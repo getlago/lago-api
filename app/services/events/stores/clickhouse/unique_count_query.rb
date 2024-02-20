@@ -154,6 +154,45 @@ module Events
           SQL
         end
 
+        def prorated_breakdown_query(with_remove: false)
+          <<-SQL
+            #{events_cte_sql},
+            event_values AS (
+              SELECT
+                property,
+                operation_type,
+                timestamp
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{operation_value_sql} AS adjusted_value
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY property, operation_type, timestamp
+            )
+
+            SELECT
+              prorated_value,
+              timestamp,
+              property,
+              operation_type
+            FROM (
+              SELECT
+                (#{period_ratio_sql}) AS prorated_value,
+                timestamp,
+                property,
+                operation_type
+              FROM event_values
+            ) prorated_breakdown
+            #{'WHERE prorated_value != 0' unless with_remove}
+            ORDER BY timestamp ASC
+          SQL
+        end
+
         private
 
         attr_reader :store
@@ -242,54 +281,60 @@ module Events
 
         def period_ratio_sql
           <<-SQL
-            if(
-              operation_type = 'add',
-              -- NOTE: duration in seconds between current add and next remove - using end of period as final boundaries if no remove
-              toDecimal128(
-                (date_diff(
-                  'seconds',
-                  if(timestamp < toDateTime64(:from_datetime, 5, 'UTC'), toDateTime64(:from_datetime, 5, 'UTC'), timestamp),
-                  if(
-                    (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 5, 'UTC'),
-                    toDateTime64(:to_datetime, 5, 'UTC'),
-                    leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
-                  )
-                )),
-                :decimal_scale
-              )
-              /
-              -- NOTE: full duration of the period
-              #{charges_duration.days.to_i},
+            toDecimal128(
+              if(
+                operation_type = 'add',
+                -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
+                ceil(
+                  date_diff(
+                    'seconds',
+                    if(timestamp < toDateTime64(:from_datetime, 5, 'UTC'), toDateTime64(:from_datetime, 5, 'UTC'), timestamp),
+                    if(
+                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 5, 'UTC'),
+                      toDateTime64(:to_datetime, 5, 'UTC'),
+                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    ),
+                    :timezone
+                  ) / 86400
+                )
+                /
+                -- NOTE: full duration of the period
+                #{charges_duration},
 
-              -- NOTE: operation was a remove, so the duration is 0
-              toDecimal128(0, :decimal_scale)
+                -- NOTE: operation was a remove, so the duration is 0
+                0
+              ),
+              :decimal_scale
             )
           SQL
         end
 
         def grouped_period_ratio_sql
           <<-SQL
-            if(
-              operation_type = 'add',
-              -- NOTE: duration in seconds between current add and next remove - using end of period as final boundaries if no remove
-              toDecimal128(
-                (date_diff(
-                  'seconds',
-                  if(timestamp < toDateTime64(:from_datetime, 5, 'UTC'), toDateTime64(:from_datetime, 5, 'UTC'), timestamp),
-                  if(
-                    (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 5, 'UTC'),
-                    toDateTime64(:to_datetime, 5, 'UTC'),
-                    leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
-                  )
-                )),
-                :decimal_scale
-              )
-              /
-              -- NOTE: full duration of the period
-              #{charges_duration.days.to_i},
+            toDecimal128(
+              if(
+                operation_type = 'add',
+                -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
+                ceil(
+                  date_diff(
+                    'seconds',
+                    if(timestamp < toDateTime64(:from_datetime, 5, 'UTC'), toDateTime64(:from_datetime, 5, 'UTC'), timestamp),
+                    if(
+                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 5, 'UTC'),
+                      toDateTime64(:to_datetime, 5, 'UTC'),
+                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    ),
+                    :timezone
+                  ) / 86400
+                )
+                /
+                -- NOTE: full duration of the period
+                #{charges_duration},
 
-              -- NOTE: operation was a remove, so the duration is 0
-              toDecimal128(0, :decimal_scale)
+                -- NOTE: operation was a remove, so the duration is 0
+                0
+              ),
+              :decimal_scale
             )
           SQL
         end

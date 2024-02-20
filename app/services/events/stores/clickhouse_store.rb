@@ -14,7 +14,6 @@ module Events
           .where(code:)
           .order(timestamp: :asc)
 
-        # TODO: check how to deal with this since events are not stored forever in clickhouse
         scope = scope.where('events_raw.timestamp >= ?', from_datetime) if force_from || use_from_boundary
         scope = scope.where('events_raw.timestamp <= ?', to_datetime) if to_datetime
         scope = scope.where(numeric_condition) if numeric_property
@@ -126,7 +125,12 @@ module Events
       def unique_count_breakdown
         query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
         ::Clickhouse::EventsRaw.connection.select_all(
-          ActiveRecord::Base.sanitize_sql_for_conditions([query.breakdown_query]),
+          ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              query.breakdown_query,
+              { decimal_scale: DECIMAL_SCALE },
+            ],
+          ),
         ).rows
       end
 
@@ -139,12 +143,30 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
+              timezone: customer.applicable_timezone,
             },
           ],
         )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
 
         result['aggregation']
+      end
+
+      def prorated_unique_count_breakdown(with_remove: false)
+        query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          [
+            query.prorated_breakdown_query(with_remove:),
+            {
+              from_datetime:,
+              to_datetime: to_datetime.ceil,
+              decimal_scale: DECIMAL_SCALE,
+              timezone: customer.applicable_timezone,
+            },
+          ],
+        )
+
+        ::Clickhouse::EventsRaw.connection.select_all(sql).to_a
       end
 
       def grouped_unique_count
@@ -171,6 +193,7 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
+              timezone: customer.applicable_timezone,
             },
           ],
         )
