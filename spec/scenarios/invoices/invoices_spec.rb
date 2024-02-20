@@ -274,6 +274,41 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     end
   end
 
+  context 'when pay in arrear subscription with no charges is terminated' do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 1000, interval: 'yearly') }
+
+    it 'creates subscription fee and adds it to the invoice' do
+      ### 15 Dec: Create subscription + charge.
+      dec15 = DateTime.new(2022, 12, 15)
+
+      travel_to(dec15) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      ### 20 Dec: Terminate subscription + refresh.
+      dec20 = DateTime.parse('2022-12-20 06:00:00')
+
+      travel_to(dec20) do
+        expect {
+          terminate_subscription(subscription)
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { subscription.invoices.count }.from(0).to(1)
+
+        invoice = subscription.invoices.first
+        expect(invoice.fees.subscription_kind.count).to eq(1)
+      end
+    end
+  end
+
   context 'when pay in arrear subscription with recurring charges is upgraded and new plan does not contain same BM' do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
