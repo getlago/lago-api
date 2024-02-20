@@ -2,6 +2,7 @@
 
 class User < ApplicationRecord
   include PaperTrailTraceable
+  include OtpAuthenticatable
   has_secure_password
 
   has_many :password_resets
@@ -19,5 +20,5 @@ class User < ApplicationRecord
   has_many :subscriptions, through: :customers
 
   validates :email, presence: true
-  validates :password, presence: true
+  validates :password, presence: true, unless: :password_digest?
 end

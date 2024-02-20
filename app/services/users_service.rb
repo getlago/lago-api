@@ -1,8 +1,13 @@
 # frozen_string_literal: true
 
 class UsersService < BaseService
-  def login(email, password)
+  def login(email, password, otp_attempt = nil)
     result.user = User.find_by(email:)&.authenticate(password)
+
+    if result.user&.otp_enabled?
+      return result.single_validation_failure!(error_code: 'no_otp_attempt') unless otp_attempt.present?
+      return result.single_validation_failure!(error_code: 'incorrect_otp_attempt') unless result.user.verify_otp!(otp_attempt)
+    end
 
     unless result.user.present? && result.user.memberships&.active&.any?
       return result.single_validation_failure!(error_code: 'incorrect_login_or_password')
