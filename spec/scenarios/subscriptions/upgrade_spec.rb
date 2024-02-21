@@ -116,7 +116,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
       expect(customer.credit_notes.first.credit_amount_cents).to eq(32) # 1000 / 31
 
       number_of_days = (DateTime.new(2024, 6, 29, 0, 0) - DateTime.new(2023, 9, 28, 0, 0)).to_i
-      single_day_price = 12000.fdiv(366)
+      single_day_price = 12_000.fdiv(366)
 
       expect(invoice.fees_amount_cents).to eq((number_of_days * single_day_price).round)
     end
