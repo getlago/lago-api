@@ -131,8 +131,10 @@ describe 'Subscription Downgrade Scenario', :scenarios, type: :request, transact
       # There are 243 days from new sub started_at until old subscription subscription_at. Also, 2024 is a leap year
       # Also for old pay in advance plan there are no charges so total amount is zero
       expect(new_sub_invoice.fees_amount_cents).to eq(0 + (yearly_plan.amount_cents.fdiv(366) * 243).round)
-      expect(new_sub_invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq('2023-11-19T00:00:00Z')
-      expect(new_sub_invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq('2024-07-18T23:59:59Z')
+      expect(new_subscription.invoice_subscriptions.order(created_at: :desc).first.from_datetime.iso8601)
+        .to eq('2023-11-19T00:00:00Z')
+      expect(new_subscription.invoice_subscriptions.order(created_at: :desc).first.to_datetime.iso8601)
+        .to eq('2024-07-18T23:59:59Z')
     end
   end
 end
