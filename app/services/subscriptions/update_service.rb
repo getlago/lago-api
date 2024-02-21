@@ -71,7 +71,7 @@ module Subscriptions
       else
         Plans::OverrideService.call(
           plan: current_plan,
-          params: params[:plan_overrides].to_h.with_indifferent_access
+          params: params[:plan_overrides].to_h.with_indifferent_access,
         )
       end
     end
