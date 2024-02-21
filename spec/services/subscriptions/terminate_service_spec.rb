@@ -186,10 +186,11 @@ RSpec.describe Subscriptions::TerminateService do
 
       before { subscription.plan.update!(pay_in_advance: true) }
 
-      it 'enqueues a job to bill the existing subscription' do
-        expect do
-          terminate_service.terminate_and_start_next(timestamp:)
-        end.to have_enqueued_job(BillSubscriptionJob).twice
+      it 'enqueues one job' do
+        terminate_service.terminate_and_start_next(timestamp:)
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([subscription, next_subscription], timestamp)
       end
     end
   end

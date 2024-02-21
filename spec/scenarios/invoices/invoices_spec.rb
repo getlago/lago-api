@@ -538,15 +538,13 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           )
           perform_all_enqueued_jobs
         }.to change { subscription.reload.status }.from('active').to('terminated')
-          .and change { customer.invoices.count }.from(1).to(3)
+          .and change { customer.invoices.count }.from(1).to(2)
 
-        terminated_invoice = subscription.invoices.order(created_at: :desc).first
-        new_subscription_invoice = customer.subscriptions.active.first.invoices.order(created_at: :desc).first
+        invoice = customer.subscriptions.active.first.invoices.order(created_at: :desc).first
         credit_note = customer.credit_notes.first
 
         expect(credit_note.credit_amount_cents).to eq(1_800)
-        expect(terminated_invoice.total_amount_cents).to eq(0) # 11/29 x 500 = 190 - 190(CN)
-        expect(new_subscription_invoice.total_amount_cents).to eq(18_000 - (1_800 - 190))
+        expect(invoice.total_amount_cents).to eq(18_000 + 190 - 1_800) # 11/29 x 500 = 190
       end
 
       travel_to(DateTime.new(2024, 3, 1, 12, 12)) do
@@ -1088,7 +1086,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           },
         )
 
-        expect(customer.invoices.draft.count).to eq(2)
+        expect(customer.invoices.draft.count).to eq(1)
 
         pay_in_arrear_subscription = customer.subscriptions.terminated.first
         pay_in_arrear_invoice = pay_in_arrear_subscription.invoices.first
