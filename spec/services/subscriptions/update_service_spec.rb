@@ -109,6 +109,8 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     end
 
     context 'when plan_overrides' do
+      let(:plan) { create(:plan, organization: membership.organization) }
+      let(:subscription) { create(:subscription, plan:, subscription_at: Time.current - 1.year) }
       let(:params) do
         {
           plan_overrides: {
@@ -119,8 +121,23 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
       around { |test| lago_premium!(&test) }
 
-      it 'updates the plan accordingly' do
-        expect { update_service.call }.to change { subscription.plan.reload.name }.to('new name')
+      it 'creates the new plan accordingly' do
+        update_service.call
+
+        expect(subscription.plan.reload.name).to eq('new name')
+        expect(subscription.plan_id).not_to eq(plan.id)
+      end
+
+      context 'with overriden plan' do
+        let(:parent_plan) { create(:plan, organization: membership.organization) }
+        let(:plan) { create(:plan, organization: membership.organization, parent_id: parent_plan.id) }
+
+        it 'updates the plan accordingly' do
+          update_service.call
+
+          expect(subscription.plan.reload.name).to eq('new name')
+          expect(subscription.plan_id).to eq(plan.id)
+        end
       end
     end
 

@@ -24,11 +24,10 @@ module Subscriptions
       subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
 
       if params.key?(:plan_overrides)
-        plan_result = Plans::UpdateService.call(
-          plan: subscription.plan,
-          params: params[:plan_overrides].to_h.with_indifferent_access,
-        )
+        plan_result = handle_plan_override
         return plan_result unless plan_result.success?
+
+        subscription.plan = plan_result.plan
       end
 
       if subscription.starting_in_the_future? && params.key?(:subscription_at)
@@ -59,6 +58,22 @@ module Subscriptions
       return unless subscription.plan.pay_in_advance? && subscription.subscription_at.today?
 
       BillSubscriptionJob.perform_later([subscription], Time.current.to_i)
+    end
+
+    def handle_plan_override
+      current_plan = subscription.plan
+
+      if current_plan.parent_id
+        Plans::UpdateService.call(
+          plan: current_plan,
+          params: params[:plan_overrides].to_h.with_indifferent_access,
+        )
+      else
+        Plans::OverrideService.call(
+          plan: current_plan,
+          params: params[:plan_overrides].to_h.with_indifferent_access
+        )
+      end
     end
 
     def valid?(args)
