@@ -59,6 +59,16 @@ RSpec.describe Utils::DatetimeService, type: :service do
         expect(result).to eq(31)
       end
     end
+
+    context 'with to date is the beginning of the day' do
+      let(:from_datetime) { Time.zone.parse('2023-12-01T00:00:00') }
+      let(:to_datetime) { Time.zone.parse('2023-12-07T00:00:00') }
+      let(:timezone) { 'UTC' }
+
+      it 'ensures it counts the full days' do
+        expect(result).to eq(7)
+      end
+    end
   end
 
   describe '.period_total_length_in_days' do
