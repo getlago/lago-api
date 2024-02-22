@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 class BillSubscriptionByTimebasedEventJob < ApplicationJob
-  queue_as "billing"
+  queue_as 'billing'
 
   retry_on Sequenced::SequenceError, ActiveJob::DeserializationError
 
-  def perform(subscription, timestamp, timebased_event:, async: true)
+  def perform(subscription, timestamp, async: true)
     service = async ? Invoices::SubscriptionService : Invoices::SubscriptionSyncService
 
     result = service.call(
@@ -14,9 +14,7 @@ class BillSubscriptionByTimebasedEventJob < ApplicationJob
       recurring: false,
       invoice: nil,
     )
-    if result.success? && !async
-      return result
-    end
+    return result if result.success? && !async
 
     result.raise_if_error! if result.invoice.nil? || !result.invoice.generating?
   end

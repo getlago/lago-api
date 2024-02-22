@@ -50,14 +50,12 @@ module Subscriptions
         BillSubscriptionByTimebasedEventJob.perform_later(
           subscription,
           billing_timestamp,
-          timebased_event: timebased_event,
           async:,
         )
       else
         BillSubscriptionByTimebasedEventJob.perform_now(
           subscription,
           billing_timestamp,
-          timebased_event: timebased_event,
           async:,
         )
       end
