@@ -31,7 +31,10 @@ module Subscriptions
           credit_note_result.raise_if_error!
         end
 
-        bill_subscription
+        # NOTE: We should bill subscription and generate invoice for all cases except for the upgrade
+        #       For upgrade we will create only one invoice for termination charges and for in advance charges
+        #       It is handled in subscriptions/create_service.rb
+        bill_subscription unless upgrade
       end
 
       # NOTE: Pending next subscription should be canceled as well
@@ -61,15 +64,18 @@ module Subscriptions
       # NOTE: Create an invoice for the terminated subscription
       #       if it has not been billed yet
       #       or only for the charges if subscription was billed in advance
-      BillSubscriptionJob.perform_later([subscription], timestamp)
+      #       Also, add new pay in advance plan inside if applicable
+      billable_subscriptions = if next_subscription.plan.pay_in_advance?
+        [subscription, next_subscription]
+      else
+        [subscription]
+      end
+      BillSubscriptionJob.perform_later(billable_subscriptions, timestamp)
 
       SendWebhookJob.perform_later('subscription.terminated', subscription)
       SendWebhookJob.perform_later('subscription.started', next_subscription)
 
       result.subscription = next_subscription
-      return result unless next_subscription.plan.pay_in_advance?
-
-      BillSubscriptionJob.perform_later([next_subscription], timestamp)
 
       result
     rescue ActiveRecord::RecordInvalid => e

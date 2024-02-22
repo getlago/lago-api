@@ -146,6 +146,9 @@ module Subscriptions
 
       cancel_pending_subscription if pending_subscription?
 
+      # Collection that groups all billable subscriptions for an invoice
+      billable_subscriptions = billable_subscriptions(new_subscription)
+
       # NOTE: When upgrading, the new subscription becomes active immediatly
       #       The previous one must be terminated
       Subscriptions::TerminateService.call(subscription: current_subscription, upgrade: true)
@@ -153,11 +156,15 @@ module Subscriptions
       new_subscription.mark_as_active!
       perform_later(job_class: SendWebhookJob, arguments: ['subscription.started', new_subscription])
 
-      if plan.pay_in_advance?
+      # NOTE: If plan is in advance we should create only one invoice for termination fees and for new plan fees
+      if billable_subscriptions.any?
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be commited before processing the job
         #       We do not set offset anymore but instead retry jobs
-        perform_later(job_class: BillSubscriptionJob, arguments: [[new_subscription], Time.zone.now.to_i + 1.second])
+        perform_later(
+          job_class: BillSubscriptionJob,
+          arguments: [billable_subscriptions, Time.zone.now.to_i + 1.second],
+        )
       end
 
       new_subscription
@@ -244,6 +251,20 @@ module Subscriptions
 
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+    end
+
+    def billable_subscriptions(new_subscription)
+      billable_subscriptions = if current_subscription.starting_in_the_future?
+        []
+      elsif current_subscription.pending?
+        []
+      elsif !current_subscription.terminated?
+        [current_subscription]
+      end.to_a
+
+      return billable_subscriptions unless plan.pay_in_advance?
+
+      billable_subscriptions << new_subscription
     end
   end
 end

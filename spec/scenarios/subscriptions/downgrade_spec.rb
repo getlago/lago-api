@@ -120,10 +120,7 @@ describe 'Subscription Downgrade Scenario', :scenarios, type: :request, transact
       expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }
       expect(subscription.reload).to be_terminated
       expect(subscription.invoices.count).to eq(5)
-
-      # Termination invoice. For in advance subscription without charges it should be equal to zero
-      invoice = subscription.invoices.order(created_at: :asc).last
-      expect(invoice.fees_amount_cents).to eq(0)
+      expect(customer.invoices.count).to eq(5)
 
       new_subscription = subscription.reload.next_subscription
 
@@ -132,9 +129,12 @@ describe 'Subscription Downgrade Scenario', :scenarios, type: :request, transact
 
       new_sub_invoice = new_subscription.invoices.order(created_at: :asc).last
       # There are 243 days from new sub started_at until old subscription subscription_at. Also, 2024 is a leap year
-      expect(new_sub_invoice.fees_amount_cents).to eq((yearly_plan.amount_cents.fdiv(366) * 243).round)
-      expect(new_sub_invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq('2023-11-19T00:00:00Z')
-      expect(new_sub_invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq('2024-07-18T23:59:59Z')
+      # Also for old pay in advance plan there are no charges so total amount is zero
+      expect(new_sub_invoice.fees_amount_cents).to eq(0 + (yearly_plan.amount_cents.fdiv(366) * 243).round)
+      expect(new_subscription.invoice_subscriptions.order(created_at: :desc).first.from_datetime.iso8601)
+        .to eq('2023-11-19T00:00:00Z')
+      expect(new_subscription.invoice_subscriptions.order(created_at: :desc).first.to_datetime.iso8601)
+        .to eq('2024-07-18T23:59:59Z')
     end
   end
 end
