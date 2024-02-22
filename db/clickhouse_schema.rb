@@ -3,7 +3,7 @@
 # incrementally modify your database, and then regenerate this schema definition.
 #
 # This file is the source Rails uses to define your schema when running `rails
-# *****:schema:load`. When creating a new database, `rails *****:schema:load` tends to
+# clickhouse:schema:load`. When creating a new database, `rails clickhouse:schema:load` tends to
 # be faster and is potentially less error prone than running all of your
 # migrations from scratch. Old migrations may fail to apply correctly if those
 # migrations use external dependencies or application code.
@@ -25,8 +25,8 @@ ClickhouseActiverecord::Schema.define(version: 2023_10_30_163703) do
   end
 
   # TABLE: events_raw_queue
-  # SQL: CREATE TABLE default.events_raw_queue ( `organization_id` String, `external_customer_id` String, `external_subscription_id` String, `transaction_id` String, `timestamp` String, `code` String, `properties` String ) ENGINE = Kafka SETTINGS kafka_broker_list = '*****', kafka_topic_list = '*****', kafka_group_name = '*****', kafka_format = 'JSONEachRow'
-  create_table "events_raw_queue", id: false, options: "Kafka SETTINGS kafka_broker_list = '*****', kafka_topic_list = '*****', kafka_group_name = '*****', kafka_format = 'JSONEachRow'", force: :cascade do |t|
+  # SQL: CREATE TABLE default.events_raw_queue ( `organization_id` String, `external_customer_id` String, `external_subscription_id` String, `transaction_id` String, `timestamp` String, `code` String, `properties` String ) ENGINE = Kafka SETTINGS kafka_broker_list = 'redpanda:9092', kafka_topic_list = 'events-raw', kafka_group_name = 'clickhouse', kafka_format = 'JSONEachRow'
+  create_table "events_raw_queue", id: false, options: "Kafka SETTINGS kafka_broker_list = 'redpanda:9092', kafka_topic_list = 'events-raw', kafka_group_name = 'clickhouse', kafka_format = 'JSONEachRow'", force: :cascade do |t|
     t.string "organization_id", null: false
     t.string "external_customer_id", null: false
     t.string "external_subscription_id", null: false
