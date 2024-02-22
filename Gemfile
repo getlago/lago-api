@@ -77,11 +77,6 @@ gem 'karafka'
 # Taxes
 gem 'valvat', require: false
 
-# SSO
-gem 'omniauth'
-gem 'omniauth-oauth2'
-gem 'omniauth-rails_csrf_protection'
-
 group :development, :test, :staging do
   gem 'factory_bot_rails'
   gem 'faker'
