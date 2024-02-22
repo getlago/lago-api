@@ -16,9 +16,7 @@ module Subscriptions
 
       billing_result = bill_subscription
 
-      if !async && billing_result.success?
-        timebased_event.update(invoice: billing_result.invoice)
-      end
+      timebased_event.update(invoice: billing_result.invoice) if !async && billing_result.success?
 
       result.timebased_event = timebased_event
       result
@@ -35,9 +33,9 @@ module Subscriptions
     def already_renewed?
       # TODO: should compare in the same timezone
       InvoiceSubscription
-        .where(subscription: subscription)
+        .where(subscription:)
         .where(
-          "from_datetime <= ? AND to_datetime >= ?", timebased_event.timestamp, timebased_event.timestamp
+          'from_datetime <= ? AND to_datetime >= ?', timebased_event.timestamp, timebased_event.timestamp
         ).exists?
     end
 

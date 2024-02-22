@@ -21,7 +21,7 @@ module TimebasedEvents
 
       timebased_event.save!
 
-      return Subscriptions::RenewalJob.perform_later(timebased_event) if async
+      return Subscriptions::RenewalJob.perform_later(timebased_event:) if async
 
       renewal_result = Subscriptions::RenewalService.new(timebased_event: timebased_event, async: false).call
       if renewal_result.already_renewed
