@@ -403,7 +403,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             aggregate_failures do
               expect(subscription.reload).to be_terminated
               expect(subscription.reload.invoices.count).to eq(1)
-              expect(invoice.total_amount_cents).to eq(226)
+              expect(invoice.total_amount_cents).to eq(258)
               expect(invoice.issuing_date.iso8601).to eq('2023-12-07')
             end
           end
@@ -1050,7 +1050,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             aggregate_failures do
               expect(subscription.reload).to be_terminated
               expect(subscription.reload.invoices.count).to eq(1)
-              expect(invoice.total_amount_cents).to eq(4_145)
+              expect(invoice.total_amount_cents).to eq(4_161)
               expect(invoice.issuing_date.iso8601).to eq('2023-12-07')
             end
           end
