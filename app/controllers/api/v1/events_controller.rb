@@ -120,8 +120,8 @@ module Api
         )
 
         if result.already_renewed
-          render json: { success: :ok, renew_status: :already_renewed }
-        elsif result.success? || true
+          render(json: { success: :ok, renew_status: :already_renewed })
+        elsif result.success?
           timebased_event_json_str = ::V1::TimebasedEventSerializer.new(
             result.timebased_event,
             root_name: 'event',
