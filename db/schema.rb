@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
+ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -612,10 +612,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
-    t.boolean "eu_tax_management", default: false
+t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
-    t.boolean "clickhouse_aggregation", default: false, null: false
+        t.boolean "clickhouse_aggregation", default: false, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
@@ -788,6 +788,20 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.index ["organization_id"], name: "index_taxes_on_organization_id"
   end
 
+  create_table "timebased_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "invoice_id"
+    t.integer "event_type"
+    t.datetime "timestamp"
+    t.string "external_customer_id"
+    t.string "external_subscription_id"
+    t.jsonb "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_timebased_events_on_invoice_id"
+    t.index ["organization_id"], name: "index_timebased_events_on_organization_id"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -946,6 +960,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
   add_foreign_key "taxes", "organizations"
+  add_foreign_key "timebased_events", "invoices"
+  add_foreign_key "timebased_events", "organizations"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
