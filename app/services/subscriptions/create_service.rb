@@ -260,9 +260,8 @@ module Subscriptions
         []
       elsif !current_subscription.terminated?
         [current_subscription]
-      end
+      end.to_a
 
-      return [] if billable_subscriptions.blank?
       return billable_subscriptions unless plan.pay_in_advance?
 
       billable_subscriptions << new_subscription
