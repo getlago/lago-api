@@ -56,6 +56,7 @@ Rails.application.routes.draw do
       resources :events, only: %i[create show] do
         post :estimate_fees, on: :collection
         post :sync, on: :collection, to: 'events#create_sync'
+        post :renew_subscription, on: :collection, to: 'events#renew_subscription'
       end
       resources :applied_coupons, only: %i[create index]
       resources :fees, only: %i[show update index]

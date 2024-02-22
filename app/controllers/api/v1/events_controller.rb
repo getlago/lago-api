@@ -88,7 +88,7 @@ module Api
         if result.success?
           event_json_str = ::V1::EventSerializer.new(
             result.event,
-            root_name: "event",
+            root_name: 'event',
           ).to_json
 
           event_json = JSON.parse(event_json_str)
@@ -97,10 +97,47 @@ module Api
             invoices_data = ::CollectionSerializer.new(
               result.invoices,
               ::V1::InvoiceSerializer,
-              collection_name: "invoices",
+              collection_name: 'invoices',
             ).to_json
 
-            event_json["event"]["invoices"] = JSON.parse(invoices_data)["invoices"]
+            event_json['event']['invoices'] = JSON.parse(invoices_data)['invoices']
+          end
+
+          render(
+            json: event_json,
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
+      def renew_subscription
+        result = TimebasedEvents::CreateService.call(
+          organization: current_organization,
+          params: create_time_based_params,
+          timestamp: Time.current.to_f,
+          metadata: event_metadata,
+        )
+
+        if result.already_renewed
+          render json: { success: :ok, renew_status: :already_renewed }
+        elsif result.success? || true
+          timebased_event_json_str = ::V1::TimebasedEventSerializer.new(
+            result.timebased_event,
+            root_name: 'event',
+          ).to_json
+
+          event_json = JSON.parse(timebased_event_json_str)
+
+          if result.timebased_event.invoice
+            invoice_json_str = ::V1::InvoiceSerializer.new(
+              result.timebased_event.invoice,
+              root_name: 'invoice',
+            ).to_json
+
+            invoice_json = JSON.parse(invoice_json_str)
+
+            event_json['event']['invoice'] = invoice_json['invoice']
           end
 
           render(
@@ -144,6 +181,17 @@ module Api
           user_agent: request.user_agent,
           ip_address: request.remote_ip,
         }
+      end
+
+      def create_time_based_params
+        params
+          .require(:event)
+          .permit(
+            :external_customer_id,
+            :external_subscription_id,
+            :timestamp,
+            event_type: :renew_subscription,
+          )
       end
     end
   end
