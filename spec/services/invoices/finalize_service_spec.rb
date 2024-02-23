@@ -50,9 +50,11 @@ RSpec.describe Invoices::FinalizeService, type: :service do
       invoice.customer.update(timezone: 'America/New_York')
 
       freeze_time do
+        current_date = Time.current.in_time_zone("America/New_York").to_date
+
         expect { finalize_service.call }
-          .to change { invoice.reload.issuing_date }.to(Time.current.to_date)
-          .and change { invoice.reload.payment_due_date }.to(Time.current.to_date)
+          .to change { invoice.reload.issuing_date }.to(current_date)
+          .and change { invoice.reload.payment_due_date }.to(current_date)
       end
     end
 
