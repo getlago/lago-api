@@ -14,7 +14,7 @@ module Events
       event.timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
 
       if is_charge_package_group?
-        event.properties[:current_package_count] = current_package_count
+        event.current_package_count = current_package_count
       end
 
       event.save!
@@ -40,7 +40,7 @@ module Events
     
     def find_charge_model
       subscription = Subscription.find_by(external_id: params[:external_subscription_id])
-      plan = Plan.find_by(id: subscription.plan_id)
+      plan = subscription.plan
       billable_metric = organization.billable_metrics.find_by(code: params[:code])
       
       Charge.where(plan: plan, billable_metric: billable_metric).first
