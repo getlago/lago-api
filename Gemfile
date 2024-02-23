@@ -113,4 +113,6 @@ group :development do
 
   gem 'sass-rails'
   gem 'uglifier'
+
+  gem 'ruby-lsp-rails', require: false
 end
