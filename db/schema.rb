@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
+ActiveRecord::Schema[7.0].define(version: 2024_02_19_093732) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -163,6 +163,13 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.index ["organization_id"], name: "index_cached_aggregations_on_organization_id"
   end
 
+  create_table "charge_package_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "current_package_count", default: 1, null: false
+    t.jsonb "available_group_usage"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "billable_metric_id"
     t.datetime "created_at", null: false
@@ -177,7 +184,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.boolean "invoiceable", default: true, null: false
     t.boolean "prorated", default: false, null: false
     t.string "invoice_display_name"
+    t.uuid "charge_package_group_id"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
+    t.index ["charge_package_group_id"], name: "index_charges_on_charge_package_group_id"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
@@ -612,9 +621,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
-    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
+    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
@@ -883,6 +892,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_04_152816) do
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "cached_aggregations", "groups"
   add_foreign_key "charges", "billable_metrics"
+  add_foreign_key "charges", "charge_package_groups"
   add_foreign_key "charges", "plans"
   add_foreign_key "charges_taxes", "charges"
   add_foreign_key "charges_taxes", "taxes"

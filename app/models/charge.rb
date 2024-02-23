@@ -8,6 +8,7 @@ class Charge < ApplicationRecord
 
   belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :billable_metric, -> { with_discarded }
+  belongs_to :charge_package_group, optional: true
 
   has_many :fees
   has_many :group_properties, dependent: :destroy
@@ -22,6 +23,7 @@ class Charge < ApplicationRecord
     percentage
     volume
     graduated_percentage
+    package_group
   ].freeze
 
   enum charge_model: CHARGE_MODELS

@@ -20,6 +20,11 @@ module Events
       event.properties = params[:properties] || {}
       event.metadata = metadata || {}
       event.timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
+
+      if is_charge_package_group?
+        event.properties[:current_package_count] = current_package_count
+      end
+
       event.save!
 
       result.event = event
@@ -53,6 +58,26 @@ module Events
           properties: event.properties,
         }.to_json,
       )
+    end
+
+    def charge_model
+      @charge_model ||= find_charge_model_by_code
+    end
+    
+    def find_charge_model_by_code
+      subscription = Subscription.find_by(external_id: params[:external_subscription_id])
+      plan = Plan.find_by(id: subscription.plan_id)
+      billable_metric = organization.billable_metrics.find_by(code: params[:code])
+      
+      Charge.where(plan: plan, billable_metric: billable_metric).first
+    end
+
+    def is_charge_package_group?
+      charge_model&.charge_model == 'package_group'
+    end
+
+    def current_package_count
+      charge_model&.charge_package_group&.current_package_count || 1
     end
   end
 end
