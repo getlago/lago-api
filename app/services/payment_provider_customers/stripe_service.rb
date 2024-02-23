@@ -63,6 +63,8 @@ module PaymentProviderCustomers
     end
 
     def update_provider_default_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
+      return result.not_found_failure!(resource: 'stripe_customer') unless stripe_customer_id
+
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
         .where(customers: { organization_id: })
@@ -77,8 +79,8 @@ module PaymentProviderCustomers
 
       result.payment_method = payment_method_id
       result
-    rescue Stripe::InvalidRequestError
-      result.single_validation_failure!(field: :payment_method_id, error_code: 'value_is_invalid')
+    rescue Stripe::InvalidRequestError => e
+      result.service_failure!(code: 'stripe_error', message: e.message)
     end
 
     def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})

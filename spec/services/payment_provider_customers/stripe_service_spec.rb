@@ -333,6 +333,22 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         end
       end
     end
+
+    context 'when stripe customer id is missing' do
+      it 'returns a not found error' do
+        result = stripe_service.update_provider_default_payment_method(
+          organization_id: organization.id,
+          stripe_customer_id: nil,
+          payment_method_id: 'pm_123456',
+        )
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('stripe_customer_not_found')
+        end
+      end
+    end
   end
 
   describe '#update_payment_method' do
