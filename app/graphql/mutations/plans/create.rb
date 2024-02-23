@@ -22,6 +22,7 @@ module Mutations
       argument :trial_period, Float, required: false
 
       argument :charges, [Types::Charges::Input]
+      argument :minimum_commitment, Types::Commitments::Input, required: false
 
       type Types::Plans::Object
 

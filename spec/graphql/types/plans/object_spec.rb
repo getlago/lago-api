@@ -14,6 +14,7 @@ RSpec.describe Types::Plans::Object do
   it { is_expected.to have_field(:description).of_type('String') }
   it { is_expected.to have_field(:interval).of_type('PlanInterval!') }
   it { is_expected.to have_field(:invoice_display_name).of_type('String') }
+  it { is_expected.to have_field(:minimum_commitment).of_type('Commitment') }
   it { is_expected.to have_field(:name).of_type('String!') }
   it { is_expected.to have_field(:parent).of_type('Plan') }
   it { is_expected.to have_field(:pay_in_advance).of_type('Boolean!') }

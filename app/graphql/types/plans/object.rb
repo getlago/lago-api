@@ -15,6 +15,7 @@ module Types
       field :description, String
       field :interval, Types::Plans::IntervalEnum, null: false
       field :invoice_display_name, String
+      field :minimum_commitment, Types::Commitments::Object, null: true
       field :name, String, null: false
       field :parent, Types::Plans::Object, null: true
       field :pay_in_advance, Boolean, null: false
