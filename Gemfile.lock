@@ -352,6 +352,7 @@ GEM
       ast (~> 2.4.1)
       racc
     pg (1.4.1)
+    prism (0.24.0)
     public_suffix (5.0.1)
     puma (6.4.2)
       nio4r (~> 2.0)
@@ -472,6 +473,16 @@ GEM
       rubocop-factory_bot (~> 2.22)
     rubocop-thread_safety (0.5.1)
       rubocop (>= 0.90.0)
+    ruby-lsp (0.14.1)
+      language_server-protocol (~> 3.17.0)
+      prism (>= 0.22.0, < 0.25)
+      sorbet-runtime (>= 0.5.10782)
+    ruby-lsp-rails (0.3.0)
+      actionpack (>= 6.0)
+      activerecord (>= 6.0)
+      railties (>= 6.0)
+      ruby-lsp (>= 0.14.0, < 0.15.0)
+      sorbet-runtime (>= 0.5.9897)
     ruby-progressbar (1.13.0)
     ruby2_keywords (0.0.5)
     sass-rails (6.0.0)
@@ -525,6 +536,7 @@ GEM
     snaky_hash (2.0.1)
       hashie
       version_gem (~> 1.1, >= 1.1.1)
+    sorbet-runtime (0.5.11264)
     sprockets (4.1.1)
       concurrent-ruby (~> 1.0)
       rack (> 1, < 3)
@@ -627,6 +639,7 @@ DEPENDENCIES
   rubocop-rails
   rubocop-rspec
   rubocop-thread_safety
+  ruby-lsp-rails
   sass-rails
   scenic
   sentry-rails (~> 5.12.0)
