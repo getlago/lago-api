@@ -61,10 +61,10 @@ module Events
     end
 
     def charge_model
-      @charge_model ||= find_charge_model_by_code
+      @charge_model ||= find_charge_model
     end
     
-    def find_charge_model_by_code
+    def find_charge_model
       subscription = Subscription.find_by(external_id: params[:external_subscription_id])
       plan = Plan.find_by(id: subscription.plan_id)
       billable_metric = organization.billable_metrics.find_by(code: params[:code])
