@@ -1,4 +1,4 @@
-- fee = self.first
+- fee = self
 tr
   td
     .body-1 = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
@@ -8,7 +8,7 @@ tr
       .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
     - if fee.charge.prorated?
       .body-3 = I18n.t('invoice.fee_prorated')
-  td.body-2 = self.sum(&:units)
-  td.body-2 = MoneyHelper.format_with_precision(self.sum(&:precise_unit_amount), fee.unit_amount.currency)
+  td.body-2 = fee.units
+  td.body-2 = MoneyHelper.format_with_precision(fee.precise_unit_amount, fee.unit_amount.currency)
   td.body-2 == TaxHelper.applied_taxes(fee)
-  td.body-2 = MoneyHelper.format(self.sum(&:amount))
+  td.body-2 = MoneyHelper.format(fee.amount)

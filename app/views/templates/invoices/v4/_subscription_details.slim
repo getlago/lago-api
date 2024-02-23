@@ -36,7 +36,7 @@
               - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
                 - fees.select { |f| f.units.positive? }.each do |fee|
                   - if fee.amount_details.blank?
-                    == SlimHelper.render('templates/invoices/v4/_default_fee', fees)
+                    == SlimHelper.render('templates/invoices/v4/_default_fee', fee)
                   - else
                     == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
 
@@ -46,7 +46,8 @@
 
               / Fees without group
               - else
-                == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
+                - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
 
     / Charge fees section for subscription invoice
     - if subscription? && subscription_fees(subscription.id).charge_kind.any?
@@ -81,7 +82,8 @@
 
               / Fees without group
               - else
-                == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
+                - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
 
       / Charges payed in advance on payed in arrears plan
       - if subscription.plan.charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance? && existing_fees_in_interval?(subscription_id: subscription.id, charge_in_advance: true)
@@ -104,7 +106,7 @@
               - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
                 - fees.select { |f| f.units.positive? }.each do |fee|
                   - if fee.amount_details.blank?
-                    == SlimHelper.render('templates/invoices/v4/_default_fee', fees)
+                    == SlimHelper.render('templates/invoices/v4/_default_fee', fee)
                   - else
                     == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
 
@@ -114,7 +116,8 @@
 
               / Fees without group
               - else
-                == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fees)
+                - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
 
     / Total section
     .invoice-resume.overflow-auto
