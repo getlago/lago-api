@@ -3,14 +3,13 @@
 module Invoices
   module Payments
     class PinetService < BaseService
-      PENDING_STATUSES = %w[processing]
-        .freeze
-      SUCCESS_STATUSES = %w[succeeded].freeze
-      FAILED_STATUSES = %w[canceled].freeze
+      PENDING_STATUSES = %w[requested processing].freeze
+      SUCCESS_STATUSES = %w[completed].freeze
+      FAILED_STATUSES = %w[failed].freeze
 
-      def initialize(invoice = nil)
+      def initialize(invoice: nil, is_sync: false)
         @invoice = invoice
-
+        @is_sync = is_sync
         super(nil)
       end
 
@@ -33,10 +32,10 @@ module Invoices
           invoice:,
           payment_provider_id: organization.pinet_payment_provider.id,
           payment_provider_customer_id: customer.pinet_customer.id,
-          amount_cents: pinet_result.amount,
-          amount_currency: pinet_result.currency&.upcase,
-          provider_payment_id: pinet_result.id,
-          status: pinet_result.status,
+          amount_cents: pinet_result['amount'],
+          amount_currency: pinet_result['currency']&.upcase,
+          provider_payment_id: pinet_result['id'],
+          status: pinet_result['status'],
         )
         payment.save!
 
@@ -76,7 +75,7 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def client
-        @client ||= Pinet::Client.new(api_key: pinet_api_key)
+        @client ||= Pinet::Client.new(is_sync: @is_sync)
       end
 
       def should_process_payment?
@@ -86,9 +85,10 @@ module Invoices
         customer&.pinet_customer&.provider_customer_id
       end
 
-      def pinet_api_key
-        organization.pinet_payment_provider.secret_key
-      end
+      # NOTE: Pinet does not provide a secret key
+      # def pinet_api_key
+      #   organization.pinet_payment_provider.secret_key
+      # end
 
       def create_pinet_payment
         client.charge(pinet_payment_payload)
@@ -140,7 +140,7 @@ module Invoices
           provider_customer_id: customer.pinet_customer.provider_customer_id,
           provider_error: {
             message: pinet_error.message,
-            error_code: pinet_error.code,
+            # error_code: pinet_error.code, # NOTE: Pinet does not provide error codes
           },
         )
       end

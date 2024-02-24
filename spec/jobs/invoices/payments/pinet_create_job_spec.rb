@@ -7,9 +7,9 @@ RSpec.describe Invoices::Payments::PinetCreateJob, type: :job do
 
   let(:pinet_service) { instance_double(Invoices::Payments::PinetService) }
 
-  it 'calls the stripe create service' do
+  it 'calls the pinet create service' do
     allow(Invoices::Payments::PinetService).to receive(:new)
-      .with(invoice)
+      .with(invoice:)
       .and_return(pinet_service)
     allow(pinet_service).to receive(:create)
       .and_return(BaseService::Result.new)
