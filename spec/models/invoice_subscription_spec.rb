@@ -137,6 +137,25 @@ RSpec.describe InvoiceSubscription, type: :model do
       let(:previous_invoice_subscription) do
         create(
           :invoice_subscription,
+          subscription: invoice_subscription.subscription,
+          from_datetime: invoice_subscription.from_datetime - 1.year,
+          to_datetime: invoice_subscription.to_datetime - 1.year,
+          charges_from_datetime: invoice_subscription.charges_from_datetime - 1.year,
+          charges_to_datetime: invoice_subscription.charges_to_datetime - 1.year,
+        )
+      end
+
+      before { previous_invoice_subscription }
+
+      it 'returns previous invoice subscription' do
+        expect(previous_invoice_subscription_call).to eq(previous_invoice_subscription)
+      end
+    end
+
+    context 'when there is a previous invoice subscription for different subscription' do
+      let(:previous_invoice_subscription) do
+        create(
+          :invoice_subscription,
           from_datetime: invoice_subscription.from_datetime - 1.year,
           to_datetime: invoice_subscription.to_datetime - 1.year,
           charges_from_datetime: invoice_subscription.charges_from_datetime - 1.year,
@@ -156,8 +175,8 @@ RSpec.describe InvoiceSubscription, type: :model do
         )
       end
 
-      it 'returns previous invoice subscription' do
-        expect(previous_invoice_subscription_call).to eq(previous_invoice_subscription)
+      it 'returns nil' do
+        expect(previous_invoice_subscription_call).to be(nil)
       end
     end
 

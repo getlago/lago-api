@@ -17,6 +17,9 @@ module Fees
           true_up_fee_result = ::Commitments::Minimum::CalculateTrueUpFeeService
             .new_instance(invoice_subscription:).call
 
+          currency = invoice.total_amount.currency
+          precise_unit_amount = true_up_fee_result.amount_cents / currency.subunit_to_unit
+
           new_fee = Fee.new(
             invoice:,
             subscription:,
@@ -24,9 +27,11 @@ module Fees
             invoiceable_type: 'Commitment',
             invoiceable_id: minimum_commitment.id,
             amount_cents: true_up_fee_result.amount_cents,
+            unit_amount_cents: true_up_fee_result.amount_cents,
             amount_currency: subscription.plan.amount_currency,
             invoice_display_name: minimum_commitment.invoice_name,
             units: 1,
+            precise_unit_amount:,
             taxes_amount_cents: 0,
           )
 
