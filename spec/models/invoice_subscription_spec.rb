@@ -145,7 +145,16 @@ RSpec.describe InvoiceSubscription, type: :model do
         )
       end
 
-      before { previous_invoice_subscription }
+      before do
+        previous_invoice_subscription
+
+        create(
+          :fee,
+          subscription: previous_invoice_subscription.subscription,
+          invoice: previous_invoice_subscription.invoice,
+          amount_cents: 857, # prorated
+        )
+      end
 
       it 'returns previous invoice subscription' do
         expect(previous_invoice_subscription_call).to eq(previous_invoice_subscription)

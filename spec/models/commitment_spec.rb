@@ -16,7 +16,7 @@ RSpec.describe Commitment, type: :model do
       let(:commitment) { build_stubbed(:commitment, invoice_display_name: [nil, ''].sample) }
 
       it 'returns name' do
-        expect(commitment_invoice_name).to eq('Minimum commitment • True up')
+        expect(commitment_invoice_name).to eq('Minimum commitment')
       end
     end
 

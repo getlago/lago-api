@@ -51,7 +51,12 @@ class InvoiceSubscription < ApplicationRecord
   end
 
   def previous_invoice_subscription
-    self.class.where(subscription:).where('to_datetime < ?', to_datetime).order(to_datetime: :desc).first
+    self.class
+      .where(subscription:)
+      .where('from_datetime <= ?', from_datetime)
+      .where.not(id:)
+      .order(from_datetime: :desc)
+      .find(&:subscription_fee)
   end
 
   def charge_amount_cents

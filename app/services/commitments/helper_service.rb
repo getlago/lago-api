@@ -4,9 +4,9 @@ module Commitments
   class HelperService < BaseService
     def self.new_instance(commitment:, invoice_subscription:)
       klass = if invoice_subscription.subscription.plan.pay_in_advance?
-        Commitments::InAdvance::HelperService
+        Commitments::Minimum::InAdvance::HelperService
       else
-        Commitments::InArrears::HelperService
+        Commitments::Minimum::InArrears::HelperService
       end
 
       klass.new(commitment:, invoice_subscription:)
@@ -53,7 +53,7 @@ module Commitments
 
       days = Utils::DatetimeService.date_diff_with_timezone(
         all_invoice_subscriptions.first.from_datetime,
-        invoice_subscription.to_datetime,
+        subscription.terminated? ? subscription.terminated_at : invoice_subscription.to_datetime,
         subscription.customer.applicable_timezone,
       )
 

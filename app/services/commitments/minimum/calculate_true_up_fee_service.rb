@@ -44,6 +44,13 @@ module Commitments
         commitment_amount_cents - fees_total_amount_cents
       end
 
+      def fees_total_amount_cents
+        subscription_fees.sum(:amount_cents) +
+          charge_fees.sum(:amount_cents) +
+          charge_in_advance_fees.sum(:amount_cents) +
+          charge_in_advance_recurring_fees.sum(:amount_cents)
+      end
+
       def commitment_amount_cents
         result = Commitments::CalculateAmountService.call(
           commitment: minimum_commitment,
@@ -51,10 +58,6 @@ module Commitments
         )
 
         result.commitment_amount_cents
-      end
-
-      def fees_total_amount_cents
-        raise NotImplementedError
       end
     end
   end

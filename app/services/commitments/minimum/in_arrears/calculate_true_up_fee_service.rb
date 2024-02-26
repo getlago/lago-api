@@ -6,19 +6,10 @@ module Commitments
       class CalculateTrueUpFeeService < Commitments::Minimum::CalculateTrueUpFeeService
         private
 
-        def fees_total_amount_cents
+        def subscription_fees
           period_invoice_ids_result = helper_service.period_invoice_ids
 
-          charge_fees = Fee
-            .charge_kind
-            .joins(:charge)
-            .where(
-              subscription_id: subscription.id,
-              invoice_id: period_invoice_ids_result.period_invoice_ids,
-              charge: { pay_in_advance: false },
-            )
-
-          subscription_fees = Fee
+          Fee
             .subscription_kind
             .joins(subscription: :plan)
             .where(
@@ -26,14 +17,32 @@ module Commitments
               invoice_id: period_invoice_ids_result.period_invoice_ids,
               plan: { pay_in_advance: false },
             )
+        end
 
-          dates_service = helper_service.dates_service
-          charge_in_advance_fees = Fee
+        def charge_fees
+          period_invoice_ids_result = helper_service.period_invoice_ids
+
+          Fee
             .charge_kind
             .joins(:charge)
             .where(
               subscription_id: subscription.id,
+              invoice_id: period_invoice_ids_result.period_invoice_ids,
+              charge: { pay_in_advance: false },
+            )
+        end
+
+        def charge_in_advance_fees
+          dates_service = helper_service.dates_service
+
+          Fee
+            .charge_kind
+            .joins(:charge)
+            .joins(charge: :billable_metric)
+            .where(
+              subscription_id: subscription.id,
               charge: { pay_in_advance: true },
+              pay_in_advance: true,
             )
             .where(
               "(fees.properties->>'charges_from_datetime') >= ?",
@@ -43,10 +52,34 @@ module Commitments
               "(fees.properties->>'charges_to_datetime') <= ?",
               dates_service.end_of_period&.iso8601(3),
             )
+        end
 
-          charge_fees.sum(:amount_cents) +
-            subscription_fees.sum(:amount_cents) +
-            charge_in_advance_fees.sum(:amount_cents)
+        def charge_in_advance_recurring_fees
+          return Fee.none unless invoice_subscription.previous_invoice_subscription
+
+          dates_service = Commitments::Minimum::InArrears::HelperService.new(
+            commitment: minimum_commitment,
+            invoice_subscription: invoice_subscription.previous_invoice_subscription,
+          ).dates_service
+
+          Fee
+            .charge_kind
+            .joins(:charge)
+            .joins(charge: :billable_metric)
+            .where(billable_metric: { recurring: true })
+            .where(
+              subscription_id: subscription.id,
+              charge: { pay_in_advance: true },
+              pay_in_advance: false,
+            )
+            .where(
+              "(fees.properties->>'charges_from_datetime') >= ?",
+              dates_service.previous_beginning_of_period,
+            )
+            .where(
+              "(fees.properties->>'charges_to_datetime') <= ?",
+              dates_service.end_of_period&.iso8601(3),
+            )
         end
       end
     end

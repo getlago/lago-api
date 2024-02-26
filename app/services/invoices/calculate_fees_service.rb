@@ -183,7 +183,11 @@ module Invoices
       subscription.active? ||
         (
           subscription.terminated? &&
-          (subscription.plan.pay_in_arrear? || subscription.terminated_at >= invoice.created_at)
+          (
+            subscription.plan.pay_in_arrear? ||
+            subscription.terminated_at >= invoice.created_at ||
+            calculate_true_up_fee_result.amount_cents.positive?
+          )
         )
     end
 
