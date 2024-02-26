@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_02_19_093732) do
+ActiveRecord::Schema[7.0].define(version: 2024_02_23_103137) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -166,8 +166,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_19_093732) do
   create_table "charge_package_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.bigint "current_package_count", default: 1, null: false
     t.jsonb "available_group_usage"
+    t.jsonb "properties", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
   end
 
   create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -388,6 +390,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_19_093732) do
     t.datetime "deleted_at"
     t.string "external_customer_id"
     t.string "external_subscription_id"
+    t.bigint "current_package_count"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
     t.index ["organization_id", "code", "created_at"], name: "index_events_on_organization_id_and_code_and_created_at", where: "(deleted_at IS NULL)"
