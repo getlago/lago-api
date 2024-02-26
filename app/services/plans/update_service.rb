@@ -204,6 +204,8 @@ module Plans
     #       if plan has been downgraded but amount cents became less than downgraded value. This pending subscription
     #       is not relevant in this case and downgrade should be ignored
     def process_downgraded_subscriptions
+      return unless plan.subscriptions.active.exists?
+
       Subscription.where(previous_subscription_id: plan.subscriptions.active, status: :pending).each do |sub|
         sub.destroy! if plan.amount_cents < sub.plan.amount_cents
       end
