@@ -86,6 +86,15 @@
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
                   == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
 
+      - if commitment_fee
+      table.invoice-resume-table width="100%"
+        tr
+          td.body-1 = commitment_fee.invoice_name
+          td.body-2 = 1
+          td.body-2 = MoneyHelper.format(commitment_fee.amount)
+          td.body-2 == TaxHelper.applied_taxes(commitment_fee)
+          td.body-2 = MoneyHelper.format(commitment_fee.amount)
+
       / Charges payed in advance on payed in arrears plan
       - if subscription.plan.charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance? && existing_fees_in_interval?(subscription_id: subscription.id, charge_in_advance: true)
         .invoice-resume.overflow-auto class="mt-24"
@@ -119,15 +128,6 @@
               - else
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
                   == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
-
-    - if commitment_fee
-      table.invoice-resume-table width="100%"
-        tr
-          td.body-1 = commitment_fee.invoice_name
-          td.body-2 = 1
-          td.body-2 = MoneyHelper.format(commitment_fee.amount)
-          td.body-2 == TaxHelper.applied_taxes(commitment_fee)
-          td.body-2 = MoneyHelper.format(commitment_fee.amount)
 
     / Total section
     .invoice-resume.overflow-auto

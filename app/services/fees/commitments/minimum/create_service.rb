@@ -18,7 +18,7 @@ module Fees
             .new_instance(invoice_subscription:).call
 
           currency = invoice.total_amount.currency
-          precise_unit_amount = true_up_fee_result.amount_cents / currency.subunit_to_unit
+          precise_unit_amount = true_up_fee_result.amount_cents / currency.subunit_to_unit.to_f
 
           new_fee = Fee.new(
             invoice:,
