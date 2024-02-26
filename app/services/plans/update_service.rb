@@ -206,7 +206,7 @@ module Plans
     def process_downgraded_subscriptions
       return unless plan.subscriptions.active.exists?
 
-      Subscription.where(previous_subscription_id: plan.subscriptions.active, status: :pending).each do |sub|
+      Subscription.where(previous_subscription_id: plan.subscriptions.active, status: :pending).find_each do |sub|
         sub.destroy! if plan.amount_cents < sub.plan.amount_cents
       end
     end
