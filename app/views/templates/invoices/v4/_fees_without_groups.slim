@@ -1,7 +1,7 @@
-- fee = self.first
+- fee = self
 
 - if fee.amount.zero? || fee.amount_details.blank?
-  == SlimHelper.render('templates/invoices/v4/_default_fee', self)
+  == SlimHelper.render('templates/invoices/v4/_default_fee', fee)
 - else
   tr.charge-name
     td.body-1
