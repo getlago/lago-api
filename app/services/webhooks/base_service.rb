@@ -71,6 +71,7 @@ module Webhooks
            Net::HTTPBadResponse,
            Errno::ECONNRESET,
            Errno::ECONNREFUSED,
+           Errno::EPIPE,
            OpenSSL::SSL::SSLError,
            SocketError,
            EOFError => e
