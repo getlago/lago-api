@@ -121,5 +121,22 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         expect(filter_value.reload).to be_discarded
       end
     end
+
+    context 'when a filter is removed' do
+      let(:filters_params) do
+        [
+          {
+            key: 'country',
+            values: %w[USA France Germany],
+          },
+        ]
+      end
+
+      it 'discards the removed filter' do
+        expect { service }.not_to change(BillableMetricFilter, :count)
+
+        expect(filter.reload).to be_discarded
+      end
+    end
   end
 end
