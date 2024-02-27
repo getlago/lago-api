@@ -2,8 +2,12 @@
 
 FactoryBot.define do
   factory :charge_filter_value do
+    transient do
+      billable_metric_filter { create(:billable_metric_filter) }
+    end
+
     charge_filter
-    billable_metric_filter
-    value { Faker::Lorem.word }
+    billable_metric_filter_id { billable_metric_filter.id }
+    value { billable_metric_filter.values.sample }
   end
 end
