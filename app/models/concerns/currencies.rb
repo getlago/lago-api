@@ -63,6 +63,7 @@ module Currencies
     INR: 'Indian Rupee',
     ISK: 'Icelandic Króna',
     JMD: 'Jamaican Dollar',
+    JOD: 'Jordanian Dinar',
     JPY: 'Japanese Yen',
     KES: 'Kenyan Shilling',
     KGS: 'Kyrgyzstani Som',

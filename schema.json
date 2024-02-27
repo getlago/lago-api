@@ -8689,6 +8689,12 @@
               "deprecationReason": null
             },
             {
+              "name": "JOD",
+              "description": "Jordanian Dinar",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "JPY",
               "description": "Japanese Yen",
               "isDeprecated": false,
