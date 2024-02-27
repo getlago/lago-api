@@ -2276,6 +2276,11 @@ enum CurrencyEnum {
   JMD
 
   """
+  Jordanian Dinar
+  """
+  JOD
+
+  """
   Japanese Yen
   """
   JPY
