@@ -74,7 +74,7 @@ module CreditNotes
       return 0 if invoice.version_number < Invoice::COUPON_BEFORE_VAT_VERSION
 
       items.sum do |item|
-        item_fee_rate = item.precise_amount_cents.fdiv(item.fee.amount_cents)
+        item_fee_rate = item.fee.amount_cents.zero? ? 0 : item.precise_amount_cents.fdiv(item.fee.amount_cents)
         item.fee.precise_coupons_amount_cents * item_fee_rate
       end
     end
@@ -82,7 +82,7 @@ module CreditNotes
     def compute_base_amount_cents(tax)
       indexed_items[tax.id].map do |item|
         # NOTE: Part of the item taken from the fee amount
-        item_fee_rate = item.precise_amount_cents.fdiv(item.fee.amount_cents)
+        item_fee_rate = item.fee.amount_cents.zero? ? 0 : item.precise_amount_cents.fdiv(item.fee.amount_cents)
 
         # NOTE: Part of the coupons applied to the item
         prorated_coupon_amount = item.fee.precise_coupons_amount_cents * item_fee_rate
@@ -98,7 +98,7 @@ module CreditNotes
       tax_items_amount_cents = compute_base_amount_cents(tax)
       total_items_amount_cents = items_amount_cents - result.coupons_adjustment_amount_cents
 
-      items_rate = tax_items_amount_cents.fdiv(total_items_amount_cents)
+      items_rate = total_items_amount_cents.zero? ? 0 : tax_items_amount_cents.fdiv(total_items_amount_cents)
 
       items_rate * tax.rate
     end
