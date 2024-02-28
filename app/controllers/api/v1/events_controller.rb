@@ -111,43 +111,6 @@ module Api
         end
       end
 
-      def renew_subscription
-        result = TimebasedEvents::CreateService.call(
-          organization: current_organization,
-          params: create_time_based_params,
-          timestamp: Time.current.to_f,
-          metadata: event_metadata,
-        )
-
-        if result.already_renewed
-          render(json: { success: :ok, renew_status: :already_renewed })
-        elsif result.success?
-          timebased_event_json_str = ::V1::TimebasedEventSerializer.new(
-            result.timebased_event,
-            root_name: 'event',
-          ).to_json
-
-          event_json = JSON.parse(timebased_event_json_str)
-
-          if result.timebased_event.invoice
-            invoice_json_str = ::V1::InvoiceSerializer.new(
-              result.timebased_event.invoice,
-              root_name: 'invoice',
-            ).to_json
-
-            invoice_json = JSON.parse(invoice_json_str)
-
-            event_json['event']['invoice'] = invoice_json['invoice']
-          end
-
-          render(
-            json: event_json,
-          )
-        else
-          render_error_response(result)
-        end
-      end
-
       private
 
       def create_params
