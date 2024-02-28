@@ -58,6 +58,8 @@ module BillableMetrics
 
         BillableMetrics::Aggregations::WeightedSumService
 
+      when :usage_time_agg
+        BillableMetrics::Aggregations::UsageTimeService
       else
         raise(NotImplementedError)
       end

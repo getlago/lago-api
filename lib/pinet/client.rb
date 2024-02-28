@@ -76,7 +76,7 @@ module Pinet
         amount: transaction_json['amount'],
         currency: transaction_json['currency'],
         status: transaction_json['state'],
-      }
+      }.with_indifferent_access
     end
   end
 end
