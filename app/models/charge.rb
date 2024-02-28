@@ -22,6 +22,7 @@ class Charge < ApplicationRecord
     percentage
     volume
     graduated_percentage
+    timebased
   ].freeze
 
   enum charge_model: CHARGE_MODELS
