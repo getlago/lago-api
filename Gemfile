@@ -16,7 +16,7 @@ gem 'sidekiq'
 
 # Security
 gem 'bcrypt'
-gem 'googleauth', require: false
+gem 'googleauth'
 gem 'jwt'
 gem 'oauth2'
 gem 'rack-cors'

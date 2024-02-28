@@ -2,15 +2,12 @@
 
 module Auth
   class GoogleService
-    AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/auth'
     BASE_SCOPE = %w[profile email openid].freeze
 
-    def initialize
-      @redis_connection = Redis.new(url: ENV['REDIS_URL'])
-    end
-
-    def authorize
-
+    def authorize(request)
+      client_id = Google::Auth::ClientId.new(ENV['GOOGLE_AUTH_CLIENT_ID'], ENV['GOOGLE_AUTH_CLIENT_SECRET'])
+      authorizer = Google::Auth::WebUserAuthorizer.new(client_id, BASE_SCOPE, nil, '/auth/google/callback')
+      authorizer.get_authorization_url(request:)
     end
   end
 end

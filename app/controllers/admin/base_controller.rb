@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'googleauth'
-
 module Admin
   class BaseController < ApplicationController
     include ApiErrors
