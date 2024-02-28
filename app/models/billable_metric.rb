@@ -22,6 +22,7 @@ class BillableMetric < ApplicationRecord
     # NOTE: deleted aggregation type, recurring_count_agg: 4,
     weighted_sum_agg: 5,
     latest_agg: 6,
+    usage_time_agg: 7,
   }.freeze
 
   WEIGHTED_INTERVAL = { seconds: 'seconds' }.freeze
