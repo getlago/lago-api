@@ -58,7 +58,7 @@ module CreditNotes
     attr_accessor :credit_note, :fee, :old_fee_values
 
     def calculate_item_value(item, old_fee_amount_cents)
-      (item.precise_amount_cents.fdiv(old_fee_amount_cents)) * fee.amount_cents
+      item.precise_amount_cents.fdiv(old_fee_amount_cents) * fee.amount_cents
     end
   end
 end

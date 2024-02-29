@@ -14,7 +14,7 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
       {
         credit_note_item_id: credit_note_item.id,
         fee_amount_cents: credit_note_item.fee&.amount_cents,
-      }
+      },
     ]
   end
 
