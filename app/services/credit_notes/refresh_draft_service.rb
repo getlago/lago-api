@@ -23,7 +23,7 @@ module CreditNotes
           item.precise_amount_cents = calculate_item_value(item, old_entry[:fee_amount_cents]) if old_entry
         end
 
-        item.save(validate: false) # rubocop:disable Rails/SkipsModelValidations
+        item.save!
       end
 
       taxes_result = CreditNotes::ApplyTaxesService.call(
@@ -57,6 +57,8 @@ module CreditNotes
 
     attr_accessor :credit_note, :fee, :old_fee_values
 
+    # NOTE: credit note item value needs to be recalculated based on the ratio between old fee value and
+    #       new fee value
     def calculate_item_value(item, old_fee_amount_cents)
       item.precise_amount_cents.fdiv(old_fee_amount_cents) * fee.amount_cents
     end
