@@ -477,6 +477,15 @@ RSpec.describe Plans::UpdateService, type: :service do
         )
       end
 
+      let(:billable_metric_filter) do
+        create(
+          :billable_metric_filter,
+          billable_metric: sum_billable_metric,
+          key: 'payment_method',
+          values: %w[card physical],
+        )
+      end
+
       let(:update_args) do
         {
           id: plan.id,
@@ -498,6 +507,13 @@ RSpec.describe Plans::UpdateService, type: :service do
                 {
                   group_id: group.id,
                   values: { amount: '100' },
+                },
+              ],
+              filters: [
+                {
+                  invoice_display_name: 'Card filter',
+                  properties: { amount: '90' },
+                  values: { billable_metric_filter.key => 'card' },
                 },
               ],
             },
@@ -532,6 +548,15 @@ RSpec.describe Plans::UpdateService, type: :service do
         expect(existing_charge.group_properties.first).to have_attributes(
           group_id: group.id,
           values: { 'amount' => '100' },
+        )
+
+        expect(existing_charge.filters.first).to have_attributes(
+          invoice_display_name: 'Card filter',
+          properties: { 'amount' => '90' },
+        )
+        expect(existing_charge.filters.first.values.first).to have_attributes(
+          billable_metric_filter_id: billable_metric_filter.id,
+          value: 'card',
         )
       end
 

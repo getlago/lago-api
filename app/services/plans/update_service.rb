@@ -10,6 +10,7 @@ module Plans
 
     def call
       return result.not_found_failure!(resource: 'plan') unless plan
+
       old_amount_cents = plan.amount_cents
 
       plan.name = params[:name] if params.key?(:name)
@@ -83,6 +84,13 @@ module Plans
         properties:,
       ).properties
 
+      if params[:filters].present?
+        ChargeFilters::CreateOrUpdateBatchService.call(
+          charge:,
+          filters_params: params[:filters].map(&:with_indifferent_access),
+        ).raise_if_error!
+      end
+
       if License.premium?
         charge.invoiceable = params[:invoiceable] unless params[:invoiceable].nil?
         charge.min_amount_cents = params[:min_amount_cents] || 0
@@ -143,6 +151,14 @@ module Plans
             return group_result if group_result.error
           end
 
+          filters = payload_charge.delete(:filters)
+          unless filters.nil?
+            ChargeFilters::CreateOrUpdateBatchService.call(
+              charge:,
+              filters_params: filters.map(&:with_indifferent_access),
+            ).raise_if_error!
+          end
+
           properties = payload_charge.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
             payload_charge[:charge_model],
           )
@@ -196,6 +212,9 @@ module Plans
 
       charge.discard!
       charge.group_properties.discard_all
+
+      charge.filter_values.discard_all
+      charge.filters.discard_all
 
       Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
     end

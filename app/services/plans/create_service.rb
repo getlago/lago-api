@@ -91,6 +91,13 @@ module Plans
         properties:,
       ).properties
 
+      if args[:filters].present?
+        ChargeFilters::CreateOrUpdateBatchService.call(
+          charge:,
+          filters_params: args[:filters].map(&:with_indifferent_access),
+        ).raise_if_error!
+      end
+
       if License.premium?
         charge.invoiceable = args[:invoiceable] unless args[:invoiceable].nil?
         charge.min_amount_cents = args[:min_amount_cents] || 0
