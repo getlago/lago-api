@@ -21,6 +21,9 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice.update!(ready_to_be_refreshed: false) if invoice.ready_to_be_refreshed?
 
+        old_fee_values = invoice_credit_note_items.map do |item|
+          { credit_note_item_id: item.id, fee_amount_cents: item.fee&.amount_cents }
+        end
         cn_subscription_ids = invoice.credit_notes.map do |cn|
           { credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id) }
         end
@@ -50,7 +53,7 @@ module Invoices
         invoice.credit_notes.each do |credit_note|
           subscription_id = cn_subscription_ids.find { |h| h[:credit_note_id] == credit_note.id }[:subscription_id]
           fee = invoice.fees.subscription.find_by(subscription_id:)
-          CreditNotes::RefreshDraftService.call(credit_note:, fee:)
+          CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:)
         end
 
         return calculate_result unless calculate_result.success?
@@ -72,6 +75,12 @@ module Invoices
       return invoice.created_at + 1.second unless fee&.properties&.[]('timestamp')
 
       DateTime.parse(fee.properties['timestamp'])
+    end
+
+    def invoice_credit_note_items
+      CreditNoteItem
+        .joins(:credit_note)
+        .where(credit_note: { invoice_id: invoice.id })
     end
   end
 end
