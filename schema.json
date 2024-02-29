@@ -1969,6 +1969,28 @@
               ]
             },
             {
+              "name": "filters",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "ChargeFilter",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "groupProperties",
               "description": null,
               "type": {
@@ -2153,6 +2175,152 @@
           "enumValues": null
         },
         {
+          "kind": "OBJECT",
+          "name": "ChargeFilter",
+          "description": "Charge filters object",
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "invoiceDisplayName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "properties",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Properties",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "values",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ChargeFilterValues",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "ChargeFilterInput",
+          "description": "Charge filters input arguments",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "invoiceDisplayName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "properties",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "PropertiesInput",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "values",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ChargeFilterValues",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "SCALAR",
+          "name": "ChargeFilterValues",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
           "kind": "INPUT_OBJECT",
           "name": "ChargeInput",
           "description": null,
@@ -2259,6 +2427,26 @@
                 "kind": "SCALAR",
                 "name": "Boolean",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "filters",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "ChargeFilterInput",
+                    "ofType": null
+                  }
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
