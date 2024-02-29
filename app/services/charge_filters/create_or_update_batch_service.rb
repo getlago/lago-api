@@ -49,6 +49,7 @@ module ChargeFilters
           result.filters << filter
         end
 
+        # NOTE: remove old filters that were not created or updated
         charge.filters.where.not(id: result.filters.map(&:id)).find_each do
           remove_filter(_1)
         end

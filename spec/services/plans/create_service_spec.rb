@@ -13,6 +13,9 @@ RSpec.describe Plans::CreateService, type: :service do
     let(:plan_invoice_display_name) { 'Some plan invoice name' }
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+    let(:billable_metric_filter) do
+      create(:billable_metric_filter, billable_metric:, key: 'payment_method', values: %w[card physical])
+    end
     let(:group) { create(:group, billable_metric:) }
     let(:plan_tax) { create(:tax, organization:) }
     let(:charge_tax) { create(:tax, organization:) }
@@ -54,6 +57,13 @@ RSpec.describe Plans::CreateService, type: :service do
             {
               group_id: group.id,
               values: { amount: '100' },
+            },
+          ],
+          filters: [
+            {
+              values: { billable_metric_filter.key => 'card' },
+              invoice_display_name: 'Card filter',
+              properties: { amount: '90' },
             },
           ],
         },
@@ -125,6 +135,14 @@ RSpec.describe Plans::CreateService, type: :service do
           group_id: group.id,
           values: { 'amount' => '100' },
         },
+      )
+      expect(standard_charge.filters.first).to have_attributes(
+        invoice_display_name: 'Card filter',
+        properties: { 'amount' => '90' },
+      )
+      expect(standard_charge.filters.first.values.first).to have_attributes(
+        billable_metric_filter_id: billable_metric_filter.id,
+        value: 'card',
       )
 
       expect(graduated_charge).to have_attributes(pay_in_advance: true, invoiceable: true, prorated: false)
