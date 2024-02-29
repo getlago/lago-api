@@ -160,14 +160,14 @@ RSpec.describe Plans::UpdateService, type: :service do
 
         before { pending_subscription }
 
-        it 'correctly removes pending subscriptions' do
+        it 'correctly cancels pending subscriptions' do
           result = plans_service.call
 
           updated_plan = result.plan
           aggregate_failures do
             expect(updated_plan.name).to eq('Updated plan name')
             expect(updated_plan.amount_cents).to eq(5)
-            expect(Subscription.find_by(id: pending_subscription.id)).to be nil
+            expect(Subscription.find_by(id: pending_subscription.id).status).to eq('canceled')
           end
         end
       end
