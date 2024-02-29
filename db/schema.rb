@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_02_28_140843) do
+ActiveRecord::Schema[7.0].define(version: 2024_02_29_100439) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -167,6 +167,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_28_140843) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.boolean "pay_in_advance", default: false, null: false
+    t.bigint "min_amount_cents", default: 0, null: false
+    t.boolean "invoiceable", default: true, null: false
+    t.string "invoice_display_name"
   end
 
   create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
