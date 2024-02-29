@@ -8,8 +8,8 @@ module Events
           .where(code:)
           .order(timestamp: :asc)
 
-        if is_charge_package_group?
-          package_count = find_charge_package_group&.current_package_count
+        if is_charge_group?
+          package_count = find_usage_charge_group&.current_package_count
           scope = scope.where(current_package_count: package_count) if package_count
         end
 
@@ -157,16 +157,16 @@ module Events
 
       private
 
-      def is_charge_package_group?
+      def is_charge_group?
         event.current_package_count.present?
       end
 
-      def find_charge_package_group
+      def find_usage_charge_group
         plan = subscription.plan
         billable_metric = event.organization.billable_metrics.find_by(code: event.code)
         charge = Charge.where(plan: plan, billable_metric: billable_metric).first
-
-        charge&.charge_package_group
+        
+        UsageChargeGroup.find_by(subscription_id: subscription.id, charge_group_id: charge.charge_group_id)
       end
     end
   end

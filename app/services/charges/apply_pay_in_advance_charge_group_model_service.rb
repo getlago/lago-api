@@ -15,7 +15,7 @@ module Charges
         return result.service_failure!(code: 'apply_charge_model_error', message: 'Charge is not pay_in_advance')
       end
 
-      amount = amount_including_event
+      amount = charge_model.apply(charge:, aggregation_result:, properties:).amount
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
       # to the currency decimals and transform it into currency cents
@@ -39,12 +39,6 @@ module Charges
                         else
                           raise(NotImplementedError)
       end
-    end
-
-    def amount_including_event
-      result = charge_model.apply(charge:, aggregation_result:, properties:)
-
-      result.amount
     end
 
     def currency
