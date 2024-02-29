@@ -36,7 +36,7 @@ module Charges
       end
 
       def ranges
-        charge.properties['graduated_percentage_ranges'].map(&:with_indifferent_access)
+        properties['graduated_percentage_ranges'].map(&:with_indifferent_access)
       end
 
       def validate_rate_and_amounts(range)

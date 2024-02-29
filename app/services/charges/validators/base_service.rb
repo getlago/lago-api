@@ -3,8 +3,9 @@
 module Charges
   module Validators
     class BaseService < BaseValidator
-      def initialize(charge:)
+      def initialize(charge:, properties: nil)
         @charge = charge
+        @properties = properties || charge.properties
         @result = ::BaseService::Result.new
 
         super(result)
@@ -21,13 +22,11 @@ module Charges
         true
       end
 
-      attr_reader :result
+      attr_reader :result, :properties
 
       private
 
       attr_reader :charge
-
-      delegate :properties, to: :charge
     end
   end
 end

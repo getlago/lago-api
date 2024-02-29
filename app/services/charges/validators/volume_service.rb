@@ -26,7 +26,7 @@ module Charges
       private
 
       def ranges
-        charge.properties['volume_ranges']&.map(&:with_indifferent_access)
+        properties['volume_ranges']&.map(&:with_indifferent_access)
       end
 
       def validate_amounts(range)
