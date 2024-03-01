@@ -28,6 +28,7 @@ RSpec.describe Fees::ChargeService do
       charges_duration: (
         subscription.started_at.end_of_month.end_of_day - subscription.started_at.beginning_of_month
       ).fdiv(1.day).ceil,
+      timestamp: subscription.started_at.end_of_month.end_of_day + 1.second,
     }
   end
 
@@ -327,6 +328,7 @@ RSpec.describe Fees::ChargeService do
             charges_from_datetime: subscription.started_at,
             charges_to_datetime: Time.zone.parse('30 Apr 2022 00:01:00'),
             charges_duration: 30,
+            timestamp: Time.zone.parse('2022-05-01T00:01:00'),
           }
         end
 
