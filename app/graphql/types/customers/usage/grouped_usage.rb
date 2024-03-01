@@ -10,6 +10,7 @@ module Types
         field :events_count, Integer, null: false
         field :units, GraphQL::Types::Float, null: false
 
+        field :filters, [Types::Customers::Usage::ChargeFilter], null: true
         field :grouped_by, GraphQL::Types::JSON, null: true
         field :groups, [Types::Customers::Usage::ChargeGroup], null: true
 
@@ -33,6 +34,12 @@ module Types
           object
             .select(&:group)
             .sort_by { |f| f.group.name }
+        end
+
+        def filters
+          object
+            .select(&:filter)
+            .sort_by { |f| f.filter.display_name }
         end
       end
     end

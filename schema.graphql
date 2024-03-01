@@ -235,6 +235,15 @@ input ChargeFilterInput {
   values: ChargeFilterValues!
 }
 
+type ChargeFilterUsage {
+  amountCents: BigInt!
+  eventsCount: Int!
+  id: ID!
+  invoiceDisplayName: String
+  units: Float!
+  values: ChargeFilterValues!
+}
+
 scalar ChargeFilterValues
 
 input ChargeInput {
@@ -276,6 +285,7 @@ type ChargeUsage {
   billableMetric: BillableMetric!
   charge: Charge!
   eventsCount: Int!
+  filters: [ChargeFilterUsage!]
   groupedUsage: [GroupedChargeUsage!]!
   groups: [GroupUsage!]
   units: Float!
@@ -3116,6 +3126,7 @@ type Fee implements InvoiceItem {
   description: String
   eventsCount: BigInt
   feeType: FeeTypesEnum!
+  filterDisplayName: String
   group: Group
   groupName: String
   groupedBy: JSON!
@@ -3335,6 +3346,7 @@ type GroupUsage {
 type GroupedChargeUsage {
   amountCents: BigInt!
   eventsCount: Int!
+  filters: [ChargeFilterUsage!]
   groupedBy: JSON
   groups: [GroupUsage!]
   units: Float!

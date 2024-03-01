@@ -320,4 +320,28 @@ RSpec.describe ChargeFilter, type: :model do
       end
     end
   end
+
+  describe '#display_name' do
+    subject(:charge_filter) { build(:charge_filter, invoice_display_name:, values:) }
+
+    let(:invoice_display_name) { Faker::Fantasy::Tolkien.character }
+    let(:values) do
+      [
+        build(:charge_filter_value, value: 'card'),
+        build(:charge_filter_value, value: 'visa'),
+      ]
+    end
+
+    it 'returns the invoice display name' do
+      expect(charge_filter.display_name).to eq(invoice_display_name)
+    end
+
+    context 'when invoice display name is not present' do
+      let(:invoice_display_name) { nil }
+
+      it 'returns the values joined' do
+        expect(charge_filter.display_name).to eq('card, visa')
+      end
+    end
+  end
 end
