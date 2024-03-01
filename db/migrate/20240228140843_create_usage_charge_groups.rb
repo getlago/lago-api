@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateUsageChargeGroups < ActiveRecord::Migration[7.0]
   def change
     create_table :usage_charge_groups, id: :uuid do |t|

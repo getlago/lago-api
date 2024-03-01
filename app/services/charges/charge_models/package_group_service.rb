@@ -6,11 +6,11 @@ module Charges
       protected
 
       delegate :billable_metric_id, to: :charge
-      
+
       def compute_amount
         return 0 if paid_units.negative?
 
-        if !usage_charge_group&.available_group_usage.present?
+        if usage_charge_group&.available_group_usage.blank?
           reset_available_group_usage
           group_count = initial_group_units
           usage_charge_group.update(current_package_count: group_count)
@@ -18,13 +18,13 @@ module Charges
           return package_amount(group_count)
         end
 
-        if added_group_units > 0
+        if added_group_units.positive?
           next_available_package_usage = per_package_size - (paid_units % per_package_size)
           group_count = usage_charge_group.current_package_count + added_group_units
           reset_available_group_usage(next_available_package_usage)
           usage_charge_group.update(current_package_count: group_count)
         end
-        
+
         package_amount(added_group_units)
       end
 
@@ -63,7 +63,10 @@ module Charges
       end
 
       def usage_charge_group
-        @usage_charge_group ||= UsageChargeGroup.find_by(subscription_id: aggregation_result.subscription_id, charge_group_id: charge.charge_group_id)
+        @usage_charge_group ||= UsageChargeGroup.find_by(
+          subscription_id: aggregation_result.subscription_id,
+          charge_group_id: charge.charge_group_id,
+        )
       end
 
       def initial_group_units
@@ -96,7 +99,7 @@ module Charges
       def per_package_size
         @per_package_size ||= properties['package_size']
       end
-      
+
       def per_package_unit_amount
         @per_package_unit_amount ||= BigDecimal(properties['amount'])
       end

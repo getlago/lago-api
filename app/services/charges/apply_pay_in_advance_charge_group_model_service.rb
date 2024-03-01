@@ -21,7 +21,7 @@ module Charges
       # to the currency decimals and transform it into currency cents
       rounded_amount = amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
-      
+
       result.units = compute_units
       result.count = 1
       result.amount = amount_cents
