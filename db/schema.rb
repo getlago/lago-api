@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_02_27_161430) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_01_133006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -167,10 +167,12 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_27_161430) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "grouped_by", default: {}, null: false
+    t.uuid "charge_filter_id"
     t.index ["charge_id"], name: "index_cached_aggregations_on_charge_id"
     t.index ["event_id"], name: "index_cached_aggregations_on_event_id"
     t.index ["external_subscription_id"], name: "index_cached_aggregations_on_external_subscription_id"
     t.index ["group_id"], name: "index_cached_aggregations_on_group_id"
+    t.index ["organization_id", "timestamp", "charge_id", "charge_filter_id"], name: "index_timestamp_filter_lookup"
     t.index ["organization_id", "timestamp", "charge_id", "group_id"], name: "index_timestamp_group_lookup"
     t.index ["organization_id", "timestamp", "charge_id"], name: "index_timestamp_lookup"
     t.index ["organization_id"], name: "index_cached_aggregations_on_organization_id"
