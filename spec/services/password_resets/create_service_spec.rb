@@ -27,10 +27,10 @@ RSpec.describe PasswordResets::CreateService, type: :service do
       end
     end
 
-    it 'enqueues an ActionMailer::MailDeliveryJob' do
+    it 'enqueues an SendEmailJob' do
       expect do
         create_service.call(**create_args)
-      end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end.to have_enqueued_job(SendEmailJob)
     end
   end
 end

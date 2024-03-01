@@ -50,7 +50,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
       invoice.customer.update(timezone: 'America/New_York')
 
       freeze_time do
-        current_date = Time.current.in_time_zone("America/New_York").to_date
+        current_date = Time.current.in_time_zone('America/New_York').to_date
 
         expect { finalize_service.call }
           .to change { invoice.reload.issuing_date }.to(current_date)
@@ -74,28 +74,28 @@ RSpec.describe Invoices::FinalizeService, type: :service do
       end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
     end
 
-    it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+    it 'does not enqueue an SendEmailJob' do
       expect do
         finalize_service.call
-      end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+      end.not_to have_enqueued_job(SendEmailJob)
     end
 
     context 'with lago_premium' do
       around { |test| lago_premium!(&test) }
 
-      it 'enqueues an ActionMailer::MailDeliveryJob' do
+      it 'enqueues an SendEmailJob' do
         expect do
           finalize_service.call
-        end.to have_enqueued_job(ActionMailer::MailDeliveryJob)
+        end.to have_enqueued_job(SendEmailJob)
       end
 
       context 'when organization does not have right email settings' do
         before { invoice.organization.update!(email_settings: []) }
 
-        it 'does not enqueue an ActionMailer::MailDeliveryJob' do
+        it 'does not enqueue an SendEmailJob' do
           expect do
             finalize_service.call
-          end.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+          end.not_to have_enqueued_job(SendEmailJob)
         end
       end
     end
