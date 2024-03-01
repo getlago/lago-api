@@ -873,8 +873,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           credit_note = credit_note.reload
           first_invoice = first_invoice.reload
 
-          expect(credit_note.credit_amount_cents).to eq(1_700) # TODO: It needs to be recalculated
-          expect(credit_note.balance_amount_cents).to eq(1_700) # TODO: It needs to be recalculated
+          expect(credit_note.credit_amount_cents).to eq(850)
+          expect(credit_note.balance_amount_cents).to eq(850)
           expect(first_invoice.total_amount_cents).to eq(900)
           expect(first_invoice.fees_amount_cents).to eq(900)
           expect(first_invoice.credit_notes_amount_cents).to eq(0)
@@ -883,8 +883,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           credit_note = customer.credit_notes.first
 
           # credit notes are not applied on draft invoice
-          expect(credit_note.credit_amount_cents).to eq(1_700)
-          expect(credit_note.balance_amount_cents).to eq(1_700)
+          expect(credit_note.credit_amount_cents).to eq(850)
+          expect(credit_note.balance_amount_cents).to eq(850)
           expect(terminated_invoice.total_amount_cents).to eq(0) # There are no charges in a period
           expect(terminated_invoice.fees_amount_cents).to eq(0)
           expect(terminated_invoice.credit_notes_amount_cents).to eq(0)
@@ -954,8 +954,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           credit_note = credit_note.reload
           first_invoice = first_invoice.reload
 
-          expect(credit_note.credit_amount_cents).to eq(1_700) # TODO: It needs to be recalculated
-          expect(credit_note.balance_amount_cents).to eq(1_700) # TODO: It needs to be recalculated
+          expect(credit_note.credit_amount_cents).to eq(0)
+          expect(credit_note.balance_amount_cents).to eq(0)
           expect(first_invoice.total_amount_cents).to eq(0)
           expect(first_invoice.fees_amount_cents).to eq(0)
           expect(first_invoice.credit_notes_amount_cents).to eq(0)
@@ -964,8 +964,8 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           credit_note = customer.credit_notes.first
 
           # credit notes are not applied on draft invoice
-          expect(credit_note.credit_amount_cents).to eq(1_700)
-          expect(credit_note.balance_amount_cents).to eq(1_700)
+          expect(credit_note.credit_amount_cents).to eq(0)
+          expect(credit_note.balance_amount_cents).to eq(0)
           expect(terminated_invoice.total_amount_cents).to eq(0) # There are no charges in a period
           expect(terminated_invoice.fees_amount_cents).to eq(0)
           expect(terminated_invoice.credit_notes_amount_cents).to eq(0)

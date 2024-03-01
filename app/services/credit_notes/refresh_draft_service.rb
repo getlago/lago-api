@@ -2,9 +2,10 @@
 
 module CreditNotes
   class RefreshDraftService < BaseService
-    def initialize(credit_note:, fee:)
+    def initialize(credit_note:, fee:, old_fee_values:)
       @credit_note = credit_note
       @fee = fee
+      @old_fee_values = old_fee_values
 
       super
     end
@@ -14,7 +15,16 @@ module CreditNotes
       return result unless credit_note.draft?
 
       credit_note.applied_taxes.destroy_all
-      credit_note.items.update_all(fee_id: fee.id) # rubocop:disable Rails/SkipsModelValidations
+      credit_note.items.each do |item|
+        item.fee_id = fee.id
+
+        if old_fee_values.any?
+          old_entry = old_fee_values.find { |h| h[:credit_note_item_id] == item.id }
+          item.precise_amount_cents = calculate_item_value(item, old_entry[:fee_amount_cents]) if old_entry
+        end
+
+        item.save!
+      end
 
       taxes_result = CreditNotes::ApplyTaxesService.call(
         invoice: fee.invoice,
@@ -45,6 +55,12 @@ module CreditNotes
 
     private
 
-    attr_accessor :credit_note, :fee
+    attr_accessor :credit_note, :fee, :old_fee_values
+
+    # NOTE: credit note item value needs to be recalculated based on the ratio between old fee value and
+    #       new fee value
+    def calculate_item_value(item, old_fee_amount_cents)
+      item.precise_amount_cents.fdiv(old_fee_amount_cents) * fee.amount_cents
+    end
   end
 end
