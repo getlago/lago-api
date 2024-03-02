@@ -25,6 +25,7 @@ module TimebasedEvents
       end
 
       private
+
       attr_accessor :event, :sync
 
       delegate :subscription, :organization, to: :event
