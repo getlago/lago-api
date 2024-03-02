@@ -20,6 +20,10 @@ module Events
       event.save!
 
       expire_cached_charges(subscriptions)
+      if subscription_renewal_service.process_event?
+        handle_subscription_renewal
+        return result
+      end
 
       if should_handle_quantified_event?
         # For unique count if repeated event got ingested, we want to store this event but prevent further processing
@@ -151,7 +155,7 @@ module Events
       SendWebhookJob.perform_later('event.error', event, { error: })
     end
 
-    # Handle timebased event
+    # Timebased event for usage based charges
     def timebased_event_service
       @timebased_event_service ||= TimebasedEvents::CreateOrUpdateService.new(event)
     end
@@ -180,6 +184,16 @@ module Events
 
     def handle_pay_in_advance_timebased
       raise NotImplementedError
+    end
+
+    # Timebased event for subscription renewal
+    def subscription_renewal_service
+      @subscription_renewal_service ||= TimebasedEvents::SubscriptionRenewals::CreateService.new(event, sync: true)
+    end
+
+    def handle_subscription_renewal
+      service_result = subscription_renewal_service.call
+      service_result.raise_if_error!
     end
   end
 end
