@@ -65,20 +65,5 @@ module Commitments
 
       days / days_total.to_f
     end
-
-    def fetch_period_invoice_ids
-      plan = subscription.plan
-
-      return [invoice_subscription.invoice_id] if !subscription.plan.yearly? || !plan.bill_charges_monthly?
-
-      subscription
-        .invoice_subscriptions
-        .where(
-          'from_datetime >= ? AND to_datetime <= ?',
-          dates_service.previous_beginning_of_period,
-          dates_service.end_of_period,
-        )
-        .pluck(:invoice_id)
-    end
   end
 end

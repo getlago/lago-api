@@ -38,7 +38,6 @@ module Commitments
           Fee
             .charge_kind
             .joins(:charge)
-            .joins(charge: :billable_metric)
             .where(
               subscription_id: subscription.id,
               charge: { pay_in_advance: true },
