@@ -69,7 +69,7 @@ RSpec.describe UsersService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.message).to eq('signup is disabled')
+          expect(result.error.message).to eq('signup disabled')
         end
       end
     end
