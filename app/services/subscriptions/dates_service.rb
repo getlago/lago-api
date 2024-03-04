@@ -3,6 +3,14 @@
 module Subscriptions
   class DatesService
     def self.new_instance(subscription, billing_at, current_usage: false)
+      if Utils::SubscriptionRenewalService.is_renewal_by_timebased_event?(subscription)
+        return Subscriptions::Dates::TimebasedService.new(
+          subscription,
+          billing_at,
+          current_usage,
+        )
+      end
+
       klass = case subscription.plan.interval&.to_sym
               when :daily
                 Subscriptions::Dates::DailyService

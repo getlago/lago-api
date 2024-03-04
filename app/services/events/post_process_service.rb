@@ -20,12 +20,23 @@ module Events
       event.save!
 
       expire_cached_charges(subscriptions)
+      if subscription_renewal_service.process_event?
+        handle_subscription_renewal
+        return result
+      end
 
       if should_handle_quantified_event?
         # For unique count if repeated event got ingested, we want to store this event but prevent further processing
         return result unless quantified_event_service.process_event?
 
         handle_quantified_event
+      end
+
+      if should_handle_timebased_event?
+        return result unless timebased_event_service.process_event?
+
+        handle_timebased_event
+        handle_pay_in_advance_timebased
       end
 
       handle_pay_in_advance
@@ -135,12 +146,54 @@ module Events
         .pay_in_advance
         .joins(:billable_metric)
         .where(billable_metric: { code: event.code })
+        .where.not(charge_model: 'timebased')
     end
 
     def delivor_error_webhook(error:)
       return unless organization.webhook_endpoints.any?
 
       SendWebhookJob.perform_later('event.error', event, { error: })
+    end
+
+    # Timebased event for usage based charges
+    def timebased_event_service
+      @timebased_event_service ||= TimebasedEvents::CreateOrUpdateService.new(event)
+    end
+
+    def should_handle_timebased_event?
+      timebased_event_service.matching_billable_metric?
+    end
+
+    def handle_timebased_event
+      service_result = timebased_event_service.call
+      service_result.raise_if_error!
+    end
+
+    def timebased_charges
+      return Charge.none unless subscriptions.first
+
+      subscriptions
+        .first
+        .plan
+        .charges
+        .pay_in_advance
+        .joins(:billable_metric)
+        .where(billable_metric: { code: event.code })
+        .where(charge_model: 'timebased')
+    end
+
+    def handle_pay_in_advance_timebased
+      raise NotImplementedError
+    end
+
+    # Timebased event for subscription renewal
+    def subscription_renewal_service
+      @subscription_renewal_service ||= TimebasedEvents::SubscriptionRenewals::CreateService.new(event, sync: true)
+    end
+
+    def handle_subscription_renewal
+      service_result = subscription_renewal_service.call
+      service_result.raise_if_error!
     end
   end
 end

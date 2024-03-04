@@ -15,6 +15,15 @@ module Charges
         return result.service_failure!(code: 'apply_charge_model_error', message: 'Charge is not pay_in_advance')
       end
 
+      if charge.charge_model == 'timebased'
+        amount = charge_model.apply(charge:, aggregation_result:, properties:).amount
+        result.amount = amount * currency.subunit_to_unit
+        result.count = 1
+        result.units = aggregation_result.pay_in_advance_aggregation
+
+        return result
+      end
+
       amount = amount_including_event - amount_excluding_event
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
@@ -44,6 +53,8 @@ module Charges
                           Charges::ChargeModels::PackageService
                         when :percentage
                           Charges::ChargeModels::PercentageService
+                        when :timebased
+                          Charges::ChargeModels::TimebasedService
                         else
                           raise(NotImplementedError)
       end
