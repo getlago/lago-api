@@ -99,6 +99,15 @@ module Api
               properties: {},
             },
             {
+              filters: [
+                :invoice_display_name,
+                {
+                  properties: {},
+                  values: {},
+                },
+              ],
+            },
+            {
               group_properties: [
                 :group_id,
                 :invoice_display_name,
