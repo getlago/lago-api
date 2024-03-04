@@ -32,6 +32,8 @@ module TimebasedEvents
       delegate :plan, to: :subscription
 
       def matching_charge?
+        return false if matching_charge.blank?
+
         matching_charge.properties&.fetch('usage') == 'subscription_renewal' &&
           block_time_in_minutes.positive?
       end
