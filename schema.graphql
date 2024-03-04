@@ -272,7 +272,6 @@ enum ChargeModelEnum {
 
 input ChargeOverridesInput {
   billableMetricId: ID!
-  filters: [ChargeFilterInput!]
   groupProperties: [GroupPropertiesInput!]
   id: ID!
   invoiceDisplayName: String
