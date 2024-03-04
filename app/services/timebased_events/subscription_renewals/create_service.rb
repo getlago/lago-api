@@ -68,7 +68,7 @@ module TimebasedEvents
       end
 
       def matching_charge
-        return nil if (plan = subscription.plan).blank?
+        return nil if (plan = subscription&.plan).blank?
 
         @matching_charge ||= Charge
           .where(
