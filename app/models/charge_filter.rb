@@ -14,6 +14,10 @@ class ChargeFilter < ApplicationRecord
 
   default_scope -> { kept }
 
+  def display_name
+    invoice_display_name || values.map(&:value).join(', ')
+  end
+
   private
 
   def validate_properties
