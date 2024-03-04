@@ -29,9 +29,10 @@ module TimebasedEvents
       attr_accessor :event, :sync
 
       delegate :subscription, :organization, to: :event
-      delegate :plan, to: :subscription
 
       def matching_charge?
+        return false if matching_charge.blank?
+
         matching_charge.properties&.fetch('usage') == 'subscription_renewal' &&
           block_time_in_minutes.positive?
       end
@@ -67,6 +68,8 @@ module TimebasedEvents
       end
 
       def matching_charge
+        return nil if (plan = subscription.plan).blank?
+
         @matching_charge ||= Charge
           .where(
             plan_id: plan.id,

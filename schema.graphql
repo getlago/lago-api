@@ -111,8 +111,8 @@ enum AggregationTypeEnum {
   max_agg
   sum_agg
   unique_count_agg
-  weighted_sum_agg
   usage_time_agg
+  weighted_sum_agg
 }
 
 type AppliedAddOn {
@@ -227,6 +227,7 @@ enum ChargeModelEnum {
   package
   percentage
   standard
+  timebased
   volume
 }
 
@@ -4250,6 +4251,7 @@ input PlanOverridesInput {
 
 type Properties {
   amount: String
+  blockTimeInMinutes: BigInt
   fixedAmount: String
   freeUnits: BigInt
   freeUnitsPerEvents: BigInt
@@ -4265,6 +4267,7 @@ type Properties {
 
 input PropertiesInput {
   amount: String
+  blockTimeInMinutes: BigInt
   fixedAmount: String
   freeUnits: BigInt
   freeUnitsPerEvents: BigInt
