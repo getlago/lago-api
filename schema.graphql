@@ -4625,7 +4625,7 @@ type Query {
   events(limit: Int, page: Int): EventCollection
 
   """
-  Query a single add-on of an organization
+  Get Google auth url.
   """
   googleAuthUrl: AuthUrl!
 

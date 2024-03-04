@@ -22129,7 +22129,7 @@
             },
             {
               "name": "googleAuthUrl",
-              "description": "Query a single add-on of an organization",
+              "description": "Get Google auth url.",
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
