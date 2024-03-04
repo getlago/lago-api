@@ -162,6 +162,15 @@ module Api
               :charge_model,
               { properties: {} },
               {
+                filters: [
+                  :invoice_display_name,
+                  {
+                    properties: {},
+                    values: {},
+                  },
+                ],
+              },
+              {
                 group_properties: [
                   :group_id,
                   { values: {} },
