@@ -28,10 +28,6 @@ module LagoApi
     config.i18n.available_locales = %i[en fr nb de it es sv]
     config.i18n.default_locale = :en
 
-    config.session_store(:cookie_store, key: '_lago_session')
-    config.middleware.use(ActionDispatch::Cookies)
-    config.middleware.use(config.session_store, config.session_options)
-
     config.generators do |g|
       g.orm(:active_record, primary_key_type: :uuid)
     end

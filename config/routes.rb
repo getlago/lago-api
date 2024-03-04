@@ -98,12 +98,6 @@ Rails.application.routes.draw do
     end
   end
 
-  namespace :auth do
-    resources :google, only: %i[index] do
-      get :callback, on: :collection
-    end
-  end
-
   if Rails.env.development?
     namespace :dev_tools do
       get '/invoices/:id', to: 'invoices#show'
