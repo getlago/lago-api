@@ -4,17 +4,17 @@ module Types
   module Charges
     class Properties < Types::BaseObject
       # NOTE: Standard and Package charge model
-      field :amount, String, null: true, hash_key: :amount
+      field :amount, String, null: true
 
       # NOTE: Graduated charge model
-      field :graduated_ranges, [Types::Charges::GraduatedRange], null: true, hash_key: :graduated_ranges
+      field :graduated_ranges, [Types::Charges::GraduatedRange], null: true
 
       # NOTE: Graduated percentage modle
       field :graduated_percentage_ranges, [Types::Charges::GraduatedPercentageRange], null: true
 
       # NOTE: Package charge model
-      field :free_units, GraphQL::Types::BigInt, null: true, hash_key: :free_units
-      field :package_size, GraphQL::Types::BigInt, null: true, hash_key: :package_size
+      field :free_units, GraphQL::Types::BigInt, null: true
+      field :package_size, GraphQL::Types::BigInt, null: true
 
       # NOTE: Percentage charge model
       field :fixed_amount, String, null: true
@@ -25,7 +25,10 @@ module Types
       field :rate, String, null: true
 
       # NOTE: Volume charge model
-      field :volume_ranges, [Types::Charges::VolumeRange], null: true, hash_key: :volume_ranges
+      field :volume_ranges, [Types::Charges::VolumeRange], null: true
+
+      # NOTE: Timebased charge model
+      field :block_time_in_minutes, GraphQL::Types::BigInt, null: true
     end
   end
 end
