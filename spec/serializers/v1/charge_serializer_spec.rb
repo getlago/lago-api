@@ -19,6 +19,7 @@ RSpec.describe ::V1::ChargeSerializer do
       expect(result['charge']['charge_model']).to eq(charge.charge_model)
       expect(result['charge']['pay_in_advance']).to eq(charge.pay_in_advance)
       expect(result['charge']['properties']).to eq(charge.properties)
+      expect(result['charge']['filters']).to eq([])
 
       expect(result['charge']['taxes']).to eq([])
     end

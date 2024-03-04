@@ -18,6 +18,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             billableMetric { name code aggregationType }
             charge { chargeModel }
             groups { id key value units amountCents }
+            filters { id units amountCents invoiceDisplayName values eventsCount }
             units
             amountCents
             groupedUsage {
@@ -26,6 +27,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
               eventsCount
               groupedBy
               groups { id key value units amountCents }
+              filters { id units amountCents invoiceDisplayName values eventsCount }
             }
           }
         }

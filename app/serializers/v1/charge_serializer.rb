@@ -17,6 +17,7 @@ module V1
         properties: model.properties,
       }
 
+      payload.merge!(charge_filters)
       payload.merge!(group_properties)
 
       payload.merge!(taxes) if include?(:taxes)
@@ -39,6 +40,14 @@ module V1
         model.taxes,
         ::V1::TaxSerializer,
         collection_name: 'taxes',
+      ).serialize
+    end
+
+    def charge_filters
+      ::CollectionSerializer.new(
+        model.filters.includes(:billable_metric_filter),
+        ::V1::ChargeFilterSerializer,
+        collection_name: 'filters',
       ).serialize
     end
   end

@@ -48,6 +48,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           'code' => billable_metric.code,
           'aggregation_type' => billable_metric.aggregation_type,
         },
+        'filters' => [],
         'groups' => [],
         'grouped_usage' => [
           {
@@ -55,6 +56,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             'events_count' => 12,
             'units' => '10.0',
             'grouped_by' => { 'card_type' => 'visa' },
+            'filters' => [],
             'groups' => [],
           },
         ],
@@ -118,6 +120,51 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       it 'returns groups array' do
         expect(serializer_groups).to eq(groups)
       end
+    end
+  end
+
+  describe '#filters' do
+    let(:charge_filter) { create(:charge_filter) }
+
+    let(:usage) do
+      [
+        OpenStruct.new(
+          charge_id: charge.id,
+          billable_metric:,
+          charge:,
+          units: '10.0',
+          events_count: 12,
+          amount_cents: 100,
+          amount_currency: 'EUR',
+          invoice_display_name: charge.invoice_display_name,
+          lago_id: billable_metric.id,
+          name: billable_metric.name,
+          code: billable_metric.code,
+          aggregation_type: billable_metric.aggregation_type,
+          grouped_by: { 'card_type' => 'visa' },
+          charge_filter:,
+        ),
+      ]
+    end
+
+    it 'returns filters array' do
+      expect(result['charges'].first['filters'].first).to include(
+        'lago_id' => charge_filter.id,
+        'units' => '10.0',
+        'amount_cents' => 100,
+        'events_count' => 12,
+        'invoice_display_name' => charge_filter.display_name,
+        'values' => {},
+      )
+
+      expect(result['charges'].first['grouped_usage'].first['filters'].first).to include(
+        'lago_id' => charge_filter.id,
+        'units' => '10.0',
+        'amount_cents' => 100,
+        'events_count' => 12,
+        'invoice_display_name' => charge_filter.display_name,
+        'values' => {},
+      )
     end
   end
 end
