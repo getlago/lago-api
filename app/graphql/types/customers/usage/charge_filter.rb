@@ -15,7 +15,7 @@ module Types
         field :values, Types::ChargeFilters::Values, null: false
 
         def values
-          object.filter.values.each_with_object({}) do |value, result|
+          object.charge_filter.values.each_with_object({}) do |value, result|
             result[value.billable_metric_filter.key] = value.values
           end
         end

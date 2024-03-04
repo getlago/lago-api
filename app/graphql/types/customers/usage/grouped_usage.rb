@@ -38,8 +38,8 @@ module Types
 
         def filters
           object
-            .select(&:filter)
-            .sort_by { |f| f.filter.display_name }
+            .select(&:charge_filter)
+            .sort_by { |f| f.charge_filter.display_name }
         end
       end
     end
