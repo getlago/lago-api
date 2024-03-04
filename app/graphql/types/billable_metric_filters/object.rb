@@ -10,6 +10,10 @@ module Types
 
       field :key, String, null: false
       field :values, [String], null: false
+
+      def values
+        object.values.sort
+      end
     end
   end
 end
