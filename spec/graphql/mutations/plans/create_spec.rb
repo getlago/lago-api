@@ -64,6 +64,11 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                 volumeRanges { fromValue, toValue }
               }
             }
+            filters {
+              invoiceDisplayName
+              values
+              properties { amount }
+            }
           }
         }
       }
@@ -76,6 +81,16 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
 
   let(:first_group) { create(:group, billable_metric: billable_metrics[1]) }
   let(:second_group) { create(:group, billable_metric: billable_metrics[2]) }
+
+  let(:billable_metric_filter) do
+    create(
+      :billable_metric_filter,
+      billable_metric: billable_metrics[0],
+      key: 'payment_method',
+      values: %w[card physical],
+    )
+  end
+
   let(:tax) { create(:tax, organization:) }
 
   around { |test| lago_premium!(&test) }
@@ -106,6 +121,13 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               chargeModel: 'standard',
               properties: { amount: '100.00' },
               taxCodes: [charge_tax.code],
+              filters: [
+                {
+                  invoiceDisplayName: 'Payment Method',
+                  properties: { amount: '100.00' },
+                  values: { billable_metric_filter.key => 'card' },
+                },
+              ],
             },
             {
               billableMetricId: billable_metrics[1].id,
@@ -223,6 +245,11 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(standard_charge['chargeModel']).to eq('standard')
       expect(standard_charge['taxes'].count).to eq(1)
       expect(standard_charge['taxes'].first['code']).to eq(charge_tax.code)
+
+      filter = standard_charge['filters'].first
+      expect(filter['invoiceDisplayName']).to eq('Payment Method')
+      expect(filter['properties']['amount']).to eq('100.00')
+      expect(filter['values']).to eq('payment_method' => 'card')
 
       package_charge = result_data['charges'][1]
       expect(package_charge['chargeModel']).to eq('package')

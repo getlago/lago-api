@@ -203,6 +203,7 @@ type Charge {
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
   deletedAt: ISO8601DateTime
+  filters: [ChargeFilter!]
   groupProperties: [GroupProperties!]
   id: ID!
   invoiceDisplayName: String
@@ -215,9 +216,31 @@ type Charge {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+Charge filters object
+"""
+type ChargeFilter {
+  id: ID!
+  invoiceDisplayName: String
+  properties: Properties!
+  values: ChargeFilterValues!
+}
+
+"""
+Charge filters input arguments
+"""
+input ChargeFilterInput {
+  invoiceDisplayName: String
+  properties: PropertiesInput!
+  values: ChargeFilterValues!
+}
+
+scalar ChargeFilterValues
+
 input ChargeInput {
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
+  filters: [ChargeFilterInput!]
   groupProperties: [GroupPropertiesInput!]
   id: ID
   invoiceDisplayName: String

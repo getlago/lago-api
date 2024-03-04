@@ -19,4 +19,5 @@ RSpec.describe Types::Charges::Object do
   it { is_expected.to have_field(:deleted_at).of_type('ISO8601DateTime') }
   it { is_expected.to have_field(:updated_at).of_type('ISO8601DateTime!') }
   it { is_expected.to have_field(:taxes).of_type('[Tax!]') }
+  it { is_expected.to have_field(:filters).of_type('[ChargeFilter!]') }
 end

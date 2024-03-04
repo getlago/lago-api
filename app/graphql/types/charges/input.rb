@@ -14,6 +14,7 @@ module Types
       argument :pay_in_advance, Boolean, required: false
       argument :prorated, Boolean, required: false
 
+      argument :filters, [Types::ChargeFilters::Input], required: false
       argument :group_properties, [Types::Charges::GroupPropertiesInput], required: false
       argument :properties, Types::Charges::PropertiesInput, required: false
 
