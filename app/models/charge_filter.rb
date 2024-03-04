@@ -8,6 +8,7 @@ class ChargeFilter < ApplicationRecord
   belongs_to :charge
 
   has_many :values, class_name: 'ChargeFilterValue', dependent: :destroy
+  has_many :billable_metric_filters, through: :values
   has_many :fees
 
   validate :validate_properties
