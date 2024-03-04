@@ -45,7 +45,7 @@ module V1
 
     def charge_filters
       ::CollectionSerializer.new(
-        model.filters.includes(:billable_metric_filter),
+        model.filters.includes(:billable_metric_filters),
         ::V1::ChargeFilterSerializer,
         collection_name: 'filters',
       ).serialize
