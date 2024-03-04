@@ -312,6 +312,9 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 10, 31, 2),
             DateTime.new(2023, 11, 30, 2),
             DateTime.new(2023, 12, 31, 2),
+            DateTime.new(2024, 1, 31, 2),
+            DateTime.new(2024, 2, 29, 2),
+            DateTime.new(2024, 3, 31, 2),
           ]
         end
 
@@ -335,6 +338,8 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 10, 30, 2),
             DateTime.new(2023, 11, 30, 2),
             DateTime.new(2023, 12, 30, 2),
+            DateTime.new(2024, 2, 29, 2),
+            DateTime.new(2024, 3, 30, 2),
           ]
         end
 

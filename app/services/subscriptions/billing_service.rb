@@ -227,7 +227,6 @@ module Subscriptions
         conditions: [billing_month, billing_day],
       )
     end
-    # rubocop:enable Layout/LineLength
 
     def yearly_anniversary
       billing_month = <<-SQL
