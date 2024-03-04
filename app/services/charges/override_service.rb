@@ -18,11 +18,6 @@ module Charges
           c.min_amount_cents = params[:min_amount_cents] if params.key?(:min_amount_cents)
           c.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
           c.group_properties = charge.group_properties.map(&:dup)
-          c.filters = charge.filters.map do |filter|
-            f = filter.dup
-            f.values = filter.values.map(&:dup)
-            f
-          end
           c.plan_id = params[:plan_id]
         end
         new_charge.save!
@@ -33,14 +28,6 @@ module Charges
             properties_params: params[:group_properties],
           )
           return group_result if group_result.error
-        end
-
-        if params.key?(:filters)
-          filters_result = ChargeFilters::CreateOrUpdateBatchService.call(
-            charge: new_charge,
-            filters_params: params[:filters],
-          )
-          return filters_result if filters_result.error
         end
 
         if params.key?(:tax_codes)
