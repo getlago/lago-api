@@ -4,7 +4,7 @@ module Resolvers
   module Auth
     module Google
       class AuthUrlResolver < Resolvers::BaseResolver
-        graphql_name 'GooGleAuthUrl'
+        graphql_name 'GoogleAuthUrl'
         description 'Get Google auth url.'
 
         type Types::Auth::Google::AuthUrl, null: false
