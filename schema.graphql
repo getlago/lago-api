@@ -4417,8 +4417,10 @@ input ProviderCustomerInput {
 }
 
 enum ProviderPaymentMethodsEnum {
+  bacs_debit
   card
   sepa_debit
+  us_bank_account
 }
 
 enum ProviderTypeEnum {
