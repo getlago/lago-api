@@ -32,12 +32,12 @@ module Events
         handle_quantified_event
       end
 
-      if should_handle_timebased_event?
-        return result unless timebased_event_service.process_event?
+      # if should_handle_timebased_event?
+      #   return result unless timebased_event_service.process_event?
 
-        handle_timebased_event
-        handle_pay_in_advance_timebased
-      end
+      #   handle_timebased_event
+      #   handle_pay_in_advance_timebased
+      # end
 
       handle_pay_in_advance
 
@@ -188,7 +188,7 @@ module Events
 
     # Timebased event for subscription renewal
     def subscription_renewal_service
-      @subscription_renewal_service ||= TimebasedEvents::SubscriptionRenewals::CreateService.new(event, sync: true)
+      @subscription_renewal_service ||= TimebasedEvents::SubscriptionRenewals::CreateService.new(event, sync: false)
     end
 
     def handle_subscription_renewal

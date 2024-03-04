@@ -26,7 +26,6 @@ module Subscriptions
           .plan
           .charges
           .where(charge_model: :timebased)
-          .where('properties->>\'usage\' = ?', 'subscription_renewal')
           .first
           .properties['block_time_in_minutes']
           .to_i
