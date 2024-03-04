@@ -6,7 +6,7 @@ module V1
       {
         lago_id: model.id,
         key: model.key,
-        values: model.values,
+        values: model.values.sort,
       }
     end
   end

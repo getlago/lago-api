@@ -13,7 +13,7 @@ RSpec.describe ::V1::BillableMetricFilterSerializer do
       expect(result['billable_metric_filter']).to include(
         'lago_id' => billable_metric_filter.id,
         'key' => billable_metric_filter.key,
-        'values' => billable_metric_filter.values,
+        'values' => billable_metric_filter.values.sort,
       )
     end
   end

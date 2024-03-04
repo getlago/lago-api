@@ -13,7 +13,7 @@ class BillableMetric < ApplicationRecord
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :groups, dependent: :delete_all
-  has_many :filters, dependent: :delete_all, class_name: 'BillableMetricFilter'
+  has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: 'BillableMetricFilter'
 
   AGGREGATION_TYPES = {
     count_agg: 0,
