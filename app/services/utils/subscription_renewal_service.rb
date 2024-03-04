@@ -7,7 +7,6 @@ module Utils
         .plan
         .charges
         .where(charge_model: :timebased)
-        .where('properties->>\'usage\' = ?', 'subscription_renewal')
 
       renewal_charge.count == 1
     end

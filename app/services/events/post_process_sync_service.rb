@@ -40,5 +40,9 @@ module Events
 
       result.invoices = [charge_result.invoice] if charge_result&.success?
     end
+
+    def subscription_renewal_service
+      @subscription_renewal_service ||= TimebasedEvents::SubscriptionRenewals::CreateService.new(event, sync: true)
+    end
   end
 end

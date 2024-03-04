@@ -19,8 +19,6 @@ module TimebasedEvents
       end
 
       def process_event?
-        return false if already_renewed_subscription?
-
         matching_charge? && matching_billable_metric? && block_time_elapsed?
       end
 
@@ -28,13 +26,16 @@ module TimebasedEvents
 
       attr_accessor :event, :sync
 
-      delegate :subscription, :organization, to: :event
+      delegate :organization, to: :event
+
+      def subscription
+        @subscription ||= Subscription.find_by(external_id: event.external_subscription_id)
+      end
 
       def matching_charge?
         return false if matching_charge.blank?
 
-        matching_charge.properties&.fetch('usage') == 'subscription_renewal' &&
-          block_time_in_minutes.positive?
+        block_time_in_minutes.positive?
       end
 
       def matching_billable_metric?
@@ -49,7 +50,6 @@ module TimebasedEvents
         @latest_subscription_renewal_event_within_block_time ||= TimebasedEvent
           .where(organization_id: organization.id)
           .where(external_subscription_id: subscription.external_id)
-          .where(event_type: TimebasedEvent.event_types[:subscription_renewal])
           .where('timestamp >= ?', event.timestamp - block_time_in_minutes.minutes)
           .order(timestamp: :desc)
           .first
@@ -63,7 +63,6 @@ module TimebasedEvents
           billable_metric_id: matching_billable_metric.id,
           metadata: event.metadata,
           timestamp: Time.zone.at(event.timestamp),
-          event_type: :subscription_renewal,
         )
       end
 
@@ -75,7 +74,6 @@ module TimebasedEvents
             plan_id: plan.id,
             charge_model: 'timebased',
           )
-          .where('properties->>\'usage\' = ?', 'subscription_renewal')
           .first
       end
 
