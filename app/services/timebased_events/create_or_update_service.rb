@@ -20,7 +20,8 @@ module TimebasedEvents
     end
 
     def process_event?
-      matching_charge.present? && block_time_present_and_elapsed?
+      matching_charge.present? && matching_charge.properties['usage'] == 'based_charge' &&
+        block_time_present_and_elapsed?
     end
 
     def matching_billable_metric?

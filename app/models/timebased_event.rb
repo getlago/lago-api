@@ -6,7 +6,7 @@ class TimebasedEvent < ApplicationRecord
   belongs_to :invoice, optional: true
 
   EVENT_TYPES = %i[
-    renew_subscription
+    subscription_renewal
     usage_time_started
   ].freeze
 

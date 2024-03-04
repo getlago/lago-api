@@ -52,6 +52,10 @@ class Charge < ApplicationRecord
     group_properties.find_by(group_id:)&.values || read_attribute(:properties)
   end
 
+  def block_time_in_minutes
+    properties['block_time_in_minutes'].to_i
+  end
+
   private
 
   def validate_amount

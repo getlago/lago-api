@@ -93,7 +93,7 @@ class BillableMetric < ApplicationRecord
   private
 
   def should_have_field_name?
-    !count_agg?
+    !(count_agg? || usage_time_agg?)
   end
 
   def validate_recurring

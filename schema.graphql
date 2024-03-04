@@ -112,6 +112,7 @@ enum AggregationTypeEnum {
   sum_agg
   unique_count_agg
   weighted_sum_agg
+  usage_time_agg
 }
 
 type AppliedAddOn {
