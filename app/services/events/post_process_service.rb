@@ -90,15 +90,6 @@ module Events
       end
     end
 
-    def quantified_event_service
-      @quantified_event_service ||= QuantifiedEvents::CreateOrUpdateService.new(event)
-    end
-
-    def handle_quantified_event
-      service_result = quantified_event_service.call
-      service_result.raise_if_error!
-    end
-
     def handle_pay_in_advance
       return unless billable_metric
 
