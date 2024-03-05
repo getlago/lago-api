@@ -4,13 +4,10 @@ module Auth
   class GoogleService < BaseService
     BASE_SCOPE = %w[profile email openid].freeze
 
-    def initialize
-      @client_id = Google::Auth::ClientId.new(ENV['GOOGLE_AUTH_CLIENT_ID'], ENV['GOOGLE_AUTH_CLIENT_SECRET'])
-
-      super
-    end
-
     def authorize_url(request)
+      ensure_google_auth_setup
+      return result unless result.success?
+
       authorizer = Google::Auth::WebUserAuthorizer.new(
         client_id,
         BASE_SCOPE,
@@ -24,6 +21,9 @@ module Auth
     end
 
     def login(code)
+      ensure_google_auth_setup
+      return result unless result.success?
+
       authorizer = Google::Auth::UserAuthorizer.new(
         client_id,
         BASE_SCOPE,
@@ -49,6 +49,14 @@ module Auth
 
     private
 
-    attr_reader :client_id
+    def client_id
+      @client_id ||= Google::Auth::ClientId.new(ENV['GOOGLE_AUTH_CLIENT_ID'], ENV['GOOGLE_AUTH_CLIENT_SECRET'])
+    end
+
+    def ensure_google_auth_setup
+      return if ENV['GOOGLE_AUTH_CLIENT_ID'].present? && ENV['GOOGLE_AUTH_CLIENT_SECRET'].present?
+
+      result.service_failure!(code: 'google_auth_missing_setup', message: 'Google auth is not set up')
+    end
   end
 end

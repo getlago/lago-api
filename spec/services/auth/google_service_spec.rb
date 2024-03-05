@@ -20,6 +20,23 @@ RSpec.describe Auth::GoogleService do
         expect(result.url).to include('https://accounts.google.com/o/oauth2/auth')
       end
     end
+
+    context 'when google auth is not set up' do
+      before do
+        ENV['GOOGLE_AUTH_CLIENT_ID'] = nil
+        ENV['GOOGLE_AUTH_CLIENT_SECRET'] = nil
+      end
+
+      it 'returns a service failure' do
+        request = Rack::Request.new(Rack::MockRequest.env_for('http://example.com'))
+        result = service.authorize_url(request)
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.code).to eq('google_auth_missing_setup')
+        end
+      end
+    end
   end
 
   describe '#login' do
@@ -75,6 +92,22 @@ RSpec.describe Auth::GoogleService do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error.messages.values.flatten).to include('user_does_not_exist')
+        end
+      end
+    end
+
+    context 'when google auth is not set up' do
+      before do
+        ENV['GOOGLE_AUTH_CLIENT_ID'] = nil
+        ENV['GOOGLE_AUTH_CLIENT_SECRET'] = nil
+      end
+
+      it 'returns a service failure' do
+        result = service.login('code')
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.code).to eq('google_auth_missing_setup')
         end
       end
     end
