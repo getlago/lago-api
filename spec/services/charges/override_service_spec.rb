@@ -95,6 +95,89 @@ RSpec.describe Charges::OverrideService, type: :service do
         )
         expect(charge.taxes).to contain_exactly(tax)
       end
+
+      context 'with charge filters' do
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
+
+        let(:charge) do
+          create(
+            :standard_charge,
+            billable_metric:,
+            properties: { amount: '300' },
+          )
+        end
+
+        let(:filters) do
+          [
+            create(
+              :charge_filter,
+              charge:,
+              properties: { amount: '10' },
+            ),
+            create(
+              :charge_filter,
+              charge:,
+              properties: { amount: '20' },
+            ),
+          ]
+        end
+
+        let(:filter_values) do
+          [
+            create(
+              :charge_filter_value,
+              charge_filter: filters.first,
+              billable_metric_filter:,
+              value: billable_metric_filter.values.first,
+            ),
+            create(
+              :charge_filter_value,
+              charge_filter: filters.second,
+              billable_metric_filter:,
+              value: billable_metric_filter.values.second,
+            ),
+          ]
+        end
+
+        let(:params) do
+          {
+            id: charge.id,
+            plan_id: plan.id,
+            min_amount_cents: 1000,
+            properties: { amount: '200' },
+            tax_codes: [tax.code],
+            filters: [
+              {
+                properties: { amount: '10' },
+                invoice_display_name: 'invoice display name',
+                values: { billable_metric_filter.key => billable_metric_filter.values.first },
+              },
+            ],
+          }
+        end
+
+        before { filter_values }
+
+        it 'creates a charge based on the given charge', :aggregate_failures do
+          expect { override_service.call }.to change(Charge, :count).by(1)
+
+          charge = Charge.order(:created_at).last
+
+          expect(charge.filters.count).to eq(1)
+          expect(charge.filters.with_discarded.discarded.count).to eq(1)
+          expect(charge.filters.first).to have_attributes(
+            {
+              invoice_display_name: 'invoice display name',
+              properties: { 'amount' => '10' },
+            },
+          )
+          expect(charge.filters.first.values.count).to eq(1)
+          expect(charge.filters.first.values.first).to have_attributes(
+            billable_metric_filter_id: billable_metric_filter.id,
+            value: billable_metric_filter.values.first,
+          )
+        end
+      end
     end
   end
 end
