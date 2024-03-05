@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_03_01_133006) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_05_164449) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -89,6 +89,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_01_133006) do
     t.datetime "updated_at", null: false
     t.uuid "group_id"
     t.jsonb "grouped_by", default: {}, null: false
+    t.uuid "charge_filter_id"
+    t.index ["charge_filter_id"], name: "index_adjusted_fees_on_charge_filter_id"
     t.index ["charge_id"], name: "index_adjusted_fees_on_charge_id"
     t.index ["fee_id"], name: "index_adjusted_fees_on_fee_id"
     t.index ["group_id"], name: "index_adjusted_fees_on_group_id"
@@ -780,7 +782,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_01_133006) do
     t.uuid "group_id"
     t.uuid "organization_id", null: false
     t.jsonb "grouped_by", default: {}, null: false
+    t.uuid "charge_filter_id"
     t.index ["billable_metric_id"], name: "index_quantified_events_on_billable_metric_id"
+    t.index ["charge_filter_id"], name: "index_quantified_events_on_charge_filter_id"
     t.index ["deleted_at"], name: "index_quantified_events_on_deleted_at"
     t.index ["external_id"], name: "index_quantified_events_on_external_id"
     t.index ["group_id"], name: "index_quantified_events_on_group_id"
