@@ -64,6 +64,22 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
     )
   end
 
+  let(:billable_metric_with_filter) do
+    create(
+      :billable_metric,
+      organization:,
+    )
+  end
+
+  let(:billable_metric_filter) do
+    create(
+      :billable_metric_filter,
+      billable_metric: billable_metric_with_filter,
+      key: 'region',
+      values: %w[eu-west-1 us-east-1],
+    )
+  end
+
   let(:missing_parent_group_key_event) do
     create(
       :event,
@@ -87,6 +103,16 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
     )
   end
 
+  let(:invalid_filter_values_event) do
+    create(
+      :event,
+      organization:,
+      code: billable_metric_with_filter.code,
+      properties: { billable_metric_filter.key => 'us-west-4' },
+      created_at: Time.current.beginning_of_hour - 25.minutes,
+    )
+  end
+
   before do
     child_group
 
@@ -95,6 +121,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
     negative_aggregation_property_event
     missing_parent_group_key_event
     missing_child_group_key_event
+    invalid_filter_values_event
 
     Scenic.database.refresh_materialized_view(
       Events::LastHourMv.table_name,
@@ -128,6 +155,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
           missing_parent_group_key_event.transaction_id,
           missing_child_group_key_event.transaction_id,
         )
+      expect(result.errors[:invalid_filter_values]).to include(invalid_filter_values_event.transaction_id)
     end
 
     it 'delivers a webhook with the list of transaction_id' do
@@ -141,6 +169,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
             invalid_code: [invalid_code_event.transaction_id],
             missing_aggregation_property: [missing_aggregation_property_event.transaction_id],
             missing_group_key: Array,
+            invalid_filter_values: [invalid_filter_values_event.transaction_id],
           },
         )
     end

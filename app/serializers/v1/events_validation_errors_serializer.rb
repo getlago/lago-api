@@ -7,6 +7,7 @@ module V1
         invalid_code: model.invalid_code,
         missing_aggregation_property: model.missing_aggregation_property,
         missing_group_key: model.missing_group_key,
+        invalid_filter_values: model.invalid_filter_values,
       }
     end
   end

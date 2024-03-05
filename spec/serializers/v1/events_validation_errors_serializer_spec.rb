@@ -10,6 +10,7 @@ RSpec.describe ::V1::EventsValidationErrorsSerializer do
       invalid_code: [SecureRandom.uuid],
       missing_aggregation_property: [SecureRandom.uuid],
       missing_group_key: [SecureRandom.uuid],
+      invalid_filter_values: [SecureRandom.uuid],
     )
   end
 
@@ -21,6 +22,7 @@ RSpec.describe ::V1::EventsValidationErrorsSerializer do
         'invalid_code' => Array,
         'missing_aggregation_property' => Array,
         'missing_group_key' => Array,
+        'invalid_filter_values' => Array,
       )
     end
   end

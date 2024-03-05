@@ -13,11 +13,13 @@ module Events
         invalid_code: process_query(invalid_code_query),
         missing_aggregation_property: process_query(missing_aggregation_property_query),
         missing_group_key: process_query(missing_group_key_query),
+        invalid_filter_values: process_query(invalid_filter_values_query),
       }
 
       if errors[:invalid_code].present? ||
          errors[:missing_aggregation_property].present? ||
-         errors[:missing_group_key].present?
+         errors[:missing_group_key].present? ||
+         errors[:invalid_filter_values].present?
         deliver_webhook(errors)
       end
 
@@ -71,6 +73,16 @@ module Events
               AND has_child_group_key = 'f'
             )
           )
+      SQL
+    end
+
+    def invalid_filter_values_query
+      <<-SQL
+        SELECT DISTINCT transaction_id
+        FROM last_hour_events_mv
+        WHERE organization_id = '#{organization.id}'
+          AND has_filter_keys = 't'
+          AND has_invalid_filter_values = 't'
       SQL
     end
 
