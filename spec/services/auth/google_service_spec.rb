@@ -10,7 +10,7 @@ RSpec.describe Auth::GoogleService do
     ENV['GOOGLE_AUTH_CLIENT_SECRET'] = 'client_secret'
   end
 
-  describe '.authorize_url' do
+  describe '#authorize_url' do
     it 'returns the authorize url' do
       request = Rack::Request.new(Rack::MockRequest.env_for('http://example.com'))
       result = service.authorize_url(request)
@@ -22,7 +22,7 @@ RSpec.describe Auth::GoogleService do
     end
   end
 
-  describe '.login' do
+  describe '#login' do
     let(:authorizer) { instance_double(Google::Auth::UserAuthorizer) }
     let(:oidc_verifier) { instance_double(Google::Auth::IDTokens) }
     let(:authorizer_response) { instance_double(Google::Auth::UserRefreshCredentials, id_token: 'id_token') }

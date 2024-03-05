@@ -14,7 +14,7 @@ module Auth
       authorizer = Google::Auth::WebUserAuthorizer.new(
         client_id,
         BASE_SCOPE,
-        nil,
+        nil, # token_store is nil because we don't need to store the token
         "#{ENV['LAGO_FRONT_URL']}/auth/google/callback",
       )
 
@@ -27,7 +27,7 @@ module Auth
       authorizer = Google::Auth::UserAuthorizer.new(
         client_id,
         BASE_SCOPE,
-        nil,
+        nil, # token_store is nil because we don't need to store the token
         "#{ENV['LAGO_FRONT_URL']}/auth/google/callback",
       )
 
