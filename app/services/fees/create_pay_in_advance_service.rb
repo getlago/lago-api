@@ -65,6 +65,7 @@ module Fees
         )
 
         taxes_result = Fees::ApplyTaxesService.call(fee:)
+
         taxes_result.raise_if_error!
 
         fee.save! unless estimate

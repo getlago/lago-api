@@ -26,6 +26,9 @@ module Types
 
       # NOTE: Volume charge model
       argument :volume_ranges, [Types::Charges::VolumeRangeInput], required: false
+
+      # NOTE: Timebased charge model
+      argument :block_time_in_minutes, GraphQL::Types::BigInt, required: false
     end
   end
 end
