@@ -5,8 +5,63 @@ require 'rails_helper'
 describe 'Invoices Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+  let(:pdf_file) { StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))) }
+  let(:pdf_result) { OpenStruct.new(io: pdf_file) }
 
-  before { tax }
+  before do
+    tax
+
+    allow(Utils::PdfGenerator).to receive(:new)
+      .and_return(pdf_generator)
+    allow(pdf_generator).to receive(:call)
+      .and_return(pdf_result)
+  end
+
+  context 'when pay in advance subscription with free trial used on several subscriptions' do
+    let(:organization) { create(:organization, webhook_url: nil) }
+    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 3500, pay_in_advance: true, trial_period: 7) }
+
+    it 'creates an invoice for the expected period' do
+      travel_to(DateTime.new(2024, 3, 2)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+      invoice = subscription.invoices.first
+      expect(invoice.total_amount_cents).to eq(2597) # (31 - 1 - 7) * 35 / 31
+
+      travel_to(DateTime.new(2024, 3, 3)) do
+        terminate_subscription(subscription)
+      end
+
+      invoice = subscription.invoices.order(created_at: :desc).first
+      expect(invoice.total_amount_cents).to eq(0)
+
+      travel_to(DateTime.new(2024, 3, 5, 4)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        subscription = customer.subscriptions.active.first
+        invoice = subscription.invoices.first
+        # NOTE: 4 days of trial left
+        expect(invoice.fees_amount_cents).to eq(2597) # (31 - 4 - 4) * 35 / 31
+      end
+    end
+  end
 
   context 'when timezone is negative and not the same day as UTC' do
     let(:organization) { create(:organization, webhook_url: nil) }
