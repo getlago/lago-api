@@ -812,6 +812,20 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_29_100439) do
     t.uuid "subscription_id", null: false
     t.index ["charge_group_id"], name: "index_usage_charge_groups_on_charge_group_id"
     t.index ["subscription_id"], name: "index_usage_charge_groups_on_subscription_id"
+  create_table "timebased_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "invoice_id"
+    t.uuid "billable_metric_id"
+    t.integer "event_type"
+    t.datetime "timestamp"
+    t.string "external_customer_id"
+    t.string "external_subscription_id"
+    t.jsonb "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billable_metric_id"], name: "index_timebased_events_on_billable_metric_id"
+    t.index ["invoice_id"], name: "index_timebased_events_on_invoice_id"
+    t.index ["organization_id"], name: "index_timebased_events_on_organization_id"
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -975,6 +989,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_29_100439) do
   add_foreign_key "taxes", "organizations"
   add_foreign_key "usage_charge_groups", "charge_groups"
   add_foreign_key "usage_charge_groups", "subscriptions"
+  add_foreign_key "timebased_events", "billable_metrics"
+  add_foreign_key "timebased_events", "invoices"
+  add_foreign_key "timebased_events", "organizations"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"

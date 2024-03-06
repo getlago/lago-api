@@ -24,6 +24,7 @@ class Charge < ApplicationRecord
     volume
     graduated_percentage
     package_group
+    timebased
   ].freeze
 
   enum charge_model: CHARGE_MODELS
@@ -51,6 +52,10 @@ class Charge < ApplicationRecord
 
   def properties(group_id: nil)
     group_properties.find_by(group_id:)&.values || read_attribute(:properties)
+  end
+
+  def block_time_in_minutes
+    properties['block_time_in_minutes'].to_i
   end
 
   private

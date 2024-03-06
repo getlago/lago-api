@@ -88,7 +88,7 @@ module Api
         if result.success?
           event_json_str = ::V1::EventSerializer.new(
             result.event,
-            root_name: "event",
+            root_name: 'event',
           ).to_json
 
           event_json = JSON.parse(event_json_str)
@@ -97,10 +97,10 @@ module Api
             invoices_data = ::CollectionSerializer.new(
               result.invoices,
               ::V1::InvoiceSerializer,
-              collection_name: "invoices",
+              collection_name: 'invoices',
             ).to_json
 
-            event_json["event"]["invoices"] = JSON.parse(invoices_data)["invoices"]
+            event_json['event']['invoices'] = JSON.parse(invoices_data)['invoices']
           end
 
           render(
@@ -144,6 +144,17 @@ module Api
           user_agent: request.user_agent,
           ip_address: request.remote_ip,
         }
+      end
+
+      def create_time_based_params
+        params
+          .require(:event)
+          .permit(
+            :external_customer_id,
+            :external_subscription_id,
+            :timestamp,
+            event_type: :renew_subscription,
+          )
       end
     end
   end

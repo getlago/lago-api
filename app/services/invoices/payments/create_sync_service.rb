@@ -12,7 +12,8 @@ module Invoices
         when :adyen
           Invoices::Payments::AdyenCreateJob.perform_now(invoice)
         when :pinet
-          Invoices::Payments::PinetCreateJob.perform_now(invoice)
+          result = Invoices::Payments::PinetService.new(invoice:, is_sync: true).create
+          result.raise_if_error!
         end
       end
     end
