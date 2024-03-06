@@ -87,6 +87,26 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     context 'when subscription was payed in advance' do
+      let(:creation_time) { Time.current.beginning_of_month - 1.month }
+      let(:date_service) do
+        Subscriptions::DatesService.new_instance(
+          subscription,
+          Time.current.beginning_of_month,
+          current_usage: false,
+        )
+      end
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          invoice:,
+          subscription:,
+          recurring: true,
+          from_datetime: date_service.from_datetime,
+          to_datetime: date_service.to_datetime,
+          charges_from_datetime: date_service.charges_from_datetime,
+          charges_to_datetime: date_service.charges_to_datetime,
+        )
+      end
       let(:invoice) do
         create(
           :invoice,
@@ -116,10 +136,11 @@ RSpec.describe Subscriptions::TerminateService do
         subscription.plan.update!(pay_in_advance: true)
         subscription.update!(
           billing_time: :anniversary,
-          started_at: Time.current - 40.days,
-          subscription_at: Time.current - 40.days,
+          started_at: creation_time,
+          subscription_at: creation_time,
         )
 
+        invoice_subscription
         last_subscription_fee
       end
 
@@ -127,6 +148,16 @@ RSpec.describe Subscriptions::TerminateService do
         expect do
           terminate_service.call
         end.to change(CreditNote, :count)
+      end
+
+      context 'when invoice subscription is not generated' do
+        let(:invoice_subscription) { nil }
+
+        it 'does not create a credit note for the remaining days' do
+          expect do
+            terminate_service.call
+          end.not_to change(CreditNote, :count)
+        end
       end
     end
   end

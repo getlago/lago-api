@@ -526,6 +526,11 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         )
       end
 
+      travel_to(DateTime.new(2024, 2, 1)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+      end
+
       travel_to(DateTime.parse('2024-02-12 06:00:00')) do
         expect {
           create_subscription(
@@ -538,7 +543,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           )
           perform_all_enqueued_jobs
         }.to change { subscription.reload.status }.from('active').to('terminated')
-          .and change { customer.invoices.count }.from(1).to(2)
+          .and change { customer.invoices.count }.from(2).to(3)
 
         invoice = customer.subscriptions.active.first.invoices.order(created_at: :desc).first
         credit_note = customer.credit_notes.first
@@ -612,6 +617,11 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         )
       end
 
+      travel_to(DateTime.new(2024, 2, 1)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+      end
+
       travel_to(DateTime.parse('2024-02-12 06:00:00')) do
         expect {
           create_subscription(
@@ -624,7 +634,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           )
           perform_all_enqueued_jobs
         }.to change { subscription.reload.status }.from('active').to('terminated')
-          .and change { customer.invoices.count }.from(0).to(1)
+          .and change { customer.invoices.count }.from(1).to(2)
 
         terminated_invoice = subscription.invoices.order(created_at: :desc).first
 
@@ -696,7 +706,53 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         )
       end
 
+      travel_to(DateTime.new(2024, 2, 1)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+      end
+
       travel_to(DateTime.parse('2024-02-12 06:00:00')) do
+        expect {
+          terminate_subscription(subscription)
+          perform_all_enqueued_jobs
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { customer.invoices.count }.from(2).to(3)
+
+        terminated_invoice = subscription.invoices.order(created_at: :desc).first
+        credit_note = customer.credit_notes.first
+
+        expect(credit_note.credit_amount_cents).to eq(1_700)
+        expect(terminated_invoice.total_amount_cents).to eq(0) # 12/29 x 500 = 207 - 207(CN)
+        expect(terminated_invoice.fees_amount_cents).to eq(207)
+        expect(terminated_invoice.credit_notes_amount_cents).to eq(207)
+      end
+    end
+  end
+
+  context 'when pay in advance subscription is terminated on the same day' do
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
+    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:metric) do
+      create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
+    end
+
+    it 'bills fees correctly' do
+      travel_to(DateTime.parse('2024-02-01 03:00:00')) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: 'calendar',
+          },
+        )
+      end
+
+      subscription = customer.subscriptions.first
+      first_invoice = subscription.invoices.first
+
+      travel_to(DateTime.parse('2024-02-01 18:00:00')) do
         expect {
           terminate_subscription(subscription)
           perform_all_enqueued_jobs
@@ -706,10 +762,9 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         terminated_invoice = subscription.invoices.order(created_at: :desc).first
         credit_note = customer.credit_notes.first
 
-        expect(credit_note.credit_amount_cents).to eq(1_700)
-        expect(terminated_invoice.total_amount_cents).to eq(0) # 12/29 x 500 = 207 - 207(CN)
-        expect(terminated_invoice.fees_amount_cents).to eq(207)
-        expect(terminated_invoice.credit_notes_amount_cents).to eq(207)
+        expect(first_invoice.credit_notes.count).to eq(1)
+        expect(credit_note.credit_amount_cents).to eq(2_800) # Only one day is billed
+        expect(terminated_invoice.total_amount_cents).to eq(0) # There are no charges
       end
     end
   end
@@ -768,12 +823,19 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         )
       end
 
+      travel_to(DateTime.new(2024, 2, 1)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+
+        finalize_invoice(subscription.invoices.order(created_at: :desc).first)
+      end
+
       travel_to(DateTime.parse('2024-02-12 06:00:00')) do
         expect {
           terminate_subscription(subscription)
           perform_all_enqueued_jobs
         }.to change { subscription.reload.status }.from('active').to('terminated')
-          .and change { customer.invoices.count }.from(1).to(2)
+          .and change { customer.invoices.count }.from(2).to(3)
 
         terminated_invoice = subscription.invoices.order(created_at: :desc).first
         credit_note = customer.credit_notes.first

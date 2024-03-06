@@ -445,6 +445,26 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           end
 
           context 'when old subscription was payed in advance' do
+            let(:creation_time) { Time.current.beginning_of_month - 1.month }
+            let(:date_service) do
+              Subscriptions::DatesService.new_instance(
+                subscription,
+                Time.current.beginning_of_month,
+                current_usage: false,
+              )
+            end
+            let(:invoice_subscription) do
+              create(
+                :invoice_subscription,
+                invoice:,
+                subscription:,
+                recurring: true,
+                from_datetime: date_service.from_datetime,
+                to_datetime: date_service.to_datetime,
+                charges_from_datetime: date_service.charges_from_datetime,
+                charges_to_datetime: date_service.charges_to_datetime,
+              )
+            end
             let(:invoice) do
               create(
                 :invoice,
@@ -476,8 +496,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 customer:,
                 plan: old_plan,
                 status: :active,
-                subscription_at: Time.current - 40.days,
-                started_at: Time.current - 40.days,
+                subscription_at: creation_time,
+                started_at: creation_time,
                 external_id:,
                 billing_time: 'anniversary',
               )
@@ -485,7 +505,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
             let(:old_plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
 
-            before { last_subscription_fee }
+            before do
+              invoice_subscription
+              last_subscription_fee
+            end
 
             it 'creates a credit note for the remaining days' do
               expect { create_service.call }.to change(CreditNote, :count)
