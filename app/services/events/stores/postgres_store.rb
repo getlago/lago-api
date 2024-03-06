@@ -8,6 +8,11 @@ module Events
           .where(code:)
           .order(timestamp: :asc)
 
+        if is_charge_group?
+          package_count = find_usage_charge_group&.current_package_count
+          scope = scope.where(current_package_count: package_count) if package_count
+        end
+
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
         scope = scope.to_datetime(to_datetime) if to_datetime
 
@@ -148,6 +153,20 @@ module Events
         to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
 
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{duration}::numeric"
+      end
+
+      private
+
+      def is_charge_group?
+        event.current_package_count.present?
+      end
+
+      def find_usage_charge_group
+        plan = subscription.plan
+        billable_metric = event.organization.billable_metrics.find_by(code: event.code)
+        charge = Charge.where(plan:, billable_metric:).first
+
+        UsageChargeGroup.find_by(subscription_id: subscription.id, charge_group_id: charge.charge_group_id)
       end
     end
   end

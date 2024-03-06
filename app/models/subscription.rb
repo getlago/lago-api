@@ -13,6 +13,7 @@ class Subscription < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :invoices, through: :invoice_subscriptions
   has_many :fees
+  has_many :usage_charge_groups
 
   validates :external_id, presence: true
   validate :validate_external_id, on: :create

@@ -12,6 +12,8 @@ module Events
       event.properties = params[:properties] || {}
       event.metadata = metadata || {}
       event.timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
+      event.current_package_count = current_package_count if is_charge_group?
+
       event.save!
 
       result.event = event
@@ -26,7 +28,7 @@ module Events
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique
-      result.single_validation_failure!(field: :transaction_id, error_code: "value_already_exist")
+      result.single_validation_failure!(field: :transaction_id, error_code: 'value_already_exist')
     end
   end
 end

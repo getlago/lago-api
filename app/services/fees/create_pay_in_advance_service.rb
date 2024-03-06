@@ -126,9 +126,16 @@ module Fees
     end
 
     def apply_charge_model(aggregation_result:, properties:)
-      charge_model_result = Charges::ApplyPayInAdvanceChargeModelService.call(
+      charge_service = if charge.charge_model.to_sym == :package_group
+        Charges::ApplyPayInAdvanceChargeGroupModelService
+      else
+        Charges::ApplyPayInAdvanceChargeModelService
+      end
+
+      charge_model_result = charge_service.call(
         charge:, aggregation_result:, properties:,
       )
+
       charge_model_result.raise_if_error!
       charge_model_result
     end

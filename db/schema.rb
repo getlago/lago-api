@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
+ActiveRecord::Schema[7.0].define(version: 2024_02_29_100439) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -163,6 +163,16 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
     t.index ["organization_id"], name: "index_cached_aggregations_on_organization_id"
   end
 
+  create_table "charge_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
+    t.boolean "pay_in_advance", default: false, null: false
+    t.bigint "min_amount_cents", default: 0, null: false
+    t.boolean "invoiceable", default: true, null: false
+    t.string "invoice_display_name"
+  end
+
   create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "billable_metric_id"
     t.datetime "created_at", null: false
@@ -177,7 +187,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
     t.boolean "invoiceable", default: true, null: false
     t.boolean "prorated", default: false, null: false
     t.string "invoice_display_name"
+    t.uuid "charge_group_id"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
+    t.index ["charge_group_id"], name: "index_charges_on_charge_group_id"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
@@ -379,6 +391,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
     t.datetime "deleted_at"
     t.string "external_customer_id"
     t.string "external_subscription_id"
+    t.bigint "current_package_count"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
     t.index ["organization_id", "code", "created_at"], name: "index_events_on_organization_id_and_code_and_created_at", where: "(deleted_at IS NULL)"
@@ -612,9 +625,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
-    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
+    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
@@ -804,6 +817,19 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
     t.index ["organization_id"], name: "index_timebased_events_on_organization_id"
   end
 
+  create_table "usage_charge_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "current_package_count", default: 1, null: false
+    t.jsonb "available_group_usage"
+    t.jsonb "properties", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
+    t.uuid "charge_group_id", null: false
+    t.uuid "subscription_id", null: false
+    t.index ["charge_group_id"], name: "index_usage_charge_groups_on_charge_group_id"
+    t.index ["subscription_id"], name: "index_usage_charge_groups_on_subscription_id"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -899,6 +925,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "cached_aggregations", "groups"
   add_foreign_key "charges", "billable_metrics"
+  add_foreign_key "charges", "charge_groups"
   add_foreign_key "charges", "plans"
   add_foreign_key "charges_taxes", "charges"
   add_foreign_key "charges_taxes", "taxes"
@@ -965,6 +992,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_21_080159) do
   add_foreign_key "timebased_events", "billable_metrics"
   add_foreign_key "timebased_events", "invoices"
   add_foreign_key "timebased_events", "organizations"
+  add_foreign_key "usage_charge_groups", "charge_groups"
+  add_foreign_key "usage_charge_groups", "subscriptions"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
