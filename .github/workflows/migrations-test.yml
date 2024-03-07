@@ -1,4 +1,4 @@
-name: Run Spec
+name: Run rails migrations
 on:
   push:
     branches:
@@ -6,8 +6,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
-  run-spec:
-    name: Run Spec
+  run-migrations:
+    name: Run migrations
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -35,6 +35,7 @@ jobs:
       LAGO_CLICKHOUSE_DATABASE: default
       LAGO_CLICKHOUSE_USERNAME: ""
       LAGO_CLICKHOUSE_PASSWORD: ""
+      LAGO_DISABLE_SCHEMA_DUMP: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,11 +50,7 @@ jobs:
         shell: bash
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
-      - name: Set up Postgres database schema
-        run: bin/rails db:schema:load:primary
-      - name: Set up Clickhouse database schema
+      - name: Perform Postgres database migrations
+        run: bin/rails db:migrate:primary
+      - name: Perform Clickhouse database migrations
         run: bin/rails db:migrate:clickhouse
-      - name: Set up Clickhouse database schema
-        run: bin/rails db:schema:dump:clickhouse
-      - name: Run tests
-        run: bundle exec rspec

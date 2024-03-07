@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
-ENHANCED_TASKS = %w[db:migrate db:migrate:primary db:rollback db:rollback:primary db:schema:dump:clickhouse].freeze
+unless defined?(ENHANCED_TASKS)
+  ENHANCED_TASKS = %w[db:migrate db:migrate:primary db:rollback db:rollback:primary db:schema:dump:clickhouse].freeze
 
-ENHANCED_TASKS.each do |task|
-  next unless Rake::Task.task_defined?(task)
+  ENHANCED_TASKS.each do |task|
+    next unless Rake::Task.task_defined?(task)
 
-  Rake::Task[task].enhance do
-    Rake::Task['db:clickhouse:filter'].invoke
+    Rake::Task[task].enhance do
+      Rake::Task['db:clickhouse:filter'].invoke
+    end
   end
 end
 

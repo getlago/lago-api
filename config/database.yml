@@ -31,9 +31,11 @@ test:
   primary:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
+    schema_dump: <% if ENV['LAGO_DISABLE_SCHEMA_DUMP'].present? %> false <% else %> schema.rb <% end %>
   events:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
+    schema_dump: false
   clickhouse:
     adapter: clickhouse
     database: <%= ENV.fetch('LAGO_CLICKHOUSE_DATABASE', 'default_test') %>
@@ -41,8 +43,10 @@ test:
     port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
     username: <%= ENV.fetch('LAGO_CLICKHOUSE_USERNAME', 'default') %>
     password: <%= ENV.fetch('LAGO_CLICKHOUSE_PASSWORD', 'default') %>
+    migrations_paths: db/clickhouse_migrate
     debug: true
     database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>
+    schema_dump: <% if ENV['LAGO_DISABLE_SCHEMA_DUMP'].present? %> false <% else %> clickhouse_schema.rb <% end %>
 
 staging:
   primary:
