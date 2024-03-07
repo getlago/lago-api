@@ -77,7 +77,7 @@ module CreditNotes
         billed_from = if subscription.trial_end_date > to_date
           to_date
         else
-          subscription.trial_end_date
+          subscription.trial_end_date - 1.day
         end
       end
 
