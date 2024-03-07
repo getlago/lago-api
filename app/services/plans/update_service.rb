@@ -47,6 +47,7 @@ module Plans
         process_charges(plan, params[:charges]) if params[:charges]
         process_minimum_commitment(plan, params[:minimum_commitment]) if params[:minimum_commitment] && License.premium?
         process_downgraded_subscriptions if old_amount_cents != plan.amount_cents
+        process_pending_subscriptions if old_amount_cents != plan.amount_cents
       end
 
       result.plan = plan.reload
@@ -227,6 +228,15 @@ module Plans
 
       Subscription.where(previous_subscription: plan.subscriptions.active, status: :pending).find_each do |sub|
         sub.mark_as_canceled! if plan.amount_cents < sub.plan.amount_cents
+      end
+    end
+
+    # NOTE: We should remove pending subscriptions
+    #       if plan has been downgraded but amount cents of pending plan became higher than original plan.
+    #       This pending subscription is not relevant in this case and downgrade should be ignored
+    def process_pending_subscriptions
+      Subscription.where(plan:, status: :pending).find_each do |sub|
+        sub.mark_as_canceled! if plan.amount_cents > sub.previous_subscription.plan.amount_cents
       end
     end
   end

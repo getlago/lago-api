@@ -171,6 +171,37 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
       end
+
+      context 'when there are pending subscriptions which are not relevant after the amount cents update' do
+        let(:original_plan) { create(:plan, organization:, amount_cents: 150) }
+        let(:subscription) { create(:subscription, plan: original_plan, customer: new_customer) }
+        let(:pending_subscription) do
+          create(:subscription, plan:, status: :pending, previous_subscription_id: subscription.id)
+        end
+        let(:update_args) do
+          {
+            name: plan_name,
+            code: 'new_plan',
+            interval: 'monthly',
+            pay_in_advance: false,
+            amount_cents: 200,
+            amount_currency: 'EUR',
+          }
+        end
+
+        before { pending_subscription }
+
+        it 'correctly cancels pending subscriptions' do
+          result = plans_service.call
+
+          updated_plan = result.plan
+          aggregate_failures do
+            expect(updated_plan.name).to eq('Updated plan name')
+            expect(updated_plan.amount_cents).to eq(200)
+            expect(Subscription.find_by(id: pending_subscription.id).status).to eq('canceled')
+          end
+        end
+      end
     end
 
     context 'when plan is not found' do
