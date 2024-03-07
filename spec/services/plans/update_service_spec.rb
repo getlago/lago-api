@@ -152,7 +152,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context 'when there are pending subscriptions which are not relevant after the amount cents update' do
+      context 'when there are pending subscriptions which are not relevant after the amount cents decrease' do
         let(:pending_plan) { create(:plan, organization:, amount_cents: 10) }
         let(:pending_subscription) do
           create(:subscription, plan: pending_plan, status: :pending, previous_subscription_id: subscription.id)
@@ -172,7 +172,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context 'when there are pending subscriptions which are not relevant after the amount cents update' do
+      context 'when there are pending subscriptions which are not relevant after the amount cents increase' do
         let(:original_plan) { create(:plan, organization:, amount_cents: 150) }
         let(:subscription) { create(:subscription, plan: original_plan, customer: new_customer) }
         let(:pending_subscription) do
