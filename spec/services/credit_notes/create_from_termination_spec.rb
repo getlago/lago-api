@@ -217,11 +217,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           credit_note = result.credit_note
           expect(credit_note).to be_available
           expect(credit_note).to be_order_change
-          expect(credit_note.total_amount_cents).to eq(17)
+          expect(credit_note.total_amount_cents).to eq(18) # 15 * 1.2
           expect(credit_note.total_amount_currency).to eq('EUR')
-          expect(credit_note.credit_amount_cents).to eq(17)
+          expect(credit_note.credit_amount_cents).to eq(18)
           expect(credit_note.credit_amount_currency).to eq('EUR')
-          expect(credit_note.balance_amount_cents).to eq(17)
+          expect(credit_note.balance_amount_cents).to eq(18)
           expect(credit_note.balance_amount_currency).to eq('EUR')
 
           expect(credit_note.items.count).to eq(1)

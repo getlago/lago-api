@@ -25,7 +25,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     let(:plan) { create(:plan, organization:, amount_cents: 3500, pay_in_advance: true, trial_period: 7) }
 
     it 'creates an invoice for the expected period' do
-      travel_to(DateTime.new(2024, 3, 2)) do
+      travel_to(DateTime.new(2024, 3, 4, 21)) do
         create_subscription(
           {
             external_customer_id: customer.external_id,
@@ -37,14 +37,17 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
       subscription = customer.subscriptions.first
       invoice = subscription.invoices.first
-      expect(invoice.total_amount_cents).to eq(2597) # (31 - 1 - 7) * 35 / 31
+      expect(invoice.total_amount_cents).to eq(2371) # (31 - 3 - 7) * 35 / 31
 
-      travel_to(DateTime.new(2024, 3, 3)) do
+      travel_to(DateTime.new(2024, 3, 5, 3)) do
         terminate_subscription(subscription)
       end
 
-      invoice = subscription.invoices.order(created_at: :desc).first
-      expect(invoice.total_amount_cents).to eq(0)
+      term_invoice = subscription.invoices.order(created_at: :desc).first
+      expect(term_invoice.total_amount_cents).to eq(0)
+
+      expect(invoice.reload.credit_notes.count).to eq(1)
+      expect(invoice.credit_notes.first.total_amount_cents).to eq(2371)
 
       travel_to(DateTime.new(2024, 3, 5, 4)) do
         create_subscription(
@@ -57,8 +60,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
         subscription = customer.subscriptions.active.first
         invoice = subscription.invoices.first
-        # NOTE: 4 days of trial left
-        expect(invoice.fees_amount_cents).to eq(2597) # (31 - 4 - 4) * 35 / 31
+        expect(invoice.fees_amount_cents).to eq(2371) # (31 - 4 - 6) * 35 / 31
       end
     end
   end
