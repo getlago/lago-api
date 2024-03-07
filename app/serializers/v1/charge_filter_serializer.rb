@@ -4,7 +4,6 @@ module V1
   class ChargeFilterSerializer < ModelSerializer
     def serialize
       {
-        lago_id: model.id,
         invoice_display_name: model.invoice_display_name,
         properties: model.properties,
         values:,

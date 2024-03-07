@@ -23,7 +23,6 @@ RSpec.describe ::V1::ChargeFilterSerializer do
     result = JSON.parse(serializer.to_json)
 
     aggregate_failures do
-      expect(result['filter']['lago_id']).to eq(charge_filter.id)
       expect(result['filter']['invoice_display_name']).to eq(charge_filter.invoice_display_name)
       expect(result['filter']['properties']).to eq(charge_filter.properties)
       expect(result['filter']['values']).to eq(
