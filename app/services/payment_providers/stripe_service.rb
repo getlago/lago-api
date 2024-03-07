@@ -201,7 +201,7 @@ module PaymentProviders
       raise if event.livemode
 
       Rails.logger.warn("Stripe resource not found: #{e.message}. JSON: #{event_json}")
-      result
+      BaseService::Result.new # NOTE: Prevents error from being re-raised
     end
 
     private
