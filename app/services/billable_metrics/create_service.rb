@@ -26,7 +26,7 @@ module BillableMetrics
         if args[:filters].present?
           BillableMetricFilters::CreateOrUpdateBatchService.call(
             billable_metric: metric,
-            filters_params: args[:filters].map(&:with_indifferent_access),
+            filters_params: args[:filters].map { |f| f.to_h.with_indifferent_access },
           ).raise_if_error!
         end
 
