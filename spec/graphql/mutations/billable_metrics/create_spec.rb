@@ -16,6 +16,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
           organization { id },
           group
           weightedInterval
+          filters { key values }
         }
       }
     GQL
@@ -33,6 +34,12 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
           description: 'New metric description',
           aggregationType: 'count_agg',
           recurring: false,
+          filters: [
+            {
+              key: 'region',
+              values: %w[usa europe],
+            },
+          ],
         },
       },
     )
