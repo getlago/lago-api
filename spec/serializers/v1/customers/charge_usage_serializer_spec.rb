@@ -149,7 +149,6 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
 
     it 'returns filters array' do
       expect(result['charges'].first['filters'].first).to include(
-        'lago_id' => charge_filter.id,
         'units' => '10.0',
         'amount_cents' => 100,
         'events_count' => 12,
@@ -158,7 +157,6 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       )
 
       expect(result['charges'].first['grouped_usage'].first['filters'].first).to include(
-        'lago_id' => charge_filter.id,
         'units' => '10.0',
         'amount_cents' => 100,
         'events_count' => 12,

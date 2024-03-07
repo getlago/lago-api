@@ -52,7 +52,6 @@ module V1
           next unless f.charge_filter
 
           {
-            lago_id: f.charge_filter.id,
             units: f.units,
             amount_cents: f.amount_cents,
             events_count: f.events_count,
