@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_02_29_100439) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_07_050026) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -171,6 +171,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_29_100439) do
     t.bigint "min_amount_cents", default: 0, null: false
     t.boolean "invoiceable", default: true, null: false
     t.string "invoice_display_name"
+    t.jsonb "properties", default: {}, null: false
   end
 
   create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -820,7 +821,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_29_100439) do
   create_table "usage_charge_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.bigint "current_package_count", default: 1, null: false
     t.jsonb "available_group_usage"
-    t.jsonb "properties", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
