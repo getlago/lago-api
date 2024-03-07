@@ -50,6 +50,13 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
       sub_invoice = subscription.invoices.first
       expect(sub_invoice.total_amount_cents).to eq(4645) # 60 / 31 * 24
 
+      travel_to(DateTime.new(2023, 2, 1, 6)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+      end
+
+      last_invoice = subscription.invoices.order(created_at: :desc).first
+
       ### 25 Feb: Create event and Terminate subscription
       travel_to(DateTime.new(2023, 2, 25, 6)) do
         create_event(
@@ -63,7 +70,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         expect {
           terminate_subscription(subscription)
         }.to change { subscription.reload.status }.from('active').to('terminated')
-          .and change { subscription.invoices.count }.from(1).to(2)
+          .and change { subscription.invoices.count }.from(2).to(3)
 
         term_invoice = subscription.invoices.order(sequential_id: :desc).first
         expect(term_invoice).to be_draft
@@ -93,11 +100,9 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         )
 
         # Refresh pay in advance invoice
-        expect {
-          refresh_invoice(sub_invoice)
-        }.not_to change { sub_invoice.reload.total_amount_cents }
+        refresh_invoice(last_invoice)
 
-        credit_note = sub_invoice.credit_notes.first
+        credit_note = last_invoice.credit_notes.first
         expect(credit_note).to be_draft
         expect(credit_note.reload.total_amount_cents).to eq(643)
 
@@ -108,8 +113,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
         # Finalize pay in advance invoice
         expect {
-          finalize_invoice(sub_invoice)
-        }.to change { sub_invoice.reload.status }.from('draft').to('finalized')
+          finalize_invoice(last_invoice)
+        }.to change { last_invoice.reload.status }.from('draft').to('finalized')
           .and change { credit_note.reload.status }.from('draft').to('finalized')
 
         # Finalize termination invoice
@@ -117,7 +122,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           finalize_invoice(term_invoice)
         }.to change { term_invoice.reload.status }.from('draft').to('finalized')
 
-        credit_note = sub_invoice.credit_notes.first
+        credit_note = last_invoice.credit_notes.first
         expect(credit_note.total_amount_cents).to eq(643) # 60.0 / 28 * 3
 
         expect(term_invoice).to have_attributes(
@@ -182,6 +187,11 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
       sub_invoice = subscription.invoices.first
       expect(sub_invoice.total_amount_cents).to eq(4645) # 60 / 31 * 24
 
+      travel_to(DateTime.new(2023, 2, 1, 6)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+      end
+
       ### 25 Feb: Create event and Terminate subscription
       travel_to(DateTime.new(2023, 2, 25, 8)) do
         create_event(
@@ -209,7 +219,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         expect {
           terminate_subscription(subscription)
         }.to change { subscription.reload.status }.from('active').to('terminated')
-          .and change { subscription.invoices.count }.from(1).to(2)
+          .and change { subscription.invoices.count }.from(2).to(3)
 
         term_invoice = subscription.invoices.order(sequential_id: :desc).first
         expect(term_invoice).to be_finalized

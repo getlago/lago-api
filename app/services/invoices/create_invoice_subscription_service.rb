@@ -63,7 +63,7 @@ module Invoices
       subscriptions_boundaries.any? do |subscription_id, boundaries|
         subscription = Subscription.includes(:plan).find(subscription_id)
 
-        matching_invoice_subscription?(subscription, boundaries)
+        InvoiceSubscription.matching?(subscription, boundaries)
       end
     end
 
@@ -125,23 +125,7 @@ module Invoices
         charges_duration: dates_service.charges_duration_in_days,
       }
 
-      matching_invoice_subscription?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries
-    end
-
-    def matching_invoice_subscription?(subscription, boundaries)
-      base_query = InvoiceSubscription
-        .where(subscription_id: subscription.id)
-        .recurring
-        .where(from_datetime: boundaries[:from_datetime])
-        .where(to_datetime: boundaries[:to_datetime])
-
-      if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
-        base_query = base_query
-          .where(charges_from_datetime: boundaries[:charges_from_datetime])
-          .where(charges_to_datetime: boundaries[:charges_to_datetime])
-      end
-
-      base_query.exists?
+      InvoiceSubscription.matching?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries
     end
   end
 end

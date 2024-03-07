@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization, webhook_url: nil, email_settings: '') }
 
   let(:timezone) { 'Europe/Paris' }
   let(:customer) { create(:customer, organization:, timezone:) }
@@ -178,6 +178,54 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
       end
     end
 
+    context 'when plan is pay in advance' do
+      let(:plan) do
+        create(
+          :plan,
+          organization:,
+          interval: 'monthly',
+          amount_cents: 1000,
+          pay_in_advance: true,
+        )
+      end
+
+      it 'does not issue credit note and does not bill previous period ' do
+        subscription = nil
+
+        travel_to(creation_time) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+              billing_time: 'anniversary',
+              subscription_at: subscription_at.iso8601,
+              ending_at: ending_at.iso8601,
+            },
+          )
+
+          subscription = customer.subscriptions.first
+          expect(subscription).to be_active
+        end
+
+        travel_to(ending_at + 15.minutes) do
+          Clock::TerminateEndedSubscriptionsJob.perform_now
+
+          perform_all_enqueued_jobs
+
+          invoice = subscription.invoices.order(created_at: :desc).first
+
+          aggregate_failures do
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(2)
+            expect(customer.credit_notes.count).to eq(0)
+            expect(invoice.total_amount_cents).to eq(0)
+            expect(invoice.issuing_date.iso8601).to eq('2023-10-05')
+          end
+        end
+      end
+    end
+
     context 'when ending_at is not set and subscription is terminated on the day of creation' do
       it 'bills correctly only 1 day' do
         subscription = nil
@@ -332,6 +380,59 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription.reload.invoices.count).to eq(1)
             expect(invoice.total_amount_cents).to eq(1000)
             expect(invoice.issuing_date.iso8601).to eq('2023-10-01')
+          end
+        end
+      end
+
+      context 'when plan is pay in advance' do
+        let(:plan) do
+          create(
+            :plan,
+            organization:,
+            interval: 'monthly',
+            amount_cents: 1000,
+            pay_in_advance: true,
+          )
+        end
+
+        it 'does not issue credit note and does not bill previous period' do
+          subscription = nil
+
+          travel_to(creation_time) do
+            create_subscription(
+              {
+                external_customer_id: customer.external_id,
+                external_id: customer.external_id,
+                plan_code: plan.code,
+                billing_time: 'calendar',
+                subscription_at: subscription_at.iso8601,
+                ending_at: ending_at.iso8601,
+              },
+            )
+
+            subscription = customer.subscriptions.first
+            expect(subscription).to be_active
+          end
+
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
+            Subscriptions::BillingService.call
+            perform_all_enqueued_jobs
+          end
+
+          travel_to(ending_at + 15.minutes) do
+            Clock::TerminateEndedSubscriptionsJob.perform_now
+
+            perform_all_enqueued_jobs
+
+            invoice = subscription.invoices.order(created_at: :desc).first
+
+            aggregate_failures do
+              expect(subscription.reload).to be_terminated
+              expect(subscription.reload.invoices.count).to eq(3)
+              expect(customer.credit_notes.count).to eq(0)
+              expect(invoice.total_amount_cents).to eq(0)
+              expect(invoice.issuing_date.iso8601).to eq('2023-10-01')
+            end
           end
         end
       end
