@@ -24,7 +24,7 @@ module BillableMetrics
         if params.key?(:filters)
           BillableMetricFilters::CreateOrUpdateBatchService.call(
             billable_metric:,
-            filters_params: params[:filters].map(&:to_h).map(&:with_indifferent_access),
+            filters_params: params[:filters].map { |f| f.to_h.with_indifferent_access },
           ).raise_if_error!
         end
       end
