@@ -193,6 +193,14 @@ type BillableMetricFilter {
   values: [String!]!
 }
 
+"""
+Billable metric filters input arguments
+"""
+input BillableMetricFiltersInput {
+  key: String!
+  values: [String!]!
+}
+
 enum BillingTimeEnum {
   anniversary
   calendar
@@ -1689,7 +1697,7 @@ input CreateBillableMetricInput {
   code: String!
   description: String!
   fieldName: String
-  filters: [Input!]
+  filters: [BillableMetricFiltersInput!]
   group: JSON
   name: String!
   recurring: Boolean
@@ -3362,14 +3370,6 @@ scalar ISO8601Date
 An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
-
-"""
-Billable metric filters input arguments
-"""
-input Input {
-  key: String!
-  values: [String!]!
-}
 
 type Invite {
   acceptedAt: ISO8601DateTime!
@@ -5870,7 +5870,7 @@ input UpdateBillableMetricInput {
   code: String!
   description: String!
   fieldName: String
-  filters: [Input!]
+  filters: [BillableMetricFiltersInput!]
   group: JSON
   id: String!
   name: String!
