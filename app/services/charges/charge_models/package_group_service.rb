@@ -50,7 +50,7 @@ module Charges
             free_units: BigDecimal(free_units).to_s,
             paid_units: '0.0',
             per_package_size:,
-            per_package_unit_amount:,
+            per_package_unit_amount: per_group_package_unit_amount,
           }
         end
 
@@ -58,8 +58,12 @@ module Charges
           free_units: BigDecimal(free_units).to_s,
           paid_units: BigDecimal(paid_units).to_s,
           per_package_size:,
-          per_package_unit_amount:,
+          per_package_unit_amount: per_group_package_unit_amount,
         }
+      end
+
+      def charge_group
+        @charge_group ||= ChargeGroup.find(charge.charge_group_id)
       end
 
       def usage_charge_group
@@ -85,7 +89,7 @@ module Charges
       end
 
       def per_group_package_unit_amount
-        @per_group_package_unit_amount ||= BigDecimal(usage_charge_group.properties['amount'])
+        @per_group_package_unit_amount ||= BigDecimal(charge_group.properties['amount'])
       end
 
       def paid_units
@@ -98,10 +102,6 @@ module Charges
 
       def per_package_size
         @per_package_size ||= properties['package_size']
-      end
-
-      def per_package_unit_amount
-        @per_package_unit_amount ||= BigDecimal(properties['amount'])
       end
 
       def current_package_available_usage
