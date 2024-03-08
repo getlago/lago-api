@@ -99,22 +99,18 @@ class Fee < ApplicationRecord
     subscription.plan.invoice_display_name
   end
 
-  def group_name
-    charge&.group_properties&.find_by(group:)&.invoice_display_name || group&.name
-  end
-
   def filter_display_name
     charge_filter&.display_name
   end
 
   def invoice_sorting_clause
-    base_clause = "#{invoice_name} #{group_name} #{filter_display_name}".downcase
+    base_clause = "#{invoice_name} #{filter_display_name}".downcase
 
     return base_clause unless charge?
     return base_clause unless charge.standard?
     return base_clause if charge.properties['grouped_by'].blank?
 
-    "#{invoice_name} #{grouped_by.values.join} #{group_name} #{filter_display_name}".downcase
+    "#{invoice_name} #{grouped_by.values.join} #{filter_display_name}".downcase
   end
 
   def currency

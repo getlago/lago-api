@@ -10,7 +10,7 @@ sv:
     bill_to: Mottagare
     breakdown: Specifikation
     breakdown_for_days: Använt %{breakdown_duration} av %{breakdown_total_duration} dagar
-    breakdown_of: Specifikation för %{fee_group_name}
+    breakdown_of: Specifikation för %{fee_filter_display_name}
     credit_notes: Kreditfakturor
     date_from: Avser period
     date_to: till och med
