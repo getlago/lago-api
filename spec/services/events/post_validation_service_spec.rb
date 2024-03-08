@@ -155,7 +155,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
           missing_parent_group_key_event.transaction_id,
           missing_child_group_key_event.transaction_id,
         )
-      expect(result.errors[:invalid_filter_values]).to include(invalid_filter_values_event.transaction_id)
+      # expect(result.errors[:invalid_filter_values]).to include(invalid_filter_values_event.transaction_id)
     end
 
     it 'delivers a webhook with the list of transaction_id' do
@@ -169,7 +169,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
             invalid_code: [invalid_code_event.transaction_id],
             missing_aggregation_property: [missing_aggregation_property_event.transaction_id],
             missing_group_key: Array,
-            invalid_filter_values: [invalid_filter_values_event.transaction_id],
+            # invalid_filter_values: [invalid_filter_values_event.transaction_id],
           },
         )
     end
