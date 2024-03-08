@@ -10,7 +10,7 @@ de:
     bill_to: An
     breakdown: Aufschlüsselung
     breakdown_for_days: "%{breakdown_duration} für %{breakdown_total_duration} Tage"
-    breakdown_of: Aufschlüsselung für %{fee_group_name}
+    breakdown_of: Aufschlüsselung für %{fee_filter_display_name}
     coupons: Coupons
     credit_notes: Gutschriften
     date_from: Vom
