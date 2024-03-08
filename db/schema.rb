@@ -439,8 +439,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_15_122310) do
     t.jsonb "metadata", default: {}, null: false
     t.uuid "subscription_id"
     t.datetime "deleted_at"
-    t.string "external_subscription_id"
     t.string "external_customer_id"
+    t.string "external_subscription_id"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
     t.index ["organization_id", "code", "created_at"], name: "index_events_on_organization_id_and_code_and_created_at", where: "(deleted_at IS NULL)"
@@ -715,9 +715,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_15_122310) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
-    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
+    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.string "premium_integrations", default: [], null: false, array: true
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
