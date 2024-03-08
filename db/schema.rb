@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_03_05_164449) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_08_104003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1045,14 +1045,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_05_164449) do
                LEFT JOIN groups child_groups ON (((child_groups.billable_metric_id = billable_metrics_1.id) AND (child_groups.parent_group_id IS NOT NULL))))
             WHERE (billable_metrics_1.deleted_at IS NULL)
             GROUP BY billable_metrics_1.id, billable_metrics_1.code
-          ), billable_metric_filters AS (
-           SELECT billable_metrics_1.id AS bm_id,
-              billable_metrics_1.code AS bm_code,
-              filters.key AS filter_key,
-              filters."values" AS filter_values
-             FROM (billable_metrics billable_metrics_1
-               JOIN public.billable_metric_filters filters ON ((filters.billable_metric_id = billable_metrics_1.id)))
-            WHERE ((billable_metrics_1.deleted_at IS NULL) AND (filters.deleted_at IS NULL))
           )
    SELECT events.organization_id,
       events.transaction_id,
@@ -1066,22 +1058,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_05_164449) do
       (COALESCE(billable_metric_groups.parent_group_count, (0)::bigint) > 0) AS parent_group_mandatory,
       (events.properties ?| (billable_metric_groups.parent_group_keys)::text[]) AS has_parent_group_key,
       (COALESCE(billable_metric_groups.child_group_count, (0)::bigint) > 0) AS child_group_mandatory,
-      (events.properties ?| (billable_metric_groups.child_group_keys)::text[]) AS has_child_group_key,
-      (sum(
-          CASE
-              WHEN (events.properties ? (billable_metric_filters.filter_key)::text) THEN 1
-              ELSE 0
-          END) > 0) AS has_filter_keys,
-      (sum(
-          CASE
-              WHEN ((events.properties ->> (billable_metric_filters.filter_key)::text) = ANY ((billable_metric_filters.filter_values)::text[])) THEN 0
-              ELSE 1
-          END) > 0) AS has_invalid_filter_values
-     FROM (((events
+      (events.properties ?| (billable_metric_groups.child_group_keys)::text[]) AS has_child_group_key
+     FROM ((events
        LEFT JOIN billable_metrics ON ((((billable_metrics.code)::text = (events.code)::text) AND (events.organization_id = billable_metrics.organization_id))))
        LEFT JOIN billable_metric_groups ON ((billable_metrics.id = billable_metric_groups.bm_id)))
-       LEFT JOIN billable_metric_filters ON ((billable_metric_filters.bm_id = billable_metrics.id)))
-    WHERE ((events.deleted_at IS NULL) AND (events.created_at >= (date_trunc('hour'::text, now()) - 'PT1H'::interval)) AND (events.created_at < date_trunc('hour'::text, now())) AND (billable_metrics.deleted_at IS NULL))
-    GROUP BY events.organization_id, events.transaction_id, events."timestamp", events.properties, billable_metrics.code, billable_metrics.field_name, billable_metrics.aggregation_type, billable_metric_groups.parent_group_count, billable_metric_groups.parent_group_keys, billable_metric_groups.child_group_count, billable_metric_groups.child_group_keys;
+    WHERE ((events.deleted_at IS NULL) AND (events.created_at >= (date_trunc('hour'::text, now()) - 'PT1H'::interval)) AND (events.created_at < date_trunc('hour'::text, now())) AND (billable_metrics.deleted_at IS NULL));
   SQL
 end
