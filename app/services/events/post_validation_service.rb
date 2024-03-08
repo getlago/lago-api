@@ -13,7 +13,7 @@ module Events
         invalid_code: process_query(invalid_code_query),
         missing_aggregation_property: process_query(missing_aggregation_property_query),
         missing_group_key: process_query(missing_group_key_query),
-        # TODO: Fix performance issue - invalid_filter_values: process_query(invalid_filter_values_query),
+        invalid_filter_values: process_query(invalid_filter_values_query),
       }
 
       if errors[:invalid_code].present? ||
@@ -82,7 +82,7 @@ module Events
         FROM last_hour_events_mv
         WHERE organization_id = '#{organization.id}'
           AND has_filter_keys = 't'
-          AND has_invalid_filter_values = 't'
+          AND has_valid_filter_values = 'f'
       SQL
     end
 
