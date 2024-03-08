@@ -1,6 +1,18 @@
 # frozen_string_literal: true
 
 class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
+  class BillableMetricFilter < ApplicationRecord
+  end
+
+  class ChargeFilter < ApplicationRecord
+    has_many :values, class_name: 'ChargeFilterValue'
+  end
+
+  class ChargeFilterValue < ApplicationRecord
+    belongs_to :charge_filter
+    belongs_to :billable_metric_filter
+  end
+
   class CachedAggregation < ApplicationRecord
     belongs_to :group, optional: true
     belongs_to :charge
@@ -43,9 +55,10 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
   private
 
   def link_charge_filter(object)
-    filter = object.charge.filters.find do |f|
-      f.values.pluck(:value).sort == [object.group.value, object.group.parent&.value].compact.sort
-    end
+    object_hash = { object.group.key => [object.group.value] }
+    object_hash[object.group.parent.key] = [object.group.parent.value] if object.group.parent
+
+    filter = object.charge.filters.find { |f| f.to_h == object_hash }
 
     object.update!(charge_filter_id: filter.id)
   end

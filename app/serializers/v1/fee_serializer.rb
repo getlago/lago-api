@@ -20,7 +20,7 @@ module V1
           name: model.item_name,
           invoice_display_name: model.invoice_name,
           filter_invoice_display_name: model.charge_filter&.display_name,
-          group_invoice_display_name: model.group_name,
+          group_invoice_display_name: model.filter_display_name,
           lago_item_id: model.item_id,
           item_type: model.item_type,
           grouped_by: model.grouped_by,
