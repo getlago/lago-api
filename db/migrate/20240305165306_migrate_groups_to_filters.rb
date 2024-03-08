@@ -52,7 +52,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
       )
 
       filter.values ||= []
-      filter.values << group.value unless filter.value?(group.value)
+      filter.values << group.value unless filter.values.include?(group.value)
       filter.save!
     end
 

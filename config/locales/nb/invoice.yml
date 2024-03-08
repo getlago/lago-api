@@ -10,7 +10,7 @@ nb:
     bill_to: Til
     breakdown: Oversikt
     breakdown_for_days: "%{breakdown_duration} av %{breakdown_total_duration} dager"
-    breakdown_of: Fordeling av %{fee_group_name}
+    breakdown_of: Fordeling av %{fee_filter_display_name}
     coupons: Kuponger
     credit_notes: Kreditnotaer
     date_from: Fra
