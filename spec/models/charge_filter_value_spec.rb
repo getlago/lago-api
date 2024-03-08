@@ -30,5 +30,11 @@ RSpec.describe ChargeFilterValue, type: :model do
         expect(charge_filter_value.errors[:value]).to include('value_is_invalid')
       end
     end
+
+    context 'when value is MATCH_ALL_FILTER_VALUES' do
+      let(:value) { ChargeFilterValue::MATCH_ALL_FILTER_VALUES }
+
+      it { expect(charge_filter_value).to be_valid }
+    end
   end
 end
