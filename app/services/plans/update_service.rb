@@ -46,8 +46,10 @@ module Plans
 
         process_charges(plan, params[:charges]) if params[:charges]
         process_minimum_commitment(plan, params[:minimum_commitment]) if params[:minimum_commitment] && License.premium?
-        process_downgraded_subscriptions if old_amount_cents != plan.amount_cents
-        process_pending_subscriptions if old_amount_cents != plan.amount_cents
+        if old_amount_cents != plan.amount_cents
+          process_downgraded_subscriptions
+          process_pending_subscriptions
+        end
       end
 
       result.plan = plan.reload
