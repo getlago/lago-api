@@ -15,7 +15,7 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
     QuantifiedEvent.where.associated(:group).find_each do |event|
       filters = ChargeFilter.where(charge_id: event.billable_metric.charges.pluck(:id))
       filter = filters.find do |f|
-        f.values.pluck(:value).sort == [event.group.value, event.group.parent&.value].compact.sort
+        f.values.pluck(:values).flatten.sort == [[event.group.value], [event.group.parent&.value]].flatten.compact.sort
       end
 
       event.update!(charge_filter_id: filter.id)
@@ -24,7 +24,7 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
     # NOTE: Associate adjusted_fees with charge filters
     AdjustedFee.where.associated(:group).find_each do |fee|
       filter = fee.charge.filters.find do |f|
-        f.values.pluck(:value).sort == [fee.group.value, fee.group.parent&.value].compact.sort
+        f.values.pluck(:values).flatten.sort == [[fee.group.value], [fee.group.parent&.value]].flatten.compact.sort
       end
 
       fee.update!(charge_filter_id: filter.id)

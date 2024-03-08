@@ -44,7 +44,7 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
 
   def link_charge_filter(object)
     filter = object.charge.filters.find do |f|
-      f.values.pluck(:value).sort == [object.group.value, object.group.parent&.value].compact.sort
+      f.values.pluck(:values).flatten.sort == [[object.group.value], [object.group.parent&.value]].flatten.compact.sort
     end
 
     object.update!(charge_filter_id: filter.id)

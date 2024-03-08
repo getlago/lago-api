@@ -72,7 +72,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         bm_filter = BillableMetricFilter.find_by(billable_metric_id: group.billable_metric_id, key: group.key)
 
         # NOTE: Create filter value
-        filter.values.create!(billable_metric_filter_id: bm_filter.id, value: group.value)
+        filter.values.create!(billable_metric_filter_id: bm_filter.id, values: [group.value])
 
         next unless group.parent_group_id?
 
@@ -82,7 +82,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
           key: group.parent.key,
         )
 
-        filter.values.create!(billable_metric_filter_id: parent_bm_filter.id, value: group.parent.value)
+        filter.values.create!(billable_metric_filter_id: parent_bm_filter.id, values: [group.parent.value])
       end
 
       # NOTE: Create filter values for the remaining groups
@@ -95,7 +95,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
 
         # Create filter values
         bm_filter = BillableMetricFilter.find_by(billable_metric_id: group.billable_metric_id, key: group.key)
-        filter.values.create!(billable_metric_filter_id: bm_filter.id, value: group.value)
+        filter.values.create!(billable_metric_filter_id: bm_filter.id, values: [group.value])
 
         next unless group.parent_group_id?
 
@@ -104,7 +104,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
           key: group.parent.key,
         )
 
-        filter.values.create!(billable_metric_filter_id: parent_bm_filter.id, value: group.parent.value)
+        filter.values.create!(billable_metric_filter_id: parent_bm_filter.id, values: [group.parent.value])
       end
     end
   end
