@@ -35,11 +35,32 @@ module Plans
 
         if args[:charges].present?
           args[:charges].each do |charge|
+            # NOTE: charges that belong to a group will be created in a separate step
+            next if charge[:charge_group_id].present?
+
             new_charge = create_charge(plan, charge)
 
             if charge[:tax_codes].present?
               taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
               return taxes_result unless taxes_result.success?
+            end
+          end
+        end
+
+        if args[:charge_groups].present?
+          args[:charge_groups].each do |charge_group|
+            # TODO: tax services is not implemented for group yet
+            new_charge_group = create_charge_group(plan, charge_group)
+
+            next if new_charge_group.nil?
+
+            args[:charges].select { |charge| charge[:charge_group_id] == charge_group[:id] }.each do |charge|
+              new_charge = create_charge(plan, charge.merge(charge_group_id: new_charge_group.id))
+
+              if charge[:tax_codes].present?
+                taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
+                return taxes_result unless taxes_result.success?
+              end
             end
           end
         end
@@ -63,6 +84,7 @@ module Plans
         prorated: args[:prorated] || false,
         properties: args[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(args)),
         group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
+        charge_group_id: args[:charge_group_id] || nil,
       )
 
       if License.premium?
@@ -72,6 +94,25 @@ module Plans
 
       charge.save!
       charge
+    end
+
+    def create_charge_group(plan, args)
+      charge_group = plan.charge_groups.new(
+        invoice_display_name: args[:invoice_display_name],
+        invoiceable: true,
+        min_amount_cents: 0,
+        # NOTE: charge group is pay in advance by default since pay in arrears is not implemented yet
+        pay_in_advance: args[:pay_in_advance] || true,
+        properties: args[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(args)),
+      )
+
+      if License.premium?
+        charge_group.invoiceable = args[:invoiceable] unless args[:invoiceable].nil?
+        charge_group.min_amount_cents = args[:min_amount_cents] || 0
+      end
+
+      charge_group.save!
+      charge_group
     end
 
     def charge_model(args)

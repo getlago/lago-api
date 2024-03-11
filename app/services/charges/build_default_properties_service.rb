@@ -15,6 +15,8 @@ module Charges
       when :percentage then default_percentage_properties
       when :volume then default_volume_properties
       when :graduated_percentage then default_graduated_percentage_properties
+      when :package_group then default_package_group_properties
+      when :timebased then default_timebased_properties
       end
     end
 
@@ -75,6 +77,21 @@ module Charges
             'flat_amount': '0',
           },
         ],
+      }
+    end
+
+    def default_package_group_properties
+      {
+        'package_size': 1,
+        'amount': '0',
+        'free_units': 0,
+      }
+    end
+
+    def default_timebased_properties
+      {
+        'amount': '0',
+        'block_time_in_minutes': 15,
       }
     end
   end
