@@ -77,6 +77,10 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
               invoice: invoice_subscription.invoice,
               charge:,
               amount_cents: 300,
+              properties: {
+                charges_from_datetime: charges_from_datetime,
+                charges_to_datetime: charges_to_datetime,
+              },
             )
           end
 
@@ -585,6 +589,10 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                     invoice: invoice_subscription_previous.invoice,
                     charge:,
                     amount_cents: 300,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:,
+                    },
                   )
                 end
 

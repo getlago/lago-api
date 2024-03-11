@@ -20,15 +20,22 @@ module Commitments
         end
 
         def charge_fees
-          period_invoice_ids_result = helper_service.period_invoice_ids
+          dates_service = helper_service.dates_service
 
           Fee
             .charge_kind
             .joins(:charge)
             .where(
               subscription_id: subscription.id,
-              invoice_id: period_invoice_ids_result.period_invoice_ids,
               charge: { pay_in_advance: false },
+            )
+            .where(
+              "(fees.properties->>'charges_from_datetime') >= ?",
+              dates_service.previous_beginning_of_period,
+            )
+            .where(
+              "(fees.properties->>'charges_to_datetime') <= ?",
+              dates_service.end_of_period&.iso8601(3),
             )
         end
 
@@ -81,16 +88,22 @@ module Commitments
               pay_in_advance: false,
             )
             .where(
-              "(fees.properties->>'charges_from_datetime') >= ?",
-              dates_service.previous_beginning_of_period,
-            )
-            .where(
               "(fees.properties->>'charges_to_datetime') <= ?",
               dates_service.end_of_period&.iso8601(3),
             )
 
-          if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
-            scope = scope.where.not(invoice_id: invoice_subscription.invoice_id)
+          if subscription.plan.yearly? && subscription.plan.bill_charges_monthly? # ruboco:disable Style/ConditionalAssignment
+            scope = scope
+              .where(
+                "(fees.properties->>'charges_from_datetime') >= ?",
+                dates_service.previous_beginning_of_period - 1.month,
+              )
+              .where.not(invoice_id: invoice_subscription.invoice_id)
+          else
+            scope = scope.where(
+              "(fees.properties->>'charges_from_datetime') >= ?",
+              dates_service.previous_beginning_of_period,
+            )
           end
 
           scope
