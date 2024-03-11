@@ -53,7 +53,11 @@ module Charges
       end
 
       def current_package_available_usage
-        @current_package_available_usage ||= BigDecimal(usage_charge_group.available_group_usage[charge.billable_metric_id])
+        @current_package_available_usage ||=
+          BigDecimal(
+            usage_charge_group
+              .available_group_usage[charge.billable_metric_id],
+          )
       end
 
       # TODO: check on this
