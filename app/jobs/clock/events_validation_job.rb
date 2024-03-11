@@ -4,6 +4,8 @@ module Clock
   class EventsValidationJob < ApplicationJob
     queue_as 'clock'
 
+    unique :until_executed
+
     def perform
       # NOTE: refresh the last hour events materialized view
       Scenic.database.refresh_materialized_view(
