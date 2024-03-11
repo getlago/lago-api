@@ -35,7 +35,7 @@ module TimebasedEvents
       def matching_charge?
         return false if matching_charge.blank?
 
-        block_time_in_minutes.positive?
+        block_time_in_minutes.positive? && matching_charge.charge_group_id.nil?
       end
 
       def matching_billable_metric?
