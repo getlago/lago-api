@@ -54,14 +54,23 @@ module Commitments
         end
 
         def charge_in_advance_recurring_fees
-          return Fee.none unless invoice_subscription.previous_invoice_subscription
+          if !invoice_subscription.previous_invoice_subscription &&
+             (!subscription.plan.yearly? || !subscription.plan.bill_charges_monthly?)
+            return Fee.none
+          end
+
+          is = if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
+            invoice_subscription
+          else
+            invoice_subscription.previous_invoice_subscription
+          end
 
           dates_service = Commitments::Minimum::InArrears::HelperService.new(
             commitment: minimum_commitment,
-            invoice_subscription: invoice_subscription.previous_invoice_subscription,
+            invoice_subscription: is,
           ).dates_service
 
-          Fee
+          scope = Fee
             .charge_kind
             .joins(:charge)
             .joins(charge: :billable_metric)
@@ -79,6 +88,12 @@ module Commitments
               "(fees.properties->>'charges_to_datetime') <= ?",
               dates_service.end_of_period&.iso8601(3),
             )
+
+          if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
+            scope = scope.where.not(invoice_id: invoice_subscription.invoice_id)
+          end
+
+          scope
         end
       end
     end
