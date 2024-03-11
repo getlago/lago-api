@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_03_08_104003) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_11_091817) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1064,4 +1064,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_08_104003) do
        LEFT JOIN billable_metric_groups ON ((billable_metrics.id = billable_metric_groups.bm_id)))
     WHERE ((events.deleted_at IS NULL) AND (events.created_at >= (date_trunc('hour'::text, now()) - 'PT1H'::interval)) AND (events.created_at < date_trunc('hour'::text, now())) AND (billable_metrics.deleted_at IS NULL));
   SQL
+  add_index "last_hour_events_mv", ["organization_id"], name: "index_last_hour_events_mv_on_organization_id"
+
 end
