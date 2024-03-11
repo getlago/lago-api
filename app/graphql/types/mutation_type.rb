@@ -89,5 +89,7 @@ module Types
     field :create_webhook_endpoint, mutation: Mutations::WebhookEndpoints::Create
     field :destroy_webhook_endpoint, mutation: Mutations::WebhookEndpoints::Destroy
     field :update_webhook_endpoint, mutation: Mutations::WebhookEndpoints::Update
+
+    field :google_login_user, mutation: Mutations::Auth::Google::LoginUser
   end
 end

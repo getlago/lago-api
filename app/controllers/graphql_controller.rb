@@ -25,6 +25,7 @@ class GraphqlController < ApplicationController
       current_user:,
       current_organization:,
       customer_portal_user:,
+      request:,
     }
     result = LagoApiSchema.execute(query, variables:, context:, operation_name:)
     render(json: result)
