@@ -64,7 +64,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
 
   let(:billing_time) { 'anniversary' }
   let(:plan_interval) { 'yearly' }
-  let(:subscription_time) { DateTime.new(2024, 3, 1, 10) }
+  let(:subscription_time) { DateTime.new(2024, 3, 5, 10) }
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
   before do
@@ -170,6 +170,17 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               )
             end
 
+            if i == 11
+              create_event(
+                {
+                  code: billable_metric_metered.code,
+                  transaction_id: SecureRandom.uuid,
+                  external_customer_id: customer.external_id,
+                  properties: { total: '1' },
+                },
+              )
+            end
+
             Subscriptions::BillingService.new.call
             perform_all_enqueued_jobs
           end
@@ -178,8 +189,10 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
 
       it 'creates an invoice with minimum commitment fee' do
         travel_to(subscription_time + 1.year) do
-          expect(invoice.fees.commitment_kind.count).to eq(1)
-          expect(invoice.fees.commitment_kind.sum(:amount_cents)).to eq(981_200)
+          aggregate_failures do
+            expect(invoice.fees.commitment_kind.count).to eq(1)
+            expect(invoice.fees.commitment_kind.sum(:amount_cents)).to eq(981_100)
+          end
         end
       end
     end

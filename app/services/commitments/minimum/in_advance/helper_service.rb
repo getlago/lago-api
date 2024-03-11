@@ -37,7 +37,7 @@ module Commitments
           subscription
             .invoice_subscriptions
             .where(
-              'from_datetime >= ? AND to_datetime <= ?',
+              'charges_from_datetime >= ? AND charges_to_datetime <= ?',
               ds.previous_beginning_of_period,
               ds.end_of_period,
             )

@@ -170,6 +170,17 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
               )
             end
 
+            if i == 11
+              create_event(
+                {
+                  code: billable_metric_metered.code,
+                  transaction_id: SecureRandom.uuid,
+                  external_customer_id: customer.external_id,
+                  properties: { total: '1' },
+                },
+              )
+            end
+
             Subscriptions::BillingService.new.call
             perform_all_enqueued_jobs
           end
@@ -178,8 +189,10 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
 
       it 'creates an invoice with minimum commitment fee' do
         travel_to(subscription_time + 1.year + 1.month) do
-          expect(invoice.fees.commitment_kind.count).to eq(1)
-          expect(invoice.fees.commitment_kind.sum(:amount_cents)).to eq(981_200)
+          aggregate_failures do
+            expect(invoice.fees.commitment_kind.count).to eq(1)
+            expect(invoice.fees.commitment_kind.sum(:amount_cents)).to eq(981_100)
+          end
         end
       end
     end
