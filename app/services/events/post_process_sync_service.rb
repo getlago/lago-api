@@ -44,5 +44,9 @@ module Events
     def subscription_renewal_service
       @subscription_renewal_service ||= TimebasedEvents::SubscriptionRenewals::CreateService.new(event, sync: true)
     end
+
+    def package_timebased_group_service
+      @package_timebased_group_service ||= TimebasedEvents::PackageTimebasedGroup::CreateService.new(event, sync: true)
+    end
   end
 end

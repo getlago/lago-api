@@ -3,12 +3,9 @@
 module Utils
   class SubscriptionRenewalService < BaseService
     def self.is_renewal_by_timebased_event?(subscription)
-      renewal_charge = subscription
-        .plan
-        .charges
-        .where(charge_model: :timebased)
+      charges = subscription.plan.charges
 
-      renewal_charge.count == 1
+      charges.count == 1 && charges.first.charge_model.to_sym == :timebased
     end
   end
 end
