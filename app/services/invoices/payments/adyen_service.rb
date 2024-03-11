@@ -148,7 +148,7 @@ module Invoices
         update_payment_method_id
 
         client.checkout.payments_api.payments(Lago::Adyen::Params.new(payment_params).to_h)
-      rescue Adyen::ValidationError => e
+      rescue Adyen::AuthenticationError, Adyen::ValidationError => e
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
         nil
