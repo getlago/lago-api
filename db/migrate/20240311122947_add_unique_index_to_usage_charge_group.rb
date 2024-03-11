@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddUniqueIndexToUsageChargeGroup < ActiveRecord::Migration[7.0]
   def change
     add_index :usage_charge_groups,
