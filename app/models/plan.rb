@@ -10,6 +10,7 @@ class Plan < ApplicationRecord
   belongs_to :parent, class_name: 'Plan', optional: true
 
   has_many :charges, dependent: :destroy
+  has_many :charge_groups, dependent: :destroy
   has_many :billable_metrics, through: :charges
   has_many :subscriptions
   has_many :customers, through: :subscriptions

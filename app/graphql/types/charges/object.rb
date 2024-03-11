@@ -9,6 +9,7 @@ module Types
       field :invoice_display_name, String, null: true
 
       field :billable_metric, Types::BillableMetrics::Object, null: false
+      field :charge_group, Types::ChargeGroups::Object, null: true
       field :charge_model, Types::Charges::ChargeModelEnum, null: false
       field :group_properties, [Types::Charges::GroupProperties], null: true
       field :invoiceable, Boolean, null: false
@@ -33,6 +34,12 @@ module Types
         scope = object.group_properties
         scope = scope.with_discarded if object.discarded?
         scope.includes(:group).sort_by { |gp| gp.group&.name }
+      end
+
+      def charge_group
+        return object.charge_group unless object.discarded?
+
+        ChargeGroup.with_discarded.find_by(id: object.charge_group_id)
       end
     end
   end

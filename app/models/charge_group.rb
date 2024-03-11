@@ -5,6 +5,8 @@ class ChargeGroup < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
+  belongs_to :plan, -> { with_discarded }, touch: true
+
   has_many :charges
   has_many :usage_charge_groups
 end

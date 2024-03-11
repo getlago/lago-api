@@ -6,6 +6,7 @@ module Types
       graphql_name 'ChargeInput'
 
       argument :billable_metric_id, ID, required: true
+      argument :charge_group_id, ID, required: false
       argument :charge_model, Types::Charges::ChargeModelEnum, required: true
       argument :id, ID, required: false
       argument :invoice_display_name, String, required: false
