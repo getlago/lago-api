@@ -33,9 +33,12 @@ module Charges
     attr_reader :charge, :aggregation_result, :properties
 
     def charge_model
-      @charge_model ||= case charge.charge_model.to_sym
+      charge_group_type = Utils::ChargeGroupTypeDeterminerService.call(charge.charge_group)
+      @charge_model ||= case charge_group_type
                         when :package_group
                           Charges::ChargeModels::PackageGroupService
+                        when :package_timebased_group
+                          Charges::ChargeModels::PackageTimebasedGroupService
                         else
                           raise(NotImplementedError)
       end

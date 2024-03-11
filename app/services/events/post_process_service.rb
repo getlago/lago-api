@@ -32,12 +32,11 @@ module Events
         handle_quantified_event
       end
 
-      # if should_handle_timebased_event?
-      #   return result unless timebased_event_service.process_event?
+      if package_timebased_group_service.process_timebased_event?
+        handle_package_timebased_group
 
-      #   handle_timebased_event
-      #   handle_pay_in_advance_timebased
-      # end
+        return result
+      end
 
       handle_pay_in_advance
 
@@ -193,6 +192,16 @@ module Events
 
     def handle_subscription_renewal
       service_result = subscription_renewal_service.call
+      service_result.raise_if_error!
+    end
+
+    # Timebased event for grouped timebased charges
+    def package_timebased_group_service
+      @package_timebased_group_service ||= TimebasedEvents::PackageTimebasedGroup::CreateService.new(event, sync: false)
+    end
+
+    def handle_package_timebased_group
+      service_result = package_timebased_group_service.call
       service_result.raise_if_error!
     end
   end

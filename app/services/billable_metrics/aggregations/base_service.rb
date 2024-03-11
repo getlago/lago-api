@@ -13,6 +13,7 @@ module BillableMetrics
         @boundaries = boundaries
 
         result.subscription_id = subscription.id
+        result.event = event
         result.aggregator = self
       end
 
