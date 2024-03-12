@@ -12,13 +12,7 @@ module Types
         field :events_count, Integer, null: false
         field :invoice_display_name, String, null: true
         field :units, GraphQL::Types::Float, null: false
-        field :values, Types::ChargeFilters::Values, null: false
-
-        def values
-          object.charge_filter.values.each_with_object({}) do |value, result|
-            result[value.billable_metric_filter.key] = value.values
-          end
-        end
+        field :values, Types::ChargeFilters::Values, null: false, method: :to_h
       end
     end
   end
