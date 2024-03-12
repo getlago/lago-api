@@ -10,7 +10,6 @@ class UsageChargeGroup < ApplicationRecord
 
   # TODO: add details validations
   validates :current_package_count, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
-  validates :available_group_usage, presence: true
   validates :charge_group_id, presence: true
   validates :subscription_id, presence: true
 end
