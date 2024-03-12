@@ -15,6 +15,7 @@ module BillableMetrics
         result.count = event_store.count
         result.variation = event_store.sum || 0
         result.total_aggregated_units = result.variation
+        result.options = {}
 
         if billable_metric.recurring?
           result.total_aggregated_units = latest_value + result.variation
