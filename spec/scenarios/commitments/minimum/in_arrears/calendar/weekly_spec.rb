@@ -61,9 +61,9 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
     )
   end
 
-  let(:billing_time) { 'anniversary' }
-  let(:plan_interval) { 'monthly' }
-  let(:subscription_time) { DateTime.new(2024, 2, 28, 10) }
+  let(:billing_time) { 'calendar' }
+  let(:plan_interval) { 'weekly' }
+  let(:subscription_time) { DateTime.new(2024, 3, 12, 10) }
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
   before do
@@ -137,7 +137,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       )
     end
 
-    travel_to(subscription_time + 1.month) do
+    travel_to((subscription_time + 1.week).beginning_of_week) do
       Subscriptions::BillingService.new.call
       perform_all_enqueued_jobs
     end
@@ -146,22 +146,22 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
   context 'when coupons are not applied' do
     context 'when subscription is billed for the first period' do
       it 'creates an invoice with minimum commitment fee' do
-        travel_to(subscription_time + 1.month) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(987_000)
+        travel_to((subscription_time + 1.week).beginning_of_week) do
+          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(845_572)
         end
       end
     end
 
     context 'when subscription is billed for the second period' do
       before do
-        travel_to(subscription_time + 2.months) do
+        travel_to((subscription_time + 2.weeks).beginning_of_week) do
           Subscriptions::BillingService.new.call
           perform_all_enqueued_jobs
         end
       end
 
       it 'creates an invoice with minimum commitment fee' do
-        travel_to(subscription_time + 2.months) do
+        travel_to((subscription_time + 2.weeks).beginning_of_week) do
           expect(invoice.fees.commitment_kind.first.amount_cents).to eq(989_000)
         end
       end
@@ -186,26 +186,31 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
         coupon_code: coupon_target.coupon.code,
         amount_cents: 1_000_000,
       )
+
+      travel_to((subscription_time + 1.week).beginning_of_week) do
+        Subscriptions::BillingService.new.call
+        perform_all_enqueued_jobs
+      end
     end
 
     context 'when subscription is billed for the first period' do
       it 'creates an invoice with minimum commitment fee' do
-        travel_to(subscription_time + 1.month) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(987_000)
+        travel_to((subscription_time + 1.week).beginning_of_week) do
+          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(845_572)
         end
       end
     end
 
     context 'when subscription is billed for the second period' do
       before do
-        travel_to(subscription_time + 2.months) do
+        travel_to((subscription_time + 2.weeks).beginning_of_week) do
           Subscriptions::BillingService.new.call
           perform_all_enqueued_jobs
         end
       end
 
       it 'creates an invoice with minimum commitment fee' do
-        travel_to(subscription_time + 2.months) do
+        travel_to((subscription_time + 2.weeks).beginning_of_week) do
           expect(invoice.fees.commitment_kind.first.amount_cents).to eq(989_000)
         end
       end

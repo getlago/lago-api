@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :request do
+describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:timezone) { 'UTC' }
   let(:customer) { create(:customer, organization:, timezone:) }
@@ -13,12 +13,12 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
   let(:plan) do
     create(
       :plan,
-      name: 'In Arrears',
-      code: 'in_arrears',
+      name: 'In Advance',
+      code: 'in_advance',
       organization:,
       amount_cents: 10_000,
       interval: plan_interval,
-      pay_in_advance: false,
+      pay_in_advance: true,
     )
   end
 
@@ -62,8 +62,8 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
   end
 
   let(:billing_time) { 'anniversary' }
-  let(:plan_interval) { 'monthly' }
-  let(:subscription_time) { DateTime.new(2024, 2, 28, 10) }
+  let(:plan_interval) { 'weekly' }
+  let(:subscription_time) { DateTime.new(2024, 3, 12, 10) }
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
   before do
@@ -114,7 +114,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
           code: billable_metric_recurring_advance.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { total: '10' },
+          properties: { total: '15' },
         },
       )
 
@@ -123,7 +123,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
           code: billable_metric_metered.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { total: '10' },
+          properties: { total: '25' },
         },
       )
 
@@ -132,12 +132,10 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
           code: billable_metric_metered_advance.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { total: '10' },
+          properties: { total: '30' },
         },
       )
-    end
 
-    travel_to(subscription_time + 1.month) do
       Subscriptions::BillingService.new.call
       perform_all_enqueued_jobs
     end
@@ -145,24 +143,44 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
 
   context 'when coupons are not applied' do
     context 'when subscription is billed for the first period' do
-      it 'creates an invoice with minimum commitment fee' do
-        travel_to(subscription_time + 1.month) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(987_000)
+      it 'creates an invoice with no minimum commitment fee' do
+        travel_to(subscription_time) do
+          expect(invoice.fees.commitment_kind.count).to eq(0)
         end
       end
     end
 
     context 'when subscription is billed for the second period' do
       before do
-        travel_to(subscription_time + 2.months) do
+        travel_to(subscription_time + 1.week) do
           Subscriptions::BillingService.new.call
           perform_all_enqueued_jobs
         end
       end
 
       it 'creates an invoice with minimum commitment fee' do
-        travel_to(subscription_time + 2.months) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(989_000)
+        travel_to(subscription_time + 1.week) do
+          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(983_000)
+        end
+      end
+    end
+
+    context 'when subscription is billed for the third period' do
+      before do
+        travel_to(subscription_time + 1.week) do
+          Subscriptions::BillingService.new.call
+          perform_all_enqueued_jobs
+        end
+
+        travel_to(subscription_time + 2.weeks) do
+          Subscriptions::BillingService.new.call
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it 'creates an invoice with minimum commitment fee' do
+        travel_to(subscription_time + 2.weeks) do
+          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(988_500)
         end
       end
     end
@@ -189,24 +207,44 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
     end
 
     context 'when subscription is billed for the first period' do
-      it 'creates an invoice with minimum commitment fee' do
-        travel_to(subscription_time + 1.month) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(987_000)
+      it 'creates an invoice with no minimum commitment fee' do
+        travel_to(subscription_time) do
+          expect(invoice.fees.commitment_kind.count).to eq(0)
         end
       end
     end
 
     context 'when subscription is billed for the second period' do
       before do
-        travel_to(subscription_time + 2.months) do
+        travel_to(subscription_time + 1.week) do
           Subscriptions::BillingService.new.call
           perform_all_enqueued_jobs
         end
       end
 
       it 'creates an invoice with minimum commitment fee' do
-        travel_to(subscription_time + 2.months) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(989_000)
+        travel_to(subscription_time + 1.week) do
+          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(983_000)
+        end
+      end
+    end
+
+    context 'when subscription is billed for the third period' do
+      before do
+        travel_to(subscription_time + 1.week) do
+          Subscriptions::BillingService.new.call
+          perform_all_enqueued_jobs
+        end
+
+        travel_to(subscription_time + 2.weeks) do
+          Subscriptions::BillingService.new.call
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it 'creates an invoice with minimum commitment fee' do
+        travel_to(subscription_time + 2.weeks) do
+          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(988_500)
         end
       end
     end

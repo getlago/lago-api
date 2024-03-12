@@ -22,7 +22,6 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
     )
   end
 
-  let(:bill_charges_monthly) { false }
   let(:invoice) { subscription.reload.invoices.order(sequential_id: :desc).first }
   let(:subscription) { customer.subscriptions.first.reload }
 
@@ -72,10 +71,6 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
     allow(pdf_generator).to receive(:call).and_return(pdf_result)
 
     minimum_commitment
-
-    billable_metric_metered
-    billable_metric_metered_advance
-    billable_metric_recurring_advance
 
     create(
       :standard_charge,
