@@ -99,6 +99,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
 
       expect(result.aggregation.round(5).to_s).to eq('0.0')
       expect(result.count).to eq(0)
+      expect(result.options).to eq({})
     end
   end
 
