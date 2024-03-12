@@ -43,6 +43,7 @@ module Commitments
       all_invoice_subscriptions = subscription
         .invoice_subscriptions
         .where(invoice_id: fetch_period_invoice_ids)
+        .where('from_datetime >= ?', dates_service.previous_beginning_of_period)
         .order(
           Arel.sql(
             ActiveRecord::Base.sanitize_sql_for_conditions(

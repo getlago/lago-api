@@ -12,7 +12,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
   let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
   let(:timestamp) { DateTime.parse('2025-01-01T10:00:00') }
   let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let(:plan) { create(:plan, organization:, interval: :yearly) }
   let(:organization) { create(:organization) }
 
   context 'when plan has no minimum commitment' do

@@ -26,7 +26,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
   let(:customer) { create(:customer, organization:) }
   let(:subscription_at) { DateTime.parse('2024-01-01T00:00:00') }
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:, pay_in_advance:) }
+  let(:plan) { create(:plan, organization:, pay_in_advance:, interval: :yearly) }
   let(:billing_time) { :calendar }
   let(:bill_charges_monthly) { false }
   let(:pay_in_advance) { false }
