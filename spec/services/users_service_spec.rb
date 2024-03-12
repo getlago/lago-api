@@ -38,6 +38,7 @@ RSpec.describe UsersService, type: :service do
 
       org = Organization.find(result.organization.id)
       expect(org.document_number_prefix).to eq("#{org.name.first(3).upcase}-#{org.id.last(4).upcase}")
+      expect(org.document_numbering).to eq('per_organization')
     end
 
     context 'when user already exists' do
