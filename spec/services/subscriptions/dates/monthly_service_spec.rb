@@ -611,6 +611,14 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         expect(result).to eq(plan.amount_cents.fdiv(28))
       end
 
+      context 'when passing the plan amount' do
+        let(:result) { date_service.single_day_price(plan_amount_cents: 1000) }
+
+        it 'returns the price of single day' do
+          expect(result).to eq(1_000.fdiv(28))
+        end
+      end
+
       context 'when on a leap year' do
         let(:subscription_at) { DateTime.parse('28 Feb 2019') }
         let(:billing_at) { DateTime.parse('01 Mar 2020') }

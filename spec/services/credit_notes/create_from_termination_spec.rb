@@ -370,6 +370,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_id: subscription.id,
           taxes_rate: 0,
           created_at: Time.zone.parse('2023-02-28 10:00'),
+          amount_details: { 'plan_amount_cents' => 999 },
         )
       end
 
@@ -425,6 +426,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_id: subscription.id,
           taxes_rate: 20,
           precise_coupons_amount_cents: 10,
+          amount_details: { 'plan_amount_cents' => plan.amount_cents },
         )
       end
 
@@ -440,6 +442,45 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
             credit_amount_cents: 17,
             balance_amount_cents: 17,
           )
+        end
+      end
+    end
+
+    context 'with no amount details attached to the fee' do
+      let(:subscription_fee) do
+        create(
+          :fee,
+          subscription:,
+          invoice:,
+          amount_cents: 999,
+          taxes_amount_cents: 0,
+          invoiceable_type: 'Subscription',
+          invoiceable_id: subscription.id,
+          taxes_rate: 0,
+          created_at: Time.zone.parse('2023-02-28 10:00'),
+        )
+      end
+
+      it 'creates a credit note using the plan amount cents' do
+        travel_to(terminated_at) do
+          result = create_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            credit_note = result.credit_note
+            expect(credit_note).to be_available
+            expect(credit_note).to be_order_change
+            expect(credit_note.total_amount_cents).to eq(19)
+            expect(credit_note.total_amount_currency).to eq('EUR')
+            expect(credit_note.credit_amount_cents).to eq(19)
+            expect(credit_note.credit_amount_currency).to eq('EUR')
+            expect(credit_note.balance_amount_cents).to eq(19)
+            expect(credit_note.balance_amount_currency).to eq('EUR')
+            expect(credit_note.reason).to eq('order_change')
+
+            expect(credit_note.items.count).to eq(1)
+          end
         end
       end
     end

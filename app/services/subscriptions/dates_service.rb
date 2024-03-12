@@ -110,9 +110,9 @@ module Subscriptions
       customer_timezone_shift(beginning_utc)
     end
 
-    def single_day_price(optional_from_date: nil)
+    def single_day_price(optional_from_date: nil, plan_amount_cents: nil)
       duration = compute_duration(from_date: optional_from_date || compute_from_date)
-      plan.amount_cents.fdiv(duration.to_i)
+      (plan_amount_cents || plan.amount_cents).fdiv(duration.to_i)
     end
 
     def charge_single_day_price(charge:)
