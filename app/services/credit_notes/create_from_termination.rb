@@ -57,12 +57,16 @@ module CreditNotes
       )
     end
 
+    def plan_amount_cents
+      last_subscription_fee&.amount_details&.[]('plan_amount_cents') || plan.amount_cents
+    end
+
     def to_date
       date_service.next_end_of_period.to_date
     end
 
     def day_price
-      date_service.single_day_price
+      date_service.single_day_price(plan_amount_cents:)
     end
 
     def terminated_at_in_timezone

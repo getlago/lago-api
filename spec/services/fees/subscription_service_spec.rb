@@ -63,6 +63,7 @@ RSpec.describe Fees::SubscriptionService do
         payment_status: 'pending',
         unit_amount_cents: 100,
         precise_unit_amount: 1,
+        amount_details: { 'plan_amount_cents' => 100 },
       )
     end
 
@@ -83,6 +84,7 @@ RSpec.describe Fees::SubscriptionService do
             amount_cents: 90,
             unit_amount_cents: 90,
             precise_unit_amount: 0.9,
+            amount_details: { 'plan_amount_cents' => 100 },
           )
         end
       end

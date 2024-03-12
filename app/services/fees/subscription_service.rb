@@ -49,6 +49,7 @@ module Fees
         payment_status: :pending,
         taxes_amount_cents: 0,
         unit_amount_cents: new_amount_cents,
+        amount_details: { plan_amount_cents: plan.amount_cents },
       )
 
       return base_fee if !invoice.draft? || !adjusted_fee
