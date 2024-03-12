@@ -344,4 +344,26 @@ RSpec.describe ChargeFilter, type: :model do
       end
     end
   end
+
+  describe '#to_h' do
+    subject(:charge_filter) { build(:charge_filter, values:) }
+
+    let(:card) { create(:billable_metric_filter, key: 'card') }
+    let(:scheme) { create(:billable_metric_filter, key: 'scheme') }
+    let(:values) do
+      [
+        build(:charge_filter_value, value: 'credit', billable_metric_filter: card),
+        build(:charge_filter_value, value: 'visa', billable_metric_filter: scheme),
+      ]
+    end
+
+    it 'returns the values as a hash' do
+      expect(charge_filter.to_h).to eq(
+        {
+          'card' => 'credit',
+          'scheme' => 'visa',
+        },
+      )
+    end
+  end
 end

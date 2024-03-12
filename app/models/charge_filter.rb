@@ -19,6 +19,12 @@ class ChargeFilter < ApplicationRecord
     invoice_display_name.presence || values.map(&:value).join(', ')
   end
 
+  def to_h
+    values.each_with_object({}) do |filter_value, result|
+      result[filter_value.billable_metric_filter.key] = filter_value.value
+    end
+  end
+
   private
 
   def validate_properties

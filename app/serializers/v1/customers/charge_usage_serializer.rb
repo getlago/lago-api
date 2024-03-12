@@ -56,9 +56,7 @@ module V1
             amount_cents: f.amount_cents,
             events_count: f.events_count,
             invoice_display_name: f.charge_filter.display_name,
-            values: f.charge_filter.values.each_with_object({}) do |value, result|
-              result[value.billable_metric_filter.key] = value.values
-            end,
+            values: f.charge_filter.to_h,
           }
         end.compact
       end
