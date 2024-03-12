@@ -16,6 +16,11 @@ module CreditNotes
       amount = compute_amount
       return result unless amount.positive?
 
+      # NOTE: In some cases, if the fee was already prorated (in case of multiple upgrade) the amount
+      #       could be greater than the last subscription fee amount.
+      #       In that case, we have to use the last subscription fee amount
+      amount = last_subscription_fee.amount_cents if amount > last_subscription_fee.amount_cents
+
       # NOTE: if credit notes were already issued on the fee,
       #       we have to deduct them from the prorated amount
       amount -= last_subscription_fee.credit_note_items.sum(:amount_cents)
