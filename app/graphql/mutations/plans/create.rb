@@ -21,6 +21,7 @@ module Mutations
       argument :tax_codes, [String], required: false
       argument :trial_period, Float, required: false
 
+      argument :charge_groups, [Types::ChargeGroups::Input], required: false
       argument :charges, [Types::Charges::Input]
 
       type Types::Plans::Object

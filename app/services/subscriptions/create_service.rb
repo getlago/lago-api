@@ -42,6 +42,8 @@ module Subscriptions
         return currency_result unless currency_result.success?
 
         result.subscription = handle_subscription
+
+        UsageChargeGroups::CreateService.call(subscription: result.subscription)
       end
 
       perform_pending_jobs

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_03_07_050026) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_11_122947) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -172,6 +172,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_07_050026) do
     t.boolean "invoiceable", default: true, null: false
     t.string "invoice_display_name"
     t.jsonb "properties", default: {}, null: false
+    t.uuid "plan_id"
+    t.index ["plan_id"], name: "index_charge_groups_on_plan_id"
   end
 
   create_table "charges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -826,6 +828,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_07_050026) do
     t.datetime "deleted_at"
     t.uuid "charge_group_id", null: false
     t.uuid "subscription_id", null: false
+    t.index ["charge_group_id", "subscription_id"], name: "index_ucg_on_charge_group_id_and_subscription_id", unique: true
     t.index ["charge_group_id"], name: "index_usage_charge_groups_on_charge_group_id"
     t.index ["subscription_id"], name: "index_usage_charge_groups_on_subscription_id"
   end
@@ -924,6 +927,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_07_050026) do
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "cached_aggregations", "groups"
+  add_foreign_key "charge_groups", "plans"
   add_foreign_key "charges", "billable_metrics"
   add_foreign_key "charges", "charge_groups"
   add_foreign_key "charges", "plans"
