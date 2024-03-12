@@ -24,16 +24,7 @@ module Auth
       ensure_google_auth_setup
       return result unless result.success?
 
-      authorizer = Google::Auth::UserAuthorizer.new(
-        client_id,
-        BASE_SCOPE,
-        nil, # token_store is nil because we don't need to store the token
-        "#{ENV['LAGO_FRONT_URL']}/auth/google/callback",
-      )
-
-      credentials = authorizer.get_credentials_from_code(code:)
-      google_oidc = Google::Auth::IDTokens.verify_oidc(credentials.id_token, aud: ENV['GOOGLE_AUTH_CLIENT_ID'])
-
+      google_oidc = oidc_verifier(code:)
       user = User.find_by(email: google_oidc['email'])
 
       unless user.present? && user.memberships&.active&.any?
@@ -41,6 +32,19 @@ module Auth
       end
 
       UsersService.new.new_token(user)
+    rescue Google::Auth::IDTokens::SignatureError
+      result.single_validation_failure!(error_code: 'invalid_google_token')
+    rescue Signet::AuthorizationError
+      result.single_validation_failure!(error_code: 'invalid_google_code')
+    end
+
+    def create_user(code, organization_name)
+      ensure_google_auth_setup
+      return result unless result.success?
+
+      google_oidc = oidc_verifier(code:)
+
+      UsersService.new.register(google_oidc['email'], SecureRandom.hex, organization_name)
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: 'invalid_google_token')
     rescue Signet::AuthorizationError
@@ -57,6 +61,18 @@ module Auth
       return if ENV['GOOGLE_AUTH_CLIENT_ID'].present? && ENV['GOOGLE_AUTH_CLIENT_SECRET'].present?
 
       result.service_failure!(code: 'google_auth_missing_setup', message: 'Google auth is not set up')
+    end
+
+    def oidc_verifier(code:)
+      authorizer = Google::Auth::UserAuthorizer.new(
+        client_id,
+        BASE_SCOPE,
+        nil, # token_store is nil because we don't need to store the token
+        "#{ENV['LAGO_FRONT_URL']}/auth/google/callback",
+      )
+
+      credentials = authorizer.get_credentials_from_code(code:)
+      Google::Auth::IDTokens.verify_oidc(credentials.id_token, aud: ENV['GOOGLE_AUTH_CLIENT_ID'])
     end
   end
 end
