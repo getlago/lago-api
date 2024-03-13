@@ -17,7 +17,9 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { group:, event: pay_in_advance_event, grouped_by: } }
+  let(:filters) do
+    { group:, event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
+  end
 
   let(:subscription) do
     create(
@@ -35,6 +37,9 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   let(:customer) { subscription.customer }
   let(:group) { nil }
   let(:grouped_by) { nil }
+  let(:charge_filter) { nil }
+  let(:matching_filters) { nil }
+  let(:ignored_filters) { nil }
 
   let(:billable_metric) do
     create(
@@ -369,6 +374,38 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         let(:group) do
           create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
         end
+
+        it 'assigns an pay_in_advance aggregation' do
+          result = count_service.aggregate
+
+          expect(result.pay_in_advance_aggregation).to eq(1)
+        end
+      end
+
+      context 'when charge filter is used' do
+        let(:properties) { { unique_id: '111', region: 'europe' } }
+
+        let(:filter) do
+          create(
+            :billable_metric_filter,
+            billable_metric:,
+            key: 'region',
+            values: ['north america', 'europe', 'africa'],
+          )
+        end
+        let(:matching_filters) { { 'region' => ['europe'] } }
+        let(:ignored_filters) { [] }
+        let(:charge_filter) { create(:charge_filter, charge:) }
+        let(:filter_value) do
+          create(
+            :charge_filter_value,
+            charge_filter:,
+            billable_metric_filter: filter,
+            values: ['europe'],
+          )
+        end
+
+        before { filter_value }
 
         it 'assigns an pay_in_advance aggregation' do
           result = count_service.aggregate

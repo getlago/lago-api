@@ -77,6 +77,7 @@ module BillableMetrics
       def latest_value
         return @latest_value if @latest_value
 
+        # TODO: Should be moved to CachedAggregation
         quantified_events = QuantifiedEvent
           .where(billable_metric_id: billable_metric.id)
           .where(organization_id: billable_metric.organization_id)
@@ -86,6 +87,7 @@ module BillableMetrics
           .order(added_at: :desc)
 
         quantified_events = quantified_events.where(group_id: group.id) if group
+        quantified_events = quantified_events.where(charge_filter_id: charge_filter.id) if charge_filter
         quantified_event = quantified_events.first
 
         if quantified_event
@@ -116,6 +118,7 @@ module BillableMetrics
       def grouped_latest_values
         return @grouped_latest_values if @grouped_latest_values
 
+        # TODO: Should be moved to CachedAggregation
         quantified_events = QuantifiedEvent
           .where(billable_metric_id: billable_metric.id)
           .where(organization_id: billable_metric.organization_id)
@@ -128,6 +131,7 @@ module BillableMetrics
         end
 
         quantified_events = quantified_events.where(group_id: group.id) if group
+        quantified_events = quantified_events.where(charge_filter_id: charge_filter.id) if charge_filter
 
         if quantified_events.all.any?
           return @grouped_latest_values = quantified_events.map do |quantified_event|

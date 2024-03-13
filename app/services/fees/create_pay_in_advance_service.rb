@@ -14,10 +14,12 @@ module Fees
       fees = []
 
       ActiveRecord::Base.transaction do
-        if charge.billable_metric.selectable_groups.blank?
-          fees << create_fee(properties: charge.properties)
-        else
+        if charge.billable_metric.selectable_groups.any?
           fees += create_group_properties_fees
+        elsif charge.filters.any?
+          fees << create_charge_filter_fee
+        else
+          fees << create_fee(properties: charge.properties)
         end
       end
 
@@ -38,11 +40,11 @@ module Fees
     delegate :billable_metric, to: :charge
     delegate :subscription, :customer, to: :event
 
-    def create_fee(properties:, group: nil)
+    def create_fee(properties:, group: nil, charge_filter: nil)
       ActiveRecord::Base.transaction do
-        aggregation_result = aggregate(properties:, group:)
+        aggregation_result = aggregate(properties:, group:, charge_filter:)
 
-        cache_aggregation_result(aggregation_result:, group:)
+        cache_aggregation_result(aggregation_result:, group:, charge_filter:)
 
         result = apply_charge_model(aggregation_result:, properties:)
         unit_amount_cents = result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
@@ -59,6 +61,7 @@ module Fees
           properties: boundaries,
           events_count: result.count,
           group_id: group&.id,
+          charge_filter_id: charge_filter&.id,
           pay_in_advance_event_id: event.id,
           payment_status: :pending,
           pay_in_advance: true,
@@ -102,6 +105,15 @@ module Fees
       group_fees
     end
 
+    def create_charge_filter_fee
+      properties = charge.properties
+
+      filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
+      properties = filter.properties if filter
+
+      create_fee(properties:, charge_filter: filter || ChargeFilter.new(charge:))
+    end
+
     def date_service
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
@@ -121,9 +133,9 @@ module Fees
       }
     end
 
-    def aggregate(properties:, group:)
+    def aggregate(properties:, group:, charge_filter: nil)
       aggregation_result = Charges::PayInAdvanceAggregationService.call(
-        charge:, boundaries:, group:, properties:, event:,
+        charge:, boundaries:, group:, properties:, event:, charge_filter:,
       )
       aggregation_result.raise_if_error!
       aggregation_result
@@ -155,7 +167,7 @@ module Fees
       result.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
     end
 
-    def cache_aggregation_result(aggregation_result:, group:)
+    def cache_aggregation_result(aggregation_result:, group:, charge_filter:)
       return unless aggregation_result.current_aggregation.present? ||
                     aggregation_result.max_aggregation.present? ||
                     aggregation_result.max_aggregation_with_proration.present?
@@ -167,6 +179,7 @@ module Fees
         external_subscription_id: event.external_subscription_id,
         charge_id: charge.id,
         group_id: group&.id,
+        charge_filter_id: charge_filter&.id,
         current_aggregation: aggregation_result.current_aggregation,
         max_aggregation: aggregation_result.max_aggregation,
         max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,

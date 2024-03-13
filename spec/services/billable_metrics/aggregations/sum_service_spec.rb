@@ -17,13 +17,18 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { group:, event: pay_in_advance_event, grouped_by: } }
+  let(:filters) do
+    { group:, event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
+  end
 
   let(:subscription) { create(:subscription, started_at: Time.current.beginning_of_month - 6.months) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:group) { nil }
   let(:grouped_by) { nil }
+  let(:charge_filter) { nil }
+  let(:matching_filters) { nil }
+  let(:ignored_filters) { nil }
 
   let(:billable_metric) do
     create(
@@ -296,6 +301,74 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
 
     before do
+      create(
+        :event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: to_datetime - 1.day,
+        properties: {
+          total_count: 12,
+          region: 'europe',
+        },
+      )
+
+      create(
+        :event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: to_datetime - 1.day,
+        properties: {
+          total_count: 8,
+          region: 'europe',
+        },
+      )
+
+      create(
+        :event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: to_datetime - 1.day,
+        properties: {
+          total_count: 12,
+          region: 'africa',
+        },
+      )
+    end
+
+    it 'aggregates the events' do
+      result = sum_service.aggregate(options:)
+
+      expect(result.aggregation).to eq(20)
+      expect(result.count).to eq(2)
+      expect(result.options).to eq({ running_total: [12, 20] })
+    end
+  end
+
+  context 'when filter is given' do
+    let(:filter) do
+      create(:billable_metric_filter, billable_metric:, key: 'region', values: ['north america', 'europe', 'africa'])
+    end
+    let(:matching_filters) { { 'region' => ['europe'] } }
+    let(:ignored_filters) { [] }
+    let(:charge_filter) { create(:charge_filter, charge:) }
+    let(:filter_value) do
+      create(
+        :charge_filter_value,
+        charge_filter:,
+        billable_metric_filter: filter,
+        values: ['europe'],
+      )
+    end
+
+    before do
+      filter_value
+
       create(
         :event,
         organization_id: organization.id,
