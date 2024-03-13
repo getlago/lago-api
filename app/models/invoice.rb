@@ -304,8 +304,17 @@ class Invoice < ApplicationRecord
       transaction: true,
       timeout_seconds: 10.seconds,
     ) do
-      organization_sequential_id = organization_sequence_scope.count
-      organization_sequential_id ||= 0
+      # If previous invoice had different numbering, base sequential id is the total number of invoices
+      organization_sequential_id = if switched_from_customer_numbering?
+        organization.invoices.count
+      else
+        organization
+          .invoices
+          .where.not(organization_sequential_id: 0)
+          .order(organization_sequential_id: :desc)
+          .limit(1)
+          .pick(:organization_sequential_id) || 0
+      end
 
       # NOTE: Start with the most recent sequential id and find first available sequential id that haven't occurred
       loop do
@@ -319,5 +328,13 @@ class Invoice < ApplicationRecord
     raise(SequenceError, 'Unable to acquire lock on the database') unless result
 
     result
+  end
+
+  def switched_from_customer_numbering?
+    last_invoice = organization.invoices.order(created_at: :desc).first
+
+    return false unless last_invoice
+
+    last_invoice&.organization_sequential_id&.zero?
   end
 end
