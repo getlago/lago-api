@@ -2,9 +2,15 @@
 
 module Clock
   class EventsValidationJob < ApplicationJob
+    include Sentry::Cron::MonitorCheckIns
+
     queue_as 'clock'
 
     unique :until_executed
+
+    if ENV['SENTRY_ENABLE_CRONS']
+      sentry_monitor_check_ins slug: 'lago_post_validate_events', monitor_config: Sentry::Cron::MonitorConfig.from_crontab('5 */1 * * *')
+    end
 
     def perform
       # NOTE: refresh the last hour events materialized view
