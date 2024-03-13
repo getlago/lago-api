@@ -18,10 +18,8 @@ module Events
         end
 
         scope = with_grouped_by_values(scope) if grouped_by_values?
-
-        return scope unless group
-
-        group_scope(scope)
+        scope = group_scope(scope) if group.present?
+        filters_scope(scope)
       end
 
       def events_values(limit: nil, force_from: false)
@@ -331,6 +329,24 @@ module Events
         return scope unless group.parent
 
         scope.where('events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+      end
+
+      def filters_scope(scope)
+        matching_filters.each do |key, value|
+          scope = scope.where(
+            'events.properties @> ?',
+            { key.to_s => value }.to_json
+          )
+        end
+
+        ignored_filters.each do |key, value|
+          scope = scope.where.not(
+            'events.properties @> ?',
+            { key.to_s => value }.to_json
+          )
+        end
+
+        scope
       end
 
       def with_grouped_by_values(scope)
