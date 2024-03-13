@@ -8,7 +8,13 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       code:,
       subscription:,
       boundaries:,
-      filters: { group:, grouped_by:, grouped_by_values: },
+      filters: {
+        group:,
+        grouped_by:,
+        grouped_by_values:,
+        matching_filters:,
+        ignored_filters:,
+      },
     )
   end
 
@@ -32,6 +38,8 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
   let(:group) { nil }
   let(:grouped_by) { nil }
   let(:grouped_by_values) { nil }
+  let(:matching_filters) { {} }
+  let(:ignored_filters) { {} }
 
   let(:events) do
     events = []
@@ -41,6 +49,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       if i.even?
         properties[group.key.to_s] = group.value.to_s if group
+        matching_filters.each { |key, value| properties[key] = value }
 
         if grouped_by_values.present?
           grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
@@ -49,6 +58,10 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
             properties[group] = "#{Faker::Fantasy::Tolkien.character.delete("'")}_#{i}"
           end
         end
+      end
+
+      if i.zero?
+        ignored_filters.each { |key, value| properties[key] = value }
       end
 
       events << Clickhouse::EventsRaw.create!(
@@ -99,6 +112,15 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(3)
+      end
+    end
+
+    context 'with filters' do
+      let(:matching_filters) { { 'region' => 'europe', 'country' => 'france' } }
+      let(:ignored_filters) { { 'city' => 'paris' } }
+
+      it 'returns a list of events' do
+        expect(event_store.events.count).to eq(2) # 1st event is ignored
       end
     end
   end
