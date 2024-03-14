@@ -32,6 +32,9 @@ module Invoices
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
+          if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
+            create_minimum_commitment_true_up_fee(invoice_subscription)
+          end
         end
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
@@ -55,24 +58,6 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     end
 
-    private
-
-    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context
-
-    delegate :customer, :currency, to: :invoice
-
-    def issuing_date
-      timestamp.in_time_zone(customer.applicable_timezone).to_date
-    end
-
-    def date_service(subscription)
-      Subscriptions::DatesService.new_instance(
-        subscription,
-        timestamp,
-        current_usage: subscription.terminated? && subscription.upgraded?,
-      )
-    end
-
     def terminated_date_service(subscription, date_service)
       return date_service unless subscription.terminated? && subscription.next_subscription.nil?
 
@@ -94,6 +79,24 @@ module Invoices
       matching_invoice_subscription?(subscription, new_dates_service) ? date_service : new_dates_service
     end
 
+    private
+
+    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context
+
+    delegate :customer, :currency, to: :invoice
+
+    def issuing_date
+      timestamp.in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def date_service(subscription)
+      Subscriptions::DatesService.new_instance(
+        subscription,
+        timestamp,
+        current_usage: subscription.terminated? && subscription.upgraded?,
+      )
+    end
+
     def matching_invoice_subscription?(subscription, date_service)
       base_query = InvoiceSubscription
         .where(subscription_id: subscription.id)
@@ -108,6 +111,11 @@ module Invoices
       end
 
       base_query.exists?
+    end
+
+    def create_minimum_commitment_true_up_fee(invoice_subscription)
+      minimum_commitment_result = Fees::Commitments::Minimum::CreateService.call(invoice_subscription:)
+      minimum_commitment_result.raise_if_error!
     end
 
     def create_subscription_fee(subscription, boundaries)
@@ -159,6 +167,28 @@ module Invoices
       return false if next_subscription_charges.blank?
 
       next_subscription_charges.pluck(:billable_metric_id).include?(charge.billable_metric_id)
+    end
+
+    def should_create_minimum_commitment_true_up_fee?(invoice_subscription)
+      subscription = invoice_subscription.subscription
+
+      return false if subscription.plan.pay_in_advance? && !invoice_subscription.previous_invoice_subscription
+      return false unless should_create_yearly_subscription_fee?(subscription)
+
+      calculate_true_up_fee_result = Commitments::Minimum::CalculateTrueUpFeeService
+        .new_instance(invoice_subscription:).call
+
+      return false if calculate_true_up_fee_result.amount_cents.zero?
+
+      subscription.active? ||
+        (
+          subscription.terminated? &&
+          (
+            subscription.plan.pay_in_arrear? ||
+            subscription.terminated_at >= invoice.created_at ||
+            calculate_true_up_fee_result.amount_cents.positive?
+          )
+        )
     end
 
     def should_create_subscription_fee?(subscription)

@@ -6,10 +6,10 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
   subject(:apply_service) { described_class.new(commitment:, invoice_subscription:) }
 
   let(:invoice_subscription) do
-    create(:invoice_subscription, subscription:, from_datetime:, to_datetime:)
+    create(:invoice_subscription, subscription:, from_datetime:, to_datetime:, timestamp:)
   end
 
-  let(:subscription) { create(:subscription, customer:, plan:, billing_time:) }
+  let(:subscription) { create(:subscription, customer:, plan:, billing_time:, subscription_at:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:, interval:) }
@@ -19,8 +19,10 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
     context 'when plan has weekly interval' do
       let(:amount_cents) { 3_000 }
       let(:interval) { :weekly }
-      let(:from_datetime) { DateTime.parse('2024-01-02T00:00:00') }
+      let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
+      let(:subscription_at) { DateTime.parse('2024-01-01T00:00:00') }
       let(:to_datetime) { DateTime.parse('2024-01-07T23:59:59') }
+      let(:timestamp) { DateTime.parse('2024-01-08T10:00:00') }
 
       context 'when subscription is calendar' do
         let(:billing_time) { :calendar }
@@ -40,12 +42,10 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
 
           before { commitment }
 
-          it { is_expected.to delegate_method(:subscription).to(:invoice_subscription) }
-
           it 'returns result' do
             result = apply_service.call
 
-            expect(result.commitment_amount_cents).to eq(2_571)
+            expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
           end
         end
       end
@@ -66,12 +66,23 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
         context 'when a commitment exists for a plan' do
           let(:commitment) { create(:commitment, plan:, amount_cents:) }
 
-          it { is_expected.to delegate_method(:subscription).to(:invoice_subscription) }
+          context 'when it is full period' do
+            it 'returns result' do
+              result = apply_service.call
 
-          it 'returns result' do
-            result = apply_service.call
+              expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
+            end
+          end
 
-            expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
+          context 'when it is not full period' do
+            let(:to_datetime) { DateTime.parse('2024-01-06T23:59:59') }
+            let(:timestamp) { DateTime.parse('2024-01-07T10:00:00') }
+
+            it 'returns prorated result' do
+              result = apply_service.call
+
+              expect(result.commitment_amount_cents).to eq(2_571)
+            end
           end
         end
       end
@@ -80,8 +91,10 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
     context 'when plan has monthly interval' do
       let(:amount_cents) { 20_000 }
       let(:interval) { :monthly }
-      let(:from_datetime) { DateTime.parse('2024-01-15T00:00:00') }
+      let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
+      let(:subscription_at) { DateTime.parse('2024-01-01T00:00:00') }
       let(:to_datetime) { DateTime.parse('2024-01-31T23:59:59') }
+      let(:timestamp) { DateTime.parse('2024-02-05T10:00:00') }
 
       context 'when subscription is calendar' do
         let(:billing_time) { :calendar }
@@ -99,12 +112,10 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
         context 'when a commitment exists for a plan' do
           let(:commitment) { create(:commitment, plan:, amount_cents:) }
 
-          it { is_expected.to delegate_method(:subscription).to(:invoice_subscription) }
-
           it 'returns result' do
             result = apply_service.call
 
-            expect(result.commitment_amount_cents).to eq(10_968)
+            expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
           end
         end
       end
@@ -125,12 +136,23 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
         context 'when a commitment exists for a plan' do
           let(:commitment) { create(:commitment, plan:, amount_cents:) }
 
-          it { is_expected.to delegate_method(:subscription).to(:invoice_subscription) }
+          context 'when it is full period' do
+            it 'returns result' do
+              result = apply_service.call
 
-          it 'returns result' do
-            result = apply_service.call
+              expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
+            end
+          end
 
-            expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
+          context 'when it is not full period' do
+            let(:to_datetime) { DateTime.parse('2024-01-30T23:59:59') }
+            let(:timestamp) { DateTime.parse('2024-02-04T10:00:00') }
+
+            it 'returns result' do
+              result = apply_service.call
+
+              expect(result.commitment_amount_cents).to eq(19_355)
+            end
           end
         end
       end
@@ -139,8 +161,10 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
     context 'when plan has quarterly interval' do
       let(:amount_cents) { 40_000 }
       let(:interval) { :quarterly }
-      let(:from_datetime) { DateTime.parse('2024-01-15T00:00:00') }
+      let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
+      let(:subscription_at) { DateTime.parse('2024-01-01T00:00:00') }
       let(:to_datetime) { DateTime.parse('2024-03-31T23:59:59') }
+      let(:timestamp) { DateTime.parse('2024-04-05T10:00:00') }
 
       context 'when subscription is calendar' do
         let(:billing_time) { :calendar }
@@ -160,12 +184,10 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
 
           before { commitment }
 
-          it { is_expected.to delegate_method(:subscription).to(:invoice_subscription) }
-
           it 'returns result' do
             result = apply_service.call
 
-            expect(result.commitment_amount_cents).to eq(33_846)
+            expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
           end
         end
       end
@@ -186,12 +208,23 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
         context 'when a commitment exists for a plan' do
           let(:commitment) { create(:commitment, plan:, amount_cents:) }
 
-          it { is_expected.to delegate_method(:subscription).to(:invoice_subscription) }
+          context 'when it is full period' do
+            it 'returns result' do
+              result = apply_service.call
 
-          it 'returns result' do
-            result = apply_service.call
+              expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
+            end
+          end
 
-            expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
+          context 'when it is not full period' do
+            let(:to_datetime) { DateTime.parse('2024-03-30T23:59:59') }
+            let(:timestamp) { DateTime.parse('2024-04-04T10:00:00') }
+
+            it 'returns prorated result' do
+              result = apply_service.call
+
+              expect(result.commitment_amount_cents).to eq(39_560)
+            end
           end
         end
       end
@@ -201,10 +234,12 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
       let(:amount_cents) { 200_000 }
       let(:interval) { :yearly }
       let(:from_datetime) { DateTime.parse('2024-01-15T00:00:00') }
-      let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
+      let(:subscription_at) { DateTime.parse('2024-01-15T00:00:00') }
 
       context 'when subscription is calendar' do
         let(:billing_time) { :calendar }
+        let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
+        let(:timestamp) { DateTime.parse('2025-01-05T10:00:00') }
 
         context 'when there is no commitment' do
           let(:commitment) { nil }
@@ -220,8 +255,6 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
           let(:commitment) { create(:commitment, plan:, amount_cents:) }
 
           before { commitment }
-
-          it { is_expected.to delegate_method(:subscription).to(:invoice_subscription) }
 
           it 'returns result' do
             result = apply_service.call
@@ -233,6 +266,8 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
 
       context 'when subscription is anniversary' do
         let(:billing_time) { :anniversary }
+        let(:to_datetime) { DateTime.parse('2025-01-14T23:59:59') }
+        let(:timestamp) { DateTime.parse('2025-01-19T10:00:00') }
 
         context 'when there is no commitment' do
           let(:commitment) { nil }
@@ -247,12 +282,23 @@ RSpec.describe Commitments::CalculateAmountService, type: :service do
         context 'when a commitment exists for a plan' do
           let(:commitment) { create(:commitment, plan:, amount_cents:) }
 
-          it { is_expected.to delegate_method(:subscription).to(:invoice_subscription) }
+          context 'when it is full period' do
+            it 'returns result' do
+              result = apply_service.call
 
-          it 'returns result' do
-            result = apply_service.call
+              expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
+            end
+          end
 
-            expect(result.commitment_amount_cents).to eq(commitment.amount_cents)
+          context 'when it is not full period' do
+            let(:to_datetime) { DateTime.parse('2025-01-13T23:59:59') }
+            let(:timestamp) { DateTime.parse('2025-01-18T10:00:00') }
+
+            it 'returns prorated result' do
+              result = apply_service.call
+
+              expect(result.commitment_amount_cents).to eq(199_454)
+            end
           end
         end
       end
