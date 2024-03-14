@@ -6,7 +6,9 @@ module Types
       graphql_name 'PinetProvider'
 
       field :id, ID, null: false
-      field :secret_key, String, null: false
+      field :key_id, String, null: false
+      field :private_key, String, null: false
+      field :secret_key, String, null: true
 
       field :create_customers, Boolean, null: false
       field :success_redirect_url, String, null: true
@@ -15,6 +17,14 @@ module Types
       #       front end application. Instead we send an obfuscated value
       def secret_key
         "#{'•' * 8}…#{object.secret_key[-3..]}"
+      end
+
+      def key_id
+        "#{'•' * 8}…#{object.key_id[-3..]}"
+      end
+
+      def private_key
+        "#{'•' * 8}…#{object.private_key[-3..]}"
       end
     end
   end

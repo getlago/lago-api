@@ -29,5 +29,21 @@ module PaymentProviders
     def webhook_id
       get_from_settings('webhook_id')
     end
+
+    def key_id=(key_id)
+      push_to_secrets(key: 'key_id', value: key_id)
+    end
+
+    def private_key=(private_key)
+      push_to_secrets(key: 'private_key', value: private_key)
+    end
+
+    def key_id
+      get_from_secrets('key_id')
+    end
+
+    def private_key
+      get_from_secrets('private_key')
+    end
   end
 end
