@@ -60,9 +60,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         end
       end
 
-      if i.zero?
-        ignored_filters.each { |key, value| properties[key] = value }
-      end
+      ignored_filters.each { |key, values| properties[key] = values.first } if i.zero?
 
       events << Clickhouse::EventsRaw.create!(
         transaction_id: SecureRandom.uuid,
@@ -117,7 +115,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
     context 'with filters' do
       let(:matching_filters) { { 'region' => 'europe', 'country' => 'france' } }
-      let(:ignored_filters) { { 'city' => 'paris' } }
+      let(:ignored_filters) { { 'city' => ['paris'] } }
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(2) # 1st event is ignored

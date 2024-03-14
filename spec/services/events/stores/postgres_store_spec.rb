@@ -109,7 +109,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
     context 'with filters' do
       let(:matching_filters) { { 'region' => 'europe', 'country' => 'france' } }
-      let(:ignored_filters) { { 'city' => 'paris' } }
+      let(:ignored_filters) { { 'city' => ['paris'] } }
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(2) # 1st event is ignored

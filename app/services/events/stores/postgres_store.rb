@@ -335,14 +335,14 @@ module Events
         matching_filters.each do |key, value|
           scope = scope.where(
             'events.properties @> ?',
-            { key.to_s => value }.to_json
+            { key.to_s => value }.to_json,
           )
         end
 
-        ignored_filters.each do |key, value|
+        ignored_filters.each do |key, values|
           scope = scope.where.not(
             'events.properties @> ?',
-            { key.to_s => value }.to_json
+            { key.to_s => values }.to_json,
           )
         end
 

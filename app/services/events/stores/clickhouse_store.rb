@@ -470,8 +470,8 @@ module Events
           scope = scope.where('events_raw.properties[?] = ?', key.to_s, value)
         end
 
-        ignored_filters.each do |key, value|
-          scope = scope.where.not('events_raw.properties[?] = ?', key.to_s, value)
+        ignored_filters.each do |key, values|
+          scope = scope.where('events_raw.properties[?] NOT IN (?)', key.to_s, values)
         end
 
         scope

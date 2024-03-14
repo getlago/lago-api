@@ -44,7 +44,40 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     )
 
     expect(service.ignored_filters).to eq(
-      { 'card_type' => 'credit' },
+      { 'card_type' => ['credit'] },
     )
+  end
+
+  context 'when filter does not have children' do
+    subject(:service) { described_class.call(filter: filter2) }
+
+    it 'returns a formatted hash', :aggregate_failures do
+      expect(service.matching_filters).to eq(
+        {
+          'payment_method' => 'card',
+          'card_location' => 'domestic',
+          'scheme' => 'visa',
+          'card_type' => 'credit',
+        },
+      )
+
+      expect(service.ignored_filters).to eq({})
+    end
+  end
+
+  context 'when provided filter is empty' do
+    subject(:service) { described_class.call(filter: ChargeFilter.new(charge: filter1.charge)) }
+
+    it 'returns all filter values as ignored filters' do
+      expect(service.matching_filters).to eq({})
+      expect(service.ignored_filters).to eq(
+        {
+          'payment_method' => ['card'],
+          'card_location' => ['domestic'],
+          'scheme' => ['visa'],
+          'card_type' => ['credit'],
+        },
+      )
+    end
   end
 end

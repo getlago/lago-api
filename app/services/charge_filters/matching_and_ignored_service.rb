@@ -16,9 +16,17 @@ module ChargeFilters
       end
 
       # NOTE: List of filters that we must ignore to prevent duplicated count of events
-      result.ignored_filters = children.map do |child|
-        (child.to_h.to_a - result.matching_filters.to_a).to_h
-      end.flatten.first
+      result.ignored_filters = children.each_with_object({}) do |child, res|
+        keys = (child.to_h.to_a - result.matching_filters.to_a).to_h
+
+        keys.each do |key, values|
+          res[key] ||= []
+          res[key] << values
+          res[key] = res[key].flatten.uniq
+        end
+
+        res
+      end
 
       result
     end
