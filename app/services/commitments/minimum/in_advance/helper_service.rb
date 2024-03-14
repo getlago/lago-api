@@ -13,8 +13,11 @@ module Commitments
 
           return ds unless subscription.terminated?
 
-          Invoices::CalculateFeesService.new(invoice: invoice_subscription.invoice)
-            .terminated_date_service(subscription, ds)
+          Subscriptions::TerminatedDatesService.new(
+            subscription:,
+            invoice: invoice_subscription.invoice,
+            date_service: ds,
+          ).call
         end
 
         private
