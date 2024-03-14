@@ -3,9 +3,9 @@
 module Mutations
   module Auth
     module Google
-      class CreateUser < BaseMutation
-        graphql_name 'GoogleCreateUser'
-        description 'Creates a new user with Google Oauth'
+      class RegisterUser < BaseMutation
+        graphql_name 'GoogleRegisterUser'
+        description 'Register a new user with Google Oauth'
 
         argument :code, String, required: true
         argument :organization_name, String, required: true
@@ -13,7 +13,7 @@ module Mutations
         type Types::Payloads::RegisterUserType
 
         def resolve(code:, organization_name:)
-          result = ::Auth::GoogleService.new.create_user(code, organization_name)
+          result = ::Auth::GoogleService.new.register_user(code, organization_name)
           result.success? ? result : result_error(result)
         end
       end

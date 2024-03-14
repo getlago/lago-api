@@ -38,7 +38,7 @@ module Auth
       result.single_validation_failure!(error_code: 'invalid_google_code')
     end
 
-    def create_user(code, organization_name)
+    def register_user(code, organization_name)
       ensure_google_auth_setup
       return result unless result.success?
 

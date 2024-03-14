@@ -113,7 +113,7 @@ RSpec.describe Auth::GoogleService do
     end
   end
 
-  describe '#create_user' do
+  describe '#register_user' do
     let(:authorizer) { instance_double(Google::Auth::UserAuthorizer) }
     let(:oidc_verifier) { instance_double(Google::Auth::IDTokens) }
     let(:authorizer_response) { instance_double(Google::Auth::UserRefreshCredentials, id_token: 'id_token') }
@@ -127,8 +127,8 @@ RSpec.describe Auth::GoogleService do
       allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(oidc_response)
     end
 
-    it 'creates the user' do
-      result = service.create_user('code', 'Foobar')
+    it 'register the user' do
+      result = service.register_user('code', 'Foobar')
 
       aggregate_failures do
         expect(result).to be_success
@@ -141,7 +141,7 @@ RSpec.describe Auth::GoogleService do
       before { create(:user, email: 'foo@bar.com') }
 
       it 'returns a validation failure' do
-        result = service.create_user('code', 'FooBar')
+        result = service.register_user('code', 'FooBar')
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -157,7 +157,7 @@ RSpec.describe Auth::GoogleService do
       end
 
       it 'returns a service failure' do
-        result = service.create_user('code', 'FooBar')
+        result = service.register_user('code', 'FooBar')
 
         aggregate_failures do
           expect(result).not_to be_success

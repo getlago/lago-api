@@ -2,11 +2,11 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Auth::Google::CreateUser, type: :graphql do
+RSpec.describe Mutations::Auth::Google::RegisterUser, type: :graphql do
   let(:google_service) { instance_double(Auth::GoogleService) }
   let(:user) { create(:user) }
 
-  let(:create_user_result) do
+  let(:register_user_result) do
     result = BaseService::Result.new
     result.user = user
     result.token = 'token'
@@ -15,8 +15,8 @@ RSpec.describe Mutations::Auth::Google::CreateUser, type: :graphql do
 
   let(:mutation) do
     <<~GQL
-      mutation($input: GoogleCreateUserInput!) {
-        googleCreateUser(input: $input) {
+      mutation($input: GoogleRegisterUserInput!) {
+        googleRegisterUser(input: $input) {
           token
           user {
             id
@@ -29,7 +29,7 @@ RSpec.describe Mutations::Auth::Google::CreateUser, type: :graphql do
 
   before do
     allow(Auth::GoogleService).to receive(:new).and_return(google_service)
-    allow(google_service).to receive(:create_user).and_return(create_user_result)
+    allow(google_service).to receive(:register_user).and_return(register_user_result)
   end
 
   it 'returns token and user' do
@@ -44,7 +44,7 @@ RSpec.describe Mutations::Auth::Google::CreateUser, type: :graphql do
       },
     )
 
-    response = result['data']['googleCreateUser']
+    response = result['data']['googleRegisterUser']
 
     aggregate_failures do
       expect(response['token']).to eq('token')
@@ -54,7 +54,7 @@ RSpec.describe Mutations::Auth::Google::CreateUser, type: :graphql do
   end
 
   context 'when user already exists' do
-    let(:create_user_result) do
+    let(:register_user_result) do
       result = BaseService::Result.new
       result.single_validation_failure!(error_code: 'user_already_exists')
       result
