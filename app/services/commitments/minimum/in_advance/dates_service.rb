@@ -3,10 +3,10 @@
 module Commitments
   module Minimum
     module InAdvance
-      class HelperService < Commitments::HelperService
-        def dates_service
+      class DatesService < Commitments::HelperService
+        def call
           ds = Subscriptions::DatesService.new_instance(
-            subscription,
+            invoice_subscription.subscription,
             invoice_subscription.timestamp,
             current_usage: true,
           )
@@ -14,7 +14,7 @@ module Commitments
           return ds unless subscription.terminated?
 
           Subscriptions::TerminatedDatesService.new(
-            subscription:,
+            subscription: invoice_subscription.subscription,
             invoice: invoice_subscription.invoice,
             date_service: ds,
           ).call

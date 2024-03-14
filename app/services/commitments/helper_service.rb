@@ -24,11 +24,6 @@ module Commitments
       result
     end
 
-    def period_invoice_ids
-      result.period_invoice_ids = fetch_period_invoice_ids
-      result
-    end
-
     def dates_service
       raise NotImplementedError
     end
@@ -40,9 +35,12 @@ module Commitments
     delegate :subscription, to: :invoice_subscription
 
     def calculate_proration_coefficient
+      invoices_service = Commitments::FetchInvoicesService.new_instance(commitment:, invoice_subscription:)
+      invoices_result = invoices_service.call
+
       all_invoice_subscriptions = subscription
         .invoice_subscriptions
-        .where(invoice_id: fetch_period_invoice_ids)
+        .where(invoice_id: invoices_result.invoices.ids)
         .where('from_datetime >= ?', dates_service.previous_beginning_of_period)
         .order(
           Arel.sql(

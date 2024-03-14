@@ -64,12 +64,4 @@ RSpec.describe Commitments::HelperService, type: :service do
       end
     end
   end
-
-  describe '#period_invoice_ids' do
-    subject(:apply_service) { service.period_invoice_ids }
-
-    it 'returns ids of all subscription invoices for the period' do
-      expect(apply_service.period_invoice_ids).to eq([invoice_subscription.invoice_id])
-    end
-  end
 end

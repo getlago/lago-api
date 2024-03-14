@@ -7,20 +7,23 @@ module Commitments
         private
 
         def subscription_fees
-          period_invoice_ids_result = helper_service.period_invoice_ids
+          invoices_result = FetchInvoicesService.call(commitment: minimum_commitment, invoice_subscription:)
 
           Fee
             .subscription_kind
             .joins(subscription: :plan)
             .where(
               subscription_id: subscription.id,
-              invoice_id: period_invoice_ids_result.period_invoice_ids,
+              invoice_id: invoices_result.invoices.ids,
               plan: { pay_in_advance: false },
             )
         end
 
         def charge_fees
-          dates_service = helper_service.dates_service
+          dates_service = Commitments::DatesService.new_instance(
+            commitment: minimum_commitment,
+            invoice_subscription:,
+          ).call
 
           Fee
             .charge_kind
@@ -40,7 +43,10 @@ module Commitments
         end
 
         def charge_in_advance_fees
-          dates_service = helper_service.dates_service
+          dates_service = Commitments::DatesService.new_instance(
+            commitment: minimum_commitment,
+            invoice_subscription:,
+          ).call
 
           Fee
             .charge_kind
@@ -72,10 +78,10 @@ module Commitments
             invoice_subscription.previous_invoice_subscription
           end
 
-          dates_service = Commitments::Minimum::InArrears::HelperService.new(
+          dates_service = Commitments::Minimum::InArrears::DatesService.new(
             commitment: minimum_commitment,
             invoice_subscription: is,
-          ).dates_service
+          ).call
 
           scope = Fee
             .charge_kind

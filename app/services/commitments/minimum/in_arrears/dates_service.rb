@@ -2,13 +2,13 @@
 
 module Commitments
   module Minimum
-    module InAdvance
-      class HelperService < Commitments::HelperService
-        def dates_service
+    module InArrears
+      class DatesService < Commitments::HelperService
+        def call
           ds = Subscriptions::DatesService.new_instance(
             subscription,
             invoice_subscription.timestamp,
-            current_usage: true,
+            current_usage: subscription.terminated?,
           )
 
           return ds unless subscription.terminated?
