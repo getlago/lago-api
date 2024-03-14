@@ -20,7 +20,19 @@ module Commitments
     end
 
     def call
-      raise NotImplementedError
+      ds = Subscriptions::DatesService.new_instance(
+        invoice_subscription.subscription,
+        invoice_subscription.timestamp,
+        current_usage:,
+      )
+
+      return ds unless invoice_subscription.subscription.terminated?
+
+      Subscriptions::TerminatedDatesService.new(
+        subscription: invoice_subscription.subscription,
+        invoice: invoice_subscription.invoice,
+        date_service: ds,
+      ).call
     end
 
     private

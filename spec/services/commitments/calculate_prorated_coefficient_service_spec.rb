@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe Commitments::HelperService, type: :service do
-  let(:service) { described_class.new_instance(commitment:, invoice_subscription:) }
+RSpec.describe Commitments::CalculateProratedCoefficientService, type: :service do
+  let(:service) { described_class.new(commitment:, invoice_subscription:) }
   let(:commitment) { create(:commitment, plan:) }
   let(:plan) { create(:plan, organization:) }
   let(:organization) { create(:organization) }
@@ -58,7 +58,7 @@ RSpec.describe Commitments::HelperService, type: :service do
 
       it 'returns proration coefficient' do
         invoice_subscription = subscription.invoice_subscriptions.reload.last
-        apply_service = described_class.new_instance(commitment:, invoice_subscription:).proration_coefficient
+        apply_service = described_class.new(commitment:, invoice_subscription:).proration_coefficient
 
         expect(apply_service.proration_coefficient).to eq(1 / days_in_month.to_f)
       end

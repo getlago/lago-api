@@ -1,17 +1,7 @@
 # frozen_string_literal: true
 
 module Commitments
-  class HelperService < BaseService
-    def self.new_instance(commitment:, invoice_subscription:)
-      klass = if invoice_subscription.subscription.plan.pay_in_advance?
-        Commitments::Minimum::InAdvance::HelperService
-      else
-        Commitments::Minimum::InArrears::HelperService
-      end
-
-      klass.new(commitment:, invoice_subscription:)
-    end
-
+  class CalculateProratedCoefficientService < BaseService
     def initialize(commitment:, invoice_subscription:)
       @commitment = commitment
       @invoice_subscription = invoice_subscription
@@ -25,7 +15,7 @@ module Commitments
     end
 
     def dates_service
-      raise NotImplementedError
+      @dates_service ||= Commitments::DatesService.new_instance(commitment:, invoice_subscription:).call
     end
 
     private
