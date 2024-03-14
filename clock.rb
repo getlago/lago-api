@@ -19,8 +19,9 @@ module Clockwork
   # NOTE: All clocks run every hour to take customer timezones into account
 
   every(5.minutes, 'schedule:activate_subscriptions') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::ActivateSubscriptionsJob.perform_later
+    Clock::ActivateSubscriptionsJob.perform_later(:sentry => {
+      :slug => "activate_subscriptions", :cron => "*/5 * * * *"
+    })
   end
 
   every(5.minutes, 'schedule:refresh_draft_invoices') do
