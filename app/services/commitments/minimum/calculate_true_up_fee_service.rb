@@ -31,13 +31,6 @@ module Commitments
 
       delegate :subscription, to: :invoice_subscription
 
-      def helper_service
-        @helper_service ||= Commitments::HelperService.new_instance(
-          commitment: minimum_commitment,
-          invoice_subscription:,
-        )
-      end
-
       def amount_cents
         return 0 if !minimum_commitment || fees_total_amount_cents >= commitment_amount_cents
 
