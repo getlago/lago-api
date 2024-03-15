@@ -10,7 +10,6 @@ module Types
 
       field :billable_metric, Types::BillableMetrics::Object, null: false
       field :charge_model, Types::Charges::ChargeModelEnum, null: false
-      field :group_properties, [Types::Charges::GroupProperties], null: true
       field :invoiceable, Boolean, null: false
       field :min_amount_cents, GraphQL::Types::BigInt, null: false
       field :pay_in_advance, Boolean, null: false
@@ -35,12 +34,6 @@ module Types
         return object.billable_metric unless object.discarded?
 
         BillableMetric.with_discarded.find_by(id: object.billable_metric_id)
-      end
-
-      def group_properties
-        scope = object.group_properties
-        scope = scope.with_discarded if object.discarded?
-        scope.includes(:group).sort_by { |gp| gp.group&.name }
       end
     end
   end
