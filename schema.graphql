@@ -172,8 +172,6 @@ type BillableMetric {
   draftInvoicesCount: Int!
   fieldName: String
   filters: [BillableMetricFilter!]
-  flatGroups: [Group!]
-  group: JSON
   id: ID!
   name: String!
   organization: Organization
@@ -217,7 +215,6 @@ type Charge {
   createdAt: ISO8601DateTime!
   deletedAt: ISO8601DateTime
   filters: [ChargeFilter!]
-  groupProperties: [GroupProperties!]
   id: ID!
   invoiceDisplayName: String
   invoiceable: Boolean!
@@ -263,7 +260,6 @@ input ChargeInput {
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   filters: [ChargeFilterInput!]
-  groupProperties: [GroupPropertiesInput!]
   id: ID
   invoiceDisplayName: String
   invoiceable: Boolean
@@ -287,7 +283,6 @@ enum ChargeModelEnum {
 input ChargeOverridesInput {
   billableMetricId: ID!
   filters: [ChargeFilterInput!]
-  groupProperties: [GroupPropertiesInput!]
   id: ID!
   invoiceDisplayName: String
   minAmountCents: BigInt
@@ -3426,19 +3421,6 @@ type Group {
   id: ID!
   key: String
   value: String!
-}
-
-type GroupProperties {
-  deletedAt: ISO8601DateTime
-  groupId: ID!
-  invoiceDisplayName: String
-  values: Properties!
-}
-
-input GroupPropertiesInput {
-  groupId: ID!
-  invoiceDisplayName: String
-  values: PropertiesInput!
 }
 
 type GroupUsage {
