@@ -78,7 +78,7 @@ module Subscriptions
       end
 
       def previous_anniversary_day(date)
-        year = (date.month < subscription_at.month) ? (date.year - 1) : date.year
+        year = period_started_in_last_year?(date) ? (date.year - 1) : date.year
         month = subscription_at.month
         day = subscription_at.day
 
@@ -99,6 +99,13 @@ module Subscriptions
         return monthly_service.compute_charges_duration(from_date:) if plan.bill_charges_monthly
 
         compute_duration(from_date:)
+      end
+
+      def period_started_in_last_year?(date)
+        return true if (date.month < subscription_at.month)
+        return true if (date.month == subscription_at.month)  && (subscription_at.day > date.day)
+
+        false
       end
     end
   end
