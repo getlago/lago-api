@@ -16,12 +16,12 @@ class ChargeFilter < ApplicationRecord
   default_scope -> { kept }
 
   def display_name
-    invoice_display_name.presence || values.map(&:value).join(', ')
+    invoice_display_name.presence || values.map(&:values).flatten.join(', ')
   end
 
   def to_h
     values.each_with_object({}) do |filter_value, result|
-      result[filter_value.billable_metric_filter.key] = filter_value.value
+      result[filter_value.billable_metric_filter.key] = filter_value.values
     end
   end
 

@@ -10,29 +10,38 @@ RSpec.describe ChargeFilterValue, type: :model do
   it { is_expected.to belong_to(:charge_filter) }
   it { is_expected.to belong_to(:billable_metric_filter) }
 
-  it { is_expected.to validate_presence_of(:value) }
+  it { is_expected.to validate_presence_of(:values) }
 
-  describe '#valdiate_value' do
+  describe '#valdiate_values' do
     subject(:charge_filter_value) do
-      build(:charge_filter_value, billable_metric_filter:, value:)
+      build(:charge_filter_value, billable_metric_filter:, values:)
     end
 
     let(:billable_metric_filter) { create(:billable_metric_filter) }
-    let(:value) { billable_metric_filter.values.first }
+    let(:values) { [billable_metric_filter.values.first] }
 
     it { expect(charge_filter_value).to be_valid }
 
     context 'when value is not included in billable_metric_filter values' do
-      let(:value) { 'invalid_value' }
+      let(:values) { ['invalid_value'] }
 
       it do
         expect(charge_filter_value).to be_invalid
-        expect(charge_filter_value.errors[:value]).to include('value_is_invalid')
+        expect(charge_filter_value.errors[:values]).to include('value_is_invalid')
+      end
+    end
+
+    context 'when values are empty' do
+      let(:values) { [] }
+
+      it do
+        expect(charge_filter_value).to be_invalid
+        expect(charge_filter_value.errors[:values]).to include('value_is_mandatory')
       end
     end
 
     context 'when value is MATCH_ALL_FILTER_VALUES' do
-      let(:value) { ChargeFilterValue::MATCH_ALL_FILTER_VALUES }
+      let(:values) { [ChargeFilterValue::MATCH_ALL_FILTER_VALUES] }
 
       it { expect(charge_filter_value).to be_valid }
     end

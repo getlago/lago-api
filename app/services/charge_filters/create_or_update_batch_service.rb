@@ -20,28 +20,35 @@ module ChargeFilters
 
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
-          # NOTE: Find the filters matching the values
+          # NOTE: Find the filters matching the all the keys
           filters = charge.filters.joins(values: :billable_metric_filter)
             .where(billable_metric_filters: { key: filter_param[:values].keys })
-            .where(charge_filter_values: { value: filter_param[:values].values })
+            .includes(values: :billable_metric_filter)
 
           # NOTE: since a filter could be a refinement of another one, we have to make sure
           #       that we are targeting the right one
-          filter = filters.find { |f| f.values.count == filter_param[:values].count }
+          filter = filters.find do |f|
+            next unless f.values.count == filter_param[:values].count
+
+            f.values.all? do |value|
+              filter_param[:values][value.key] == value.values
+            end
+          end
+
           filter ||= charge.filters.new
 
           filter.invoice_display_name = filter_param[:invoice_display_name]
           filter.properties = filter_param[:properties]
 
           # NOTE: Create or update the filter values
-          filter_param[:values].each do |key, value|
+          filter_param[:values].each do |key, values|
             billable_metric_filter = charge.billable_metric.filters.find_by(key:)
 
             filter_value = filter.values.find_or_initialize_by(
               billable_metric_filter_id: billable_metric_filter&.id,
             )
 
-            filter_value.value = value
+            filter_value.values = values
           end
 
           filter.save!
