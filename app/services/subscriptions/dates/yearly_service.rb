@@ -102,8 +102,8 @@ module Subscriptions
       end
 
       def period_started_in_last_year?(date)
-        return true if (date.month < subscription_at.month)
-        return true if (date.month == subscription_at.month)  && (subscription_at.day > date.day)
+        return true if date.month < subscription_at.month
+        return true if (date.month == subscription_at.month) && (subscription_at.day > date.day)
 
         false
       end
