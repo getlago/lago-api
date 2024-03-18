@@ -1590,17 +1590,17 @@ RSpec.describe Fees::ChargeService do
 
       let(:filter1) { create(:charge_filter, charge:, properties: { amount: '20' }) }
       let(:filter1_values) do
-        [create(:charge_filter_value, value: 'europe', billable_metric_filter: region, charge_filter: filter1)]
+        [create(:charge_filter_value, values: ['europe'], billable_metric_filter: region, charge_filter: filter1)]
       end
 
       let(:filter2) { create(:charge_filter, charge:, properties: { amount: '50' }) }
       let(:filter2_values) do
-        [create(:charge_filter_value, value: 'usa', billable_metric_filter: region, charge_filter: filter2)]
+        [create(:charge_filter_value, values: ['usa'], billable_metric_filter: region, charge_filter: filter2)]
       end
 
       let(:filter3) { create(:charge_filter, charge:, properties: { amount: '10.12345' }) }
       let(:filter3_values) do
-        [create(:charge_filter_value, value: 'france', billable_metric_filter: country, charge_filter: filter3)]
+        [create(:charge_filter_value, values: ['france'], billable_metric_filter: country, charge_filter: filter3)]
       end
 
       let(:charge) do

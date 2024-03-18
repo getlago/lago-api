@@ -10,23 +10,33 @@ module ChargeFilters
     def call
       result.matching_filters = filter.to_h
 
+      # NOTE: Check if filters contains some key/values from input filter
       children = other_filters.find_all do |f|
-        # NOTE: Check if filters contains all key/values from input filter
-        (result.matching_filters.to_a - f.to_h.to_a).empty?
+        child = f.to_h
+
+        result.matching_filters.all? do |key, values|
+          values.any? { (child[key] || []).include?(_1) }
+        end
       end
 
       # NOTE: List of filters that we must ignore to prevent duplicated count of events
-      result.ignored_filters = children.each_with_object({}) do |child, res|
-        keys = (child.to_h.to_a - result.matching_filters.to_a).to_h
+      result.ignored_filters = children.each_with_object([]) do |child_filter, res|
+        child = child_filter.to_h
+        child_result = {}
 
-        keys.each do |key, values|
-          res[key] ||= []
-          res[key] << values
-          res[key] = res[key].flatten.uniq
+        child.each do |key, values|
+          # NOTE: The parent filter does not have the key, so we ignore all values
+          next child_result[key] = values unless result.matching_filters[key]
+
+          # NOTE: The parent filter, has the same values for the key, so no need to filter them
+          next if values == result.matching_filters[key]
+
+          # NOTE: The parent filter has some values for the key, so we get only the parent ones
+          child_result[key] = values.select { result.matching_filters[key].include?(_1) }
         end
 
-        res
-      end
+        res << child_result
+      end.uniq
 
       result
     end
@@ -38,7 +48,7 @@ module ChargeFilters
     delegate :charge, to: :filter
 
     def other_filters
-      @other_filters ||= charge.filters.where.not(id: filter.id)
+      @other_filters ||= charge.filters.where.not(id: filter.id).includes(values: :billable_metric_filter)
     end
   end
 end

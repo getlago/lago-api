@@ -466,12 +466,18 @@ module Events
       end
 
       def filters_scope(scope)
-        matching_filters.each do |key, value|
-          scope = scope.where('events_raw.properties[?] = ?', key.to_s, value)
+        matching_filters.each do |key, values|
+          scope = scope.where('events_raw.properties[?] IN ?', key.to_s, values)
         end
 
-        ignored_filters.each do |key, values|
-          scope = scope.where('events_raw.properties[?] NOT IN (?)', key.to_s, values)
+        ignored_filters.each do |filters|
+          sql = filters.map do |key, values|
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              ["(coalesce(events_raw.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)],
+            )
+          end.join(' OR ')
+
+          scope = scope.where.not(sql)
         end
 
         scope
