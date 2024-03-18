@@ -63,12 +63,15 @@ module Fees
           init_charge_fees(properties: charge.properties, group:)
         end
       else
-        init_charge_fees(properties: charge.properties) unless charge.filters.any?
+        return init_charge_fees(properties: charge.properties) unless charge.filters.any?
 
         # NOTE: Create a fee for each filters defined on the charge.
         charge.filters.each do |charge_filter|
           init_charge_fees(properties: charge_filter.properties, charge_filter:)
         end
+
+        # NOTE: Create a fee for events not matching any filters.
+        init_charge_fees(properties: charge.properties, charge_filter: ChargeFilter.new(charge:))
       end
     end
 

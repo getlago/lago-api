@@ -11,6 +11,11 @@ module ChargeFilters
       result.matching_filters = filter.to_h
 
       # NOTE: Check if filters contains some key/values from input filter
+      #       Result will have the following format:
+      #       {
+      #         key1: [value1, value2],
+      #         key2: [value3, value4]
+      #       }
       children = other_filters.find_all do |f|
         child = f.to_h
 
@@ -20,6 +25,17 @@ module ChargeFilters
       end
 
       # NOTE: List of filters that we must ignore to prevent duplicated count of events
+      #       Result will have the following format:
+      #       [
+      #         {
+      #           key1: [value1],
+      #           key2: [value3, value4]
+      #         },
+      #         {
+      #           key1: [value2],
+      #           key2: [value3, value4]
+      #         }
+      #       ]
       result.ignored_filters = children.each_with_object([]) do |child_filter, res|
         child = child_filter.to_h
         child_result = {}

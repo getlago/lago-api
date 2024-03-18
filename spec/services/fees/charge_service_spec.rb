@@ -1608,7 +1608,7 @@ RSpec.describe Fees::ChargeService do
           :standard_charge,
           plan: subscription.plan,
           billable_metric:,
-          properties: { amount: '10.12345' },
+          properties: { amount: '10' },
         )
       end
 
@@ -1653,6 +1653,15 @@ RSpec.describe Fees::ChargeService do
           timestamp: DateTime.parse('2022-03-16'),
           properties: { country: 'france' },
         )
+        create(
+          :event,
+          organization: subscription.organization,
+          customer: subscription.customer,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: DateTime.parse('2022-03-16'),
+          properties: { country: 'canada' },
+        )
       end
 
       it 'creates expected fees' do
@@ -1661,7 +1670,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(3)
+          expect(created_fees.count).to eq(4) # 3 filters + 1 for default properties
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -1689,6 +1698,13 @@ RSpec.describe Fees::ChargeService do
             units: 1,
             unit_amount_cents: 1012,
             precise_unit_amount: 10.12345,
+          )
+
+          expect(created_fees.find { |f| f.charge_filter_id.nil? }).to have_attributes(
+            amount_cents: 1000,
+            units: 1,
+            unit_amount_cents: 1000,
+            precise_unit_amount: 10.0,
           )
         end
       end
