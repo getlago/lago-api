@@ -186,21 +186,43 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_month }
       let(:started_at) { timestamp - 3.days }
 
-      it 'creates subscription and charge fees' do
-        result = invoice_service.call
+      context 'when plan has no minimum commitment' do
+        it 'creates subscription and charge fees' do
+          result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+          aggregate_failures do
+            expect(result).to be_success
 
-          expect(invoice.subscriptions.first).to eq(subscription)
-          expect(invoice.fees.subscription_kind.count).to eq(1)
-          expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription_kind.count).to eq(1)
+            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.commitment_kind.count).to eq(0)
 
-          invoice_subscription = invoice.invoice_subscriptions.first
-          expect(invoice_subscription).to have_attributes(
-            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-            from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
-          )
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
+            )
+          end
+        end
+      end
+
+      context 'when plan has minimum commitment' do
+        before do
+          create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+        end
+
+        it 'creates subscription, charge and commitment fees' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription_kind.count).to eq(1)
+            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.commitment_kind.count).to eq(1)
+          end
         end
       end
     end
@@ -231,21 +253,48 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
       let(:invoice_subscriptions) { [invoice_subscription, invoice_subscription2] }
 
-      it 'creates subscription and charges fees for both' do
-        result = invoice_service.call
+      context 'when plan has no minimum commitment' do
+        it 'creates subscription and charges fees for both' do
+          result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
-          expect(invoice.payment_status).to eq('pending')
-          expect(invoice.fees.subscription_kind.count).to eq(2)
-          expect(invoice.fees.charge_kind.count).to eq(2)
+          aggregate_failures do
+            expect(result).to be_success
+            expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
+            expect(invoice.payment_status).to eq('pending')
+            expect(invoice.fees.subscription_kind.count).to eq(2)
+            expect(invoice.fees.charge_kind.count).to eq(2)
 
-          invoice_subscription = invoice.invoice_subscriptions.first
-          expect(invoice_subscription).to have_attributes(
-            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-            from_datetime: match_datetime((timestamp - 1.month).beginning_of_day),
-          )
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day),
+            )
+          end
+        end
+      end
+
+      context 'when plan has minimum commitment' do
+        before do
+          create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+        end
+
+        it 'creates subscription, charges and commitment fees for both' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
+            expect(invoice.payment_status).to eq('pending')
+            expect(invoice.fees.subscription_kind.count).to eq(2)
+            expect(invoice.fees.charge_kind.count).to eq(2)
+            expect(invoice.fees.commitment_kind.count).to eq(2)
+
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day),
+            )
+          end
         end
       end
     end
@@ -256,18 +305,42 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:started_at) { Time.zone.today - 3.months }
       let(:terminated_at) { timestamp - 2.days }
 
-      it 'creates a subscription fee' do
-        result = invoice_service.call
+      context 'when plan has minimum commitment' do
+        before do
+          create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+        end
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(invoice.fees.subscription_kind.count).to eq(1)
+        it 'creates a subscription and a commitment fee' do
+          result = invoice_service.call
 
-          invoice_subscription = invoice.invoice_subscriptions.first
-          expect(invoice_subscription).to have_attributes(
-            to_datetime: match_datetime(terminated_at),
-            from_datetime: match_datetime(terminated_at.beginning_of_month),
-          )
+          aggregate_failures do
+            expect(result).to be_success
+            expect(invoice.fees.subscription_kind.count).to eq(1)
+            expect(invoice.fees.commitment_kind.count).to eq(1)
+
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(terminated_at),
+              from_datetime: match_datetime(terminated_at.beginning_of_month),
+            )
+          end
+        end
+      end
+
+      context 'when plan has no minimum commitment' do
+        it 'creates a subscription fee' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(invoice.fees.subscription_kind.count).to eq(1)
+
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(terminated_at),
+              from_datetime: match_datetime(terminated_at.beginning_of_month),
+            )
+          end
         end
       end
 
@@ -275,6 +348,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:billable_metric) do
           create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
         end
+
         let(:charge) do
           create(
             :standard_charge,
@@ -286,13 +360,33 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           )
         end
 
-        it 'does not create a charge fee' do
-          result = invoice_service.call
+        context 'when plan no minimum commitment' do
+          it 'does not create a charge fee or a commitment fee' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+            aggregate_failures do
+              expect(result).to be_success
 
-            expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          it 'does not create a charge fee but it creates a commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.commitment_kind.count).to eq(1)
+            end
           end
         end
       end
@@ -313,13 +407,33 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           )
         end
 
-        it 'creates a charge fee' do
-          result = invoice_service.call
+        context 'when plan no minimum commitment' do
+          it 'creates a charge fee but no minimum commitment fee' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+            aggregate_failures do
+              expect(result).to be_success
 
-            expect(invoice.fees.charge_kind.count).to eq(1)
+              expect(invoice.fees.charge_kind.count).to eq(1)
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          it 'creates a charge fee and a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.charge_kind.count).to eq(1)
+              expect(invoice.fees.commitment_kind.count).to eq(1)
+            end
           end
         end
       end
@@ -335,9 +449,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             created_at: terminated_at + 1.day,
           )
         end
+
         let(:billable_metric) do
           create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
         end
+
         let(:charge) do
           create(
             :standard_charge,
@@ -351,13 +467,51 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         before { new_subscription }
 
-        it 'does not create a charge fee' do
-          result = invoice_service.call
+        context 'when plan has no minimum commitment' do
+          it 'does not create a charge fee' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+            aggregate_failures do
+              expect(result).to be_success
 
-            expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge_kind.count).to eq(0)
+            end
+          end
+
+          it 'does not create a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          it 'does not create a charge fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.charge_kind.count).to eq(0)
+            end
+          end
+
+          it 'creates a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(1)
+            end
           end
         end
       end
@@ -373,9 +527,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             created_at: terminated_at + 1.day,
           )
         end
+
         let(:billable_metric) do
           create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
         end
+
         let(:charge) do
           create(
             :standard_charge,
@@ -390,13 +546,51 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         before { new_subscription }
 
-        it 'does not create a charge fee' do
-          result = invoice_service.call
+        context 'when plan has no minimum commitment' do
+          it 'does not create a charge fee' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+            aggregate_failures do
+              expect(result).to be_success
 
-            expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge_kind.count).to eq(0)
+            end
+          end
+
+          it 'does not create a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          it 'does not create a charge fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.charge_kind.count).to eq(0)
+            end
+          end
+
+          it 'creates a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(1)
+            end
           end
         end
       end
@@ -407,18 +601,61 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription_at) { started_at }
         let(:billing_time) { 'anniversary' }
 
-        it 'creates subscription fee' do
-          result = invoice_service.call
+        context 'when plan has no minimum commitment' do
+          it 'creates subscription fee' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(invoice.fees.subscription_kind.count).to eq(1)
+            aggregate_failures do
+              expect(result).to be_success
+              expect(invoice.fees.subscription_kind.count).to eq(1)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(terminated_at),
-              from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
-            )
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                to_datetime: match_datetime(terminated_at),
+                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+              )
+            end
+          end
+
+          it 'does not create a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          it 'creates subscription fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(invoice.fees.subscription_kind.count).to eq(1)
+
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                to_datetime: match_datetime(terminated_at),
+                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+              )
+            end
+          end
+
+          it 'creates a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(1)
+            end
           end
         end
       end
@@ -433,21 +670,67 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription_at) { started_at }
         let(:billing_time) { :anniversary }
 
-        it 'creates a subscription fee' do
-          result = invoice_service.call
+        context 'when plan has no minimum commitment' do
+          it 'creates a subscription fee' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(invoice.subscriptions.first).to eq(subscription)
-            expect(invoice.payment_status).to eq('pending')
-            expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(0)
+            aggregate_failures do
+              expect(result).to be_success
+              expect(invoice.subscriptions.first).to eq(subscription)
+              expect(invoice.payment_status).to eq('pending')
+              expect(invoice.fees.subscription_kind.count).to eq(1)
+              expect(invoice.fees.charge_kind.count).to eq(0)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(DateTime.parse('2022-04-05 23:59:59')),
-              from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
-            )
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                to_datetime: match_datetime(DateTime.parse('2022-04-05 23:59:59')),
+                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+              )
+            end
+          end
+
+          it 'does not create a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          it 'creates a subscription fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(invoice.subscriptions.first).to eq(subscription)
+              expect(invoice.payment_status).to eq('pending')
+              expect(invoice.fees.subscription_kind.count).to eq(1)
+              expect(invoice.fees.charge_kind.count).to eq(0)
+
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                to_datetime: match_datetime(DateTime.parse('2022-04-05 23:59:59')),
+                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+              )
+            end
+          end
+
+          it 'does not create a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
           end
         end
       end
@@ -457,15 +740,55 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         before { create(:fee, subscription:) }
 
-        it 'does not create any subscription fees' do
-          result = invoice_service.call
+        context 'when plan has no minimum commitment' do
+          it 'does not create any subscription fees' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+            aggregate_failures do
+              expect(result).to be_success
 
-            expect(invoice.fees.subscription_kind.count).to eq(0)
-            expect(invoice.invoice_subscriptions.count).to eq(1)
-            expect(invoice.invoice_subscriptions.first.recurring).to be_falsey
+              expect(invoice.fees.subscription_kind.count).to eq(0)
+              expect(invoice.invoice_subscriptions.count).to eq(1)
+              expect(invoice.invoice_subscriptions.first.recurring).to be_falsey
+            end
+          end
+
+          it 'does create a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          it 'does not create any subscription fees' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.subscription_kind.count).to eq(0)
+              expect(invoice.invoice_subscriptions.count).to eq(1)
+              expect(invoice.invoice_subscriptions.first.recurring).to be_falsey
+            end
+          end
+
+          it 'does not create a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
           end
         end
       end
@@ -524,26 +847,72 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           )
         end
 
-        it 'creates pro-rated subscription fee and no charge fees' do
-          result = invoice_service.call
+        context 'when plan has no minimum commitment' do
+          it 'creates pro-rated subscription fee and no charge fees' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+            aggregate_failures do
+              expect(result).to be_success
 
-            expect(invoice).to be_pending
-            expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice).to be_pending
+              expect(invoice.fees.subscription_kind.count).to eq(1)
+              expect(invoice.fees.charge_kind.count).to eq(0)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(subscription.started_at.end_of_month),
-              from_datetime: match_datetime(subscription.started_at.beginning_of_day),
-            )
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                to_datetime: match_datetime(subscription.started_at.end_of_month),
+                from_datetime: match_datetime(subscription.started_at.beginning_of_day),
+              )
+            end
+          end
+
+          it 'does not create a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          it 'creates pro-rated subscription fee and no charge fees' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice).to be_pending
+              expect(invoice.fees.subscription_kind.count).to eq(1)
+              expect(invoice.fees.charge_kind.count).to eq(0)
+
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                to_datetime: match_datetime(subscription.started_at.end_of_month),
+                from_datetime: match_datetime(subscription.started_at.beginning_of_day),
+              )
+            end
+          end
+
+          it 'does not creates a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
           end
         end
       end
 
-      context 'when subscritpion is terminated after an upgrade' do
+      context 'when subscription is terminated after an upgrade' do
         let(:next_subscription) do
           create(
             :subscription,
@@ -577,20 +946,67 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         before { next_subscription }
 
-        it 'creates only the charge fees' do
-          result = invoice_service.call
+        context 'when plan has no minimum commitment' do
+          it 'creates only the charge fees' do
+            result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+            aggregate_failures do
+              expect(result).to be_success
 
-            expect(invoice.fees.subscription_kind.count).to eq(0)
-            expect(invoice.fees.charge_kind.count).to eq(1)
+              expect(invoice.fees.subscription_kind.count).to eq(0)
+              expect(invoice.fees.charge_kind.count).to eq(1)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              charges_from_datetime: match_datetime(DateTime.parse('2022-10-01 00:00:00')),
-              charges_to_datetime: match_datetime(terminated_at),
-            )
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                charges_from_datetime: match_datetime(DateTime.parse('2022-10-01 00:00:00')),
+                charges_to_datetime: match_datetime(terminated_at),
+              )
+            end
+          end
+
+          it 'does not creates a minimum commitment fee' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.fees.commitment_kind.count).to eq(0)
+            end
+          end
+        end
+
+        context 'when plan has minimum commitment' do
+          before do
+            create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
+          end
+
+          context 'when plan has no minimum commitment' do
+            it 'creates only the charge fees' do
+              result = invoice_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+
+                expect(invoice.fees.subscription_kind.count).to eq(0)
+                expect(invoice.fees.charge_kind.count).to eq(1)
+
+                invoice_subscription = invoice.invoice_subscriptions.first
+                expect(invoice_subscription).to have_attributes(
+                  charges_from_datetime: match_datetime(DateTime.parse('2022-10-01 00:00:00')),
+                  charges_to_datetime: match_datetime(terminated_at),
+                )
+              end
+            end
+
+            it 'does not creates a minimum commitment fee' do
+              result = invoice_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+
+                expect(invoice.fees.commitment_kind.count).to eq(0)
+              end
+            end
           end
         end
       end
