@@ -29,15 +29,15 @@ module Commitments
             return Invoice.where(id: invoice_subscription.invoice_id)
           end
 
-          invoice_ids = subscription
+          invoice_ids_query = subscription
             .invoice_subscriptions
             .where(
               'from_datetime >= ? AND to_datetime <= ?',
               dates_service.previous_beginning_of_period,
               dates_service.end_of_period,
-            ).pluck(:invoice_id)
+            ).select(:invoice_id)
 
-          Invoice.where(id: invoice_ids)
+          Invoice.where(id: invoice_ids_query)
         end
       end
     end
