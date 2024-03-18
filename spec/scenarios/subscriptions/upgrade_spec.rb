@@ -104,7 +104,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
       expect(subscription.invoice_subscriptions.order(created_at: :desc).first.charges_from_datetime.iso8601)
         .to eq('2023-08-29T00:00:00Z')
       expect(subscription.invoice_subscriptions.order(created_at: :desc).first.charges_to_datetime.iso8601)
-        .to eq('2023-09-27T23:59:59Z')
+        .to eq('2023-09-28T05:00:00Z')
 
       new_subscription = customer.subscriptions.order(created_at: :asc).last
       expect(new_subscription.plan.code).to eq(yearly_plan.code)
