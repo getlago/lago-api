@@ -25,6 +25,15 @@ class ChargeFilter < ApplicationRecord
     end
   end
 
+  def to_h_with_all_values
+    values.each_with_object({}) do |filter_value, result|
+      values = filter_value.values
+      values = filter_value.billable_metric_filter.values if values == [ChargeFilterValue::MATCH_ALL_FILTER_VALUES]
+
+      result[filter_value.billable_metric_filter.key] = values
+    end
+  end
+
   private
 
   def validate_properties

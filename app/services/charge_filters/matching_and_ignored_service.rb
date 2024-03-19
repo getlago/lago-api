@@ -8,7 +8,7 @@ module ChargeFilters
     end
 
     def call
-      result.matching_filters = filter.to_h
+      result.matching_filters = filter.to_h_with_all_values
 
       # NOTE: Check if filters contains some key/values from input filter
       #       Result will have the following format:
@@ -17,7 +17,7 @@ module ChargeFilters
       #         key2: [value3, value4]
       #       }
       children = other_filters.find_all do |f|
-        child = f.to_h
+        child = f.to_h_with_all_values
 
         result.matching_filters.all? do |key, values|
           values.any? { (child[key] || []).include?(_1) }
@@ -37,7 +37,7 @@ module ChargeFilters
       #         }
       #       ]
       result.ignored_filters = children.each_with_object([]) do |child_filter, res|
-        child = child_filter.to_h
+        child = child_filter.to_h_with_all_values
         child_result = {}
 
         child.each do |key, values|
