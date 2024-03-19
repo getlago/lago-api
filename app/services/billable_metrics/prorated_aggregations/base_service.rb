@@ -102,11 +102,7 @@ module BillableMetrics
       #       we want to bill the persisted metrics at prorata of the full period duration.
       #       ie: the number of day of the terminated period divided by number of days without termination
       def persisted_pro_rata
-        Utils::DatetimeService.date_diff_with_timezone(
-          from_datetime,
-          to_datetime,
-          subscription.customer.applicable_timezone,
-        ).fdiv(period_duration)
+        subscription.date_diff_with_timezone(from_datetime, to_datetime).fdiv(period_duration)
       end
 
       attr_accessor :options
