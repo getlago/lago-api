@@ -82,11 +82,20 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     )
   end
 
+  let(:billable_metric_filter) do
+    create(:billable_metric_filter, billable_metric: metric, key: 'cloud', values: %w[aws gcp])
+  end
+
+  let(:charge_filter) { create(:charge_filter, charge: standard_charge, invoice_display_name: nil) }
+  let(:charge_filter_value) do
+    create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ['aws'])
+  end
+
   before do
     subscription
     charge
-    standard_charge
     tax
+    charge_filter_value
 
     create_list(
       :event,
@@ -108,6 +117,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       timestamp: Time.zone.now,
       properties: {
         agent_name: 'frodo',
+        cloud: 'aws',
         item_id: 1,
       },
     )
