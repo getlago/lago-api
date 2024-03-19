@@ -16,7 +16,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           weightedInterval
           recurring
           organization { id },
-          group
+          filters { key values }
         }
       }
     GQL
@@ -35,6 +35,12 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
           aggregationType: 'count_agg',
           recurring: false,
           weightedInterval: 'seconds',
+          filters: [
+            {
+              key: 'region',
+              values: %w[usa europe],
+            },
+          ],
         },
       },
     )
@@ -49,65 +55,7 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
       expect(result_data['aggregationType']).to eq('count_agg')
       expect(result_data['weightedInterval']).to eq('seconds')
       expect(result_data['recurring']).to eq(false)
-    end
-  end
-
-  context 'with group parameter' do
-    let(:group) do
-      {
-        key: 'cloud',
-        values: [
-          { name: 'AWS', key: 'region', values: %w[usa europe] },
-          { name: 'Google', key: 'region', values: ['usa'] },
-        ],
-      }
-    end
-
-    it 'updates billable metric\'s group' do
-      create(:group, billable_metric:)
-
-      result = execute_graphql(
-        current_user: membership.user,
-        query: mutation,
-        variables: {
-          input: {
-            id: billable_metric.id,
-            name: 'metric',
-            code: 'metric',
-            description: 'metric description',
-            aggregationType: 'count_agg',
-            group:,
-          },
-        },
-      )
-      result_data = result['data']['updateBillableMetric']
-
-      expect(result_data['group']).to eq(group)
-    end
-  end
-
-  context 'with invalid group parameter' do
-    let(:group) do
-      { key: 'foo', foo: 'bar' }
-    end
-
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query: mutation,
-        variables: {
-          input: {
-            id: billable_metric.id,
-            name: 'metric',
-            code: 'metric',
-            description: 'metric description',
-            aggregationType: 'count_agg',
-            group:,
-          },
-        },
-      )
-
-      expect_unprocessable_entity(result)
+      expect(result_data['filters'].count).to eq(1)
     end
   end
 

@@ -49,21 +49,6 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               perTransactionMaxAmount
               perTransactionMinAmount
             }
-            groupProperties {
-              groupId,
-              invoiceDisplayName,
-              values {
-                amount,
-                freeUnits,
-                packageSize,
-                rate,
-                fixedAmount,
-                freeUnitsPerEvents,
-                freeUnitsPerTotalAggregation,
-                graduatedRanges { fromValue, toValue },
-                volumeRanges { fromValue, toValue }
-              }
-            }
             filters {
               invoiceDisplayName
               values
@@ -78,9 +63,6 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   let(:billable_metrics) do
     create_list(:billable_metric, 6, organization:)
   end
-
-  let(:first_group) { create(:group, billable_metric: billable_metrics[1]) }
-  let(:second_group) { create(:group, billable_metric: billable_metrics[2]) }
 
   let(:billable_metric_filter) do
     create(
@@ -132,35 +114,23 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
             {
               billableMetricId: billable_metrics[1].id,
               chargeModel: 'package',
-              groupProperties: [
-                {
-                  groupId: first_group.id,
-                  invoiceDisplayName: 'Group 1 Invoice Name',
-                  values: {
-                    amount: '300.00',
-                    freeUnits: 10,
-                    packageSize: 10,
-                  },
-                },
-              ],
+              properties: {
+                amount: '300.00',
+                freeUnits: 10,
+                packageSize: 10,
+              },
             },
             {
               billableMetricId: billable_metrics[2].id,
               chargeModel: 'percentage',
-              groupProperties: [
-                {
-                  groupId: second_group.id,
-                  invoiceDisplayName: 'Group 2 Invoice Name',
-                  values: {
-                    rate: '0.25',
-                    fixedAmount: '2',
-                    freeUnitsPerEvents: 5,
-                    freeUnitsPerTotalAggregation: '50',
-                    perTransactionMaxAmount: '20',
-                    perTransactionMinAmount: '10',
-                  },
-                },
-              ],
+              properties: {
+                rate: '0.25',
+                fixedAmount: '2',
+                freeUnitsPerEvents: 5,
+                freeUnitsPerTotalAggregation: '50',
+                perTransactionMaxAmount: '20',
+                perTransactionMinAmount: '10',
+              },
             },
             {
               billableMetricId: billable_metrics[3].id,
@@ -253,20 +223,18 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
 
       package_charge = result_data['charges'][1]
       expect(package_charge['chargeModel']).to eq('package')
-      group_properties = package_charge['groupProperties'][0]['values']
-      expect(group_properties['amount']).to eq('300.00')
-      expect(group_properties['freeUnits']).to eq('10')
-      expect(group_properties['packageSize']).to eq('10')
-      expect(package_charge['groupProperties'][0]['invoiceDisplayName']).to eq('Group 1 Invoice Name')
+      package_properties = package_charge['properties']
+      expect(package_properties['amount']).to eq('300.00')
+      expect(package_properties['freeUnits']).to eq('10')
+      expect(package_properties['packageSize']).to eq('10')
 
       percentage_charge = result_data['charges'][2]
       expect(percentage_charge['chargeModel']).to eq('percentage')
-      group_properties = percentage_charge['groupProperties'][0]['values']
-      expect(group_properties['rate']).to eq('0.25')
-      expect(group_properties['fixedAmount']).to eq('2')
-      expect(group_properties['freeUnitsPerEvents']).to eq('5')
-      expect(group_properties['freeUnitsPerTotalAggregation']).to eq('50')
-      expect(package_charge['groupProperties'][0]['invoiceDisplayName']).to eq('Group 1 Invoice Name')
+      percentage_properties = percentage_charge['properties']
+      expect(percentage_properties['rate']).to eq('0.25')
+      expect(percentage_properties['fixedAmount']).to eq('2')
+      expect(percentage_properties['freeUnitsPerEvents']).to eq('5')
+      expect(percentage_properties['freeUnitsPerTotalAggregation']).to eq('50')
 
       graduated_charge = result_data['charges'][3]
       expect(graduated_charge['chargeModel']).to eq('graduated')

@@ -9,7 +9,6 @@ module Types
       field :charge, Types::Charges::Object, null: true
       field :currency, Types::CurrencyEnum, null: false
       field :description, String, null: true
-      field :group_name, String, null: true
       field :grouped_by, GraphQL::Types::JSON, null: false
       field :invoice_display_name, String, null: true
       field :invoice_name, String, null: true

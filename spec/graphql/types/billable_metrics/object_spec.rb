@@ -14,8 +14,6 @@ RSpec.describe Types::BillableMetrics::Object do
   it { is_expected.to have_field(:field_name).of_type('String') }
   it { is_expected.to have_field(:weighted_interval).of_type('WeightedIntervalEnum') }
   it { is_expected.to have_field(:filters).of_type('[BillableMetricFilter!]') }
-  it { is_expected.to have_field(:flat_groups).of_type('[Group!]') }
-  it { is_expected.to have_field(:group).of_type('JSON') }
   it { is_expected.to have_field(:active_subscriptions_count).of_type('Int!') }
   it { is_expected.to have_field(:draft_invoices_count).of_type('Int!') }
   it { is_expected.to have_field(:plans_count).of_type('Int!') }
