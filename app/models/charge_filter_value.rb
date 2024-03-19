@@ -8,7 +8,7 @@ class ChargeFilterValue < ApplicationRecord
   MATCH_ALL_FILTER_VALUES = '__MATCH_ALL_FILTER_VALUES__'
 
   belongs_to :charge_filter
-  belongs_to :billable_metric_filter
+  belongs_to :billable_metric_filter, -> { with_discarded }
 
   validates :values, presence: true
   validate :validate_values
