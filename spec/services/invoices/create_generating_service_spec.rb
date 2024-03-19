@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CreateGeneratingService, type: :service do
   subject(:create_service) do
-    described_class.new(customer:, invoice_type:, currency:, datetime:, subscriptions_details:)
+    described_class.new(customer:, invoice_type:, currency:, datetime:, subscriptions_details:, charge_in_advance:)
   end
 
   let(:customer) { create(:customer) }
@@ -12,6 +12,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
   let(:currency) { 'EUR' }
   let(:datetime) { Time.current }
   let(:subscriptions_details) { [] }
+  let(:charge_in_advance) { false }
   let(:recurring) { false }
 
   describe 'call' do
@@ -94,6 +95,16 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
         result = create_service.call
 
         expect(result.invoice.issuing_date.to_s).to eq((datetime + 3.days).to_date.to_s)
+      end
+
+      context 'when charge pay in advance invoice is generated' do
+        let(:charge_in_advance) { true }
+
+        it 'creates an invoice with correct issuing date' do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date.to_s).to eq(datetime.to_date.to_s)
+        end
       end
 
       context 'with customer timezone' do
