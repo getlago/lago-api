@@ -2,12 +2,12 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    def initialize(customer:, invoice_type:, datetime:, currency:, subscriptions_details: nil)
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false)
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
       @datetime = datetime
-      @subscriptions_details = subscriptions_details
+      @charge_in_advance = charge_in_advance
 
       super
     end
@@ -35,14 +35,14 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :invoice_type, :currency, :datetime, :subscriptions_details
+    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance
 
     delegate :organization, to: :customer
 
     # NOTE: accounting date must be in customer timezone
     def issuing_date
       date = datetime.in_time_zone(customer.applicable_timezone).to_date
-      return date unless grace_period?
+      return date if !grace_period? || charge_in_advance
 
       date + customer.applicable_invoice_grace_period.days
     end
