@@ -63,20 +63,28 @@ module Fees
           init_charge_fees(properties: charge.properties, group:)
         end
       else
-        init_charge_fees(properties: charge.properties)
+        return init_charge_fees(properties: charge.properties) unless charge.filters.any?
+
+        # NOTE: Create a fee for each filters defined on the charge.
+        charge.filters.each do |charge_filter|
+          init_charge_fees(properties: charge_filter.properties, charge_filter:)
+        end
+
+        # NOTE: Create a fee for events not matching any filters.
+        init_charge_fees(properties: charge.properties, charge_filter: ChargeFilter.new(charge:))
       end
     end
 
-    def init_charge_fees(properties:, group: nil)
-      charge_model_result = apply_aggregation_and_charge_model(properties:, group:)
+    def init_charge_fees(properties:, group: nil, charge_filter: nil)
+      charge_model_result = apply_aggregation_and_charge_model(properties:, group:, charge_filter:)
       return result.fail_with_error!(charge_model_result.error) unless charge_model_result.success?
 
       (charge_model_result.grouped_results || [charge_model_result]).each do |amount_result|
-        init_fee(amount_result, properties:, group:)
+        init_fee(amount_result, properties:, group:, charge_filter:)
       end
     end
 
-    def init_fee(amount_result, properties:, group:)
+    def init_fee(amount_result, properties:, group:, charge_filter:)
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
       if invoice.draft? && (adjusted = adjusted_fee(
@@ -129,6 +137,7 @@ module Fees
         precise_unit_amount: amount_result.unit_amount,
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
+        charge_filter:,
       )
 
       if (adjusted = adjusted_fee(group, amount_result.grouped_by))&.adjusted_display_name?
@@ -165,8 +174,8 @@ module Fees
       result.fees << true_up_fee if true_up_fee
     end
 
-    def apply_aggregation_and_charge_model(properties:, group: nil)
-      aggregation_result = aggregator(group:).aggregate(options: options(properties))
+    def apply_aggregation_and_charge_model(properties:, group: nil, charge_filter: nil)
+      aggregation_result = aggregator(group:, charge_filter:).aggregate(options: options(properties))
       return aggregation_result unless aggregation_result.success?
 
       if billable_metric.recurring?
@@ -196,7 +205,7 @@ module Fees
       true
     end
 
-    def aggregator(group:)
+    def aggregator(group:, charge_filter:)
       BillableMetrics::AggregationFactory.new_instance(
         charge:,
         current_usage: is_current_usage,
@@ -206,7 +215,7 @@ module Fees
           to_datetime: boundaries.charges_to_datetime,
           charges_duration: boundaries.charges_duration,
         },
-        filters: aggregation_filters(group:),
+        filters: aggregation_filters(group:, charge_filter:),
       )
     end
 
@@ -234,11 +243,17 @@ module Fees
       end
     end
 
-    def aggregation_filters(group:)
+    def aggregation_filters(group:, charge_filter: nil)
       filters = { group: }
 
       if charge.standard? && charge.properties['grouped_by'].present?
         filters[:grouped_by] = charge.properties['grouped_by']
+      end
+
+      if charge_filter.present?
+        result = ChargeFilters::MatchingAndIgnoredService.call(filter: charge_filter)
+        filters[:matching_filters] = result.matching_filters
+        filters[:ignored_filters] = result.ignored_filters
       end
 
       filters
