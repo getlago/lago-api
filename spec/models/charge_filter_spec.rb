@@ -327,8 +327,8 @@ RSpec.describe ChargeFilter, type: :model do
     let(:invoice_display_name) { Faker::Fantasy::Tolkien.character }
     let(:values) do
       [
-        build(:charge_filter_value, value: 'card'),
-        build(:charge_filter_value, value: 'visa'),
+        build(:charge_filter_value, values: ['card']),
+        build(:charge_filter_value, values: ['visa']),
       ]
     end
 
@@ -352,16 +352,16 @@ RSpec.describe ChargeFilter, type: :model do
     let(:scheme) { create(:billable_metric_filter, key: 'scheme') }
     let(:values) do
       [
-        build(:charge_filter_value, value: 'credit', billable_metric_filter: card),
-        build(:charge_filter_value, value: 'visa', billable_metric_filter: scheme),
+        build(:charge_filter_value, values: ['credit'], billable_metric_filter: card),
+        build(:charge_filter_value, values: ['visa'], billable_metric_filter: scheme),
       ]
     end
 
     it 'returns the values as a hash' do
       expect(charge_filter.to_h).to eq(
         {
-          'card' => 'credit',
-          'scheme' => 'visa',
+          'card' => ['credit'],
+          'scheme' => ['visa'],
         },
       )
     end
