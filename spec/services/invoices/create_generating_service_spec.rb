@@ -4,14 +4,13 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CreateGeneratingService, type: :service do
   subject(:create_service) do
-    described_class.new(customer:, invoice_type:, currency:, datetime:, subscriptions_details:, charge_in_advance:)
+    described_class.new(customer:, invoice_type:, currency:, datetime:, charge_in_advance:)
   end
 
   let(:customer) { create(:customer) }
   let(:invoice_type) { :one_off }
   let(:currency) { 'EUR' }
   let(:datetime) { Time.current }
-  let(:subscriptions_details) { [] }
   let(:charge_in_advance) { false }
   let(:recurring) { false }
 

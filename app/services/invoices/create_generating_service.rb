@@ -2,13 +2,12 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    def initialize(customer:, invoice_type:, datetime:, currency:, subscriptions_details: nil, charge_in_advance: false)
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false)
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
       @datetime = datetime
       @charge_in_advance = charge_in_advance
-      @subscriptions_details = subscriptions_details
 
       super
     end
@@ -36,7 +35,7 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :invoice_type, :currency, :datetime, :subscriptions_details, :charge_in_advance
+    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance
 
     delegate :organization, to: :customer
 
