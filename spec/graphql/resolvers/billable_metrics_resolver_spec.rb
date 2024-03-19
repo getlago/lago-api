@@ -10,9 +10,7 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
           collection {
             id
             name
-            flatGroups {
-              id key value
-            }
+            filters { key values }
           }
           metadata { currentPage totalCount }
         }
@@ -26,8 +24,8 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
   it 'returns a list of billable metrics' do
     metric = create(:billable_metric, organization:)
 
-    group1 = create(:group, billable_metric: metric, key: 'cloud', value: 'aws')
-    group2 = create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: group1.id)
+    filter1 = create(:billable_metric_filter, billable_metric: metric, key: 'cloud', values: %w[aws gcp azure])
+    filter2 = create(:billable_metric_filter, billable_metric: metric, key: 'region', values: %w[usa europe asia])
 
     result = execute_graphql(
       current_user: membership.user,
@@ -38,9 +36,14 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
     aggregate_failures do
       expect(result['data']['billableMetrics']['collection'].count).to eq(organization.billable_metrics.count)
       expect(result['data']['billableMetrics']['collection'].first['id']).to eq(metric.id)
-      expect(result['data']['billableMetrics']['collection'].first['flatGroups']).to eq(
-        [{ 'id' => group2.id, 'key' => 'aws', 'value' => 'usa' }],
-      )
+
+      expect(result['data']['billableMetrics']['collection'].first['filters'].first['key']).to eq(filter1.key)
+      expect(result['data']['billableMetrics']['collection'].first['filters'].first['values'])
+        .to match_array(filter1.values)
+
+      expect(result['data']['billableMetrics']['collection'].first['filters'].second['key']).to eq(filter2.key)
+      expect(result['data']['billableMetrics']['collection'].first['filters'].second['values'])
+        .to match_array(filter2.values)
 
       expect(result['data']['billableMetrics']['metadata']['currentPage']).to eq(1)
       expect(result['data']['billableMetrics']['metadata']['totalCount']).to eq(1)

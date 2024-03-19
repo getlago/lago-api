@@ -103,6 +103,10 @@ class Fee < ApplicationRecord
     charge&.group_properties&.find_by(group:)&.invoice_display_name || group&.name
   end
 
+  def filter_display_name
+    charge_filter&.display_name
+  end
+
   def invoice_sorting_clause
     base_clause = "#{invoice_name} #{group_name}".downcase
 
