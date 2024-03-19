@@ -9,7 +9,6 @@ RSpec.describe Types::Charges::Object do
   it { is_expected.to have_field(:invoice_display_name).of_type('String') }
   it { is_expected.to have_field(:billable_metric).of_type('BillableMetric!') }
   it { is_expected.to have_field(:charge_model).of_type('ChargeModelEnum!') }
-  it { is_expected.to have_field(:group_properties).of_type('[GroupProperties!]') }
   it { is_expected.to have_field(:invoiceable).of_type('Boolean!') }
   it { is_expected.to have_field(:min_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:pay_in_advance).of_type('Boolean!') }

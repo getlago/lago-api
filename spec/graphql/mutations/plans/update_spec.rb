@@ -42,19 +42,10 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
               graduatedRanges { fromValue, toValue },
               volumeRanges { fromValue, toValue }
             }
-            groupProperties {
-              groupId,
-              values {
-                amount,
-                freeUnits,
-                packageSize,
-                rate,
-                fixedAmount,
-                freeUnitsPerEvents,
-                freeUnitsPerTotalAggregation,
-                graduatedRanges { fromValue, toValue },
-                volumeRanges { fromValue, toValue }
-              }
+            filters {
+              invoiceDisplayName
+              values
+              properties { amount }
             }
           }
         }
@@ -66,9 +57,16 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
     create_list(:billable_metric, 5, organization:)
   end
 
+  let(:billable_metric_filter) do
+    create(
+      :billable_metric_filter,
+      billable_metric: billable_metrics[0],
+      key: 'payment_method',
+      values: %w[card sepa],
+    )
+  end
+
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
-  let(:first_group) { create(:group, billable_metric: billable_metrics[1]) }
-  let(:second_group) { create(:group, billable_metric: billable_metrics[2]) }
 
   let(:graphql) do
     {
@@ -94,35 +92,32 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
               billableMetricId: billable_metrics[0].id,
               chargeModel: 'standard',
               properties: { amount: '100.00' },
+              filters: [
+                {
+                  invoiceDisplayName: 'Payment method',
+                  properties: { amount: '10.00' },
+                  values: { billable_metric_filter.key => %w[card] },
+                },
+              ],
             },
             {
               billableMetricId: billable_metrics[1].id,
               chargeModel: 'package',
-              groupProperties: [
-                {
-                  groupId: first_group.id,
-                  values: {
-                    amount: '300.00',
-                    freeUnits: 10,
-                    packageSize: 10,
-                  },
-                },
-              ],
+              properties: {
+                amount: '300.00',
+                freeUnits: 10,
+                packageSize: 10,
+              },
             },
             {
               billableMetricId: billable_metrics[2].id,
               chargeModel: 'percentage',
-              groupProperties: [
-                {
-                  groupId: second_group.id,
-                  values: {
-                    rate: '0.25',
-                    fixedAmount: '2',
-                    freeUnitsPerEvents: 5,
-                    freeUnitsPerTotalAggregation: '50',
-                  },
-                },
-              ],
+              properties: {
+                rate: '0.25',
+                fixedAmount: '2',
+                freeUnitsPerEvents: 5,
+                freeUnitsPerTotalAggregation: '50',
+              },
             },
             {
               billableMetricId: billable_metrics[3].id,
@@ -195,20 +190,25 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
         expect(standard_charge['properties']['amount']).to eq('100.00')
         expect(standard_charge['chargeModel']).to eq('standard')
 
+        filter = standard_charge['filters'].first
+        expect(filter['invoiceDisplayName']).to eq('Payment method')
+        expect(filter['properties']['amount']).to eq('10.00')
+        expect(filter['values']).to eq('payment_method' => %w[card])
+
         package_charge = result_data['charges'][1]
         expect(package_charge['chargeModel']).to eq('package')
-        group_properties = package_charge['groupProperties'][0]['values']
-        expect(group_properties['amount']).to eq('300.00')
-        expect(group_properties['freeUnits']).to eq('10')
-        expect(group_properties['packageSize']).to eq('10')
+        package_properties = package_charge['properties']
+        expect(package_properties['amount']).to eq('300.00')
+        expect(package_properties['freeUnits']).to eq('10')
+        expect(package_properties['packageSize']).to eq('10')
 
         percentage_charge = result_data['charges'][2]
         expect(percentage_charge['chargeModel']).to eq('percentage')
-        group_properties = percentage_charge['groupProperties'][0]['values']
-        expect(group_properties['rate']).to eq('0.25')
-        expect(group_properties['fixedAmount']).to eq('2')
-        expect(group_properties['freeUnitsPerEvents']).to eq('5')
-        expect(group_properties['freeUnitsPerTotalAggregation']).to eq('50')
+        percentage_properties = percentage_charge['properties']
+        expect(percentage_properties['rate']).to eq('0.25')
+        expect(percentage_properties['fixedAmount']).to eq('2')
+        expect(percentage_properties['freeUnitsPerEvents']).to eq('5')
+        expect(percentage_properties['freeUnitsPerTotalAggregation']).to eq('50')
 
         graduated_charge = result_data['charges'][3]
         expect(graduated_charge['chargeModel']).to eq('graduated')
@@ -264,18 +264,18 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
 
         package_charge = result_data['charges'][1]
         expect(package_charge['chargeModel']).to eq('package')
-        group_properties = package_charge['groupProperties'][0]['values']
-        expect(group_properties['amount']).to eq('300.00')
-        expect(group_properties['freeUnits']).to eq('10')
-        expect(group_properties['packageSize']).to eq('10')
+        package_properties = package_charge['properties']
+        expect(package_properties['amount']).to eq('300.00')
+        expect(package_properties['freeUnits']).to eq('10')
+        expect(package_properties['packageSize']).to eq('10')
 
         percentage_charge = result_data['charges'][2]
         expect(percentage_charge['chargeModel']).to eq('percentage')
-        group_properties = percentage_charge['groupProperties'][0]['values']
-        expect(group_properties['rate']).to eq('0.25')
-        expect(group_properties['fixedAmount']).to eq('2')
-        expect(group_properties['freeUnitsPerEvents']).to eq('5')
-        expect(group_properties['freeUnitsPerTotalAggregation']).to eq('50')
+        percentage_properties = percentage_charge['properties']
+        expect(percentage_properties['rate']).to eq('0.25')
+        expect(percentage_properties['fixedAmount']).to eq('2')
+        expect(percentage_properties['freeUnitsPerEvents']).to eq('5')
+        expect(percentage_properties['freeUnitsPerTotalAggregation']).to eq('50')
 
         graduated_charge = result_data['charges'][3]
         expect(graduated_charge['chargeModel']).to eq('graduated')

@@ -14,7 +14,6 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
           aggregationType,
           recurring
           organization { id },
-          group
           weightedInterval
           filters { key values }
         }
@@ -53,65 +52,8 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
       expect(result_data['organization']['id']).to eq(membership.organization_id)
       expect(result_data['aggregationType']).to eq('count_agg')
       expect(result_data['recurring']).to eq(false)
-      expect(result_data['group']).to eq({})
       expect(result_data['weightedInterval']).to be_nil
-    end
-  end
-
-  context 'with group parameter' do
-    let(:group) do
-      {
-        key: 'cloud',
-        values: [
-          { name: 'AWS', key: 'region', values: %w[usa europe] },
-          { name: 'Google', key: 'region', values: ['usa'] },
-        ],
-      }
-    end
-
-    it 'creates billable metric\'s group' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'New Metric',
-            code: 'new_metric',
-            description: 'New metric description',
-            aggregationType: 'count_agg',
-            group:,
-          },
-        },
-      )
-      result_data = result['data']['createBillableMetric']
-
-      expect(result_data['group']).to eq(group)
-    end
-  end
-
-  context 'with invalid group parameter' do
-    let(:group) do
-      { foo: 'bar' }
-    end
-
-    it 'creates billable metric\'s group' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'New Metric',
-            code: 'new_metric',
-            description: 'New metric description',
-            aggregationType: 'count_agg',
-            group:,
-          },
-        },
-      )
-
-      expect_unprocessable_entity(result)
+      expect(result_data['filters'].count).to eq(1)
     end
   end
 
