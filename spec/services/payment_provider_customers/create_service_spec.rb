@@ -9,8 +9,10 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
   let(:stripe_provider) { create(:stripe_provider, organization: customer.organization) }
 
   let(:create_params) do
-    { provider_customer_id: 'id', sync_with_provider: true, provider_payment_methods: %w[card] }
+    { provider_customer_id: 'id', sync_with_provider: true, provider_payment_methods: }
   end
+
+  let(:provider_payment_methods) { %w[card] }
 
   describe '.create_or_update' do
     it 'creates a payment_provider_customer' do
@@ -23,6 +25,69 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
       expect(result).to be_success
       expect(result.provider_customer).to be_present
       expect(result.provider_customer.provider_customer_id).to eq('id')
+    end
+
+    context 'when payment provider is stripe' do
+      let(:service_call) do
+        create_service.create_or_update(
+          customer_class: PaymentProviderCustomers::StripeCustomer,
+          payment_provider_id: stripe_provider.id,
+          params: create_params,
+        )
+      end
+
+      context 'when provider customer is persisted' do
+        before do
+          create(
+            :stripe_customer,
+            customer:,
+            payment_provider: stripe_provider,
+            provider_payment_methods: %w[sepa_debit],
+          )
+        end
+
+        context 'when provider payment methods are present' do
+          let(:provider_payment_methods) { %w[card sepa_debit] }
+
+          it 'updates payment methods' do
+            result = service_call
+
+            expect(result.provider_customer.provider_payment_methods).to eq(provider_payment_methods)
+          end
+        end
+
+        context 'when provider payment methods are not present' do
+          let(:provider_payment_methods) { nil }
+
+          it 'does not update payment methods' do
+            result = service_call
+
+            expect(result.provider_customer.provider_payment_methods).to eq(%w[sepa_debit])
+          end
+        end
+      end
+
+      context 'when provider customer is not persisted' do
+        context 'when provider payment methods are present' do
+          let(:provider_payment_methods) { %w[card sepa_debit] }
+
+          it 'saves payment methods' do
+            result = service_call
+
+            expect(result.provider_customer.provider_payment_methods).to eq(provider_payment_methods)
+          end
+        end
+
+        context 'when provider payment methods are not present' do
+          let(:provider_payment_methods) { nil }
+
+          it 'saves default payment method' do
+            result = service_call
+
+            expect(result.provider_customer.provider_payment_methods).to eq(%w[card])
+          end
+        end
+      end
     end
 
     context 'when no provider customer id and should create on service' do

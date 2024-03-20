@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_03_12_141641) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_14_163426) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -183,10 +183,10 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_12_141641) do
   create_table "charge_filter_values", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "charge_filter_id", null: false
     t.uuid "billable_metric_filter_id", null: false
-    t.string "value", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.string "values", default: [], null: false, array: true
     t.index ["billable_metric_filter_id"], name: "index_charge_filter_values_on_billable_metric_filter_id"
     t.index ["charge_filter_id"], name: "index_charge_filter_values_on_charge_filter_id"
     t.index ["deleted_at"], name: "index_charge_filter_values_on_deleted_at"

@@ -87,7 +87,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       :billable_metric_filter,
       billable_metric: billable_metrics[0],
       key: 'payment_method',
-      values: %w[card physical],
+      values: %w[card sepa],
     )
   end
 
@@ -125,7 +125,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                 {
                   invoiceDisplayName: 'Payment Method',
                   properties: { amount: '100.00' },
-                  values: { billable_metric_filter.key => 'card' },
+                  values: { billable_metric_filter.key => %w[card sepa] },
                 },
               ],
             },
@@ -249,7 +249,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       filter = standard_charge['filters'].first
       expect(filter['invoiceDisplayName']).to eq('Payment Method')
       expect(filter['properties']['amount']).to eq('100.00')
-      expect(filter['values']).to eq('payment_method' => 'card')
+      expect(filter['values']).to eq('payment_method' => %w[card sepa])
 
       package_charge = result_data['charges'][1]
       expect(package_charge['chargeModel']).to eq('package')

@@ -373,7 +373,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         end
 
         it 'returns the beginning of the start date' do
-          expect(result).to eq(subscription.started_at.beginning_of_day.utc.to_s)
+          expect(result).to eq(subscription.started_at.utc.to_s) # boundary should be terminated_at
         end
       end
     end
@@ -443,8 +443,8 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
             )
           end
 
-          it 'returns the previous end of day' do
-            expect(result).to eq((subscription.terminated_at - 1.day).end_of_day.to_s)
+          it 'returns the terminated_at' do
+            expect(result).to eq(subscription.terminated_at.to_s)
           end
 
           context 'when end of previous day is before charges_from_datetime' do
@@ -452,7 +452,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
             let(:terminated_at) { Time.zone.parse('2022-03-06T12:23:00') }
 
             it 'returns the charges_from_datetime' do
-              expect(result).to eq(subscription.started_at.to_s)
+              expect(result).to eq(subscription.terminated_at.to_s)
             end
           end
         end

@@ -6,8 +6,8 @@ module Types
       graphql_name 'ChargeFilterValues'
 
       def self.coerce_input(input_value, _context)
-        input_value.to_h.each_with_object({}) do |(key, value), result|
-          result[key.to_s] = value.to_s
+        input_value.to_h.each_with_object({}) do |(key, values), result|
+          result[key.to_s] = values&.map(&:to_s) || []
         end
       rescue StandardError
         raise GraphQL::CoercionError, "#{input_value.inspect} is not a valid hash object"

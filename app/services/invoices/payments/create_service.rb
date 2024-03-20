@@ -18,6 +18,8 @@ module Invoices
         when :adyen
           Invoices::Payments::AdyenCreateJob.perform_later(invoice)
         end
+      rescue ActiveJob::Uniqueness::JobNotUnique => e
+        Sentry.capture_exception(e)
       end
 
       private

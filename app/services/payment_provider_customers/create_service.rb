@@ -20,16 +20,7 @@ module PaymentProviderCustomers
         provider_customer.sync_with_provider = params[:sync_with_provider].presence
       end
 
-      if provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer)
-        if provider_customer.persisted? && (provider_payment_methods = (params || {})[:provider_payment_methods]).present?
-          provider_customer.provider_payment_methods = provider_payment_methods
-        elsif (provider_payment_methods = (params || {})[:provider_payment_methods]).present?
-          provider_customer.provider_payment_methods = provider_payment_methods
-        else
-          provider_customer.provider_payment_methods = %w[card]
-        end
-      end
-
+      provider_customer = handle_provider_payment_methods(provider_customer:, params:)
       provider_customer.save!
 
       result.provider_customer = provider_customer
@@ -50,6 +41,20 @@ module PaymentProviderCustomers
     attr_accessor :customer
 
     delegate :organization, to: :customer
+
+    def handle_provider_payment_methods(provider_customer:, params:)
+      return provider_customer unless provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer)
+
+      provider_payment_methods = (params || {})[:provider_payment_methods]
+
+      if provider_customer.persisted?
+        provider_customer.provider_payment_methods = provider_payment_methods if provider_payment_methods.present?
+      else
+        provider_customer.provider_payment_methods = provider_payment_methods.presence || %w[card]
+      end
+
+      provider_customer
+    end
 
     def create_customer_on_provider_service(async)
       if result.provider_customer.type == 'PaymentProviderCustomers::StripeCustomer'

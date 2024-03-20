@@ -30,7 +30,7 @@ class UsersService < BaseService
     end
 
     ActiveRecord::Base.transaction do
-      result.organization = Organization.create!(name: organization_name)
+      result.organization = Organization.create!(name: organization_name, document_numbering: 'per_organization')
 
       create_user_and_membership(result, password)
     end

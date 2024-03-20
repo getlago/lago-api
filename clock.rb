@@ -77,5 +77,7 @@ module Clockwork
   every(1.hour, 'schedule:post_validate_events', at: '*:05') do
     # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
     Clock::EventsValidationJob.perform_later
+  rescue StandardError => e
+    Sentry.capture_exception(e)
   end
 end

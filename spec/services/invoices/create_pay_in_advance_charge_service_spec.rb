@@ -199,6 +199,17 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
     end
 
+    context 'with grace period' do
+      let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
+      let(:timestamp) { DateTime.parse('2022-11-25 08:00:00') }
+
+      it 'assigns the correct issuing date' do
+        result = invoice_service.call
+
+        expect(result.invoice.issuing_date.to_s).to eq('2022-11-25')
+      end
+    end
+
     context 'with provided invoice' do
       let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription, status: :generating) }
 

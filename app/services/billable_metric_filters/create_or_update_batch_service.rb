@@ -27,7 +27,7 @@ module BillableMetricFilters
 
             filter_values = filter.filter_values
               .where(billable_metric_filter_id: filter.id)
-              .where(value: deleted_values)
+              .where(values: deleted_values)
 
             filter_values.each { discard_filter_value(_1) }
           end

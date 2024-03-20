@@ -50,6 +50,15 @@ class InvoiceSubscription < ApplicationRecord
     )
   end
 
+  def previous_invoice_subscription
+    self.class
+      .where(subscription:)
+      .where('from_datetime <= ?', from_datetime)
+      .where.not(id:)
+      .order(from_datetime: :desc)
+      .find(&:subscription_fee)
+  end
+
   def charge_amount_cents
     fees.charge_kind.sum(:amount_cents)
   end
@@ -60,6 +69,10 @@ class InvoiceSubscription < ApplicationRecord
 
   def subscription_fee
     fees.subscription_kind.first
+  end
+
+  def commitment_fee
+    fees.commitment_kind.first
   end
 
   def total_amount_cents

@@ -88,7 +88,7 @@ RSpec.describe Invoice, type: :model do
         aggregate_failures do
           expect(invoice).to be_valid
           expect(invoice.sequential_id).to eq(6)
-          expect(invoice.organization_sequential_id).to eq(1)
+          expect(invoice.organization_sequential_id).to eq(16)
         end
       end
     end
@@ -115,6 +115,40 @@ RSpec.describe Invoice, type: :model do
         organization_id_substring = organization.id.last(4).upcase
 
         expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-001")
+      end
+
+      context 'with existing invoices in current month' do
+        let(:created_at) { Time.now.utc }
+
+        before do
+          create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14, created_at:)
+          create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
+        end
+
+        it 'scopes the organization_sequential_id to the organization and month' do
+          invoice.save
+
+          organization_id_substring = organization.id.last(4).upcase
+
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+        end
+      end
+
+      context 'with existing invoices in previous month' do
+        let(:created_at) { Time.now.utc - 1.month }
+
+        before do
+          create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14, created_at:)
+          create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
+        end
+
+        it 'scopes the organization_sequential_id to the organization and month' do
+          invoice.save
+
+          organization_id_substring = organization.id.last(4).upcase
+
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+        end
       end
     end
   end

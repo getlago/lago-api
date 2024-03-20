@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
-  subject(:date_service) { described_class.new(subscription, billing_at, false) }
+  subject(:date_service) { described_class.new(subscription, billing_at, current_usage) }
 
   let(:subscription) do
     create(
@@ -19,6 +19,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
   let(:customer) { create(:customer, timezone:) }
   let(:plan) { create(:plan, interval: :yearly, pay_in_advance:) }
   let(:pay_in_advance) { false }
+  let(:current_usage) { false }
 
   let(:subscription_at) { DateTime.parse('02 Feb 2021') }
   let(:billing_at) { DateTime.parse('07 Mar 2022') }
@@ -86,6 +87,16 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
 
       it 'returns the previous year day and month' do
         expect(result).to eq('2021-02-02 00:00:00 UTC')
+      end
+
+      context 'when current usage is true and current month is the same as starting month' do
+        let(:current_usage) { true }
+        let(:subscription_at) { DateTime.parse('29 Mar 2023') }
+        let(:billing_at) { DateTime.parse('15 Mar 2024') }
+
+        it 'returns the previous year day and month' do
+          expect(result).to eq('2023-03-29 00:00:00 UTC')
+        end
       end
 
       context 'when date is before the start date' do

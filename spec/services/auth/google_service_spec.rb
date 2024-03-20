@@ -112,4 +112,58 @@ RSpec.describe Auth::GoogleService do
       end
     end
   end
+
+  describe '#register_user' do
+    let(:authorizer) { instance_double(Google::Auth::UserAuthorizer) }
+    let(:oidc_verifier) { instance_double(Google::Auth::IDTokens) }
+    let(:authorizer_response) { instance_double(Google::Auth::UserRefreshCredentials, id_token: 'id_token') }
+    let(:oidc_response) do
+      { 'email' => 'foo@bar.com' }
+    end
+
+    before do
+      allow(Google::Auth::UserAuthorizer).to receive(:new).and_return(authorizer)
+      allow(authorizer).to receive(:get_credentials_from_code).and_return(authorizer_response)
+      allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(oidc_response)
+    end
+
+    it 'register the user' do
+      result = service.register_user('code', 'Foobar')
+
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.user).to be_a(User)
+        expect(result.token).to be_present
+      end
+    end
+
+    context 'when user already exists' do
+      before { create(:user, email: 'foo@bar.com') }
+
+      it 'returns a validation failure' do
+        result = service.register_user('code', 'FooBar')
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.messages.values.flatten).to include('user_already_exists')
+        end
+      end
+    end
+
+    context 'when google auth is not set up' do
+      before do
+        ENV['GOOGLE_AUTH_CLIENT_ID'] = nil
+        ENV['GOOGLE_AUTH_CLIENT_SECRET'] = nil
+      end
+
+      it 'returns a service failure' do
+        result = service.register_user('code', 'FooBar')
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.code).to eq('google_auth_missing_setup')
+        end
+      end
+    end
+  end
 end
