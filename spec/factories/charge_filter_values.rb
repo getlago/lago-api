@@ -8,6 +8,6 @@ FactoryBot.define do
 
     charge_filter
     billable_metric_filter_id { billable_metric_filter.id }
-    value { billable_metric_filter.values.sample }
+    values { [billable_metric_filter.values.sample] }
   end
 end

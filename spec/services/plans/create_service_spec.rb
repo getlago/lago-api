@@ -61,7 +61,7 @@ RSpec.describe Plans::CreateService, type: :service do
           ],
           filters: [
             {
-              values: { billable_metric_filter.key => 'card' },
+              values: { billable_metric_filter.key => ['card'] },
               invoice_display_name: 'Card filter',
               properties: { amount: '90' },
             },
@@ -142,7 +142,7 @@ RSpec.describe Plans::CreateService, type: :service do
       )
       expect(standard_charge.filters.first.values.first).to have_attributes(
         billable_metric_filter_id: billable_metric_filter.id,
-        value: 'card',
+        values: ['card'],
       )
 
       expect(graduated_charge).to have_attributes(pay_in_advance: true, invoiceable: true, prorated: false)

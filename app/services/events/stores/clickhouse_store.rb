@@ -19,10 +19,8 @@ module Events
         scope = scope.where(numeric_condition) if numeric_property
 
         scope = with_grouped_by_values(scope) if grouped_by_values?
-
-        return scope unless group
-
-        group_scope(scope)
+        scope = group_scope(scope) if group.present?
+        filters_scope(scope)
       end
 
       def events_values(limit: nil, force_from: false)
@@ -465,6 +463,24 @@ module Events
         return scope unless group.parent
 
         scope.where('events_raw.properties[?] = ?', group.parent.key.to_s, group.parent.value.to_s)
+      end
+
+      def filters_scope(scope)
+        matching_filters.each do |key, values|
+          scope = scope.where('events_raw.properties[?] IN ?', key.to_s, values)
+        end
+
+        ignored_filters.each do |filters|
+          sql = filters.map do |key, values|
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              ["(coalesce(events_raw.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)],
+            )
+          end.join(' OR ')
+
+          scope = scope.where.not(sql)
+        end
+
+        scope
       end
 
       def with_grouped_by_values(scope)

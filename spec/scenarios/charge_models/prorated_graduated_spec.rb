@@ -609,9 +609,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             invoice = subscription.invoices.order(created_at: :desc).first
             expect(invoice.fees.charge_kind.count).to eq(1)
 
-            # NOTE: the charges from the termination day will be billed on the upgraded subscription
-            # 30226 (16 / 31 * 75 units) + 2.58 (1 / 31 * 20 units - prorated event in termination period)
-            expect(invoice.total_amount_cents).to eq(27_194)
+            # 30226 (17 / 31 * 75 units) + 2.58 (2 / 31 * 20 units - prorated event in termination period)
+            expect(invoice.total_amount_cents).to eq(27_323)
           end
 
           travel_to(DateTime.new(2023, 11, 1)) do

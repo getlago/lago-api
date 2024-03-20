@@ -71,33 +71,25 @@ module Subscriptions
         datetime = new_datetime if ((datetime.in_time_zone - new_datetime.in_time_zone) / 1.hour).abs < 26
       end
 
-      if datetime < subscription.started_at
-        datetime = subscription.started_at
-
-        if subscription.previous_subscription&.terminated? && subscription.previous_subscription&.upgraded?
-          datetime = datetime.in_time_zone(customer.applicable_timezone).beginning_of_day.utc
-        end
-      end
+      datetime = subscription.started_at if datetime < subscription.started_at
 
       datetime
     end
 
     def charges_to_datetime
       datetime = customer_timezone_shift(compute_charges_to_date, end_of_day: true)
-      if subscription.terminated? && datetime > subscription.terminated_at
-        datetime = subscription.terminated_at
-
-        if subscription.upgraded?
-          new_datetime = customer_timezone_shift(datetime - 1.day, end_of_day: true)
-          datetime = (new_datetime < charges_from_datetime) ? charges_from_datetime : new_datetime
-        end
-      end
+      datetime = subscription.terminated_at if subscription.terminated? && datetime > subscription.terminated_at
 
       datetime
     end
 
     def next_end_of_period
       end_utc = compute_next_end_of_period
+      customer_timezone_shift(end_utc, end_of_day: true)
+    end
+
+    def end_of_period
+      end_utc = compute_to_date
       customer_timezone_shift(end_utc, end_of_day: true)
     end
 

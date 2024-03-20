@@ -91,5 +91,6 @@ module Types
     field :update_webhook_endpoint, mutation: Mutations::WebhookEndpoints::Update
 
     field :google_login_user, mutation: Mutations::Auth::Google::LoginUser
+    field :google_register_user, mutation: Mutations::Auth::Google::RegisterUser
   end
 end

@@ -544,7 +544,7 @@ RSpec.describe Plans::UpdateService, type: :service do
                 {
                   invoice_display_name: 'Card filter',
                   properties: { amount: '90' },
-                  values: { billable_metric_filter.key => 'card' },
+                  values: { billable_metric_filter.key => ['card'] },
                 },
               ],
             },
@@ -587,7 +587,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         )
         expect(existing_charge.filters.first.values.first).to have_attributes(
           billable_metric_filter_id: billable_metric_filter.id,
-          value: 'card',
+          values: ['card'],
         )
       end
 

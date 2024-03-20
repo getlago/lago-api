@@ -8,7 +8,13 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       code:,
       subscription:,
       boundaries:,
-      filters: { group:, grouped_by:, grouped_by_values: },
+      filters: {
+        group:,
+        grouped_by:,
+        grouped_by_values:,
+        matching_filters:,
+        ignored_filters:,
+      },
     )
   end
 
@@ -32,6 +38,8 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
   let(:group) { nil }
   let(:grouped_by) { nil }
   let(:grouped_by_values) { nil }
+  let(:matching_filters) { {} }
+  let(:ignored_filters) { [] }
 
   let(:events) do
     events = []
@@ -51,6 +59,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
       if i.even?
         event.properties[group.key] = group.value if group
+        matching_filters.each { |key, values| event.properties[key] = values.first }
 
         if grouped_by_values.present?
           grouped_by_values.each { |grouped_by, value| event.properties[grouped_by] = value }
@@ -64,6 +73,12 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       event.save!
 
       events << event
+    end
+
+    first_event = events.first
+    (ignored_filters.first || {}).each do |key, values|
+      first_event.properties[key] = values.first
+      first_event.save!
     end
 
     events
@@ -89,6 +104,15 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(3)
+      end
+    end
+
+    context 'with filters' do
+      let(:matching_filters) { { 'region' => ['europe'], 'country' => %w[france germany] } }
+      let(:ignored_filters) { [{ 'city' => ['paris'] }, { 'city' => ['londons'], 'country' => ['united kingdom'] }] }
+
+      it 'returns a list of events' do
+        expect(event_store.events.count).to eq(2) # 1st event is ignored
       end
     end
   end

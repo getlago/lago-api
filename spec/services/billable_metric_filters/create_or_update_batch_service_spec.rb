@@ -24,7 +24,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
           :charge_filter_value,
           charge_filter:,
           billable_metric_filter: filter,
-          value: filter.values.first,
+          values: [filter.values.first],
         )
       end
 
@@ -106,7 +106,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         create(
           :charge_filter_value,
           billable_metric_filter: filter,
-          value: 'US',
+          values: ['US'],
         )
       end
 
