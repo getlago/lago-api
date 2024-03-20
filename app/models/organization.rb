@@ -82,6 +82,10 @@ class Organization < ApplicationRecord
     end
   end
 
+  def eu?
+    country && LagoEuVat::Rate.new.countries_code.include?(country)
+  end
+
   def payment_provider(provider)
     case provider
     when 'stripe'
