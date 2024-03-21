@@ -35,6 +35,10 @@ module ScenariosHelper
     post_with_token(organization, '/api/v1/plans', { plan: params })
   end
 
+  def update_plan(plan, params)
+    put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: params })
+  end
+
   def delete_plan(plan)
     delete_with_token(organization, "/api/v1/plans/#{plan.code}")
   end
