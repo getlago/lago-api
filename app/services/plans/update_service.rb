@@ -145,6 +145,8 @@ module Plans
         charge = plan.charges.find_by(id: payload_charge[:id])
 
         if charge
+          charge.charge_model = payload_charge[:charge_model] unless plan.attached_to_subscriptions?
+
           group_properties = payload_charge.delete(:group_properties)
           if group_properties.present?
             group_result = GroupProperties::CreateOrUpdateBatchService.call(
