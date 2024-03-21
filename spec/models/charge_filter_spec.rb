@@ -377,7 +377,7 @@ RSpec.describe ChargeFilter, type: :model do
         build(:charge_filter_value, values: ['credit'], billable_metric_filter: card),
         build(
           :charge_filter_value,
-          values: [ChargeFilterValue::MATCH_ALL_FILTER_VALUES],
+          values: [ChargeFilterValue::ALL_FILTER_VALUES],
           billable_metric_filter: scheme,
         ),
       ]

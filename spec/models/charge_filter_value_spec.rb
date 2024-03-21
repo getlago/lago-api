@@ -40,8 +40,8 @@ RSpec.describe ChargeFilterValue, type: :model do
       end
     end
 
-    context 'when value is MATCH_ALL_FILTER_VALUES' do
-      let(:values) { [ChargeFilterValue::MATCH_ALL_FILTER_VALUES] }
+    context 'when value is ALL_FILTER_VALUES' do
+      let(:values) { [ChargeFilterValue::ALL_FILTER_VALUES] }
 
       it { expect(charge_filter_value).to be_valid }
     end
