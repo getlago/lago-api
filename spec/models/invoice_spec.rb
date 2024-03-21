@@ -11,10 +11,11 @@ RSpec.describe Invoice, type: :model do
 
   describe 'sequential_id' do
     let(:customer) { create(:customer, organization:) }
-    let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0) }
+    let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating) }
 
     it 'assigns a sequential id and organization sequential id to a new invoice' do
-      invoice.save
+      invoice.save!
+      invoice.finalized!
 
       aggregate_failures do
         expect(invoice).to be_valid
@@ -30,7 +31,8 @@ RSpec.describe Invoice, type: :model do
       end
 
       it 'does not replace the sequential_id and organization_sequential_id' do
-        invoice.save
+        invoice.save!
+        invoice.finalized!
 
         aggregate_failures do
           expect(invoice).to be_valid
@@ -47,7 +49,8 @@ RSpec.describe Invoice, type: :model do
       end
 
       it 'takes the next available id' do
-        invoice.save
+        invoice.save!
+        invoice.finalized!
 
         aggregate_failures do
           expect(invoice).to be_valid
@@ -63,7 +66,8 @@ RSpec.describe Invoice, type: :model do
       end
 
       it 'scopes the sequence to the organization' do
-        invoice.save
+        invoice.save!
+        invoice.finalized!
 
         aggregate_failures do
           expect(invoice).to be_valid
@@ -83,7 +87,8 @@ RSpec.describe Invoice, type: :model do
       end
 
       it 'scopes the organization_sequential_id to the organization and month' do
-        invoice.save
+        invoice.save!
+        invoice.finalized!
 
         aggregate_failures do
           expect(invoice).to be_valid
@@ -98,10 +103,11 @@ RSpec.describe Invoice, type: :model do
     let(:organization) { create(:organization, name: 'LAGO') }
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0) }
+    let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating) }
 
     it 'generates the invoice number' do
-      invoice.save
+      invoice.save!
+      invoice.finalized!
       organization_id_substring = organization.id.last(4).upcase
 
       expect(invoice.number).to eq("LAG-#{organization_id_substring}-001-001")
@@ -111,7 +117,8 @@ RSpec.describe Invoice, type: :model do
       let(:organization) { create(:organization, document_numbering: 'per_organization', name: 'lago') }
 
       it 'scopes the organization_sequential_id to the organization and month' do
-        invoice.save
+        invoice.save!
+        invoice.finalized!
         organization_id_substring = organization.id.last(4).upcase
 
         expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-001")
@@ -126,7 +133,8 @@ RSpec.describe Invoice, type: :model do
         end
 
         it 'scopes the organization_sequential_id to the organization and month' do
-          invoice.save
+          invoice.save!
+          invoice.finalized!
 
           organization_id_substring = organization.id.last(4).upcase
 
@@ -143,7 +151,8 @@ RSpec.describe Invoice, type: :model do
         end
 
         it 'scopes the organization_sequential_id to the organization and month' do
-          invoice.save
+          invoice.save!
+          invoice.finalized!
 
           organization_id_substring = organization.id.last(4).upcase
 
