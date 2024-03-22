@@ -58,6 +58,8 @@ module BillableMetrics
 
         BillableMetrics::Aggregations::WeightedSumService
 
+      when :custom_agg
+        BillableMetrics::Aggregations::CustomService
       else
         raise(NotImplementedError)
       end

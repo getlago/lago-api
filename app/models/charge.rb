@@ -24,6 +24,7 @@ class Charge < ApplicationRecord
     percentage
     volume
     graduated_percentage
+    custom
   ].freeze
 
   enum charge_model: CHARGE_MODELS

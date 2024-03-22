@@ -15,11 +15,12 @@ module Charges
       end
 
       def apply
+        result.amount = compute_amount
+
         result.units = aggregation_result.aggregation
         result.current_usage_units = aggregation_result.current_usage_units
         result.full_units_number = aggregation_result.full_units_number
         result.count = aggregation_result.count
-        result.amount = compute_amount
         result.unit_amount = unit_amount
         result.amount_details = amount_details
 
