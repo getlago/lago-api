@@ -172,7 +172,7 @@ RSpec.describe Invoice, type: :model do
             organization_sequential_id: 14,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-014"
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-014",
           )
         end
         let(:invoice2) do
@@ -183,7 +183,7 @@ RSpec.describe Invoice, type: :model do
             sequential_id: 5,
             organization_sequential_id: 15,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-015"
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-015",
           )
         end
 
@@ -224,7 +224,7 @@ RSpec.describe Invoice, type: :model do
             organization_sequential_id: 0,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-DRAFT"
+            number: "LAG-#{organization.id.last(4).upcase}-DRAFT",
           )
         end
         let(:invoice2) do
@@ -235,7 +235,7 @@ RSpec.describe Invoice, type: :model do
             sequential_id: 4,
             organization_sequential_id: 14,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-014"
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-014",
           )
         end
 

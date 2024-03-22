@@ -12,7 +12,7 @@ module Sequenced
 
     def ensure_sequential_id
       return if sequential_id.present?
-      return if self.class.to_s == 'Invoice' && !status_changed_to_finalized?
+      return if self.instance_of?(::Invoice) && !status_changed_to_finalized?
 
       self.sequential_id = generate_sequential_id
     end

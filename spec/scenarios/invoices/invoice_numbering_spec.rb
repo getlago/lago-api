@@ -418,9 +418,9 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       end
 
       travel_to(time + 1.hour) do
-        draft_invoice_1 = customer_second.reload.invoices.draft.order(created_at: :asc).first
+        draft_invoice1 = customer_second.reload.invoices.draft.order(created_at: :asc).first
 
-        finalize_invoice(draft_invoice_1)
+        finalize_invoice(draft_invoice1)
 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
@@ -437,9 +437,9 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       end
 
       travel_to(time + 2.hours) do
-        draft_invoice_2 = customer_second.reload.invoices.draft.order(created_at: :asc).last
+        draft_invoice2 = customer_second.reload.invoices.draft.order(created_at: :asc).last
 
-        finalize_invoice(draft_invoice_2)
+        finalize_invoice(draft_invoice2)
 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
@@ -626,9 +626,9 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       end
 
       travel_to(time + 1.hour) do
-        draft_invoice_1 = customer_second.reload.invoices.draft.order(created_at: :asc).first
+        draft_invoice1 = customer_second.reload.invoices.draft.order(created_at: :asc).first
 
-        finalize_invoice(draft_invoice_1)
+        finalize_invoice(draft_invoice1)
 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
@@ -645,9 +645,9 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       end
 
       travel_to(time + 2.hours) do
-        draft_invoice_2 = customer_second.reload.invoices.draft.order(created_at: :asc).last
+        draft_invoice2 = customer_second.reload.invoices.draft.order(created_at: :asc).last
 
-        finalize_invoice(draft_invoice_2)
+        finalize_invoice(draft_invoice2)
 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
@@ -721,9 +721,9 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       end
 
       travel_to(DateTime.new(2023, 9, 20, 12, 12)) do
-        draft_invoice_1 = customer_second.reload.invoices.draft.order(created_at: :asc).first
+        draft_invoice1 = customer_second.reload.invoices.draft.order(created_at: :asc).first
 
-        finalize_invoice(draft_invoice_1)
+        finalize_invoice(draft_invoice1)
 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
