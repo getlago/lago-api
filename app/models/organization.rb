@@ -82,7 +82,7 @@ class Organization < ApplicationRecord
     end
   end
 
-  def eu?
+  def eu_vat_eligible?
     country && LagoEuVat::Rate.new.countries_code.include?(country)
   end
 

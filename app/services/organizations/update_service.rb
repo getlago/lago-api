@@ -120,9 +120,8 @@ module Organizations
     end
 
     def handle_eu_tax_management(eu_tax_management)
-      org_outside_eu = !organization.eu?
       trying_to_enable_eu_tax_management = params[:eu_tax_management] && !organization.eu_tax_management
-      if org_outside_eu && trying_to_enable_eu_tax_management
+      if !organization.eu_vat_eligible? && trying_to_enable_eu_tax_management
         result.single_validation_failure!(error_code: 'org_must_be_in_eu', field: :eu_tax_management)
           .raise_if_error!
       end
