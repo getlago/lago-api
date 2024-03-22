@@ -51,6 +51,31 @@ module Auth
       result.single_validation_failure!(error_code: 'invalid_google_code')
     end
 
+    def accept_invite(code, invite_token)
+      ensure_google_auth_setup
+      return result unless result.success?
+
+      google_oidc = oidc_verifier(code:)
+      invite = Invite.find_by(token: invite_token, status: :pending)
+
+      return result.not_found_failure!(resource: 'invite') unless invite
+
+      unless google_oidc['email'] == invite.email
+        return result.single_validation_failure!(error_code: 'invite_email_mistmatch')
+      end
+
+      Invites::AcceptService.new.call(
+        invite:,
+        email: google_oidc['email'],
+        token: invite_token,
+        password: SecureRandom.hex,
+      )
+    rescue Google::Auth::IDTokens::SignatureError
+      result.single_validation_failure!(error_code: 'invalid_google_token')
+    rescue Signet::AuthorizationError
+      result.single_validation_failure!(error_code: 'invalid_google_code')
+    end
+
     private
 
     def client_id
