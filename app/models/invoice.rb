@@ -270,12 +270,9 @@ class Invoice < ApplicationRecord
   end
 
   def ensure_number
-    return if number.present? && (finalized? || voided?) && !status_changed_to_finalized?
+    self.number = "#{organization.document_number_prefix}-DRAFT" if number.blank? && !status_changed_to_finalized?
 
-    unless status_changed_to_finalized?
-      self.number = "#{organization.document_number_prefix}-DRAFT"
-      return
-    end
+    return unless status_changed_to_finalized?
 
     if organization.per_customer?
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
