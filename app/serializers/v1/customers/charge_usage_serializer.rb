@@ -49,14 +49,12 @@ module V1
 
       def filters(fees)
         fees.sort_by { |f| f.charge_filter&.display_name.to_s }.map do |f|
-          next unless f.charge_filter
-
           {
             units: f.units,
             amount_cents: f.amount_cents,
             events_count: f.events_count,
-            invoice_display_name: f.charge_filter.display_name,
-            values: f.charge_filter.to_h,
+            invoice_display_name: f&.charge_filter&.display_name,
+            values: f&.charge_filter&.to_h,
           }
         end.compact
       end
