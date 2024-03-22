@@ -15,11 +15,11 @@ module Types
         field :values, Types::ChargeFilters::Values, null: false
 
         def values
-          object&.charge_filter&.to_h || {} # rubocop:disable Lint/RedundantSafeNavigation
+          object.charge_filter&.to_h || {} # rubocop:disable Lint/RedundantSafeNavigation
         end
 
         def invoice_display_name
-          object&.charge_filter&.display_name
+          object.charge_filter&.display_name
         end
       end
     end

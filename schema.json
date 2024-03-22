@@ -12249,6 +12249,20 @@
               ]
             },
             {
+              "name": "chargeFilter",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "ChargeFilter",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "creditableAmountCents",
               "description": null,
               "type": {
@@ -12323,20 +12337,6 @@
                   "name": "FeeTypesEnum",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "filterDisplayName",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
