@@ -43,7 +43,7 @@ module Types
         end
 
         def filters
-          object.sort_by { |f| f&.charge_filter&.display_name.to_s }
+          object.sort_by { |f| f.charge_filter&.display_name.to_s }
         end
 
         def grouped_usage
