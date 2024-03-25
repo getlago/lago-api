@@ -72,7 +72,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         }.to change { subscription.reload.status }.from('active').to('terminated')
           .and change { subscription.invoices.count }.from(2).to(3)
 
-        term_invoice = subscription.invoices.order(sequential_id: :desc).first
+        term_invoice = subscription.invoices.order(created_at: :desc).first
         expect(term_invoice).to be_draft
 
         expect(term_invoice.fees.count).to eq(2)
@@ -221,7 +221,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         }.to change { subscription.reload.status }.from('active').to('terminated')
           .and change { subscription.invoices.count }.from(2).to(3)
 
-        term_invoice = subscription.invoices.order(sequential_id: :desc).first
+        term_invoice = subscription.invoices.order(created_at: :desc).first
         expect(term_invoice).to be_finalized
         expect(term_invoice.fees.count).to eq(3)
 

@@ -9,8 +9,8 @@ class Invoice < ApplicationRecord
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
 
-  before_create :ensure_organization_sequential_id, if: -> { organization.per_organization? }
-  before_create :ensure_number
+  before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
+  before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -73,6 +73,7 @@ class Invoice < ApplicationRecord
   sequenced scope: ->(invoice) { invoice.customer.invoices },
             lock_key: ->(invoice) { invoice.customer_id }
 
+  scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
   scope :ready_to_be_finalized,
         lambda {
@@ -264,12 +265,18 @@ class Invoice < ApplicationRecord
 
   private
 
+  def should_assign_sequential_id?
+    status_changed_to_finalized?
+  end
+
   def void_invoice!
     update!(ready_for_payment_processing: false)
   end
 
   def ensure_number
-    return if number.present?
+    self.number = "#{organization.document_number_prefix}-DRAFT" if number.blank? && !status_changed_to_finalized?
+
+    return unless status_changed_to_finalized?
 
     if organization.per_customer?
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
@@ -287,13 +294,14 @@ class Invoice < ApplicationRecord
 
   def ensure_organization_sequential_id
     return if organization_sequential_id.present? && organization_sequential_id.positive?
+    return unless status_changed_to_finalized?
 
     self.organization_sequential_id = generate_organization_sequential_id
   end
 
   def generate_organization_sequential_id
     timezone = organization.timezone || 'UTC'
-    organization_sequence_scope = organization.invoices.where(
+    organization_sequence_scope = organization.invoices.with_generated_number.where(
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
       timezone,
       Time.now.in_time_zone(timezone).beginning_of_month.to_date,
@@ -306,7 +314,7 @@ class Invoice < ApplicationRecord
     ) do
       # If previous invoice had different numbering, base sequential id is the total number of invoices
       organization_sequential_id = if switched_from_customer_numbering?
-        organization.invoices.count
+        organization.invoices.with_generated_number.count
       else
         organization
           .invoices
@@ -331,10 +339,14 @@ class Invoice < ApplicationRecord
   end
 
   def switched_from_customer_numbering?
-    last_invoice = organization.invoices.order(created_at: :desc).first
+    last_invoice = organization.invoices.order(created_at: :desc).with_generated_number.first
 
     return false unless last_invoice
 
     last_invoice&.organization_sequential_id&.zero?
+  end
+
+  def status_changed_to_finalized?
+    status_changed?(from: 'draft', to: 'finalized') || status_changed?(from: 'generating', to: 'finalized')
   end
 end
