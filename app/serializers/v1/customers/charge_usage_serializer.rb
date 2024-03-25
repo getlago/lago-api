@@ -54,7 +54,7 @@ module V1
             amount_cents: f.amount_cents,
             events_count: f.events_count,
             invoice_display_name: f&.charge_filter&.display_name,
-            values: f&.charge_filter&.to_h,
+            values: f.charge_filter&.to_h,
           }
         end.compact
       end
