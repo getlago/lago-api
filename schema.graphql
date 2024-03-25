@@ -3134,12 +3134,12 @@ type Fee implements InvoiceItem {
   amountDetails: FeeAmountDetails
   appliedTaxes: [FeeAppliedTax!]
   charge: Charge
+  chargeFilter: ChargeFilter
   creditableAmountCents: BigInt!
   currency: CurrencyEnum!
   description: String
   eventsCount: BigInt
   feeType: FeeTypesEnum!
-  filterDisplayName: String
   group: Group
   groupName: String
   groupedBy: JSON!
