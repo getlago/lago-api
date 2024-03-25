@@ -2,14 +2,13 @@
 
 module Clock
   class ActivateSubscriptionsJob < ApplicationJob
-    include SentryCronConcern
+    include SentryConcern
 
     queue_as 'clock'
     unique :until_executed, on_conflict: :log
 
 
-    def perform(sentry)
-      self.mixin_sentry_cron(senty)
+    def perform
       Subscriptions::ActivateService.new(timestamp: Time.current.to_i).activate_all_pending
     end
   end

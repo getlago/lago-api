@@ -19,41 +19,48 @@ module Clockwork
   # NOTE: All clocks run every hour to take customer timezones into account
 
   every(5.minutes, 'schedule:activate_subscriptions') do
-    Clock::ActivateSubscriptionsJob.perform_later(:sentry => {
-      :slug => "activate_subscriptions", :cron => "*/5 * * * *"
-    })
+    Clock::ActivateSubscriptionsJob.perform_later(
+        :slug => "activate_subscriptions", :cron => "*/5 * * * *"
+    )
   end
 
   every(5.minutes, 'schedule:refresh_draft_invoices') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::RefreshDraftInvoicesJob.perform_later
+    Clock::RefreshDraftInvoicesJob.perform_later(
+      :slug => "lago_refresh_draft_invoices", :cron => "*/5 * * * *"
+    )
   end
 
   if ENV['LAGO_MEMCACHE_SERVERS'].present? || ENV['LAGO_REDIS_CACHE_URL'].present?
     every(5.minutes, 'schedule:refresh_wallets_ongoing_balance') do
       # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-      Clock::RefreshWalletsOngoingBalanceJob.perform_later unless ENV['LAGO_DISABLE_WALLET_REFRESH'] == 'true'
+      Clock::RefreshWalletsOngoingBalanceJob.perform_later(
+        :slug => "lago_refresh_wallets_ongoing_balance", :cron => "*/5 * * * *"
+      ) unless ENV['LAGO_DISABLE_WALLET_REFRESH'] == 'true'
     end
   end
 
   every(1.hour, 'schedule:terminate_ended_subscriptions', at: '*:05') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::TerminateEndedSubscriptionsJob.perform_later
+    Clock::TerminateEndedSubscriptionsJob.perform_later(
+      :slug => "lago_terminate_ended_subscriptions", :cron => "5 */1 * * *"
+    )
   end
 
   every(1.hour, 'schedule:bill_customers', at: '*:10') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::SubscriptionsBillerJob.perform_later
+    Clock::SubscriptionsBillerJob.perform_later(
+      :slug => "lago_bill_customers", :cron => "10 */1 * * *"
+    )
   end
 
   every(1.hour, 'schedule:finalize_invoices', at: '*:20') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::FinalizeInvoicesJob.perform_later
+    Clock::FinalizeInvoicesJob.perform_later(
+      :slug => "lago_finalize_invoices", :cron => "20 */1 * * *"
+    )
   end
 
   every(1.hour, 'schedule:terminate_coupons', at: '*:30') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::TerminateCouponsJob.perform_later
+    Clock::TerminateCouponsJob.perform_later(
+      :slug => "lago_terminate_coupons", :cron => "30 */1 * * *"
+    )
   end
 
   every(1.hour, 'schedule:bill_ended_trial_subscriptions', at: '*:35') do
@@ -61,29 +68,34 @@ module Clockwork
   end
 
   every(1.hour, 'schedule:terminate_wallets', at: '*:45') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::TerminateWalletsJob.perform_later
+    Clock::TerminateWalletsJob.perform_later(
+      :slug => "lago_terminate_wallets", :cron => "45 */1 * * *"
+    )
   end
 
   every(1.hour, 'schedule:termination_alert', at: '*:50') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::SubscriptionsToBeTerminatedJob.perform_later
+    Clock::SubscriptionsToBeTerminatedJob.perform_later(
+      :slug => "lago_termination_alert", :cron => "50 */1 * * *"
+    )
   end
 
   every(1.hour, 'schedule:top_up_wallet_interval_credits', at: '*:55') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::CreateIntervalWalletTransactionsJob.perform_later
+    Clock::CreateIntervalWalletTransactionsJob.perform_later(
+      :slug => "lago_top_up_wallet_interval_credits", :cron => "55 */1 * * *"
+    )
   end
 
   every(1.day, 'schedule:clean_webhooks', at: '01:00') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::WebhooksCleanupJob.perform_later
+    Clock::WebhooksCleanupJob.perform_later(
+      :slug => "lago_clean_webhooks", :cron => "0 1 * * *"
+    )
   end
 
   every(1.hour, 'schedule:post_validate_events', at: '*:05') do
-    # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-    Clock::EventsValidationJob.perform_later
-  rescue => e
+    Clock::EventsValidationJob.perform_later(
+      :slug => "lago_post_validate_events", :cron => "5 */1 * * *"
+    )
+  rescue StandardError => e
     Sentry.capture_exception(e)
   end
 end
