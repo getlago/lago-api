@@ -37,7 +37,7 @@ module Types
         end
 
         def filters
-          object.sort_by { |f| f&.charge_filter&.display_name }
+          object.sort_by { |f| f.charge_filter&.display_name }
         end
       end
     end
