@@ -345,7 +345,7 @@ module Events
             ActiveRecord::Base.sanitize_sql_for_conditions(
               ["(coalesce(events.properties ->> ?, '') IN (?))", key.to_s, values.map(&:to_s)],
             )
-          end.join(' OR ')
+          end.join(' AND ')
 
           scope = scope.where.not(sql)
         end
