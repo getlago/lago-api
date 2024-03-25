@@ -265,6 +265,10 @@ class Invoice < ApplicationRecord
 
   private
 
+  def should_assign_sequential_id?
+    status_changed_to_finalized?
+  end
+
   def void_invoice!
     update!(ready_for_payment_processing: false)
   end
