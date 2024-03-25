@@ -51,7 +51,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               trueUpParentFee { id }
               units
               preciseUnitAmount
-              filterDisplayName
+              chargeFilter { invoiceDisplayName values }
               appliedTaxes {
                 taxCode
                 taxName
@@ -71,7 +71,6 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
             itemCode
             itemName
             creditableAmountCents
-            filterDisplayName
             charge {
               id
               billableMetric {
@@ -134,9 +133,8 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       variables: { id: invoice.id },
     )
 
-    expect(
-      result['data']['invoice']['invoiceSubscriptions'][0]['fees'][0]['filterDisplayName'],
-    ).to eq(charge_filter_value.values.first)
+    fee = result['data']['invoice']['invoiceSubscriptions'][0]['fees'][0]
+    expect(fee['chargeFilter']['values'][billable_metric_filter.key]).to eq(charge_filter_value.values)
   end
 
   context 'when invoice is not found' do

@@ -3136,7 +3136,6 @@ type Fee implements InvoiceItem {
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   group: Group
-  groupName: String
   groupedBy: JSON!
   id: ID!
   invoiceDisplayName: String

@@ -22,7 +22,5 @@ RSpec.describe Types::Fees::Object do
   it { is_expected.to have_field(:adjusted_fee_type).of_type('AdjustedFeeTypeEnum') }
   it { is_expected.to have_field(:grouped_by).of_type('JSON!') }
 
-  it { is_expected.to have_field(:group_name).of_type('String') }
-
   it { is_expected.to have_field(:charge_filter).of_type('ChargeFilter') }
 end
