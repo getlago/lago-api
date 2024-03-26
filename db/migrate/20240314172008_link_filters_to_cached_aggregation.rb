@@ -19,9 +19,9 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
   end
 
   class Fee < ApplicationRecord
-    belongs_to :group, -> { with_discarded }, optional: true
-    belongs_to :charge, -> { with_discarded }, optional: true
-    belongs_to :charge_filter, -> { with_discarded }, optional: true
+    belongs_to :group, optional: true
+    belongs_to :charge, optional: true
+    belongs_to :charge_filter, optional: true
   end
 
   class AdjustedFee < ApplicationRecord
@@ -58,7 +58,10 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
     object_hash = { object.group.key => [object.group.value] }
     object_hash[object.group.parent.key] = [object.group.parent.value] if object.group.parent
 
-    filter = object.charge.filters.find { |f| f.to_h == object_hash }
+    filter = object.charge.filters.find do |f|
+      f_h = f.to_h
+      f_h.keys == object_hash.keys && f_h.all? { |k, v| object_hash[k].sort == v.sort }
+    end
 
     object.update!(charge_filter_id: filter.id)
   end
