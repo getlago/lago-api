@@ -20,18 +20,13 @@ module ChargeFilters
 
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
-          # NOTE: Find the filters matching the all the keys
-          filters = charge.filters.joins(values: :billable_metric_filter)
-            .where(billable_metric_filters: { key: filter_param[:values].keys })
-            .includes(values: :billable_metric_filter)
-
           # NOTE: since a filter could be a refinement of another one, we have to make sure
           #       that we are targeting the right one
           filter = filters.find do |f|
-            next unless f.values.count == filter_param[:values].count
+            next unless f.to_h.sort == filter_param[:values].sort
 
             f.values.all? do |value|
-              filter_param[:values][value.key] == value.values
+              filter_param[:values][value.key].sort == value.values.sort
             end
           end
 
@@ -68,6 +63,10 @@ module ChargeFilters
     private
 
     attr_reader :charge, :filters_params
+
+    def filters
+      @filters ||= charge.filters.includes(values: :billable_metric_filter)
+    end
 
     def remove_all
       ActiveRecord::Base.transaction do
