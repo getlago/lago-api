@@ -6,6 +6,13 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
 
   class ChargeFilter < ApplicationRecord
     has_many :values, class_name: 'ChargeFilterValue'
+
+    def to_h
+      # NOTE: Ensure filters are keeping the initial ordering
+      values.order(updated_at: :asc).each_with_object({}) do |filter_value, result|
+        result[filter_value.billable_metric_filter.key] = filter_value.values
+      end
+    end
   end
 
   class ChargeFilterValue < ApplicationRecord
@@ -14,10 +21,6 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
   end
 
   class QuantifiedEvent < ApplicationRecord
-    include Discard::Model
-    self.discard_column = :deleted_at
-    default_scope -> { kept }
-
     belongs_to :group, optional: true
     belongs_to :billable_metric
   end
@@ -30,19 +33,23 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
       object_hash = { event.group.key => [event.group.value] }
       object_hash[event.group.parent.key] = [event.group.parent.value] if event.group.parent
 
-      filter = filters.find { |f| f.to_h == object_hash }
+      # First look for an active filter
+      filter = filters.find do |f|
+        next if f.deleted_at
+
+        f_h = f.to_h
+        f_h.keys == object_hash.keys && f_h.all? { |k, v| object_hash[k].sort == v.sort }
+      end
+
+      # If no active filter is found, look for a deleted filter
+      filter ||= filters.find do |f|
+        next unless f.deleted_at
+
+        f_h = f.to_h
+        f_h.keys == object_hash.keys && f_h.all? { |k, v| object_hash[k].sort == v.sort }
+      end
 
       event.update!(charge_filter_id: filter.id)
-    end
-
-    # NOTE: Associate adjusted_fees with charge filters
-    AdjustedFee.where.associated(:group).find_each do |fee|
-      object_hash = { fee.group.key => [fee.group.value] }
-      object_hash[fee.group.parent.key] = [fee.group.parent.value] if fee.group.parent
-
-      filter = filters.find { |f| f.to_h == object_hash }
-
-      fee.update!(charge_filter_id: filter.id)
     end
   end
 
