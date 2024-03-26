@@ -248,9 +248,8 @@ module Fees
     def aggregation_filters(group:, charge_filter: nil)
       filters = { group: }
 
-      if charge.standard? && charge.properties['grouped_by'].present?
-        filters[:grouped_by] = charge.properties['grouped_by']
-      end
+      properties = charge_filter&.properties || charge.properties
+      filters[:grouped_by] = properties['grouped_by'] if charge.standard? && properties['grouped_by'].present?
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(filter: charge_filter)

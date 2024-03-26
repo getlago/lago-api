@@ -48,8 +48,9 @@ module Charges
         event:,
       }
 
-      if charge.standard? && charge.properties['grouped_by'].present?
-        filters[:grouped_by_values] = charge.properties['grouped_by'].index_with do |grouped_by|
+      properties = charge_filter&.properties || charge.properties
+      if charge.standard? && properties['grouped_by'].present?
+        filters[:grouped_by_values] = properties['grouped_by'].index_with do |grouped_by|
           event.properties[grouped_by]
         end
       end

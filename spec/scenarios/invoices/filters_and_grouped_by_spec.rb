@@ -17,7 +17,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
 
   let(:plan) { create(:plan, organization:, amount_cents: 0, interval: 'monthly', pay_in_advance: false) }
   let(:charge) do
-    create(:standard_charge, plan:, billable_metric:, properties: { amount: '10', grouped_by: %w[country] })
+    create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
   end
 
   let(:charge_filter) { create(:charge_filter, charge:, properties: { amount: '12', grouped_by: %w[country] }) }
@@ -142,9 +142,11 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
       expect(aws_filter[:units]).to eq('10.0')
       expect(aws_filter[:values]).to eq(cloud: %w[aws], region: [ChargeFilterValue::ALL_FILTER_VALUES])
 
-      china_group = charge_usage[:grouped_usage].find { |group| group[:grouped_by][:country] == 'china' }
-      expect(china_group[:units]).to eq('10.0')
-      expect(china_group[:values]).to be_nil
+      empty_filter = charge_usage[:filters].find { |filter| filter[:values].nil? }
+      expect(empty_filter[:amount_cents]).to eq(10_000)
+      expect(empty_filter[:events_count]).to eq(1)
+      expect(empty_filter[:units]).to eq('10.0')
+      expect(empty_filter[:values]).to be_nil
     end
 
     # Run the billing job
@@ -174,11 +176,11 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
       expect(ungrouped_fee.units).to eq(10.0)
       expect(ungrouped_fee.charge_filter).to eq(charge_filter)
 
-      china_fee = invoice.fees.charge.find { |fee| fee.grouped_by['country'] == 'china' }
-      expect(china_fee.amount_cents).to eq(10_000)
-      expect(china_fee.events_count).to eq(1)
-      expect(china_fee.units).to eq(10)
-      expect(china_fee.charge_filter).to be_nil
+      empty_filter = invoice.fees.charge.find { |fee| fee.charge_filter_id.nil? }
+      expect(empty_filter.amount_cents).to eq(10_000)
+      expect(empty_filter.events_count).to eq(1)
+      expect(empty_filter.units).to eq(10)
+      expect(empty_filter.charge_filter).to be_nil
     end
   end
 end
