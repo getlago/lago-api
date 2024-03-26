@@ -66,7 +66,6 @@ gem 'sentry-rails', '~> 5.12.0'
 gem 'sentry-ruby', '~> 5.12.0'
 gem 'sentry-sidekiq', '~> 5.12.0'
 
-
 # Storage
 gem 'aws-sdk-s3', require: false
 gem 'google-cloud-storage', require: false
