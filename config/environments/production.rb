@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'active_support/core_ext/integer/time'
+require 'opentelemetry/sdk'
 
 Rails.application.configure do
   config.cache_classes = true
@@ -83,4 +84,6 @@ Rails.application.configure do
       enable_starttls_auto: true,
     }
   end
+
+  OpenTelemetry::SDK.configure(&:use_all) if ENV['OTEL_EXPORTER'].present?
 end
