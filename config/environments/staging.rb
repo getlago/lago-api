@@ -73,4 +73,6 @@ Rails.application.configure do
       port: ENV['LAGO_SMTP_PORT'],
     }
   end
+
+  OpenTelemetry::SDK.configure(&:use_all) if ENV['OTEL_EXPORTER'].present?
 end

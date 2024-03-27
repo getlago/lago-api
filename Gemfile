@@ -59,6 +59,9 @@ gem 'multipart-post'
 
 # Monitoring
 gem 'newrelic_rpm'
+gem 'opentelemetry-exporter-otlp'
+gem 'opentelemetry-instrumentation-all'
+gem 'opentelemetry-sdk'
 gem 'sentry-rails', '~> 5.12.0'
 gem 'sentry-ruby', '~> 5.12.0'
 gem 'sentry-sidekiq', '~> 5.12.0'
