@@ -6,6 +6,6 @@ class AddDeletedAtToAddOns < ActiveRecord::Migration[7.0]
     add_index :add_ons, :deleted_at
 
     remove_index :add_ons, %i[organization_id code]
-    add_index :add_ons, %i[organization_id code], unique: true, where: 'deleted_at IS NULL'
+    add_index :add_ons, %i[organization_id code], unique: true, where: "deleted_at IS NULL"
   end
 end

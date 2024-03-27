@@ -14,6 +14,6 @@ class CreateEventsRawMv < ActiveRecord::Migration[7.0]
       FROM events_raw_queue
     SQL
 
-    create_view :events_raw_mv, materialized: true, as: sql, to: 'events_raw'
+    create_view :events_raw_mv, materialized: true, as: sql, to: "events_raw"
   end
 end

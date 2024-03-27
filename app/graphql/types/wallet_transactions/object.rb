@@ -3,7 +3,7 @@
 module Types
   module WalletTransactions
     class Object < Types::BaseObject
-      graphql_name 'WalletTransaction'
+      graphql_name "WalletTransaction"
 
       field :id, ID, null: false
       field :wallet, Types::Wallets::Object

@@ -3,11 +3,17 @@
 class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7.0]
   # NOTE: redefine models to prevent schema issue in the future
   class BillableMetric < ApplicationRecord; end
+
   class Charge < ApplicationRecord; end
+
   class Customer < ApplicationRecord; end
+
   class Event < ApplicationRecord; end
+
   class Plan < ApplicationRecord; end
+
   class Subscription < ApplicationRecord; end
+
   class QuantifiedEvent < ApplicationRecord; end
 
   def change
@@ -38,25 +44,25 @@ class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7
         ApplicationRecord.connection.select_all(sql).each_with_object({}) do |row, _result|
           existing_quantified_event =
             QuantifiedEvent.where(
-              customer_id: row['customer_id'],
-              billable_metric_id: row['billable_metric_id'],
-              external_subscription_id: row['subscription_external_id'],
-              external_id: JSON.parse(row['properties'])[row['field_name'].to_s],
+              customer_id: row["customer_id"],
+              billable_metric_id: row["billable_metric_id"],
+              external_subscription_id: row["subscription_external_id"],
+              external_id: JSON.parse(row["properties"])[row["field_name"].to_s]
             ).where(removed_at: nil).any?
 
           # There can only be one quantified event for certain external_id which guarantees uniqueness
           next if existing_quantified_event
 
           quantified_event = QuantifiedEvent.create!(
-            customer_id: row['customer_id'],
-            billable_metric_id: row['billable_metric_id'],
-            external_subscription_id: row['subscription_external_id'],
-            external_id: JSON.parse(row['properties'])[row['field_name'].to_s],
-            properties: JSON.parse(row['properties']),
-            added_at: row['event_timestamp'],
+            customer_id: row["customer_id"],
+            billable_metric_id: row["billable_metric_id"],
+            external_subscription_id: row["subscription_external_id"],
+            external_id: JSON.parse(row["properties"])[row["field_name"].to_s],
+            properties: JSON.parse(row["properties"]),
+            added_at: row["event_timestamp"]
           )
 
-          event = Event.find_by(id: row['event_id'])
+          event = Event.find_by(id: row["event_id"])
           event.quantified_event_id = quantified_event.id
           event.save!
         end

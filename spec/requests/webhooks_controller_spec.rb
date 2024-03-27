@@ -1,23 +1,23 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe WebhooksController, type: :request do
-  describe 'POST /stripe' do
+  describe "POST /stripe" do
     let(:organization) { create(:organization) }
 
     let(:stripe_provider) do
       create(
         :stripe_provider,
         organization:,
-        webhook_secret: 'secrests',
+        webhook_secret: "secrests"
       )
     end
 
     let(:stripe_service) { instance_double(PaymentProviders::StripeService) }
 
     let(:event) do
-      path = Rails.root.join('spec/fixtures/stripe/payment_intent_event.json')
+      path = Rails.root.join("spec/fixtures/stripe/payment_intent_event.json")
       JSON.parse(File.read(path))
     end
 
@@ -35,19 +35,19 @@ RSpec.describe WebhooksController, type: :request do
           organization_id: organization.id,
           code: nil,
           params: event.to_json,
-          signature: 'signature',
+          signature: "signature"
         )
         .and_return(result)
     end
 
-    it 'handle stripe webhooks' do
+    it "handle stripe webhooks" do
       post(
         "/webhooks/stripe/#{stripe_provider.organization_id}",
         params: event.to_json,
         headers: {
-          'HTTP_STRIPE_SIGNATURE' => 'signature',
-          'Content-Type' => 'application/json',
-        },
+          "HTTP_STRIPE_SIGNATURE" => "signature",
+          "Content-Type" => "application/json"
+        }
       )
 
       expect(response).to have_http_status(:success)
@@ -56,19 +56,19 @@ RSpec.describe WebhooksController, type: :request do
       expect(stripe_service).to have_received(:handle_incoming_webhook)
     end
 
-    context 'when failing to handle stripe event' do
+    context "when failing to handle stripe event" do
       let(:result) do
-        BaseService::Result.new.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+        BaseService::Result.new.service_failure!(code: "webhook_error", message: "Invalid payload")
       end
 
-      it 'returns a bad request' do
+      it "returns a bad request" do
         post(
           "/webhooks/stripe/#{stripe_provider.organization_id}",
           params: event.to_json,
           headers: {
-            'HTTP_STRIPE_SIGNATURE' => 'signature',
-            'Content-Type' => 'application/json',
-          },
+            "HTTP_STRIPE_SIGNATURE" => "signature",
+            "Content-Type" => "application/json"
+          }
         )
 
         expect(response).to have_http_status(:bad_request)
@@ -79,27 +79,27 @@ RSpec.describe WebhooksController, type: :request do
     end
   end
 
-  describe 'POST /gocardless' do
+  describe "POST /gocardless" do
     let(:organization) { create(:organization) }
 
     let(:gocardless_provider) do
       create(
         :gocardless_provider,
         organization:,
-        webhook_secret: 'secrets',
+        webhook_secret: "secrets"
       )
     end
 
     let(:gocardless_service) { instance_double(PaymentProviders::GocardlessService) }
 
     let(:events) do
-      path = Rails.root.join('spec/fixtures/gocardless/events.json')
+      path = Rails.root.join("spec/fixtures/gocardless/events.json")
       JSON.parse(File.read(path))
     end
 
     let(:result) do
       result = BaseService::Result.new
-      result.events = events['events'].map { |event| GoCardlessPro::Resources::Event.new(event) }
+      result.events = events["events"].map { |event| GoCardlessPro::Resources::Event.new(event) }
       result
     end
 
@@ -111,19 +111,19 @@ RSpec.describe WebhooksController, type: :request do
           organization_id: organization.id,
           code: nil,
           body: events.to_json,
-          signature: 'signature',
+          signature: "signature"
         )
         .and_return(result)
     end
 
-    it 'handle gocardless webhooks' do
+    it "handle gocardless webhooks" do
       post(
         "/webhooks/gocardless/#{gocardless_provider.organization_id}",
         params: events.to_json,
         headers: {
-          'Webhook-Signature' => 'signature',
-          'Content-Type' => 'application/json',
-        },
+          "Webhook-Signature" => "signature",
+          "Content-Type" => "application/json"
+        }
       )
 
       expect(response).to have_http_status(:success)
@@ -132,19 +132,19 @@ RSpec.describe WebhooksController, type: :request do
       expect(gocardless_service).to have_received(:handle_incoming_webhook)
     end
 
-    context 'when failing to handle gocardless event' do
+    context "when failing to handle gocardless event" do
       let(:result) do
-        BaseService::Result.new.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+        BaseService::Result.new.service_failure!(code: "webhook_error", message: "Invalid payload")
       end
 
-      it 'returns a bad request' do
+      it "returns a bad request" do
         post(
           "/webhooks/gocardless/#{gocardless_provider.organization_id}",
           params: events.to_json,
           headers: {
-            'Webhook-Signature' => 'signature',
-            'Content-Type' => 'application/json',
-          },
+            "Webhook-Signature" => "signature",
+            "Content-Type" => "application/json"
+          }
         )
 
         expect(response).to have_http_status(:bad_request)
@@ -155,7 +155,7 @@ RSpec.describe WebhooksController, type: :request do
     end
   end
 
-  describe 'POST /adyen' do
+  describe "POST /adyen" do
     let(:organization) { create(:organization) }
 
     let(:adyen_provider) do
@@ -165,7 +165,7 @@ RSpec.describe WebhooksController, type: :request do
     let(:adyen_service) { instance_double(PaymentProviders::AdyenService) }
 
     let(:body) do
-      path = Rails.root.join('spec/fixtures/adyen/webhook_authorisation_response.json')
+      path = Rails.root.join("spec/fixtures/adyen/webhook_authorisation_response.json")
       JSON.parse(File.read(path))
     end
 
@@ -182,18 +182,18 @@ RSpec.describe WebhooksController, type: :request do
         .with(
           organization_id: organization.id,
           code: nil,
-          body: body['notificationItems'].first&.dig('NotificationRequestItem'),
+          body: body["notificationItems"].first&.dig("NotificationRequestItem")
         )
         .and_return(result)
     end
 
-    it 'handle adyen webhooks' do
+    it "handle adyen webhooks" do
       post(
         "/webhooks/adyen/#{adyen_provider.organization_id}",
         params: body.to_json,
         headers: {
-          'Content-Type' => 'application/json',
-        },
+          "Content-Type" => "application/json"
+        }
       )
 
       expect(response).to have_http_status(:success)
@@ -202,18 +202,18 @@ RSpec.describe WebhooksController, type: :request do
       expect(adyen_service).to have_received(:handle_incoming_webhook)
     end
 
-    context 'when failing to handle adyen event' do
+    context "when failing to handle adyen event" do
       let(:result) do
-        BaseService::Result.new.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+        BaseService::Result.new.service_failure!(code: "webhook_error", message: "Invalid payload")
       end
 
-      it 'returns a bad request' do
+      it "returns a bad request" do
         post(
           "/webhooks/adyen/#{adyen_provider.organization_id}",
           params: body.to_json,
           headers: {
-            'Content-Type' => 'application/json',
-          },
+            "Content-Type" => "application/json"
+          }
         )
 
         expect(response).to have_http_status(:bad_request)

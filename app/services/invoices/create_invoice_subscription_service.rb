@@ -15,8 +15,8 @@ module Invoices
     def call
       if duplicated_invoices?
         return result.service_failure!(
-          code: 'duplicated_invoices',
-          message: 'Invoice subscription already exists with the boundaries',
+          code: "duplicated_invoices",
+          message: "Invoice subscription already exists with the boundaries"
         )
       end
 
@@ -34,7 +34,7 @@ module Invoices
           to_datetime: boundaries[:to_datetime],
           charges_from_datetime: boundaries[:charges_from_datetime],
           charges_to_datetime: boundaries[:charges_to_datetime],
-          recurring:,
+          recurring:
         )
       end
 
@@ -81,7 +81,7 @@ module Invoices
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
-        timestamp: datetime,
+        timestamp: datetime
       }
     end
 
@@ -89,7 +89,7 @@ module Invoices
       Subscriptions::DatesService.new_instance(
         subscription,
         datetime,
-        current_usage: subscription.terminated? && subscription.upgraded?,
+        current_usage: subscription.terminated? && subscription.upgraded?
       )
     end
 
@@ -122,7 +122,7 @@ module Invoices
         charges_from_datetime: dates_service.charges_from_datetime,
         charges_to_datetime: dates_service.charges_to_datetime,
         timestamp: datetime,
-        charges_duration: dates_service.charges_duration_in_days,
+        charges_duration: dates_service.charges_duration_in_days
       }
 
       InvoiceSubscription.matching?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries

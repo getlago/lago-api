@@ -4,6 +4,6 @@ module Clickhouse
   class BaseRecord < ApplicationRecord
     self.abstract_class = true
 
-    connects_to database: { writing: :clickhouse, reading: :clickhouse }
+    connects_to database: {writing: :clickhouse, reading: :clickhouse}
   end
 end

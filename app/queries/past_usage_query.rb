@@ -9,7 +9,7 @@ class PastUsageQuery < BaseQuery
     result.usage_periods = query_result.map do |invoice_subscription|
       OpenStruct.new(
         invoice_subscription:,
-        fees: fees_query(invoice_subscription.invoice),
+        fees: fees_query(invoice_subscription.invoice)
       )
     end
 
@@ -28,8 +28,8 @@ class PastUsageQuery < BaseQuery
   def query
     base_query = InvoiceSubscription.joins(subscription: :customer)
       .where.not(charges_from_datetime: nil)
-      .where(customers: { external_id: filters.external_customer_id, organization_id: organization.id })
-      .where(subscriptions: { external_id: filters.external_subscription_id })
+      .where(customers: {external_id: filters.external_customer_id, organization_id: organization.id})
+      .where(subscriptions: {external_id: filters.external_subscription_id})
       .order(charges_from_datetime: :desc)
       .includes(:invoice)
 
@@ -42,27 +42,27 @@ class PastUsageQuery < BaseQuery
     query = invoice.fees.charge.includes(:charge_filter, :group)
     return query unless filters.billable_metric_code
 
-    query.joins(:charge).where(charges: { billable_metric_id: billable_metric.id })
+    query.joins(:charge).where(charges: {billable_metric_id: billable_metric.id})
   end
 
   def validate_filters
     if filters.external_customer_id.blank?
       return result.single_validation_failure!(
         field: :external_customer_id,
-        error_code: 'value_is_mandatory',
+        error_code: "value_is_mandatory"
       )
     end
 
     if filters.external_subscription_id.blank?
       return result.single_validation_failure!(
         field: :external_subscription_id,
-        error_code: 'value_is_mandatory',
+        error_code: "value_is_mandatory"
       )
     end
 
     return if filters.billable_metric_code.blank?
 
-    result.not_found_failure!(resource: 'billable_metric') if billable_metric.blank?
+    result.not_found_failure!(resource: "billable_metric") if billable_metric.blank?
   end
 
   def billable_metric

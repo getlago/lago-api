@@ -89,12 +89,12 @@ module Fees
       # Base fee creation flow handles case when only name has been adjusted
       if invoice.draft? && (adjusted = adjusted_fee(
         group,
-        amount_result.grouped_by,
+        amount_result.grouped_by
       )) && !adjusted.adjusted_display_name?
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted,
           boundaries:,
-          properties:,
+          properties:
         )
         return result.fail_with_error!(adjustement_result.error) unless adjustement_result.success?
 
@@ -124,7 +124,7 @@ module Fees
         amount_cents:,
         amount_currency: currency,
         fee_type: :charge,
-        invoiceable_type: 'Charge',
+        invoiceable_type: "Charge",
         invoiceable: charge,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
@@ -137,7 +137,7 @@ module Fees
         precise_unit_amount: amount_result.unit_amount,
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
-        charge_filter_id: charge_filter&.id,
+        charge_filter_id: charge_filter&.id
       )
 
       if (adjusted = adjusted_fee(group, amount_result.grouped_by))&.adjusted_display_name?
@@ -150,8 +150,8 @@ module Fees
     def adjusted_fee(group, grouped_by)
       @adjusted_fee ||= {}
 
-      key = [group&.id, (grouped_by || {}).map { |k, v| "#{k}-#{v}" }.sort.join('|')].compact.join('|')
-      key = 'default' if key.blank?
+      key = [group&.id, (grouped_by || {}).map { |k, v| "#{k}-#{v}" }.sort.join("|")].compact.join("|")
+      key = "default" if key.blank?
 
       return @adjusted_fee[key] if @adjusted_fee.key?(key)
 
@@ -182,7 +182,7 @@ module Fees
         persist_recurring_value(
           aggregation_result.aggregations || [aggregation_result],
           group,
-          charge_filter,
+          charge_filter
         )
       end
 
@@ -191,10 +191,10 @@ module Fees
 
     def options(properties)
       {
-        free_units_per_events: properties['free_units_per_events'].to_i,
-        free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0),
+        free_units_per_events: properties["free_units_per_events"].to_i,
+        free_units_per_total_aggregation: BigDecimal(properties["free_units_per_total_aggregation"] || 0),
         is_current_usage:,
-        is_pay_in_advance: charge.pay_in_advance?,
+        is_pay_in_advance: charge.pay_in_advance?
       }
     end
 
@@ -214,9 +214,9 @@ module Fees
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,
-          charges_duration: boundaries.charges_duration,
+          charges_duration: boundaries.charges_duration
         },
-        filters: aggregation_filters(group:, charge_filter:),
+        filters: aggregation_filters(group:, charge_filter:)
       )
     end
 
@@ -237,7 +237,7 @@ module Fees
           charge_filter_id: charge_filter&.id,
           billable_metric_id: billable_metric.id,
           added_at: aggregation_result.recurring_updated_at,
-          grouped_by: aggregation_result.grouped_by || {},
+          grouped_by: aggregation_result.grouped_by || {}
         ) do |event|
           event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS] = aggregation_result.total_aggregated_units
           event.save!
@@ -246,10 +246,10 @@ module Fees
     end
 
     def aggregation_filters(group:, charge_filter: nil)
-      filters = { group: }
+      filters = {group:}
 
-      if charge.standard? && charge.properties['grouped_by'].present?
-        filters[:grouped_by] = charge.properties['grouped_by']
+      if charge.standard? && charge.properties["grouped_by"].present?
+        filters[:grouped_by] = charge.properties["grouped_by"]
       end
 
       if charge_filter.present?

@@ -6,7 +6,7 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      description 'Query invoice collections of an organization'
+      description "Query invoice collections of an organization"
 
       argument :currency, Types::CurrencyEnum, required: false
 

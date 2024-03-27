@@ -2,7 +2,7 @@
 
 module Clock
   class CreateIntervalWalletTransactionsJob < ApplicationJob
-    queue_as 'clock'
+    queue_as "clock"
 
     def perform
       Wallets::CreateIntervalWalletTransactionsService.call

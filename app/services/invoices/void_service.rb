@@ -8,7 +8,7 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') if invoice.nil?
+      return result.not_found_failure!(resource: "invoice") if invoice.nil?
 
       result.invoice = invoice
 
@@ -27,11 +27,11 @@ module Invoices
         end
       end
 
-      SendWebhookJob.perform_later('invoice.voided', result.invoice) if invoice.organization.webhook_endpoints.any?
+      SendWebhookJob.perform_later("invoice.voided", result.invoice) if invoice.organization.webhook_endpoints.any?
 
       result
     rescue AASM::InvalidTransition => _e
-      result.not_allowed_failure!(code: 'not_voidable')
+      result.not_allowed_failure!(code: "not_voidable")
     end
 
     private

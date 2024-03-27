@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Fees::CreatePayInAdvanceJob, type: :job do
   let(:charge) { create(:standard_charge, :pay_in_advance) }
@@ -12,7 +12,7 @@ RSpec.describe Fees::CreatePayInAdvanceJob, type: :job do
     instance_double(Fees::CreatePayInAdvanceService)
   end
 
-  it 'delegates to the pay_in_advance aggregation service' do
+  it "delegates to the pay_in_advance aggregation service" do
     allow(Fees::CreatePayInAdvanceService).to receive(:new)
       .with(charge:, event:)
       .and_return(instant_service)

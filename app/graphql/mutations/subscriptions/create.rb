@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateSubscription'
-      description 'Create a new Subscription'
+      graphql_name "CreateSubscription"
+      description "Create a new Subscription"
 
       input_object_class Types::Subscriptions::CreateSubscriptionInput
 
@@ -18,18 +18,18 @@ module Mutations
 
         customer = Customer.find_by(
           id: args[:customer_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         plan = Plan.find_by(
           id: args[:plan_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         result = ::Subscriptions::CreateService.call(
           customer:,
           plan:,
-          params: args.merge(external_id: args[:external_id] || SecureRandom.uuid),
+          params: args.merge(external_id: args[:external_id] || SecureRandom.uuid)
         )
 
         result.success? ? result.subscription : result_error(result)

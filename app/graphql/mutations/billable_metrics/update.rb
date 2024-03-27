@@ -5,8 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'UpdateBillableMetric'
-      description 'Updates an existing Billable metric'
+      graphql_name "UpdateBillableMetric"
+      description "Updates an existing Billable metric"
 
       input_object_class Types::BillableMetrics::UpdateInput
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service, transaction: false do
   subject(:count_service) do
@@ -10,15 +10,15 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:,
+        to_datetime:
       },
-      filters:,
+      filters:
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:filters) do
-    { group:, event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
+    {group:, event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters:}
   end
 
   let(:subscription) do
@@ -26,12 +26,12 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       :subscription,
       started_at:,
       subscription_at:,
-      billing_time: :anniversary,
+      billing_time: :anniversary
     )
   end
 
   let(:pay_in_advance_event) { nil }
-  let(:subscription_at) { DateTime.parse('2022-06-09') }
+  let(:subscription_at) { DateTime.parse("2022-06-09") }
   let(:started_at) { subscription_at }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
@@ -45,21 +45,21 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     create(
       :billable_metric,
       organization:,
-      aggregation_type: 'unique_count_agg',
-      field_name: 'unique_id',
-      recurring: true,
+      aggregation_type: "unique_count_agg",
+      field_name: "unique_id",
+      recurring: true
     )
   end
 
   let(:charge) do
     create(
       :standard_charge,
-      billable_metric:,
+      billable_metric:
     )
   end
 
-  let(:from_datetime) { DateTime.parse('2022-07-09 00:00:00 UTC') }
-  let(:to_datetime) { DateTime.parse('2022-08-08 23:59:59 UTC') }
+  let(:from_datetime) { DateTime.parse("2022-07-09 00:00:00 UTC") }
+  let(:to_datetime) { DateTime.parse("2022-08-08 23:59:59 UTC") }
 
   let(:added_at) { from_datetime - 1.month }
   let(:unique_count_event) do
@@ -70,16 +70,16 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       external_customer_id: customer.external_id,
       external_subscription_id: subscription.external_id,
       timestamp: added_at,
-      properties: { unique_id: SecureRandom.uuid },
+      properties: {unique_id: SecureRandom.uuid}
     )
   end
 
   before { unique_count_event }
 
-  describe '#aggregate' do
+  describe "#aggregate" do
     let(:result) { count_service.aggregate }
 
-    context 'when there is persisted event and event added in period' do
+    context "when there is persisted event and event added in period" do
       let(:new_unique_count_event) do
         create(
           :event,
@@ -88,25 +88,25 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          properties: { unique_id: SecureRandom.uuid },
+          properties: {unique_id: SecureRandom.uuid}
         )
       end
 
       before { new_unique_count_event }
 
-      it 'returns the correct number' do
+      it "returns the correct number" do
         expect(result.aggregation).to eq(2)
       end
     end
 
-    context 'when there is persisted event and event added in period but billable metric is not recurring' do
+    context "when there is persisted event and event added in period but billable metric is not recurring" do
       let(:billable_metric) do
         create(
           :billable_metric,
           organization:,
-          aggregation_type: 'unique_count_agg',
-          field_name: 'unique_id',
-          recurring: false,
+          aggregation_type: "unique_count_agg",
+          field_name: "unique_id",
+          recurring: false
         )
       end
       let(:new_unique_count_event) do
@@ -117,23 +117,23 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          properties: { unique_id: SecureRandom.uuid },
+          properties: {unique_id: SecureRandom.uuid}
         )
       end
 
       before { new_unique_count_event }
 
-      it 'returns only the number of events ingested in the current period' do
+      it "returns only the number of events ingested in the current period" do
         expect(result.aggregation).to eq(1)
       end
     end
 
-    context 'with persisted metric on full period' do
-      it 'returns the number of persisted metric' do
+    context "with persisted metric on full period" do
+      it "returns the number of persisted metric" do
         expect(result.aggregation).to eq(1)
       end
 
-      context 'when subscription was terminated in the period' do
+      context "when subscription was terminated in the period" do
         let(:subscription) do
           create(
             :subscription,
@@ -141,17 +141,17 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
-            status: :terminated,
+            status: :terminated
           )
         end
-        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { DateTime.parse("2022-07-24 23:59:59") }
 
-        it 'returns the correct number' do
+        it "returns the correct number" do
           expect(result.aggregation).to eq(1)
         end
       end
 
-      context 'when subscription was upgraded in the period' do
+      context "when subscription was upgraded in the period" do
         let(:subscription) do
           create(
             :subscription,
@@ -159,10 +159,10 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
-            status: :terminated,
+            status: :terminated
           )
         end
-        let(:to_datetime) { DateTime.parse('2022-07-24 23:59:59') }
+        let(:to_datetime) { DateTime.parse("2022-07-24 23:59:59") }
 
         before do
           create(
@@ -170,53 +170,53 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             previous_subscription: subscription,
             organization:,
             customer:,
-            started_at: to_datetime,
+            started_at: to_datetime
           )
         end
 
-        it 'returns the correct number' do
+        it "returns the correct number" do
           expect(result.aggregation).to eq(1)
         end
       end
 
-      context 'when subscription was started in the period' do
-        let(:started_at) { DateTime.parse('2022-08-01') }
+      context "when subscription was started in the period" do
+        let(:started_at) { DateTime.parse("2022-08-01") }
         let(:from_datetime) { started_at }
 
-        it 'returns the correct number' do
+        it "returns the correct number" do
           expect(result.aggregation).to eq(1)
         end
       end
 
-      context 'when plan is pay in advance' do
+      context "when plan is pay in advance" do
         before do
           subscription.plan.update!(pay_in_advance: true)
         end
 
-        it 'returns the correct number' do
+        it "returns the correct number" do
           expect(result.aggregation).to eq(1)
         end
       end
     end
 
-    context 'with persisted metrics added in the period' do
+    context "with persisted metrics added in the period" do
       let(:added_at) { from_datetime + 15.days }
 
-      it 'returns the correct number' do
+      it "returns the correct number" do
         expect(result.aggregation).to eq(1)
       end
 
-      context 'when added on the first day of the period' do
+      context "when added on the first day of the period" do
         let(:added_at) { from_datetime }
 
-        it 'returns the correct number' do
+        it "returns the correct number" do
           expect(result.aggregation).to eq(1)
         end
       end
     end
 
-    context 'with persisted metrics terminated in the period' do
-      it 'returns the correct number' do
+    context "with persisted metrics terminated in the period" do
+      it "returns the correct number" do
         create(
           :event,
           organization_id: organization.id,
@@ -225,16 +225,16 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 15.days,
           properties: {
-            unique_id: unique_count_event.properties['unique_id'],
-            operation_type: 'remove',
-          },
+            unique_id: unique_count_event.properties["unique_id"],
+            operation_type: "remove"
+          }
         )
 
         expect(result.aggregation).to eq(0)
       end
 
-      context 'when removed on the last day of the period' do
-        it 'returns the correct number' do
+      context "when removed on the last day of the period" do
+        it "returns the correct number" do
           create(
             :event,
             organization_id: organization.id,
@@ -243,9 +243,9 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             external_subscription_id: subscription.external_id,
             timestamp: to_datetime,
             properties: {
-              unique_id: unique_count_event.properties['unique_id'],
-              operation_type: 'remove',
-            },
+              unique_id: unique_count_event.properties["unique_id"],
+              operation_type: "remove"
+            }
           )
 
           expect(result.aggregation).to eq(0)
@@ -253,10 +253,10 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
     end
 
-    context 'with persisted metrics added and terminated in the period' do
+    context "with persisted metrics added and terminated in the period" do
       let(:added_at) { from_datetime + 1.day }
 
-      it 'returns the correct number' do
+      it "returns the correct number" do
         create(
           :event,
           organization_id: organization.id,
@@ -265,18 +265,18 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 1.day,
           properties: {
-            unique_id: unique_count_event.properties['unique_id'],
-            operation_type: 'remove',
-          },
+            unique_id: unique_count_event.properties["unique_id"],
+            operation_type: "remove"
+          }
         )
 
         expect(result.aggregation).to eq(0)
       end
 
-      context 'when added and removed the same day' do
+      context "when added and removed the same day" do
         let(:added_at) { from_datetime + 1.day }
 
-        it 'returns a correct number' do
+        it "returns a correct number" do
           create(
             :event,
             organization_id: organization.id,
@@ -285,9 +285,9 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             external_subscription_id: subscription.external_id,
             timestamp: added_at.end_of_day,
             properties: {
-              unique_id: unique_count_event.properties['unique_id'],
-              operation_type: 'remove',
-            },
+              unique_id: unique_count_event.properties["unique_id"],
+              operation_type: "remove"
+            }
           )
 
           expect(result.aggregation).to eq(0)
@@ -295,9 +295,9 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
     end
 
-    context 'when current usage context and charge is pay in advance' do
+    context "when current usage context and charge is pay in advance" do
       let(:options) do
-        { is_pay_in_advance: true, is_current_usage: true }
+        {is_pay_in_advance: true, is_current_usage: true}
       end
       let(:previous_event) do
         create(
@@ -307,7 +307,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 5.days,
-          properties: { unique_id: '000' },
+          properties: {unique_id: "000"}
         )
       end
 
@@ -319,26 +319,26 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           event_id: previous_event.id,
           external_subscription_id: subscription.external_id,
           timestamp: previous_event.timestamp,
-          current_aggregation: '1',
-          max_aggregation: '3',
+          current_aggregation: "1",
+          max_aggregation: "3"
         )
       end
 
       before { cached_aggregation }
 
-      it 'returns period maximum as aggregation' do
+      it "returns period maximum as aggregation" do
         result = count_service.aggregate(options:)
 
         expect(result.aggregation).to eq(4)
       end
 
-      context 'when cached aggregation does not exist' do
+      context "when cached aggregation does not exist" do
         let(:cached_aggregation) { nil }
         let(:previous_event) { nil }
 
         before { billable_metric.update!(recurring: false) }
 
-        it 'returns zero as aggregation' do
+        it "returns zero as aggregation" do
           result = count_service.aggregate(options:)
 
           expect(result.aggregation).to eq(0)
@@ -346,8 +346,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
     end
 
-    context 'when event is given' do
-      let(:properties) { { unique_id: unique_count_event.properties['unique_id'] } }
+    context "when event is given" do
+      let(:properties) { {unique_id: unique_count_event.properties["unique_id"]} }
       let(:pay_in_advance_event) do
         create(
           :event,
@@ -356,44 +356,44 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          properties:,
+          properties:
         )
       end
 
       before { pay_in_advance_event }
 
-      it 'assigns an pay_in_advance aggregation' do
+      it "assigns an pay_in_advance aggregation" do
         result = count_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0)
       end
 
-      context 'when dimensions are used' do
-        let(:properties) { { unique_id: '111', region: 'europe' } }
+      context "when dimensions are used" do
+        let(:properties) { {unique_id: "111", region: "europe"} }
 
         let(:group) do
-          create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+          create(:group, billable_metric_id: billable_metric.id, key: "region", value: "europe")
         end
 
-        it 'assigns an pay_in_advance aggregation' do
+        it "assigns an pay_in_advance aggregation" do
           result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(1)
         end
       end
 
-      context 'when charge filter is used' do
-        let(:properties) { { unique_id: '111', region: 'europe' } }
+      context "when charge filter is used" do
+        let(:properties) { {unique_id: "111", region: "europe"} }
 
         let(:filter) do
           create(
             :billable_metric_filter,
             billable_metric:,
-            key: 'region',
-            values: ['north america', 'europe', 'africa'],
+            key: "region",
+            values: ["north america", "europe", "africa"]
           )
         end
-        let(:matching_filters) { { 'region' => ['europe'] } }
+        let(:matching_filters) { {"region" => ["europe"]} }
         let(:ignored_filters) { [] }
         let(:charge_filter) { create(:charge_filter, charge:) }
         let(:filter_value) do
@@ -401,31 +401,31 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             :charge_filter_value,
             charge_filter:,
             billable_metric_filter: filter,
-            values: ['europe'],
+            values: ["europe"]
           )
         end
 
         before { filter_value }
 
-        it 'assigns an pay_in_advance aggregation' do
+        it "assigns an pay_in_advance aggregation" do
           result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(1)
         end
       end
 
-      context 'when event is missing properties' do
+      context "when event is missing properties" do
         let(:properties) { {} }
 
-        it 'assigns 0 as pay_in_advance aggregation' do
+        it "assigns 0 as pay_in_advance aggregation" do
           result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to be_zero
         end
       end
 
-      context 'when current period aggregation is greater than period maximum' do
-        let(:properties) { { unique_id: '003' } }
+      context "when current period aggregation is greater than period maximum" do
+        let(:properties) { {unique_id: "003"} }
 
         let(:previous_event) do
           create(
@@ -435,7 +435,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: { unique_id: '001' },
+            properties: {unique_id: "001"}
           )
         end
 
@@ -447,21 +447,21 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             event_id: previous_event.id,
             external_subscription_id: subscription.external_id,
             timestamp: previous_event.timestamp,
-            current_aggregation: '2',
-            max_aggregation: '2',
+            current_aggregation: "2",
+            max_aggregation: "2"
           )
         end
 
         before { cached_aggregation }
 
-        it 'assigns a pay_in_advance aggregation' do
+        it "assigns a pay_in_advance aggregation" do
           result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(1)
         end
       end
 
-      context 'when current period aggregation is less than period maximum' do
+      context "when current period aggregation is less than period maximum" do
         let(:previous_event) do
           create(
             :event,
@@ -470,7 +470,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: { unique_id: '000' },
+            properties: {unique_id: "000"}
           )
         end
 
@@ -482,14 +482,14 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             event_id: previous_event.id,
             external_subscription_id: subscription.external_id,
             timestamp: previous_event.timestamp,
-            current_aggregation: '4',
-            max_aggregation: '7',
+            current_aggregation: "4",
+            max_aggregation: "7"
           )
         end
 
         before { cached_aggregation }
 
-        it 'assigns a pay_in_advance aggregation' do
+        it "assigns a pay_in_advance aggregation" do
           result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(0)
@@ -498,12 +498,12 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     end
   end
 
-  describe '.grouped_by_aggregation' do
-    let(:grouped_by) { ['agent_name'] }
+  describe ".grouped_by_aggregation" do
+    let(:grouped_by) { ["agent_name"] }
     let(:agent_names) { %w[aragorn frodo] }
     let(:unique_count_event) { nil }
 
-    context 'when there is persisted event and event added in period' do
+    context "when there is persisted event and event added in period" do
       let(:unique_count_events) do
         agent_names.map do |agent_name|
           create(
@@ -515,8 +515,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: added_at,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
-            },
+              agent_name:
+            }
           )
         end
       end
@@ -532,8 +532,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: from_datetime + 10.days,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
-            },
+              agent_name:
+            }
           )
         end
       end
@@ -543,38 +543,38 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         new_unique_count_events
       end
 
-      it 'returns the correct result' do
+      it "returns the correct result" do
         result = count_service.aggregate
 
         expect(result.aggregations.count).to eq(2)
 
         result.aggregations.each do |aggregation|
-          expect(aggregation.grouped_by.keys).to include('agent_name')
-          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.grouped_by.keys).to include("agent_name")
+          expect(aggregation.grouped_by["agent_name"]).to eq("frodo").or eq("aragorn")
           expect(aggregation.count).to eq(2)
           expect(aggregation.aggregation).to eq(2)
         end
       end
 
-      context 'when billable metric is not recurring' do
+      context "when billable metric is not recurring" do
         let(:billable_metric) do
           create(
             :billable_metric,
             organization:,
-            aggregation_type: 'unique_count_agg',
-            field_name: 'unique_id',
-            recurring: false,
+            aggregation_type: "unique_count_agg",
+            field_name: "unique_id",
+            recurring: false
           )
         end
 
-        it 'returns only the number of events ingested in the current period' do
+        it "returns only the number of events ingested in the current period" do
           result = count_service.aggregate
 
           expect(result.aggregations.count).to eq(2)
 
           result.aggregations.each do |aggregation|
-            expect(aggregation.grouped_by.keys).to include('agent_name')
-            expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+            expect(aggregation.grouped_by.keys).to include("agent_name")
+            expect(aggregation.grouped_by["agent_name"]).to eq("frodo").or eq("aragorn")
             expect(aggregation.count).to eq(1)
             expect(aggregation.aggregation).to eq(1)
           end
@@ -582,7 +582,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
     end
 
-    context 'without events in the period' do
+    context "without events in the period" do
       let(:unique_count_events) do
         agent_names.map do |agent_name|
           create(
@@ -594,32 +594,32 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: added_at,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
-            },
+              agent_name:
+            }
           )
         end
       end
 
       before { unique_count_events }
 
-      it 'returns only the number of events persisted events' do
+      it "returns only the number of events persisted events" do
         result = count_service.aggregate
 
         expect(result.aggregations.count).to eq(2)
 
         result.aggregations.each do |aggregation|
-          expect(aggregation.grouped_by.keys).to include('agent_name')
-          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.grouped_by.keys).to include("agent_name")
+          expect(aggregation.grouped_by["agent_name"]).to eq("frodo").or eq("aragorn")
           expect(aggregation.count).to eq(1)
           expect(aggregation.aggregation).to eq(1)
         end
       end
     end
 
-    context 'without events' do
+    context "without events" do
       let(:unique_count_event) { nil }
 
-      it 'returns an empty result' do
+      it "returns an empty result" do
         result = count_service.aggregate
 
         expect(result.aggregations.count).to eq(1)
@@ -627,13 +627,13 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+        expect(aggregation.grouped_by).to eq({"agent_name" => nil})
       end
     end
 
-    context 'when current usage context and charge is pay in advance' do
+    context "when current usage context and charge is pay in advance" do
       let(:options) do
-        { is_pay_in_advance: true, is_current_usage: true }
+        {is_pay_in_advance: true, is_current_usage: true}
       end
 
       let(:unique_count_event) { nil }
@@ -649,8 +649,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: added_at,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
-            },
+              agent_name:
+            }
           )
         end
       end
@@ -666,8 +666,8 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: from_datetime + 5.days,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
-            },
+              agent_name:
+            }
           )
         end
       end
@@ -681,9 +681,9 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             event_id: previous_events[index].id,
             external_subscription_id: subscription.external_id,
             timestamp: previous_events[index].timestamp,
-            current_aggregation: '1',
-            max_aggregation: '3',
-            grouped_by: { 'agent_name' => agent_name },
+            current_aggregation: "1",
+            max_aggregation: "3",
+            grouped_by: {"agent_name" => agent_name}
           )
         end
       end
@@ -693,25 +693,25 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         cached_aggregations
       end
 
-      it 'returns period maximum as aggregation' do
+      it "returns period maximum as aggregation" do
         result = count_service.aggregate(options:)
 
         expect(result.aggregations.count).to eq(2)
 
         result.aggregations.each do |aggregation|
-          expect(aggregation.grouped_by.keys).to include('agent_name')
-          expect(aggregation.grouped_by['agent_name']).to eq('frodo').or eq('aragorn')
+          expect(aggregation.grouped_by.keys).to include("agent_name")
+          expect(aggregation.grouped_by["agent_name"]).to eq("frodo").or eq("aragorn")
           expect(aggregation.count).to eq(2)
           expect(aggregation.aggregation).to eq(4)
         end
       end
 
-      context 'when cached aggregation does not exist' do
+      context "when cached aggregation does not exist" do
         let(:cached_aggregations) { nil }
 
         before { billable_metric.update!(recurring: false) }
 
-        it 'returns an empty result' do
+        it "returns an empty result" do
           result = count_service.aggregate(options:)
 
           expect(result.aggregations.count).to eq(1)
@@ -719,16 +719,16 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           aggregation = result.aggregations.first
           expect(aggregation.aggregation).to eq(0)
           expect(aggregation.count).to eq(0)
-          expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+          expect(aggregation.grouped_by).to eq({"agent_name" => nil})
         end
       end
     end
   end
 
-  describe '.per_event_aggregation' do
+  describe ".per_event_aggregation" do
     let(:added_at) { from_datetime }
 
-    it 'aggregates per events added in the period' do
+    it "aggregates per events added in the period" do
       result = count_service.per_event_aggregation
 
       expect(result.event_aggregation).to eq([1])

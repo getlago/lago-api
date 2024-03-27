@@ -3,12 +3,12 @@
 module Mutations
   module Invites
     class Accept < BaseMutation
-      graphql_name 'AcceptInvite'
-      description 'Accepts a new Invite'
+      graphql_name "AcceptInvite"
+      description "Accepts a new Invite"
 
       argument :email, String, required: true
       argument :password, String, required: true
-      argument :token, String, required: true, description: 'Uniq token of the Invite'
+      argument :token, String, required: true, description: "Uniq token of the Invite"
 
       type Types::Payloads::RegisterUserType
 

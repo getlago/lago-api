@@ -13,16 +13,16 @@ module Webhooks
         ::V1::PaymentProviders::CustomerCheckoutSerializer.new(
           object,
           root_name: object_type,
-          checkout_url: options[:checkout_url],
+          checkout_url: options[:checkout_url]
         )
       end
 
       def webhook_type
-        'customer.checkout_url_generated'
+        "customer.checkout_url_generated"
       end
 
       def object_type
-        'payment_provider_customer_checkout_url'
+        "payment_provider_customer_checkout_url"
       end
     end
   end

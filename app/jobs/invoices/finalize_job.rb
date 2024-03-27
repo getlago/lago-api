@@ -2,7 +2,7 @@
 
 module Invoices
   class FinalizeJob < ApplicationJob
-    queue_as 'invoices'
+    queue_as "invoices"
 
     def perform(invoice)
       Invoices::FinalizeService.call(invoice:)

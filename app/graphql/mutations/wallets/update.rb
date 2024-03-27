@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'UpdateCustomerWallet'
-      description 'Updates a new Customer Wallet'
+      graphql_name "UpdateCustomerWallet"
+      description "Updates a new Customer Wallet"
 
       input_object_class Types::Wallets::UpdateInput
 
@@ -20,7 +20,7 @@ module Mutations
           .new(context[:current_user])
           .update(
             wallet:,
-            args:,
+            args:
           )
 
         result.success? ? result.wallet : result_error(result)

@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query a single customer of an organization'
+    description "Query a single customer of an organization"
 
-    argument :id, ID, required: true, description: 'Uniq ID of the customer'
+    argument :id, ID, required: true, description: "Uniq ID of the customer"
 
     type Types::Customers::Object, null: true
 
@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.customers.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'customer')
+      not_found_error(resource: "customer")
     end
   end
 end

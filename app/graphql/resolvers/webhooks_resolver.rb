@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query Webhooks'
+    description "Query Webhooks"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
@@ -25,7 +25,7 @@ module Resolvers
         search_term:,
         page:,
         limit:,
-        status:,
+        status:
       )
 
       result.webhooks

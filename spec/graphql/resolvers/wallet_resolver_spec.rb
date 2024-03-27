@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::WalletResolver, type: :graphql do
   let(:query) do
@@ -20,46 +20,46 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
 
   before { wallet }
 
-  it 'returns a wallet' do
+  it "returns a wallet" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: { id: wallet.id },
+      variables: {id: wallet.id}
     )
 
-    coupon_response = result['data']['wallet']
+    coupon_response = result["data"]["wallet"]
 
     aggregate_failures do
-      expect(coupon_response['id']).to eq(wallet.id)
-      expect(coupon_response['name']).to eq(wallet.name)
-      expect(coupon_response['status']).to eq('active')
-      expect(coupon_response['creditsBalance']).to eq(0)
+      expect(coupon_response["id"]).to eq(wallet.id)
+      expect(coupon_response["name"]).to eq(wallet.name)
+      expect(coupon_response["status"]).to eq("active")
+      expect(coupon_response["creditsBalance"]).to eq(0)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query:,
-        variables: { id: wallet.id },
+        variables: {id: wallet.id}
       )
 
-      expect_graphql_error(result:, message: 'Missing organization id')
+      expect_graphql_error(result:, message: "Missing organization id")
     end
   end
 
-  context 'when wallet is not found' do
-    it 'returns an error' do
+  context "when wallet is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: { id: 'foo' },
+        variables: {id: "foo"}
       )
 
-      expect_graphql_error(result:, message: 'Resource not found')
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

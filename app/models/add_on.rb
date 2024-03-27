@@ -12,17 +12,17 @@ class AddOn < ApplicationRecord
   has_many :customers, through: :applied_add_ons
   has_many :fees
 
-  has_many :applied_taxes, class_name: 'AddOn::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "AddOn::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   monetize :amount_cents
 
   validates :name, presence: true
   validates :code,
-            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
 
-  validates :amount_cents, numericality: { greater_than: 0 }
-  validates :amount_currency, inclusion: { in: currency_list }
+  validates :amount_cents, numericality: {greater_than: 0}
+  validates :amount_currency, inclusion: {in: currency_list}
 
   default_scope -> { kept }
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CreditNoteResolver, type: :graphql do
   let(:query) do
@@ -51,20 +51,20 @@ RSpec.describe Resolvers::CreditNoteResolver, type: :graphql do
   let(:invoice) { create(:invoice, organization: membership.organization, customer:) }
   let(:credit_note) { create(:credit_note, customer:, invoice:) }
 
-  it 'returns a single credit note' do
+  it "returns a single credit note" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: customer.organization,
       query:,
       variables: {
-        creditNoteId: credit_note.id,
-      },
+        creditNoteId: credit_note.id
+      }
     )
 
-    credit_note_response = result['data']['creditNote']
+    credit_note_response = result["data"]["creditNote"]
 
     aggregate_failures do
-      expect(credit_note_response['id']).to eq(credit_note.id)
+      expect(credit_note_response["id"]).to eq(credit_note.id)
     end
   end
 end

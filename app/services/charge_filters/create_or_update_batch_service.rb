@@ -22,7 +22,7 @@ module ChargeFilters
         filters_params.each do |filter_param|
           # NOTE: Find the filters matching the all the keys
           filters = charge.filters.joins(values: :billable_metric_filter)
-            .where(billable_metric_filters: { key: filter_param[:values].keys })
+            .where(billable_metric_filters: {key: filter_param[:values].keys})
             .includes(values: :billable_metric_filter)
 
           # NOTE: since a filter could be a refinement of another one, we have to make sure
@@ -45,7 +45,7 @@ module ChargeFilters
             billable_metric_filter = charge.billable_metric.filters.find_by(key:)
 
             filter_value = filter.values.find_or_initialize_by(
-              billable_metric_filter_id: billable_metric_filter&.id,
+              billable_metric_filter_id: billable_metric_filter&.id
             )
 
             filter_value.values = values

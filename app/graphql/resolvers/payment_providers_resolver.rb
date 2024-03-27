@@ -25,12 +25,12 @@ module Resolvers
 
     def provider_type(type)
       case type
-      when 'adyen'
-        'PaymentProviders::AdyenProvider'
-      when 'stripe'
-        'PaymentProviders::StripeProvider'
-      when 'gocardless'
-        'PaymentProviders::GocardlessProvider'
+      when "adyen"
+        "PaymentProviders::AdyenProvider"
+      when "stripe"
+        "PaymentProviders::StripeProvider"
+      when "gocardless"
+        "PaymentProviders::GocardlessProvider"
       else
         raise(NotImplementedError)
       end

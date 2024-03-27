@@ -12,16 +12,16 @@ module Webhooks
       def object_serializer
         ::V1::EventsValidationErrorsSerializer.new(
           OpenStruct.new(options[:errors]),
-          root_name: 'events_errors',
+          root_name: "events_errors"
         )
       end
 
       def webhook_type
-        'events.errors'
+        "events.errors"
       end
 
       def object_type
-        'events_errors'
+        "events_errors"
       end
     end
   end

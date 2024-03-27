@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PlansQuery, type: :query do
   subject(:plan_query) do
@@ -9,9 +9,9 @@ RSpec.describe PlansQuery, type: :query do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:plan_first) { create(:plan, organization:, name: 'defgh', code: '11') }
-  let(:plan_second) { create(:plan, organization:, name: 'abcde', code: '22') }
-  let(:plan_third) { create(:plan, organization:, name: 'presuv', code: '33') }
+  let(:plan_first) { create(:plan, organization:, name: "defgh", code: "11") }
+  let(:plan_second) { create(:plan, organization:, name: "abcde", code: "22") }
+  let(:plan_third) { create(:plan, organization:, name: "presuv", code: "33") }
 
   before do
     plan_first
@@ -19,11 +19,11 @@ RSpec.describe PlansQuery, type: :query do
     plan_third
   end
 
-  it 'returns all plans' do
+  it "returns all plans" do
     result = plan_query.call(
       search_term: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.plans.pluck(:id)
@@ -36,12 +36,12 @@ RSpec.describe PlansQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term' do
-    it 'returns only two plans' do
+  context "when searching for /de/ term" do
+    it "returns only two plans" do
       result = plan_query.call(
-        search_term: 'de',
+        search_term: "de",
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.plans.pluck(:id)
@@ -55,15 +55,15 @@ RSpec.describe PlansQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term and filtering by id' do
-    it 'returns only one plan' do
+  context "when searching for /de/ term and filtering by id" do
+    it "returns only one plan" do
       result = plan_query.call(
-        search_term: 'de',
+        search_term: "de",
         page: 1,
         limit: 10,
         filters: {
-          ids: [plan_second.id],
-        },
+          ids: [plan_second.id]
+        }
       )
 
       returned_ids = result.plans.pluck(:id)

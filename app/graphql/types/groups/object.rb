@@ -3,7 +3,7 @@
 module Types
   module Groups
     class Object < Types::BaseObject
-      graphql_name 'Group'
+      graphql_name "Group"
 
       field :id, ID, null: false
       field :key, String, null: true

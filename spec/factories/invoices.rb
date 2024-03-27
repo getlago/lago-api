@@ -7,8 +7,8 @@ FactoryBot.define do
 
     issuing_date { Time.zone.now - 1.day }
     payment_due_date { issuing_date }
-    payment_status { 'pending' }
-    currency { 'EUR' }
+    payment_status { "pending" }
+    currency { "EUR" }
 
     organization_sequential_id { rand(1_000_000) }
 

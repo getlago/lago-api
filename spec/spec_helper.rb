@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'webmock/rspec'
+require "webmock/rspec"
 
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
@@ -33,6 +33,6 @@ RSpec.configure do |config|
   end
 
   config.before(:each, clickhouse: true) do
-    WebMock.disable_net_connect!(allow: ENV.fetch('LAGO_CLICKHOUSE_HOST', 'clickhouse'))
+    WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
   end
 end

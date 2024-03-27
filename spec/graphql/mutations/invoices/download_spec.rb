@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Download, type: :graphql do
   let(:membership) { create(:membership) }
@@ -25,7 +25,7 @@ RSpec.describe Mutations::Invoices::Download, type: :graphql do
   end
 
   let(:pdf_content) do
-    File.read(Rails.root.join('spec/fixtures/blank.pdf'))
+    File.read(Rails.root.join("spec/fixtures/blank.pdf"))
   end
 
   before do
@@ -35,47 +35,47 @@ RSpec.describe Mutations::Invoices::Download, type: :graphql do
       .and_return(pdf_response)
   end
 
-  it 'generates the PDF for the given invoice' do
+  it "generates the PDF for the given invoice" do
     freeze_time do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         query: mutation,
         variables: {
-          input: { id: invoice.id },
-        },
+          input: {id: invoice.id}
+        }
       )
 
-      result_data = result['data']['downloadInvoice']
+      result_data = result["data"]["downloadInvoice"]
 
       aggregate_failures do
-        expect(result_data['id']).to be_present
+        expect(result_data["id"]).to be_present
       end
     end
   end
 
-  context 'without current user' do
-    it 'returns an error' do
+  context "without current user" do
+    it "returns an error" do
       result = execute_graphql(
         current_organization: membership.organization,
         query: mutation,
         variables: {
-          input: { id: invoice.id },
-        },
+          input: {id: invoice.id}
+        }
       )
 
       expect_unauthorized_error(result)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query: mutation,
         variables: {
-          input: { id: invoice.id },
-        },
+          input: {id: invoice.id}
+        }
       )
 
       expect_forbidden_error(result)

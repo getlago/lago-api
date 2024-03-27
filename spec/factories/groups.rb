@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :group do
     billable_metric
-    key { 'region' }
-    value { 'europe' }
+    key { "region" }
+    value { "europe" }
   end
 end

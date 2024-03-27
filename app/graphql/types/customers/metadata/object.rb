@@ -4,7 +4,7 @@ module Types
   module Customers
     module Metadata
       class Object < Types::BaseObject
-        graphql_name 'CustomerMetadata'
+        graphql_name "CustomerMetadata"
 
         field :display_in_invoice, Boolean, null: false
         field :id, ID, null: false

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::PasswordResets::Reset, type: :graphql do
-  let(:membership) { create(:membership, user: create(:user, password: 'HelloLago!1')) }
+  let(:membership) { create(:membership, user: create(:user, password: "HelloLago!1")) }
   let(:password_reset) { create(:password_reset, user: membership.user) }
 
   let(:mutation) do
@@ -16,36 +16,36 @@ RSpec.describe Mutations::PasswordResets::Reset, type: :graphql do
     GQL
   end
 
-  it 'returns the auth token after a password reset' do
+  it "returns the auth token after a password reset" do
     result = execute_graphql(
       query: mutation,
       variables: {
         input: {
-          newPassword: 'HelloLago!2',
-          token: password_reset.token,
-        },
-      },
+          newPassword: "HelloLago!2",
+          token: password_reset.token
+        }
+      }
     )
 
-    data = result['data']['resetPassword']
+    data = result["data"]["resetPassword"]
 
-    expect(data['token']).to be_present
+    expect(data["token"]).to be_present
   end
 
-  context 'when the password reset is expired' do
+  context "when the password reset is expired" do
     let(:expired_password_reset) do
       create(:password_reset, user: membership.user, expire_at: Time.current - 1.minute)
     end
 
-    it 'returns an error' do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
         variables: {
           input: {
-            newPassword: 'HelloLago!3',
-            token: expired_password_reset.token,
-          },
-        },
+            newPassword: "HelloLago!3",
+            token: expired_password_reset.token
+          }
+        }
       )
 
       expect_not_found(result)

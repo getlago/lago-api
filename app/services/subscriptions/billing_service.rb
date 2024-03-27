@@ -77,7 +77,7 @@ module Subscriptions
         GROUP BY subscriptions.id
       SQL
 
-      Subscription.find_by_sql([sql, { today: }])
+      Subscription.find_by_sql([sql, {today:}])
     end
 
     def base_subscription_scope(billing_time: nil, interval: nil, conditions: nil)
@@ -90,7 +90,7 @@ module Subscriptions
         WHERE subscriptions.status = #{Subscription.statuses[:active]}
           AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
           AND plans.interval = #{Plan.intervals[interval]}
-          AND #{conditions.join(' AND ')}
+          AND #{conditions.join(" AND ")}
         GROUP BY subscriptions.id
       SQL
     end
@@ -100,7 +100,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :weekly,
-        conditions: ["EXTRACT(ISODOW FROM (:today#{at_time_zone})) = 1"],
+        conditions: ["EXTRACT(ISODOW FROM (:today#{at_time_zone})) = 1"]
       )
     end
 
@@ -109,7 +109,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :monthly,
-        conditions: ["DATE_PART('day', (:today#{at_time_zone})) = 1"],
+        conditions: ["DATE_PART('day', (:today#{at_time_zone})) = 1"]
       )
     end
 
@@ -126,7 +126,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :quarterly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 
@@ -137,8 +137,8 @@ module Subscriptions
         interval: :yearly,
         conditions: [
           "DATE_PART('day', (:today#{at_time_zone})) = 1",
-          "plans.bill_charges_monthly = 't'",
-        ],
+          "plans.bill_charges_monthly = 't'"
+        ]
       )
     end
 
@@ -149,8 +149,8 @@ module Subscriptions
         interval: :yearly,
         conditions: [
           "DATE_PART('month', (:today#{at_time_zone})) = 1",
-          "DATE_PART('day', (:today#{at_time_zone})) = 1",
-        ],
+          "DATE_PART('day', (:today#{at_time_zone})) = 1"
+        ]
       )
     end
 
@@ -160,8 +160,8 @@ module Subscriptions
         interval: :weekly,
         conditions: [
           "EXTRACT(ISODOW FROM (subscriptions.subscription_at#{at_time_zone})) =
-          EXTRACT(ISODOW FROM (:today#{at_time_zone}))",
-        ],
+          EXTRACT(ISODOW FROM (:today#{at_time_zone}))"
+        ]
       )
     end
 
@@ -169,7 +169,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :anniversary,
         interval: :monthly,
-        conditions: [<<-SQL],
+        conditions: [<<-SQL]
           DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
             -- Check if today is the last day of the month
             CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
@@ -220,7 +220,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :anniversary,
         interval: :quarterly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 
@@ -251,7 +251,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :anniversary,
         interval: :yearly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 
@@ -275,12 +275,12 @@ module Subscriptions
         interval: :yearly,
         conditions: [
           "plans.bill_charges_monthly = 't'",
-          billing_day,
-        ],
+          billing_day
+        ]
       )
     end
 
-    def at_time_zone(customer: 'customers', organization: 'organizations')
+    def at_time_zone(customer: "customers", organization: "organizations")
       <<-SQL
       ::timestamptz AT TIME ZONE COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
       SQL
@@ -304,8 +304,8 @@ module Subscriptions
         WHERE invoice_subscriptions.recurring = 't'
           AND invoice_subscriptions.timestamp IS NOT NULL
           AND DATE(
-            (invoice_subscriptions.timestamp)#{at_time_zone(customer: 'cus', organization: 'org')}
-          ) = DATE(:today#{at_time_zone(customer: 'cus', organization: 'org')})
+            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", organization: "org")}
+          ) = DATE(:today#{at_time_zone(customer: "cus", organization: "org")})
         GROUP BY invoice_subscriptions.subscription_id
       SQL
     end

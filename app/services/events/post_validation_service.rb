@@ -13,13 +13,13 @@ module Events
         invalid_code: process_query(invalid_code_query),
         missing_aggregation_property: process_query(missing_aggregation_property_query),
         missing_group_key: process_query(missing_group_key_query),
-        invalid_filter_values: process_query(invalid_filter_values_query),
+        invalid_filter_values: process_query(invalid_filter_values_query)
       }
 
       if errors[:invalid_code].present? ||
-         errors[:missing_aggregation_property].present? ||
-         errors[:missing_group_key].present? ||
-         errors[:invalid_filter_values].present?
+          errors[:missing_aggregation_property].present? ||
+          errors[:missing_group_key].present? ||
+          errors[:invalid_filter_values].present?
         deliver_webhook(errors)
       end
 
@@ -91,7 +91,7 @@ module Events
     end
 
     def deliver_webhook(errors)
-      SendWebhookJob.perform_later('events.errors', organization, errors:)
+      SendWebhookJob.perform_later("events.errors", organization, errors:)
     end
   end
 end

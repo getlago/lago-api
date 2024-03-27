@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
   let(:membership) { create(:membership) }
@@ -15,16 +15,16 @@ RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
     GQL
   end
 
-  it 'deletes a payment provider' do
+  it "deletes a payment provider" do
     result = execute_graphql(
       current_user: membership.user,
       query: mutation,
       variables: {
-        input: { id: payment_provider.id },
-      },
+        input: {id: payment_provider.id}
+      }
     )
 
-    data = result['data']['destroyPaymentProvider']
-    expect(data['id']).to eq(payment_provider.id)
+    data = result["data"]["destroyPaymentProvider"]
+    expect(data["id"]).to eq(payment_provider.id)
   end
 end

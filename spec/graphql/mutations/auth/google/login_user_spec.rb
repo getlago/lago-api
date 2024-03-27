@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Auth::Google::LoginUser, type: :graphql do
   let(:membership) { create(:membership) }
@@ -10,7 +10,7 @@ RSpec.describe Mutations::Auth::Google::LoginUser, type: :graphql do
   let(:login_result) do
     result = BaseService::Result.new
     result.user = user
-    result.token = 'token'
+    result.token = "token"
     result
   end
 
@@ -33,49 +33,49 @@ RSpec.describe Mutations::Auth::Google::LoginUser, type: :graphql do
     allow(google_service).to receive(:login).and_return(login_result)
   end
 
-  it 'returns token and user' do
+  it "returns token and user" do
     result = execute_graphql(
       query: mutation,
-      request: Rack::Request.new(Rack::MockRequest.env_for('http://example.com')),
+      request: Rack::Request.new(Rack::MockRequest.env_for("http://example.com")),
       variables: {
         input: {
-          code: 'code',
-        },
-      },
+          code: "code"
+        }
+      }
     )
 
-    response = result['data']['googleLoginUser']
+    response = result["data"]["googleLoginUser"]
 
     aggregate_failures do
-      expect(response['token']).to eq('token')
-      expect(response['user']['id']).to eq(user.id)
-      expect(response['user']['email']).to eq(user.email)
+      expect(response["token"]).to eq("token")
+      expect(response["user"]["id"]).to eq(user.id)
+      expect(response["user"]["email"]).to eq(user.email)
     end
   end
 
-  context 'when user does not exist' do
+  context "when user does not exist" do
     let(:login_result) do
       result = BaseService::Result.new
-      result.single_validation_failure!(error_code: 'user_does_not_exist')
+      result.single_validation_failure!(error_code: "user_does_not_exist")
       result
     end
 
-    it 'returns an error' do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
-        request: Rack::Request.new(Rack::MockRequest.env_for('http://example.com')),
+        request: Rack::Request.new(Rack::MockRequest.env_for("http://example.com")),
         variables: {
           input: {
-            code: 'code',
-          },
-        },
+            code: "code"
+          }
+        }
       )
 
-      response = result['errors'].first
+      response = result["errors"].first
 
       aggregate_failures do
-        expect(response['extensions']['status']).to eq(422)
-        expect(response['message']).to eq('Unprocessable Entity')
+        expect(response["extensions"]["status"]).to eq(422)
+        expect(response["message"]).to eq("Unprocessable Entity")
       end
     end
   end

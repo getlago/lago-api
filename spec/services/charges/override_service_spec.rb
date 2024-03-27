@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Charges::OverrideService, type: :service do
   subject(:override_service) { described_class.new(charge:, params:) }
@@ -8,7 +8,7 @@ RSpec.describe Charges::OverrideService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe '#call' do
+  describe "#call" do
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:group) { create(:group, billable_metric:) }
     let(:group2) { create(:group, billable_metric:) }
@@ -18,19 +18,19 @@ RSpec.describe Charges::OverrideService, type: :service do
       create(
         :standard_charge,
         billable_metric:,
-        properties: { amount: '300' },
+        properties: {amount: "300"},
         group_properties: [
           build(
             :group_property,
             group:,
-            values: { amount: '10', amount_currency: 'EUR' },
+            values: {amount: "10", amount_currency: "EUR"}
           ),
           build(
             :group_property,
             group: group2,
-            values: { amount: '20', amount_currency: 'EUR' },
-          ),
-        ],
+            values: {amount: "20", amount_currency: "EUR"}
+          )
+        ]
       )
     end
 
@@ -41,29 +41,29 @@ RSpec.describe Charges::OverrideService, type: :service do
         plan_id: plan.id,
         # invoice_display_name: 'invoice display name',
         min_amount_cents: 1000,
-        properties: { amount: '200' },
+        properties: {amount: "200"},
         tax_codes: [tax.code],
         group_properties: [
           {
             group_id: group.id,
-            values: { amount: '100' },
-          },
-        ],
+            values: {amount: "100"}
+          }
+        ]
       }
     end
 
     before { charge }
 
-    context 'when lago freemium' do
-      it 'returns without overriding the charge' do
+    context "when lago freemium" do
+      it "returns without overriding the charge" do
         expect { override_service.call }.not_to change(Charge, :count)
       end
     end
 
-    context 'when lago premium' do
+    context "when lago premium" do
       around { |test| lago_premium!(&test) }
 
-      it 'creates a charge based on the given charge', :aggregate_failures do
+      it "creates a charge based on the given charge", :aggregate_failures do
         applied_tax = create(:charge_applied_tax, charge:)
 
         expect(charge.group_properties.count).to eq(2)
@@ -83,27 +83,27 @@ RSpec.describe Charges::OverrideService, type: :service do
           plan_id: plan.id,
           # invoice_display_name: 'invoice display name',
           min_amount_cents: 1000,
-          properties: { 'amount' => '200' },
+          properties: {"amount" => "200"}
         )
         expect(charge.group_properties.count).to eq(1)
         expect(charge.group_properties.with_discarded.discarded.count).to eq(1)
         expect(charge.group_properties.first).to have_attributes(
           {
             group_id: group.id,
-            values: { 'amount' => '100' },
-          },
+            values: {"amount" => "100"}
+          }
         )
         expect(charge.taxes).to contain_exactly(tax)
       end
 
-      context 'with charge filters' do
+      context "with charge filters" do
         let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
 
         let(:charge) do
           create(
             :standard_charge,
             billable_metric:,
-            properties: { amount: '300' },
+            properties: {amount: "300"}
           )
         end
 
@@ -112,13 +112,13 @@ RSpec.describe Charges::OverrideService, type: :service do
             create(
               :charge_filter,
               charge:,
-              properties: { amount: '10' },
+              properties: {amount: "10"}
             ),
             create(
               :charge_filter,
               charge:,
-              properties: { amount: '20' },
-            ),
+              properties: {amount: "20"}
+            )
           ]
         end
 
@@ -128,14 +128,14 @@ RSpec.describe Charges::OverrideService, type: :service do
               :charge_filter_value,
               charge_filter: filters.first,
               billable_metric_filter:,
-              values: [billable_metric_filter.values.first],
+              values: [billable_metric_filter.values.first]
             ),
             create(
               :charge_filter_value,
               charge_filter: filters.second,
               billable_metric_filter:,
-              values: [billable_metric_filter.values.second],
-            ),
+              values: [billable_metric_filter.values.second]
+            )
           ]
         end
 
@@ -144,21 +144,21 @@ RSpec.describe Charges::OverrideService, type: :service do
             id: charge.id,
             plan_id: plan.id,
             min_amount_cents: 1000,
-            properties: { amount: '200' },
+            properties: {amount: "200"},
             tax_codes: [tax.code],
             filters: [
               {
-                properties: { amount: '10' },
-                invoice_display_name: 'invoice display name',
-                values: { billable_metric_filter.key => [billable_metric_filter.values.first] },
-              },
-            ],
+                properties: {amount: "10"},
+                invoice_display_name: "invoice display name",
+                values: {billable_metric_filter.key => [billable_metric_filter.values.first]}
+              }
+            ]
           }
         end
 
         before { filter_values }
 
-        it 'creates a charge based on the given charge', :aggregate_failures do
+        it "creates a charge based on the given charge", :aggregate_failures do
           expect { override_service.call }.to change(Charge, :count).by(1)
 
           charge = Charge.order(:created_at).last
@@ -167,14 +167,14 @@ RSpec.describe Charges::OverrideService, type: :service do
           expect(charge.filters.with_discarded.discarded.count).to eq(1)
           expect(charge.filters.first).to have_attributes(
             {
-              invoice_display_name: 'invoice display name',
-              properties: { 'amount' => '10' },
-            },
+              invoice_display_name: "invoice display name",
+              properties: {"amount" => "10"}
+            }
           )
           expect(charge.filters.first.values.count).to eq(1)
           expect(charge.filters.first.values.first).to have_attributes(
             billable_metric_filter_id: billable_metric_filter.id,
-            values: [billable_metric_filter.values.first],
+            values: [billable_metric_filter.values.first]
           )
         end
       end

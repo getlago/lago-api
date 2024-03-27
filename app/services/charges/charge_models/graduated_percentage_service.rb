@@ -6,7 +6,7 @@ module Charges
       protected
 
       def ranges
-        properties['graduated_percentage_ranges']&.map(&:with_indifferent_access)
+        properties["graduated_percentage_ranges"]&.map(&:with_indifferent_access)
       end
 
       def amount_details
@@ -14,7 +14,7 @@ module Charges
           graduated_percentage_ranges: ranges.each_with_object([]) do |range, amounts|
             amounts << Charges::AmountDetails::RangeGraduatedPercentageService.call(range:, total_units: units)
             break amounts if range[:to_value].nil? || range[:to_value] >= units
-          end,
+          end
         }
       end
 

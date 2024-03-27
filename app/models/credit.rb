@@ -11,7 +11,7 @@ class Credit < ApplicationRecord
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 
-  validates :amount_currency, inclusion: { in: currency_list }
+  validates :amount_currency, inclusion: {in: currency_list}
 
   scope :coupon_kind, -> { where.not(applied_coupon_id: nil) }
   scope :credit_note_kind, -> { where.not(credit_note_id: nil) }
@@ -23,9 +23,9 @@ class Credit < ApplicationRecord
   end
 
   def item_type
-    return 'coupon' if applied_coupon_id?
+    return "coupon" if applied_coupon_id?
 
-    'credit_note'
+    "credit_note"
   end
 
   def item_code
@@ -45,12 +45,12 @@ class Credit < ApplicationRecord
     return nil if applied_coupon.blank?
 
     suffix = if coupon.percentage?
-      "#{format('%.2f', applied_coupon.percentage_rate)}%"
+      "#{format("%.2f", applied_coupon.percentage_rate)}%"
     else
       applied_coupon.amount.format(
-        format: I18n.t('money.format'),
-        decimal_mark: I18n.t('money.decimal_mark'),
-        thousands_separator: I18n.t('money.thousands_separator'),
+        format: I18n.t("money.format"),
+        decimal_mark: I18n.t("money.decimal_mark"),
+        thousands_separator: I18n.t("money.thousands_separator")
       )
     end
 

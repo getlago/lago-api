@@ -17,8 +17,8 @@ class CreateCachedAggregations < ActiveRecord::Migration[7.0]
 
       t.timestamps
 
-      t.index %i[organization_id timestamp charge_id], name: 'index_timestamp_lookup'
-      t.index %i[organization_id timestamp charge_id group_id], name: 'index_timestamp_group_lookup'
+      t.index %i[organization_id timestamp charge_id], name: "index_timestamp_lookup"
+      t.index %i[organization_id timestamp charge_id group_id], name: "index_timestamp_group_lookup"
     end
   end
 end

@@ -4,8 +4,8 @@ module Mutations
   module Auth
     module Google
       class AcceptInvite < BaseMutation
-        graphql_name 'GoogleAcceptInvite'
-        description 'Accepts a membership invite with Google Oauth'
+        graphql_name "GoogleAcceptInvite"
+        description "Accepts a membership invite with Google Oauth"
 
         argument :code, String, required: true
         argument :invite_token, String, required: true

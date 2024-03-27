@@ -2,7 +2,7 @@
 
 class CreditNote
   class AppliedTax < ApplicationRecord
-    self.table_name = 'credit_notes_taxes'
+    self.table_name = "credit_notes_taxes"
 
     include PaperTrailTraceable
 

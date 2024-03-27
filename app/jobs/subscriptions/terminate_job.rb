@@ -2,7 +2,7 @@
 
 module Subscriptions
   class TerminateJob < ApplicationJob
-    queue_as 'billing'
+    queue_as "billing"
 
     def perform(subscription, timestamp)
       result = Subscriptions::TerminateService.new(subscription:)

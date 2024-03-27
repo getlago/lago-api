@@ -68,7 +68,7 @@ module Fees
           taxes_amount_cents: 0,
           unit_amount_cents:,
           precise_unit_amount: result.unit_amount,
-          grouped_by: format_grouped_by,
+          grouped_by: format_grouped_by
         )
 
         taxes_result = Fees::ApplyTaxesService.call(fee:)
@@ -118,7 +118,7 @@ module Fees
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
         event.timestamp,
-        current_usage: true,
+        current_usage: true
       )
     end
 
@@ -129,13 +129,13 @@ module Fees
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         charges_duration: date_service.charges_duration_in_days,
-        timestamp: Time.current,
+        timestamp: Time.current
       }
     end
 
     def aggregate(properties:, group:, charge_filter: nil)
       aggregation_result = Charges::PayInAdvanceAggregationService.call(
-        charge:, boundaries:, group:, properties:, event:, charge_filter:,
+        charge:, boundaries:, group:, properties:, event:, charge_filter:
       )
       aggregation_result.raise_if_error!
       aggregation_result
@@ -143,7 +143,7 @@ module Fees
 
     def apply_charge_model(aggregation_result:, properties:)
       charge_model_result = Charges::ApplyPayInAdvanceChargeModelService.call(
-        charge:, aggregation_result:, properties:,
+        charge:, aggregation_result:, properties:
       )
       charge_model_result.raise_if_error!
       charge_model_result
@@ -164,13 +164,13 @@ module Fees
     def deliver_webhooks
       return if estimate
 
-      result.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
+      result.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
 
     def cache_aggregation_result(aggregation_result:, group:, charge_filter:)
       return unless aggregation_result.current_aggregation.present? ||
-                    aggregation_result.max_aggregation.present? ||
-                    aggregation_result.max_aggregation_with_proration.present?
+        aggregation_result.max_aggregation.present? ||
+        aggregation_result.max_aggregation_with_proration.present?
 
       CachedAggregation.create!(
         organization_id: event.organization_id,
@@ -183,14 +183,14 @@ module Fees
         current_aggregation: aggregation_result.current_aggregation,
         max_aggregation: aggregation_result.max_aggregation,
         max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,
-        grouped_by: format_grouped_by,
+        grouped_by: format_grouped_by
       )
     end
 
     def format_grouped_by
-      return {} if charge.properties['grouped_by'].blank?
+      return {} if charge.properties["grouped_by"].blank?
 
-      charge.properties['grouped_by'].index_with { event.properties[_1] }
+      charge.properties["grouped_by"].index_with { event.properties[_1] }
     end
   end
 end

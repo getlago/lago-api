@@ -2,7 +2,7 @@
 
 module Clock
   class RefreshWalletsOngoingBalanceJob < ApplicationJob
-    queue_as 'clock'
+    queue_as "clock"
 
     def perform
       return unless License.premium?

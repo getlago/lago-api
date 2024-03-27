@@ -22,7 +22,7 @@ module Invoices
           date_service = Subscriptions::TerminatedDatesService.new(
             subscription:,
             invoice:,
-            date_service: date_service(subscription),
+            date_service: date_service(subscription)
           ).call
 
           boundaries = {
@@ -31,7 +31,7 @@ module Invoices
             charges_from_datetime: invoice_subscription.charges_from_datetime,
             charges_to_datetime: invoice_subscription.charges_to_datetime,
             timestamp: invoice_subscription.timestamp,
-            charges_duration: date_service.charges_duration_in_days,
+            charges_duration: date_service.charges_duration_in_days
           }
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
@@ -43,7 +43,7 @@ module Invoices
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents) -
-                                                         invoice.coupons_amount_cents
+          invoice.coupons_amount_cents
 
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
         Invoices::ComputeAmountsFromFees.call(invoice:)
@@ -76,7 +76,7 @@ module Invoices
       Subscriptions::DatesService.new_instance(
         subscription,
         timestamp,
-        current_usage: subscription.terminated? && subscription.upgraded?,
+        current_usage: subscription.terminated? && subscription.upgraded?
       )
     end
 
@@ -98,7 +98,7 @@ module Invoices
         .joins(:billable_metric)
         .where(invoiceable: true)
         .where
-        .not(pay_in_advance: true, billable_metric: { recurring: false })
+        .not(pay_in_advance: true, billable_metric: {recurring: false})
         .each do |charge|
           next if should_not_create_charge_fee?(charge, subscription)
 
@@ -110,8 +110,8 @@ module Invoices
     def should_not_create_charge_fee?(charge, subscription)
       if charge.pay_in_advance?
         condition = charge.billable_metric.recurring? &&
-                    subscription.terminated? &&
-                    (subscription.upgraded? || subscription.next_subscription.nil?)
+          subscription.terminated? &&
+          (subscription.upgraded? || subscription.next_subscription.nil?)
 
         return condition
       end

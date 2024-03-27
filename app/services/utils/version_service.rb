@@ -2,13 +2,13 @@
 
 module Utils
   class VersionService < BaseService
-    VERSION_FILE = Rails.root.join('LAGO_VERSION')
-    GITHUB_BASE_URL = 'https://github.com/getlago/lago-api'
+    VERSION_FILE = Rails.root.join("LAGO_VERSION")
+    GITHUB_BASE_URL = "https://github.com/getlago/lago-api"
 
     def version
       result.version = OpenStruct.new(
         number: version_number,
-        github_url:,
+        github_url:
       )
       result
     end

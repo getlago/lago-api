@@ -40,7 +40,7 @@ module Invoices
       def create_metadata(payload)
         invoice.metadata.create!(
           key: payload[:key],
-          value: payload[:value],
+          value: payload[:value]
         )
       end
 

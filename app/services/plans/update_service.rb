@@ -9,7 +9,7 @@ module Plans
     end
 
     def call
-      return result.not_found_failure!(resource: 'plan') unless plan
+      return result.not_found_failure!(resource: "plan") unless plan
 
       old_amount_cents = plan.amount_cents
 
@@ -32,7 +32,7 @@ module Plans
       if params[:charges].present?
         metric_ids = params[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.not_found_failure!(resource: 'billable_metrics')
+          return result.not_found_failure!(resource: "billable_metrics")
         end
       end
 
@@ -78,19 +78,19 @@ module Plans
         charge_model: charge_model(params),
         pay_in_advance: params[:pay_in_advance] || false,
         prorated: params[:prorated] || false,
-        group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
+        group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) }
       )
 
       properties = params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
       charge.properties = Charges::FilterChargeModelPropertiesService.call(
         charge_model: charge.charge_model,
-        properties:,
+        properties:
       ).properties
 
       if params[:filters].present?
         ChargeFilters::CreateOrUpdateBatchService.call(
           charge:,
-          filters_params: params[:filters].map(&:with_indifferent_access),
+          filters_params: params[:filters].map(&:with_indifferent_access)
         ).raise_if_error!
       end
 
@@ -118,7 +118,7 @@ module Plans
 
     def process_minimum_commitment(plan, params)
       if params.present?
-        minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: 'minimum_commitment')
+        minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: "minimum_commitment")
 
         minimum_commitment.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
         minimum_commitment.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
@@ -129,7 +129,7 @@ module Plans
       if params[:tax_codes]
         taxes_result = Commitments::ApplyTaxesService.call(
           commitment: minimum_commitment,
-          tax_codes: params[:tax_codes],
+          tax_codes: params[:tax_codes]
         )
         taxes_result.raise_if_error!
       end
@@ -151,7 +151,7 @@ module Plans
           if group_properties.present?
             group_result = GroupProperties::CreateOrUpdateBatchService.call(
               charge:,
-              properties_params: group_properties,
+              properties_params: group_properties
             )
             return group_result if group_result.error
           end
@@ -160,20 +160,20 @@ module Plans
           unless filters.nil?
             ChargeFilters::CreateOrUpdateBatchService.call(
               charge:,
-              filters_params: filters.map(&:with_indifferent_access),
+              filters_params: filters.map(&:with_indifferent_access)
             ).raise_if_error!
           end
 
           properties = payload_charge.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
-            payload_charge[:charge_model],
+            payload_charge[:charge_model]
           )
 
           charge.update!(
             invoice_display_name: payload_charge[:invoice_display_name],
             properties: Charges::FilterChargeModelPropertiesService.call(
               charge_model: charge.charge_model,
-              properties:,
-            ).properties,
+              properties:
+            ).properties
           )
 
           tax_codes = payload_charge.delete(:tax_codes)
@@ -213,7 +213,7 @@ module Plans
 
     def discard_charge!(charge)
       draft_invoice_ids = Invoice.draft.joins(plans: [:charges])
-        .where(charges: { id: charge.id }).distinct.pluck(:id)
+        .where(charges: {id: charge.id}).distinct.pluck(:id)
 
       charge.discard!
       charge.group_properties.discard_all

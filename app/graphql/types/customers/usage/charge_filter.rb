@@ -4,7 +4,7 @@ module Types
   module Customers
     module Usage
       class ChargeFilter < Types::BaseObject
-        graphql_name 'ChargeFilterUsage'
+        graphql_name "ChargeFilterUsage"
 
         field :id, ID, null: false, method: :charge_filter_id
 

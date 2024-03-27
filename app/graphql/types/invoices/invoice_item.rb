@@ -4,7 +4,7 @@ module Types
   module Invoices
     module InvoiceItem
       include Types::BaseInterface
-      description 'Invoice Item'
+      description "Invoice Item"
 
       field :id, ID, null: false
       field :group, Types::Groups::Object

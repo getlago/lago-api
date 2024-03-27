@@ -30,7 +30,7 @@ module Charges
         if params.key?(:group_properties)
           group_result = GroupProperties::CreateOrUpdateBatchService.call(
             charge: new_charge,
-            properties_params: params[:group_properties],
+            properties_params: params[:group_properties]
           )
           return group_result if group_result.error
         end
@@ -38,7 +38,7 @@ module Charges
         if params.key?(:filters)
           filters_result = ChargeFilters::CreateOrUpdateBatchService.call(
             charge: new_charge,
-            filters_params: params[:filters],
+            filters_params: params[:filters]
           )
           return filters_result if filters_result.error
         end

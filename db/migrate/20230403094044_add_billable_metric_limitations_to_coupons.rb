@@ -8,6 +8,6 @@ class AddBillableMetricLimitationsToCoupons < ActiveRecord::Migration[7.0]
 
     add_reference :coupon_plans, :billable_metric, type: :uuid, null: true, index: true, foreign_key: true
 
-    rename_table('coupon_plans', 'coupon_targets')
+    rename_table("coupon_plans", "coupon_targets")
   end
 end

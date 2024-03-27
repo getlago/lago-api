@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateCustomer'
-      description 'Creates a new customer'
+      graphql_name "CreateCustomer"
+      description "Creates a new customer"
 
       input_object_class Types::Customers::CreateCustomerInput
 

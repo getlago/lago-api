@@ -16,7 +16,6 @@ module Charges
       def amount_details
         paid_units = units - free_units_value
         paid_units = 0 if paid_units.negative?
-        per_unit_amount = paid_units.zero? ? BigDecimal(0) : compute_percentage_amount.fdiv(paid_units)
         free_events = if aggregation_result.count >= free_units_count
           free_units_count
         else
@@ -32,9 +31,9 @@ module Charges
           rate:,
           per_unit_total_amount: compute_percentage_amount,
           paid_events:,
-          fixed_fee_unit_amount: paid_events.positive? ? fixed_amount : BigDecimal(0),
+          fixed_fee_unit_amount: paid_events.positive? ? fixed_amount : BigDecimal("0"),
           fixed_fee_total_amount: compute_fixed_amount.to_s,
-          min_max_adjustment_total_amount: min_max_adjustment_total_amount.to_s,
+          min_max_adjustment_total_amount: min_max_adjustment_total_amount.to_s
         }
       end
 
@@ -73,7 +72,7 @@ module Charges
       def free_units_count
         [
           free_units_per_events,
-          aggregation_result.options[:running_total]&.count { |e| e < free_units_per_total_aggregation } || 0,
+          aggregation_result.options[:running_total]&.count { |e| e < free_units_per_total_aggregation } || 0
         ].excluding(0).min || 0
       end
 
@@ -82,36 +81,36 @@ module Charges
       end
 
       def free_units_per_total_aggregation
-        @free_units_per_total_aggregation ||= BigDecimal(properties['free_units_per_total_aggregation'] || 0)
+        @free_units_per_total_aggregation ||= BigDecimal(properties["free_units_per_total_aggregation"] || 0)
       end
 
       def free_units_per_events
-        @free_units_per_events ||= properties['free_units_per_events'].to_i
+        @free_units_per_events ||= properties["free_units_per_events"].to_i
       end
 
       # NOTE: FE divides percentage rate with 100 and sends to BE.
       def rate
-        BigDecimal(properties['rate'].to_s)
+        BigDecimal(properties["rate"].to_s)
       end
 
       def fixed_amount
-        @fixed_amount ||= BigDecimal((properties['fixed_amount'] || 0).to_s)
+        @fixed_amount ||= BigDecimal((properties["fixed_amount"] || 0).to_s)
       end
 
       def per_transaction_max_amount?
-        properties['per_transaction_max_amount'].present?
+        properties["per_transaction_max_amount"].present?
       end
 
       def per_transaction_min_amount?
-        properties['per_transaction_min_amount'].present?
+        properties["per_transaction_min_amount"].present?
       end
 
       def per_transaction_max_amount
-        BigDecimal(properties['per_transaction_max_amount'])
+        BigDecimal(properties["per_transaction_max_amount"])
       end
 
       def per_transaction_min_amount
-        BigDecimal(properties['per_transaction_min_amount'])
+        BigDecimal(properties["per_transaction_min_amount"])
       end
 
       def should_apply_min_max?
@@ -176,7 +175,7 @@ module Charges
       end
 
       def min_max_adjustment_total_amount
-        return BigDecimal(0) unless should_apply_min_max?
+        return BigDecimal("0") unless should_apply_min_max?
 
         compute_amount_with_transaction_min_max - compute_percentage_amount - compute_fixed_amount
       end

@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'RevokeInvite'
-      description 'Revokes a invite'
+      graphql_name "RevokeInvite"
+      description "Revokes a invite"
 
       argument :id, ID, required: true
 

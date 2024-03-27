@@ -37,7 +37,7 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
           customer:,
-          currency: plan.amount_currency,
+          currency: plan.amount_currency
         )
         return currency_result unless currency_result.success?
 
@@ -51,7 +51,7 @@ module Subscriptions
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
-      result.validation_failure!(errors: { billing_time: ['value_is_invalid'] })
+      result.validation_failure!(errors: {billing_time: ["value_is_invalid"]})
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -59,14 +59,14 @@ module Subscriptions
     private
 
     attr_reader :customer,
-                :plan,
-                :params,
-                :name,
-                :subscription_at,
-                :billing_time,
-                :external_id,
-                :current_subscription,
-                :plan_overrides
+      :plan,
+      :params,
+      :name,
+      :subscription_at,
+      :billing_time,
+      :external_id,
+      :current_subscription,
+      :plan_overrides
 
     def valid?(args)
       Subscriptions::ValidateService.new(result, **args).valid?
@@ -101,7 +101,7 @@ module Subscriptions
         name:,
         external_id:,
         billing_time: billing_time || :calendar,
-        ending_at: params[:ending_at],
+        ending_at: params[:ending_at]
       )
 
       if new_subscription.subscription_at > Time.current
@@ -120,7 +120,7 @@ module Subscriptions
       end
 
       if new_subscription.active?
-        perform_later(job_class: SendWebhookJob, arguments: ['subscription.started', new_subscription])
+        perform_later(job_class: SendWebhookJob, arguments: ["subscription.started", new_subscription])
       end
 
       new_subscription
@@ -141,7 +141,7 @@ module Subscriptions
         previous_subscription_id: current_subscription.id,
         subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
 
       cancel_pending_subscription if pending_subscription?
@@ -154,7 +154,7 @@ module Subscriptions
       Subscriptions::TerminateService.call(subscription: current_subscription, upgrade: true)
 
       new_subscription.mark_as_active!
-      perform_later(job_class: SendWebhookJob, arguments: ['subscription.started', new_subscription])
+      perform_later(job_class: SendWebhookJob, arguments: ["subscription.started", new_subscription])
 
       # NOTE: If plan is in advance we should create only one invoice for termination fees and for new plan fees
       if billable_subscriptions.any?
@@ -163,7 +163,7 @@ module Subscriptions
         #       We do not set offset anymore but instead retry jobs
         perform_later(
           job_class: BillSubscriptionJob,
-          arguments: [billable_subscriptions, Time.zone.now.to_i + 1.second],
+          arguments: [billable_subscriptions, Time.zone.now.to_i + 1.second]
         )
       end
 
@@ -190,7 +190,7 @@ module Subscriptions
         subscription_at: current_subscription.subscription_at,
         status: :pending,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
 
       current_subscription
@@ -207,16 +207,16 @@ module Subscriptions
     end
 
     def subscription_type
-      return 'downgrade' if downgrade?
-      return 'upgrade' if upgrade?
+      return "downgrade" if downgrade?
+      return "upgrade" if upgrade?
 
-      'create'
+      "create"
     end
 
     def track_subscription_created(subscription)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'subscription_created',
+        event: "subscription_created",
         properties: {
           created_at: subscription.created_at,
           customer_id: subscription.customer_id,
@@ -224,8 +224,8 @@ module Subscriptions
           plan_name: subscription.plan.name,
           subscription_type:,
           organization_id: subscription.organization.id,
-          billing_time: subscription.billing_time,
-        },
+          billing_time: subscription.billing_time
+        }
       )
     end
 

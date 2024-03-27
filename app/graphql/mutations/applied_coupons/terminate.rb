@@ -5,8 +5,8 @@ module Mutations
     class Terminate < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'TerminateAppliedCoupon'
-      description 'Unassign a coupon from a customer'
+      graphql_name "TerminateAppliedCoupon"
+      description "Unassign a coupon from a customer"
 
       argument :id, ID, required: true
 
@@ -14,7 +14,7 @@ module Mutations
 
       def resolve(id:)
         applied_coupon = AppliedCoupon.joins(coupon: :organization)
-          .where(organizations: { id: context[:current_user].organization_ids })
+          .where(organizations: {id: context[:current_user].organization_ids})
           .find_by(id:)
 
         result = ::AppliedCoupons::TerminateService.call(applied_coupon:)

@@ -6,7 +6,7 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      description 'Fetch amounts for credit note creation'
+      description "Fetch amounts for credit note creation"
 
       argument :invoice_id, ID, required: true
       argument :items, [Types::CreditNoteItems::Input], required: true
@@ -18,7 +18,7 @@ module Resolvers
 
         result = ::CreditNotes::EstimateService.call(
           invoice: current_organization.invoices.not_generating.find_by(id: invoice_id),
-          items:,
+          items:
         )
 
         result.success? ? result.credit_note : result_error(result)

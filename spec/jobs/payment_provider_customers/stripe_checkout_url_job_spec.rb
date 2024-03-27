@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::StripeCheckoutUrlJob, type: :job do
   subject(:stripe_checkout_job) { described_class }
@@ -9,7 +9,7 @@ RSpec.describe PaymentProviderCustomers::StripeCheckoutUrlJob, type: :job do
 
   let(:stripe_service) { instance_double(PaymentProviderCustomers::StripeService) }
 
-  it 'calls generate_checkout_url method' do
+  it "calls generate_checkout_url method" do
     allow(PaymentProviderCustomers::StripeService).to receive(:new)
       .with(stripe_customer)
       .and_return(stripe_service)

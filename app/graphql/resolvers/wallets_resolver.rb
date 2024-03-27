@@ -5,10 +5,10 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query wallets'
+    description "Query wallets"
 
-    argument :customer_id, ID, required: true, description: 'Uniq ID of the customer'
-    argument :ids, [ID], required: false, description: 'List of wallet IDs to fetch'
+    argument :customer_id, ID, required: true, description: "Uniq ID of the customer"
+    argument :ids, [ID], required: false, description: "List of wallet IDs to fetch"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :status, Types::Wallets::StatusEnum, required: false
@@ -30,7 +30,7 @@ module Resolvers
 
       wallets.order(status: :asc, created_at: :desc)
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'customer')
+      not_found_error(resource: "customer")
     end
   end
 end

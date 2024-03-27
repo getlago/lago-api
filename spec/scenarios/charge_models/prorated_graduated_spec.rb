@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :request do
+describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
-  let(:customer) { create(:customer, organization:, name: 'aaaaaabcd') }
+  let(:customer) { create(:customer, organization:, name: "aaaaaabcd") }
   let(:tax) { create(:tax, organization:, rate: 0) }
 
   let(:plan) { create(:plan, organization:, amount_cents: 0) }
@@ -12,12 +12,12 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
 
   before { tax }
 
-  describe 'with sum_agg' do
-    let(:aggregation_type) { 'sum_agg' }
-    let(:field_name) { 'amount' }
+  describe "with sum_agg" do
+    let(:aggregation_type) { "sum_agg" }
+    let(:field_name) { "amount" }
 
-    describe 'three ranges and one overflow case' do
-      it 'returns the expected invoice and usage amounts' do
+    describe "three ranges and one overflow case" do
+      it "returns the expected invoice and usage amounts" do
         Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
         WebhookEndpoint.destroy_all
 
@@ -26,8 +26,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -41,29 +41,29 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 from_value: 0,
                 to_value: 5,
-                per_unit_amount: '10',
-                flat_amount: '100',
+                per_unit_amount: "10",
+                flat_amount: "100"
               },
               {
                 from_value: 6,
                 to_value: 15,
-                per_unit_amount: '5',
-                flat_amount: '50',
+                per_unit_amount: "5",
+                flat_amount: "50"
               },
               {
                 from_value: 16,
                 to_value: nil,
-                per_unit_amount: '2',
-                flat_amount: '0',
-              },
-            ],
-          },
+                per_unit_amount: "2",
+                flat_amount: "0"
+              }
+            ]
+          }
         )
 
         fetch_current_usage(customer:)
         expect(json[:customer_usage][:amount_cents].round(2)).to eq(0)
         expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(0)
-        expect(json[:customer_usage][:charges_usage][0][:units]).to eq('0.0')
+        expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
 
         travel_to(DateTime.new(2023, 9, 10)) do
           create_event(
@@ -71,14 +71,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2' },
-            },
+              properties: {amount: "2"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_400)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_400)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
         end
 
         travel_to(DateTime.new(2023, 9, 16)) do
@@ -87,14 +87,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '5' },
-            },
+              properties: {amount: "5"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_400)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_400)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('7.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("7.0")
         end
 
         travel_to(DateTime.new(2023, 9, 20)) do
@@ -103,14 +103,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '-6' },
-            },
+              properties: {amount: "-6"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(16_567)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(16_567)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
         end
 
         travel_to(DateTime.new(2023, 9, 25)) do
@@ -119,14 +119,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
-            },
+              properties: {amount: "10"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_967)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_967)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('11.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("11.0")
         end
 
         travel_to(DateTime.new(2023, 9, 26)) do
@@ -135,14 +135,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4' },
-            },
+              properties: {amount: "4"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_300)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_300)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('15.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("15.0")
         end
 
         travel_to(DateTime.new(2023, 9, 30)) do
@@ -151,14 +151,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '60' },
-            },
+              properties: {amount: "60"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_700)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_700)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('75.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("75.0")
         end
 
         travel_to(DateTime.new(2023, 10, 1)) do
@@ -179,7 +179,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(37_000)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(37_000)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('75.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("75.0")
         end
 
         travel_to(DateTime.new(2023, 10, 17)) do
@@ -188,19 +188,19 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '20' },
-            },
+              properties: {amount: "20"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(38_935)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(38_935)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('95.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("95.0")
         end
       end
 
-      context 'when there are old events before first invoice' do
-        it 'returns expected invoice and usage amounts' do
+      context "when there are old events before first invoice" do
+        it "returns expected invoice and usage amounts" do
           Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
           WebhookEndpoint.destroy_all
 
@@ -209,8 +209,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
-                plan_code: plan.code,
-              },
+                plan_code: plan.code
+              }
             )
           end
 
@@ -226,17 +226,17 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 {
                   from_value: 0,
                   to_value: 5,
-                  per_unit_amount: '0',
-                  flat_amount: '0',
+                  per_unit_amount: "0",
+                  flat_amount: "0"
                 },
                 {
                   from_value: 6,
                   to_value: nil,
-                  per_unit_amount: '12',
-                  flat_amount: '0',
-                },
-              ],
-            },
+                  per_unit_amount: "12",
+                  flat_amount: "0"
+                }
+              ]
+            }
           )
 
           travel_to(DateTime.new(2023, 12, 2)) do
@@ -246,8 +246,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 transaction_id: SecureRandom.uuid,
                 timestamp: 1_699_336_493, ## November 2023
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '5' },
-              },
+                properties: {amount: "5"}
+              }
             )
 
             create_event(
@@ -256,14 +256,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 transaction_id: SecureRandom.uuid,
                 timestamp: 1_699_336_493, ## November 2023
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '5' },
-              },
+                properties: {amount: "5"}
+              }
             )
 
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(6_000)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(6_000)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('10.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("10.0")
           end
 
           travel_to(DateTime.new(2024, 1, 1)) do
@@ -284,7 +284,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(6_000)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(6_000)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('10.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("10.0")
           end
 
           travel_to(DateTime.new(2024, 1, 6)) do
@@ -293,20 +293,20 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '2' },
-              },
+                properties: {amount: "2"}
+              }
             )
 
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(8_013)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(8_013)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('12.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("12.0")
           end
         end
       end
 
-      context 'when there are old events before first invoice and subscription is terminated' do
-        it 'returns expected invoice and usage amounts' do
+      context "when there are old events before first invoice and subscription is terminated" do
+        it "returns expected invoice and usage amounts" do
           Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
           WebhookEndpoint.destroy_all
 
@@ -315,8 +315,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
-                plan_code: plan.code,
-              },
+                plan_code: plan.code
+              }
             )
           end
 
@@ -332,17 +332,17 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 {
                   from_value: 0,
                   to_value: 5,
-                  per_unit_amount: '0',
-                  flat_amount: '0',
+                  per_unit_amount: "0",
+                  flat_amount: "0"
                 },
                 {
                   from_value: 6,
                   to_value: nil,
-                  per_unit_amount: '10',
-                  flat_amount: '0',
-                },
-              ],
-            },
+                  per_unit_amount: "10",
+                  flat_amount: "0"
+                }
+              ]
+            }
           )
 
           travel_to(DateTime.new(2023, 10, 5)) do
@@ -351,8 +351,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '4' },
-              },
+                properties: {amount: "4"}
+              }
             )
 
             create_event(
@@ -360,8 +360,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '3' },
-              },
+                properties: {amount: "3"}
+              }
             )
           end
 
@@ -371,8 +371,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '-1' },
-              },
+                properties: {amount: "-1"}
+              }
             )
           end
 
@@ -380,21 +380,21 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(1_000)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(1_000)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('6.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("6.0")
 
             create_event(
               {
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '1' },
-              },
+                properties: {amount: "1"}
+              }
             )
 
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(1_806)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(1_806)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('7.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("7.0")
 
             Subscriptions::TerminateService.call(subscription:)
             perform_all_enqueued_jobs
@@ -404,16 +404,16 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               expect(subscription.reload).to be_terminated
               expect(subscription.reload.invoices.count).to eq(1)
               expect(invoice.total_amount_cents).to eq(258)
-              expect(invoice.issuing_date.iso8601).to eq('2023-12-07')
+              expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
             end
           end
         end
       end
 
-      context 'when upgrade is performed' do
+      context "when upgrade is performed" do
         let(:plan_new) { create(:plan, organization:, amount_cents: 100) }
 
-        it 'returns expected invoice and usage amounts' do
+        it "returns expected invoice and usage amounts" do
           Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
           WebhookEndpoint.destroy_all
 
@@ -422,8 +422,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
-                plan_code: plan.code,
-              },
+                plan_code: plan.code
+              }
             )
           end
 
@@ -437,23 +437,23 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 {
                   from_value: 0,
                   to_value: 5,
-                  per_unit_amount: '10',
-                  flat_amount: '100',
+                  per_unit_amount: "10",
+                  flat_amount: "100"
                 },
                 {
                   from_value: 6,
                   to_value: 15,
-                  per_unit_amount: '5',
-                  flat_amount: '50',
+                  per_unit_amount: "5",
+                  flat_amount: "50"
                 },
                 {
                   from_value: 16,
                   to_value: nil,
-                  per_unit_amount: '2',
-                  flat_amount: '0',
-                },
-              ],
-            },
+                  per_unit_amount: "2",
+                  flat_amount: "0"
+                }
+              ]
+            }
           )
 
           travel_to(DateTime.new(2023, 9, 10)) do
@@ -462,8 +462,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '2' },
-              },
+                properties: {amount: "2"}
+              }
             )
           end
 
@@ -473,8 +473,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '5' },
-              },
+                properties: {amount: "5"}
+              }
             )
           end
 
@@ -484,8 +484,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '-6' },
-              },
+                properties: {amount: "-6"}
+              }
             )
           end
 
@@ -495,8 +495,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '10' },
-              },
+                properties: {amount: "10"}
+              }
             )
           end
 
@@ -506,8 +506,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '4' },
-              },
+                properties: {amount: "4"}
+              }
             )
           end
 
@@ -517,14 +517,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '60' },
-              },
+                properties: {amount: "60"}
+              }
             )
 
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(18_700)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(18_700)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('75.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("75.0")
           end
 
           travel_to(DateTime.new(2023, 10, 1)) do
@@ -545,7 +545,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(37_000)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(37_000)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('75.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("75.0")
           end
 
           travel_to(DateTime.new(2023, 10, 17)) do
@@ -554,14 +554,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '20' },
-              },
+                properties: {amount: "20"}
+              }
             )
 
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(38_935)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(38_935)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('95.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("95.0")
           end
 
           subscription = customer.subscriptions.first
@@ -577,33 +577,33 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                   {
                     from_value: 0,
                     to_value: 5,
-                    per_unit_amount: '10',
-                    flat_amount: '100',
+                    per_unit_amount: "10",
+                    flat_amount: "100"
                   },
                   {
                     from_value: 6,
                     to_value: 15,
-                    per_unit_amount: '5',
-                    flat_amount: '50',
+                    per_unit_amount: "5",
+                    flat_amount: "50"
                   },
                   {
                     from_value: 16,
                     to_value: nil,
-                    per_unit_amount: '2',
-                    flat_amount: '0',
-                  },
-                ],
-              },
+                    per_unit_amount: "2",
+                    flat_amount: "0"
+                  }
+                ]
+              }
             )
             expect {
               create_subscription(
                 {
                   external_customer_id: customer.external_id,
                   external_id: customer.external_id,
-                  plan_code: plan_new.code,
-                },
+                  plan_code: plan_new.code
+                }
               )
-            }.to change { subscription.reload.status }.from('active').to('terminated')
+            }.to change { subscription.reload.status }.from("active").to("terminated")
               .and change { subscription.invoices.count }.from(1).to(2)
 
             invoice = subscription.invoices.order(created_at: :desc).first
@@ -633,19 +633,19 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(41_000)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(41_000)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('95.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("95.0")
           end
         end
       end
     end
   end
 
-  describe 'with unique_count_agg' do
-    let(:aggregation_type) { 'unique_count_agg' }
-    let(:field_name) { 'amount' }
+  describe "with unique_count_agg" do
+    let(:aggregation_type) { "unique_count_agg" }
+    let(:field_name) { "amount" }
 
-    describe 'two ranges' do
-      it 'returns the expected invoice and usage amounts' do
+    describe "two ranges" do
+      it "returns the expected invoice and usage amounts" do
         Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
         WebhookEndpoint.destroy_all
 
@@ -654,8 +654,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -669,17 +669,17 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 from_value: 0,
                 to_value: 1,
-                per_unit_amount: '10',
-                flat_amount: '100',
+                per_unit_amount: "10",
+                flat_amount: "100"
               },
               {
                 from_value: 2,
                 to_value: nil,
-                per_unit_amount: '5',
-                flat_amount: '50',
-              },
-            ],
-          },
+                per_unit_amount: "5",
+                flat_amount: "50"
+              }
+            ]
+          }
         )
 
         travel_to(DateTime.new(2023, 9, 10)) do
@@ -688,14 +688,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1111', operation_type: 'add' },
-            },
+              properties: {amount: "1111", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(10_700)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(10_700)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
         end
 
         travel_to(DateTime.new(2023, 9, 12)) do
@@ -704,14 +704,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1111', operation_type: 'remove' },
-            },
+              properties: {amount: "1111", operation_type: "remove"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(10_100)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(10_100)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('0.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
         end
 
         travel_to(DateTime.new(2023, 9, 14)) do
@@ -720,14 +720,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1111', operation_type: 'add' },
-            },
+              properties: {amount: "1111", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_383)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_383)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
         end
 
         travel_to(DateTime.new(2023, 9, 15)) do
@@ -736,14 +736,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2222', operation_type: 'add' },
-            },
+              properties: {amount: "2222", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_650)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_650)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
         end
 
         travel_to(DateTime.new(2023, 9, 16)) do
@@ -752,14 +752,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2222', operation_type: 'add' },
-            },
+              properties: {amount: "2222", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_650)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_650)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
         end
 
         travel_to(DateTime.new(2023, 9, 20)) do
@@ -768,14 +768,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '3333', operation_type: 'add' },
-            },
+              properties: {amount: "3333", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_833)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_833)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('3.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("3.0")
         end
 
         travel_to(DateTime.new(2023, 10, 1)) do
@@ -796,7 +796,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_000) # 100 + 10 + 50 + 5 + 5
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_000)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('3.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("3.0")
         end
 
         travel_to(DateTime.new(2023, 10, 17)) do
@@ -805,20 +805,20 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4444', operation_type: 'add' },
-            },
+              properties: {amount: "4444", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_242)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_242)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('4.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("4.0")
         end
       end
     end
 
-    context 'with multiple events on the same day' do
-      it 'returns the expected invoice and usage amounts' do
+    context "with multiple events on the same day" do
+      it "returns the expected invoice and usage amounts" do
         Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
         WebhookEndpoint.destroy_all
 
@@ -827,8 +827,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -842,17 +842,17 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 from_value: 0,
                 to_value: 5,
-                per_unit_amount: '10',
-                flat_amount: '100',
+                per_unit_amount: "10",
+                flat_amount: "100"
               },
               {
                 from_value: 6,
                 to_value: nil,
-                per_unit_amount: '5',
-                flat_amount: '50',
-              },
-            ],
-          },
+                per_unit_amount: "5",
+                flat_amount: "50"
+              }
+            ]
+          }
         )
 
         travel_to(DateTime.new(2023, 10, 10)) do
@@ -861,14 +861,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1111', operation_type: 'add' },
-            },
+              properties: {amount: "1111", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(10_710)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(10_710)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
         end
 
         travel_to(DateTime.new(2023, 10, 20)) do
@@ -877,14 +877,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2222', operation_type: 'add' },
-            },
+              properties: {amount: "2222", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_097)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_097)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
         end
 
         travel_to(DateTime.new(2023, 10, 20)) do
@@ -893,14 +893,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '3333', operation_type: 'add' },
-            },
+              properties: {amount: "3333", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_484)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_484)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('3.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("3.0")
         end
 
         travel_to(DateTime.new(2023, 10, 20)) do
@@ -909,14 +909,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4444', operation_type: 'add' },
-            },
+              properties: {amount: "4444", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_871)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_871)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('4.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("4.0")
         end
 
         travel_to(DateTime.new(2023, 10, 20)) do
@@ -925,14 +925,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '5555', operation_type: 'add' },
-            },
+              properties: {amount: "5555", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(12_258)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(12_258)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('5.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("5.0")
         end
 
         travel_to(DateTime.new(2023, 10, 25)) do
@@ -941,14 +941,14 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '6666', operation_type: 'add' },
-            },
+              properties: {amount: "6666", operation_type: "add"}
+            }
           )
 
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_371)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_371)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('6.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("6.0")
         end
 
         travel_to(DateTime.new(2023, 11, 1)) do
@@ -969,12 +969,12 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(20_500)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(20_500)
-          expect(json[:customer_usage][:charges_usage][0][:units]).to eq('6.0')
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("6.0")
         end
       end
 
-      context 'when there are old events before first invoice and subscription is terminated' do
-        it 'returns expected invoice and usage amounts' do
+      context "when there are old events before first invoice and subscription is terminated" do
+        it "returns expected invoice and usage amounts" do
           Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
           WebhookEndpoint.destroy_all
 
@@ -983,8 +983,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               {
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
-                plan_code: plan.code,
-              },
+                plan_code: plan.code
+              }
             )
           end
 
@@ -1000,17 +1000,17 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 {
                   from_value: 0,
                   to_value: 1,
-                  per_unit_amount: '5',
-                  flat_amount: '10',
+                  per_unit_amount: "5",
+                  flat_amount: "10"
                 },
                 {
                   from_value: 2,
                   to_value: nil,
-                  per_unit_amount: '15',
-                  flat_amount: '30',
-                },
-              ],
-            },
+                  per_unit_amount: "15",
+                  flat_amount: "30"
+                }
+              ]
+            }
           )
 
           travel_to(DateTime.new(2023, 10, 5)) do
@@ -1019,8 +1019,8 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '1111', operation_type: 'add' },
-              },
+                properties: {amount: "1111", operation_type: "add"}
+              }
             )
           end
 
@@ -1028,21 +1028,21 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(1_500)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(1_500)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('1.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
 
             create_event(
               {
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '2222', operation_type: 'add' },
-              },
+                properties: {amount: "2222", operation_type: "add"}
+              }
             )
 
             fetch_current_usage(customer:)
             expect(json[:customer_usage][:amount_cents].round(2)).to eq(5_710)
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(5_710)
-            expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2.0')
+            expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
 
             Subscriptions::TerminateService.call(subscription:)
             perform_all_enqueued_jobs
@@ -1052,7 +1052,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               expect(subscription.reload).to be_terminated
               expect(subscription.reload.invoices.count).to eq(1)
               expect(invoice.total_amount_cents).to eq(4_161)
-              expect(invoice.issuing_date.iso8601).to eq('2023-12-07')
+              expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
             end
           end
         end

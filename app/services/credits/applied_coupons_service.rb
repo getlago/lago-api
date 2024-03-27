@@ -40,7 +40,7 @@ module Credits
       @applied_coupons = customer
         .applied_coupons.active
         .joins(:coupon)
-        .order('coupons.limited_billable_metrics DESC, coupons.limited_plans DESC, applied_coupons.created_at ASC')
+        .order("coupons.limited_billable_metrics DESC, coupons.limited_plans DESC, applied_coupons.created_at ASC")
     end
   end
 end

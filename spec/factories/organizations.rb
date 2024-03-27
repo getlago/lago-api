@@ -3,11 +3,11 @@
 FactoryBot.define do
   factory :organization do
     name { Faker::Company.name }
-    default_currency { 'USD' }
+    default_currency { "USD" }
     vat_rate { 20 }
 
     email { Faker::Internet.email }
-    email_settings { ['invoice.finalized', 'credit_note.created'] }
+    email_settings { ["invoice.finalized", "credit_note.created"] }
 
     transient do
       webhook_url { Faker::Internet.url }

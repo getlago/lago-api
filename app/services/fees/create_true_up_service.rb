@@ -50,7 +50,7 @@ module Fees
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
         boundaries.timestamp || Time.current,
-        current_usage: subscription.terminated? && subscription.upgraded?,
+        current_usage: subscription.terminated? && subscription.upgraded?
       )
     end
   end

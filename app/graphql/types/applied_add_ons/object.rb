@@ -3,7 +3,7 @@
 module Types
   module AppliedAddOns
     class Object < Types::BaseObject
-      graphql_name 'AppliedAddOn'
+      graphql_name "AppliedAddOn"
 
       field :add_on, Types::AddOns::Object, null: false
       field :id, ID, null: false

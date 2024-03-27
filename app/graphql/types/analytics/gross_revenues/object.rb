@@ -4,7 +4,7 @@ module Types
   module Analytics
     module GrossRevenues
       class Object < Types::BaseObject
-        graphql_name 'GrossRevenue'
+        graphql_name "GrossRevenue"
 
         field :amount_cents, GraphQL::Types::BigInt, null: true
         field :currency, Types::CurrencyEnum, null: true

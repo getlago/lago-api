@@ -17,7 +17,7 @@ FactoryBot.define do
     external_subscription_id { subscription.external_id }
   end
 
-  factory :received_event, class: 'Event' do
+  factory :received_event, class: "Event" do
     transient do
       source_organization { create(:organization) }
       source_customer { create(:customer, organization: source_organization) }
@@ -25,7 +25,7 @@ FactoryBot.define do
         create(
           :subscription,
           customer: source_customer,
-          organization: source_organization,
+          organization: source_organization
         )
       end
     end

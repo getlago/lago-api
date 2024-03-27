@@ -6,6 +6,6 @@ FactoryBot.define do
     fee
     amount_cents { 100 }
     precise_amount_cents { 100 }
-    amount_currency { 'EUR' }
+    amount_currency { "EUR" }
   end
 end

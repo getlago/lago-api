@@ -9,7 +9,7 @@ module AddOns
     end
 
     def call
-      return result.not_found_failure!(resource: 'add_on') unless add_on
+      return result.not_found_failure!(resource: "add_on") unless add_on
 
       add_on.name = params[:name] if params.key?(:name)
       add_on.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)

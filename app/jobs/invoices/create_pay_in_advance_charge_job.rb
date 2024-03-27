@@ -2,7 +2,7 @@
 
 module Invoices
   class CreatePayInAdvanceChargeJob < ApplicationJob
-    queue_as 'billing'
+    queue_as "billing"
 
     retry_on Sequenced::SequenceError
 
@@ -17,7 +17,7 @@ module Invoices
         charge:,
         event:,
         timestamp:,
-        invoice: result.invoice,
+        invoice: result.invoice
       )
     end
   end

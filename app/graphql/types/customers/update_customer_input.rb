@@ -3,7 +3,7 @@
 module Types
   module Customers
     class UpdateCustomerInput < BaseInputObject
-      description 'Update Customer input arguments'
+      description "Update Customer input arguments"
 
       argument :id, ID, required: true
 

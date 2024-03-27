@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Subscriptions::TerminateJob, type: :job do
   let(:subscription) { create(:subscription) }
@@ -9,7 +9,7 @@ RSpec.describe Subscriptions::TerminateJob, type: :job do
   let(:subscription_service) { instance_double(Subscriptions::TerminateService) }
   let(:result) { BaseService::Result.new }
 
-  it 'calls the subscription service' do
+  it "calls the subscription service" do
     allow(Subscriptions::TerminateService).to receive(:new)
       .with(subscription:)
       .and_return(subscription_service)
@@ -23,12 +23,12 @@ RSpec.describe Subscriptions::TerminateJob, type: :job do
     expect(subscription_service).to have_received(:terminate_and_start_next)
   end
 
-  context 'when result is a failure' do
+  context "when result is a failure" do
     let(:result) do
-      BaseService::Result.new.not_found_failure!(resource: 'subscription')
+      BaseService::Result.new.not_found_failure!(resource: "subscription")
     end
 
-    it 'raises an error' do
+    it "raises an error" do
       allow(Subscriptions::TerminateService).to receive(:new)
         .with(subscription:)
         .and_return(subscription_service)

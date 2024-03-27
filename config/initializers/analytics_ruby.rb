@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-unless ENV['LAGO_DISABLE_SEGMENT'] == 'true'
+unless ENV["LAGO_DISABLE_SEGMENT"] == "true"
   class SegmentError < StandardError
     attr_reader :status, :error_message, :message
 
@@ -17,9 +17,9 @@ unless ENV['LAGO_DISABLE_SEGMENT'] == 'true'
 
   SEGMENT_CLIENT = Segment::Analytics.new(
     {
-      write_key: ENV.fetch('SEGMENT_WRITE_KEY', 'changeme'),
+      write_key: ENV.fetch("SEGMENT_WRITE_KEY", "changeme"),
       on_error: proc { |status, msg| Sentry.capture_exception(SegmentError.new(status, msg)) },
-      stub: Rails.env.development? || Rails.env.test?,
-    },
+      stub: Rails.env.development? || Rails.env.test?
+    }
   )
 end

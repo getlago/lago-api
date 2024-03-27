@@ -36,7 +36,7 @@ module Subscriptions
         (next_to_date.to_date + 1.day - from_date.to_date).to_i
       end
 
-      alias compute_charges_duration compute_duration
+      alias_method :compute_charges_duration, :compute_duration
 
       def compute_base_date
         # NOTE: if subscription anniversary is on last day of month and current month days count
@@ -117,7 +117,7 @@ module Subscriptions
           (subscription_at.month % 12).zero? ? 12 : (subscription_at.month % 12),
           ((subscription_at.month + 3) % 12).zero? ? 12 : ((subscription_at.month + 3) % 12),
           ((subscription_at.month + 6) % 12).zero? ? 12 : ((subscription_at.month + 6) % 12),
-          ((subscription_at.month + 9) % 12).zero? ? 12 : ((subscription_at.month + 9) % 12),
+          ((subscription_at.month + 9) % 12).zero? ? 12 : ((subscription_at.month + 9) % 12)
         ].sort
 
         # This is the case when we terminate subscription on On February 10 but anniversary date is on

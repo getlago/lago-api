@@ -3,7 +3,7 @@
 module Invoices
   module Payments
     class RetryAllJob < ApplicationJob
-      queue_as 'invoices'
+      queue_as "invoices"
 
       def perform(organization_id:, invoice_ids:)
         result = Invoices::Payments::RetryBatchService.new(organization_id:).call(invoice_ids)

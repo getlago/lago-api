@@ -3,13 +3,13 @@
 module Types
   module ChargeFilters
     class Values < Types::BaseScalar
-      graphql_name 'ChargeFilterValues'
+      graphql_name "ChargeFilterValues"
 
       def self.coerce_input(input_value, _context)
         input_value.to_h.each_with_object({}) do |(key, values), result|
           result[key.to_s] = values&.map(&:to_s) || []
         end
-      rescue StandardError
+      rescue
         raise GraphQL::CoercionError, "#{input_value.inspect} is not a valid hash object"
       end
 

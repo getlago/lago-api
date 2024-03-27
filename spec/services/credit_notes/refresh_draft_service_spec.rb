@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::RefreshDraftService, type: :service do
   subject(:refresh_service) { described_class.new(credit_note:, fee:, old_fee_values:) }
@@ -13,12 +13,12 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
     [
       {
         credit_note_item_id: credit_note_item.id,
-        fee_amount_cents: credit_note_item.fee&.amount_cents,
-      },
+        fee_amount_cents: credit_note_item.fee&.amount_cents
+      }
     ]
   end
 
-  describe '#call' do
+  describe "#call" do
     let(:status) { :draft }
     let(:fee) { create(:fee, invoice:, taxes_rate: 20, amount_cents: 100, precise_coupons_amount_cents: 20) }
     let(:applied_tax) { create(:fee_applied_tax, tax:, fee:, amount_cents: 0) }
@@ -32,7 +32,7 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
         taxes_amount_cents: 0,
         credit_amount_cents: 100,
         balance_amount_cents: 100,
-        total_amount_cents: 100,
+        total_amount_cents: 100
       )
     end
 
@@ -41,19 +41,19 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
       credit_note_item
     end
 
-    context 'when credit_note is finalized' do
+    context "when credit_note is finalized" do
       let(:status) { :finalized }
 
-      it 'does not refresh it' do
+      it "does not refresh it" do
         expect { refresh_service.call }.not_to change(credit_note, :updated_at)
       end
     end
 
-    it 'assigns credit note to the fee' do
+    it "assigns credit note to the fee" do
       expect { refresh_service.call }.to change { credit_note.reload.items.pluck(:fee_id) }.to([fee.id])
     end
 
-    it 'updates vat amounts of the credit note' do
+    it "updates vat amounts of the credit note" do
       expect { refresh_service.call }
         .to change { credit_note.reload.taxes_amount_cents }.from(0).to(8)
         .and change(credit_note, :coupons_adjustment_amount_cents).from(0).to(10)

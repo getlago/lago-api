@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::FinalizeJob, type: :job do
   let(:invoice) { create(:invoice) }
@@ -11,7 +11,7 @@ RSpec.describe Invoices::FinalizeJob, type: :job do
     instance_double(Invoices::FinalizeService)
   end
 
-  it 'delegates to the Generate service' do
+  it "delegates to the Generate service" do
     allow(Invoices::FinalizeService).to receive(:new)
       .with(invoice:)
       .and_return(finalize_service)

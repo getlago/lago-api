@@ -8,7 +8,7 @@ module Plans
     end
 
     def call
-      return result.not_found_failure!(resource: 'plan') unless plan
+      return result.not_found_failure!(resource: "plan") unless plan
 
       ActiveRecord::Base.transaction do
         plan.update!(pending_deletion: true)

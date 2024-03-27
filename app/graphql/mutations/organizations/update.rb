@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'UpdateOrganization'
-      description 'Updates an Organization'
+      graphql_name "UpdateOrganization"
+      description "Updates an Organization"
 
       input_object_class Types::Organizations::UpdateOrganizationInput
 

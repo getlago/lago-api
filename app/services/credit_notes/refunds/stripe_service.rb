@@ -25,7 +25,7 @@ module CreditNotes
           amount_cents: stripe_result.amount,
           amount_currency: stripe_result.currency&.upcase,
           status: stripe_result.status,
-          provider_refund_id: stripe_result.id,
+          provider_refund_id: stripe_result.id
         )
         refund.save!
 
@@ -49,13 +49,13 @@ module CreditNotes
         track_refund_status_changed(status)
 
         if status.to_sym == :failed
-          deliver_error_webhook(message: 'Payment refund failed', code: nil)
-          result.service_failure!(code: 'refund_failed', message: 'Refund failed to perform')
+          deliver_error_webhook(message: "Payment refund failed", code: nil)
+          result.service_failure!(code: "refund_failed", message: "Refund failed to perform")
         end
 
         result
       rescue ArgumentError
-        result.single_validation_failure!(field: :refund_status, error_code: 'value_is_invalid')
+        result.single_validation_failure!(field: :refund_status, error_code: "value_is_invalid")
       end
 
       private
@@ -84,8 +84,8 @@ module CreditNotes
           stripe_refund_payload,
           {
             api_key: stripe_api_key,
-            idempotency_key: credit_note.id,
-          },
+            idempotency_key: credit_note.id
+          }
         )
       rescue Stripe::InvalidRequestError => e
         deliver_error_webhook(message: e.message, code: e.code)
@@ -102,8 +102,8 @@ module CreditNotes
           metadata: {
             lago_customer_id: customer.id,
             lago_credit_note_id: credit_note.id,
-            lago_invoice_id: invoice.id,
-          },
+            lago_invoice_id: invoice.id
+          }
         }
       end
 
@@ -122,13 +122,13 @@ module CreditNotes
         return unless organization.webhook_endpoints.any?
 
         SendWebhookJob.perform_later(
-          'credit_note.provider_refund_failure',
+          "credit_note.provider_refund_failure",
           credit_note,
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {
             message:,
-            error_code: code,
-          },
+            error_code: code
+          }
         )
       end
 
@@ -141,12 +141,12 @@ module CreditNotes
       def track_refund_status_changed(status)
         SegmentTrackJob.perform_later(
           membership_id: CurrentContext.membership,
-          event: 'refund_status_changed',
+          event: "refund_status_changed",
           properties: {
             organization_id: organization.id,
             credit_note_id: credit_note.id,
-            refund_status: status,
-          },
+            refund_status: status
+          }
         )
       end
 
@@ -157,7 +157,7 @@ module CreditNotes
         # NOTE: Invoice does not belongs to this lago instance
         return result unless Invoice.find_by(id: metadata[:lago_invoice_id])
 
-        result.not_found_failure!(resource: 'stripe_refund')
+        result.not_found_failure!(resource: "stripe_refund")
       end
 
       def stripe_payment_provider

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
   let(:membership) { create(:membership) }
@@ -9,7 +9,7 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
     create(
       :subscription,
       organization: membership.organization,
-      subscription_at: Time.current + 3.days,
+      subscription_at: Time.current + 3.days
     )
   end
 
@@ -25,35 +25,35 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
     GQL
   end
 
-  it 'updates an subscription' do
+  it "updates an subscription" do
     result = execute_graphql(
       current_user: membership.user,
       query: mutation,
       variables: {
         input: {
           id: subscription.id,
-          name: 'New name',
-        },
-      },
+          name: "New name"
+        }
+      }
     )
 
-    result_data = result['data']['updateSubscription']
+    result_data = result["data"]["updateSubscription"]
 
     aggregate_failures do
-      expect(result_data['name']).to eq('New name')
+      expect(result_data["name"]).to eq("New name")
     end
   end
 
-  context 'without current_user' do
-    it 'returns an error' do
+  context "without current_user" do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
         variables: {
           input: {
             id: subscription.id,
-            name: 'New name',
-          },
-        },
+            name: "New name"
+          }
+        }
       )
 
       expect_unauthorized_error(result)

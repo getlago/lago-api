@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'DownloadCreditNote'
-      description 'Download a Credit Note PDF'
+      graphql_name "DownloadCreditNote"
+      description "Download a Credit Note PDF"
 
       argument :id, ID, required: true
 
@@ -17,7 +17,7 @@ module Mutations
         validate_organization!
 
         result = ::CreditNotes::GenerateService.new(
-          credit_note: context[:current_user].credit_notes.find_by(id: args[:id]),
+          credit_note: context[:current_user].credit_notes.find_by(id: args[:id])
         ).call
 
         result.success? ? result.credit_note : result_error(result)

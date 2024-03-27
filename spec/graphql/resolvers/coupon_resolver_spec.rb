@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CouponResolver, type: :graphql do
   let(:query) do
@@ -28,46 +28,46 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
     end
   end
 
-  it 'returns a single coupon' do
+  it "returns a single coupon" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: { couponId: coupon.id },
+      variables: {couponId: coupon.id}
     )
 
-    coupon_response = result['data']['coupon']
+    coupon_response = result["data"]["coupon"]
 
     aggregate_failures do
-      expect(coupon_response['id']).to eq(coupon.id)
-      expect(coupon_response['customersCount']).to eq(1)
-      expect(coupon_response['description']).to eq(coupon.description)
-      expect(coupon_response['appliedCouponsCount']).to eq(1)
+      expect(coupon_response["id"]).to eq(coupon.id)
+      expect(coupon_response["customersCount"]).to eq(1)
+      expect(coupon_response["description"]).to eq(coupon.description)
+      expect(coupon_response["appliedCouponsCount"]).to eq(1)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query:,
-        variables: { couponId: coupon.id },
+        variables: {couponId: coupon.id}
       )
 
-      expect_graphql_error(result:, message: 'Missing organization id')
+      expect_graphql_error(result:, message: "Missing organization id")
     end
   end
 
-  context 'when plan is not found' do
-    it 'returns an error' do
+  context "when plan is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: { couponId: 'foo' },
+        variables: {couponId: "foo"}
       )
 
-      expect_graphql_error(result:, message: 'Resource not found')
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

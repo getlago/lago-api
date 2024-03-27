@@ -9,7 +9,7 @@ class GraphqlController < ApplicationController
   before_action :set_context_source
 
   rescue_from JWT::ExpiredSignature do
-    render_graphql_error(code: 'expired_jwt_token', status: 401)
+    render_graphql_error(code: "expired_jwt_token", status: 401)
   end
 
   # If accessing from outside this domain, nullify the session
@@ -25,13 +25,13 @@ class GraphqlController < ApplicationController
       current_user:,
       current_organization:,
       customer_portal_user:,
-      request:,
+      request:
     }
     result = LagoApiSchema.execute(query, variables:, context:, operation_name:)
     render(json: result)
   rescue JWT::ExpiredSignature
-    render_graphql_error(code: 'expired_jwt_token', status: 401)
-  rescue StandardError => e
+    render_graphql_error(code: "expired_jwt_token", status: 401)
+  rescue => e
     raise e unless Rails.env.development?
 
     handle_error_in_development(e)
@@ -63,7 +63,7 @@ class GraphqlController < ApplicationController
     logger.error(e.message)
     logger.error(e.backtrace.join("\n"))
 
-    render(json: { errors: [{ message: e.message, backtrace: e.backtrace }], data: {} }, status: 500)
+    render(json: {errors: [{message: e.message, backtrace: e.backtrace}], data: {}}, status: 500)
   end
 
   def render_graphql_error(code:, status:, message: nil)
@@ -73,14 +73,14 @@ class GraphqlController < ApplicationController
         errors: [
           {
             message: message || code,
-            extensions: { status:, code: },
-          },
-        ],
-      },
+            extensions: {status:, code:}
+          }
+        ]
+      }
     )
   end
 
   def set_context_source
-    CurrentContext.source = 'graphql'
+    CurrentContext.source = "graphql"
   end
 end

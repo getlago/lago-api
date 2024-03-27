@@ -23,10 +23,10 @@ class LagoApiSchema < GraphQL::Schema
     # For example, use Rails' GlobalID library (https://github.com/rails/globalid):
     object_id = object.to_global_id.to_s
     # Remove this redundant prefix to make IDs shorter:
-    object_id = object_id.sub("gid://#{GlobalID.app}/", '')
+    object_id = object_id.sub("gid://#{GlobalID.app}/", "")
     encoded_id = Base64.urlsafe_encode64(object_id)
     # Remove the "=" padding
-    encoded_id = encoded_id.sub(/=+/, '')
+    encoded_id = encoded_id.sub(/=+/, "")
     # Add a type hint
     type_hint = type_definition.graphql_name.first
     "#{type_hint}_#{encoded_id}"
@@ -36,7 +36,7 @@ class LagoApiSchema < GraphQL::Schema
   def self.object_from_id(encoded_id_with_hint, _query_ctx)
     # For example, use Rails' GlobalID library (https://github.com/rails/globalid):
     # Split off the type hint
-    _type_hint, encoded_id = encoded_id_with_hint.split('_', 2)
+    _type_hint, encoded_id = encoded_id_with_hint.split("_", 2)
     # Decode the ID
     id = Base64.urlsafe_decode64(encoded_id)
     # Rebuild it for Rails then find the object:

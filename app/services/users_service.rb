@@ -5,7 +5,7 @@ class UsersService < BaseService
     result.user = User.find_by(email:)&.authenticate(password)
 
     unless result.user.present? && result.user.memberships&.active&.any?
-      return result.single_validation_failure!(error_code: 'incorrect_login_or_password')
+      return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
     result.token = generate_token if result.user
@@ -17,20 +17,20 @@ class UsersService < BaseService
   end
 
   def register(email, password, organization_name)
-    if ENV.fetch('LAGO_SIGNUP_DISABLED', 'false') == 'true'
-      return result.not_allowed_failure!(code: 'signup disabled')
+    if ENV.fetch("LAGO_SIGNUP_DISABLED", "false") == "true"
+      return result.not_allowed_failure!(code: "signup disabled")
     end
 
     result.user = User.find_or_initialize_by(email:)
 
     if result.user.id
-      result.single_validation_failure!(field: :email, error_code: 'user_already_exists')
+      result.single_validation_failure!(field: :email, error_code: "user_already_exists")
 
       return result
     end
 
     ActiveRecord::Base.transaction do
-      result.organization = Organization.create!(name: organization_name, document_numbering: 'per_organization')
+      result.organization = Organization.create!(name: organization_name, document_numbering: "per_organization")
 
       create_user_and_membership(result, password)
     end
@@ -70,7 +70,7 @@ class UsersService < BaseService
 
       result.membership = Membership.create!(
         user: result.user,
-        organization: result.organization,
+        organization: result.organization
       )
 
       result
@@ -80,26 +80,26 @@ class UsersService < BaseService
   end
 
   def generate_token
-    JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
-  rescue StandardError => e
-    result.service_failure!(code: 'token_encoding_error', message: e.message)
+    JWT.encode(payload, ENV["SECRET_KEY_BASE"], "HS256")
+  rescue => e
+    result.service_failure!(code: "token_encoding_error", message: e.message)
   end
 
   def payload
     {
       sub: result.user.id,
-      exp: Time.now.to_i + 8640, # 6 hours expiration
+      exp: Time.now.to_i + 8640 # 6 hours expiration
     }
   end
 
   def track_organization_registered(organization, membership)
     SegmentTrackJob.perform_later(
       membership_id: "membership/#{membership.id}",
-      event: 'organization_registered',
+      event: "organization_registered",
       properties: {
         organization_name: organization.name,
-        organization_id: organization.id,
-      },
+        organization_id: organization.id
+      }
     )
   end
 end

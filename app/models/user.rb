@@ -7,7 +7,7 @@ class User < ApplicationRecord
   has_many :password_resets
 
   has_many :memberships
-  has_many :organizations, through: :memberships, class_name: 'Organization'
+  has_many :organizations, through: :memberships, class_name: "Organization"
 
   has_many :billable_metrics, through: :organizations
   has_many :customers, through: :organizations

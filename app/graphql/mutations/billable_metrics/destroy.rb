@@ -5,8 +5,8 @@ module Mutations
     class Destroy < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'DestroyBillableMetric'
-      description 'Deletes a Billable metric'
+      graphql_name "DestroyBillableMetric"
+      description "Deletes a Billable metric"
 
       argument :id, String, required: true
 

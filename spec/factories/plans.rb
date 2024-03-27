@@ -6,9 +6,9 @@ FactoryBot.define do
     name { Faker::TvShows::SiliconValley.app }
     invoice_display_name { Faker::TvShows::BreakingBad.episode }
     code { Faker::Alphanumeric.alphanumeric(number: 10) }
-    interval { 'monthly' }
+    interval { "monthly" }
     pay_in_advance { false }
     amount_cents { 100 }
-    amount_currency { 'EUR' }
+    amount_currency { "EUR" }
   end
 end

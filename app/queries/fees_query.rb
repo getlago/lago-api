@@ -26,7 +26,7 @@ class FeesQuery < BaseQuery
   end
 
   def with_external_subscription(scope)
-    scope.joins(:subscription).where(subscription: { external_id: filters.external_subscription_id })
+    scope.joins(:subscription).where(subscription: {external_id: filters.external_subscription_id})
   end
 
   def with_external_customer(scope)
@@ -35,18 +35,18 @@ class FeesQuery < BaseQuery
     #       - Add ons and regular fees: customers linked to the invoice
     #       - Instant: customers linked to the subscription
     scope
-      .joins('LEFT JOIN customers AS invoice_customers ON invoice_customers.id = invoices.customer_id')
-      .where('COALESCE(customers.external_id, invoice_customers.external_id) = ?', filters.external_customer_id)
+      .joins("LEFT JOIN customers AS invoice_customers ON invoice_customers.id = invoices.customer_id")
+      .where("COALESCE(customers.external_id, invoice_customers.external_id) = ?", filters.external_customer_id)
   end
 
   def with_billable_metric_code(scope)
     scope.joins(:billable_metric)
-      .where(billable_metric: { code: filters.billable_metric_code })
+      .where(billable_metric: {code: filters.billable_metric_code})
   end
 
   def with_fee_type(scope)
     unless Fee::FEE_TYPES.include?(filters.fee_type.to_sym)
-      result.single_validation_failure!(field: :fee_type, error_code: 'value_is_invalid')
+      result.single_validation_failure!(field: :fee_type, error_code: "value_is_invalid")
         .raise_if_error!
     end
 
@@ -55,7 +55,7 @@ class FeesQuery < BaseQuery
 
   def with_payment_status(scope)
     unless Fee::PAYMENT_STATUS.include?(filters.payment_status.to_sym)
-      result.single_validation_failure!(field: :payment_status, error_code: 'value_is_invalid')
+      result.single_validation_failure!(field: :payment_status, error_code: "value_is_invalid")
         .raise_if_error!
     end
 

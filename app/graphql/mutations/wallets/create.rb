@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateCustomerWallet'
-      description 'Creates a new Customer Wallet'
+      graphql_name "CreateCustomerWallet"
+      description "Creates a new Customer Wallet"
 
       input_object_class Types::Wallets::CreateInput
 
@@ -22,7 +22,7 @@ module Mutations
             args
               .merge(organization_id: current_organization.id)
               .merge(customer: current_customer(args[:customer_id]))
-              .except(:customer_id),
+              .except(:customer_id)
           )
 
         result.success? ? result.wallet : result_error(result)

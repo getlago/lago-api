@@ -5,11 +5,11 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query taxes of an organization'
+    description "Query taxes of an organization"
 
     argument :applied_to_organization, Boolean, required: false
     argument :auto_generated, Boolean, required: false
-    argument :ids, [ID], required: false, description: 'List of taxes IDs to fetch'
+    argument :ids, [ID], required: false, description: "List of taxes IDs to fetch"
     argument :limit, Integer, required: false
     argument :order, String, required: false
     argument :page, Integer, required: false
@@ -37,8 +37,8 @@ module Resolvers
         filters: {
           ids:,
           applied_to_organization:,
-          auto_generated:,
-        },
+          auto_generated:
+        }
       )
 
       result.taxes

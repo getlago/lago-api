@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe AppliedCouponsQuery, type: :query do
   subject(:applied_coupons_query) { described_class.new(organization:, pagination:, filters:) }
@@ -18,8 +18,8 @@ RSpec.describe AppliedCouponsQuery, type: :query do
 
   before { applied_coupon }
 
-  describe 'call' do
-    it 'returns a list of applied_coupons' do
+  describe "call" do
+    it "returns a list of applied_coupons" do
       result = applied_coupons_query.call
 
       aggregate_failures do
@@ -29,10 +29,10 @@ RSpec.describe AppliedCouponsQuery, type: :query do
       end
     end
 
-    context 'when customer is deleted' do
+    context "when customer is deleted" do
       let(:customer) { create(:customer, :deleted, organization:) }
 
-      it 'filters the applied_coupons' do
+      it "filters the applied_coupons" do
         result = applied_coupons_query.call
 
         aggregate_failures do
@@ -42,10 +42,10 @@ RSpec.describe AppliedCouponsQuery, type: :query do
       end
     end
 
-    context 'with pagination' do
+    context "with pagination" do
       let(:pagination) { BaseQuery::Pagination.new(page: 2, limit: 10) }
 
-      it 'applies the pagination' do
+      it "applies the pagination" do
         result = applied_coupons_query.call
 
         aggregate_failures do
@@ -56,10 +56,10 @@ RSpec.describe AppliedCouponsQuery, type: :query do
       end
     end
 
-    context 'with customer filter' do
-      let(:query_filters) { { external_customer_id: customer.external_id } }
+    context "with customer filter" do
+      let(:query_filters) { {external_customer_id: customer.external_id} }
 
-      it 'applies the filter' do
+      it "applies the filter" do
         result = applied_coupons_query.call
 
         aggregate_failures do
@@ -69,10 +69,10 @@ RSpec.describe AppliedCouponsQuery, type: :query do
       end
     end
 
-    context 'with status filter' do
-      let(:query_filters) { { status: 'terminated' } }
+    context "with status filter" do
+      let(:query_filters) { {status: "terminated"} }
 
-      it 'applies the filter' do
+      it "applies the filter" do
         result = applied_coupons_query.call
 
         aggregate_failures do

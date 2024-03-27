@@ -11,7 +11,7 @@ module V1
         amount_cents: model.amount_cents,
         interval: model.plan.interval,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
+        updated_at: model.updated_at.iso8601
       }
 
       payload.merge!(taxes) if include?(:taxes)
@@ -25,7 +25,7 @@ module V1
       ::CollectionSerializer.new(
         model.taxes,
         ::V1::TaxSerializer,
-        collection_name: 'taxes',
+        collection_name: "taxes"
       ).serialize
     end
   end

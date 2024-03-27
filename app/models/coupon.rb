@@ -16,23 +16,23 @@ class Coupon < ApplicationRecord
 
   STATUSES = [
     :active,
-    :terminated,
+    :terminated
   ].freeze
 
   EXPIRATION_TYPES = [
     :no_expiration,
-    :time_limit,
+    :time_limit
   ].freeze
 
   COUPON_TYPES = [
     :fixed_amount,
-    :percentage,
+    :percentage
   ].freeze
 
   FREQUENCIES = [
     :once,
     :recurring,
-    :forever,
+    :forever
   ].freeze
 
   enum status: STATUSES
@@ -43,31 +43,31 @@ class Coupon < ApplicationRecord
   monetize :amount_cents, disable_validation: true, allow_nil: true
 
   validates :name, presence: true
-  validates :code, uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+  validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
 
   validates :amount_cents, presence: true, if: :fixed_amount?
-  validates :amount_cents, numericality: { greater_than: 0 }, allow_nil: true
+  validates :amount_cents, numericality: {greater_than: 0}, allow_nil: true
 
   validates :amount_currency, presence: true, if: :fixed_amount?
-  validates :amount_currency, inclusion: { in: currency_list }, allow_nil: true
+  validates :amount_currency, inclusion: {in: currency_list}, allow_nil: true
 
   validates :percentage_rate, presence: true, if: :percentage?
 
   default_scope -> { kept }
   scope :order_by_status_and_expiration,
-        lambda {
-          order(
-            Arel.sql(
-              [
-                'coupons.status ASC',
-                'coupons.expiration ASC',
-                'coupons.expiration_at ASC',
-              ].join(', '),
-            ),
-          )
-        }
+    lambda {
+      order(
+        Arel.sql(
+          [
+            "coupons.status ASC",
+            "coupons.expiration ASC",
+            "coupons.expiration_at ASC"
+          ].join(", ")
+        )
+      )
+    }
 
-  scope :expired, -> { where('coupons.expiration_at::timestamp(0) < ?', Time.current) }
+  scope :expired, -> { where("coupons.expiration_at::timestamp(0) < ?", Time.current) }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

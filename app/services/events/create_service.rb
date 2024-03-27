@@ -31,7 +31,7 @@ module Events
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique
-      result.single_validation_failure!(field: :transaction_id, error_code: 'value_already_exist')
+      result.single_validation_failure!(field: :transaction_id, error_code: "value_already_exist")
     end
 
     private
@@ -39,11 +39,11 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def produce_kafka_event(event)
-      return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?
-      return if ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'].blank?
+      return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
+      return if ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].blank?
 
       Karafka.producer.produce_async(
-        topic: ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'],
+        topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
         payload: {
           organization_id: organization.id,
           external_customer_id: event.external_customer_id,
@@ -51,8 +51,8 @@ module Events
           transaction_id: event.transaction_id,
           timestamp: event.timestamp.iso8601[...-1], # NOTE: Removes trailing 'Z' to allow clickhouse parsing
           code: event.code,
-          properties: event.properties,
-        }.to_json,
+          properties: event.properties
+        }.to_json
       )
     end
   end

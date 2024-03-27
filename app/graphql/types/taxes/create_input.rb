@@ -3,7 +3,7 @@
 module Types
   module Taxes
     class CreateInput < Types::BaseInputObject
-      graphql_name 'TaxCreateInput'
+      graphql_name "TaxCreateInput"
 
       argument :code, String, required: true
       argument :description, String, required: false

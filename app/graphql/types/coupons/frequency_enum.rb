@@ -3,7 +3,7 @@
 module Types
   module Coupons
     class FrequencyEnum < Types::BaseEnum
-      graphql_name 'CouponFrequency'
+      graphql_name "CouponFrequency"
 
       Coupon::FREQUENCIES.each do |type|
         value type

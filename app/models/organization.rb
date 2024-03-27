@@ -6,8 +6,8 @@ class Organization < ApplicationRecord
   include Currencies
 
   EMAIL_SETTINGS = [
-    'invoice.finalized',
-    'credit_note.created',
+    "invoice.finalized",
+    "credit_note.created"
   ].freeze
 
   has_many :memberships
@@ -25,22 +25,22 @@ class Organization < ApplicationRecord
   has_many :applied_coupons, through: :coupons
   has_many :add_ons
   has_many :invites
-  has_many :payment_providers, class_name: 'PaymentProviders::BaseProvider'
+  has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
   has_many :taxes
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets
   has_many :webhook_endpoints
   has_many :webhooks, through: :webhook_endpoints
 
-  has_many :stripe_payment_providers, class_name: 'PaymentProviders::StripeProvider'
-  has_many :gocardless_payment_providers, class_name: 'PaymentProviders::GocardlessProvider'
-  has_many :adyen_payment_providers, class_name: 'PaymentProviders::AdyenProvider'
+  has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"
+  has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
+  has_many :adyen_payment_providers, class_name: "PaymentProviders::AdyenProvider"
 
   has_one_attached :logo
 
   DOCUMENT_NUMBERINGS = [
     :per_customer,
-    :per_organization,
+    :per_organization
   ].freeze
 
   enum document_numbering: DOCUMENT_NUMBERINGS
@@ -48,19 +48,19 @@ class Organization < ApplicationRecord
   before_create :generate_api_key
 
   validates :country, country_code: true, unless: -> { country.nil? }
-  validates :default_currency, inclusion: { in: currency_list }
+  validates :default_currency, inclusion: {in: currency_list}
   validates :document_locale, language_code: true
   validates :email, email: true, if: :email?
-  validates :invoice_footer, length: { maximum: 600 }
-  validates :document_number_prefix, length: { minimum: 1, maximum: 10 }, on: :update
-  validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
-  validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }
+  validates :invoice_footer, length: {maximum: 600}
+  validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
+  validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
+  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
   validates :logo,
-            image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes },
-            if: :logo?
+    image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
+    if: :logo?
   validates :name, presence: true
   validates :timezone, timezone: true
-  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
+  validates :vat_rate, numericality: {less_than_or_equal_to: 100, greater_than_or_equal_to: 0}
   validates :webhook_url, url: true, allow_nil: true
 
   validate :validate_email_settings
@@ -70,7 +70,7 @@ class Organization < ApplicationRecord
   def logo_url
     return if logo.blank?
 
-    Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV['LAGO_API_URL'])
+    Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV["LAGO_API_URL"])
   end
 
   def base64_logo
@@ -88,11 +88,11 @@ class Organization < ApplicationRecord
 
   def payment_provider(provider)
     case provider
-    when 'stripe'
+    when "stripe"
       stripe_payment_provider
-    when 'gocardless'
+    when "gocardless"
       gocardless_payment_provider
-    when 'adyen'
+    when "adyen"
       adyen_payment_provider
     end
   end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Events::PostProcessJob, type: :job do
   let(:process_service) { instance_double(Events::PostProcessService) }
@@ -10,7 +10,7 @@ RSpec.describe Events::PostProcessJob, type: :job do
     create(:event)
   end
 
-  it 'calls the event post process service' do
+  it "calls the event post process service" do
     allow(Events::PostProcessService).to receive(:new)
       .with(event:)
       .and_return(process_service)

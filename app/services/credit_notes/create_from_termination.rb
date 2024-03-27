@@ -2,7 +2,7 @@
 
 module CreditNotes
   class CreateFromTermination < BaseService
-    def initialize(subscription:, reason: 'order_change', upgrade: false)
+    def initialize(subscription:, reason: "order_change", upgrade: false)
       @subscription = subscription
       @reason = reason
       @upgrade = upgrade
@@ -33,11 +33,11 @@ module CreditNotes
         items: [
           {
             fee_id: last_subscription_fee.id,
-            amount_cents: amount.truncate(CreditNote::DB_PRECISION_SCALE),
-          },
+            amount_cents: amount.truncate(CreditNote::DB_PRECISION_SCALE)
+          }
         ],
         reason: reason.to_sym,
-        automatic: true,
+        automatic: true
       ).call
     end
 
@@ -58,12 +58,12 @@ module CreditNotes
     def date_service
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
-        terminated_at,
+        terminated_at
       )
     end
 
     def plan_amount_cents
-      last_subscription_fee&.amount_details&.[]('plan_amount_cents') || plan.amount_cents
+      last_subscription_fee&.amount_details&.[]("plan_amount_cents") || plan.amount_cents
     end
 
     def to_date
@@ -101,9 +101,9 @@ module CreditNotes
         items: [
           CreditNoteItem.new(
             fee_id: last_subscription_fee.id,
-            precise_amount_cents: item_amount.truncate(CreditNote::DB_PRECISION_SCALE),
-          ),
-        ],
+            precise_amount_cents: item_amount.truncate(CreditNote::DB_PRECISION_SCALE)
+          )
+        ]
       )
 
       (

@@ -12,7 +12,7 @@ module Charges
 
     def call
       unless charge.pay_in_advance?
-        return result.service_failure!(code: 'apply_charge_model_error', message: 'Charge is not pay_in_advance')
+        return result.service_failure!(code: "apply_charge_model_error", message: "Charge is not pay_in_advance")
       end
 
       amount = amount_including_event - amount_excluding_event
@@ -25,7 +25,7 @@ module Charges
       result.units = compute_units
       result.count = 1
       result.amount = amount_cents
-      result.unit_amount = rounded_amount.zero? ? BigDecimal(0) : rounded_amount / compute_units
+      result.unit_amount = rounded_amount.zero? ? BigDecimal("0") : rounded_amount / compute_units
       result
     end
 
@@ -35,18 +35,18 @@ module Charges
 
     def charge_model
       @charge_model ||= case charge.charge_model.to_sym
-                        when :standard
-                          Charges::ChargeModels::StandardService
-                        when :graduated
-                          Charges::ChargeModels::GraduatedService
-                        when :graduated_percentage
-                          Charges::ChargeModels::GraduatedPercentageService
-                        when :package
-                          Charges::ChargeModels::PackageService
-                        when :percentage
-                          Charges::ChargeModels::PercentageService
-                        else
-                          raise(NotImplementedError)
+      when :standard
+        Charges::ChargeModels::StandardService
+      when :graduated
+        Charges::ChargeModels::GraduatedService
+      when :graduated_percentage
+        Charges::ChargeModels::GraduatedPercentageService
+      when :package
+        Charges::ChargeModels::PackageService
+      when :percentage
+        Charges::ChargeModels::PercentageService
+      else
+        raise(NotImplementedError)
       end
     end
 
@@ -64,7 +64,7 @@ module Charges
       charge_model.apply(
         charge:,
         aggregation_result: previous_result,
-        properties: (properties || {}).merge(ignore_last_event: true),
+        properties: (properties || {}).merge(ignore_last_event: true)
       ).amount
     end
 

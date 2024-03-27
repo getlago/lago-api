@@ -3,7 +3,7 @@
 module Types
   module BillableMetrics
     class CreateInput < BaseInputObject
-      description 'Create Billable metric input arguments'
+      description "Create Billable metric input arguments"
 
       argument :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, required: true
       argument :code, String, required: true

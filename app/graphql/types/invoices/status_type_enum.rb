@@ -3,7 +3,7 @@
 module Types
   module Invoices
     class StatusTypeEnum < Types::BaseEnum
-      graphql_name 'InvoiceStatusTypeEnum'
+      graphql_name "InvoiceStatusTypeEnum"
 
       Invoice::STATUS.reject { |k| k == :generating }.each do |type|
         value type

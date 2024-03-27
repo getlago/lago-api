@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query subscriptions of an organization'
+    description "Query subscriptions of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
@@ -20,7 +20,7 @@ module Resolvers
       result = SubscriptionsQuery.call(
         organization: current_organization,
         pagination: BaseQuery::Pagination.new(page:, limit:),
-        filters: BaseQuery::Filters.new({ plan_code:, status: }),
+        filters: BaseQuery::Filters.new({plan_code:, status:})
       )
 
       result.subscriptions

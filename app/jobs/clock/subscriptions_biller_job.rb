@@ -2,7 +2,7 @@
 
 module Clock
   class SubscriptionsBillerJob < ApplicationJob
-    queue_as 'clock'
+    queue_as "clock"
 
     def perform
       Subscriptions::BillingService.call

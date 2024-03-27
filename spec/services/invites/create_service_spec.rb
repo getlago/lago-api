@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invites::CreateService, type: :service do
   subject(:create_service) { described_class.new(membership.user) }
@@ -8,33 +8,33 @@ RSpec.describe Invites::CreateService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe '#call' do
+  describe "#call" do
     let(:create_args) do
       {
         email: Faker::Internet.email,
-        current_organization: organization,
+        current_organization: organization
       }
     end
 
-    it 'creates an invite' do
+    it "creates an invite" do
       expect { create_service.call(**create_args) }
         .to change(Invite, :count).by(1)
     end
 
-    context 'with validation error' do
-      it 'returns an error' do
+    context "with validation error" do
+      it "returns an error" do
         result = create_service.call(current_organization: organization)
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:email]).to eq(['invalid_email_format'])
+          expect(result.error.messages[:email]).to eq(["invalid_email_format"])
         end
       end
     end
 
-    context 'with already existing invite' do
-      it 'returns an error' do
+    context "with already existing invite" do
+      it "returns an error" do
         create(:invite, organization: create_args[:current_organization], email: create_args[:email])
         result = create_service.call(**create_args)
 
@@ -46,10 +46,10 @@ RSpec.describe Invites::CreateService, type: :service do
       end
     end
 
-    context 'with already existing member' do
+    context "with already existing member" do
       let(:user) { create(:user, email: create_args[:email]) }
 
-      it 'returns an error' do
+      it "returns an error" do
         create(:membership, organization:, user:)
 
         result = create_service.call(**create_args)

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
   let(:query) do
@@ -18,22 +18,22 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
     GRAPHQL
   end
 
-  it 'returns current_user' do
+  it "returns current_user" do
     user = create(:user)
 
     result = execute_graphql(
       current_user: user,
-      query:,
+      query:
     )
 
     aggregate_failures do
-      expect(result['data']['currentUser']['email']).to eq(user.email)
-      expect(result['data']['currentUser']['id']).to eq(user.id)
-      expect(result['data']['currentUser']['premium']).to be_falsey
+      expect(result["data"]["currentUser"]["email"]).to eq(user.email)
+      expect(result["data"]["currentUser"]["id"]).to eq(user.id)
+      expect(result["data"]["currentUser"]["premium"]).to be_falsey
     end
   end
 
-  describe 'with revoked membership' do
+  describe "with revoked membership" do
     let(:membership) { create(:membership) }
     let(:revoked_membership) do
       create(:membership, user: membership.user, status: :revoked)
@@ -41,18 +41,18 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
 
     before { revoked_membership }
 
-    it 'only lists organizations when membership has an active status' do
+    it "only lists organizations when membership has an active status" do
       result = execute_graphql(
         current_user: membership.user,
-        query:,
+        query:
       )
 
-      expect(result['data']['currentUser']['organizations']).not_to include(revoked_membership.organization)
+      expect(result["data"]["currentUser"]["organizations"]).not_to include(revoked_membership.organization)
     end
   end
 
-  context 'with no current_user' do
-    it 'returns an error' do
+  context "with no current_user" do
+    it "returns an error" do
       result = execute_graphql(query:)
 
       expect_unauthorized_error(result)

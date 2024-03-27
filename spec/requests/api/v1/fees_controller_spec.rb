@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::FeesController, type: :request do
   let(:organization) { create(:organization) }
 
-  describe 'GET /fees/:id' do
+  describe "GET /fees/:id" do
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
     let(:fee) { create(:fee, subscription:, invoice: nil) }
 
-    it 'returns a fee' do
+    it "returns a fee" do
       get_with_token(organization, "/api/v1/fees/#{fee.id}")
 
       aggregate_failures do
@@ -24,21 +24,21 @@ RSpec.describe Api::V1::FeesController, type: :request do
           taxes_amount_cents: fee.taxes_amount_cents,
           units: fee.units.to_s,
           events_count: fee.events_count,
-          applied_taxes: [],
+          applied_taxes: []
         )
         expect(json[:fee][:item]).to include(
           type: fee.fee_type,
           code: fee.item_code,
-          name: fee.item_name,
+          name: fee.item_name
         )
       end
     end
 
-    context 'when fee is an add-on fee' do
+    context "when fee is an add-on fee" do
       let(:invoice) { create(:invoice, organization:) }
       let(:fee) { create(:add_on_fee, invoice:) }
 
-      it 'returns a fee' do
+      it "returns a fee" do
         get_with_token(organization, "/api/v1/fees/#{fee.id}")
 
         aggregate_failures do
@@ -52,29 +52,29 @@ RSpec.describe Api::V1::FeesController, type: :request do
             taxes_amount_cents: fee.taxes_amount_cents,
             units: fee.units.to_s,
             events_count: fee.events_count,
-            applied_taxes: [],
+            applied_taxes: []
           )
           expect(json[:fee][:item]).to include(
             type: fee.fee_type,
             code: fee.item_code,
-            name: fee.item_name,
+            name: fee.item_name
           )
         end
       end
     end
 
-    context 'when fee does not exsits' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/fees/foo')
+    context "when fee does not exsits" do
+      it "returns not found" do
+        get_with_token(organization, "/api/v1/fees/foo")
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when fee belongs to an other organization' do
+    context "when fee belongs to an other organization" do
       let(:fee) { create(:fee) }
 
-      it 'returns not found' do
+      it "returns not found" do
         get_with_token(organization, "/api/v1/fee/#{fee.id}")
 
         expect(response).to have_http_status(:not_found)
@@ -82,17 +82,17 @@ RSpec.describe Api::V1::FeesController, type: :request do
     end
   end
 
-  describe 'PUT /fees/:id' do
+  describe "PUT /fees/:id" do
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
-    let(:update_params) { { payment_status: 'succeeded' } }
+    let(:update_params) { {payment_status: "succeeded"} }
     let(:fee) do
-      create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice: nil)
+      create(:charge_fee, fee_type: "charge", pay_in_advance: true, subscription:, invoice: nil)
     end
 
     before { fee.charge.update!(invoiceable: false) }
 
-    it 'updates the fee' do
+    it "updates the fee" do
       put_with_token(organization, "/api/v1/fees/#{fee.id}", fee: update_params)
 
       aggregate_failures do
@@ -113,34 +113,34 @@ RSpec.describe Api::V1::FeesController, type: :request do
           failed_at: fee.failed_at&.iso8601,
           refunded_at: fee.refunded_at&.iso8601,
           amount_details: fee.amount_details,
-          applied_taxes: [],
+          applied_taxes: []
         )
         expect(json[:fee][:item]).to include(
           type: fee.fee_type,
           code: fee.item_code,
-          name: fee.item_name,
+          name: fee.item_name
         )
       end
     end
 
-    context 'when fee does not exist' do
-      it 'returns not found' do
-        put_with_token(organization, '/api/v1/fees/foo', fee: update_params)
+    context "when fee does not exist" do
+      it "returns not found" do
+        put_with_token(organization, "/api/v1/fees/foo", fee: update_params)
 
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /fees' do
+  describe "GET /fees" do
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
     let(:fee) { create(:fee, subscription:, invoice: nil) }
 
     before { fee }
 
-    it 'returns a list of fees' do
-      get_with_token(organization, '/api/v1/fees')
+    it "returns a list of fees" do
+      get_with_token(organization, "/api/v1/fees")
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -149,13 +149,13 @@ RSpec.describe Api::V1::FeesController, type: :request do
       end
     end
 
-    context 'with an invalid filter' do
-      it 'returns an error response' do
-        get_with_token(organization, '/api/v1/fees', fee_type: 'foo_bar')
+    context "with an invalid filter" do
+      it "returns an error response" do
+        get_with_token(organization, "/api/v1/fees", fee_type: "foo_bar")
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to eq({ fee_type: %w[value_is_invalid] })
+          expect(json[:error_details]).to eq({fee_type: %w[value_is_invalid]})
         end
       end
     end

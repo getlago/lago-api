@@ -11,7 +11,7 @@ module Customers
       unless valid_metadata_count?(metadata: params[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
-          error_code: 'invalid_count',
+          error_code: "invalid_count"
         )
       end
 
@@ -41,7 +41,7 @@ module Customers
           currency_result = Customers::UpdateService.new(nil).update_currency(
             customer:,
             currency: params[:currency],
-            customer_update: true,
+            customer_update: true
           )
           return currency_result unless currency_result.success?
         end
@@ -89,7 +89,7 @@ module Customers
       unless valid_metadata_count?(metadata: args[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
-          error_code: 'invalid_count',
+          error_code: "invalid_count"
         )
       end
 
@@ -116,7 +116,7 @@ module Customers
         payment_provider_code: args[:payment_provider_code],
         currency: args[:currency],
         document_locale: billing_configuration[:document_locale],
-        tax_identification_number: args[:tax_identification_number],
+        tax_identification_number: args[:tax_identification_number]
       )
 
       assign_premium_attributes(customer, args)
@@ -142,7 +142,7 @@ module Customers
       # NOTE: handle configuration for configured payment providers
       billing_configuration = args[:provider_customer]&.to_h&.merge(
         payment_provider: args[:payment_provider],
-        payment_provider_code: args[:payment_provider_code],
+        payment_provider_code: args[:payment_provider_code]
       )
       create_billing_configuration(customer, billing_configuration)
 
@@ -166,7 +166,7 @@ module Customers
       customer.metadata.create!(
         key: args[:key],
         value: args[:value],
-        display_in_invoice: args[:display_in_invoice] || false,
+        display_in_invoice: args[:display_in_invoice] || false
       )
     end
 
@@ -190,7 +190,7 @@ module Customers
         payment_provider_result = PaymentProviders::FindService.new(
           organization_id: customer.organization_id,
           code: billing_configuration[:payment_provider_code].presence,
-          payment_provider_type: customer.payment_provider,
+          payment_provider_type: customer.payment_provider
         ).call
         payment_provider_result.raise_if_error!
 
@@ -246,19 +246,19 @@ module Customers
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
       provider_class = case billing_configuration[:payment_provider] || customer.payment_provider
-                       when 'stripe'
-                         PaymentProviderCustomers::StripeCustomer
-                       when 'gocardless'
-                         PaymentProviderCustomers::GocardlessCustomer
-                       when 'adyen'
-                         PaymentProviderCustomers::AdyenCustomer
+      when "stripe"
+        PaymentProviderCustomers::StripeCustomer
+      when "gocardless"
+        PaymentProviderCustomers::GocardlessCustomer
+      when "adyen"
+        PaymentProviderCustomers::AdyenCustomer
       end
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: provider_class,
         payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration,
-        async: !(billing_configuration || {})[:sync],
+        async: !(billing_configuration || {})[:sync]
       )
 
       create_result.raise_if_error!
@@ -267,13 +267,13 @@ module Customers
     def track_customer_created(customer)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'customer_created',
+        event: "customer_created",
         properties: {
           customer_id: customer.id,
           created_at: customer.created_at,
           payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id,
-        },
+          organization_id: customer.organization_id
+        }
       )
     end
 
@@ -281,7 +281,7 @@ module Customers
       if customer.taxes.count > 1
         result.single_validation_failure!(
           field: :vat_rate,
-          error_code: 'multiple_taxes',
+          error_code: "multiple_taxes"
         ).raise_if_error!
       end
 

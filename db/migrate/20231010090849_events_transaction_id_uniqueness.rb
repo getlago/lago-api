@@ -8,7 +8,7 @@ class EventsTransactionIdUniqueness < ActiveRecord::Migration[7.0]
       :events,
       %i[organization_id external_subscription_id transaction_id],
       unique: true,
-      name: 'index_unique_transaction_id',
+      name: "index_unique_transaction_id"
     )
 
     remove_index :events, %i[subscription_id transaction_id]

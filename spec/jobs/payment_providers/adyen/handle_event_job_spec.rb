@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviders::Adyen::HandleEventJob, type: :job do
   subject(:handle_event_job) { described_class }
@@ -8,7 +8,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventJob, type: :job do
   let(:adyen_service) { instance_double(PaymentProviders::AdyenService) }
   let(:result) { BaseService::Result.new }
   let(:organization) { create(:organization) }
-  let(:event_json) { '{}' }
+  let(:event_json) { "{}" }
 
   before do
     allow(PaymentProviders::AdyenService).to receive(:new)
@@ -17,7 +17,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventJob, type: :job do
       .and_return(result)
   end
 
-  it 'calls the handle event service' do
+  it "calls the handle event service" do
     described_class.perform_now(organization:, event_json:)
 
     expect(PaymentProviders::AdyenService).to have_received(:new)

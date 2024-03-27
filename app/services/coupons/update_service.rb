@@ -10,7 +10,7 @@ module Coupons
     end
 
     def call
-      return result.not_found_failure!(resource: 'coupon') unless coupon
+      return result.not_found_failure!(resource: "coupon") unless coupon
       return result unless valid?(params)
 
       coupon.name = params[:name] if params.key?(:name)
@@ -22,15 +22,15 @@ module Coupons
 
       unless coupon_already_applied
         if !plan_identifiers.nil? && plans.count != plan_identifiers.count
-          return result.not_found_failure!(resource: 'plans')
+          return result.not_found_failure!(resource: "plans")
         end
 
         if !billable_metric_identifiers.nil? && billable_metrics.count != billable_metric_identifiers.count
-          return result.not_found_failure!(resource: 'billable_metrics')
+          return result.not_found_failure!(resource: "billable_metrics")
         end
 
         if billable_metrics.present? && plans.present?
-          return result.not_allowed_failure!(code: 'only_one_limitation_type_per_coupon_allowed')
+          return result.not_allowed_failure!(code: "only_one_limitation_type_per_coupon_allowed")
         end
 
         if coupon.billable_metrics.exists? && plans.present? && billable_metrics.blank?
@@ -83,7 +83,7 @@ module Coupons
       return [] if plan_identifiers.blank?
 
       finder = api_context? ? :code : :id
-      @plans = Plan.where(finder => plan_identifiers, organization_id: coupon.organization_id)
+      @plans = Plan.where(finder => plan_identifiers, :organization_id => coupon.organization_id)
     end
 
     def process_plans
@@ -117,7 +117,7 @@ module Coupons
 
       finder = api_context? ? :code : :id
       @billable_metrics =
-        BillableMetric.where(finder => billable_metric_identifiers, organization_id: coupon.organization_id)
+        BillableMetric.where(finder => billable_metric_identifiers, :organization_id => coupon.organization_id)
     end
 
     def process_billable_metrics

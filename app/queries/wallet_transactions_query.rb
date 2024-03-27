@@ -3,7 +3,7 @@
 class WalletTransactionsQuery < BaseQuery
   def call(wallet_id:, page:, limit:, filters: {})
     wallet = organization.wallets.find_by(id: wallet_id)
-    return result.not_found_failure!(resource: 'wallet') unless wallet
+    return result.not_found_failure!(resource: "wallet") unless wallet
 
     wallet_transactions = wallet.wallet_transactions
 

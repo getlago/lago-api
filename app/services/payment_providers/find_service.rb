@@ -26,15 +26,15 @@ module PaymentProviders
 
       if code.blank? && scope.count > 1
         return result.service_failure!(
-          code: 'payment_provider_code_missing',
-          message: 'Code is missing',
+          code: "payment_provider_code_missing",
+          message: "Code is missing"
         )
       end
 
       @scope = scope.where(code:) if code.present?
 
       unless scope.exists?
-        return result.service_failure!(code: 'payment_provider_not_found', message: 'Payment provider not found')
+        return result.service_failure!(code: "payment_provider_not_found", message: "Payment provider not found")
       end
 
       result.payment_provider = scope.first

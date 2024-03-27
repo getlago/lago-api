@@ -10,7 +10,7 @@ class CreateInvoiceSubscriptions < ActiveRecord::Migration[7.0]
     end
 
     LagoApi::Application.load_tasks
-    Rake::Task['invoices:handle_subscriptions'].invoke
+    Rake::Task["invoices:handle_subscriptions"].invoke
 
     remove_reference :invoices, :subscription, index: true, foreign_key: true
   end

@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'RetryAllInvoicePayments'
-      description 'Retry all invoice payments'
+      graphql_name "RetryAllInvoicePayments"
+      description "Retry all invoice payments"
 
       type Types::Invoices::Object.collection_type
 

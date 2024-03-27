@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query add-ons of an organization'
+    description "Query add-ons of an organization"
 
-    argument :ids, [ID], required: false, description: 'List of add-ons IDs to fetch'
+    argument :ids, [ID], required: false, description: "List of add-ons IDs to fetch"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false
@@ -23,8 +23,8 @@ module Resolvers
         page:,
         limit:,
         filters: {
-          ids:,
-        },
+          ids:
+        }
       )
 
       result.add_ons

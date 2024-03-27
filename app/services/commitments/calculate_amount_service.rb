@@ -27,7 +27,7 @@ module Commitments
 
       Money.from_cents(
         commitment.amount_cents * service_result.proration_coefficient,
-        commitment.plan.amount_currency,
+        commitment.plan.amount_currency
       ).cents
     end
 

@@ -10,8 +10,8 @@ module Api
             current_organization,
             input_params
               .merge(organization_id: current_organization.id)
-              .merge(customer:).to_h.deep_symbolize_keys,
-          ).create_input,
+              .merge(customer:).to_h.deep_symbolize_keys
+          ).create_input
         )
 
         if result.success?
@@ -27,8 +27,8 @@ module Api
           wallet: current_organization.wallets.find_by(id: params[:id]),
           args: WalletLegacyInput.new(
             current_organization,
-            update_params.merge(id: params[:id]).to_h.deep_symbolize_keys,
-          ).update_input,
+            update_params.merge(id: params[:id]).to_h.deep_symbolize_keys
+          ).update_input
         )
 
         if result.success?
@@ -51,17 +51,17 @@ module Api
 
       def show
         wallet = current_organization.wallets.find_by(
-          id: params[:id],
+          id: params[:id]
         )
 
-        return not_found_error(resource: 'wallet') unless wallet
+        return not_found_error(resource: "wallet") unless wallet
 
         render_wallet(wallet)
       end
 
       def index
         customer = current_organization.customers.find_by(external_id: params[:external_customer_id])
-        return not_found_error(resource: 'customer') unless customer
+        return not_found_error(resource: "customer") unless customer
 
         wallets = customer.wallets
           .page(params[:page])
@@ -71,9 +71,9 @@ module Api
           json: ::CollectionSerializer.new(
             wallets,
             ::V1::WalletSerializer,
-            collection_name: 'wallets',
-            meta: pagination_metadata(wallets),
-          ),
+            collection_name: "wallets",
+            meta: pagination_metadata(wallets)
+          )
         )
       end
 
@@ -92,8 +92,8 @@ module Api
           recurring_transaction_rules: [
             :rule_type,
             :interval,
-            :threshold_credits,
-          ],
+            :threshold_credits
+          ]
         )
       end
 
@@ -113,8 +113,8 @@ module Api
             :interval,
             :threshold_credits,
             :paid_credits,
-            :granted_credits,
-          ],
+            :granted_credits
+          ]
         )
       end
 
@@ -126,9 +126,9 @@ module Api
         render(
           json: ::V1::WalletSerializer.new(
             wallet,
-            root_name: 'wallet',
-            includes: %i[recurring_transaction_rules],
-          ),
+            root_name: "wallet",
+            includes: %i[recurring_transaction_rules]
+          )
         )
       end
     end

@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'DestroyAdjustedFee'
-      description 'Deletes an adjusted fee'
+      graphql_name "DestroyAdjustedFee"
+      description "Deletes an adjusted fee"
 
       argument :id, ID, required: true
 

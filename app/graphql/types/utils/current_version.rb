@@ -3,7 +3,7 @@
 module Types
   module Utils
     class CurrentVersion < Types::BaseObject
-      graphql_name 'CurrentVersion'
+      graphql_name "CurrentVersion"
 
       field :github_url, String, null: false
       field :number, String, null: false

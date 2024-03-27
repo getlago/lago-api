@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transaction: false do
+describe "Pay in advance charges Scenarios", :scenarios, type: :request, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
   let(:plan) { create(:plan, organization:, amount_cents: 1000) }
-  let(:aggregation_type) { 'count_agg' }
+  let(:aggregation_type) { "count_agg" }
   let(:field_name) { nil }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name:) }
 
-  describe 'with count_agg / standard' do
-    it 'creates an pay_in_advance fee' do
+  describe "with count_agg / standard" do
+    it "creates an pay_in_advance fee" do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -21,8 +21,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
-          },
+            plan_code: plan.code
+          }
         )
       end
 
@@ -32,7 +32,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         invoiceable: false,
         plan:,
         billable_metric:,
-        properties: { amount: '10' },
+        properties: {amount: "10"}
       )
 
       subscription = customer.subscriptions.first
@@ -46,8 +46,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
-            },
+              external_customer_id: customer.external_id
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -70,8 +70,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
-            },
+              external_customer_id: customer.external_id
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -87,11 +87,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
     end
   end
 
-  describe 'with unique_count_agg / standard' do
-    let(:aggregation_type) { 'unique_count_agg' }
-    let(:field_name) { 'unique_id' }
+  describe "with unique_count_agg / standard" do
+    let(:aggregation_type) { "unique_count_agg" }
+    let(:field_name) { "unique_id" }
 
-    it 'creates an pay_in_advance fee' do
+    it "creates an pay_in_advance fee" do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -100,8 +100,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
-          },
+            plan_code: plan.code
+          }
         )
       end
 
@@ -111,7 +111,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         invoiceable: false,
         plan:,
         billable_metric:,
-        properties: { amount: '12' },
+        properties: {amount: "12"}
       )
 
       subscription = customer.subscriptions.order(created_at: :desc).first
@@ -126,8 +126,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { unique_id: 'id_1' },
-            },
+              properties: {unique_id: "id_1"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -151,8 +151,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { unique_id: 'id_1', operation_type: 'remove' },
-            },
+              properties: {unique_id: "id_1", operation_type: "remove"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -176,8 +176,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { unique_id: 'id_1' },
-            },
+              properties: {unique_id: "id_1"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -201,8 +201,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { unique_id: 'id_2' },
-            },
+              properties: {unique_id: "id_2"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(3).to(4)
 
@@ -225,8 +225,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { unique_id: 'id_2' },
-            },
+              properties: {unique_id: "id_2"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(4).to(5)
 
@@ -250,8 +250,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { unique_id: 'id_3' },
-            },
+              properties: {unique_id: "id_3"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(5).to(6)
 
@@ -275,8 +275,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { unique_id: 'id_3', operation_type: 'remove' },
-            },
+              properties: {unique_id: "id_3", operation_type: "remove"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(6).to(7)
 
@@ -292,11 +292,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
     end
   end
 
-  describe 'with sum_agg / standard' do
-    let(:aggregation_type) { 'sum_agg' }
-    let(:field_name) { 'amount' }
+  describe "with sum_agg / standard" do
+    let(:aggregation_type) { "sum_agg" }
+    let(:field_name) { "amount" }
 
-    it 'creates a pay_in_advance fee' do
+    it "creates a pay_in_advance fee" do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -305,8 +305,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
-          },
+            plan_code: plan.code
+          }
         )
       end
 
@@ -316,7 +316,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         invoiceable: true,
         plan:,
         billable_metric:,
-        properties: { amount: '1' },
+        properties: {amount: "1"}
       )
 
       subscription = customer.subscriptions.first
@@ -331,8 +331,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
-            },
+              properties: {amount: "10"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -353,8 +353,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '-4' },
-            },
+              properties: {amount: "-4"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -371,8 +371,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '8' },
-            },
+              properties: {amount: "8"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -383,14 +383,14 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
       end
     end
 
-    context 'when there is matching group' do
+    context "when there is matching group" do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
       let(:parent_group_id) { nil }
       let(:group) do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+        create(:group, billable_metric:, key: "region", value: "europe", parent_group_id:)
       end
 
-      it 'creates a pay_in_advance fee' do
+      it "creates a pay_in_advance fee" do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -399,8 +399,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -415,11 +415,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               :group_property,
               group:,
               values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
+                amount: "20",
+                amount_currency: "EUR"
+              }
+            )
+          ]
         )
 
         subscription = customer.subscriptions.first
@@ -433,8 +433,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id:,
               external_customer_id: customer.external_id,
-              properties: { amount: '10', region: 'europe' },
-            },
+              properties: {amount: "10", region: "europe"}
+            }
           )
 
           expect(subscription.reload.fees.count).to eq(1)
@@ -453,14 +453,14 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
       end
     end
 
-    context 'when there is no matching group' do
+    context "when there is no matching group" do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
-      let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
+      let(:parent_group_id) { create(:group, billable_metric:, key: "cloud", value: "AWS").id }
       let(:group) do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+        create(:group, billable_metric:, key: "region", value: "europe", parent_group_id:)
       end
 
-      it 'creates a pay_in_advance fee' do
+      it "creates a pay_in_advance fee" do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -469,8 +469,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -481,18 +481,18 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           plan:,
           billable_metric:,
           properties: {
-            amount: '10',
+            amount: "10"
           },
           group_properties: [
             build(
               :group_property,
               group:,
               values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
+                amount: "20",
+                amount_currency: "EUR"
+              }
+            )
+          ]
         )
 
         subscription = customer.subscriptions.first
@@ -506,25 +506,25 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id:,
               external_customer_id: customer.external_id,
-              properties: { amount: '10', region: 'africa', cloud: 'AWS' },
-            },
+              properties: {amount: "10", region: "africa", cloud: "AWS"}
+            }
           )
 
-          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to be_nil
+          expect(Event.find_by(transaction_id:).metadata["current_aggregation"]).to be_nil
           expect(subscription.reload.fees.count).to eq(0)
           expect(subscription.invoices.count).to eq(0)
         end
       end
     end
 
-    context 'when there is an invalid group' do
+    context "when there is an invalid group" do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
-      let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
+      let(:parent_group_id) { create(:group, billable_metric:, key: "cloud", value: "AWS").id }
       let(:group) do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+        create(:group, billable_metric:, key: "region", value: "europe", parent_group_id:)
       end
 
-      it 'does not create a pay_in_advance fee' do
+      it "does not create a pay_in_advance fee" do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -533,8 +533,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -545,18 +545,18 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           plan:,
           billable_metric:,
           properties: {
-            amount: '10',
+            amount: "10"
           },
           group_properties: [
             build(
               :group_property,
               group:,
               values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
+                amount: "20",
+                amount_currency: "EUR"
+              }
+            )
+          ]
         )
 
         subscription = customer.subscriptions.first
@@ -570,22 +570,22 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id:,
               external_customer_id: customer.external_id,
-              properties: { amount: '10', bad: 'fake', cloud: 'AWS' },
-            },
+              properties: {amount: "10", bad: "fake", cloud: "AWS"}
+            }
           )
 
-          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to be_nil
+          expect(Event.find_by(transaction_id:).metadata["current_aggregation"]).to be_nil
           expect(subscription.reload.fees.count).to eq(0)
         end
       end
     end
 
-    context 'when there is no group properties' do
+    context "when there is no group properties" do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
-      let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
+      let(:parent_group_id) { create(:group, billable_metric:, key: "cloud", value: "AWS").id }
 
-      it 'creates a pay_in_advance fee' do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+      it "creates a pay_in_advance fee" do
+        create(:group, billable_metric:, key: "region", value: "europe", parent_group_id:)
 
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
@@ -595,8 +595,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -606,8 +606,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           invoiceable: true,
           plan:,
           billable_metric:,
-          properties: { amount: '10' },
-          group_properties: [],
+          properties: {amount: "10"},
+          group_properties: []
         )
 
         subscription = customer.subscriptions.first
@@ -621,8 +621,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id:,
               external_customer_id: customer.external_id,
-              properties: { amount: '2', region: 'europe', cloud: 'AWS' },
-            },
+              properties: {amount: "2", region: "europe", cloud: "AWS"}
+            }
           )
 
           event = Event.find_by(transaction_id:)
@@ -640,12 +640,12 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
       end
     end
 
-    context 'when there is no matching group but default group properties' do
+    context "when there is no matching group but default group properties" do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
 
-      it 'creates a pay_in_advance fee' do
-        create(:group, billable_metric:, key: 'country', value: 'france')
-        create(:group, billable_metric:, key: 'country', value: 'italy')
+      it "creates a pay_in_advance fee" do
+        create(:group, billable_metric:, key: "country", value: "france")
+        create(:group, billable_metric:, key: "country", value: "italy")
 
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
@@ -655,8 +655,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -666,8 +666,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           invoiceable: true,
           plan:,
           billable_metric:,
-          properties: { amount: '20' },
-          group_properties: [],
+          properties: {amount: "20"},
+          group_properties: []
         )
 
         subscription = customer.subscriptions.first
@@ -681,8 +681,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id:,
               external_customer_id: customer.external_id,
-              properties: { amount: '2', country: 'italy' },
-            },
+              properties: {amount: "2", country: "italy"}
+            }
           )
 
           event = Event.find_by(transaction_id:)
@@ -702,11 +702,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
     end
   end
 
-  describe 'with sum_agg / package' do
-    let(:aggregation_type) { 'sum_agg' }
-    let(:field_name) { 'amount' }
+  describe "with sum_agg / package" do
+    let(:aggregation_type) { "sum_agg" }
+    let(:field_name) { "amount" }
 
-    it 'creates an pay_in_advance fee' do
+    it "creates an pay_in_advance fee" do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -715,8 +715,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
-          },
+            plan_code: plan.code
+          }
         )
       end
 
@@ -726,7 +726,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         invoiceable: false,
         plan:,
         billable_metric:,
-        properties: { amount: '100', free_units: 3, package_size: 2 },
+        properties: {amount: "100", free_units: 3, package_size: 2}
       )
 
       subscription = customer.subscriptions.first
@@ -741,8 +741,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '3' },
-            },
+              properties: {amount: "3"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -763,8 +763,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1' },
-            },
+              properties: {amount: "1"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -781,8 +781,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2' },
-            },
+              properties: {amount: "2"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -794,11 +794,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
     end
   end
 
-  describe 'with sum_agg / graduated' do
-    let(:aggregation_type) { 'sum_agg' }
-    let(:field_name) { 'amount' }
+  describe "with sum_agg / graduated" do
+    let(:aggregation_type) { "sum_agg" }
+    let(:field_name) { "amount" }
 
-    it 'creates an pay_in_advance fee' do
+    it "creates an pay_in_advance fee" do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -807,8 +807,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
-          },
+            plan_code: plan.code
+          }
         )
       end
 
@@ -823,17 +823,17 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               from_value: 0,
               to_value: 5,
-              per_unit_amount: '0.02',
-              flat_amount: '0.01',
+              per_unit_amount: "0.02",
+              flat_amount: "0.01"
             },
             {
               from_value: 6,
               to_value: nil,
-              per_unit_amount: '0.01',
-              flat_amount: '0.01',
-            },
-          ],
-        },
+              per_unit_amount: "0.01",
+              flat_amount: "0.01"
+            }
+          ]
+        }
       )
 
       subscription = customer.subscriptions.first
@@ -848,8 +848,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '3' },
-            },
+              properties: {amount: "3"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -870,8 +870,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1' },
-            },
+              properties: {amount: "1"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -888,8 +888,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2' },
-            },
+              properties: {amount: "2"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -901,12 +901,12 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
     end
   end
 
-  describe 'with sum_agg / percentage' do
-    let(:aggregation_type) { 'sum_agg' }
-    let(:field_name) { 'amount' }
+  describe "with sum_agg / percentage" do
+    let(:aggregation_type) { "sum_agg" }
+    let(:field_name) { "amount" }
 
-    describe 'with free_units_per_events' do
-      it 'creates an pay_in_advance fee ' do
+    describe "with free_units_per_events" do
+      it "creates an pay_in_advance fee " do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -915,8 +915,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -927,11 +927,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           plan:,
           billable_metric:,
           properties: {
-            rate: '5',
-            fixed_amount: '1',
+            rate: "5",
+            fixed_amount: "1",
             free_units_per_events: 2,
-            free_units_per_total_aggregation: '120.0',
-          },
+            free_units_per_total_aggregation: "120.0"
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -942,8 +942,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '8' },
-            },
+              properties: {amount: "8"}
+            }
           )
         end
 
@@ -957,8 +957,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '5' },
-              },
+                properties: {amount: "5"}
+              }
             )
           end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -966,11 +966,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'charge',
+            fee_type: "charge",
             pay_in_advance: true,
             units: 5,
             events_count: 1,
-            amount_cents: 0,
+            amount_cents: 0
           )
         end
 
@@ -980,26 +980,26 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '3' },
-            },
+              properties: {amount: "3"}
+            }
           )
 
           fee = subscription.fees.order(created_at: :desc).first
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'charge',
+            fee_type: "charge",
             pay_in_advance: true,
             units: 3,
             events_count: 1,
-            amount_cents: 100 + 15,
+            amount_cents: 100 + 15
           )
         end
       end
     end
 
-    describe 'with free_units_per_total_aggregation' do
-      it 'creates an pay_in_advance fee ' do
+    describe "with free_units_per_total_aggregation" do
+      it "creates an pay_in_advance fee " do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -1008,8 +1008,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -1020,11 +1020,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           plan:,
           billable_metric:,
           properties: {
-            rate: '5',
-            fixed_amount: '1',
+            rate: "5",
+            fixed_amount: "1",
             free_units_per_events: 1,
-            free_units_per_total_aggregation: '120.0',
-          },
+            free_units_per_total_aggregation: "120.0"
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -1035,8 +1035,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2' },
-            },
+              properties: {amount: "2"}
+            }
           )
         end
 
@@ -1050,8 +1050,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '1' },
-              },
+                properties: {amount: "1"}
+              }
             )
           end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -1059,20 +1059,20 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'charge',
+            fee_type: "charge",
             pay_in_advance: true,
             units: 1,
             events_count: 1,
-            amount_cents: 100 + 5,
+            amount_cents: 100 + 5
           )
         end
       end
     end
 
-    describe 'with min / max per transaction' do
+    describe "with min / max per transaction" do
       around { |test| lago_premium!(&test) }
 
-      it 'creates a pay_in_advance fee ' do
+      it "creates a pay_in_advance fee " do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -1081,8 +1081,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -1093,11 +1093,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           plan:,
           billable_metric:,
           properties: {
-            rate: '1',
-            fixed_amount: '0.5',
-            per_transaction_max_amount: '2',
-            per_transaction_min_amount: '1.75',
-          },
+            rate: "1",
+            fixed_amount: "0.5",
+            per_transaction_max_amount: "2",
+            per_transaction_min_amount: "1.75"
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -1110,8 +1110,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '100' },
-              },
+                properties: {amount: "100"}
+              }
             )
           end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -1119,11 +1119,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'charge',
+            fee_type: "charge",
             pay_in_advance: true,
             units: 100,
             events_count: 1,
-            amount_cents: 175, # Apply minimum amount
+            amount_cents: 175 # Apply minimum amount
           )
         end
 
@@ -1137,8 +1137,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '1000' },
-              },
+                properties: {amount: "1000"}
+              }
             )
           end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -1146,11 +1146,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'charge',
+            fee_type: "charge",
             pay_in_advance: true,
             units: 1_000,
             events_count: 1,
-            amount_cents: 200, # Apply maximum amount
+            amount_cents: 200 # Apply maximum amount
           )
         end
 
@@ -1164,8 +1164,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '10000' },
-              },
+                properties: {amount: "10000"}
+              }
             )
           end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -1173,11 +1173,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'charge',
+            fee_type: "charge",
             pay_in_advance: true,
             units: 10_000,
             events_count: 1,
-            amount_cents: 200, # Apply maximum amount
+            amount_cents: 200 # Apply maximum amount
           )
 
           fetch_current_usage(customer:)
@@ -1186,7 +1186,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
       end
     end
 
-    it 'creates an pay_in_advance fee' do
+    it "creates an pay_in_advance fee" do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)
 
@@ -1195,8 +1195,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
-          },
+            plan_code: plan.code
+          }
         )
       end
 
@@ -1207,10 +1207,10 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         plan:,
         billable_metric:,
         properties: {
-          rate: '5',
-          fixed_amount: '1',
-          free_units_per_total_aggregation: '3.0',
-        },
+          rate: "5",
+          fixed_amount: "1",
+          free_units_per_total_aggregation: "3.0"
+        }
       )
 
       subscription = customer.subscriptions.first
@@ -1225,8 +1225,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '5' },
-            },
+              properties: {amount: "5"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -1247,8 +1247,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1' },
-            },
+              properties: {amount: "1"}
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -1260,12 +1260,12 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
     end
   end
 
-  describe 'with count_agg / percentage' do
-    let(:aggregation_type) { 'count_agg' }
-    let(:field_name) { 'amount' }
+  describe "with count_agg / percentage" do
+    let(:aggregation_type) { "count_agg" }
+    let(:field_name) { "amount" }
 
-    describe 'with free_units_per_events' do
-      it 'creates an pay_in_advance fee ' do
+    describe "with free_units_per_events" do
+      it "creates an pay_in_advance fee " do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -1274,8 +1274,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         end
 
@@ -1286,10 +1286,10 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           plan:,
           billable_metric:,
           properties: {
-            rate: '1',
-            fixed_amount: '1',
-            free_units_per_events: 1,
-          },
+            rate: "1",
+            fixed_amount: "1",
+            free_units_per_events: 1
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -1304,8 +1304,8 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '5' },
-              },
+                properties: {amount: "5"}
+              }
             )
           end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -1313,11 +1313,11 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'charge',
+            fee_type: "charge",
             pay_in_advance: true,
             units: 1,
             events_count: 1,
-            amount_cents: 0,
+            amount_cents: 0
           )
         end
       end

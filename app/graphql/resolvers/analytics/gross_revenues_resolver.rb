@@ -6,7 +6,7 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      description 'Query gross revenue of an organization'
+      description "Query gross revenue of an organization"
 
       argument :currency, Types::CurrencyEnum, required: false
       argument :external_customer_id, String, required: false

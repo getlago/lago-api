@@ -22,30 +22,30 @@ class Invoice < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
-  has_many :metadata, class_name: 'Metadata::InvoiceMetadata', dependent: :destroy
+  has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
   has_many :credit_notes
 
-  has_many :applied_taxes, class_name: 'Invoice::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Invoice::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   has_one_attached :file
 
   monetize :coupons_amount_cents,
-           :credit_notes_amount_cents,
-           :fees_amount_cents,
-           :prepaid_credit_amount_cents,
-           :sub_total_excluding_taxes_amount_cents,
-           :sub_total_including_taxes_amount_cents,
-           :total_amount_cents,
-           :taxes_amount_cents,
-           with_model_currency: :currency
+    :credit_notes_amount_cents,
+    :fees_amount_cents,
+    :prepaid_credit_amount_cents,
+    :sub_total_excluding_taxes_amount_cents,
+    :sub_total_including_taxes_amount_cents,
+    :total_amount_cents,
+    :taxes_amount_cents,
+    with_model_currency: :currency
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents,
-           :subscription_amount_cents,
-           disable_validation: true,
-           allow_nil: true,
-           with_model_currency: :currency
+    :subscription_amount_cents,
+    disable_validation: true,
+    allow_nil: true,
+    with_model_currency: :currency
 
   INVOICE_TYPES = %i[subscription add_on credit one_off].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
@@ -55,7 +55,7 @@ class Invoice < ApplicationRecord
   enum payment_status: PAYMENT_STATUS
   enum status: STATUS
 
-  aasm column: 'status', timestamps: true do
+  aasm column: "status", timestamps: true do
     state :generating
     state :draft
     state :finalized
@@ -71,31 +71,31 @@ class Invoice < ApplicationRecord
   end
 
   sequenced scope: ->(invoice) { invoice.customer.invoices },
-            lock_key: ->(invoice) { invoice.customer_id }
+    lock_key: ->(invoice) { invoice.customer_id }
 
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
   scope :ready_to_be_finalized,
-        lambda {
-          date = <<-SQL
+    lambda {
+      date = <<-SQL
             (
               invoices.created_at +
               COALESCE(customers.invoice_grace_period, organizations.invoice_grace_period) * INTERVAL '1 DAY'
             )
-          SQL
+      SQL
 
-          draft.joins(:customer, :organization).where("#{Arel.sql(date)} < ?", Time.current)
-        }
+      draft.joins(:customer, :organization).where("#{Arel.sql(date)} < ?", Time.current)
+    }
 
   scope :created_before,
-        lambda { |invoice|
-          where.not(id: invoice.id)
-            .where('invoices.created_at < ?', invoice.created_at)
-        }
+    lambda { |invoice|
+      where.not(id: invoice.id)
+        .where("invoices.created_at < ?", invoice.created_at)
+    }
 
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
-  validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
 
   def self.ransackable_attributes(_ = nil)
     %w[id number]
@@ -110,10 +110,10 @@ class Invoice < ApplicationRecord
 
     blob_path = Rails.application.routes.url_helpers.rails_blob_path(
       file,
-      host: 'void',
+      host: "void"
     )
 
-    File.join(ENV['LAGO_API_URL'], blob_path)
+    File.join(ENV["LAGO_API_URL"], blob_path)
   end
 
   def fee_total_amount_cents
@@ -144,26 +144,26 @@ class Invoice < ApplicationRecord
       .positive_units
       .where(true_up_parent_fee: nil)
       .joins(:charge)
-      .where(charge: { pay_in_advance: charge_in_advance })
+      .where(charge: {pay_in_advance: charge_in_advance})
       .any?
   end
 
   def recurring_fees(subscription_id)
     subscription_fees(subscription_id)
       .joins(charge: :billable_metric)
-      .where(billable_metric: { recurring: true })
-      .where(billable_metric: { aggregation_type: %i[sum_agg unique_count_agg] })
-      .where(charge: { pay_in_advance: false })
+      .where(billable_metric: {recurring: true})
+      .where(billable_metric: {aggregation_type: %i[sum_agg unique_count_agg]})
+      .where(charge: {pay_in_advance: false})
   end
 
   def recurring_breakdown(fee)
     service = case fee.charge.billable_metric.aggregation_type.to_sym
-              when :sum_agg
-                BillableMetrics::Breakdown::SumService
-              when :unique_count_agg
-                BillableMetrics::Breakdown::UniqueCountService
-              else
-                raise(NotImplementedError)
+    when :sum_agg
+      BillableMetrics::Breakdown::SumService
+    when :unique_count_agg
+      BillableMetrics::Breakdown::UniqueCountService
+    else
+      raise(NotImplementedError)
     end
 
     service.new(
@@ -171,11 +171,11 @@ class Invoice < ApplicationRecord
       charge: fee.charge,
       subscription: fee.subscription,
       boundaries: {
-        from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
-        to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
-        charges_duration: fee.properties['charges_duration'],
+        from_datetime: DateTime.parse(fee.properties["charges_from_datetime"]),
+        to_datetime: DateTime.parse(fee.properties["charges_to_datetime"]),
+        charges_duration: fee.properties["charges_duration"]
       },
-      filters: { group: fee.group },
+      filters: {group: fee.group}
     ).breakdown.breakdown
   end
 
@@ -183,7 +183,7 @@ class Invoice < ApplicationRecord
     date_service = Subscriptions::DatesService.new_instance(
       fee.subscription,
       Time.zone.at(timestamp),
-      current_usage: true,
+      current_usage: true
     )
 
     event = Event.find_by(id: fee.pay_in_advance_event_id)
@@ -193,12 +193,12 @@ class Invoice < ApplicationRecord
     number_of_days = Utils::DatetimeService.date_diff_with_timezone(
       event.timestamp,
       date_service.charges_to_datetime,
-      customer.applicable_timezone,
+      customer.applicable_timezone
     )
 
     {
       number_of_days:,
-      period_duration: date_service.charges_duration_in_days,
+      period_duration: date_service.charges_duration_in_days
     }
   end
 
@@ -206,12 +206,12 @@ class Invoice < ApplicationRecord
     date_service = Subscriptions::DatesService.new_instance(
       subscription,
       Time.zone.at(timestamp) + 1.day,
-      current_usage: true,
+      current_usage: true
     )
 
     {
       charges_from_date: date_service.charges_from_datetime&.to_date,
-      charges_to_date: date_service.charges_to_datetime&.to_date,
+      charges_to_date: date_service.charges_to_datetime&.to_date
     }
   end
 
@@ -243,8 +243,8 @@ class Invoice < ApplicationRecord
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !succeeded?
 
     amount = creditable_amount_cents -
-             credits.where(before_taxes: false).sum(:amount_cents) -
-             prepaid_credit_amount_cents
+      credits.where(before_taxes: false).sum(:amount_cents) -
+      prepaid_credit_amount_cents
     amount.negative? ? 0 : amount
   end
 
@@ -280,13 +280,13 @@ class Invoice < ApplicationRecord
 
     if organization.per_customer?
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
-      customer_slug = "#{organization.document_number_prefix}-#{format('%03d', customer.sequential_id)}"
-      formatted_sequential_id = format('%03d', sequential_id)
+      customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
+      formatted_sequential_id = format("%03d", sequential_id)
 
       self.number = "#{customer_slug}-#{formatted_sequential_id}"
     else
-      org_formatted_sequential_id = format('%03d', organization_sequential_id)
-      formatted_year_and_month = Time.now.in_time_zone(organization.timezone || 'UTC').strftime('%Y%m')
+      org_formatted_sequential_id = format("%03d", organization_sequential_id)
+      formatted_year_and_month = Time.now.in_time_zone(organization.timezone || "UTC").strftime("%Y%m")
 
       self.number = "#{organization.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
     end
@@ -300,17 +300,17 @@ class Invoice < ApplicationRecord
   end
 
   def generate_organization_sequential_id
-    timezone = organization.timezone || 'UTC'
+    timezone = organization.timezone || "UTC"
     organization_sequence_scope = organization.invoices.with_generated_number.where(
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
       timezone,
-      Time.now.in_time_zone(timezone).beginning_of_month.to_date,
+      Time.now.in_time_zone(timezone).beginning_of_month.to_date
     )
 
     result = Invoice.with_advisory_lock(
       organization_id,
       transaction: true,
-      timeout_seconds: 10.seconds,
+      timeout_seconds: 10.seconds
     ) do
       # If previous invoice had different numbering, base sequential id is the total number of invoices
       organization_sequential_id = if switched_from_customer_numbering?
@@ -333,7 +333,7 @@ class Invoice < ApplicationRecord
     end
 
     # NOTE: If the application was unable to acquire the lock, the block returns false
-    raise(SequenceError, 'Unable to acquire lock on the database') unless result
+    raise(SequenceError, "Unable to acquire lock on the database") unless result
 
     result
   end
@@ -347,6 +347,6 @@ class Invoice < ApplicationRecord
   end
 
   def status_changed_to_finalized?
-    status_changed?(from: 'draft', to: 'finalized') || status_changed?(from: 'generating', to: 'finalized')
+    status_changed?(from: "draft", to: "finalized") || status_changed?(from: "generating", to: "finalized")
   end
 end

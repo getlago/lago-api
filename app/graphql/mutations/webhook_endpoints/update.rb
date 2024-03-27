@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'UpdateWebhookEndpoint'
-      description 'Update a new webhook endpoint'
+      graphql_name "UpdateWebhookEndpoint"
+      description "Update a new webhook endpoint"
 
       input_object_class Types::WebhookEndpoints::UpdateInput
 
@@ -19,7 +19,7 @@ module Mutations
         result = ::WebhookEndpoints::UpdateService.call(
           id: args[:id],
           organization: current_organization,
-          params: args,
+          params: args
         )
 
         result.success? ? result.webhook_endpoint : result_error(result)

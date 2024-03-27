@@ -9,7 +9,7 @@ module Charges
     def self.charge_model_class(charge:, aggregation_result:)
       case charge.charge_model.to_sym
       when :standard
-        if charge.properties['grouped_by'].present? && !aggregation_result.aggregations.nil?
+        if charge.properties["grouped_by"].present? && !aggregation_result.aggregations.nil?
           Charges::ChargeModels::GroupedStandardService
         else
           Charges::ChargeModels::StandardService

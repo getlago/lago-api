@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Credits::CreditNoteService do
   subject(:credit_service) do
     described_class.new(
       invoice:,
-      credit_notes: [credit_note1, credit_note2],
+      credit_notes: [credit_note1, credit_note2]
     )
   end
 
@@ -14,8 +14,8 @@ RSpec.describe Credits::CreditNoteService do
     create(
       :invoice,
       customer:,
-      currency: 'EUR',
-      total_amount_cents: amount_cents,
+      currency: "EUR",
+      total_amount_cents: amount_cents
     )
   end
 
@@ -28,7 +28,7 @@ RSpec.describe Credits::CreditNoteService do
       total_amount_cents: 20,
       balance_amount_cents: 20,
       credit_amount_cents: 20,
-      customer:,
+      customer:
     )
   end
 
@@ -38,12 +38,12 @@ RSpec.describe Credits::CreditNoteService do
       total_amount_cents: 50,
       balance_amount_cents: 50,
       credit_amount_cents: 50,
-      customer:,
+      customer:
     )
   end
 
-  describe '.call' do
-    it 'creates a list of credits' do
+  describe ".call" do
+    it "creates a list of credits" do
       result = credit_service.call
 
       aggregate_failures do
@@ -54,7 +54,7 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit1.invoice).to eq(invoice)
         expect(credit1.credit_note).to eq(credit_note1)
         expect(credit1.amount_cents).to eq(20)
-        expect(credit1.amount_currency).to eq('EUR')
+        expect(credit1.amount_currency).to eq("EUR")
         expect(credit1.before_taxes).to eq(false)
         expect(credit_note1.reload.balance_amount_cents).to be_zero
         expect(credit_note1).to be_consumed
@@ -63,7 +63,7 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit2.invoice).to eq(invoice)
         expect(credit2.credit_note).to eq(credit_note2)
         expect(credit2.amount_cents).to eq(50)
-        expect(credit2.amount_currency).to eq('EUR')
+        expect(credit2.amount_currency).to eq("EUR")
         expect(credit2.before_taxes).to eq(false)
         expect(credit_note2.reload.balance_amount_cents).to be_zero
         expect(credit_note1).to be_consumed
@@ -72,10 +72,10 @@ RSpec.describe Credits::CreditNoteService do
       end
     end
 
-    context 'when invoice amount is 0' do
+    context "when invoice amount is 0" do
       let(:amount_cents) { 0 }
 
-      it 'does not create a credit' do
+      it "does not create a credit" do
         result = credit_service.call
 
         aggregate_failures do
@@ -85,10 +85,10 @@ RSpec.describe Credits::CreditNoteService do
       end
     end
 
-    context 'when credit amount is higher than invoice amount' do
+    context "when credit amount is higher than invoice amount" do
       let(:amount_cents) { 10 }
 
-      it 'creates a credit with partial credit note amount' do
+      it "creates a credit with partial credit note amount" do
         result = credit_service.call
 
         aggregate_failures do
@@ -99,7 +99,7 @@ RSpec.describe Credits::CreditNoteService do
           expect(credit.invoice).to eq(invoice)
           expect(credit.credit_note).to eq(credit_note1)
           expect(credit.amount_cents).to eq(10)
-          expect(credit.amount_currency).to eq('EUR')
+          expect(credit.amount_currency).to eq("EUR")
           expect(credit_note1.reload.balance_amount_cents).to eq(10)
           expect(credit_note1).to be_available
         end

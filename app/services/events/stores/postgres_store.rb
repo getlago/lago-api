@@ -40,13 +40,13 @@ module Events
         groups = sanitized_grouped_by
 
         sql = events
-          .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
+          .reorder(Arel.sql((groups + ["events.timestamp DESC, created_at DESC"]).join(", ")))
           .select(
             [
-              "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}",
-              'events.timestamp',
-              "(#{sanitized_property_name})::numeric AS value",
-            ].join(', '),
+              "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}",
+              "events.timestamp",
+              "(#{sanitized_property_name})::numeric AS value"
+            ].join(", ")
           )
           .to_sql
 
@@ -54,7 +54,7 @@ module Events
       end
 
       def prorated_events_values(total_duration)
-        ratio_sql = duration_ratio_sql('events.timestamp', to_datetime, total_duration)
+        ratio_sql = duration_ratio_sql("events.timestamp", to_datetime, total_duration)
 
         events.pluck(Arel.sql("(#{sanitized_property_name})::numeric * (#{ratio_sql})::numeric"))
       end
@@ -73,14 +73,14 @@ module Events
       #       unique property
       def active_unique_property?(event)
         previous_event = events.where.not(id: event.id)
-          .where('events.properties @> ?', { aggregation_property => event.properties[aggregation_property] }.to_json)
-          .where('events.timestamp < ?', event.timestamp)
+          .where("events.properties @> ?", {aggregation_property => event.properties[aggregation_property]}.to_json)
+          .where("events.timestamp < ?", event.timestamp)
           .reorder(timestamp: :desc)
           .first
 
         previous_event && (
-          previous_event.properties['operation_type'].nil? ||
-          previous_event.properties['operation_type'] == 'add'
+          previous_event.properties["operation_type"].nil? ||
+          previous_event.properties["operation_type"] == "add"
         )
       end
 
@@ -89,14 +89,14 @@ module Events
         sql = ActiveRecord::Base.sanitize_sql_for_conditions([query.query])
         result = ActiveRecord::Base.connection.select_one(sql)
 
-        result['aggregation']
+        result["aggregation"]
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def unique_count_breakdown
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
         ActiveRecord::Base.connection.select_all(
-          ActiveRecord::Base.sanitize_sql_for_conditions([query.breakdown_query]),
+          ActiveRecord::Base.sanitize_sql_for_conditions([query.breakdown_query])
         ).rows
       end
 
@@ -108,13 +108,13 @@ module Events
             {
               from_datetime:,
               to_datetime:,
-              timezone: customer.applicable_timezone,
-            },
-          ],
+              timezone: customer.applicable_timezone
+            }
+          ]
         )
         result = ActiveRecord::Base.connection.select_one(sql)
 
-        result['aggregation']
+        result["aggregation"]
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
@@ -125,9 +125,9 @@ module Events
             {
               from_datetime:,
               to_datetime:,
-              timezone: customer.applicable_timezone,
-            },
-          ],
+              timezone: customer.applicable_timezone
+            }
+          ]
         )
 
         ActiveRecord::Base.connection.select_all(sql).to_a
@@ -137,7 +137,7 @@ module Events
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
 
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
-          [query.grouped_query],
+          [query.grouped_query]
         )
 
         prepare_grouped_result(Event.connection.select_all(sql).rows)
@@ -151,9 +151,9 @@ module Events
             {
               from_datetime:,
               to_datetime:,
-              timezone: customer.applicable_timezone,
-            },
-          ],
+              timezone: customer.applicable_timezone
+            }
+          ]
         )
         prepare_grouped_result(Event.connection.select_all(sql).rows)
       end
@@ -180,9 +180,9 @@ module Events
         groups = sanitized_grouped_by
 
         sql = events
-          .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
+          .reorder(Arel.sql((groups + ["events.timestamp DESC, created_at DESC"]).join(", ")))
           .select(
-            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_property_name})::numeric AS value",
+            "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}, (#{sanitized_property_name})::numeric AS value"
           )
           .to_sql
 
@@ -207,7 +207,7 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          duration_ratio_sql('events.timestamp', to_datetime, period_duration)
+          duration_ratio_sql("events.timestamp", to_datetime, period_duration)
         end
 
         sql = <<-SQL
@@ -218,26 +218,26 @@ module Events
 
         ActiveRecord::Base.connection.execute(
           Arel.sql(
-            events.reorder('').select(sql).to_sql,
-          ),
-        ).first['sum_result']
+            events.reorder("").select(sql).to_sql
+          )
+        ).first["sum_result"]
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          duration_ratio_sql('events.timestamp', to_datetime, period_duration)
+          duration_ratio_sql("events.timestamp", to_datetime, period_duration)
         end
 
         sum_sql = <<-SQL
-          #{sanitized_grouped_by.join(', ')},
+          #{sanitized_grouped_by.join(", ")},
           SUM(
             (#{sanitized_property_name})::numeric * (#{ratio})::numeric
           ) AS sum_result
         SQL
 
-        sql = events.reorder('')
+        sql = events.reorder("")
           .group(sanitized_grouped_by)
           .select(sum_sql)
           .to_sql
@@ -246,13 +246,13 @@ module Events
       end
 
       def sum_date_breakdown
-        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'events.timestamp')
+        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, "events.timestamp")
 
         events.group(Arel.sql("DATE(#{date_field})"))
           .reorder(Arel.sql("DATE(#{date_field}) ASC"))
           .pluck(Arel.sql("DATE(#{date_field}) AS date, SUM((#{sanitized_property_name})::numeric)"))
           .map do |row|
-            { date: row.first.to_date, value: row.last }
+            {date: row.first.to_date, value: row.last}
           end
       end
 
@@ -265,13 +265,13 @@ module Events
             {
               from_datetime:,
               to_datetime: to_datetime.ceil,
-              initial_value: initial_value || 0,
-            },
-          ],
+              initial_value: initial_value || 0
+            }
+          ]
         )
 
         result = ActiveRecord::Base.connection.select_one(sql)
-        result['aggregation']
+        result["aggregation"]
       end
 
       def grouped_weighted_sum(initial_values: [])
@@ -283,7 +283,7 @@ module Events
           value = 0
           previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
           value = previous_group[:value] if previous_group
-          { groups: group[:groups], value: }
+          {groups: group[:groups], value:}
         end
 
         # NOTE: add the initial values for groups that are not in the events
@@ -299,9 +299,9 @@ module Events
             query.grouped_query(initial_values: formated_initial_values),
             {
               from_datetime:,
-              to_datetime: to_datetime.ceil,
-            },
-          ],
+              to_datetime: to_datetime.ceil
+            }
+          ]
         )
 
         prepare_grouped_result(Event.connection.select_all(sql).rows)
@@ -317,35 +317,35 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
-                initial_value: initial_value || 0,
-              },
-            ],
-          ),
+                initial_value: initial_value || 0
+              }
+            ]
+          )
         ).rows
       end
 
       def group_scope(scope)
-        scope = scope.where('events.properties @> ?', { group.key.to_s => group.value }.to_json)
+        scope = scope.where("events.properties @> ?", {group.key.to_s => group.value}.to_json)
         return scope unless group.parent
 
-        scope.where('events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+        scope.where("events.properties @> ?", {group.parent.key.to_s => group.parent.value}.to_json)
       end
 
       def filters_scope(scope)
         matching_filters.each do |key, values|
           scope = scope.where(
-            'events.properties ->> ? IN (?)',
+            "events.properties ->> ? IN (?)",
             key.to_s,
-            values.map(&:to_s),
+            values.map(&:to_s)
           )
         end
 
         ignored_filters.each do |filters|
           sql = filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events.properties ->> ?, '') IN (?))", key.to_s, values.map(&:to_s)],
+              ["(coalesce(events.properties ->> ?, '') IN (?))", key.to_s, values.map(&:to_s)]
             )
-          end.join(' OR ')
+          end.join(" OR ")
 
           scope = scope.where.not(sql)
         end
@@ -355,7 +355,7 @@ module Events
 
       def with_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
-          scope = scope.where('events.properties @> ?', { grouped_by.to_s => grouped_by_value.to_s }.to_json)
+          scope = scope.where("events.properties @> ?", {grouped_by.to_s => grouped_by_value.to_s}.to_json)
         end
 
         scope
@@ -363,7 +363,7 @@ module Events
 
       def sanitized_property_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['events.properties->>?', property],
+          ["events.properties->>?", property]
         )
       end
 
@@ -399,7 +399,7 @@ module Events
 
           result = {
             groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
-            value: row.last,
+            value: row.last
           }
 
           result[:timestamp] = row[-2] if timestamp

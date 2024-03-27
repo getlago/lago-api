@@ -21,7 +21,7 @@ module Invoices
           invoice_type: :add_on,
           payment_status: :pending,
           currency:,
-          timezone: customer.applicable_timezone,
+          timezone: customer.applicable_timezone
         )
 
         create_add_on_fee(invoice)
@@ -33,7 +33,7 @@ module Invoices
       end
 
       track_invoice_created(result.invoice)
-      SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
+      SendWebhookJob.perform_later("invoice.add_on_added", result.invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
 
       create_payment(result.invoice)
@@ -81,12 +81,12 @@ module Invoices
     def track_invoice_created(invoice)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type,
-        },
+          invoice_type: invoice.invoice_type
+        }
       )
     end
 
@@ -101,7 +101,7 @@ module Invoices
 
     def should_deliver_email?
       License.premium? &&
-        customer.organization.email_settings.include?('invoice.finalized')
+        customer.organization.email_settings.include?("invoice.finalized")
     end
   end
 end

@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query invoices'
+    description "Query invoices"
 
-    argument :ids, [ID], required: false, description: 'List of invoice IDs to fetch'
+    argument :ids, [ID], required: false, description: "List of invoice IDs to fetch"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
@@ -34,8 +34,8 @@ module Resolvers
         payment_status:,
         status:,
         filters: {
-          ids:,
-        },
+          ids:
+        }
       )
 
       result.invoices

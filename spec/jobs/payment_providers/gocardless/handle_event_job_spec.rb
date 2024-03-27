@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviders::Gocardless::HandleEventJob, type: :job do
   subject(:handle_event_job) { described_class }
@@ -20,7 +20,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventJob, type: :job do
       .and_return(result)
   end
 
-  it 'calls the handle event service' do
+  it "calls the handle event service" do
     handle_event_job.perform_now(events_json: gocardless_events)
 
     expect(PaymentProviders::GocardlessService).to have_received(:new)

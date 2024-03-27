@@ -14,7 +14,7 @@ module V1
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,
-        properties: model.properties,
+        properties: model.properties
       }
 
       payload.merge!(charge_filters)
@@ -31,7 +31,7 @@ module V1
       ::CollectionSerializer.new(
         model.group_properties,
         ::V1::GroupPropertiesSerializer,
-        collection_name: 'group_properties',
+        collection_name: "group_properties"
       ).serialize
     end
 
@@ -39,7 +39,7 @@ module V1
       ::CollectionSerializer.new(
         model.taxes,
         ::V1::TaxSerializer,
-        collection_name: 'taxes',
+        collection_name: "taxes"
       ).serialize
     end
 
@@ -47,7 +47,7 @@ module V1
       ::CollectionSerializer.new(
         model.filters.includes(:billable_metric_filters),
         ::V1::ChargeFilterSerializer,
-        collection_name: 'filters',
+        collection_name: "filters"
       ).serialize
     end
   end

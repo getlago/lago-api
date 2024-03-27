@@ -22,7 +22,7 @@ module ApiHelper
   end
 
   def json
-    return response.body unless response.media_type.include?('json')
+    return response.body unless response.media_type.include?("json")
 
     JSON.parse(response.body, symbolize_names: true)
   end
@@ -30,8 +30,8 @@ module ApiHelper
   private
 
   def set_headers(organization, headers)
-    headers['Content-Type'] = 'application/json'
-    headers['Accept'] = 'application/json'
-    headers['Authorization'] = "Bearer #{organization.api_key}"
+    headers["Content-Type"] = "application/json"
+    headers["Accept"] = "application/json"
+    headers["Authorization"] = "Bearer #{organization.api_key}"
   end
 end

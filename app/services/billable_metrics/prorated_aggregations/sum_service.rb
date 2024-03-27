@@ -26,7 +26,7 @@ module BillableMetrics
             aggregation,
             options[:is_pay_in_advance],
             target_result: result,
-            aggregation_without_proration:,
+            aggregation_without_proration:
           )
         else
           result.aggregation = aggregation
@@ -37,7 +37,7 @@ module BillableMetrics
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -78,7 +78,7 @@ module BillableMetrics
               aggregation_value,
               options[:is_pay_in_advance],
               target_result: group_result,
-              aggregation_without_proration: group_result_without_proration,
+              aggregation_without_proration: group_result_without_proration
             )
           else
             group_result.aggregation = aggregation_value
@@ -92,7 +92,7 @@ module BillableMetrics
 
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       def compute_per_event_prorated_aggregation
@@ -116,8 +116,8 @@ module BillableMetrics
         event_store = event_store_class.new(
           code: billable_metric.code,
           subscription:,
-          boundaries: { to_datetime: from_datetime },
-          filters:,
+          boundaries: {to_datetime: from_datetime},
+          filters:
         )
 
         event_store.use_from_boundary = false
@@ -139,7 +139,7 @@ module BillableMetrics
       def persisted_sum
         persisted_event_store_instance.prorated_sum(
           period_duration:,
-          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime),
+          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime)
         )
       end
 
@@ -176,7 +176,7 @@ module BillableMetrics
       def grouped_persisted_sums
         persisted_event_store_instance.grouped_prorated_sum(
           period_duration:,
-          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime),
+          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime)
         )
       end
     end

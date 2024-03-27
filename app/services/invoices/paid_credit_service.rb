@@ -27,7 +27,7 @@ module Invoices
       end
 
       track_invoice_created(result.invoice)
-      SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice) if should_deliver_webhook?
+      SendWebhookJob.perform_later("invoice.paid_credit_added", result.invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
 
       create_payment(result.invoice)
@@ -37,7 +37,7 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue Sequenced::SequenceError
       raise
-    rescue StandardError => e
+    rescue => e
       result.fail_with_error!(e)
     end
 
@@ -54,7 +54,7 @@ module Invoices
         customer:,
         invoice_type: :credit,
         currency:,
-        datetime: Time.zone.at(timestamp),
+        datetime: Time.zone.at(timestamp)
       )
       invoice_result.raise_if_error!
 
@@ -92,18 +92,18 @@ module Invoices
     def track_invoice_created(invoice)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type,
-        },
+          invoice_type: invoice.invoice_type
+        }
       )
     end
 
     def should_deliver_email?
       License.premium? &&
-        customer.organization.email_settings.include?('invoice.finalized')
+        customer.organization.email_settings.include?("invoice.finalized")
     end
   end
 end

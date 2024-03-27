@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe AddOns::UpdateService, type: :service do
   subject(:add_ons_service) { described_class.new(add_on:, params: update_args) }
@@ -14,90 +14,90 @@ RSpec.describe AddOns::UpdateService, type: :service do
 
   before { add_on_applied_tax }
 
-  describe 'call' do
+  describe "call" do
     before { add_on }
 
     let(:update_args) do
       {
         id: add_on.id,
-        name: 'new name',
-        invoice_display_name: 'new invoice name',
-        code: 'code',
-        description: 'desc',
+        name: "new name",
+        invoice_display_name: "new invoice name",
+        code: "code",
+        description: "desc",
         amount_cents: 100,
-        amount_currency: 'EUR',
-        tax_codes:,
+        amount_currency: "EUR",
+        tax_codes:
       }
     end
     let(:tax_codes) { [tax2.code] }
 
-    it 'updates the add-on' do
+    it "updates the add-on" do
       result = add_ons_service.call
       expect(result).to be_success
 
       aggregate_failures do
-        expect(result.add_on.name).to eq('new name')
-        expect(result.add_on.invoice_display_name).to eq('new invoice name')
-        expect(result.add_on.description).to eq('desc')
+        expect(result.add_on.name).to eq("new name")
+        expect(result.add_on.invoice_display_name).to eq("new invoice name")
+        expect(result.add_on.description).to eq("desc")
         expect(result.add_on.amount_cents).to eq(100)
-        expect(result.add_on.amount_currency).to eq('EUR')
+        expect(result.add_on.amount_currency).to eq("EUR")
         expect(result.add_on.taxes.map { |t| t[:code] }).to contain_exactly(tax2.code)
       end
     end
 
-    context 'when tax is not found' do
-      let(:tax_codes) { ['unknown'] }
+    context "when tax is not found" do
+      let(:tax_codes) { ["unknown"] }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = add_ons_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.error_code).to eq('tax_not_found')
+          expect(result.error.error_code).to eq("tax_not_found")
         end
       end
     end
 
-    context 'with validation error' do
+    context "with validation error" do
       let(:update_args) do
         {
           id: add_on.id,
           name: nil,
-          code: 'code',
+          code: "code",
           amount_cents: 100,
-          amount_currency: 'EUR',
+          amount_currency: "EUR"
         }
       end
 
-      it 'returns an error' do
+      it "returns an error" do
         result = add_ons_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+          expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
         end
       end
     end
 
-    context 'when attached to an applied add on' do
+    context "when attached to an applied add on" do
       let(:update_args) do
         {
           id: add_on.id,
-          name: 'new name',
-          description: 'new desc',
-          code: 'new code',
+          name: "new name",
+          description: "new desc",
+          code: "new code"
         }
       end
 
-      it 'updates all given attributes' do
+      it "updates all given attributes" do
         create(:applied_add_on, add_on:)
         result = add_ons_service.call
 
         aggregate_failures do
-          expect(result.add_on.name).to eq('new name')
-          expect(result.add_on.description).to eq('new desc')
-          expect(result.add_on.code).to eq('new code')
+          expect(result.add_on.name).to eq("new name")
+          expect(result.add_on.description).to eq("new desc")
+          expect(result.add_on.code).to eq("new code")
         end
       end
     end

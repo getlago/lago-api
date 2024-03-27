@@ -4,7 +4,7 @@ module BillableMetrics
   class AggregationFactory
     class << self
       def supports_clickhouse?
-        ENV['LAGO_CLICKHOUSE_ENABLED'].present?
+        ENV["LAGO_CLICKHOUSE_ENABLED"].present?
       end
     end
 
@@ -12,15 +12,15 @@ module BillableMetrics
       event_store = Events::Stores::PostgresStore
 
       if !charge.pay_in_advance? &&
-         supports_clickhouse? &&
-         charge.billable_metric.organization.clickhouse_aggregation?
+          supports_clickhouse? &&
+          charge.billable_metric.organization.clickhouse_aggregation?
         event_store = Events::Stores::ClickhouseStore
       end
 
       aggregator_class(charge, current_usage).new(
         event_store_class: event_store,
         charge:,
-        **attributes,
+        **attributes
       )
     end
 

@@ -10,7 +10,7 @@ module BillableMetrics
     end
 
     def call
-      return result.not_found_failure!(resource: 'billable_metric') unless billable_metric
+      return result.not_found_failure!(resource: "billable_metric") unless billable_metric
 
       billable_metric.name = params[:name] if params.key?(:name)
       billable_metric.description = params[:description] if params.key?(:description)
@@ -24,7 +24,7 @@ module BillableMetrics
         if params.key?(:filters)
           BillableMetricFilters::CreateOrUpdateBatchService.call(
             billable_metric:,
-            filters_params: params[:filters].map { |f| f.to_h.with_indifferent_access },
+            filters_params: params[:filters].map { |f| f.to_h.with_indifferent_access }
           ).raise_if_error!
         end
       end
@@ -55,7 +55,7 @@ module BillableMetrics
     def update_groups(metric, group_params)
       Groups::CreateOrUpdateBatchService.call(
         billable_metric: metric,
-        group_params: group_params.with_indifferent_access,
+        group_params: group_params.with_indifferent_access
       )
     end
   end

@@ -31,7 +31,7 @@ module Events
       return missing_subscription_error if subscriptions.empty?
 
       if params[:external_subscription_id] &&
-         subscriptions.pluck(:external_id).exclude?(params[:external_subscription_id])
+          subscriptions.pluck(:external_id).exclude?(params[:external_subscription_id])
         return missing_subscription_error
       end
 
@@ -48,7 +48,7 @@ module Events
       Event.where(
         organization_id: organization.id,
         transaction_id: params[:transaction_id],
-        external_subscription_id: subscriptions.first.external_id,
+        external_subscription_id: subscriptions.first.external_id
       ).none?
     end
 
@@ -71,23 +71,23 @@ module Events
     end
 
     def missing_subscription_error
-      result.not_found_failure!(resource: 'subscription')
+      result.not_found_failure!(resource: "subscription")
     end
 
     def transaction_id_error
-      result.validation_failure!(errors: { transaction_id: ['value_is_missing_or_already_exists'] })
+      result.validation_failure!(errors: {transaction_id: ["value_is_missing_or_already_exists"]})
     end
 
     def invalid_code_error
-      result.not_found_failure!(resource: 'billable_metric')
+      result.not_found_failure!(resource: "billable_metric")
     end
 
     def invalid_properties_error
-      result.validation_failure!(errors: { properties: ['value_is_not_valid_number'] })
+      result.validation_failure!(errors: {properties: ["value_is_not_valid_number"]})
     end
 
     def invalid_customer_error
-      result.not_found_failure!(resource: 'customer')
+      result.not_found_failure!(resource: "customer")
     end
 
     def billable_metric

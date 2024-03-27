@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: nil, email_settings: '') }
+describe "Subscriptions Termination Scenario", :scenarios, type: :request do
+  let(:organization) { create(:organization, webhook_url: nil, email_settings: "") }
 
-  let(:timezone) { 'Europe/Paris' }
+  let(:timezone) { "Europe/Paris" }
   let(:customer) { create(:customer, organization:, timezone:) }
 
   let(:plan) do
     create(
       :plan,
       organization:,
-      interval: 'monthly',
+      interval: "monthly",
       amount_cents: 1000,
-      pay_in_advance: false,
+      pay_in_advance: false
     )
   end
 
@@ -22,8 +22,8 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
   let(:subscription_at) { DateTime.new(2023, 9, 5, 0, 0) }
   let(:ending_at) { DateTime.new(2023, 9, 6, 0, 0) }
 
-  context 'when timezone is Europe/Paris' do
-    it 'terminates the subscription when it reaches its ending date' do
+  context "when timezone is Europe/Paris" do
+    it "terminates the subscription when it reaches its ending date" do
       subscription = nil
 
       travel_to(creation_time) do
@@ -32,10 +32,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'anniversary',
+            billing_time: "anniversary",
             subscription_at: subscription_at.iso8601,
-            ending_at: ending_at.iso8601,
-          },
+            ending_at: ending_at.iso8601
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -53,19 +53,19 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
           expect(subscription.reload).to be_terminated
           expect(subscription.reload.invoices.count).to eq(1)
           expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
-          expect(invoice.issuing_date.iso8601).to eq('2023-09-06')
+          expect(invoice.issuing_date.iso8601).to eq("2023-09-06")
         end
       end
     end
   end
 
-  context 'when timezone is Asia/Bangkok' do
-    let(:timezone) { 'Asia/Bangkok' }
+  context "when timezone is Asia/Bangkok" do
+    let(:timezone) { "Asia/Bangkok" }
     let(:creation_time) { DateTime.new(2023, 9, 5, 0, 0) }
     let(:subscription_at) { DateTime.new(2023, 9, 5, 0, 0) }
     let(:ending_at) { DateTime.new(2023, 9, 6, 0, 0) }
 
-    it 'terminates the subscription when it reaches its ending date' do
+    it "terminates the subscription when it reaches its ending date" do
       subscription = nil
 
       travel_to(creation_time) do
@@ -74,10 +74,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'anniversary',
+            billing_time: "anniversary",
             subscription_at: subscription_at.iso8601,
-            ending_at: ending_at.iso8601,
-          },
+            ending_at: ending_at.iso8601
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -95,16 +95,16 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
           expect(subscription.reload).to be_terminated
           expect(subscription.reload.invoices.count).to eq(1)
           expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
-          expect(invoice.issuing_date.iso8601).to eq('2023-09-06')
+          expect(invoice.issuing_date.iso8601).to eq("2023-09-06")
         end
       end
     end
   end
 
-  context 'when timezone is America/Bogota' do
-    let(:timezone) { 'America/Bogota' }
+  context "when timezone is America/Bogota" do
+    let(:timezone) { "America/Bogota" }
 
-    it 'terminates the subscription when it reaches its ending date' do
+    it "terminates the subscription when it reaches its ending date" do
       subscription = nil
 
       travel_to(creation_time) do
@@ -113,10 +113,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'anniversary',
+            billing_time: "anniversary",
             subscription_at: subscription_at.iso8601,
-            ending_at: ending_at.iso8601,
-          },
+            ending_at: ending_at.iso8601
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -134,16 +134,16 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
           expect(subscription.reload).to be_terminated
           expect(subscription.reload.invoices.count).to eq(1)
           expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
-          expect(invoice.issuing_date.iso8601).to eq('2023-09-05')
+          expect(invoice.issuing_date.iso8601).to eq("2023-09-05")
         end
       end
     end
   end
 
-  context 'when ending at is the same as billing date' do
+  context "when ending at is the same as billing date" do
     let(:ending_at) { DateTime.new(2023, 10, 5, 0, 0) }
 
-    it 'bills correctly previous billing period if it has not been billed yet' do
+    it "bills correctly previous billing period if it has not been billed yet" do
       subscription = nil
 
       travel_to(creation_time) do
@@ -152,10 +152,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'anniversary',
+            billing_time: "anniversary",
             subscription_at: subscription_at.iso8601,
-            ending_at: ending_at.iso8601,
-          },
+            ending_at: ending_at.iso8601
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -173,23 +173,23 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
           expect(subscription.reload).to be_terminated
           expect(subscription.reload.invoices.count).to eq(1)
           expect(invoice.total_amount_cents).to eq(1000)
-          expect(invoice.issuing_date.iso8601).to eq('2023-10-05')
+          expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
         end
       end
     end
 
-    context 'when plan is pay in advance' do
+    context "when plan is pay in advance" do
       let(:plan) do
         create(
           :plan,
           organization:,
-          interval: 'monthly',
+          interval: "monthly",
           amount_cents: 1000,
-          pay_in_advance: true,
+          pay_in_advance: true
         )
       end
 
-      it 'does not issue credit note and does not bill previous period ' do
+      it "does not issue credit note and does not bill previous period " do
         subscription = nil
 
         travel_to(creation_time) do
@@ -198,10 +198,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'anniversary',
+              billing_time: "anniversary",
               subscription_at: subscription_at.iso8601,
-              ending_at: ending_at.iso8601,
-            },
+              ending_at: ending_at.iso8601
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -220,14 +220,14 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription.reload.invoices.count).to eq(2)
             expect(customer.credit_notes.count).to eq(0)
             expect(invoice.total_amount_cents).to eq(0)
-            expect(invoice.issuing_date.iso8601).to eq('2023-10-05')
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
           end
         end
       end
     end
 
-    context 'when ending_at is not set and subscription is terminated on the day of creation' do
-      it 'bills correctly only 1 day' do
+    context "when ending_at is not set and subscription is terminated on the day of creation" do
+      it "bills correctly only 1 day" do
         subscription = nil
 
         travel_to(creation_time) do
@@ -236,10 +236,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'anniversary',
+              billing_time: "anniversary",
               subscription_at: subscription_at.iso8601,
-              ending_at: nil,
-            },
+              ending_at: nil
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -260,16 +260,16 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription.reload).to be_terminated
             expect(subscription.reload.invoices.count).to eq(1)
             expect(invoice.total_amount_cents).to eq(33)
-            expect(invoice.issuing_date.iso8601).to eq('2023-09-05')
+            expect(invoice.issuing_date.iso8601).to eq("2023-09-05")
           end
         end
       end
     end
 
-    context 'with America/Bogota timezone' do
-      let(:timezone) { 'America/Bogota' }
+    context "with America/Bogota timezone" do
+      let(:timezone) { "America/Bogota" }
 
-      it 'bills correctly previous billing period if it has not been billed yet' do
+      it "bills correctly previous billing period if it has not been billed yet" do
         subscription = nil
 
         travel_to(creation_time) do
@@ -278,10 +278,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'anniversary',
+              billing_time: "anniversary",
               subscription_at: subscription_at.iso8601,
-              ending_at: ending_at.iso8601,
-            },
+              ending_at: ending_at.iso8601
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -299,16 +299,16 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription.reload).to be_terminated
             expect(subscription.reload.invoices.count).to eq(1)
             expect(invoice.total_amount_cents).to eq(1000)
-            expect(invoice.issuing_date.iso8601).to eq('2023-10-04')
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-04")
           end
         end
       end
     end
 
-    context 'with Asia/Bangkok timezone' do
-      let(:timezone) { 'Asia/Bangkok' }
+    context "with Asia/Bangkok timezone" do
+      let(:timezone) { "Asia/Bangkok" }
 
-      it 'bills correctly previous billing period if it has not been billed yet' do
+      it "bills correctly previous billing period if it has not been billed yet" do
         subscription = nil
 
         travel_to(creation_time) do
@@ -317,10 +317,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'anniversary',
+              billing_time: "anniversary",
               subscription_at: subscription_at.iso8601,
-              ending_at: ending_at.iso8601,
-            },
+              ending_at: ending_at.iso8601
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -338,18 +338,18 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription.reload).to be_terminated
             expect(subscription.reload.invoices.count).to eq(1)
             expect(invoice.total_amount_cents).to eq(1000)
-            expect(invoice.issuing_date.iso8601).to eq('2023-10-05')
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
           end
         end
       end
     end
 
-    context 'when billing time is calendar' do
+    context "when billing time is calendar" do
       let(:creation_time) { DateTime.new(2023, 8, 1, 0, 0) }
       let(:subscription_at) { DateTime.new(2023, 8, 1, 0, 0) }
       let(:ending_at) { DateTime.new(2023, 10, 1, 0, 0) }
 
-      it 'bills correctly previous billing period if it has not been billed yet' do
+      it "bills correctly previous billing period if it has not been billed yet" do
         subscription = nil
 
         travel_to(creation_time) do
@@ -358,10 +358,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'calendar',
+              billing_time: "calendar",
               subscription_at: subscription_at.iso8601,
-              ending_at: ending_at.iso8601,
-            },
+              ending_at: ending_at.iso8601
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -379,23 +379,23 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             expect(subscription.reload).to be_terminated
             expect(subscription.reload.invoices.count).to eq(1)
             expect(invoice.total_amount_cents).to eq(1000)
-            expect(invoice.issuing_date.iso8601).to eq('2023-10-01')
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
           end
         end
       end
 
-      context 'when plan is pay in advance' do
+      context "when plan is pay in advance" do
         let(:plan) do
           create(
             :plan,
             organization:,
-            interval: 'monthly',
+            interval: "monthly",
             amount_cents: 1000,
-            pay_in_advance: true,
+            pay_in_advance: true
           )
         end
 
-        it 'does not issue credit note and does not bill previous period' do
+        it "does not issue credit note and does not bill previous period" do
           subscription = nil
 
           travel_to(creation_time) do
@@ -404,10 +404,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
                 plan_code: plan.code,
-                billing_time: 'calendar',
+                billing_time: "calendar",
                 subscription_at: subscription_at.iso8601,
-                ending_at: ending_at.iso8601,
-              },
+                ending_at: ending_at.iso8601
+              }
             )
 
             subscription = customer.subscriptions.first
@@ -431,14 +431,14 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               expect(subscription.reload.invoices.count).to eq(3)
               expect(customer.credit_notes.count).to eq(0)
               expect(invoice.total_amount_cents).to eq(0)
-              expect(invoice.issuing_date.iso8601).to eq('2023-10-01')
+              expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
             end
           end
         end
       end
 
-      context 'with already triggered subscription job' do
-        it 'bills correctly the previous period since billing job is not performed on ending day' do
+      context "with already triggered subscription job" do
+        it "bills correctly the previous period since billing job is not performed on ending day" do
           subscription = nil
 
           travel_to(creation_time) do
@@ -447,10 +447,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
                 plan_code: plan.code,
-                billing_time: 'calendar',
+                billing_time: "calendar",
                 subscription_at: subscription_at.iso8601,
-                ending_at: ending_at.iso8601,
-              },
+                ending_at: ending_at.iso8601
+              }
             )
 
             subscription = customer.subscriptions.first
@@ -482,14 +482,14 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               expect(subscription.reload).to be_terminated
               expect(subscription.reload.invoices.count).to eq(1)
               expect(invoice.total_amount_cents).to eq(1000)
-              expect(invoice.issuing_date.iso8601).to eq('2023-10-01')
+              expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
             end
           end
         end
       end
 
-      context 'with already triggered subscription job and if ending_at is not set' do
-        it 'bills correctly only one day for manual termination case' do
+      context "with already triggered subscription job and if ending_at is not set" do
+        it "bills correctly only one day for manual termination case" do
           subscription = nil
 
           travel_to(creation_time) do
@@ -498,10 +498,10 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
                 plan_code: plan.code,
-                billing_time: 'calendar',
+                billing_time: "calendar",
                 subscription_at: subscription_at.iso8601,
-                ending_at: nil,
-              },
+                ending_at: nil
+              }
             )
 
             subscription = customer.subscriptions.first
@@ -522,7 +522,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               expect(subscription.reload).to be_active
               expect(subscription.reload.invoices.count).to eq(1)
               expect(invoice.total_amount_cents).to eq(1000)
-              expect(invoice.issuing_date.iso8601).to eq('2023-10-01')
+              expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
             end
           end
 
@@ -537,7 +537,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               expect(subscription.reload).to be_terminated
               expect(subscription.reload.invoices.count).to eq(2)
               expect(invoice.total_amount_cents).to eq(32)
-              expect(invoice.issuing_date.iso8601).to eq('2023-10-01')
+              expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
             end
           end
         end

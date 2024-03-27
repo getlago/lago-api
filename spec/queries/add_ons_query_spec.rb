@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe AddOnsQuery, type: :query do
   subject(:add_ons_query) do
@@ -9,9 +9,9 @@ RSpec.describe AddOnsQuery, type: :query do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:add_on_first) { create(:add_on, organization:, name: 'defgh', code: '11') }
-  let(:add_on_second) { create(:add_on, organization:, name: 'abcde', code: '22') }
-  let(:add_on_third) { create(:add_on, organization:, name: 'presuv', code: '33') }
+  let(:add_on_first) { create(:add_on, organization:, name: "defgh", code: "11") }
+  let(:add_on_second) { create(:add_on, organization:, name: "abcde", code: "22") }
+  let(:add_on_third) { create(:add_on, organization:, name: "presuv", code: "33") }
 
   before do
     add_on_first
@@ -19,11 +19,11 @@ RSpec.describe AddOnsQuery, type: :query do
     add_on_third
   end
 
-  it 'returns all add_ons' do
+  it "returns all add_ons" do
     result = add_ons_query.call(
       search_term: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.add_ons.pluck(:id)
@@ -36,12 +36,12 @@ RSpec.describe AddOnsQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term' do
-    it 'returns only two add_ons' do
+  context "when searching for /de/ term" do
+    it "returns only two add_ons" do
       result = add_ons_query.call(
-        search_term: 'de',
+        search_term: "de",
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.add_ons.pluck(:id)
@@ -55,15 +55,15 @@ RSpec.describe AddOnsQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term and filtering by id' do
-    it 'returns only one add_on' do
+  context "when searching for /de/ term and filtering by id" do
+    it "returns only one add_on" do
       result = add_ons_query.call(
-        search_term: 'de',
+        search_term: "de",
         page: 1,
         limit: 10,
         filters: {
-          ids: [add_on_second.id],
-        },
+          ids: [add_on_second.id]
+        }
       )
 
       returned_ids = result.add_ons.pluck(:id)
@@ -77,12 +77,12 @@ RSpec.describe AddOnsQuery, type: :query do
     end
   end
 
-  context 'when searching for /1/ term' do
-    it 'returns only two add_ons' do
+  context "when searching for /1/ term" do
+    it "returns only two add_ons" do
       result = add_ons_query.call(
-        search_term: '1',
+        search_term: "1",
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.add_ons.pluck(:id)

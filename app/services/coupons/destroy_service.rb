@@ -8,7 +8,7 @@ module Coupons
     end
 
     def call
-      return result.not_found_failure!(resource: 'coupon') unless coupon
+      return result.not_found_failure!(resource: "coupon") unless coupon
 
       ActiveRecord::Base.transaction do
         coupon.discard!

@@ -5,7 +5,7 @@ module Resolvers
     class CustomerResolver < Resolvers::BaseResolver
       include AuthenticableCustomerPortalUser
 
-      description 'Query a customer portal user'
+      description "Query a customer portal user"
 
       type Types::Customers::Object, null: true
 

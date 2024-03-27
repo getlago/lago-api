@@ -16,7 +16,7 @@ module BillableMetrics
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -40,14 +40,14 @@ module BillableMetrics
 
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       protected
 
       def compute_aggregation_value(latest_value)
         result = BigDecimal((latest_value || 0).to_s)
-        return BigDecimal(0) if result.negative?
+        return BigDecimal("0") if result.negative?
 
         result
       end

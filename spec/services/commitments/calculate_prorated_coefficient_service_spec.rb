@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Commitments::CalculateProratedCoefficientService, type: :service do
   let(:service) { described_class.new(commitment:, invoice_subscription:) }
@@ -18,35 +18,35 @@ RSpec.describe Commitments::CalculateProratedCoefficientService, type: :service 
       to_datetime:,
       charges_from_datetime:,
       charges_to_datetime:,
-      timestamp:,
+      timestamp:
     )
   end
 
-  let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-  let(:started_at) { DateTime.parse('2024-01-01T00:00:00') }
-  let(:to_datetime) { DateTime.parse('2024-01-31T23:59:59') }
-  let(:charges_from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
-  let(:charges_to_datetime) { DateTime.parse('2024-01-31T23:59:59') }
-  let(:timestamp) { DateTime.parse('2024-02-01T10:00:00') }
+  let(:from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+  let(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
+  let(:to_datetime) { DateTime.parse("2024-01-31T23:59:59") }
+  let(:charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+  let(:charges_to_datetime) { DateTime.parse("2024-01-31T23:59:59") }
+  let(:timestamp) { DateTime.parse("2024-02-01T10:00:00") }
 
-  describe '#proration_coefficient' do
+  describe "#proration_coefficient" do
     subject(:apply_service) { service.proration_coefficient }
 
-    context 'with whole period' do
-      it 'returns proration coefficient' do
+    context "with whole period" do
+      it "returns proration coefficient" do
         expect(apply_service.proration_coefficient).to eq(1.0)
       end
     end
 
-    context 'with partial period' do
-      let(:from_datetime) { DateTime.parse('2024-01-15T00:00:00') }
+    context "with partial period" do
+      let(:from_datetime) { DateTime.parse("2024-01-15T00:00:00") }
 
-      it 'returns proration coefficient' do
+      it "returns proration coefficient" do
         expect(apply_service.proration_coefficient).to eq(0.5483870967741935)
       end
     end
 
-    context 'when subscription is terminated' do
+    context "when subscription is terminated" do
       let(:from_datetime) { DateTime.current.beginning_of_day }
       let(:started_at) { DateTime.current }
       let(:to_datetime) { nil }
@@ -56,7 +56,7 @@ RSpec.describe Commitments::CalculateProratedCoefficientService, type: :service 
         Subscriptions::TerminateService.call(subscription:, async: false)
       end
 
-      it 'returns proration coefficient' do
+      it "returns proration coefficient" do
         invoice_subscription = subscription.invoice_subscriptions.reload.last
         apply_service = described_class.new(commitment:, invoice_subscription:).proration_coefficient
 

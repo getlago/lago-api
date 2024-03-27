@@ -15,11 +15,11 @@ module Api
     private
 
     def authenticate
-      auth_header = request.headers['Authorization']
+      auth_header = request.headers["Authorization"]
 
       return unauthorized_error unless auth_header
 
-      api_key = auth_header.split(' ').second
+      api_key = auth_header.split(" ").second
 
       return unauthorized_error unless api_key
       return unauthorized_error unless current_organization(api_key)
@@ -32,7 +32,7 @@ module Api
     end
 
     def set_context_source
-      CurrentContext.source = 'api'
+      CurrentContext.source = "api"
     end
   end
 end

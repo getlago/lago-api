@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query a single webhook endpoint'
+    description "Query a single webhook endpoint"
 
-    argument :id, ID, required: true, description: 'Uniq ID of the webhook endpoint'
+    argument :id, ID, required: true, description: "Uniq ID of the webhook endpoint"
 
     type Types::WebhookEndpoints::Object, null: true
 
@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.webhook_endpoints.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'webhook_endpoint')
+      not_found_error(resource: "webhook_endpoint")
     end
   end
 end

@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query pending invites of an organization'
+    description "Query pending invites of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

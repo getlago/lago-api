@@ -3,7 +3,7 @@
 module Types
   module Organizations
     class BillingConfiguration < Types::BaseObject
-      graphql_name 'OrganizationBillingConfiguration'
+      graphql_name "OrganizationBillingConfiguration"
 
       field :document_locale, String
       field :id, ID, null: false

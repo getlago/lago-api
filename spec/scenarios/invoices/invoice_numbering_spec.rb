@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: false do
+describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: false do
   let(:customer_first) { create(:customer, organization:) }
   let(:customer_second) { create(:customer, organization:) }
   let(:customer_third) { create(:customer, organization:) }
@@ -12,9 +12,9 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
     create(
       :organization,
       webhook_url: nil,
-      document_numbering: 'per_customer',
-      timezone: 'Europe/Paris',
-      email_settings: [],
+      document_numbering: "per_customer",
+      timezone: "Europe/Paris",
+      email_settings: []
     )
   end
 
@@ -22,27 +22,27 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
     create(
       :plan,
       organization:,
-      interval: 'monthly',
+      interval: "monthly",
       amount_cents: 12_900,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
   let(:yearly_plan) do
     create(
       :plan,
       organization:,
-      interval: 'yearly',
+      interval: "yearly",
       amount_cents: 100_000,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
   before do
     organization.webhook_endpoints.destroy_all
-    organization.update!(document_number_prefix: 'ORG-1')
+    organization.update!(document_number_prefix: "ORG-1")
   end
 
-  it 'creates invoice numbers correctly' do
+  it "creates invoice numbers correctly" do
     # NOTE: Jul 19th: create the subscription
     travel_to(subscription_at) do
       create_subscription(
@@ -50,27 +50,27 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           external_customer_id: customer_first.external_id,
           external_id: customer_first.external_id,
           plan_code: monthly_plan.code,
-          billing_time: 'anniversary',
-          subscription_at: subscription_at.iso8601,
-        },
+          billing_time: "anniversary",
+          subscription_at: subscription_at.iso8601
+        }
       )
       create_subscription(
         {
           external_customer_id: customer_second.external_id,
           external_id: customer_second.external_id,
           plan_code: monthly_plan.code,
-          billing_time: 'anniversary',
-          subscription_at: subscription_at.iso8601,
-        },
+          billing_time: "anniversary",
+          subscription_at: subscription_at.iso8601
+        }
       )
       create_subscription(
         {
           external_customer_id: customer_third.external_id,
           external_id: customer_third.external_id,
           plan_code: monthly_plan.code,
-          billing_time: 'anniversary',
-          subscription_at: subscription_at.iso8601,
-        },
+          billing_time: "anniversary",
+          subscription_at: subscription_at.iso8601
+        }
       )
 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
@@ -115,7 +115,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
 
     # NOTE: October 19th: Switching to per_organization numbering and Bill subscription
     travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
-      organization.update!(document_numbering: 'per_organization', document_number_prefix: 'ORG-11')
+      organization.update!(document_numbering: "per_organization", document_number_prefix: "ORG-11")
 
       Subscriptions::BillingService.call
       perform_all_enqueued_jobs
@@ -132,7 +132,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
 
     # NOTE: November 19th: Switching to per_customer numbering and Bill subscription
     travel_to(DateTime.new(2023, 11, 19, 12, 12)) do
-      organization.update!(document_numbering: 'per_customer')
+      organization.update!(document_numbering: "per_customer")
 
       Subscriptions::BillingService.call
       perform_all_enqueued_jobs
@@ -153,11 +153,11 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       create_subscription(
         {
           external_customer_id: customer_second.external_id,
-          external_id: 'new_external_id',
+          external_id: "new_external_id",
           plan_code: yearly_plan.code,
-          billing_time: 'anniversary',
-          subscription_at: time.iso8601,
-        },
+          billing_time: "anniversary",
+          subscription_at: time.iso8601
+        }
       )
 
       invoices = organization.reload.invoices.order(created_at: :desc)
@@ -183,13 +183,13 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             ORG-11-002-005
             ORG-11-003-005
             ORG-11-002-006
-          ],
+          ]
         )
     end
 
     # NOTE: December 19th: Switching to per_organization numbering and Bill subscription
     travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
-      organization.update!(document_numbering: 'per_organization')
+      organization.update!(document_numbering: "per_organization")
 
       Subscriptions::BillingService.call
       perform_all_enqueued_jobs
@@ -220,8 +220,8 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
     end
   end
 
-  context 'with organization timezone' do
-    it 'creates invoice numbers correctly' do
+  context "with organization timezone" do
+    it "creates invoice numbers correctly" do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
         create_subscription(
@@ -229,27 +229,27 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_customer_id: customer_first.external_id,
             external_id: customer_first.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'calendar',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "calendar",
+            subscription_at: subscription_at.iso8601
+          }
         )
         create_subscription(
           {
             external_customer_id: customer_second.external_id,
             external_id: customer_second.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'calendar',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "calendar",
+            subscription_at: subscription_at.iso8601
+          }
         )
         create_subscription(
           {
             external_customer_id: customer_third.external_id,
             external_id: customer_third.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'calendar',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "calendar",
+            subscription_at: subscription_at.iso8601
+          }
         )
 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
@@ -292,14 +292,14 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
         expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
       end
 
-      timezone = 'Europe/Paris'
+      timezone = "Europe/Paris"
       customer_first.update(timezone:)
       customer_second.update(timezone:)
       customer_third.update(timezone:)
 
       # NOTE: October 1st: Switching to per_organization numbering and Bill subscription
       travel_to(DateTime.new(2023, 9, 30, 23, 10)) do
-        organization.update!(document_numbering: 'per_organization', document_number_prefix: 'ORG-11')
+        organization.update!(document_numbering: "per_organization", document_number_prefix: "ORG-11")
 
         Subscriptions::BillingService.call
         perform_all_enqueued_jobs
@@ -316,10 +316,10 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
     end
   end
 
-  context 'with grace period and per_customer numbering' do
+  context "with grace period and per_customer numbering" do
     let(:customer_second) { create(:customer, organization:, invoice_grace_period: 2) }
 
-    it 'creates invoice numbers correctly' do
+    it "creates invoice numbers correctly" do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
         create_subscription(
@@ -327,27 +327,27 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_customer_id: customer_first.external_id,
             external_id: customer_first.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
         )
         create_subscription(
           {
             external_customer_id: customer_second.external_id,
             external_id: customer_second.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
         )
         create_subscription(
           {
             external_customer_id: customer_third.external_id,
             external_id: customer_third.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
         )
 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
@@ -366,11 +366,11 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
         create_subscription(
           {
             external_customer_id: customer_first.external_id,
-            external_id: 'new_external_id',
+            external_id: "new_external_id",
             plan_code: yearly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: time.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: time.iso8601
+          }
         )
 
         invoices = organization.reload.invoices.order(created_at: :desc)
@@ -384,7 +384,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-DRAFT
               ORG-1-003-001
               ORG-1-001-002
-            ],
+            ]
           )
       end
 
@@ -394,11 +394,11 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
         create_subscription(
           {
             external_customer_id: customer_second.external_id,
-            external_id: 'new_external_id_2',
+            external_id: "new_external_id_2",
             plan_code: yearly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: time.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: time.iso8601
+          }
         )
 
         invoices = organization.reload.invoices.order(created_at: :desc)
@@ -413,7 +413,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-003-001
               ORG-1-001-002
               ORG-1-DRAFT
-            ],
+            ]
           )
       end
 
@@ -432,7 +432,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-003-001
               ORG-1-001-002
               ORG-1-DRAFT
-            ],
+            ]
           )
       end
 
@@ -451,7 +451,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-003-001
               ORG-1-001-002
               ORG-1-002-002
-            ],
+            ]
           )
       end
 
@@ -478,7 +478,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-001-003
               ORG-1-DRAFT
               ORG-1-003-002
-            ],
+            ]
           )
       end
 
@@ -508,26 +508,26 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-001-004
               ORG-1-DRAFT
               ORG-1-003-003
-            ],
+            ]
           )
       end
     end
   end
 
-  context 'with grace period and per_organization numbering' do
+  context "with grace period and per_organization numbering" do
     let(:customer_second) { create(:customer, organization:, invoice_grace_period: 2) }
 
     let(:organization) do
       create(
         :organization,
         webhook_url: nil,
-        document_numbering: 'per_organization',
-        timezone: 'Europe/Paris',
-        email_settings: [],
+        document_numbering: "per_organization",
+        timezone: "Europe/Paris",
+        email_settings: []
       )
     end
 
-    it 'creates invoice numbers correctly' do
+    it "creates invoice numbers correctly" do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
         create_subscription(
@@ -535,27 +535,27 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_customer_id: customer_first.external_id,
             external_id: customer_first.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
         )
         create_subscription(
           {
             external_customer_id: customer_second.external_id,
             external_id: customer_second.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
         )
         create_subscription(
           {
             external_customer_id: customer_third.external_id,
             external_id: customer_third.external_id,
             plan_code: monthly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
         )
 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
@@ -574,11 +574,11 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
         create_subscription(
           {
             external_customer_id: customer_first.external_id,
-            external_id: 'new_external_id',
+            external_id: "new_external_id",
             plan_code: yearly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: time.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: time.iso8601
+          }
         )
 
         invoices = organization.reload.invoices.order(created_at: :desc)
@@ -592,7 +592,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-DRAFT
               ORG-1-202307-002
               ORG-1-202307-003
-            ],
+            ]
           )
       end
 
@@ -602,11 +602,11 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
         create_subscription(
           {
             external_customer_id: customer_second.external_id,
-            external_id: 'new_external_id_2',
+            external_id: "new_external_id_2",
             plan_code: yearly_plan.code,
-            billing_time: 'anniversary',
-            subscription_at: time.iso8601,
-          },
+            billing_time: "anniversary",
+            subscription_at: time.iso8601
+          }
         )
 
         invoices = organization.reload.invoices.order(created_at: :desc)
@@ -621,7 +621,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202307-002
               ORG-1-202307-003
               ORG-1-DRAFT
-            ],
+            ]
           )
       end
 
@@ -640,7 +640,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202307-002
               ORG-1-202307-003
               ORG-1-DRAFT
-            ],
+            ]
           )
       end
 
@@ -659,7 +659,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202307-002
               ORG-1-202307-003
               ORG-1-202307-005
-            ],
+            ]
           )
       end
 
@@ -686,7 +686,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202308-006
               ORG-1-DRAFT
               ORG-1-202308-007
-            ],
+            ]
           )
       end
 
@@ -716,7 +716,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202309-008
               ORG-1-DRAFT
               ORG-1-202309-009
-            ],
+            ]
           )
       end
 
@@ -741,7 +741,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202309-008
               ORG-1-DRAFT
               ORG-1-202309-009
-            ],
+            ]
           )
       end
     end

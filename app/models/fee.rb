@@ -11,18 +11,18 @@ class Fee < ApplicationRecord
   belongs_to :charge_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
-  belongs_to :true_up_parent_fee, class_name: 'Fee', optional: true
+  belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :customer, through: :subscription
   has_one :organization, through: :invoice
   has_one :billable_metric, -> { with_discarded }, through: :charge
-  has_one :true_up_fee, class_name: 'Fee', foreign_key: :true_up_parent_fee_id, dependent: :destroy
+  has_one :true_up_fee, class_name: "Fee", foreign_key: :true_up_parent_fee_id, dependent: :destroy
 
   has_many :credit_note_items, dependent: :destroy
   has_many :credit_notes, through: :credit_note_items
 
-  has_many :applied_taxes, class_name: 'Fee::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Fee::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   monetize :amount_cents
@@ -37,9 +37,9 @@ class Fee < ApplicationRecord
   enum fee_type: FEE_TYPES
   enum payment_status: PAYMENT_STATUS
 
-  validates :amount_currency, inclusion: { in: currency_list }
-  validates :units, numericality: { greated_than_or_equal_to: 0 }
-  validates :events_count, numericality: { greated_than_or_equal_to: 0 }, allow_nil: true
+  validates :amount_currency, inclusion: {in: currency_list}
+  validates :units, numericality: {greated_than_or_equal_to: 0}
+  validates :events_count, numericality: {greated_than_or_equal_to: 0}, allow_nil: true
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
 
@@ -47,16 +47,16 @@ class Fee < ApplicationRecord
   scope :charge_kind, -> { where(fee_type: :charge) }
   scope :commitment_kind, -> { where(fee_type: :commitment) }
 
-  scope :positive_units, -> { where('units > ?', 0) }
+  scope :positive_units, -> { where("units > ?", 0) }
 
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
   scope :from_organization,
-        lambda { |organization|
-          left_joins(:invoice)
-            .left_joins(subscription: :customer)
-            .where('COALESCE(invoices.organization_id, customers.organization_id) = ?', organization.id)
-        }
+    lambda { |organization|
+      left_joins(:invoice)
+        .left_joins(subscription: :customer)
+        .where("COALESCE(invoices.organization_id, customers.organization_id) = ?", organization.id)
+    }
 
   def item_id
     return billable_metric.id if charge?
@@ -108,7 +108,7 @@ class Fee < ApplicationRecord
 
     return base_clause unless charge?
     return base_clause unless charge.standard?
-    return base_clause if charge.properties['grouped_by'].blank?
+    return base_clause if charge.properties["grouped_by"].blank?
 
     "#{invoice_name} #{grouped_by.values.join} #{group_name}".downcase
   end
@@ -124,7 +124,7 @@ class Fee < ApplicationRecord
   def total_amount_cents
     amount_cents + taxes_amount_cents
   end
-  alias total_amount_currency currency
+  alias_method :total_amount_currency, :currency
 
   def creditable_amount_cents
     amount_cents - credit_note_items.sum(:amount_cents)

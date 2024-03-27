@@ -3,7 +3,7 @@
 module Types
   module PaymentProviders
     class GocardlessInput < BaseInputObject
-      description 'Gocardless input arguments'
+      description "Gocardless input arguments"
 
       argument :access_code, String, required: false
       argument :code, String, required: true

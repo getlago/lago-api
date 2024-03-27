@@ -4,7 +4,7 @@ module Types
   module Customers
     module Usage
       class Current < Types::BaseObject
-        graphql_name 'CustomerUsage'
+        graphql_name "CustomerUsage"
 
         field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false
         field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false

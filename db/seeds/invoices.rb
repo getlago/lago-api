@@ -8,7 +8,7 @@ Subscription.all.find_each do |subscription|
     Invoices::SubscriptionService.call(
       subscriptions: [subscription],
       timestamp: Time.current - offset.months + 1.day,
-      recurring: true,
+      recurring: true
     )
   end
 end
@@ -32,13 +32,13 @@ Invoice.all.find_each do |invoice|
     total_amount_cents: amount,
     total_amount_currency: fee.amount_currency,
     issuing_date: Time.current.to_date,
-    taxes_amount_cents: fee.taxes_amount_cents,
+    taxes_amount_cents: fee.taxes_amount_cents
   )
 
   credit_note.items.create!(
     fee:,
     amount_cents: amount,
     precise_amount_cents: amount,
-    amount_currency: fee.amount_currency,
+    amount_currency: fee.amount_currency
   )
 end

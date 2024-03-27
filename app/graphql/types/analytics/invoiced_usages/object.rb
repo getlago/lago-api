@@ -4,7 +4,7 @@ module Types
   module Analytics
     module InvoicedUsages
       class Object < Types::BaseObject
-        graphql_name 'InvoicedUsage'
+        graphql_name "InvoicedUsage"
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :code, String, null: true

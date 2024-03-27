@@ -4,7 +4,7 @@ module Types
   module Analytics
     module InvoiceCollections
       class Object < Types::BaseObject
-        graphql_name 'FinalizedInvoiceCollection'
+        graphql_name "FinalizedInvoiceCollection"
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :currency, Types::CurrencyEnum, null: true

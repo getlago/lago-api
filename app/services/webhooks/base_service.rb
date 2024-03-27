@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'lago_http_client'
+require "lago_http_client"
 
 module Webhooks
   # NOTE: Abstract Service, should not be used directly
@@ -16,9 +16,9 @@ module Webhooks
       return if current_organization.webhook_endpoints.none?
 
       payload = {
-        webhook_type:,
-        object_type:,
-        object_type => object_serializer.serialize,
+        :webhook_type => webhook_type,
+        :object_type => object_type,
+        object_type => object_serializer.serialize
       }
 
       current_organization.webhook_endpoints.each do |webhook_endpoint|
@@ -66,19 +66,19 @@ module Webhooks
 
       succeed_webhook(webhook, response)
     rescue LagoHttpClient::HttpError,
-           Net::OpenTimeout,
-           Net::ReadTimeout,
-           Net::HTTPBadResponse,
-           Errno::ECONNRESET,
-           Errno::ECONNREFUSED,
-           Errno::EPIPE,
-           OpenSSL::SSL::SSLError,
-           SocketError,
-           EOFError => e
+      Net::OpenTimeout,
+      Net::ReadTimeout,
+      Net::HTTPBadResponse,
+      Errno::ECONNRESET,
+      Errno::ECONNREFUSED,
+      Errno::EPIPE,
+      OpenSSL::SSL::SSLError,
+      SocketError,
+      EOFError => e
       fail_webhook(webhook, e)
 
       # NOTE: By default, Lago is retrying 3 times a webhook
-      return if webhook.retries >= ENV.fetch('LAGO_WEBHOOK_ATTEMPTS', 3).to_i
+      return if webhook.retries >= ENV.fetch("LAGO_WEBHOOK_ATTEMPTS", 3).to_i
 
       SendWebhookJob.set(wait: wait_value(webhook))
         .perform_later(webhook_type, object, options, webhook.id)
@@ -86,16 +86,16 @@ module Webhooks
 
     def generate_headers(webhook_id, webhook_endpoint, payload)
       signature = case webhook_endpoint.signature_algo&.to_sym
-                  when :jwt
-                    jwt_signature(payload)
-                  when :hmac
-                    hmac_signature(payload)
+      when :jwt
+        jwt_signature(payload)
+      when :hmac
+        hmac_signature(payload)
       end
 
       {
-        'X-Lago-Signature' => signature,
-        'X-Lago-Signature-Algorithm' => webhook_endpoint.signature_algo.to_s,
-        'X-Lago-Unique-Key' => webhook_id,
+        "X-Lago-Signature" => signature,
+        "X-Lago-Signature-Algorithm" => webhook_endpoint.signature_algo.to_s,
+        "X-Lago-Unique-Key" => webhook_id
       }
     end
 
@@ -103,20 +103,20 @@ module Webhooks
       JWT.encode(
         {
           data: payload.to_json,
-          iss: issuer,
+          iss: issuer
         },
         RsaPrivateKey,
-        'RS256',
+        "RS256"
       )
     end
 
     def hmac_signature(payload)
-      hmac = OpenSSL::HMAC.digest('sha-256', current_organization.api_key, payload.to_json)
+      hmac = OpenSSL::HMAC.digest("sha-256", current_organization.api_key, payload.to_json)
       Base64.strict_encode64(hmac)
     end
 
     def issuer
-      ENV['LAGO_API_URL']
+      ENV["LAGO_API_URL"]
     end
 
     def initialize_webhook(webhook_endpoint, payload)

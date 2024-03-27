@@ -6,11 +6,11 @@ class WebhooksController < ApplicationController
       organization_id: params[:organization_id],
       code: params[:code].presence,
       params: request.body.read,
-      signature: request.headers['HTTP_STRIPE_SIGNATURE'],
+      signature: request.headers["HTTP_STRIPE_SIGNATURE"]
     )
 
     unless result.success?
-      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == 'webhook_error'
+      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == "webhook_error"
         return head(:bad_request)
       end
 
@@ -25,11 +25,11 @@ class WebhooksController < ApplicationController
       organization_id: params[:organization_id],
       code: params[:code].presence,
       body: request.body.read,
-      signature: request.headers['Webhook-Signature'],
+      signature: request.headers["Webhook-Signature"]
     )
 
     unless result.success?
-      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == 'webhook_error'
+      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == "webhook_error"
         return head(:bad_request)
       end
 
@@ -43,19 +43,19 @@ class WebhooksController < ApplicationController
     result = PaymentProviders::AdyenService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],
       code: params[:code].presence,
-      body: adyen_params,
+      body: adyen_params
     )
 
     unless result.success?
-      return head(:bad_request) if result.error.code == 'webhook_error'
+      return head(:bad_request) if result.error.code == "webhook_error"
 
       result.raise_if_error!
     end
 
-    render(json: '[accepted]')
+    render(json: "[accepted]")
   end
 
   def adyen_params
-    params['notificationItems'].first&.dig('NotificationRequestItem')&.permit!
+    params["notificationItems"].first&.dig("NotificationRequestItem")&.permit!
   end
 end

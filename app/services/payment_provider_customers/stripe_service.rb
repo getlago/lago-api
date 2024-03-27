@@ -18,7 +18,7 @@ module PaymentProviderCustomers
       return result if !stripe_result || !result.success?
 
       stripe_customer.update!(
-        provider_customer_id: stripe_result.id,
+        provider_customer_id: stripe_result.id
       )
 
       deliver_success_webhook
@@ -31,23 +31,23 @@ module PaymentProviderCustomers
     def update
       return result unless stripe_payment_provider
 
-      Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, { api_key: })
+      Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, {api_key:})
       result
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
       deliver_error_webhook(e)
 
-      result.service_failure!(code: 'stripe_error', message: e.message)
+      result.service_failure!(code: "stripe_error", message: e.message)
     rescue Stripe::AuthenticationError => e
       deliver_error_webhook(e)
 
-      message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
+      message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
       result.unauthorized_failure!(message:)
     end
 
     def update_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(customers: { organization_id: })
+        .where(customers: {organization_id:})
         .find_by(provider_customer_id: stripe_customer_id)
       return handle_missing_customer(organization_id, metadata) unless stripe_customer
 
@@ -63,30 +63,30 @@ module PaymentProviderCustomers
     end
 
     def update_provider_default_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
-      return result.not_found_failure!(resource: 'stripe_customer') unless stripe_customer_id
+      return result.not_found_failure!(resource: "stripe_customer") unless stripe_customer_id
 
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(customers: { organization_id: })
+        .where(customers: {organization_id:})
         .find_by(provider_customer_id: stripe_customer_id)
       return handle_missing_customer(organization_id, metadata) unless stripe_customer
 
       Stripe::Customer.update(
         stripe_customer_id,
-        { invoice_settings: { default_payment_method: payment_method_id } },
-        { api_key: },
+        {invoice_settings: {default_payment_method: payment_method_id}},
+        {api_key:}
       )
 
       result.payment_method = payment_method_id
       result
     rescue Stripe::InvalidRequestError => e
-      result.service_failure!(code: 'stripe_error', message: e.message)
+      result.service_failure!(code: "stripe_error", message: e.message)
     end
 
     def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(customers: { organization_id: })
+        .where(customers: {organization_id:})
         .find_by(provider_customer_id: stripe_customer_id)
       return handle_missing_customer(organization_id, metadata) unless stripe_customer
 
@@ -101,7 +101,7 @@ module PaymentProviderCustomers
 
     def check_payment_method(payment_method_id)
       payment_method = Stripe::Customer.new(id: stripe_customer.provider_customer_id)
-        .retrieve_payment_method(payment_method_id, {}, { api_key: })
+        .retrieve_payment_method(payment_method_id, {}, {api_key:})
 
       result.payment_method = payment_method
       result
@@ -109,7 +109,7 @@ module PaymentProviderCustomers
       # NOTE: The payment method is no longer valid
       stripe_customer.update!(payment_method_id: nil)
 
-      result.single_validation_failure!(field: :payment_method_id, error_code: 'value_is_invalid')
+      result.single_validation_failure!(field: :payment_method_id, error_code: "value_is_invalid")
     end
 
     def generate_checkout_url(send_webhook: true)
@@ -118,17 +118,17 @@ module PaymentProviderCustomers
       res = Stripe::Checkout::Session.create(
         checkout_link_params,
         {
-          api_key:,
-        },
+          api_key:
+        }
       )
 
-      result.checkout_url = res['url']
+      result.checkout_url = res["url"]
 
       if send_webhook
         SendWebhookJob.perform_later(
-          'customer.checkout_url_generated',
+          "customer.checkout_url_generated",
           customer,
-          checkout_url: result.checkout_url,
+          checkout_url: result.checkout_url
         )
       end
 
@@ -155,9 +155,9 @@ module PaymentProviderCustomers
     def checkout_link_params
       {
         success_url: success_redirect_url,
-        mode: 'setup',
+        mode: "setup",
         payment_method_types: stripe_customer.provider_payment_methods,
-        customer: stripe_customer.provider_customer_id,
+        customer: stripe_customer.provider_customer_id
       }
     end
 
@@ -171,8 +171,8 @@ module PaymentProviderCustomers
         stripe_create_payload,
         {
           api_key:,
-          idempotency_key: customer.id,
-        },
+          idempotency_key: customer.id
+        }
       )
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
       deliver_error_webhook(e)
@@ -180,7 +180,7 @@ module PaymentProviderCustomers
     rescue Stripe::AuthenticationError => e
       deliver_error_webhook(e)
 
-      message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
+      message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
       result.unauthorized_failure!(message:)
     end
 
@@ -192,15 +192,15 @@ module PaymentProviderCustomers
           line1: customer.address_line1,
           line2: customer.address_line2,
           postal_code: customer.zipcode,
-          state: customer.state,
+          state: customer.state
         },
-        email: customer.email&.strip&.split(',')&.first,
+        email: customer.email&.strip&.split(",")&.first,
         name: customer.name,
         metadata: {
           lago_customer_id: customer.id,
-          customer_id: customer.external_id,
+          customer_id: customer.external_id
         },
-        phone: customer.phone,
+        phone: customer.phone
       }
     end
 
@@ -212,11 +212,11 @@ module PaymentProviderCustomers
           line1: customer.address_line1,
           line2: customer.address_line2,
           postal_code: customer.zipcode,
-          state: customer.state,
+          state: customer.state
         },
-        email: customer.email&.strip&.split(',')&.first,
+        email: customer.email&.strip&.split(",")&.first,
         name: customer.name,
-        phone: customer.phone,
+        phone: customer.phone
       }
     end
 
@@ -224,8 +224,8 @@ module PaymentProviderCustomers
       return unless customer.organization.webhook_endpoints.any?
 
       SendWebhookJob.perform_later(
-        'customer.payment_provider_created',
-        customer,
+        "customer.payment_provider_created",
+        customer
       )
     end
 
@@ -233,12 +233,12 @@ module PaymentProviderCustomers
       return unless customer.organization.webhook_endpoints.any?
 
       SendWebhookJob.perform_later(
-        'customer.payment_provider_error',
+        "customer.payment_provider_error",
         customer,
         provider_error: {
           message: stripe_error.message,
-          error_code: stripe_error.code,
-        },
+          error_code: stripe_error.code
+        }
       )
     end
 
@@ -246,7 +246,7 @@ module PaymentProviderCustomers
       invoices = customer.invoices
         .pending
         .where(ready_for_payment_processing: true)
-        .where(status: 'finalized')
+        .where(status: "finalized")
 
       invoices.find_each do |invoice|
         Invoices::Payments::StripeCreateJob.perform_later(invoice)
@@ -265,7 +265,7 @@ module PaymentProviderCustomers
       #       (Happens when the Stripe API key is shared between organizations)
       return result if Customer.find_by(id: metadata[:lago_customer_id], organization_id:).nil?
 
-      result.not_found_failure!(resource: 'stripe_customer')
+      result.not_found_failure!(resource: "stripe_customer")
     end
 
     def stripe_payment_provider

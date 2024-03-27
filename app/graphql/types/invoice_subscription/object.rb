@@ -3,7 +3,7 @@
 module Types
   module InvoiceSubscription
     class Object < Types::BaseObject
-      graphql_name 'InvoiceSubscription'
+      graphql_name "InvoiceSubscription"
 
       field :invoice, Types::Invoices::Object, null: false
       field :subscription, Types::Subscriptions::Object, null: false

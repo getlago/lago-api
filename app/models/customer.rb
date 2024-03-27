@@ -17,7 +17,7 @@ class Customer < ApplicationRecord
   has_many :events
   has_many :invoices
   has_many :applied_coupons
-  has_many :metadata, class_name: 'Metadata::CustomerMetadata', dependent: :destroy
+  has_many :metadata, class_name: "Metadata::CustomerMetadata", dependent: :destroy
   has_many :coupons, through: :applied_coupons
   has_many :credit_notes
   has_many :applied_add_ons
@@ -25,35 +25,35 @@ class Customer < ApplicationRecord
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
   has_many :payment_provider_customers,
-           class_name: 'PaymentProviderCustomers::BaseCustomer',
-           dependent: :destroy
+    class_name: "PaymentProviderCustomers::BaseCustomer",
+    dependent: :destroy
   has_many :quantified_events
 
-  has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Customer::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
-  has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
-  has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'
-  has_one :adyen_customer, class_name: 'PaymentProviderCustomers::AdyenCustomer'
+  has_one :stripe_customer, class_name: "PaymentProviderCustomers::StripeCustomer"
+  has_one :gocardless_customer, class_name: "PaymentProviderCustomers::GocardlessCustomer"
+  has_one :adyen_customer, class_name: "PaymentProviderCustomers::AdyenCustomer"
 
   PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
 
   default_scope -> { kept }
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
-            lock_key: ->(customer) { customer.organization_id }
+    lock_key: ->(customer) { customer.organization_id }
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
-  validates :currency, inclusion: { in: currency_list }, allow_nil: true
+  validates :currency, inclusion: {in: currency_list}, allow_nil: true
   validates :external_id,
-            presence: true,
-            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id },
-            unless: :deleted_at
-  validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
-  validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
-  validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
+    presence: true,
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},
+    unless: :deleted_at
+  validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+  validates :payment_provider, inclusion: {in: PAYMENT_PROVIDERS}, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
-  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :vat_rate, numericality: {less_than_or_equal_to: 100, greater_than_or_equal_to: 0}, allow_nil: true
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name external_id email]
@@ -70,7 +70,7 @@ class Customer < ApplicationRecord
   def applicable_timezone
     return timezone if timezone.present?
 
-    organization.timezone || 'UTC'
+    organization.timezone || "UTC"
   end
 
   def applicable_invoice_grace_period
@@ -114,7 +114,7 @@ class Customer < ApplicationRecord
   def ensure_slug
     return if slug.present?
 
-    formatted_sequential_id = format('%03d', sequential_id)
+    formatted_sequential_id = format("%03d", sequential_id)
 
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
   end

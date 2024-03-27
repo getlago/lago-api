@@ -3,7 +3,7 @@
 module Wallets
   class UpdateService < BaseService
     def update(wallet:, args:)
-      return result.not_found_failure!(resource: 'wallet') unless wallet
+      return result.not_found_failure!(resource: "wallet") unless wallet
       return result unless valid_expiration_at?(expiration_at: args[:expiration_at])
       return result unless valid_recurring_transaction_rules?(**args)
 
@@ -43,7 +43,7 @@ module Wallets
         return true if parsed_expiration_at.to_date > Time.current.to_date
       end
 
-      result.single_validation_failure!(field: :expiration_at, error_code: 'invalid_date')
+      result.single_validation_failure!(field: :expiration_at, error_code: "invalid_date")
 
       false
     end

@@ -9,7 +9,7 @@ module PaymentProviders
         organization_id: args[:organization].id,
         code: args[:code],
         id: args[:id],
-        payment_provider_type: 'adyen',
+        payment_provider_type: "adyen"
       )
 
       adyen_provider = if payment_provider_result.success?
@@ -17,7 +17,7 @@ module PaymentProviders
       else
         PaymentProviders::AdyenProvider.new(
           organization_id: args[:organization].id,
-          code: args[:code],
+          code: args[:code]
         )
       end
 
@@ -37,7 +37,7 @@ module PaymentProviders
         #       attached to the provider
         reattach_provider_customers(
           organization_id: args[:organization_id],
-          adyen_provider:,
+          adyen_provider:
         )
       end
 
@@ -49,12 +49,12 @@ module PaymentProviders
 
     def handle_incoming_webhook(organization_id:, body:, code: nil)
       organization = Organization.find_by(id: organization_id)
-      return result.service_failure!(code: 'webhook_error', message: 'Organization not found') unless organization
+      return result.service_failure!(code: "webhook_error", message: "Organization not found") unless organization
 
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id:,
         code:,
-        payment_provider_type: 'adyen',
+        payment_provider_type: "adyen"
       )
 
       return payment_provider_result unless payment_provider_result.success?
@@ -63,7 +63,7 @@ module PaymentProviders
       hmac_key = payment_provider_result.payment_provider.hmac_key
 
       if hmac_key && !validator.valid_notification_hmac?(body, hmac_key)
-        return result.service_failure!(code: 'webhook_error', message: 'Invalid signature')
+        return result.service_failure!(code: "webhook_error", message: "Invalid signature")
       end
 
       PaymentProviders::Adyen::HandleEventJob.perform_later(organization:, event_json: body.to_json)
@@ -74,19 +74,19 @@ module PaymentProviders
 
     def handle_event(organization:, event_json:)
       event = JSON.parse(event_json)
-      unless WEBHOOKS_EVENTS.include?(event['eventCode'])
+      unless WEBHOOKS_EVENTS.include?(event["eventCode"])
         return result.service_failure!(
-          code: 'webhook_error',
-          message: "Invalid adyen event code: #{event['eventCode']}",
+          code: "webhook_error",
+          message: "Invalid adyen event code: #{event["eventCode"]}"
         )
       end
 
-      case event['eventCode']
-      when 'AUTHORISATION'
-        amount = event.dig('amount', 'value')
-        payment_type = event.dig('additionalData', 'metadata.payment_type')
+      case event["eventCode"]
+      when "AUTHORISATION"
+        amount = event.dig("amount", "value")
+        payment_type = event.dig("additionalData", "metadata.payment_type")
 
-        if payment_type == 'one-time'
+        if payment_type == "one-time"
           update_result = update_payment_status(event, payment_type)
           return update_result.raise_if_error! || update_result
         end
@@ -97,20 +97,20 @@ module PaymentProviders
 
         result = service.preauthorise(organization, event)
         result.raise_if_error! || result
-      when 'REFUND'
+      when "REFUND"
         service = CreditNotes::Refunds::AdyenService.new
 
-        provider_refund_id = event['pspReference']
-        status = (event['success'] == 'true') ? :succeeded : :failed
+        provider_refund_id = event["pspReference"]
+        status = (event["success"] == "true") ? :succeeded : :failed
 
         result = service.update_status(provider_refund_id:, status:)
         result.raise_if_error! || result
-      when 'REFUND_FAILED'
-        return result if event['success'] != 'true'
+      when "REFUND_FAILED"
+        return result if event["success"] != "true"
 
         service = CreditNotes::Refunds::AdyenService.new
 
-        provider_refund_id = event['pspReference']
+        provider_refund_id = event["pspReference"]
 
         result = service.update_status(provider_refund_id:, status: :failed)
         result.raise_if_error! || result
@@ -120,7 +120,7 @@ module PaymentProviders
     def reattach_provider_customers(organization_id:, adyen_provider:)
       PaymentProviderCustomers::AdyenCustomer
         .joins(:customer)
-        .where(payment_provider_id: nil, customers: { organization_id: }).each do |c|
+        .where(payment_provider_id: nil, customers: {organization_id:}).each do |c|
           c.update(payment_provider_id: adyen_provider.id)
         end
     end
@@ -128,9 +128,9 @@ module PaymentProviders
     private
 
     def update_payment_status(event, payment_type)
-      provider_payment_id = event['pspReference']
-      status = (event['success'] == 'true') ? 'succeeded' : 'failed'
-      metadata = { payment_type:, lago_invoice_id: event.dig('additionalData', 'metadata.lago_invoice_id') }
+      provider_payment_id = event["pspReference"]
+      status = (event["success"] == "true") ? "succeeded" : "failed"
+      metadata = {payment_type:, lago_invoice_id: event.dig("additionalData", "metadata.lago_invoice_id")}
 
       Invoices::Payments::AdyenService.new.update_payment_status(provider_payment_id:, status:, metadata:)
     end

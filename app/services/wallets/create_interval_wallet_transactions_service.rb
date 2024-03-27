@@ -11,7 +11,7 @@ module Wallets
           wallet_id: wallet.id,
           paid_credits: recurring_transaction_rule.paid_credits.to_s,
           granted_credits: recurring_transaction_rule.granted_credits.to_s,
-          source: :interval,
+          source: :interval
         )
       end
     end
@@ -54,7 +54,7 @@ module Wallets
         GROUP BY recurring_transaction_rules.id
       SQL
 
-      RecurringTransactionRule.find_by_sql([sql, { today: }])
+      RecurringTransactionRule.find_by_sql([sql, {today:}])
     end
 
     def base_recurring_transaction_rule_scope(interval: nil, conditions: nil)
@@ -67,7 +67,7 @@ module Wallets
         WHERE wallets.status = #{Wallet.statuses[:active]}
           AND recurring_transaction_rules.rule_type = #{RecurringTransactionRule.rule_types[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}
-          AND #{conditions.join(' AND ')}
+          AND #{conditions.join(" AND ")}
         GROUP BY recurring_transaction_rules.id
       SQL
     end
@@ -77,15 +77,15 @@ module Wallets
         interval: :weekly,
         conditions: [
           "EXTRACT(ISODOW FROM (wallets.created_at#{at_time_zone})) =
-          EXTRACT(ISODOW FROM (:today#{at_time_zone}))",
-        ],
+          EXTRACT(ISODOW FROM (:today#{at_time_zone}))"
+        ]
       )
     end
 
     def monthly_anniversary
       base_recurring_transaction_rule_scope(
         interval: :monthly,
-        conditions: [<<-SQL],
+        conditions: [<<-SQL]
           DATE_PART('day', (wallets.created_at#{at_time_zone})) = ANY (
             -- Check if today is the last day of the month
             CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
@@ -136,7 +136,7 @@ module Wallets
 
       base_recurring_transaction_rule_scope(
         interval: :quarterly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
     # rubocop:enable Layout/LineLength
@@ -167,11 +167,11 @@ module Wallets
 
       base_recurring_transaction_rule_scope(
         interval: :yearly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 
-    def at_time_zone(customer: 'customers', organization: 'organizations')
+    def at_time_zone(customer: "customers", organization: "organizations")
       <<-SQL
       ::timestamptz AT TIME ZONE COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
       SQL
@@ -195,8 +195,8 @@ module Wallets
         WHERE wallet_transactions.source = #{WalletTransaction.sources[:interval]}
           AND wallet_transactions.transaction_type = #{WalletTransaction.transaction_types[:inbound]}
           AND DATE(
-            (wallet_transactions.created_at)#{at_time_zone(customer: 'cus', organization: 'org')}
-          ) = DATE(:today#{at_time_zone(customer: 'cus', organization: 'org')})
+            (wallet_transactions.created_at)#{at_time_zone(customer: "cus", organization: "org")}
+          ) = DATE(:today#{at_time_zone(customer: "cus", organization: "org")})
         GROUP BY wallet_transactions.wallet_id
       SQL
     end

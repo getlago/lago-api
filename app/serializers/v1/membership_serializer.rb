@@ -7,7 +7,7 @@ module V1
         lago_id: model.id,
         lago_user_id: model.user_id,
         lago_organization_id: model.organization_id,
-        role: model.role,
+        role: model.role
       }
     end
   end

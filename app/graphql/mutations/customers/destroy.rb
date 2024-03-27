@@ -5,8 +5,8 @@ module Mutations
     class Destroy < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'DestroyCustomer'
-      description 'Delete a Customer'
+      graphql_name "DestroyCustomer"
+      description "Delete a Customer"
 
       argument :id, ID, required: true
 

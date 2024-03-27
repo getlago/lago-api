@@ -4,7 +4,7 @@ module Types
   module Fees
     module AmountDetails
       class Object < Types::BaseObject
-        graphql_name 'FeeAmountDetails'
+        graphql_name "FeeAmountDetails"
 
         # NOTE: Graduated charge model
         field :graduated_ranges, [Types::Fees::AmountDetails::GraduatedRange], null: true

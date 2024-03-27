@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'lago_utils'
+require "lago_utils"
 
 License = LagoUtils::License.new(Rails.application.config.license_url)
 

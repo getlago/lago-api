@@ -7,8 +7,8 @@ module Resolvers
 
     description "Query customer's credit note"
 
-    argument :customer_id, ID, required: true, description: 'Uniq ID of the customer'
-    argument :ids, [String], required: false, description: 'List of plan ID to fetch'
+    argument :customer_id, ID, required: true, description: "Uniq ID of the customer"
+    argument :ids, [String], required: false, description: "List of plan ID to fetch"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false
@@ -25,13 +25,13 @@ module Resolvers
         customer_id:,
         limit:,
         filters: {
-          ids:,
-        },
+          ids:
+        }
       )
 
       result.credit_notes
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'customer')
+      not_found_error(resource: "customer")
     end
   end
 end

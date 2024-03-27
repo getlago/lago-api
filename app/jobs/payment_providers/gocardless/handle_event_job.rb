@@ -3,7 +3,7 @@
 module PaymentProviders
   module Gocardless
     class HandleEventJob < ApplicationJob
-      queue_as 'providers'
+      queue_as "providers"
 
       def perform(events_json:)
         result = PaymentProviders::GocardlessService.new.handle_event(events_json:)

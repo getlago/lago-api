@@ -11,11 +11,11 @@ module Subscriptions
 
     def cache_key
       [
-        'charge-usage',
+        "charge-usage",
         charge.id,
         subscription.id,
-        charge.updated_at.iso8601,
-      ].join('/')
+        charge.updated_at.iso8601
+      ].join("/")
     end
 
     def expire_cache

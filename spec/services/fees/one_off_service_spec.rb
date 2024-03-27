@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Fees::OneOffService do
   subject(:one_off_service) do
@@ -20,21 +20,21 @@ RSpec.describe Fees::OneOffService do
         add_on_code: add_on_first.code,
         unit_amount_cents: 1200,
         units: 2,
-        description: 'desc-123',
-        tax_codes: [tax2.code],
+        description: "desc-123",
+        tax_codes: [tax2.code]
       },
       {
-        add_on_code: add_on_second.code,
-      },
+        add_on_code: add_on_second.code
+      }
     ]
   end
 
   before { tax }
 
-  describe 'create' do
-    before { CurrentContext.source = 'api' }
+  describe "create" do
+    before { CurrentContext.source = "api" }
 
-    it 'creates fees' do
+    it "creates fees" do
       result = one_off_service.create
 
       expect(result).to be_success
@@ -47,14 +47,14 @@ RSpec.describe Fees::OneOffService do
           id: String,
           invoice_id: invoice.id,
           add_on_id: add_on_first.id,
-          description: 'desc-123',
+          description: "desc-123",
           unit_amount_cents: 1200,
           precise_unit_amount: 12,
           units: 2,
           amount_cents: 2400,
-          amount_currency: 'EUR',
-          fee_type: 'add_on',
-          payment_status: 'pending',
+          amount_currency: "EUR",
+          fee_type: "add_on",
+          payment_status: "pending"
         )
         expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
 
@@ -67,50 +67,50 @@ RSpec.describe Fees::OneOffService do
           precise_unit_amount: 4,
           units: 1,
           amount_cents: 400,
-          amount_currency: 'EUR',
-          fee_type: 'add_on',
-          payment_status: 'pending',
+          amount_currency: "EUR",
+          fee_type: "add_on",
+          payment_status: "pending"
         )
         expect(second_fee.taxes.map(&:code)).to contain_exactly(tax.code)
       end
     end
 
-    context 'when add_on_code is invalid' do
+    context "when add_on_code is invalid" do
       let(:fees) do
         [
           {
             add_on_code: add_on_first.code,
             unit_amount_cents: 1200,
             units: 2,
-            description: 'desc-123',
+            description: "desc-123"
           },
           {
-            add_on_code: 'invalid',
-          },
+            add_on_code: "invalid"
+          }
         ]
       end
 
-      it 'does not create an invalid fee' do
+      it "does not create an invalid fee" do
         one_off_service.create
 
         expect(Fee.find_by(description: add_on_second.description)).to be_nil
       end
     end
 
-    context 'when units is passed as string' do
+    context "when units is passed as string" do
       let(:fees) do
         [
           {
             add_on_code: add_on_first.code,
             unit_amount_cents: 1200,
             units: 2,
-            description: 'desc-123',
-            tax_codes: [tax2.code],
-          },
+            description: "desc-123",
+            tax_codes: [tax2.code]
+          }
         ]
       end
 
-      it 'creates fees' do
+      it "creates fees" do
         result = one_off_service.create
 
         expect(result).to be_success
@@ -122,14 +122,14 @@ RSpec.describe Fees::OneOffService do
             id: String,
             invoice_id: invoice.id,
             add_on_id: add_on_first.id,
-            description: 'desc-123',
+            description: "desc-123",
             unit_amount_cents: 1200,
             precise_unit_amount: 12,
             units: 2,
             amount_cents: 2400,
-            amount_currency: 'EUR',
-            fee_type: 'add_on',
-            payment_status: 'pending',
+            amount_currency: "EUR",
+            fee_type: "add_on",
+            payment_status: "pending"
           )
           expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
         end

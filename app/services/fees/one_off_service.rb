@@ -16,7 +16,7 @@ module Fees
         fees.each do |fee|
           add_on = add_on(identifier: fee[add_on_identifier])
 
-          return result.not_found_failure!(resource: 'add_on') unless add_on
+          return result.not_found_failure!(resource: "add_on") unless add_on
 
           unit_amount_cents = fee[:unit_amount_cents] || add_on.amount_cents
           units = fee[:units]&.to_f || 1
@@ -31,11 +31,11 @@ module Fees
             amount_cents: (unit_amount_cents * units).round,
             amount_currency: invoice.currency,
             fee_type: :add_on,
-            invoiceable_type: 'AddOn',
+            invoiceable_type: "AddOn",
             invoiceable: add_on,
             units:,
             payment_status: :pending,
-            taxes_amount_cents: 0,
+            taxes_amount_cents: 0
           )
           fee.precise_unit_amount = fee.unit_amount.to_f
 

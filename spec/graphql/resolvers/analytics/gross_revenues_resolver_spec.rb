@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
   let(:query) do
@@ -20,43 +20,43 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  it 'returns a list of gross revenues' do
+  it "returns a list of gross revenues" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
-    expect(result['data']['grossRevenues']['collection']).to eq([])
+    expect(result["data"]["grossRevenues"]["collection"]).to eq([])
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(current_user: membership.user, query:)
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: "Missing organization id"
       )
     end
   end
 
-  context 'when not member of the organization' do
-    it 'returns an error' do
+  context "when not member of the organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Not in organization',
+        message: "Not in organization"
       )
     end
   end
 
-  describe '#resolve' do
+  describe "#resolve" do
     subject(:resolve) { resolver.resolve }
 
     let(:resolver) { described_class.new(object: nil, context: nil, field: nil) }
@@ -70,7 +70,7 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
       resolve
     end
 
-    it 'calls ::Analytics::GrossRevenue.find_all_by' do
+    it "calls ::Analytics::GrossRevenue.find_all_by" do
       expect(Analytics::GrossRevenue).to have_received(:find_all_by).with(current_organization.id, months: 12)
     end
   end

@@ -46,15 +46,15 @@ module BillableMetrics
       protected
 
       attr_accessor :event_store_class,
-                    :charge,
-                    :subscription,
-                    :filters,
-                    :group,
-                    :charge_filter,
-                    :event,
-                    :boundaries,
-                    :grouped_by,
-                    :grouped_by_values
+        :charge,
+        :subscription,
+        :filters,
+        :group,
+        :charge_filter,
+        :event,
+        :boundaries,
+        :grouped_by,
+        :grouped_by_values
 
       delegate :billable_metric, to: :charge
 
@@ -65,7 +65,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries:,
-          filters:,
+          filters:
         )
       end
 
@@ -81,13 +81,13 @@ module BillableMetrics
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: target_result.grouped_by,
+          grouped_by: target_result.grouped_by
         )
 
         if cached_aggregation
           aggregation = total_aggregation -
-                        BigDecimal(cached_aggregation.current_aggregation) +
-                        BigDecimal(cached_aggregation.max_aggregation)
+            BigDecimal(cached_aggregation.current_aggregation) +
+            BigDecimal(cached_aggregation.max_aggregation)
 
           target_result.aggregation = aggregation
         else

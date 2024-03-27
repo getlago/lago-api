@@ -3,7 +3,7 @@
 module Types
   module Coupons
     class CreateInput < Types::BaseInputObject
-      graphql_name 'CreateCouponInput'
+      graphql_name "CreateCouponInput"
 
       argument :amount_cents, GraphQL::Types::BigInt, required: false
       argument :amount_currency, Types::CurrencyEnum, required: false

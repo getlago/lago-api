@@ -5,10 +5,10 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query a single payment provider'
+    description "Query a single payment provider"
 
-    argument :code, String, required: false, description: 'Code of the payment provider'
-    argument :id, ID, required: false, description: 'Uniq ID of the payment provider'
+    argument :code, String, required: false, description: "Code of the payment provider"
+    argument :id, ID, required: false, description: "Uniq ID of the payment provider"
 
     type Types::PaymentProviders::Object, null: true
 
@@ -21,7 +21,7 @@ module Resolvers
         current_organization.payment_providers.find_by!(code:)
       end
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'payment_provider')
+      not_found_error(resource: "payment_provider")
     end
   end
 end

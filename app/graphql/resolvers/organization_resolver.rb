@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query the current organization'
+    description "Query the current organization"
 
     type Types::OrganizationType, null: true
 

@@ -12,7 +12,7 @@ class TaxesQuery < BaseQuery
       taxes = taxes.where(applied_to_organization: filters[:applied_to_organization])
     end
 
-    order = Tax::ORDERS.include?(order) ? order : 'name'
+    order = Tax::ORDERS.include?(order) ? order : "name"
     taxes = taxes.order(order).page(page).per(limit)
 
     result.taxes = taxes
@@ -31,9 +31,9 @@ class TaxesQuery < BaseQuery
     return nil if search_term.blank?
 
     {
-      m: 'or',
+      m: "or",
       name_cont: search_term,
-      code_cont: search_term,
+      code_cont: search_term
     }
   end
 end

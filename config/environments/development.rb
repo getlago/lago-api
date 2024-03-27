@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require 'active_support/core_ext/integer/time'
-require 'sprockets/railtie'
+require "active_support/core_ext/integer/time"
+require "sprockets/railtie"
 
 Rails.application.configure do
   config.after_initialize do
-    Bullet.enable        = true
-    Bullet.rails_logger  = true
+    Bullet.enable = true
+    Bullet.rails_logger = true
   end
 
   # Settings specified here will take precedence over those in config/application.rb.
   config.middleware.use(ActionDispatch::Cookies)
-  config.middleware.use(ActionDispatch::Session::CookieStore, key: '_lago_dev')
+  config.middleware.use(ActionDispatch::Session::CookieStore, key: "_lago_dev")
   config.middleware.use(Rack::MethodOverride)
 
   config.cache_classes = false
@@ -19,10 +19,10 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.server_timing = true
 
-  if Rails.root.join('tmp/caching-dev.txt').exist?
+  if Rails.root.join("tmp/caching-dev.txt").exist?
     config.cache_store = :memory_store
     config.public_file_server.headers = {
-      'Cache-Control' => "public, max-age=#{2.days.to_i}",
+      "Cache-Control" => "public, max-age=#{2.days.to_i}"
     }
   else
     config.action_controller.perform_caching = false
@@ -30,8 +30,8 @@ Rails.application.configure do
     config.cache_store = :null_store
   end
 
-  config.active_storage.service = if ENV['LAGO_USE_AWS_S3'].present? && ENV['LAGO_USE_AWS_S3'] == 'true'
-    if ENV['LAGO_AWS_S3_ENDPOINT'].present?
+  config.active_storage.service = if ENV["LAGO_USE_AWS_S3"].present? && ENV["LAGO_USE_AWS_S3"] == "true"
+    if ENV["LAGO_AWS_S3_ENDPOINT"].present?
       :amazon_compatible_endpoint
     else
       :amazon
@@ -50,18 +50,18 @@ Rails.application.configure do
   logger.formatter = config.log_formatter
   config.logger = ActiveSupport::TaggedLogging.new(logger)
 
-  config.hosts << 'api.lago.dev'
-  config.hosts << 'api'
-  config.hosts << 'lago.ngrok.dev'
+  config.hosts << "api.lago.dev"
+  config.hosts << "api"
+  config.hosts << "lago.ngrok.dev"
 
-  config.license_url = 'http://license:3000'
+  config.license_url = "http://license:3000"
 
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
-    address: 'mailhog',
-    port: 1025,
+    address: "mailhog",
+    port: 1025
   }
 
   Dotenv.load

@@ -6,7 +6,7 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      description 'Query MRR of an organization'
+      description "Query MRR of an organization"
 
       argument :currency, Types::CurrencyEnum, required: false
 
@@ -17,7 +17,7 @@ module Resolvers
 
         raise unauthorized_error unless License.premium?
 
-        ::Analytics::Mrr.find_all_by(current_organization.id, **args.merge({ months: 12 }))
+        ::Analytics::Mrr.find_all_by(current_organization.id, **args.merge({months: 12}))
       end
     end
   end

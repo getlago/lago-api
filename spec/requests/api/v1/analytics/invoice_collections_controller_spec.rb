@@ -1,19 +1,19 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::Analytics::InvoiceCollectionsController, type: :request do # rubocop:disable RSpec/FilePath
-  describe 'GET /analytics/invoice_collection' do
+  describe "GET /analytics/invoice_collection" do
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
 
-    context 'when licence is premium' do
+    context "when licence is premium" do
       around { |test| lago_premium!(&test) }
 
-      it 'returns the gross revenue' do
+      it "returns the gross revenue" do
         get_with_token(
           organization,
-          '/api/v1/analytics/invoice_collection',
+          "/api/v1/analytics/invoice_collection"
         )
 
         aggregate_failures do
@@ -30,11 +30,11 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController, type: :request 
       end
     end
 
-    context 'when licence is not premium' do
-      it 'returns forbidden status' do
+    context "when licence is not premium" do
+      it "returns forbidden status" do
         get_with_token(
           organization,
-          '/api/v1/analytics/invoice_collection',
+          "/api/v1/analytics/invoice_collection"
         )
 
         expect(response).to have_http_status(:forbidden)

@@ -10,7 +10,7 @@ module Events
         organization:,
         params:,
         timestamp: Time.zone.at(timestamp.to_f),
-        metadata:,
+        metadata:
       )
 
       result.raise_if_error!

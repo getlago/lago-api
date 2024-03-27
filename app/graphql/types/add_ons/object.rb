@@ -3,7 +3,7 @@
 module Types
   module AddOns
     class Object < Types::BaseObject
-      graphql_name 'AddOn'
+      graphql_name "AddOn"
 
       field :id, ID, null: false
       field :organization, Types::OrganizationType
@@ -21,7 +21,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :applied_add_ons_count, Integer, null: false
-      field :customers_count, Integer, null: false, description: 'Number of customers using this add-on'
+      field :customers_count, Integer, null: false, description: "Number of customers using this add-on"
 
       field :taxes, [Types::Taxes::Object]
 

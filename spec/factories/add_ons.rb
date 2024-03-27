@@ -6,8 +6,8 @@ FactoryBot.define do
     name { Faker::Name.name }
     invoice_display_name { Faker::Fantasy::Tolkien.location }
     code { Faker::Name.first_name }
-    description { 'test description' }
+    description { "test description" }
     amount_cents { 200 }
-    amount_currency { 'EUR' }
+    amount_currency { "EUR" }
   end
 end

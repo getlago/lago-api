@@ -3,7 +3,7 @@
 module Types
   module Charges
     class Object < Types::BaseObject
-      graphql_name 'Charge'
+      graphql_name "Charge"
 
       field :id, ID, null: false
       field :invoice_display_name, String, null: true
@@ -26,7 +26,7 @@ module Types
       field :taxes, [Types::Taxes::Object]
 
       def properties
-        return object.properties unless object.properties == '{}'
+        return object.properties unless object.properties == "{}"
 
         JSON.parse(object.properties)
       end

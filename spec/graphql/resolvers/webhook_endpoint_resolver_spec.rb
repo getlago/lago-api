@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::WebhookEndpointResolver, type: :graphql do
   let(:query) do
@@ -25,20 +25,20 @@ RSpec.describe Resolvers::WebhookEndpointResolver, type: :graphql do
     organization.webhook_endpoints << webhook_endpoint
   end
 
-  it 'returns a single credit note' do
+  it "returns a single credit note" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       query:,
       variables: {
-        webhookEndpointId: webhook_endpoint.id,
-      },
+        webhookEndpointId: webhook_endpoint.id
+      }
     )
 
-    webhook_endpoint_response = result['data']['webhookEndpoint']
+    webhook_endpoint_response = result["data"]["webhookEndpoint"]
 
     aggregate_failures do
-      expect(webhook_endpoint_response['id']).to eq(webhook_endpoint.id)
+      expect(webhook_endpoint_response["id"]).to eq(webhook_endpoint.id)
     end
   end
 end

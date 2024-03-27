@@ -3,8 +3,8 @@
 module Types
   module ChargeFilters
     class Input < BaseInputObject
-      graphql_name 'ChargeFilterInput'
-      description 'Charge filters input arguments'
+      graphql_name "ChargeFilterInput"
+      description "Charge filters input arguments"
 
       argument :invoice_display_name, String, required: false
       argument :properties, Types::Charges::PropertiesInput, required: true

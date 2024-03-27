@@ -3,7 +3,7 @@
 module Types
   module Wallets
     class UpdateInput < Types::BaseInputObject
-      description 'Update Wallet Input'
+      description "Update Wallet Input"
 
       argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :id, ID, required: true

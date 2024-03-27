@@ -7,7 +7,7 @@ module V1
         lago_id: model.id,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
-        fee:,
+        fee:
       }
     end
 
@@ -15,7 +15,7 @@ module V1
 
     def fee
       ::V1::FeeSerializer.new(
-        model.fee,
+        model.fee
       ).serialize
     end
   end

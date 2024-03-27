@@ -11,10 +11,10 @@ class Charge < ApplicationRecord
 
   has_many :fees
   has_many :group_properties, dependent: :destroy
-  has_many :filters, dependent: :destroy, class_name: 'ChargeFilter'
-  has_many :filter_values, through: :filters, class_name: 'ChargeFilterValue', source: :values
+  has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
+  has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values
 
-  has_many :applied_taxes, class_name: 'Charge::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   CHARGE_MODELS = %i[
@@ -35,7 +35,7 @@ class Charge < ApplicationRecord
   validate :validate_volume, if: -> { volume? && group_properties.empty? }
   validate :validate_graduated_percentage, if: -> { graduated_percentage? && group_properties.empty? }
 
-  validates :min_amount_cents, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
 
   validate :validate_pay_in_advance

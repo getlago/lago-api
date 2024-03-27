@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:query) do
@@ -55,7 +55,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) do
-    create(:customer, organization:, currency: 'EUR')
+    create(:customer, organization:, currency: "EUR")
   end
   let(:subscription) { create(:subscription, customer:) }
   let(:applied_add_on) { create(:applied_add_on, customer:) }
@@ -64,7 +64,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:credit_note_item) { create(:credit_note_item, credit_note:) }
 
   before do
-    organization.update!(timezone: 'America/New_York')
+    organization.update!(timezone: "America/New_York")
     create_list(:invoice, 2, customer:)
     applied_add_on
     applied_tax
@@ -72,35 +72,35 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     credit_note_item
   end
 
-  it 'returns a single customer' do
+  it "returns a single customer" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       query:,
       variables: {
-        customerId: customer.id,
-      },
+        customerId: customer.id
+      }
     )
 
-    customer_response = result['data']['customer']
+    customer_response = result["data"]["customer"]
 
     aggregate_failures do
-      expect(customer_response['id']).to eq(customer.id)
-      expect(customer_response['subscriptions'].count).to eq(1)
-      expect(customer_response['invoices'].count).to eq(2)
-      expect(customer_response['appliedAddOns'].count).to eq(1)
-      expect(customer_response['taxes'].count).to eq(1)
-      expect(customer_response['currency']).to be_present
-      expect(customer_response['externalSalesforceId']).to be_nil
-      expect(customer_response['timezone']).to be_nil
-      expect(customer_response['applicableTimezone']).to eq('TZ_AMERICA_NEW_YORK')
-      expect(customer_response['hasCreditNotes']).to be true
-      expect(customer_response['creditNotesCreditsAvailableCount']).to eq(1)
-      expect(customer_response['creditNotesBalanceAmountCents']).to eq('120')
+      expect(customer_response["id"]).to eq(customer.id)
+      expect(customer_response["subscriptions"].count).to eq(1)
+      expect(customer_response["invoices"].count).to eq(2)
+      expect(customer_response["appliedAddOns"].count).to eq(1)
+      expect(customer_response["taxes"].count).to eq(1)
+      expect(customer_response["currency"]).to be_present
+      expect(customer_response["externalSalesforceId"]).to be_nil
+      expect(customer_response["timezone"]).to be_nil
+      expect(customer_response["applicableTimezone"]).to eq("TZ_AMERICA_NEW_YORK")
+      expect(customer_response["hasCreditNotes"]).to be true
+      expect(customer_response["creditNotesCreditsAvailableCount"]).to eq(1)
+      expect(customer_response["creditNotesBalanceAmountCents"]).to eq("120")
     end
   end
 
-  context 'when active and pending subscriptions are requested' do
+  context "when active and pending subscriptions are requested" do
     let(:second_subscription) { create(:pending_subscription, customer:) }
     let(:third_subscription) { create(:pending_subscription, customer:, previous_subscription: subscription) }
 
@@ -124,17 +124,17 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       third_subscription
     end
 
-    it 'returns a single customer with correct subscriptions' do
+    it "returns a single customer with correct subscriptions" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         query:,
         variables: {
-          customerId: customer.id,
-        },
+          customerId: customer.id
+        }
       )
 
-      subscription_ids = result['data']['customer']['subscriptions'].map { |el| el['id'] }
+      subscription_ids = result["data"]["customer"]["subscriptions"].map { |el| el["id"] }
 
       aggregate_failures do
         expect(subscription_ids.count).to eq(2)
@@ -143,37 +143,37 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query:,
         variables: {
-          customerId: customer.id,
-        },
+          customerId: customer.id
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: "Missing organization id"
       )
     end
   end
 
-  context 'when customer is not found' do
-    it 'returns an error' do
+  context "when customer is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         query:,
         variables: {
-          customerId: 'foo',
-        },
+          customerId: "foo"
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found',
+        message: "Resource not found"
       )
     end
   end

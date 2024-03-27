@@ -1,23 +1,23 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::TaxesController, type: :request do
   let(:organization) { create(:organization) }
 
-  describe 'POST /taxes' do
+  describe "POST /taxes" do
     let(:create_params) do
       {
-        name: 'tax',
-        code: 'tax_code',
+        name: "tax",
+        code: "tax_code",
         rate: 20.0,
-        description: 'tax_description',
-        applied_to_organization: false,
+        description: "tax_description",
+        applied_to_organization: false
       }
     end
 
-    it 'creates a tax' do
-      expect { post_with_token(organization, '/api/v1/taxes', { tax: create_params }) }
+    it "creates a tax" do
+      expect { post_with_token(organization, "/api/v1/taxes", {tax: create_params}) }
         .to change(Tax, :count).by(1)
 
       aggregate_failures do
@@ -33,22 +33,22 @@ RSpec.describe Api::V1::TaxesController, type: :request do
     end
   end
 
-  describe 'PUT /taxes/:code' do
+  describe "PUT /taxes/:code" do
     let(:tax) { create(:tax, organization:) }
-    let(:code) { 'code_updated' }
-    let(:name) { 'name_updated' }
+    let(:code) { "code_updated" }
+    let(:name) { "name_updated" }
     let(:rate) { 15.0 }
     let(:applied_to_organization) { false }
 
     let(:update_params) do
-      { code:, name:, rate:, applied_to_organization: }
+      {code:, name:, rate:, applied_to_organization:}
     end
 
-    it 'updates a tax' do
+    it "updates a tax" do
       put_with_token(
         organization,
         "/api/v1/taxes/#{tax.code}",
-        { tax: update_params },
+        {tax: update_params}
       )
 
       aggregate_failures do
@@ -61,31 +61,31 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       end
     end
 
-    context 'when tax does not exist' do
-      it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/taxes/unknown', { tax: update_params })
+    context "when tax does not exist" do
+      it "returns not_found error" do
+        put_with_token(organization, "/api/v1/taxes/unknown", {tax: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when tax code already exists in organization scope (validation error)' do
+    context "when tax code already exists in organization scope (validation error)" do
       let(:tax2) { create(:tax, organization:) }
       let(:code) { tax2.code }
 
       before { tax2 }
 
-      it 'returns unprocessable_entity error' do
-        put_with_token(organization, "/api/v1/taxes/#{tax.code}", { tax: update_params })
+      it "returns unprocessable_entity error" do
+        put_with_token(organization, "/api/v1/taxes/#{tax.code}", {tax: update_params})
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'GET /taxes/:code' do
+  describe "GET /taxes/:code" do
     let(:tax) { create(:tax, organization:) }
 
-    it 'returns a tax' do
+    it "returns a tax" do
       get_with_token(organization, "/api/v1/taxes/#{tax.code}")
 
       aggregate_failures do
@@ -95,25 +95,25 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       end
     end
 
-    context 'when tax does not exist' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/taxes/unknown')
+    context "when tax does not exist" do
+      it "returns not found" do
+        get_with_token(organization, "/api/v1/taxes/unknown")
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'DELETE /taxes/:code' do
+  describe "DELETE /taxes/:code" do
     let(:tax) { create(:tax, organization:) }
 
     before { tax }
 
-    it 'deletes a tax' do
+    it "deletes a tax" do
       expect { delete_with_token(organization, "/api/v1/taxes/#{tax.code}") }
         .to change(Tax, :count).by(-1)
     end
 
-    it 'returns deleted tax' do
+    it "returns deleted tax" do
       delete_with_token(organization, "/api/v1/taxes/#{tax.code}")
 
       aggregate_failures do
@@ -123,21 +123,21 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       end
     end
 
-    context 'when tax does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, '/api/v1/taxes/unknown')
+    context "when tax does not exist" do
+      it "returns not_found error" do
+        delete_with_token(organization, "/api/v1/taxes/unknown")
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /taxes' do
+  describe "GET /taxes" do
     let(:tax) { create(:tax, organization:) }
 
     before { tax }
 
-    it 'returns taxes' do
-      get_with_token(organization, '/api/v1/taxes')
+    it "returns taxes" do
+      get_with_token(organization, "/api/v1/taxes")
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -147,13 +147,13 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       end
     end
 
-    context 'with pagination' do
+    context "with pagination" do
       let(:tax2) { create(:tax, organization:) }
 
       before { tax2 }
 
-      it 'returns taxes with correct meta data' do
-        get_with_token(organization, '/api/v1/taxes?page=1&per_page=1')
+      it "returns taxes with correct meta data" do
+        get_with_token(organization, "/api/v1/taxes?page=1&per_page=1")
 
         aggregate_failures do
           expect(response).to have_http_status(:success)

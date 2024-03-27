@@ -11,7 +11,7 @@ module Subscriptions
     end
 
     def call
-      return result.not_found_failure!(resource: 'subscription') if subscription.blank?
+      return result.not_found_failure!(resource: "subscription") if subscription.blank?
 
       if subscription.starting_in_the_future?
         subscription.mark_as_terminated!
@@ -25,8 +25,8 @@ module Subscriptions
           #       we have to create a credit note for the days that were not consumed
           credit_note_result = CreditNotes::CreateFromTermination.new(
             subscription:,
-            reason: 'order_cancellation',
-            upgrade:,
+            reason: "order_cancellation",
+            upgrade:
           ).call
           credit_note_result.raise_if_error!
         end
@@ -42,7 +42,7 @@ module Subscriptions
 
       # NOTE: Wait to ensure job is performed at the end of the database transaction.
       # See https://github.com/getlago/lago-api/blob/main/app/services/subscriptions/create_service.rb#L46.
-      SendWebhookJob.set(wait: 2.seconds).perform_later('subscription.terminated', subscription)
+      SendWebhookJob.set(wait: 2.seconds).perform_later("subscription.terminated", subscription)
 
       result.subscription = subscription
       result
@@ -72,8 +72,8 @@ module Subscriptions
       end
       BillSubscriptionJob.perform_later(billable_subscriptions, timestamp)
 
-      SendWebhookJob.perform_later('subscription.terminated', subscription)
-      SendWebhookJob.perform_later('subscription.started', next_subscription)
+      SendWebhookJob.perform_later("subscription.terminated", subscription)
+      SendWebhookJob.perform_later("subscription.started", next_subscription)
 
       result.subscription = next_subscription
 
@@ -111,7 +111,7 @@ module Subscriptions
       dates_service = Subscriptions::DatesService.new_instance(
         duplicate,
         beginning_of_period,
-        current_usage: false,
+        current_usage: false
       )
 
       boundaries = {
@@ -119,7 +119,7 @@ module Subscriptions
         to_datetime: dates_service.to_datetime,
         charges_from_datetime: dates_service.charges_from_datetime,
         charges_to_datetime: dates_service.charges_to_datetime,
-        charges_duration: dates_service.charges_duration_in_days,
+        charges_duration: dates_service.charges_duration_in_days
       }
 
       InvoiceSubscription.matching?(subscription, boundaries, recurring: false)
@@ -129,7 +129,7 @@ module Subscriptions
       dates_service = Subscriptions::DatesService.new_instance(
         subscription_dup,
         subscription.terminated_at,
-        current_usage: false,
+        current_usage: false
       )
 
       dates_service.previous_beginning_of_period(current_period: true).to_datetime

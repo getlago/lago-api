@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::Refunds::AdyenCreateJob, type: :job do
   let(:credit_note) { create(:credit_note) }
@@ -9,7 +9,7 @@ RSpec.describe CreditNotes::Refunds::AdyenCreateJob, type: :job do
     instance_double(CreditNotes::Refunds::AdyenService)
   end
 
-  it 'delegates to the adyen refund service' do
+  it "delegates to the adyen refund service" do
     allow(CreditNotes::Refunds::AdyenService).to receive(:new)
       .with(credit_note)
       .and_return(refund_service)

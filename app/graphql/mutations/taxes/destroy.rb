@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'DestroyTax'
-      description 'Deletes a tax'
+      graphql_name "DestroyTax"
+      description "Deletes a tax"
 
       argument :id, ID, required: true
 

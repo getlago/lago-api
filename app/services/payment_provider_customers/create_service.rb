@@ -57,11 +57,11 @@ module PaymentProviderCustomers
     end
 
     def create_customer_on_provider_service(async)
-      if result.provider_customer.type == 'PaymentProviderCustomers::StripeCustomer'
+      if result.provider_customer.type == "PaymentProviderCustomers::StripeCustomer"
         return PaymentProviderCustomers::StripeCreateJob.perform_later(result.provider_customer) if async
 
         PaymentProviderCustomers::StripeCreateJob.perform_now(result.provider_customer)
-      elsif result.provider_customer.type == 'PaymentProviderCustomers::AdyenCustomer'
+      elsif result.provider_customer.type == "PaymentProviderCustomers::AdyenCustomer"
         return PaymentProviderCustomers::AdyenCreateJob.perform_later(result.provider_customer) if async
 
         PaymentProviderCustomers::AdyenCreateJob.perform_now(result.provider_customer)
@@ -73,7 +73,7 @@ module PaymentProviderCustomers
     end
 
     def generate_checkout_url(async)
-      job_class = result.provider_customer.type.gsub(/Customer\z/, 'CheckoutUrlJob').constantize
+      job_class = result.provider_customer.type.gsub(/Customer\z/, "CheckoutUrlJob").constantize
 
       if async
         job_class.perform_later(result.provider_customer)

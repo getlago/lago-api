@@ -6,7 +6,7 @@ module V1
       {
         lago_id: model.id,
         key: model.parent&.value || model.key,
-        value: model.value,
+        value: model.value
       }
     end
   end

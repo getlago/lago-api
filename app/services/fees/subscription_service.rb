@@ -42,14 +42,14 @@ module Fees
         amount_cents: new_amount_cents,
         amount_currency: plan.amount_currency,
         fee_type: :subscription,
-        invoiceable_type: 'Subscription',
+        invoiceable_type: "Subscription",
         invoiceable: subscription,
         units: 1,
         properties: boundaries.to_h,
         payment_status: :pending,
         taxes_amount_cents: 0,
         unit_amount_cents: new_amount_cents,
-        amount_details: { plan_amount_cents: plan.amount_cents },
+        amount_details: {plan_amount_cents: plan.amount_cents}
       )
 
       return base_fee if !invoice.draft? || !adjusted_fee
@@ -126,11 +126,11 @@ module Fees
       # However, we should not bill full amount if subscription is downgraded since in that case, first invoice
       # should be prorated (this part is covered with first_subscription_amount method).
       return true if plan.pay_in_advance? && subscription.anniversary? && !subscription.previous_subscription_id
-      return true if subscription.fees.subscription_kind.where('created_at < ?', invoice.created_at).exists?
+      return true if subscription.fees.subscription_kind.where("created_at < ?", invoice.created_at).exists?
       return true if subscription.started_in_past? && plan.pay_in_advance?
 
       if subscription.started_in_past? &&
-         subscription.started_at < date_service(subscription).previous_beginning_of_period
+          subscription.started_at < date_service(subscription).previous_beginning_of_period
         return true
       end
 
@@ -155,7 +155,7 @@ module Fees
       days_to_bill = Utils::DatetimeService.date_diff_with_timezone(
         from_datetime,
         to_datetime,
-        customer.applicable_timezone,
+        customer.applicable_timezone
       )
       days_to_bill * single_day_price(subscription)
     end
@@ -191,7 +191,7 @@ module Fees
       number_of_day_to_bill *
         single_day_price(
           subscription,
-          optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date,
+          optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date
         )
     end
 
@@ -212,7 +212,7 @@ module Fees
       number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
         from_datetime,
         to_datetime,
-        customer.applicable_timezone,
+        customer.applicable_timezone
       )
 
       # NOTE: Subscription is upgraded from another plan
@@ -241,12 +241,12 @@ module Fees
           number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
             subscription.trial_end_datetime,
             to_datetime,
-            customer.applicable_timezone,
+            customer.applicable_timezone
           )
 
           return number_of_day_to_bill * single_day_price(
             subscription,
-            optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date,
+            optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date
           )
         end
       end
@@ -261,7 +261,7 @@ module Fees
     # NOTE: cost of a single day in a period
     def single_day_price(target_subscription, optional_from_date: nil)
       date_service(target_subscription).single_day_price(
-        optional_from_date:,
+        optional_from_date:
       )
     end
   end

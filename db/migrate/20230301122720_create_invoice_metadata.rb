@@ -10,7 +10,7 @@ class CreateInvoiceMetadata < ActiveRecord::Migration[7.0]
 
       t.timestamps
 
-      t.index %w[invoice_id key], name: 'index_invoice_metadata_on_invoice_id_and_key', unique: true
+      t.index %w[invoice_id key], name: "index_invoice_metadata_on_invoice_id_and_key", unique: true
     end
   end
 end

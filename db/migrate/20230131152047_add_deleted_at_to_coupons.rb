@@ -6,6 +6,6 @@ class AddDeletedAtToCoupons < ActiveRecord::Migration[7.0]
     add_index :coupons, :deleted_at
 
     remove_index :coupons, %i[organization_id code]
-    add_index :coupons, %i[organization_id code], unique: true, where: 'deleted_at IS NULL'
+    add_index :coupons, %i[organization_id code], unique: true, where: "deleted_at IS NULL"
   end
 end

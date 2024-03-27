@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Coupons::Terminate, type: :graphql do
   let(:membership) { create(:membership) }
@@ -17,29 +17,29 @@ RSpec.describe Mutations::Coupons::Terminate, type: :graphql do
     GQL
   end
 
-  it 'terminates a coupon' do
+  it "terminates a coupon" do
     result = execute_graphql(
       current_user: membership.user,
       query: mutation,
       variables: {
-        input: { id: coupon.id },
-      },
+        input: {id: coupon.id}
+      }
     )
 
-    data = result['data']['terminateCoupon']
-    expect(data['id']).to eq(coupon.id)
-    expect(data['name']).to eq(coupon.name)
-    expect(data['status']).to eq('terminated')
-    expect(data['terminatedAt']).to be_present
+    data = result["data"]["terminateCoupon"]
+    expect(data["id"]).to eq(coupon.id)
+    expect(data["name"]).to eq(coupon.name)
+    expect(data["status"]).to eq("terminated")
+    expect(data["terminatedAt"]).to be_present
   end
 
-  context 'without current_user' do
-    it 'returns an error' do
+  context "without current_user" do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
         variables: {
-          input: { id: coupon.id },
-        },
+          input: {id: coupon.id}
+        }
       )
 
       expect_unauthorized_error(result)

@@ -3,7 +3,9 @@
 class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
   # NOTE: redifine models to prevent schema issue in the future
   class Subscription < ApplicationRecord; end
+
   class CouponTarget < ApplicationRecord; end
+
   class Charge < ApplicationRecord; end
 
   class Coupon < ApplicationRecord
@@ -34,9 +36,9 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
         credits = Credit
           .joins(:invoice)
           .joins(applied_coupon: :coupon)
-          .where('credits.amount_cents > 0')
-          .where(invoices: { version_number: 3 })
-          .order('credits.created_at ASC')
+          .where("credits.amount_cents > 0")
+          .where(invoices: {version_number: 3})
+          .order("credits.created_at ASC")
 
         # NOTE: prevent migration of fees already using the field
         fees_id = Fee.where.not(precise_coupons_amount_cents: 0).pluck(:id)
@@ -47,7 +49,7 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
             fees = credit.invoice.fees
               .where.not(id: fees_id)
               .joins(:subscription)
-              .where(subscriptions: { plan_id: coupon.coupon_targets.where.not(plan_id: nil).select(:plan_id) })
+              .where(subscriptions: {plan_id: coupon.coupon_targets.where.not(plan_id: nil).select(:plan_id)})
 
             fees.find_each do |fee|
               base_amount_cents = fees.sum(:amount_cents)
@@ -65,7 +67,7 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
               .where(charge: {
                 billable_metric_id: coupon.coupon_targets
                                           .where.not(billable_metric_id: nil)
-                                          .select(:billable_metric_id),
+                                          .select(:billable_metric_id)
               })
 
             fees.find_each do |fee|
@@ -82,7 +84,7 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
               # NOTE: When applying coupons without limitations,
               #       the base of computation is the remaining amount of all fees.
               base_amount_cents = Fee.where(invoice_id: fee.invoice_id)
-                .sum('fees.amount_cents - fees.precise_coupons_amount_cents')
+                .sum("fees.amount_cents - fees.precise_coupons_amount_cents")
               next if base_amount_cents.zero?
 
               fee.precise_coupons_amount_cents += (credit.amount_cents * fee.amount_cents).fdiv(base_amount_cents)

@@ -10,15 +10,15 @@ module Fees
     end
 
     def call
-      return result.not_found_failure!(resource: 'fee') if fee.nil?
+      return result.not_found_failure!(resource: "fee") if fee.nil?
 
       if params.key?(:payment_status)
-        return result.not_allowed_failure!(code: 'invoiceable_fee') if fee.charge? && fee.charge&.invoiceable?
+        return result.not_allowed_failure!(code: "invoiceable_fee") if fee.charge? && fee.charge&.invoiceable?
 
         unless valid_payment_status?(params[:payment_status])
           return result.single_validation_failure!(
             field: :payment_status,
-            error_code: 'value_is_invalid',
+            error_code: "value_is_invalid"
           )
         end
 

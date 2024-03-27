@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Spending Minimum Scenarios', :scenarios, type: :request do
+describe "Spending Minimum Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 5000) }
   let(:metric) { create(:billable_metric, organization:) }
   let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
-  let(:pdf_file) { StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))) }
+  let(:pdf_file) { StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))) }
   let(:pdf_result) { OpenStruct.new(io: pdf_file) }
 
   before do
@@ -21,10 +21,10 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
       .and_return(pdf_result)
   end
 
-  context 'when invoice grace period' do
+  context "when invoice grace period" do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
 
-    it 'creates expected credit note and invoice' do
+    it "creates expected credit note and invoice" do
       ### 8 Jan: Create subscription
       travel_to(DateTime.new(2023, 1, 8, 8)) do
         expect {
@@ -32,8 +32,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         }.to change(Invoice, :count).by(1)
 
@@ -41,8 +41,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           :standard_charge,
           plan:,
           billable_metric: metric,
-          properties: { amount: '8' },
-          min_amount_cents: 1000,
+          properties: {amount: "8"},
+          min_amount_cents: 1000
         )
       end
 
@@ -63,13 +63,13 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
-          },
+            external_customer_id: customer.external_id
+          }
         )
 
         expect {
           terminate_subscription(subscription)
-        }.to change { subscription.reload.status }.from('active').to('terminated')
+        }.to change { subscription.reload.status }.from("active").to("terminated")
           .and change { subscription.invoices.count }.from(2).to(3)
 
         term_invoice = subscription.invoices.order(created_at: :desc).first
@@ -82,21 +82,21 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         expect(usage_fee).to have_attributes(
           amount_cents: 800,
           taxes_amount_cents: 160,
-          units: 1,
+          units: 1
         )
 
         # True up fee is pro-rated for 25/28 days.
         expect(true_up_fee).to have_attributes(
           amount_cents: 92, # (1000 / 28.0 * 25 - 800).floor
           taxes_amount_cents: 18,
-          units: 1,
+          units: 1
         )
 
         expect(term_invoice).to have_attributes(
           fees_amount_cents: 892,
           taxes_amount_cents: 178,
           credit_notes_amount_cents: 0,
-          total_amount_cents: 1070,
+          total_amount_cents: 1070
         )
 
         # Refresh pay in advance invoice
@@ -114,13 +114,13 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         # Finalize pay in advance invoice
         expect {
           finalize_invoice(last_invoice)
-        }.to change { last_invoice.reload.status }.from('draft').to('finalized')
-          .and change { credit_note.reload.status }.from('draft').to('finalized')
+        }.to change { last_invoice.reload.status }.from("draft").to("finalized")
+          .and change { credit_note.reload.status }.from("draft").to("finalized")
 
         # Finalize termination invoice
         expect {
           finalize_invoice(term_invoice)
-        }.to change { term_invoice.reload.status }.from('draft').to('finalized')
+        }.to change { term_invoice.reload.status }.from("draft").to("finalized")
 
         credit_note = last_invoice.credit_notes.first
         expect(credit_note.total_amount_cents).to eq(643) # 60.0 / 28 * 3
@@ -129,22 +129,22 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           fees_amount_cents: 892,
           taxes_amount_cents: 178,
           credit_notes_amount_cents: 643,
-          total_amount_cents: 427, # 892 + 178 - 643
+          total_amount_cents: 427 # 892 + 178 - 643
         )
       end
     end
   end
 
-  context 'when dimensions' do
+  context "when dimensions" do
     let(:europe) do
-      create(:group, billable_metric_id: metric.id, key: 'region', value: 'europe')
+      create(:group, billable_metric_id: metric.id, key: "region", value: "europe")
     end
 
     let(:usa) do
-      create(:group, billable_metric_id: metric.id, key: 'region', value: 'usa')
+      create(:group, billable_metric_id: metric.id, key: "region", value: "usa")
     end
 
-    it 'creates expected credit note and invoice' do
+    it "creates expected credit note and invoice" do
       ### 8 Jan: Create subscription
       travel_to(DateTime.new(2023, 1, 8)) do
         expect {
@@ -152,8 +152,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
-            },
+              plan_code: plan.code
+            }
           )
         }.to change(Invoice, :count).by(1)
 
@@ -166,20 +166,20 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
               :group_property,
               group: europe,
               values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
+                amount: "20",
+                amount_currency: "EUR"
+              }
             ),
             build(
               :group_property,
               group: usa,
               values: {
-                amount: '50',
-                amount_currency: 'EUR',
-              },
-            ),
+                amount: "50",
+                amount_currency: "EUR"
+              }
+            )
           ],
-          min_amount_cents: 10_000,
+          min_amount_cents: 10_000
         )
       end
 
@@ -200,9 +200,9 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             properties: {
-              region: 'usa',
-            },
-          },
+              region: "usa"
+            }
+          }
         )
 
         create_event(
@@ -211,14 +211,14 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             properties: {
-              region: 'europe',
-            },
-          },
+              region: "europe"
+            }
+          }
         )
 
         expect {
           terminate_subscription(subscription)
-        }.to change { subscription.reload.status }.from('active').to('terminated')
+        }.to change { subscription.reload.status }.from("active").to("terminated")
           .and change { subscription.invoices.count }.from(2).to(3)
 
         term_invoice = subscription.invoices.order(created_at: :desc).first
@@ -234,14 +234,14 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         expect(true_up_fee).to have_attributes(
           amount_cents: 1928, # (10000 / 28.0 * 25 - 2000 - 5000).floor
           taxes_amount_cents: 386,
-          units: 1,
+          units: 1
         )
 
         expect(term_invoice).to have_attributes(
           fees_amount_cents: 8928, # 1928 + 2000 + 5000
           taxes_amount_cents: 1786,
           credit_notes_amount_cents: 643,
-          total_amount_cents: 10_071,
+          total_amount_cents: 10_071
         )
       end
     end

@@ -2,6 +2,6 @@
 
 module Clickhouse
   class EventsRaw < BaseRecord
-    self.table_name = 'events_raw'
+    self.table_name = "events_raw"
   end
 end

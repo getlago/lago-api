@@ -2,7 +2,7 @@
 
 module Clock
   class TerminateCouponsJob < ApplicationJob
-    queue_as 'clock'
+    queue_as "clock"
 
     def perform
       Coupons::TerminateService.new.terminate_all_expired

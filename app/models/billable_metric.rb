@@ -13,7 +13,7 @@ class BillableMetric < ApplicationRecord
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :groups, dependent: :delete_all
-  has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: 'BillableMetricFilter'
+  has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: "BillableMetricFilter"
 
   AGGREGATION_TYPES = {
     count_agg: 0,
@@ -22,10 +22,10 @@ class BillableMetric < ApplicationRecord
     unique_count_agg: 3,
     # NOTE: deleted aggregation type, recurring_count_agg: 4,
     weighted_sum_agg: 5,
-    latest_agg: 6,
+    latest_agg: 6
   }.freeze
 
-  WEIGHTED_INTERVAL = { seconds: 'seconds' }.freeze
+  WEIGHTED_INTERVAL = {seconds: "seconds"}.freeze
 
   enum aggregation_type: AGGREGATION_TYPES
   enum weighted_interval: WEIGHTED_INTERVAL
@@ -34,13 +34,13 @@ class BillableMetric < ApplicationRecord
 
   validates :name, presence: true
   validates :field_name, presence: true, if: :should_have_field_name?
-  validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.keys.map(&:to_s) }
+  validates :aggregation_type, inclusion: {in: AGGREGATION_TYPES.keys.map(&:to_s)}
   validates :code,
-            presence: true,
-            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+    presence: true,
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
   validates :weighted_interval,
-            inclusion: { in: WEIGHTED_INTERVAL.values },
-            if: :weighted_sum_agg?
+    inclusion: {in: WEIGHTED_INTERVAL.values},
+    if: :weighted_sum_agg?
 
   default_scope -> { kept }
 
@@ -65,7 +65,7 @@ class BillableMetric < ApplicationRecord
   # NOTE: 1 dimension: all groups, 2 dimensions: all children.
   def selectable_groups
     groups = active_groups.children.exists? ? active_groups.children : active_groups
-    groups.includes(:parent).reorder('parent.value', 'groups.value')
+    groups.includes(:parent).reorder("parent.value", "groups.value")
   end
 
   def active_groups_as_tree
@@ -74,7 +74,7 @@ class BillableMetric < ApplicationRecord
     unless active_groups.children.exists?
       return {
         key: active_groups.pluck(:key).uniq.first,
-        values: active_groups.pluck(:value),
+        values: active_groups.pluck(:value)
       }
     end
 
@@ -84,9 +84,9 @@ class BillableMetric < ApplicationRecord
         {
           name: p.value,
           key: p.children.first.key,
-          values: p.children.pluck(:value),
+          values: p.children.pluck(:value)
         }
-      end,
+      end
     }
   end
 

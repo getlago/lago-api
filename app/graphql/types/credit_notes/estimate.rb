@@ -3,8 +3,8 @@
 module Types
   module CreditNotes
     class Estimate < Types::BaseObject
-      description 'Estimate amounts for credit note creation'
-      graphql_name 'CreditNoteEstimate'
+      description "Estimate amounts for credit note creation"
+      graphql_name "CreditNoteEstimate"
 
       field :currency, Types::CurrencyEnum, null: false
 

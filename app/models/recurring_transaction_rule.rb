@@ -7,14 +7,14 @@ class RecurringTransactionRule < ApplicationRecord
 
   RULE_TYPES = [
     :interval,
-    :threshold,
+    :threshold
   ].freeze
 
   INTERVALS = [
     :weekly,
     :monthly,
     :quarterly,
-    :yearly,
+    :yearly
   ].freeze
 
   enum rule_type: RULE_TYPES

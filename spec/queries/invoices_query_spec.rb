@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe InvoicesQuery, type: :query do
   subject(:invoice_query) do
@@ -9,56 +9,56 @@ RSpec.describe InvoicesQuery, type: :query do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer_first) { create(:customer, organization:, name: 'Rick Sanchez', email: 'pickle@hotmail.com') }
-  let(:customer_second) { create(:customer, organization:, name: 'Morty Smith', email: 'ilovejessica@gmail.com') }
+  let(:customer_first) { create(:customer, organization:, name: "Rick Sanchez", email: "pickle@hotmail.com") }
+  let(:customer_second) { create(:customer, organization:, name: "Morty Smith", email: "ilovejessica@gmail.com") }
   let(:invoice_first) do
     create(
       :invoice,
       organization:,
-      status: 'finalized',
-      payment_status: 'succeeded',
+      status: "finalized",
+      payment_status: "succeeded",
       customer: customer_first,
-      number: '1111111111',
+      number: "1111111111"
     )
   end
   let(:invoice_second) do
     create(
       :invoice,
       organization:,
-      status: 'finalized',
-      payment_status: 'pending',
+      status: "finalized",
+      payment_status: "pending",
       customer: customer_second,
-      number: '2222222222',
+      number: "2222222222"
     )
   end
   let(:invoice_third) do
     create(
       :invoice,
       organization:,
-      status: 'finalized',
-      payment_status: 'failed',
+      status: "finalized",
+      payment_status: "failed",
       customer: customer_first,
-      number: '3333333333',
+      number: "3333333333"
     )
   end
   let(:invoice_fourth) do
     create(
       :invoice,
       organization:,
-      status: 'draft',
-      payment_status: 'pending',
+      status: "draft",
+      payment_status: "pending",
       customer: customer_second,
-      number: '4444444444',
+      number: "4444444444"
     )
   end
   let(:invoice_fifth) do
     create(
       :invoice,
       organization:,
-      status: 'draft',
-      payment_status: 'pending',
+      status: "draft",
+      payment_status: "pending",
       customer: customer_first,
-      number: '5555555555',
+      number: "5555555555"
     )
   end
 
@@ -70,13 +70,13 @@ RSpec.describe InvoicesQuery, type: :query do
     invoice_fifth
   end
 
-  it 'returns all invoices' do
+  it "returns all invoices" do
     result = invoice_query.call(
       search_term: nil,
       status: nil,
       payment_status: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.invoices.pluck(:id)
@@ -91,8 +91,8 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when filtering by id' do
-    it 'returns only invoices specified' do
+  context "when filtering by id" do
+    it "returns only invoices specified" do
       result = invoice_query.call(
         search_term: nil,
         status: nil,
@@ -100,8 +100,8 @@ RSpec.describe InvoicesQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [invoice_second.id, invoice_fifth.id],
-        },
+          ids: [invoice_second.id, invoice_fifth.id]
+        }
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -117,14 +117,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when filtering by draft status' do
-    it 'returns 2 invoices' do
+  context "when filtering by draft status" do
+    it "returns 2 invoices" do
       result = invoice_query.call(
         search_term: nil,
-        status: 'draft',
+        status: "draft",
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -140,14 +140,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when filtering by failed payment_status' do
-    it 'returns 1 invoices' do
+  context "when filtering by failed payment_status" do
+    it "returns 1 invoices" do
       result = invoice_query.call(
         search_term: nil,
         status: nil,
-        payment_status: 'failed',
+        payment_status: "failed",
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -163,14 +163,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when searching for a part of an invoice id' do
-    it 'returns 1 invoices' do
+  context "when searching for a part of an invoice id" do
+    it "returns 1 invoices" do
       result = invoice_query.call(
         search_term: invoice_fourth.id.scan(/.{10}/).first,
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -186,14 +186,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when searching an invoice number' do
-    it 'returns 1 invoices' do
+  context "when searching an invoice number" do
+    it "returns 1 invoices" do
       result = invoice_query.call(
         search_term: invoice_first.number,
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -209,14 +209,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when searching a customer external id' do
-    it 'returns 2 invoices' do
+  context "when searching a customer external id" do
+    it "returns 2 invoices" do
       result = invoice_query.call(
         search_term: customer_second.external_id,
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -232,14 +232,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when searching for /rick/ term' do
-    it 'returns 3 invoices' do
+  context "when searching for /rick/ term" do
+    it "returns 3 invoices" do
       result = invoice_query.call(
-        search_term: 'rick',
+        search_term: "rick",
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -255,14 +255,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when searching for /gmail/ term' do
-    it 'returns 2 invoices' do
+  context "when searching for /gmail/ term" do
+    it "returns 2 invoices" do
       result = invoice_query.call(
-        search_term: 'gmail',
+        search_term: "gmail",
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -278,14 +278,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when searching for /44444444/ term' do
-    it 'returns 1 invoices' do
+  context "when searching for /44444444/ term" do
+    it "returns 1 invoices" do
       result = invoice_query.call(
         customer_id: customer_second.id,
-        search_term: '44444444',
+        search_term: "44444444",
         status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -301,14 +301,14 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when searching for another customer with no invoice' do
-    it 'returns 0 invoices' do
+  context "when searching for another customer with no invoice" do
+    it "returns 0 invoices" do
       result = invoice_query.call(
         customer_id: create(:customer, organization:).id,
         search_term: nil,
         status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)

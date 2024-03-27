@@ -3,7 +3,7 @@
 module Types
   module Wallets
     class CreateInput < Types::BaseInputObject
-      description 'Create Wallet Input'
+      description "Create Wallet Input"
 
       argument :currency, Types::CurrencyEnum, required: true
       argument :customer_id, ID, required: true

@@ -7,7 +7,7 @@ FactoryBot.define do
     charge { nil }
     subscription
 
-    fee_type { 'subscription' }
+    fee_type { "subscription" }
 
     unit_amount_cents { 200 }
     units { 2 }

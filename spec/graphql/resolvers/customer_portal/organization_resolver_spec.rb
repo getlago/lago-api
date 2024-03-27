@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::OrganizationResolver, type: :graphql do
   let(:query) do
@@ -18,17 +18,17 @@ RSpec.describe Resolvers::CustomerPortal::OrganizationResolver, type: :graphql d
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
 
-  it 'returns the customer portal organization' do
+  it "returns the customer portal organization" do
     result = execute_graphql(
       customer_portal_user: customer,
-      query:,
+      query:
     )
 
-    data = result['data']['customerPortalOrganization']
+    data = result["data"]["customerPortalOrganization"]
 
     aggregate_failures do
-      expect(data['id']).to eq(organization.id)
-      expect(data['name']).to eq(organization.name)
+      expect(data["id"]).to eq(organization.id)
+      expect(data["name"]).to eq(organization.name)
     end
   end
 end

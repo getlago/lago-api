@@ -11,12 +11,12 @@ module Invoices
       end
 
       def call
-        return result.not_found_failure!(resource: 'invoice') if invoice.blank?
-        return result.single_validation_failure!(error_code: 'no_linked_payment_provider') unless provider
-        return result.single_validation_failure!(error_code: 'invalid_payment_provider') if provider == 'gocardless'
+        return result.not_found_failure!(resource: "invoice") if invoice.blank?
+        return result.single_validation_failure!(error_code: "no_linked_payment_provider") unless provider
+        return result.single_validation_failure!(error_code: "invalid_payment_provider") if provider == "gocardless"
 
         if invoice.succeeded? || invoice.voided? || invoice.draft?
-          return result.single_validation_failure!(error_code: 'invalid_invoice_status_or_payment_status')
+          return result.single_validation_failure!(error_code: "invalid_invoice_status_or_payment_status")
         end
 
         payment_url_result = Invoices::Payments::PaymentProviders::Factory.new_instance(invoice:).generate_payment_url
@@ -24,7 +24,7 @@ module Invoices
         return payment_url_result unless payment_url_result.success?
 
         if payment_url_result.payment_url.blank?
-          return result.single_validation_failure!(error_code: 'payment_provider_error')
+          return result.single_validation_failure!(error_code: "payment_provider_error")
         end
 
         payment_url_result

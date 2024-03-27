@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'DownloadInvoice'
-      description 'Download an Invoice PDF'
+      graphql_name "DownloadInvoice"
+      description "Download an Invoice PDF"
 
       argument :id, ID, required: true
 

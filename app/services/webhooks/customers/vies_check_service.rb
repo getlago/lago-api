@@ -12,18 +12,18 @@ module Webhooks
       def object_serializer
         ::V1::CustomerSerializer.new(
           object,
-          root_name: 'customer',
+          root_name: "customer",
           includes: %i[vies_check],
-          vies_check: options[:vies_check],
+          vies_check: options[:vies_check]
         )
       end
 
       def webhook_type
-        'customer.vies_check'
+        "customer.vies_check"
       end
 
       def object_type
-        'customer'
+        "customer"
       end
     end
   end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::RefreshDraftJob, type: :job do
   let(:invoice) { create(:invoice) }
@@ -10,7 +10,7 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
     instance_double(Invoices::RefreshDraftService)
   end
 
-  it 'delegates to the RefreshDraft service' do
+  it "delegates to the RefreshDraft service" do
     allow(Invoices::RefreshDraftService).to receive(:new).with(invoice:).and_return(refresh_service)
     allow(refresh_service).to receive(:call).and_return(result)
 

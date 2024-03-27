@@ -14,11 +14,11 @@ class CreditNote < ApplicationRecord
 
   has_one :organization, through: :invoice
 
-  has_many :items, class_name: 'CreditNoteItem', dependent: :destroy
+  has_many :items, class_name: "CreditNoteItem", dependent: :destroy
   has_many :fees, through: :items
   has_many :refunds
 
-  has_many :applied_taxes, class_name: 'CreditNote::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "CreditNote::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   has_one_attached :file
@@ -29,8 +29,8 @@ class CreditNote < ApplicationRecord
   monetize :total_amount_cents
   monetize :sub_total_excluding_taxes_amount_cents
   monetize :taxes_amount_cents,
-           :coupons_adjustment_amount_cents,
-           with_model_currency: :total_amount_currency
+    :coupons_adjustment_amount_cents,
+    with_model_currency: :total_amount_currency
 
   # NOTE: Status of the credit part
   # - available: a credit amount remain available
@@ -52,12 +52,12 @@ class CreditNote < ApplicationRecord
   enum status: STATUS
 
   sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) },
-            lock_key: ->(credit_note) { credit_note.invoice_id }
+    lock_key: ->(credit_note) { credit_note.invoice_id }
 
-  validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
-  validates :credit_amount_cents, numericality: { greater_than_or_equal_to: 0 }
-  validates :refund_amount_cents, numericality: { greater_than_or_equal_to: 0 }
-  validates :balance_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :credit_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :refund_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :balance_amount_cents, numericality: {greater_than_or_equal_to: 0}
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[number id]
@@ -66,7 +66,7 @@ class CreditNote < ApplicationRecord
   def file_url
     return if file.blank?
 
-    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV['LAGO_API_URL'])
+    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV["LAGO_API_URL"])
   end
 
   def currency
@@ -88,13 +88,13 @@ class CreditNote < ApplicationRecord
   def subscription_item(subscription_id)
     items.joins(:fee)
       .merge(Fee.subscription)
-      .find_by(fees: { subscription_id: }) || Fee.new(amount_cents: 0, amount_currency: currency)
+      .find_by(fees: {subscription_id:}) || Fee.new(amount_cents: 0, amount_currency: currency)
   end
 
   def subscription_charge_items(subscription_id)
     items.joins(:fee)
       .merge(Fee.charge)
-      .where(fees: { subscription_id: })
+      .where(fees: {subscription_id:})
       .includes(:fee)
   end
 
@@ -114,21 +114,21 @@ class CreditNote < ApplicationRecord
     update!(
       credit_status: :voided,
       voided_at: timestamp,
-      balance_amount_cents: 0,
+      balance_amount_cents: 0
     )
   end
 
   def sub_total_excluding_taxes_amount_cents
     (items.sum(&:precise_amount_cents) - precise_coupons_adjustment_amount_cents).round
   end
-  alias sub_total_excluding_taxes_amount_currency currency
+  alias_method :sub_total_excluding_taxes_amount_currency, :currency
 
   private
 
   def ensure_number
     return if number.present?
 
-    formatted_sequential_id = format('%03d', sequential_id)
+    formatted_sequential_id = format("%03d", sequential_id)
 
     self.number = "#{invoice.number}-CN#{formatted_sequential_id}"
   end

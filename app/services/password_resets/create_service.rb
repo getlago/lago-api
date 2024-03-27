@@ -9,12 +9,12 @@ module PasswordResets
     end
 
     def call
-      return result.not_found_failure!(resource: 'user') if user.blank?
+      return result.not_found_failure!(resource: "user") if user.blank?
 
       password_reset = PasswordReset.create!(
         user:,
         token: SecureRandom.hex(20),
-        expire_at: Time.current + 30.minutes,
+        expire_at: Time.current + 30.minutes
       )
 
       PasswordResetMailer.with(password_reset:).requested.deliver_later

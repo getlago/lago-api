@@ -19,7 +19,7 @@ module V1
         customers_count: model.customers_count,
         active_subscriptions_count: model.active_subscriptions_count,
         draft_invoices_count: model.draft_invoices_count,
-        parent_id: model.parent_id,
+        parent_id: model.parent_id
       }
 
       payload.merge!(charges) if include?(:charges)
@@ -35,8 +35,8 @@ module V1
       ::CollectionSerializer.new(
         model.charges,
         ::V1::ChargeSerializer,
-        collection_name: 'charges',
-        includes: include?(:taxes) ? %i[taxes] : [],
+        collection_name: "charges",
+        includes: include?(:taxes) ? %i[taxes] : []
       ).serialize
     end
 
@@ -44,8 +44,8 @@ module V1
       {
         minimum_commitment: V1::CommitmentSerializer.new(
           model.minimum_commitment,
-          includes: include?(:taxes) ? %i[taxes] : [],
-        ).serialize.except(:commitment_type),
+          includes: include?(:taxes) ? %i[taxes] : []
+        ).serialize.except(:commitment_type)
       }
     end
 
@@ -53,7 +53,7 @@ module V1
       ::CollectionSerializer.new(
         model.taxes,
         ::V1::TaxSerializer,
-        collection_name: 'taxes',
+        collection_name: "taxes"
       ).serialize
     end
   end
