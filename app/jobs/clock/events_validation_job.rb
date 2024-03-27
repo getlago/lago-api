@@ -2,6 +2,8 @@
 
 module Clock
   class EventsValidationJob < ApplicationJob
+    include SentryConcern
+
     queue_as 'clock'
 
     unique :until_executed

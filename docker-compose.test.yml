@@ -1,0 +1,36 @@
+version: "3.8"
+services:
+  unittest: &base 
+    entrypoint: bundle exec rspec
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    environment:
+      RAILS_ENV: test
+      LAGO_PDF_URL: http://pdf
+      LAGO_API_URL: http://app
+      SECRET_KEY_BASE: your-secret-key-base-hex-64
+      LAGO_FROM_EMAIL: noreply@getlago.com
+      ENCRYPTION_PRIMARY_KEY: 5I9mjfzry2P787x4S5ZuDdJwXNgYEwqo
+      ENCRYPTION_DETERMINISTIC_KEY: SGiZzmh18EjBF9gSW8LCNk7pelauWVr4
+      ENCRYPTION_KEY_DERIVATION_SALT: q3pkMw34ZkRPFSf2LmtWe705yw532Pf7
+    volumes:
+      - .:/app
+      - pg-socket:/var/run/postgresql/
+    depends_on:
+      - db
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: root
+    volumes:
+      - pg-socket:/var/run/postgresql/
+  migrate:
+    <<: *base
+    entrypoint: bin/rails db:migrate RAILS_ENV=test
+
+volumes:
+  pg-socket:

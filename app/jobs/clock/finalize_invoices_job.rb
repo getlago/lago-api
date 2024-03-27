@@ -2,6 +2,8 @@
 
 module Clock
   class FinalizeInvoicesJob < ApplicationJob
+    include SentryConcern
+
     queue_as 'clock'
 
     def perform
