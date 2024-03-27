@@ -43,6 +43,8 @@ module Charges
         )
       when :volume
         properties.slice(:volume_ranges)
+      when :custom
+        properties.slice(:aggregator, :aggregation_properties)
       end
     end
   end

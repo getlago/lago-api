@@ -32,6 +32,10 @@ module Events
         scope.pluck(Arel.sql(field_name))
       end
 
+      def events_properties
+        events.pluck(:properties, :timestamp)
+      end
+
       def last_event
         events.last
       end

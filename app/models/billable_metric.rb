@@ -23,6 +23,7 @@ class BillableMetric < ApplicationRecord
     # NOTE: deleted aggregation type, recurring_count_agg: 4,
     weighted_sum_agg: 5,
     latest_agg: 6,
+    custom_agg: 7,
   }.freeze
 
   WEIGHTED_INTERVAL = { seconds: 'seconds' }.freeze
@@ -93,7 +94,7 @@ class BillableMetric < ApplicationRecord
   private
 
   def should_have_field_name?
-    !count_agg?
+    !count_agg? && !custom_agg?
   end
 
   def validate_recurring
