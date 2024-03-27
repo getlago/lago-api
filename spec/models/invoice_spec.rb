@@ -828,8 +828,8 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#assign_payment_dispute_lost_at' do
-    subject(:assign_payment_dispute_lost_at_call) { invoice.__send__(:assign_payment_dispute_lost_at) }
+  describe '#mark_as_disputed!' do
+    subject(:mark_as_disputed_call) { invoice.mark_as_disputed! }
 
     context 'when record is new' do
       let(:invoice) { build(:invoice, payment_disputed:) }
@@ -837,57 +837,87 @@ RSpec.describe Invoice, type: :model do
       context 'when payment is not disputed' do
         let(:payment_disputed) { false }
 
-        it 'does not change payment dispute lost date' do
-          expect { assign_payment_dispute_lost_at_call }.not_to change(invoice, :payment_dispute_lost_at)
+        it 'changes payment disputed' do
+          expect { mark_as_disputed_call }.to change(invoice, :payment_disputed).from(false).to(true)
+        end
+
+        it 'changes payment dispute lost date' do
+          expect { mark_as_disputed_call }.to change(invoice, :payment_dispute_lost_at)
         end
       end
 
       context 'when payment is disputed' do
         let(:payment_disputed) { true }
 
+        it 'does not change payment disputed' do
+          expect { mark_as_disputed_call }.not_to change(invoice, :payment_disputed)
+        end
+
         it 'changes payment dispute lost date' do
-          expect { assign_payment_dispute_lost_at_call }.to change(invoice, :payment_dispute_lost_at)
+          expect { mark_as_disputed_call }.to change(invoice, :payment_dispute_lost_at)
         end
       end
     end
 
     context 'when record already exists' do
-      let(:invoice) { create(:invoice, payment_disputed:) }
+      let(:invoice) { create(:invoice, payment_disputed:, payment_dispute_lost_at:) }
 
       context 'when payment is not disputed' do
         let(:payment_disputed) { false }
+        let(:payment_dispute_lost_at) { nil }
 
-        context 'when payment disputed changed to true' do
-          before { invoice.payment_disputed = true }
-
-          it 'changes payment dispute lost date' do
-            expect { assign_payment_dispute_lost_at_call }.to change(invoice, :payment_dispute_lost_at)
-          end
+        it 'changes payment disputed' do
+          expect { mark_as_disputed_call }.to change(invoice, :payment_disputed).from(false).to(true)
         end
 
-        context 'when payment disputed did not change' do
-          it 'does not change payment dispute lost date' do
-            expect { assign_payment_dispute_lost_at_call }.not_to change(invoice, :payment_dispute_lost_at)
-          end
+        it 'changes payment dispute lost date' do
+          expect { mark_as_disputed_call }.to change(invoice, :payment_dispute_lost_at)
         end
       end
 
       context 'when payment is disputed' do
         let(:payment_disputed) { true }
+        let(:payment_dispute_lost_at) { DateTime.current - 1.day }
 
-        context 'when payment disputed changed to false' do
-          before { invoice.payment_disputed = false }
-
-          it 'does not change payment dispute lost date' do
-            expect { assign_payment_dispute_lost_at_call }.not_to change(invoice, :payment_dispute_lost_at)
-          end
+        it 'does not change payment disputed' do
+          expect { mark_as_disputed_call }.not_to change(invoice, :payment_disputed)
         end
 
-        context 'when payment disputed did not change' do
-          it 'does not change payment dispute lost date' do
-            expect { assign_payment_dispute_lost_at_call }.not_to change(invoice, :payment_dispute_lost_at)
-          end
+        it 'does not change payment dispute lost date' do
+          expect { mark_as_disputed_call }.not_to change(invoice, :payment_dispute_lost_at)
         end
+      end
+    end
+  end
+
+  describe '#mark_as_not_disputed!' do
+    subject(:mark_as_not_disputed_call) { invoice.mark_as_not_disputed! }
+
+    let(:invoice) { create(:invoice, payment_disputed:, payment_dispute_lost_at:) }
+
+    context 'when payment is not disputed' do
+      let(:payment_disputed) { false }
+      let(:payment_dispute_lost_at) { nil }
+
+      it 'does not change payment disputed' do
+        expect { mark_as_not_disputed_call }.not_to change(invoice, :payment_disputed)
+      end
+
+      it 'does not change payment dispute lost date' do
+        expect { mark_as_not_disputed_call }.not_to change(invoice, :payment_dispute_lost_at)
+      end
+    end
+
+    context 'when payment is disputed' do
+      let(:payment_disputed) { true }
+      let(:payment_dispute_lost_at) { DateTime.current - 1.day }
+
+      it 'changes payment disputed' do
+        expect { mark_as_not_disputed_call }.to change(invoice, :payment_disputed).from(true).to(false)
+      end
+
+      it 'changes payment dispute lost date' do
+        expect { mark_as_not_disputed_call }.to change(invoice, :payment_dispute_lost_at).to(nil)
       end
     end
   end

@@ -11,7 +11,6 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
   before_save :ensure_number
-  before_save :assign_payment_dispute_lost_at
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -266,6 +265,18 @@ class Invoice < ApplicationRecord
     subscription_from != charges_from && subscription_to != charges_to
   end
 
+  def mark_as_disputed!(timestamp = Time.current)
+    self.payment_dispute_lost_at ||= timestamp
+    self.payment_disputed = true
+    save!
+  end
+
+  def mark_as_not_disputed!
+    self.payment_dispute_lost_at = nil
+    self.payment_disputed = false
+    save!
+  end
+
   private
 
   def should_assign_sequential_id?
@@ -339,10 +350,6 @@ class Invoice < ApplicationRecord
     raise(SequenceError, 'Unable to acquire lock on the database') unless result
 
     result
-  end
-
-  def assign_payment_dispute_lost_at
-    self.payment_dispute_lost_at = DateTime.current if !payment_disputed_was && payment_disputed
   end
 
   def switched_from_customer_numbering?
