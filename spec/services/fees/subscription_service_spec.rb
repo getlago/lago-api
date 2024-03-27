@@ -89,7 +89,7 @@ RSpec.describe Fees::SubscriptionService do
         end
       end
 
-      context 'when trial end after end of period' do
+      context 'when trial ends after end of period' do
         let(:trial_duration) { 45 }
 
         it 'creates a fee with zero amount' do
@@ -657,6 +657,23 @@ RSpec.describe Fees::SubscriptionService do
               result = fees_subscription_service.create
 
               expect(result.fee.amount_cents).to eq(1600)
+            end
+
+            context 'with customer timezone' do
+              let(:customer) { create(:customer, organization:, timezone: 'Europe/Paris') }
+              let(:boundaries) do
+                {
+                  from_datetime: Time.zone.parse('2022-08-30 22:00:00'),
+                  to_datetime: Time.zone.parse('2022-09-30 21:59:59'),
+                  timestamp: Time.zone.parse('2022-10-01 00:00').to_i,
+                }
+              end
+
+              it 'creates a fee with prorated amount based on trial' do
+                result = fees_subscription_service.create
+
+                expect(result.fee.amount_cents).to eq(1600)
+              end
             end
           end
         end

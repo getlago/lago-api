@@ -9,7 +9,6 @@ module Types
       field :charge, Types::Charges::Object, null: true
       field :currency, Types::CurrencyEnum, null: false
       field :description, String, null: true
-      field :filter_display_name, String, null: true
       field :group_name, String, null: true
       field :grouped_by, GraphQL::Types::JSON, null: false
       field :invoice_display_name, String, null: true
@@ -33,6 +32,8 @@ module Types
       field :adjusted_fee, Boolean, null: false
       field :adjusted_fee_type, Types::AdjustedFees::AdjustedFeeTypeEnum, null: true
 
+      field :charge_filter, Types::ChargeFilters::Object, null: true
+
       def item_type
         object.fee_type
       end
@@ -50,10 +51,6 @@ module Types
         return nil if object.adjusted_fee.adjusted_display_name?
 
         object.adjusted_fee.adjusted_units? ? 'adjusted_units' : 'adjusted_amount'
-      end
-
-      def filter_display_name
-        object.charge_filter&.display_name
       end
     end
   end

@@ -20,10 +20,10 @@ module Fees
 
       fees = []
 
-      ActiveRecord::Base.transaction do
+      EventsRecord.transaction do
         event.save!
         charges.each { |charge| fees += estimated_charge_fees(charge) }
-
+        
         # NOTE: make sure the event is not persisted in database
         raise ActiveRecord::Rollback
       end

@@ -6,6 +6,7 @@ require:
   - rubocop-graphql
 
 AllCops:
+  NewCops: disable
   DisplayStyleGuide: true
   Exclude:
     - 'bin/**/*'
