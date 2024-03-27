@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe WalletTransactionsQuery, type: :query do
   subject(:wallet_transactions_query) do
@@ -23,12 +23,12 @@ RSpec.describe WalletTransactionsQuery, type: :query do
     wallet_transaction_fourth
   end
 
-  it 'returns all wallet transactions for a certain wallet' do
+  it "returns all wallet transactions for a certain wallet" do
     result = wallet_transactions_query.call(
       wallet_id: wallet.id,
       page: 1,
       limit: 10,
-      filters: {},
+      filters: {}
     )
 
     returned_ids = result.wallet_transactions.pluck(:id)
@@ -42,15 +42,15 @@ RSpec.describe WalletTransactionsQuery, type: :query do
     end
   end
 
-  context 'when filtering by id' do
-    it 'returns only one wallet transaction' do
+  context "when filtering by id" do
+    it "returns only one wallet transaction" do
       result = wallet_transactions_query.call(
         wallet_id: wallet.id,
         page: 1,
         limit: 10,
         filters: {
-          ids: [wallet_transaction_second.id],
-        },
+          ids: [wallet_transaction_second.id]
+        }
       )
 
       returned_ids = result.wallet_transactions.pluck(:id)
@@ -65,17 +65,17 @@ RSpec.describe WalletTransactionsQuery, type: :query do
     end
   end
 
-  context 'when filtering by status' do
-    let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, status: 'pending') }
+  context "when filtering by status" do
+    let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, status: "pending") }
 
-    it 'returns only one wallet transaction' do
+    it "returns only one wallet transaction" do
       result = wallet_transactions_query.call(
         wallet_id: wallet.id,
         page: 1,
         limit: 10,
         filters: {
-          status: 'pending',
-        },
+          status: "pending"
+        }
       )
 
       returned_ids = result.wallet_transactions.pluck(:id)
@@ -90,17 +90,17 @@ RSpec.describe WalletTransactionsQuery, type: :query do
     end
   end
 
-  context 'when filtering by transaction type' do
-    let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, transaction_type: 'outbound') }
+  context "when filtering by transaction type" do
+    let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, transaction_type: "outbound") }
 
-    it 'returns only one wallet transaction' do
+    it "returns only one wallet transaction" do
       result = wallet_transactions_query.call(
         wallet_id: wallet.id,
         page: 1,
         limit: 10,
         filters: {
-          transaction_type: 'outbound',
-        },
+          transaction_type: "outbound"
+        }
       )
 
       returned_ids = result.wallet_transactions.pluck(:id)
@@ -115,19 +115,19 @@ RSpec.describe WalletTransactionsQuery, type: :query do
     end
   end
 
-  context 'when wallet is not found' do
-    it 'returns not found error' do
+  context "when wallet is not found" do
+    it "returns not found error" do
       result = wallet_transactions_query.call(
         wallet_id: "#{wallet.id}abc",
         page: 1,
         limit: 10,
-        filters: {},
+        filters: {}
       )
 
       aggregate_failures do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.message).to eq('wallet_not_found')
+        expect(result.error.message).to eq("wallet_not_found")
       end
     end
   end

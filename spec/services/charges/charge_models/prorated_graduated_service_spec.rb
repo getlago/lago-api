@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service do
   subject(:apply_graduated_service) do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties,
+      properties: charge.properties
     )
   end
 
@@ -19,7 +19,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       event_store_class:,
       charge:,
       subscription: nil,
-      boundaries: nil,
+      boundaries: nil
     )
   end
   let(:event_store_class) { Events::Stores::PostgresStore }
@@ -38,17 +38,17 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
           {
             from_value: 0,
             to_value: 5,
-            per_unit_amount: '10',
-            flat_amount: '100',
+            per_unit_amount: "10",
+            flat_amount: "100"
           },
           {
             from_value: 6,
             to_value: nil,
-            per_unit_amount: '5',
-            flat_amount: '50',
-          },
-        ],
-      },
+            per_unit_amount: "5",
+            flat_amount: "50"
+          }
+        ]
+      }
     )
   end
 
@@ -61,13 +61,13 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     allow(aggregator).to receive(:per_event_aggregation).and_return(per_event_aggregation)
   end
 
-  it 'returns expected amount', :aggregate_failures do
+  it "returns expected amount", :aggregate_failures do
     expect(apply_graduated_service.amount.round(2)).to eq(197.33)
     expect(apply_graduated_service.unit_amount.round(2)).to eq(14.10) # 197.33 / 14
     expect(apply_graduated_service.amount_details).to eq({})
   end
 
-  context 'with event that cannot be fully placed into the range' do
+  context "with event that cannot be fully placed into the range" do
     let(:aggregation) { 3.86667 }
     let(:per_event_aggregation) do
       BaseService::Result.new.tap do |r|
@@ -82,14 +82,14 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       aggregation_result.current_usage_units = 11
     end
 
-    it 'returns expected amount', :aggregate_failures do
+    it "returns expected amount", :aggregate_failures do
       expect(apply_graduated_service.amount.round(2)).to eq(184.33)
       expect(apply_graduated_service.unit_amount.round(2)).to eq(16.76) # 184.33 / 11
       expect(apply_graduated_service.amount_details).to eq({})
     end
   end
 
-  context 'with final number of units equals to zero' do
+  context "with final number of units equals to zero" do
     let(:aggregation) { 1.613 }
     let(:per_event_aggregation) do
       BaseService::Result.new.tap do |r|
@@ -104,14 +104,14 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       aggregation_result.current_usage_units = 0
     end
 
-    it 'returns expected amount', :aggregate_failures do
+    it "returns expected amount", :aggregate_failures do
       expect(apply_graduated_service.amount.round(2)).to eq(165.81)
       expect(apply_graduated_service.unit_amount).to eq(0)
       expect(apply_graduated_service.amount_details).to eq({})
     end
   end
 
-  context 'with negative event that results in changing range' do
+  context "with negative event that results in changing range" do
     let(:aggregation) { 2.5 }
     let(:per_event_aggregation) do
       BaseService::Result.new.tap do |r|
@@ -126,13 +126,13 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       aggregation_result.current_usage_units = 3
     end
 
-    it 'returns expected amount', :aggregate_failures do
+    it "returns expected amount", :aggregate_failures do
       expect(apply_graduated_service.amount.round(2)).to eq(125)
       expect(apply_graduated_service.unit_amount.round(2)).to eq(41.67)
       expect(apply_graduated_service.amount_details).to eq({})
     end
 
-    context 'with overflow and changing ranges' do
+    context "with overflow and changing ranges" do
       let(:aggregation) { 3.2 }
       let(:per_event_aggregation) do
         BaseService::Result.new.tap do |r|
@@ -147,14 +147,14 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
         aggregation_result.current_usage_units = 3
       end
 
-      it 'returns expected amount', :aggregate_failures do
+      it "returns expected amount", :aggregate_failures do
         expect(apply_graduated_service.amount.round(2)).to eq(180.5)
         expect(apply_graduated_service.unit_amount.round(2)).to eq(60.17)
         expect(apply_graduated_service.amount_details).to eq({})
       end
     end
 
-    context 'with multiple overflows in both directions' do
+    context "with multiple overflows in both directions" do
       let(:aggregation) { 4.9 }
       let(:per_event_aggregation) do
         BaseService::Result.new.tap do |r|
@@ -169,7 +169,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
         aggregation_result.current_usage_units = 13
       end
 
-      it 'returns expected amount', :aggregate_failures do
+      it "returns expected amount", :aggregate_failures do
         expect(apply_graduated_service.amount.round(2)).to eq(190)
         expect(apply_graduated_service.unit_amount.round(2)).to eq(14.62)
         expect(apply_graduated_service.amount_details).to eq({})
@@ -177,7 +177,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     end
   end
 
-  context 'with negative event that results in negative total amount' do
+  context "with negative event that results in negative total amount" do
     let(:aggregation) { -31.33 }
     let(:per_event_aggregation) do
       BaseService::Result.new.tap do |r|
@@ -192,13 +192,13 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       aggregation_result.current_usage_units = -95
     end
 
-    it 'returns expected amount', :aggregate_failures do
+    it "returns expected amount", :aggregate_failures do
       expect(apply_graduated_service.amount.round(2)).to eq(0)
       expect(apply_graduated_service.unit_amount).to eq(0)
       expect(apply_graduated_service.amount_details).to eq({})
     end
 
-    context 'with only one range used' do
+    context "with only one range used" do
       let(:aggregation) { -31.73 }
       let(:per_event_aggregation) do
         BaseService::Result.new.tap do |r|
@@ -213,7 +213,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
         aggregation_result.current_usage_units = -96
       end
 
-      it 'returns expected amount', :aggregate_failures do
+      it "returns expected amount", :aggregate_failures do
         expect(apply_graduated_service.amount.round(2)).to eq(0)
         expect(apply_graduated_service.unit_amount).to eq(0)
         expect(apply_graduated_service.amount_details).to eq({})
@@ -221,7 +221,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     end
   end
 
-  context 'when only one range is used' do
+  context "when only one range is used" do
     let(:aggregation) { 0.7 }
     let(:per_event_aggregation) do
       BaseService::Result.new.tap do |r|
@@ -236,13 +236,13 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       aggregation_result.current_usage_units = 1
     end
 
-    it 'returns expected amount', :aggregate_failures do
+    it "returns expected amount", :aggregate_failures do
       expect(apply_graduated_service.amount.round(2)).to eq(107)
       expect(apply_graduated_service.unit_amount).to eq(107)
       expect(apply_graduated_service.amount_details).to eq({})
     end
 
-    context 'with two ranges where first unit fully covers first range' do
+    context "with two ranges where first unit fully covers first range" do
       let(:charge) do
         create(
           :graduated_charge,
@@ -252,27 +252,27 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
               {
                 from_value: 0,
                 to_value: 1,
-                per_unit_amount: '10',
-                flat_amount: '100',
+                per_unit_amount: "10",
+                flat_amount: "100"
               },
               {
                 from_value: 2,
                 to_value: nil,
-                per_unit_amount: '5',
-                flat_amount: '50',
-              },
-            ],
-          },
+                per_unit_amount: "5",
+                flat_amount: "50"
+              }
+            ]
+          }
         )
       end
 
-      it 'calculates the amount correctly and second flat fee is not applied' do
+      it "calculates the amount correctly and second flat fee is not applied" do
         expect(apply_graduated_service.amount.round(2)).to eq(107)
       end
     end
   end
 
-  context 'with three ranges and one overflow' do
+  context "with three ranges and one overflow" do
     let(:aggregation) { 6.36 }
     let(:per_event_aggregation) do
       BaseService::Result.new.tap do |r|
@@ -289,23 +289,23 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
             {
               from_value: 0,
               to_value: 5,
-              per_unit_amount: '10',
-              flat_amount: '100',
+              per_unit_amount: "10",
+              flat_amount: "100"
             },
             {
               from_value: 6,
               to_value: 15,
-              per_unit_amount: '5',
-              flat_amount: '50',
+              per_unit_amount: "5",
+              flat_amount: "50"
             },
             {
               from_value: 16,
               to_value: nil,
-              per_unit_amount: '2',
-              flat_amount: '0',
-            },
-          ],
-        },
+              per_unit_amount: "2",
+              flat_amount: "0"
+            }
+          ]
+        }
       )
     end
 
@@ -315,13 +315,13 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       aggregation_result.current_usage_units = 75
     end
 
-    it 'returns expected amount', :aggregate_failures do
+    it "returns expected amount", :aggregate_failures do
       expect(apply_graduated_service.amount.ceil(2)).to eq(191.34)
       expect(apply_graduated_service.unit_amount.round(2)).to eq(2.55)
       expect(apply_graduated_service.amount_details).to eq({})
     end
 
-    context 'when there are two overflows' do
+    context "when there are two overflows" do
       let(:aggregation) { 75 }
       let(:per_event_aggregation) do
         BaseService::Result.new.tap do |r|
@@ -336,11 +336,11 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
         aggregation_result.current_usage_units = 75
       end
 
-      it 'calculates the amount correctly' do
+      it "calculates the amount correctly" do
         expect(apply_graduated_service.amount.round(2)).to eq(370)
       end
 
-      it 'returns expected amount', :aggregate_failures do
+      it "returns expected amount", :aggregate_failures do
         expect(apply_graduated_service.amount.ceil(2)).to eq(370)
         expect(apply_graduated_service.unit_amount.round(2)).to eq(4.93)
         expect(apply_graduated_service.amount_details).to eq({})

@@ -39,7 +39,7 @@ module Charges
           :free_units_per_total_aggregation,
           :per_transaction_max_amount,
           :per_transaction_min_amount,
-          :rate,
+          :rate
         )
       when :volume
         properties.slice(:volume_ranges)

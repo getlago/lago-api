@@ -17,6 +17,6 @@ class AddDeletedAtToBillableMetrics < ActiveRecord::Migration[7.0]
     add_index :persisted_events, :deleted_at
 
     remove_index :billable_metrics, %i[organization_id code]
-    add_index :billable_metrics, %i[organization_id code], unique: true, where: 'deleted_at IS NULL'
+    add_index :billable_metrics, %i[organization_id code], unique: true, where: "deleted_at IS NULL"
   end
 end

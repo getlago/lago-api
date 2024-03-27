@@ -28,7 +28,7 @@ module CreditNotes
 
       taxes_result = CreditNotes::ApplyTaxesService.call(
         invoice: fee.invoice,
-        items: credit_note.items,
+        items: credit_note.items
       )
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents

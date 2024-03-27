@@ -3,7 +3,7 @@
 module Types
   module Organizations
     class UpdateOrganizationInput < BaseInputObject
-      description 'Update Organization input arguments'
+      description "Update Organization input arguments"
 
       argument :default_currency, Types::CurrencyEnum, required: false
       argument :email, String, required: false

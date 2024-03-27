@@ -6,7 +6,7 @@ module Api
       def create
         service = ::WebhookEndpoints::CreateService.new(
           organization: current_organization,
-          params: create_params,
+          params: create_params
         )
 
         result = service.call
@@ -20,7 +20,7 @@ module Api
         service = ::WebhookEndpoints::UpdateService.new(
           id: params[:id],
           organization: current_organization,
-          params: update_params,
+          params: update_params
         )
 
         result = service.call
@@ -39,16 +39,16 @@ module Api
           json: ::CollectionSerializer.new(
             webhook_endpoints,
             ::V1::WebhookEndpointSerializer,
-            collection_name: 'webhook_endpoints',
-            meta: pagination_metadata(webhook_endpoints),
-          ),
+            collection_name: "webhook_endpoints",
+            meta: pagination_metadata(webhook_endpoints)
+          )
         )
       end
 
       def show
         webhook_endpoint = current_organization.webhook_endpoints.find_by(id: params[:id])
 
-        return not_found_error(resource: 'webhook_endpoint') unless webhook_endpoint
+        return not_found_error(resource: "webhook_endpoint") unless webhook_endpoint
 
         render_webhook_endpoint(webhook_endpoint)
       end
@@ -70,14 +70,14 @@ module Api
         params.require(:webhook_endpoint).permit(
           :id,
           :webhook_url,
-          :signature_algo,
+          :signature_algo
         )
       end
 
       def update_params
         params.require(:webhook_endpoint).permit(
           :webhook_url,
-          :signature_algo,
+          :signature_algo
         )
       end
 
@@ -85,8 +85,8 @@ module Api
         render(
           json: ::V1::WebhookEndpointSerializer.new(
             webhook_endpoint,
-            root_name: 'webhook_endpoint',
-          ),
+            root_name: "webhook_endpoint"
+          )
         )
       end
     end

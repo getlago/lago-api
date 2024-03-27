@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Events::PostProcessService, type: :service do
   subject(:process_service) { described_class.new(event:) }
@@ -26,15 +26,15 @@ RSpec.describe Events::PostProcessService, type: :service do
       external_subscription_id:,
       timestamp:,
       code:,
-      properties: event_properties,
+      properties: event_properties
     )
   end
 
-  describe '#call' do
-    context 'without external customer id' do
+  describe "#call" do
+    context "without external customer id" do
       let(:external_customer_id) { nil }
 
-      it 'assigns the customer external_id' do
+      it "assigns the customer external_id" do
         result = process_service.call
 
         aggregate_failures do
@@ -44,12 +44,12 @@ RSpec.describe Events::PostProcessService, type: :service do
         end
       end
 
-      context 'with multiple active subscription' do
+      context "with multiple active subscription" do
         let(:second_subscription) { create(:subscription, organization:, customer:, started_at:) }
 
         before { second_subscription }
 
-        it 'assigns the subscription external_id' do
+        it "assigns the subscription external_id" do
           result = process_service.call
 
           aggregate_failures do
@@ -61,13 +61,13 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
     end
 
-    context 'without external subscription id' do
+    context "without external subscription id" do
       let(:external_subscription_id) { nil }
 
       before { subscription }
 
-      context 'with a single customer subscription' do
-        it 'assigns the subscription external_id' do
+      context "with a single customer subscription" do
+        it "assigns the subscription external_id" do
           result = process_service.call
 
           aggregate_failures do
@@ -78,12 +78,12 @@ RSpec.describe Events::PostProcessService, type: :service do
         end
       end
 
-      context 'with multiple active subscription' do
+      context "with multiple active subscription" do
         let(:second_subscription) { create(:subscription, organization:, customer:, started_at:) }
 
         before { second_subscription }
 
-        it 'does not assigns the subscription external_id' do
+        it "does not assigns the subscription external_id" do
           result = process_service.call
 
           aggregate_failures do
@@ -96,82 +96,82 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
     end
 
-    context 'when event matches an pay_in_advance charge that is not invoiceable' do
+    context "when event matches an pay_in_advance charge that is not invoiceable" do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
       let(:billable_metric) do
-        create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id')
+        create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "item_id")
       end
 
-      let(:event_properties) { { billable_metric.field_name => '12' } }
+      let(:event_properties) { {billable_metric.field_name => "12"} }
 
       before { charge }
 
-      it 'enqueues a job to perform the pay_in_advance aggregation' do
+      it "enqueues a job to perform the pay_in_advance aggregation" do
         expect { process_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
       end
 
-      context 'when charge is invoiceable' do
+      context "when charge is invoiceable" do
         before { charge.update!(invoiceable: true) }
 
-        it 'does not enqueue a job to perform the pay_in_advance aggregation' do
+        it "does not enqueue a job to perform the pay_in_advance aggregation" do
           expect { process_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
         end
       end
 
-      context 'when multiple charges have the billable metric' do
+      context "when multiple charges have the billable metric" do
         before { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
 
-        it 'enqueues a job for each charge' do
+        it "enqueues a job for each charge" do
           expect { process_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob).twice
         end
       end
     end
 
-    context 'when event matches a pay_in_advance charge that is invoiceable' do
+    context "when event matches a pay_in_advance charge that is invoiceable" do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: true) }
       let(:billable_metric) do
-        create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id')
+        create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "item_id")
       end
 
-      let(:event_properties) { { billable_metric.field_name => '12' } }
+      let(:event_properties) { {billable_metric.field_name => "12"} }
 
       before { charge }
 
-      it 'enqueues a job to create the pay_in_advance charge invoice' do
+      it "enqueues a job to create the pay_in_advance charge invoice" do
         expect { process_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
       end
 
-      context 'when charge is not invoiceable' do
+      context "when charge is not invoiceable" do
         before { charge.update!(invoiceable: false) }
 
-        it 'does not enqueue a job to create the pay_in_advance charge invoice' do
+        it "does not enqueue a job to create the pay_in_advance charge invoice" do
           expect { process_service.call }
             .not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
 
-      context 'when multiple charges have the billable metric' do
+      context "when multiple charges have the billable metric" do
         before { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: true) }
 
-        it 'enqueues a job for each charge' do
+        it "enqueues a job for each charge" do
           expect { process_service.call }
             .to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob).twice
         end
       end
 
-      context 'when value for sum_agg is negative' do
-        let(:event_properties) { { billable_metric.field_name => '-5' } }
+      context "when value for sum_agg is negative" do
+        let(:event_properties) { {billable_metric.field_name => "-5"} }
 
-        it 'enqueues a job' do
+        it "enqueues a job" do
           expect { process_service.call }
             .to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
 
-      context 'when event field name does not batch the BM one' do
-        let(:event_properties) { { 'wrong_field_name' => '-5' } }
+      context "when event field name does not batch the BM one" do
+        let(:event_properties) { {"wrong_field_name" => "-5"} }
 
-        it 'does not enqueue a job' do
+        it "does not enqueue a job" do
           expect { process_service.call }
             .not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end

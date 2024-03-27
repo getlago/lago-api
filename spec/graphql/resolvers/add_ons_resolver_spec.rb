@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::AddOnsResolver, type: :graphql do
   let(:query) do
@@ -20,46 +20,46 @@ RSpec.describe Resolvers::AddOnsResolver, type: :graphql do
 
   before { add_on }
 
-  it 'returns a list of add-ons' do
+  it "returns a list of add-ons" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
-    add_ons_response = result['data']['addOns']
+    add_ons_response = result["data"]["addOns"]
 
     aggregate_failures do
-      expect(add_ons_response['collection'].first['id']).to eq(add_on.id)
-      expect(add_ons_response['collection'].first['name']).to eq(add_on.name)
+      expect(add_ons_response["collection"].first["id"]).to eq(add_on.id)
+      expect(add_ons_response["collection"].first["name"]).to eq(add_on.name)
 
-      expect(add_ons_response['metadata']['currentPage']).to eq(1)
-      expect(add_ons_response['metadata']['totalCount']).to eq(1)
+      expect(add_ons_response["metadata"]["currentPage"]).to eq(1)
+      expect(add_ons_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(current_user: membership.user, query:)
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: "Missing organization id"
       )
     end
   end
 
-  context 'when not member of the organization' do
-    it 'returns an error' do
+  context "when not member of the organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Not in organization',
+        message: "Not in organization"
       )
     end
   end

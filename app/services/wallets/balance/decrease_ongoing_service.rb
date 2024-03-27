@@ -17,7 +17,7 @@ module Wallets
           ongoing_usage_balance_cents: amount_cents,
           credits_ongoing_usage_balance: credits_amount,
           ongoing_balance_cents:,
-          credits_ongoing_balance:,
+          credits_ongoing_balance:
         )
 
         handle_threshold_top_up(ongoing_usage_balance_cents)
@@ -34,14 +34,14 @@ module Wallets
         threshold_rule = wallet.recurring_transaction_rules.where(rule_type: :threshold).first
 
         return if threshold_rule.nil? || wallet.credits_ongoing_balance > threshold_rule.threshold_credits
-        return if amount_cents.positive? && ongoing_usage_balance_cents == amount_cents
+        #        return if amount_cents.positive? && ongoing_usage_balance_cents == amount_cents
 
         WalletTransactions::CreateJob.set(wait: 2.seconds).perform_later(
           organization_id: wallet.organization.id,
           wallet_id: wallet.id,
           paid_credits: threshold_rule.paid_credits.to_s,
           granted_credits: threshold_rule.granted_credits.to_s,
-          source: :threshold,
+          source: :threshold
         )
       end
 
@@ -60,14 +60,14 @@ module Wallets
       def ongoing_balance_cents
         [
           0,
-          (pending_transactions.sum(:amount) * currency.subunit_to_unit) - amount_cents + wallet.balance_cents,
+          (pending_transactions.sum(:amount) * currency.subunit_to_unit) - amount_cents + wallet.balance_cents
         ].max
       end
 
       def credits_ongoing_balance
         [
           0,
-          pending_transactions.sum(:credit_amount) - credits_amount + wallet.credits_balance,
+          pending_transactions.sum(:credit_amount) - credits_amount + wallet.credits_balance
         ].max
       end
     end

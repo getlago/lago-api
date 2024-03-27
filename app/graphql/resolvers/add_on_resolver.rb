@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query a single add-on of an organization'
+    description "Query a single add-on of an organization"
 
-    argument :id, ID, required: true, description: 'Uniq ID of the add-on'
+    argument :id, ID, required: true, description: "Uniq ID of the add-on"
 
     type Types::AddOns::Object, null: true
 
@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.add_ons.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'add_on')
+      not_found_error(resource: "add_on")
     end
   end
 end

@@ -3,7 +3,7 @@
 module Types
   module Coupons
     class Object < Types::BaseObject
-      graphql_name 'Coupon'
+      graphql_name "Coupon"
 
       field :id, ID, null: false
       field :organization, Types::OrganizationType
@@ -33,7 +33,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :applied_coupons_count, Integer, null: false
-      field :customers_count, Integer, null: false, description: 'Number of customers using this coupon'
+      field :customers_count, Integer, null: false, description: "Number of customers using this coupon"
 
       def customers_count
         object.applied_coupons.active.select(:customer_id).distinct.count

@@ -7,7 +7,7 @@ class ChargeFilter < ApplicationRecord
 
   belongs_to :charge
 
-  has_many :values, class_name: 'ChargeFilterValue', dependent: :destroy
+  has_many :values, class_name: "ChargeFilterValue", dependent: :destroy
   has_many :billable_metric_filters, through: :values
   has_many :fees
 
@@ -16,7 +16,7 @@ class ChargeFilter < ApplicationRecord
   default_scope -> { kept }
 
   def display_name
-    invoice_display_name.presence || values.map(&:values).flatten.join(', ')
+    invoice_display_name.presence || values.map(&:values).flatten.join(", ")
   end
 
   def to_h
@@ -38,17 +38,17 @@ class ChargeFilter < ApplicationRecord
 
   def validate_properties
     case charge&.charge_model
-    when 'standard'
+    when "standard"
       validate_charge_model(Charges::Validators::StandardService)
-    when 'graduated'
+    when "graduated"
       validate_charge_model(Charges::Validators::GraduatedService)
-    when 'package'
+    when "package"
       validate_charge_model(Charges::Validators::PackageService)
-    when 'percentage'
+    when "percentage"
       validate_charge_model(Charges::Validators::PercentageService)
-    when 'volume'
+    when "volume"
       validate_charge_model(Charges::Validators::VolumeService)
-    when 'graduated_percentage'
+    when "graduated_percentage"
       validate_charge_model(Charges::Validators::GraduatedPercentageService)
     end
   end

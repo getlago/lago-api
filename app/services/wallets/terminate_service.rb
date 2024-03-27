@@ -8,7 +8,7 @@ module Wallets
     end
 
     def call
-      return result.not_found_failure!(resource: 'wallet') unless wallet
+      return result.not_found_failure!(resource: "wallet") unless wallet
 
       wallet.mark_as_terminated! if wallet.active?
 

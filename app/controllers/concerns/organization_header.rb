@@ -9,6 +9,6 @@ module OrganizationHeader
   end
 
   def organization_header
-    request.headers['x-lago-organization']
+    request.headers["x-lago-organization"]
   end
 end

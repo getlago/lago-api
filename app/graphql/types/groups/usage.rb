@@ -3,7 +3,7 @@
 module Types
   module Groups
     class Usage < Types::BaseObject
-      graphql_name 'GroupUsage'
+      graphql_name "GroupUsage"
 
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :id, ID, null: false

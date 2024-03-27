@@ -4,7 +4,7 @@ module Types
   module Customers
     module Usage
       class ChargeGroup < Types::BaseObject
-        graphql_name 'GroupUsage'
+        graphql_name "GroupUsage"
 
         field :id, ID, null: false, method: :group_id
 

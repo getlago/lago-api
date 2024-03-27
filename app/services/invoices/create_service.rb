@@ -12,9 +12,9 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'customer') unless customer
-      return result.not_found_failure!(resource: 'fees') if fees.blank?
-      return result.not_found_failure!(resource: 'add_on') unless add_ons.count == add_on_identifiers.count
+      return result.not_found_failure!(resource: "customer") unless customer
+      return result.not_found_failure!(resource: "fees") if fees.blank?
+      return result.not_found_failure!(resource: "add_on") unless add_ons.count == add_on_identifiers.count
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(customer:, currency:)
@@ -29,7 +29,7 @@ module Invoices
       end
 
       track_invoice_created(invoice)
-      SendWebhookJob.perform_later('invoice.one_off_created', invoice) if should_deliver_webhook?
+      SendWebhookJob.perform_later("invoice.one_off_created", invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
       Invoices::Payments::CreateService.new(invoice).call
 
@@ -39,7 +39,7 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue Sequenced::SequenceError
       raise
-    rescue StandardError => e
+    rescue => e
       result.fail_with_error!(e)
     end
 
@@ -52,7 +52,7 @@ module Invoices
         customer:,
         invoice_type: :one_off,
         currency:,
-        datetime: Time.zone.at(timestamp),
+        datetime: Time.zone.at(timestamp)
       )
       invoice_result.raise_if_error!
 
@@ -71,17 +71,17 @@ module Invoices
     def track_invoice_created(invoice)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type,
-        },
+          invoice_type: invoice.invoice_type
+        }
       )
     end
 
     def should_deliver_email?
-      License.premium? && customer.organization.email_settings.include?('invoice.finalized')
+      License.premium? && customer.organization.email_settings.include?("invoice.finalized")
     end
 
     def add_ons

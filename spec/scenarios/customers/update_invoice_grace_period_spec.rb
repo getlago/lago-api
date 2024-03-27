@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Update Customer Invoice Grace Period Scenarios', :scenarios, type: :request do
+describe "Update Customer Invoice Grace Period Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:) }
 
   let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
-  let(:pdf_file) { StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))) }
+  let(:pdf_file) { StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))) }
   let(:pdf_result) { OpenStruct.new(io: pdf_file) }
 
   around { |test| lago_premium!(&test) }
@@ -18,7 +18,7 @@ describe 'Update Customer Invoice Grace Period Scenarios', :scenarios, type: :re
     allow(pdf_generator).to receive(:call).and_return(pdf_result)
   end
 
-  it 'updates the grace period of the customer' do
+  it "updates the grace period of the customer" do
     ### 15 Dec: Create subscription + charge.
     dec15 = DateTime.new(2022, 12, 15)
 
@@ -27,8 +27,8 @@ describe 'Update Customer Invoice Grace Period Scenarios', :scenarios, type: :re
         {
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
-          plan_code: plan.code,
-        },
+          plan_code: plan.code
+        }
       )
     end
 
@@ -44,8 +44,8 @@ describe 'Update Customer Invoice Grace Period Scenarios', :scenarios, type: :re
         create_or_update_customer(
           {
             external_id: customer.external_id,
-            billing_configuration: { invoice_grace_period: 0 },
-          },
+            billing_configuration: {invoice_grace_period: 0}
+          }
         )
       end.to change { ActionMailer::Base.deliveries.count }.by(1)
 

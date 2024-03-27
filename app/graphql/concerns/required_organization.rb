@@ -8,14 +8,14 @@ module RequiredOrganization
   end
 
   def validate_organization!
-    raise organization_error('Missing organization id') unless current_organization
-    raise organization_error('Not in organization') unless organization_member?
+    raise organization_error("Missing organization id") unless current_organization
+    raise organization_error("Not in organization") unless organization_member?
 
     true
   end
 
   def organization_error(message)
-    GraphQL::ExecutionError.new(message, extensions: { status: :forbidden, code: 'forbidden' })
+    GraphQL::ExecutionError.new(message, extensions: {status: :forbidden, code: "forbidden"})
   end
 
   def organization_member?

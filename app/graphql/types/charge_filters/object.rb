@@ -3,8 +3,8 @@
 module Types
   module ChargeFilters
     class Object < Types::BaseObject
-      graphql_name 'ChargeFilter'
-      description 'Charge filters object'
+      graphql_name "ChargeFilter"
+      description "Charge filters object"
 
       field :id, ID, null: false
 

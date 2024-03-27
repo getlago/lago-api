@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
   let(:query) do
@@ -30,27 +30,27 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
     invoice_second
   end
 
-  it 'returns all invoices' do
+  it "returns all invoices" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
-    invoices_response = result['data']['invoices']
-    returned_ids = invoices_response['collection'].map { |hash| hash['id'] }
+    invoices_response = result["data"]["invoices"]
+    returned_ids = invoices_response["collection"].map { |hash| hash["id"] }
 
     aggregate_failures do
-      expect(invoices_response['collection'].count).to eq(2)
+      expect(invoices_response["collection"].count).to eq(2)
       expect(returned_ids).to include(invoice_first.id)
       expect(returned_ids).to include(invoice_second.id)
 
-      expect(invoices_response['metadata']['currentPage']).to eq(1)
-      expect(invoices_response['metadata']['totalCount']).to eq(2)
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(2)
     end
   end
 
-  context 'when filtering by succeeded payment status' do
+  context "when filtering by succeeded payment status" do
     let(:query) do
       <<~GQL
         query {
@@ -62,28 +62,28 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       GQL
     end
 
-    it 'returns all succeeded invoices' do
+    it "returns all succeeded invoices" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
-      invoices_response = result['data']['invoices']
-      returned_ids = invoices_response['collection'].map { |hash| hash['id'] }
+      invoices_response = result["data"]["invoices"]
+      returned_ids = invoices_response["collection"].map { |hash| hash["id"] }
 
       aggregate_failures do
-        expect(invoices_response['collection'].count).to eq(1)
+        expect(invoices_response["collection"].count).to eq(1)
         expect(returned_ids).not_to include(invoice_first.id)
         expect(returned_ids).to include(invoice_second.id)
 
-        expect(invoices_response['metadata']['currentPage']).to eq(1)
-        expect(invoices_response['metadata']['totalCount']).to eq(1)
+        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
       end
     end
   end
 
-  context 'when filtering by draft status' do
+  context "when filtering by draft status" do
     let(:invoice_third) { create(:invoice, customer: customer_second, status: :draft, organization:) }
     let(:query) do
       <<~GQL
@@ -98,50 +98,50 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
 
     before { invoice_third }
 
-    it 'returns all draft invoices' do
+    it "returns all draft invoices" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
-      invoices_response = result['data']['invoices']
+      invoices_response = result["data"]["invoices"]
 
       aggregate_failures do
-        expect(invoices_response['collection'].count).to eq(1)
-        expect(invoices_response['collection'].first['id']).to eq(invoice_third.id)
+        expect(invoices_response["collection"].count).to eq(1)
+        expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
 
-        expect(invoices_response['metadata']['currentPage']).to eq(1)
-        expect(invoices_response['metadata']['totalCount']).to eq(1)
+        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
       end
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: "Missing organization id"
       )
     end
   end
 
-  context 'when not member of the organization' do
-    it 'returns an error' do
+  context "when not member of the organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Not in organization',
+        message: "Not in organization"
       )
     end
   end

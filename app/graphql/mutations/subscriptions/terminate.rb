@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'TerminateSubscription'
-      description 'Terminate a Subscription'
+      graphql_name "TerminateSubscription"
+      description "Terminate a Subscription"
 
       argument :id, ID, required: true
 

@@ -3,7 +3,7 @@
 module Types
   module Fees
     class Object < Types::BaseObject
-      graphql_name 'Fee'
+      graphql_name "Fee"
       implements Types::Invoices::InvoiceItem
 
       field :charge, Types::Charges::Object, null: true
@@ -50,7 +50,7 @@ module Types
         return nil if object.adjusted_fee.blank?
         return nil if object.adjusted_fee.adjusted_display_name?
 
-        object.adjusted_fee.adjusted_units? ? 'adjusted_units' : 'adjusted_amount'
+        object.adjusted_fee.adjusted_units? ? "adjusted_units" : "adjusted_amount"
       end
     end
   end

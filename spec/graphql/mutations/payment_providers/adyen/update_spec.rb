@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
   let(:membership) { create(:membership) }
@@ -20,7 +20,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
 
   before { adyen_provider }
 
-  it 'updates an adyen provider' do
+  it "updates an adyen provider" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -28,18 +28,18 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
       variables: {
         input: {
           id: adyen_provider.id,
-          successRedirectUrl: success_redirect_url,
-        },
-      },
+          successRedirectUrl: success_redirect_url
+        }
+      }
     )
 
-    result_data = result['data']['updateAdyenPaymentProvider']
+    result_data = result["data"]["updateAdyenPaymentProvider"]
 
-    expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
+    expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
   end
 
-  context 'when success redirect url is nil' do
-    it 'removes success redirect url from the provider' do
+  context "when success redirect url is nil" do
+    it "removes success redirect url from the provider" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
@@ -47,45 +47,45 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
         variables: {
           input: {
             id: adyen_provider.id,
-            successRedirectUrl: nil,
-          },
-        },
+            successRedirectUrl: nil
+          }
+        }
       )
 
-      result_data = result['data']['updateAdyenPaymentProvider']
+      result_data = result["data"]["updateAdyenPaymentProvider"]
 
-      expect(result_data['successRedirectUrl']).to eq(nil)
+      expect(result_data["successRedirectUrl"]).to eq(nil)
     end
   end
 
-  context 'without current user' do
-    it 'returns an error' do
+  context "without current user" do
+    it "returns an error" do
       result = execute_graphql(
         current_organization: membership.organization,
         query: mutation,
         variables: {
           input: {
             id: adyen_provider.id,
-            successRedirectUrl: success_redirect_url,
-          },
-        },
+            successRedirectUrl: success_redirect_url
+          }
+        }
       )
 
       expect_unauthorized_error(result)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query: mutation,
         variables: {
           input: {
             id: adyen_provider.id,
-            successRedirectUrl: success_redirect_url,
-          },
-        },
+            successRedirectUrl: success_redirect_url
+          }
+        }
       )
 
       expect_forbidden_error(result)

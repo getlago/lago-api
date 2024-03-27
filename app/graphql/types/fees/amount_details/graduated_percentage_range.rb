@@ -4,7 +4,7 @@ module Types
   module Fees
     module AmountDetails
       class GraduatedPercentageRange < Types::BaseObject
-        graphql_name 'FeeAmountDetailsGraduatedPercentageRange'
+        graphql_name "FeeAmountDetailsGraduatedPercentageRange"
 
         field :flat_unit_amount, String, null: true
         field :from_value, Integer, null: true

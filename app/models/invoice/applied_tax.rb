@@ -2,7 +2,7 @@
 
 class Invoice
   class AppliedTax < ApplicationRecord
-    self.table_name = 'invoices_taxes'
+    self.table_name = "invoices_taxes"
 
     include PaperTrailTraceable
 
@@ -10,9 +10,9 @@ class Invoice
     belongs_to :tax
 
     monetize :amount_cents,
-             :fees_amount_cents,
-             with_model_currency: :amount_currency
+      :fees_amount_cents,
+      with_model_currency: :amount_currency
 
-    validates :amount_cents, numericality: { greater_than_or_equal_to: 0 }
+    validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
   end
 end

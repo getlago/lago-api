@@ -11,7 +11,7 @@ class CreateCustomerMetadata < ActiveRecord::Migration[7.0]
 
       t.timestamps
 
-      t.index %w[customer_id key], name: 'index_customer_metadata_on_customer_id_and_key', unique: true
+      t.index %w[customer_id key], name: "index_customer_metadata_on_customer_id_and_key", unique: true
     end
   end
 end

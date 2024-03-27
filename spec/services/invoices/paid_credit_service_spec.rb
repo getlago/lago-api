@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::PaidCreditService, type: :service do
   subject(:invoice_service) do
@@ -9,12 +9,12 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
   let(:timestamp) { Time.current.to_i }
 
-  describe 'call' do
+  describe "call" do
     let(:customer) { create(:customer) }
     let(:subscription) { create(:subscription, customer:) }
     let(:wallet) { create(:wallet, customer:) }
     let(:wallet_transaction) do
-      create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00')
+      create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00")
     end
 
     let(:invoice) { nil }
@@ -25,7 +25,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       allow(SegmentTrackJob).to receive(:perform_later)
     end
 
-    it 'creates an invoice' do
+    it "creates an invoice" do
       result = invoice_service.call
 
       aggregate_failures do
@@ -33,15 +33,15 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
         expect(result.invoice).to have_attributes(
           issuing_date: Time.zone.at(timestamp).to_date,
-          invoice_type: 'credit',
-          payment_status: 'pending',
-          currency: 'EUR',
+          invoice_type: "credit",
+          payment_status: "pending",
+          currency: "EUR",
           fees_amount_cents: 1500,
           sub_total_excluding_taxes_amount_cents: 1500,
           taxes_amount_cents: 0,
           taxes_rate: 0,
           sub_total_including_taxes_amount_cents: 1500,
-          total_amount_cents: 1500,
+          total_amount_cents: 1500
         )
 
         expect(result.invoice.applied_taxes.count).to eq(0)
@@ -50,31 +50,31 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    it 'enqueues a SendWebhookJob' do
+    it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call
       end.to have_enqueued_job(SendWebhookJob)
     end
 
-    it 'does not enqueue an SendEmailJob' do
+    it "does not enqueue an SendEmailJob" do
       expect do
         invoice_service.call
       end.not_to have_enqueued_job(SendEmailJob)
     end
 
-    context 'with lago_premium' do
+    context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
-      it 'enqueues an SendEmailJob' do
+      it "enqueues an SendEmailJob" do
         expect do
           invoice_service.call
         end.to have_enqueued_job(SendEmailJob)
       end
 
-      context 'when organization does not have right email settings' do
+      context "when organization does not have right email settings" do
         before { customer.organization.update!(email_settings: []) }
 
-        it 'does not enqueue an SendEmailJob' do
+        it "does not enqueue an SendEmailJob" do
           expect do
             invoice_service.call
           end.not_to have_enqueued_job(SendEmailJob)
@@ -82,21 +82,21 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    it 'calls SegmentTrackJob' do
+    it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type,
-        },
+          invoice_type: invoice.invoice_type
+        }
       )
     end
 
-    it 'creates a payment' do
+    it "creates a payment" do
       payment_create_service = instance_double(Invoices::Payments::CreateService)
       allow(Invoices::Payments::CreateService)
         .to receive(:new).and_return(payment_create_service)
@@ -109,34 +109,34 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       expect(payment_create_service).to have_received(:call)
     end
 
-    context 'when organization does not have a webhook endpoint' do
+    context "when organization does not have a webhook endpoint" do
       before { customer.organization.webhook_endpoints.destroy_all }
 
-      it 'does not enqueues a SendWebhookJob' do
+      it "does not enqueues a SendWebhookJob" do
         expect do
           invoice_service.call
         end.not_to have_enqueued_job(SendWebhookJob)
       end
     end
 
-    context 'with customer timezone' do
-      before { customer.update!(timezone: 'America/Los_Angeles') }
+    context "with customer timezone" do
+      before { customer.update!(timezone: "America/Los_Angeles") }
 
-      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00').to_i }
+      let(:timestamp) { DateTime.parse("2022-11-25 01:00:00").to_i }
 
-      it 'assigns the issuing date in the customer timezone' do
+      it "assigns the issuing date in the customer timezone" do
         result = invoice_service.call
 
-        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+        expect(result.invoice.issuing_date.to_s).to eq("2022-11-24")
       end
     end
 
-    context 'with provided invoice' do
+    context "with provided invoice" do
       let(:invoice) do
         create(:invoice, organization: customer.organization, customer:, invoice_type: :credit, status: :generating)
       end
 
-      it 'does not re-create an invoice' do
+      it "does not re-create an invoice" do
         result = invoice_service.call
 
         expect(result).to be_success

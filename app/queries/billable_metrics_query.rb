@@ -26,9 +26,9 @@ class BillableMetricsQuery < BaseQuery
     return nil if search_term.blank?
 
     {
-      m: 'or',
+      m: "or",
       name_cont: search_term,
-      code_cont: search_term,
+      code_cont: search_term
     }
   end
 end

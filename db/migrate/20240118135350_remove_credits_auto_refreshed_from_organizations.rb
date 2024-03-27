@@ -8,8 +8,8 @@ class RemoveCreditsAutoRefreshedFromOrganizations < ActiveRecord::Migration[7.0]
       t.bigint :ongoing_balance_cents, default: 0, null: false
       t.bigint :ongoing_usage_balance_cents, default: 0, null: false
 
-      t.decimal :credits_ongoing_balance, precision: 30, scale: 5, default: '0.0', null: false
-      t.decimal :credits_ongoing_usage_balance, precision: 30, scale: 5, default: '0.0', null: false
+      t.decimal :credits_ongoing_balance, precision: 30, scale: 5, default: "0.0", null: false
+      t.decimal :credits_ongoing_usage_balance, precision: 30, scale: 5, default: "0.0", null: false
     end
   end
 end

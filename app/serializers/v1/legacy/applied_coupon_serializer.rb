@@ -5,7 +5,7 @@ module V1
     class AppliedCouponSerializer < ModelSerializer
       def serialize
         {
-          expiration_date: model.coupon.expiration_at&.to_date&.iso8601,
+          expiration_date: model.coupon.expiration_at&.to_date&.iso8601
         }
       end
     end

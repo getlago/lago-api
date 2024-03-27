@@ -5,8 +5,8 @@ module Mutations
     class DownloadInvoice < BaseMutation
       include AuthenticableCustomerPortalUser
 
-      graphql_name 'DownloadCustomerPortalInvoice'
-      description 'Download customer portal invoice PDF'
+      graphql_name "DownloadCustomerPortalInvoice"
+      description "Download customer portal invoice PDF"
 
       argument :id, ID, required: true
 

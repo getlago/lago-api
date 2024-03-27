@@ -49,7 +49,7 @@ class BaseService
     private
 
     def format_messages
-      "Validation errors: #{[messages].flatten.join(', ')}"
+      "Validation errors: #{[messages].flatten.join(", ")}"
     end
   end
 
@@ -118,18 +118,18 @@ class BaseService
     end
 
     def single_validation_failure!(error_code:, field: :base)
-      validation_failure!(errors: { field.to_sym => [error_code] })
+      validation_failure!(errors: {field.to_sym => [error_code]})
     end
 
     def service_failure!(code:, message:)
       fail_with_error!(ServiceFailure.new(self, code:, error_message: message))
     end
 
-    def forbidden_failure!(code: 'feature_unavailable')
+    def forbidden_failure!(code: "feature_unavailable")
       fail_with_error!(ForbiddenFailure.new(self, code:))
     end
 
-    def unauthorized_failure!(message: 'unauthorized')
+    def unauthorized_failure!(message: "unauthorized")
       fail_with_error!(UnauthorizedFailure.new(self, message:))
     end
 

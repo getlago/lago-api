@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::AppliedCouponsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, organization:) }
 
-  describe 'apply' do
+  describe "apply" do
     before do
       create(:subscription, customer:)
     end
@@ -15,15 +15,15 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
     let(:params) do
       {
         external_customer_id: customer.external_id,
-        coupon_code: coupon.code,
+        coupon_code: coupon.code
       }
     end
 
-    it 'returns a success' do
+    it "returns a success" do
       post_with_token(
         organization,
-        '/api/v1/applied_coupons',
-        { applied_coupon: params },
+        "/api/v1/applied_coupons",
+        {applied_coupon: params}
       )
 
       expect(response).to have_http_status(:success)
@@ -41,22 +41,22 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       end
     end
 
-    context 'with invalid params' do
+    context "with invalid params" do
       let(:params) do
-        { name: 'Foo Bar' }
+        {name: "Foo Bar"}
       end
 
-      it 'returns an unprocessable_entity' do
-        post_with_token(organization, '/api/v1/applied_coupons', { applied_coupon: params })
+      it "returns an unprocessable_entity" do
+        post_with_token(organization, "/api/v1/applied_coupons", {applied_coupon: params})
 
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'index' do
+  describe "index" do
     let(:customer) { create(:customer, organization:) }
-    let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', organization:) }
+    let(:coupon) { create(:coupon, coupon_type: "fixed_amount", organization:) }
     let(:credit) do
       create(:credit, applied_coupon:, amount_cents: 2, amount_currency: customer.currency)
     end
@@ -66,7 +66,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
         customer:,
         coupon:,
         amount_cents: 10,
-        amount_currency: customer.currency,
+        amount_currency: customer.currency
       )
     end
 
@@ -75,8 +75,8 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       credit
     end
 
-    it 'returns applied coupons' do
-      get_with_token(organization, '/api/v1/applied_coupons')
+    it "returns applied coupons" do
+      get_with_token(organization, "/api/v1/applied_coupons")
 
       aggregate_failures do
         expect(response).to have_http_status(:success)

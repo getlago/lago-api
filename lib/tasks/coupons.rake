@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 namespace :coupons do
-  desc 'Populate expiration_date for coupons'
+  desc "Populate expiration_date for coupons"
   task fill_expiration_date: :environment do
     Coupon.unscoped.find_each do |coupon|
       next unless coupon.expiration_duration

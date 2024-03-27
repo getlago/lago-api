@@ -14,7 +14,7 @@ module Taxes
         name: params[:name],
         code: params[:code],
         rate: params[:rate],
-        description: params[:description],
+        description: params[:description]
       )
 
       tax.applied_to_organization = params[:applied_to_organization] if params.key?(:applied_to_organization)

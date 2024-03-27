@@ -11,16 +11,16 @@ class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
     end
 
     Wallet.find_each do |wallet|
-      currency = Money::Currency.new(wallet.attributes['currency'])
+      currency = Money::Currency.new(wallet.attributes["currency"])
 
       # NOTE: prevent validation issues with deleted customers
       wallet.customer = Customer.with_discarded.find(wallet.customer_id)
 
       wallet.update!(
-        balance_cents: (wallet.attributes['balance'] * currency.subunit_to_unit).to_i,
+        balance_cents: (wallet.attributes["balance"] * currency.subunit_to_unit).to_i,
         balance_currency: currency.iso_code,
-        consumed_amount_cents: (wallet.attributes['consumed_amount'] * currency.subunit_to_unit).to_i,
-        consumed_amount_currenty: currency.iso_code,
+        consumed_amount_cents: (wallet.attributes["consumed_amount"] * currency.subunit_to_unit).to_i,
+        consumed_amount_currenty: currency.iso_code
       )
     end
 

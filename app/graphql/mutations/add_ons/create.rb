@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateAddOn'
-      description 'Creates a new add-on'
+      graphql_name "CreateAddOn"
+      description "Creates a new add-on"
 
       input_object_class Types::AddOns::CreateInput
 

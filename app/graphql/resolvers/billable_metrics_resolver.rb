@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query billable metrics of an organization'
+    description "Query billable metrics of an organization"
 
-    argument :ids, [String], required: false, description: 'List of plan ID to fetch'
+    argument :ids, [String], required: false, description: "List of plan ID to fetch"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :recurring, Boolean, required: false
@@ -24,7 +24,7 @@ module Resolvers
         search_term: args[:search_term],
         page: args[:page],
         limit: args[:limit],
-        filters: args.slice(:ids, :recurring, :aggregation_types),
+        filters: args.slice(:ids, :recurring, :aggregation_types)
       )
 
       result.billable_metrics

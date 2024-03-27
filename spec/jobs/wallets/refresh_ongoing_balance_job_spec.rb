@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Wallets::RefreshOngoingBalanceJob, type: :job do
   let(:wallet) { create(:wallet) }
@@ -10,7 +10,7 @@ RSpec.describe Wallets::RefreshOngoingBalanceJob, type: :job do
     instance_double(Wallets::Balance::RefreshOngoingService)
   end
 
-  it 'delegates to the RefreshOngoingBalance service' do
+  it "delegates to the RefreshOngoingBalance service" do
     allow(Wallets::Balance::RefreshOngoingService).to receive(:new).with(wallet:).and_return(refresh_service)
     allow(refresh_service).to receive(:call).and_return(result)
 

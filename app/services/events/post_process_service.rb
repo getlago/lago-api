@@ -30,7 +30,7 @@ module Events
 
       result
     rescue ActiveRecord::RecordNotUnique
-      delivor_error_webhook(error: { transaction_id: ['value_already_exist'] })
+      delivor_error_webhook(error: {transaction_id: ["value_already_exist"]})
 
       result
     end
@@ -65,9 +65,9 @@ module Events
         .where("date_trunc('second', started_at::timestamp) <= ?::timestamp", event.timestamp)
         .where(
           "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
-          event.timestamp,
+          event.timestamp
         )
-        .order('terminated_at DESC NULLS FIRST, started_at DESC')
+        .order("terminated_at DESC NULLS FIRST, started_at DESC")
     end
 
     def billable_metric
@@ -81,7 +81,7 @@ module Events
 
       charges = billable_metric.charges
         .joins(:plan)
-        .where(plans: { id: active_subscription.map(&:plan_id) })
+        .where(plans: {id: active_subscription.map(&:plan_id)})
 
       charges.each do |charge|
         active_subscription.each do |subscription|
@@ -114,13 +114,13 @@ module Events
         .charges
         .pay_in_advance
         .joins(:billable_metric)
-        .where(billable_metric: { code: event.code })
+        .where(billable_metric: {code: event.code})
     end
 
     def delivor_error_webhook(error:)
       return unless organization.webhook_endpoints.any?
 
-      SendWebhookJob.perform_later('event.error', event, { error: })
+      SendWebhookJob.perform_later("event.error", event, {error:})
     end
   end
 end

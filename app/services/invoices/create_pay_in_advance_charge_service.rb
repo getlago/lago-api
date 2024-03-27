@@ -48,7 +48,7 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue Sequenced::SequenceError
       raise
-    rescue StandardError => e
+    rescue => e
       result.fail_with_error!(e)
     end
 
@@ -64,7 +64,7 @@ module Invoices
         invoice_type: :subscription,
         currency: customer.currency,
         datetime: Time.zone.at(timestamp),
-        charge_in_advance: true,
+        charge_in_advance: true
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, recurring: false)
@@ -86,24 +86,24 @@ module Invoices
     end
 
     def deliver_webhooks
-      invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
-      SendWebhookJob.perform_later('invoice.created', invoice)
+      invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+      SendWebhookJob.perform_later("invoice.created", invoice)
     end
 
     def track_invoice_created(invoice)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type,
-        },
+          invoice_type: invoice.invoice_type
+        }
       )
     end
 
     def should_deliver_email?
-      License.premium? && customer.organization.email_settings.include?('invoice.finalized')
+      License.premium? && customer.organization.email_settings.include?("invoice.finalized")
     end
 
     def credit_notes

@@ -17,9 +17,9 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') unless invoice
+      return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless should_create_credit_note?
-      return result.not_allowed_failure!(code: 'invalid_type_or_status') unless valid_type_or_status?
+      return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.create!(
@@ -34,8 +34,8 @@ module CreditNotes
           refund_amount_cents:,
           reason:,
           description:,
-          credit_status: 'available',
-          status: invoice.status,
+          credit_status: "available",
+          status: invoice.status
         )
 
         create_items
@@ -46,12 +46,12 @@ module CreditNotes
         valid_credit_note?
         result.raise_if_error!
 
-        credit_note.credit_status = 'available' if credit_note.credited?
-        credit_note.refund_status = 'pending' if credit_note.refunded?
+        credit_note.credit_status = "available" if credit_note.credited?
+        credit_note.refund_status = "pending" if credit_note.refunded?
 
         credit_note.update!(
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
-          balance_amount_cents: credit_note.credit_amount_cents,
+          balance_amount_cents: credit_note.credit_amount_cents
         )
       end
 
@@ -66,7 +66,7 @@ module CreditNotes
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
-      result.single_validation_failure!(field: :reason, error_code: 'value_is_invalid')
+      result.single_validation_failure!(field: :reason, error_code: "value_is_invalid")
     rescue BaseService::ValidationFailure
       result
     end
@@ -74,12 +74,12 @@ module CreditNotes
     private
 
     attr_accessor :invoice,
-                  :items_attr,
-                  :reason,
-                  :description,
-                  :credit_amount_cents,
-                  :refund_amount_cents,
-                  :automatic
+      :items_attr,
+      :reason,
+      :description,
+      :credit_amount_cents,
+      :refund_amount_cents,
+      :automatic
 
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice
@@ -112,7 +112,7 @@ module CreditNotes
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),
           amount_cents: amount_cents.round,
           precise_amount_cents: amount_cents,
-          amount_currency: invoice.currency,
+          amount_currency: invoice.currency
         )
         break unless valid_item?(item)
 
@@ -130,35 +130,35 @@ module CreditNotes
 
     def track_credit_note_created
       types = if credit_note.credited? && credit_note.refunded?
-        'both'
+        "both"
       elsif credit_note.credited?
-        'credit'
+        "credit"
       elsif credit_note.refunded?
-        'refund'
+        "refund"
       end
 
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'credit_note_issued',
+        event: "credit_note_issued",
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
-          credit_note_method: types,
-        },
+          credit_note_method: types
+        }
       )
     end
 
     def deliver_webhook
       SendWebhookJob.perform_later(
-        'credit_note.created',
-        credit_note,
+        "credit_note.created",
+        credit_note
       )
     end
 
     def deliver_email
       # NOTE: We already check the premium state for the credit note creation
-      return unless credit_note.organization.email_settings.include?('credit_note.created')
+      return unless credit_note.organization.email_settings.include?("credit_note.created")
 
       CreditNoteMailer.with(credit_note:)
         .created.deliver_later(wait: 3.seconds)
@@ -189,7 +189,7 @@ module CreditNotes
     def compute_amounts_and_taxes
       taxes_result = CreditNotes::ApplyTaxesService.call(
         invoice:,
-        items: credit_note.items,
+        items: credit_note.items
       )
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents

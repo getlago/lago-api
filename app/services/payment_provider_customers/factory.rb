@@ -8,11 +8,11 @@ module PaymentProviderCustomers
 
     def self.service_class(provider_customer)
       case provider_customer&.class.to_s
-      when 'PaymentProviderCustomers::StripeCustomer'
+      when "PaymentProviderCustomers::StripeCustomer"
         PaymentProviderCustomers::StripeService
-      when 'PaymentProviderCustomers::GocardlessCustomer'
+      when "PaymentProviderCustomers::GocardlessCustomer"
         PaymentProviderCustomers::GocardlessService
-      when 'PaymentProviderCustomers::AdyenCustomer'
+      when "PaymentProviderCustomers::AdyenCustomer"
         PaymentProviderCustomers::AdyenService
       else
         raise(NotImplementedError)

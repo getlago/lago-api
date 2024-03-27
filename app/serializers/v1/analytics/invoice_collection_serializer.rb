@@ -5,11 +5,11 @@ module V1
     class InvoiceCollectionSerializer < ModelSerializer
       def serialize
         {
-          month: model['month'],
-          payment_status: model['payment_status'],
-          invoices_count: model['invoices_count'],
-          amount_cents: model['amount_cents'],
-          currency: model['currency'],
+          month: model["month"],
+          payment_status: model["payment_status"],
+          invoices_count: model["invoices_count"],
+          amount_cents: model["amount_cents"],
+          currency: model["currency"]
         }
       end
     end

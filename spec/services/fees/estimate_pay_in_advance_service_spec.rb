@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Fees::EstimatePayInAdvanceService do
   subject(:estimate_service) { described_class.new(organization:, params:) }
@@ -17,7 +17,7 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
       :subscription,
       customer:,
       plan:,
-      started_at: 1.year.ago,
+      started_at: 1.year.ago
     )
   end
 
@@ -25,7 +25,7 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
     {
       code:,
       external_customer_id:,
-      external_subscription_id:,
+      external_subscription_id:
     }
   end
 
@@ -35,12 +35,12 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
 
   before { charge }
 
-  describe '#call' do
-    it 'does not persist any events' do
+  describe "#call" do
+    it "does not persist any events" do
       expect { estimate_service.call }.not_to change(Event, :count)
     end
 
-    it 'returns a list of fees' do
+    it "returns a list of fees" do
       result = estimate_service.call
 
       aggregate_failures do
@@ -52,35 +52,35 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
         expect(fee).to have_attributes(
           subscription:,
           charge:,
-          fee_type: 'charge',
+          fee_type: "charge",
           pay_in_advance: true,
           invoiceable: charge,
           events_count: 1,
-          pay_in_advance_event_id: nil,
+          pay_in_advance_event_id: nil
         )
       end
     end
 
-    context 'when event code does not match an pay_in_advance charge' do
+    context "when event code does not match an pay_in_advance charge" do
       let(:charge) { create(:standard_charge, plan:, billable_metric:) }
 
-      it 'fails with a validation error' do
+      it "fails with a validation error" do
         result = estimate_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:code]).to eq(['does_not_match_an_instant_charge'])
+          expect(result.error.messages[:code]).to eq(["does_not_match_an_instant_charge"])
         end
       end
     end
 
-    context 'when event matches multiple charges' do
+    context "when event matches multiple charges" do
       let(:charge2) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
 
       before { charge2 }
 
-      it 'returns a fee per charges' do
+      it "returns a fee per charges" do
         result = estimate_service.call
 
         aggregate_failures do
@@ -90,48 +90,48 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
       end
     end
 
-    context 'when external customer is not found' do
+    context "when external customer is not found" do
       let(:params) do
-        { code:, external_customer_id: 'unknown' }
+        {code:, external_customer_id: "unknown"}
       end
 
-      it 'fails with a not found error' do
+      it "fails with a not found error" do
         result = estimate_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.error_code).to eq('customer_not_found')
+          expect(result.error.error_code).to eq("customer_not_found")
         end
       end
     end
 
-    context 'when external subscription is not found' do
+    context "when external subscription is not found" do
       let(:external_subscription_id) { nil }
 
-      it 'fails with a not found error' do
+      it "fails with a not found error" do
         result = estimate_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.error_code).to eq('subscription_not_found')
+          expect(result.error.error_code).to eq("subscription_not_found")
         end
       end
 
-      context 'when customer has an active subscription' do
+      context "when customer has an active subscription" do
         let(:subscription) do
           create(
             :subscription,
             customer:,
             plan:,
-            started_at: 1.year.ago,
+            started_at: 1.year.ago
           )
         end
 
         before { subscription }
 
-        it 'returns a list of fees' do
+        it "returns a list of fees" do
           result = estimate_service.call
 
           aggregate_failures do
@@ -143,11 +143,11 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
             expect(fee).to have_attributes(
               subscription:,
               charge:,
-              fee_type: 'charge',
+              fee_type: "charge",
               pay_in_advance: true,
               invoiceable: charge,
               events_count: 1,
-              pay_in_advance_event_id: nil,
+              pay_in_advance_event_id: nil
             )
           end
         end

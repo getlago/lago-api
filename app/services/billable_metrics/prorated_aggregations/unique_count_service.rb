@@ -26,7 +26,7 @@ module BillableMetrics
             aggregation,
             options[:is_pay_in_advance],
             target_result: result,
-            aggregation_without_proration:,
+            aggregation_without_proration:
           )
         else
           result.aggregation = aggregation
@@ -76,7 +76,7 @@ module BillableMetrics
               aggregation_value,
               options[:is_pay_in_advance],
               target_result: group_result,
-              aggregation_without_proration: group_result_without_proration,
+              aggregation_without_proration: group_result_without_proration
             )
           else
             group_result.aggregation = aggregation_value
@@ -92,7 +92,7 @@ module BillableMetrics
       end
 
       def per_event_aggregation
-        period_aggregation = event_store.prorated_unique_count_breakdown.map { |row| row['prorated_value'].ceil(5) }
+        period_aggregation = event_store.prorated_unique_count_breakdown.map { |row| row["prorated_value"].ceil(5) }
 
         Result.new.tap do |result|
           result.event_aggregation = Array.new(period_aggregation.count) { 1 }

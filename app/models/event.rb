@@ -9,19 +9,19 @@ class Event < EventsRecord
 
   belongs_to :organization
 
-  validates :transaction_id, presence: true, uniqueness: { scope: %i[organization_id external_subscription_id] }
+  validates :transaction_id, presence: true, uniqueness: {scope: %i[organization_id external_subscription_id]}
   validates :code, presence: true
 
   default_scope -> { kept }
-  scope :from_datetime, ->(from_datetime) { where('events.timestamp::timestamp(0) >= ?', from_datetime) }
-  scope :to_datetime, ->(to_datetime) { where('events.timestamp::timestamp(0) <= ?', to_datetime) }
+  scope :from_datetime, ->(from_datetime) { where("events.timestamp::timestamp(0) >= ?", from_datetime) }
+  scope :to_datetime, ->(to_datetime) { where("events.timestamp::timestamp(0) <= ?", to_datetime) }
 
   def api_client
-    metadata['user_agent']
+    metadata["user_agent"]
   end
 
   def ip_address
-    metadata['ip_address']
+    metadata["ip_address"]
   end
 
   def billable_metric
@@ -33,8 +33,8 @@ class Event < EventsRecord
       .customers
       .with_discarded
       .where(external_id: external_customer_id)
-      .where('deleted_at IS NULL OR deleted_at > ?', timestamp)
-      .order('deleted_at DESC NULLS LAST')
+      .where("deleted_at IS NULL OR deleted_at > ?", timestamp)
+      .order("deleted_at DESC NULLS LAST")
       .first
   end
 
@@ -53,9 +53,9 @@ class Event < EventsRecord
       .where("date_trunc('second', started_at::timestamp) <= ?::timestamp", timestamp)
       .where(
         "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
-        timestamp,
+        timestamp
       )
-      .order('terminated_at DESC NULLS FIRST, started_at DESC')
+      .order("terminated_at DESC NULLS FIRST, started_at DESC")
       .first
   end
 end

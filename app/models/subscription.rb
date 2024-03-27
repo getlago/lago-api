@@ -5,10 +5,10 @@ class Subscription < ApplicationRecord
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
-  belongs_to :previous_subscription, class_name: 'Subscription', optional: true
+  belongs_to :previous_subscription, class_name: "Subscription", optional: true
 
   has_one :organization, through: :customer
-  has_many :next_subscriptions, class_name: 'Subscription', foreign_key: :previous_subscription_id
+  has_many :next_subscriptions, class_name: "Subscription", foreign_key: :previous_subscription_id
   has_many :events
   has_many :invoice_subscriptions
   has_many :invoices, through: :invoice_subscriptions
@@ -21,7 +21,7 @@ class Subscription < ApplicationRecord
     :pending,
     :active,
     :terminated,
-    :canceled,
+    :canceled
   ].freeze
 
   BILLING_TIME = %i[
@@ -142,7 +142,7 @@ class Subscription < ApplicationRecord
     number_od_days = Utils::DatetimeService.date_diff_with_timezone(
       from_datetime,
       to_datetime,
-      customer.applicable_timezone,
+      customer.applicable_timezone
     )
 
     return number_od_days unless terminated? && upgraded?

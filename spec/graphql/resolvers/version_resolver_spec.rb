@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::VersionResolver, type: :graphql do
   let(:query) do
@@ -11,14 +11,14 @@ RSpec.describe Resolvers::VersionResolver, type: :graphql do
     GQL
   end
 
-  it 'returns the currentVersion' do
+  it "returns the currentVersion" do
     result = execute_graphql(query:)
 
-    version_response = result['data']['currentVersion']
+    version_response = result["data"]["currentVersion"]
 
     aggregate_failures do
-      expect(version_response['number']).to be_present
-      expect(version_response['githubUrl']).to start_with(Utils::VersionService::GITHUB_BASE_URL)
+      expect(version_response["number"]).to be_present
+      expect(version_response["githubUrl"]).to start_with(Utils::VersionService::GITHUB_BASE_URL)
     end
   end
 end

@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query plans of an organization'
+    description "Query plans of an organization"
 
-    argument :ids, [String], required: false, description: 'List of plan ID to fetch'
+    argument :ids, [String], required: false, description: "List of plan ID to fetch"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false
@@ -23,8 +23,8 @@ module Resolvers
         page:,
         limit:,
         filters: {
-          ids:,
-        },
+          ids:
+        }
       )
 
       result.plans

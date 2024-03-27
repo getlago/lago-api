@@ -8,15 +8,15 @@ module Api
           organization: current_organization,
           params: create_params,
           timestamp: Time.current.to_f,
-          metadata: event_metadata,
+          metadata: event_metadata
         )
 
         if result.success?
           render(
             json: ::V1::EventSerializer.new(
               result.event,
-              root_name: 'event',
-            ),
+              root_name: "event"
+            )
           )
         else
           render_error_response(result)
@@ -28,7 +28,7 @@ module Api
           organization: current_organization,
           events_params: batch_params,
           timestamp: Time.current.to_f,
-          metadata: event_metadata,
+          metadata: event_metadata
         )
 
         if result.success?
@@ -36,8 +36,8 @@ module Api
             json: ::CollectionSerializer.new(
               result.events,
               ::V1::EventSerializer,
-              collection_name: 'events',
-            ),
+              collection_name: "events"
+            )
           )
         else
           render_error_response(result)
@@ -47,23 +47,23 @@ module Api
       def show
         event = Event.find_by(
           organization: current_organization,
-          transaction_id: params[:id],
+          transaction_id: params[:id]
         )
 
-        return not_found_error(resource: 'event') unless event
+        return not_found_error(resource: "event") unless event
 
         render(
           json: ::V1::EventSerializer.new(
             event,
-            root_name: 'event',
-          ),
+            root_name: "event"
+          )
         )
       end
 
       def estimate_fees
         result = Fees::EstimatePayInAdvanceService.call(
           organization: current_organization,
-          params: create_params,
+          params: create_params
         )
 
         if result.success?
@@ -71,9 +71,9 @@ module Api
             json: ::CollectionSerializer.new(
               result.fees,
               ::V1::FeeSerializer,
-              collection_name: 'fees',
-              includes: %i[applied_taxes],
-            ),
+              collection_name: "fees",
+              includes: %i[applied_taxes]
+            )
           )
         else
           render_error_response(result)
@@ -91,7 +91,7 @@ module Api
             :code,
             :timestamp,
             :external_subscription_id,
-            properties: {},
+            properties: {}
           )
       end
 
@@ -104,15 +104,15 @@ module Api
               :code,
               :timestamp,
               :external_subscription_id,
-              properties: {}, # rubocop:disable Style/HashAsLastArrayItem
-            ],
+              properties: {} # rubocop:disable Style/HashAsLastArrayItem
+            ]
           ).to_h.deep_symbolize_keys
       end
 
       def event_metadata
         {
           user_agent: request.user_agent,
-          ip_address: request.remote_ip,
+          ip_address: request.remote_ip
         }
       end
     end

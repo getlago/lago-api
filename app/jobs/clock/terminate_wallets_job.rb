@@ -2,7 +2,7 @@
 
 module Clock
   class TerminateWalletsJob < ApplicationJob
-    queue_as 'clock'
+    queue_as "clock"
 
     def perform
       Wallet.active.expired.find_each do |wallet|

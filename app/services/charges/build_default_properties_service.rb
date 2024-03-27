@@ -23,58 +23,58 @@ module Charges
     attr_reader :charge_model
 
     def default_standard_properties
-      { 'amount': '0' }
+      {amount: "0"}
     end
 
     def default_graduated_properties
       {
-        'graduated_ranges': [
+        graduated_ranges: [
           {
-            'from_value': 0,
-            'to_value': nil,
-            'per_unit_amount': '0',
-            'flat_amount': '0',
-          },
-        ],
+            from_value: 0,
+            to_value: nil,
+            per_unit_amount: "0",
+            flat_amount: "0"
+          }
+        ]
       }
     end
 
     def default_package_properties
       {
-        'package_size': 1,
-        'amount': '0',
-        'free_units': 0,
+        package_size: 1,
+        amount: "0",
+        free_units: 0
       }
     end
 
     def default_percentage_properties
-      { 'rate': '0' }
+      {rate: "0"}
     end
 
     def default_volume_properties
       {
-        'volume_ranges': [
+        volume_ranges: [
           {
-            'from_value': 0,
-            'to_value': nil,
-            'per_unit_amount': '0',
-            'flat_amount': '0',
-          },
-        ],
+            from_value: 0,
+            to_value: nil,
+            per_unit_amount: "0",
+            flat_amount: "0"
+          }
+        ]
       }
     end
 
     def default_graduated_percentage_properties
       {
-        'graduated_percentage_ranges': [
+        graduated_percentage_ranges: [
           {
-            'from_value': 0,
-            'to_value': nil,
-            'rate': '0',
-            'fixed_amount': '0',
-            'flat_amount': '0',
-          },
-        ],
+            from_value: 0,
+            to_value: nil,
+            rate: "0",
+            fixed_amount: "0",
+            flat_amount: "0"
+          }
+        ]
       }
     end
   end

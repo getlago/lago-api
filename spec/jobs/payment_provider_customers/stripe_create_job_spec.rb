@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::StripeCreateJob, type: :job do
   let(:stripe_customer) { create(:stripe_customer) }
 
   let(:stripe_service) { instance_double(PaymentProviderCustomers::StripeService) }
 
-  it 'calls the stripe create service' do
+  it "calls the stripe create service" do
     allow(PaymentProviderCustomers::StripeService).to receive(:new)
       .with(stripe_customer)
       .and_return(stripe_service)

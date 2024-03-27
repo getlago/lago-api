@@ -25,11 +25,11 @@ module Utils
     attr_reader :template, :context
 
     def template_file
-      File.read(Rails.root.join("app/views/templates/#{template}.slim"), encoding: 'UTF-8')
+      File.read(Rails.root.join("app/views/templates/#{template}.slim"), encoding: "UTF-8")
     end
 
     def pdf_url
-      URI.join(ENV['LAGO_PDF_URL'], '/forms/chromium/convert/html').to_s
+      URI.join(ENV["LAGO_PDF_URL"], "/forms/chromium/convert/html").to_s
     end
 
     def render_pdf
@@ -37,16 +37,16 @@ module Utils
 
       response = http_client.post_multipart_file(
         render_html,
-        'text/html',
-        'index.html',
-        scale: '1.28',
-        marginTop: '0.42',
-        marginBottom: '0.42',
-        marginLeft: '0.42',
-        marginRight: '0.42',
+        "text/html",
+        "index.html",
+        scale: "1.28",
+        marginTop: "0.42",
+        marginBottom: "0.42",
+        marginLeft: "0.42",
+        marginRight: "0.42"
       )
 
-      response.body.force_encoding('UTF-8')
+      response.body.force_encoding("UTF-8")
     end
   end
 end

@@ -4,8 +4,8 @@ module Mutations
   module Auth
     module Google
       class RegisterUser < BaseMutation
-        graphql_name 'GoogleRegisterUser'
-        description 'Register a new user with Google Oauth'
+        graphql_name "GoogleRegisterUser"
+        description "Register a new user with Google Oauth"
 
         argument :code, String, required: true
         argument :organization_name, String, required: true

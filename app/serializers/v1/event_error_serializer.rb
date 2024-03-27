@@ -5,8 +5,8 @@ module V1
     def serialize
       payload = {
         status: 422,
-        error: 'Unprocessable entity',
-        message: model.error.to_json,
+        error: "Unprocessable entity",
+        message: model.error.to_json
       }
 
       payload.merge!(event)
@@ -17,12 +17,12 @@ module V1
 
     def legacy_values
       ::V1::Legacy::EventErrorSerializer.new(
-        model.event,
+        model.event
       ).serialize
     end
 
     def event
-      { event: ::V1::EventSerializer.new(model.event).serialize }
+      {event: ::V1::EventSerializer.new(model.event).serialize}
     end
   end
 end

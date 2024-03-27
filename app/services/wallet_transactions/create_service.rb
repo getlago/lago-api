@@ -17,7 +17,7 @@ module WalletTransactions
         transaction = handle_granted_credits(
           wallet: result.current_wallet,
           granted_credits: args[:granted_credits],
-          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(args[:reset_consumed_credits]),
+          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(args[:reset_consumed_credits])
         )
         wallet_transactions << transaction
       end
@@ -41,13 +41,13 @@ module WalletTransactions
         amount: wallet.rate_amount * paid_credits_amount,
         credit_amount: paid_credits_amount,
         status: :pending,
-        source:,
+        source:
       )
       Wallets::Balance::IncreaseOngoingService.new(wallet:, credits_amount: paid_credits_amount).call
 
       BillPaidCreditJob.perform_later(
         wallet_transaction,
-        Time.current.to_i,
+        Time.current.to_i
       )
 
       wallet_transaction
@@ -66,13 +66,13 @@ module WalletTransactions
           credit_amount: granted_credits_amount,
           status: :settled,
           settled_at: Time.current,
-          source:,
+          source:
         )
 
         Wallets::Balance::IncreaseService.new(
           wallet:,
           credits_amount: granted_credits_amount,
-          reset_consumed_credits:,
+          reset_consumed_credits:
         ).call
 
         wallet_transaction

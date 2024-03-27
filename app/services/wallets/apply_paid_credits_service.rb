@@ -3,10 +3,10 @@
 module Wallets
   class ApplyPaidCreditsService < BaseService
     def call(invoice)
-      wallet_transaction = invoice.fees.find_by(fee_type: 'credit')&.invoiceable
+      wallet_transaction = invoice.fees.find_by(fee_type: "credit")&.invoiceable
 
       return unless wallet_transaction
-      return if wallet_transaction.status == 'settled'
+      return if wallet_transaction.status == "settled"
 
       WalletTransactions::SettleService.new(wallet_transaction:).call
       Wallets::Balance::IncreaseService

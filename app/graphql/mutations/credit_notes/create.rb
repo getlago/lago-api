@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateCreditNote'
-      description 'Creates a new Credit Note'
+      graphql_name "CreateCreditNote"
+      description "Creates a new Credit Note"
 
       argument :description, String, required: false
       argument :invoice_id, ID, required: true
@@ -27,7 +27,7 @@ module Mutations
         result = ::CreditNotes::CreateService
           .new(
             invoice: current_organization.invoices.not_generating.find_by(id: args[:invoice_id]),
-            **args,
+            **args
           )
           .call
 

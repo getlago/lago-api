@@ -7,21 +7,21 @@ class Plan < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :organization
-  belongs_to :parent, class_name: 'Plan', optional: true
+  belongs_to :parent, class_name: "Plan", optional: true
 
-  has_one :minimum_commitment, -> { where(commitment_type: :minimum_commitment) }, class_name: 'Commitment'
+  has_one :minimum_commitment, -> { where(commitment_type: :minimum_commitment) }, class_name: "Commitment"
 
   has_many :commitments
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
   has_many :subscriptions
   has_many :customers, through: :subscriptions
-  has_many :children, class_name: 'Plan', foreign_key: :parent_id, dependent: :destroy
+  has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :invoices, through: :subscriptions
 
-  has_many :applied_taxes, class_name: 'Plan::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   INTERVALS = %i[
@@ -36,8 +36,8 @@ class Plan < ApplicationRecord
   monetize :amount_cents
 
   validates :name, :code, presence: true
-  validates :amount_currency, inclusion: { in: currency_list }
-  validates :pay_in_advance, inclusion: { in: [true, false] }
+  validates :amount_currency, inclusion: {in: currency_list}
+  validates :pay_in_advance, inclusion: {in: [true, false]}
   validate :validate_code_unique
 
   default_scope -> { kept }
@@ -78,7 +78,7 @@ class Plan < ApplicationRecord
     count = subscriptions.active.count
     return count unless children
 
-    count + children.joins(:subscriptions).merge(Subscription.active).select('subscriptions.id').distinct.count
+    count + children.joins(:subscriptions).merge(Subscription.active).select("subscriptions.id").distinct.count
   end
 
   def customers_count

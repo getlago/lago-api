@@ -10,7 +10,7 @@ module Taxes
     end
 
     def call
-      return result.not_found_failure!(resource: 'tax') unless tax
+      return result.not_found_failure!(resource: "tax") unless tax
 
       customer_ids = tax.applicable_customers.select(:id)
 

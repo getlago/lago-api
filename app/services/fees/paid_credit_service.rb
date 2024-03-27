@@ -20,7 +20,7 @@ module Fees
       new_fee = Fee.new(
         invoice:,
         fee_type: :credit,
-        invoiceable_type: 'WalletTransaction',
+        invoiceable_type: "WalletTransaction",
         invoiceable: wallet_transaction,
         amount_cents:,
         amount_currency: wallet_transaction.wallet.currency,
@@ -30,7 +30,7 @@ module Fees
 
         # NOTE: No taxes should be applied on as it can be considered as an advance
         taxes_rate: 0,
-        taxes_amount_cents: 0,
+        taxes_amount_cents: 0
       )
       new_fee.precise_unit_amount = new_fee.unit_amount.to_f
       new_fee.save!
@@ -46,7 +46,7 @@ module Fees
     attr_reader :invoice, :wallet_transaction, :customer
 
     def already_billed?
-      existing_fee = invoice.fees.find_by(invoiceable_id: wallet_transaction.id, invoiceable_type: 'WalletTransaction')
+      existing_fee = invoice.fees.find_by(invoiceable_id: wallet_transaction.id, invoiceable_type: "WalletTransaction")
       return false unless existing_fee
 
       result.fee = existing_fee

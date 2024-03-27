@@ -12,7 +12,7 @@ module V1
           amount_cents: invoice.fees_amount_cents,
           total_amount_cents: invoice.fees_amount_cents + taxes_amount_cents,
           taxes_amount_cents:,
-          lago_invoice_id: invoice.id,
+          lago_invoice_id: invoice.id
         }
 
         payload.merge!(charges_usage) if include?(:charges_usage)
@@ -30,7 +30,7 @@ module V1
 
       def charges_usage
         {
-          charges_usage: ::V1::Customers::ChargeUsageSerializer.new(fees).serialize,
+          charges_usage: ::V1::Customers::ChargeUsageSerializer.new(fees).serialize
         }
       end
     end

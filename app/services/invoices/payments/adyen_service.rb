@@ -39,8 +39,8 @@ module Invoices
           payment_provider_customer_id: customer.adyen_customer.id,
           amount_cents: invoice.total_amount_cents,
           amount_currency: invoice.currency.upcase,
-          provider_payment_id: res.response['pspReference'],
-          status: res.response['resultCode'],
+          provider_payment_id: res.response["pspReference"],
+          status: res.response["resultCode"]
         )
         payment.save!
 
@@ -52,12 +52,12 @@ module Invoices
       end
 
       def update_payment_status(provider_payment_id:, status:, metadata: {})
-        payment = if metadata[:payment_type] == 'one-time'
+        payment = if metadata[:payment_type] == "one-time"
           create_payment(provider_payment_id:, metadata:)
         else
           Payment.find_by(provider_payment_id:)
         end
-        return result.not_found_failure!(resource: 'adyen_payment') unless payment
+        return result.not_found_failure!(resource: "adyen_payment") unless payment
 
         result.payment = payment
         result.invoice = payment.invoice
@@ -82,7 +82,7 @@ module Invoices
 
         return result unless result.success?
 
-        result.payment_url = res.response['url']
+        result.payment_url = res.response["url"]
 
         result
       rescue Adyen::AdyenError => e
@@ -108,7 +108,7 @@ module Invoices
           payment_provider_customer_id: customer.adyen_customer.id,
           amount_cents: invoice.total_amount_cents,
           amount_currency: invoice.currency.upcase,
-          provider_payment_id:,
+          provider_payment_id:
         )
       end
 
@@ -123,7 +123,7 @@ module Invoices
         @client ||= Adyen::Client.new(
           api_key: adyen_payment_provider.api_key,
           env: adyen_payment_provider.environment,
-          live_url_prefix: adyen_payment_provider.live_prefix,
+          live_url_prefix: adyen_payment_provider.live_prefix
         )
       end
 
@@ -137,10 +137,10 @@ module Invoices
 
       def update_payment_method_id
         result = client.checkout.payments_api.payment_methods(
-          Lago::Adyen::Params.new(payment_method_params).to_h,
+          Lago::Adyen::Params.new(payment_method_params).to_h
         ).response
 
-        payment_method_id = result['storedPaymentMethods']&.first&.dig('id')
+        payment_method_id = result["storedPaymentMethods"]&.first&.dig("id")
         customer.adyen_customer.update!(payment_method_id:) if payment_method_id
       end
 
@@ -161,7 +161,7 @@ module Invoices
       def payment_method_params
         {
           merchantAccount: adyen_payment_provider.merchant_account,
-          shopperReference: customer.adyen_customer.provider_customer_id,
+          shopperReference: customer.adyen_customer.provider_customer_id
         }
       end
 
@@ -169,17 +169,17 @@ module Invoices
         prms = {
           amount: {
             currency: invoice.currency.upcase,
-            value: invoice.total_amount_cents,
+            value: invoice.total_amount_cents
           },
           reference: invoice.number,
           paymentMethod: {
-            type: 'scheme',
-            storedPaymentMethodId: customer.adyen_customer.payment_method_id,
+            type: "scheme",
+            storedPaymentMethodId: customer.adyen_customer.payment_method_id
           },
           shopperReference: customer.adyen_customer.provider_customer_id,
           merchantAccount: adyen_payment_provider.merchant_account,
-          shopperInteraction: 'ContAuth',
-          recurringProcessingModel: 'UnscheduledCardOnFile',
+          shopperInteraction: "ContAuth",
+          recurringProcessingModel: "UnscheduledCardOnFile"
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms
@@ -190,21 +190,21 @@ module Invoices
           reference: invoice.number,
           amount: {
             value: invoice.total_amount_cents,
-            currency: invoice.currency.upcase,
+            currency: invoice.currency.upcase
           },
           merchantAccount: adyen_payment_provider.merchant_account,
           returnUrl: success_redirect_url,
           shopperReference: customer.external_id,
-          storePaymentMethodMode: 'enabled',
-          recurringProcessingModel: 'UnscheduledCardOnFile',
+          storePaymentMethodMode: "enabled",
+          recurringProcessingModel: "UnscheduledCardOnFile",
           expiresAt: Time.current + 1.day,
           metadata: {
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,
             invoice_issuing_date: invoice.issuing_date.iso8601,
             invoice_type: invoice.invoice_type,
-            payment_type: 'one-time',
-          },
+            payment_type: "one-time"
+          }
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms
@@ -223,9 +223,9 @@ module Invoices
           invoice:,
           params: {
             payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded,
+            ready_for_payment_processing: payment_status.to_sym != :succeeded
           },
-          webhook_notification: deliver_webhook,
+          webhook_notification: deliver_webhook
         )
         result.raise_if_error!
       end
@@ -238,13 +238,13 @@ module Invoices
         return unless invoice.organization.webhook_endpoints.any?
 
         SendWebhookJob.perform_later(
-          'invoice.payment_failure',
+          "invoice.payment_failure",
           invoice,
           provider_customer_id: customer.adyen_customer.provider_customer_id,
           provider_error: {
             message: adyen_error.msg,
-            error_code: adyen_error.code,
-          },
+            error_code: adyen_error.code
+          }
         )
       end
     end

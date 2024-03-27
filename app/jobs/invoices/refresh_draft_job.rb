@@ -2,7 +2,7 @@
 
 module Invoices
   class RefreshDraftJob < ApplicationJob
-    queue_as 'invoices'
+    queue_as "invoices"
 
     def perform(invoice)
       ::Invoices::RefreshDraftService.call(invoice:)

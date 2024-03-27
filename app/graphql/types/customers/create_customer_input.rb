@@ -3,7 +3,7 @@
 module Types
   module Customers
     class CreateCustomerInput < BaseInputObject
-      description 'Create Customer input arguments'
+      description "Create Customer input arguments"
 
       argument :address_line1, String, required: false
       argument :address_line2, String, required: false

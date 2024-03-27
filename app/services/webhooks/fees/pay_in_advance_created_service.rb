@@ -12,16 +12,16 @@ module Webhooks
       def object_serializer
         ::V1::FeeSerializer.new(
           object,
-          root_name: 'fee',
+          root_name: "fee"
         )
       end
 
       def webhook_type
-        'fee.created'
+        "fee.created"
       end
 
       def object_type
-        'fee'
+        "fee"
       end
     end
   end

@@ -3,8 +3,8 @@
 module Types
   module Invoices
     class Object < Types::BaseObject
-      description 'Invoice'
-      graphql_name 'Invoice'
+      description "Invoice"
+      graphql_name "Invoice"
 
       field :customer, Types::Customers::Object, null: false
 

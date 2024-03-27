@@ -6,7 +6,7 @@ class AddPrepaidCreditAmountCentsToInvoices < ActiveRecord::Migration[7.0]
 
     reversible do |dir|
       dir.up do
-        currency_list = WalletTransaction.joins(:wallet).pluck('DISTINCT(wallets.balance_currency)')
+        currency_list = WalletTransaction.joins(:wallet).pluck("DISTINCT(wallets.balance_currency)")
         next if currency_list.blank?
 
         currency_sql = currency_list.each_with_object([]) do |code, currencies|
@@ -23,7 +23,7 @@ class AddPrepaidCreditAmountCentsToInvoices < ActiveRecord::Migration[7.0]
               INNER JOIN wallets ON wallet_transactions.wallet_id = wallets.id
               INNER JOIN (
                 SELECT *
-                FROM (VALUES #{currency_sql.join(', ')}) AS t(currency, exponent, subunit_to_unit)
+                FROM (VALUES #{currency_sql.join(", ")}) AS t(currency, exponent, subunit_to_unit)
               ) currencies ON currencies.currency = wallets.balance_currency
             GROUP BY wallet_transactions.invoice_id, currencies.currency, currencies.exponent, currencies.subunit_to_unit
           )

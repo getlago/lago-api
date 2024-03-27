@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateAppliedCoupon'
-      description 'Assigns a Coupon to a Customer'
+      graphql_name "CreateAppliedCoupon"
+      description "Assigns a Coupon to a Customer"
 
       argument :coupon_id, ID, required: true
       argument :customer_id, ID, required: true
@@ -25,12 +25,12 @@ module Mutations
 
         customer = Customer.find_by(
           id: args[:customer_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         coupon = Coupon.find_by(
           id: args[:coupon_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         result = ::AppliedCoupons::CreateService.call(customer:, coupon:, params: args)

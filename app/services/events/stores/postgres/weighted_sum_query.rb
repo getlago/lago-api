@@ -123,7 +123,7 @@ module Events
               UNION
               (#{
                 events
-                  .select("#{groups.join(', ')}, timestamp, (#{sanitized_property_name})::numeric AS difference, events.created_at")
+                  .select("#{groups.join(", ")}, timestamp, (#{sanitized_property_name})::numeric AS difference, events.created_at")
                   .to_sql
               })
               UNION
@@ -138,22 +138,22 @@ module Events
               if initial_value[:groups][g]
                 "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
               else
-                'NULL'
+                "NULL"
               end
             end
 
             [
               groups,
-              'timestamp without time zone :from_datetime',
+              "timestamp without time zone :from_datetime",
               initial_value[:value],
-              'timestamp without time zone :from_datetime',
-            ].flatten.join(', ')
+              "timestamp without time zone :from_datetime"
+            ].flatten.join(", ")
           end
 
           <<-SQL
             SELECT *
             FROM (
-                VALUES #{values.map { "(#{_1})" }.join(', ')}
+                VALUES #{values.map { "(#{_1})" }.join(", ")}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
         end
@@ -164,22 +164,22 @@ module Events
               if initial_value[:groups][g]
                 "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
               else
-                'NULL'
+                "NULL"
               end
             end
 
             [
               groups,
-              'timestamp without time zone :from_datetime',
+              "timestamp without time zone :from_datetime",
               0,
-              'timestamp without time zone :from_datetime',
-            ].flatten.join(', ')
+              "timestamp without time zone :from_datetime"
+            ].flatten.join(", ")
           end
 
           <<-SQL
             SELECT *
             FROM (
-              VALUES #{values.map { "(#{_1})" }.join(', ')}
+              VALUES #{values.map { "(#{_1})" }.join(", ")}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
         end
@@ -204,7 +204,7 @@ module Events
         end
 
         def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(', ')
+          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         end
       end
     end

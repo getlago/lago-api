@@ -3,8 +3,8 @@
 module Types
   module BillableMetrics
     class Object < Types::BaseObject
-      graphql_name 'BillableMetric'
-      description 'Base billable metric'
+      graphql_name "BillableMetric"
+      description "Base billable metric"
 
       field :id, ID, null: false
       field :organization, Types::OrganizationType

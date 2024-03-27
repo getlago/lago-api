@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Delete Plan Scenarios', :scenarios, type: :request do
+describe "Delete Plan Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
   let(:metric) { create(:billable_metric, organization:) }
 
-  it 'deletes the plan, terminates subscriptions and finalizes draft invoices' do
+  it "deletes the plan, terminates subscriptions and finalizes draft invoices" do
     ### 15 Dec: Create subscription + charge.
     dec15 = DateTime.new(2022, 12, 15)
 
@@ -17,11 +17,11 @@ describe 'Delete Plan Scenarios', :scenarios, type: :request do
         {
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
-          plan_code: plan.code,
-        },
+          plan_code: plan.code
+        }
       )
 
-      create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '3' })
+      create(:standard_charge, plan:, billable_metric: metric, properties: {amount: "3"})
       create(:plan, pay_in_advance: true, organization:, amount_cents: 1000, parent_id: plan.id)
     end
 

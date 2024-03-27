@@ -16,7 +16,7 @@ module Wallets
 
         update_params = {
           ongoing_balance_cents: wallet.ongoing_balance_cents + amount_cents,
-          credits_ongoing_balance: wallet.credits_ongoing_balance + credits_amount,
+          credits_ongoing_balance: wallet.credits_ongoing_balance + credits_amount
         }
 
         wallet.update!(update_params)

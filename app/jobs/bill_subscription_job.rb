@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class BillSubscriptionJob < ApplicationJob
-  queue_as 'billing'
+  queue_as "billing"
 
   retry_on Sequenced::SequenceError, ActiveJob::DeserializationError
 
@@ -10,7 +10,7 @@ class BillSubscriptionJob < ApplicationJob
       subscriptions:,
       timestamp:,
       recurring:,
-      invoice:,
+      invoice:
     )
     return if result.success?
 
@@ -21,7 +21,7 @@ class BillSubscriptionJob < ApplicationJob
       subscriptions,
       timestamp,
       recurring:,
-      invoice: result.invoice,
+      invoice: result.invoice
     )
   end
 end

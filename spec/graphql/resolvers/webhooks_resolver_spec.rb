@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
   let(:query) do
@@ -22,46 +22,46 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
     create_list(:webhook, 5, :succeeded, webhook_endpoint:)
   end
 
-  it 'returns a list of webhooks' do
+  it "returns a list of webhooks" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
-    webhooks_response = result['data']['webhooks']
+    webhooks_response = result["data"]["webhooks"]
 
     aggregate_failures do
-      expect(webhooks_response['collection'].count).to eq(webhook_endpoint.webhooks.count)
-      expect(webhooks_response['metadata']['currentPage']).to eq(1)
+      expect(webhooks_response["collection"].count).to eq(webhook_endpoint.webhooks.count)
+      expect(webhooks_response["metadata"]["currentPage"]).to eq(1)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: "Missing organization id"
       )
     end
   end
 
-  context 'when not member of the organization' do
-    it 'returns an error' do
+  context "when not member of the organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Not in organization',
+        message: "Not in organization"
       )
     end
   end

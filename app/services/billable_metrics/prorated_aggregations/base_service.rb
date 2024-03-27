@@ -4,8 +4,8 @@ module BillableMetrics
   module ProratedAggregations
     class BaseService < BillableMetrics::Aggregations::BaseService
       def compute_pay_in_advance_aggregation(aggregation_without_proration:)
-        return BigDecimal(0) unless event
-        return BigDecimal(0) if event.properties.blank?
+        return BigDecimal("0") unless event
+        return BigDecimal("0") if event.properties.blank?
 
         result_without_proration = aggregation_without_proration.pay_in_advance_aggregation
         result.full_units_number = result_without_proration
@@ -16,7 +16,7 @@ module BillableMetrics
         proration_coefficient = Utils::DatetimeService.date_diff_with_timezone(
           event.timestamp,
           to_datetime,
-          customer.applicable_timezone,
+          customer.applicable_timezone
         ).fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
@@ -35,7 +35,7 @@ module BillableMetrics
         cached_aggregation = base_aggregator.find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: grouped_by_values,
+          grouped_by: grouped_by_values
         )
 
         unless cached_aggregation
@@ -61,7 +61,7 @@ module BillableMetrics
         cached_aggregation = base_aggregator.find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: target_result.grouped_by,
+          grouped_by: target_result.grouped_by
         )
 
         if !is_pay_in_advance
@@ -71,14 +71,14 @@ module BillableMetrics
           target_result.current_usage_units = aggregation_without_proration.current_usage_units
 
           persisted_units_without_proration = aggregation_without_proration.current_usage_units -
-                                              BigDecimal(cached_aggregation.current_aggregation)
+            BigDecimal(cached_aggregation.current_aggregation)
           target_result.aggregation = (persisted_units_without_proration * persisted_pro_rata).ceil(5) +
-                                      BigDecimal(cached_aggregation.max_aggregation_with_proration)
+            BigDecimal(cached_aggregation.max_aggregation_with_proration)
         elsif cached_aggregation
           target_result.current_usage_units = aggregation_without_proration.current_usage_units
           target_result.aggregation = aggregation_without_proration.current_usage_units -
-                                      BigDecimal(cached_aggregation.current_aggregation) +
-                                      BigDecimal(cached_aggregation.max_aggregation_with_proration)
+            BigDecimal(cached_aggregation.current_aggregation) +
+            BigDecimal(cached_aggregation.max_aggregation_with_proration)
         elsif persisted_pro_rata < 1
           target_result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
           target_result.current_usage_units = aggregation_without_proration.current_usage_units
@@ -94,7 +94,7 @@ module BillableMetrics
         @period_duration ||= Subscriptions::DatesService.new_instance(
           subscription,
           to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?,
+          current_usage: subscription.terminated? && subscription.upgraded?
         ).charges_duration_in_days
       end
 
@@ -117,8 +117,8 @@ module BillableMetrics
           .pluck(:id)
 
         Fee.joins(:charge)
-          .where(charge: { billable_metric_id: billable_metric.id })
-          .where(charge: { prorated: true })
+          .where(charge: {billable_metric_id: billable_metric.id})
+          .where(charge: {prorated: true})
           .where(subscription_id: subscription_ids, fee_type: :charge, group_id: group&.id)
           .where("CAST(fees.properties->>'charges_to_datetime' AS timestamp) < ?", boundaries[:to_datetime])
           .order(created_at: :desc)

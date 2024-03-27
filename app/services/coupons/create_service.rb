@@ -25,19 +25,19 @@ module Coupons
         expiration_at: args[:expiration_at],
         limited_plans: plan_identifiers.present?,
         limited_billable_metrics: billable_metric_identifiers.present?,
-        reusable:,
+        reusable:
       )
 
       if plan_identifiers.present? && plans.count != plan_identifiers.count
-        return result.not_found_failure!(resource: 'plans')
+        return result.not_found_failure!(resource: "plans")
       end
 
       if billable_metric_identifiers.present? && billable_metrics.count != billable_metric_identifiers.count
-        return result.not_found_failure!(resource: 'billable_metrics')
+        return result.not_found_failure!(resource: "billable_metrics")
       end
 
       if billable_metrics.present? && plans.present?
-        return result.not_allowed_failure!(code: 'only_one_limitation_type_per_coupon_allowed')
+        return result.not_allowed_failure!(code: "only_one_limitation_type_per_coupon_allowed")
       end
 
       ActiveRecord::Base.transaction do
@@ -64,12 +64,12 @@ module Coupons
     def track_coupon_created(coupon)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'coupon_created',
+        event: "coupon_created",
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,
-          organization_id:,
-        },
+          organization_id:
+        }
       )
     end
 
@@ -83,7 +83,7 @@ module Coupons
       return [] if plan_identifiers.blank?
 
       finder = api_context? ? :code : :id
-      @plans = Plan.where(finder => plan_identifiers, organization_id:)
+      @plans = Plan.where(finder => plan_identifiers, :organization_id => organization_id)
     end
 
     def billable_metric_identifiers
@@ -96,7 +96,7 @@ module Coupons
       return [] if billable_metric_identifiers.blank?
 
       finder = api_context? ? :code : :id
-      @billable_metrics = BillableMetric.where(finder => billable_metric_identifiers, organization_id:)
+      @billable_metrics = BillableMetric.where(finder => billable_metric_identifiers, :organization_id => organization_id)
     end
 
     def valid?(args)

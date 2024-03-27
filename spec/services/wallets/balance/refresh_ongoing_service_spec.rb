@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
   subject(:refresh_service) { described_class.new(wallet:) }
@@ -14,7 +14,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       ongoing_usage_balance_cents: 200,
       credits_balance: 10.0,
       credits_ongoing_balance: 8.0,
-      credits_ongoing_usage_balance: 2.0,
+      credits_ongoing_usage_balance: 2.0
     )
   end
 
@@ -28,14 +28,14 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
     create(:subscription, organization:, customer:, started_at: Time.zone.now - 1.year)
   end
   let(:timestamp) { Time.current }
-  let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+  let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
 
   let(:first_charge) do
     create(
       :standard_charge,
       plan: first_subscription.plan,
       billable_metric:,
-      properties: { amount: '3' },
+      properties: {amount: "3"}
     )
   end
   let(:second_charge) do
@@ -43,7 +43,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       :standard_charge,
       plan: second_subscription.plan,
       billable_metric:,
-      properties: { amount: '5' },
+      properties: {amount: "5"}
     )
   end
 
@@ -55,7 +55,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       subscription: first_subscription,
       customer: first_subscription.customer,
       code: billable_metric.code,
-      timestamp:,
+      timestamp:
     ).push(
       create(
         :event,
@@ -63,8 +63,8 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
         subscription: second_subscription,
         customer: second_subscription.customer,
         code: billable_metric.code,
-        timestamp:,
-      ),
+        timestamp:
+      )
     )
   end
 
@@ -75,8 +75,8 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
     events
   end
 
-  describe '.call' do
-    it 'updates wallet ongoing balance' do
+  describe ".call" do
+    it "updates wallet ongoing balance" do
       expect { refresh_service.call }
         .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1100)
         .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(11.0)
@@ -84,7 +84,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
         .and change(wallet, :credits_ongoing_balance).from(8.0).to(0)
     end
 
-    it 'returns the wallet' do
+    it "returns the wallet" do
       expect(refresh_service.call.wallet).to eq(wallet)
     end
   end

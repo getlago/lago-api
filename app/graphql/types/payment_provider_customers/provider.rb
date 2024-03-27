@@ -3,7 +3,7 @@
 module Types
   module PaymentProviderCustomers
     class Provider < Types::BaseObject
-      graphql_name 'ProviderCustomer'
+      graphql_name "ProviderCustomer"
 
       field :id, ID, null: false
       field :provider_customer_id, ID, null: true

@@ -3,7 +3,7 @@
 module Types
   module Webhooks
     class Object < Types::BaseObject
-      graphql_name 'Webhook'
+      graphql_name "Webhook"
 
       field :id, ID, null: false
       field :webhook_endpoint, Types::WebhookEndpoints::Object

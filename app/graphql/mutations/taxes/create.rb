@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateTax'
-      description 'Creates a tax'
+      graphql_name "CreateTax"
+      description "Creates a tax"
 
       input_object_class Types::Taxes::CreateInput
       type Types::Taxes::Object

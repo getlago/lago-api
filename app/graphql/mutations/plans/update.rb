@@ -5,8 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'UpdatePlan'
-      description 'Updates an existing Plan'
+      graphql_name "UpdatePlan"
+      description "Updates an existing Plan"
 
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true

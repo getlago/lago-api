@@ -33,7 +33,7 @@ module Invoices
 
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
-          recurring:,
+          recurring:
         )
 
         fee_result.raise_if_error!
@@ -41,9 +41,9 @@ module Invoices
       end
 
       if grace_period?
-        SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?
+        SendWebhookJob.perform_later("invoice.drafted", invoice) if should_deliver_webhook?
       else
-        SendWebhookJob.perform_later('invoice.created', invoice) if should_deliver_webhook?
+        SendWebhookJob.perform_later("invoice.created", invoice) if should_deliver_webhook?
         InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_finalized_email?
         Invoices::Payments::CreateService.new(invoice).call
         track_invoice_created(invoice)
@@ -54,7 +54,7 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue Sequenced::SequenceError
       raise
-    rescue StandardError => e
+    rescue => e
       result.fail_with_error!(e)
     end
 
@@ -71,7 +71,7 @@ module Invoices
         customer:,
         invoice_type: :subscription,
         currency:,
-        datetime: Time.zone.at(timestamp),
+        datetime: Time.zone.at(timestamp)
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, recurring:)
@@ -97,18 +97,18 @@ module Invoices
 
     def should_deliver_finalized_email?
       License.premium? &&
-        customer.organization.email_settings.include?('invoice.finalized')
+        customer.organization.email_settings.include?("invoice.finalized")
     end
 
     def track_invoice_created(invoice)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type,
-        },
+          invoice_type: invoice.invoice_type
+        }
       )
     end
   end

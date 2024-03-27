@@ -10,16 +10,16 @@ module Api
               nil,
               customer_id: params[:customer_external_id],
               subscription_id: params[:external_subscription_id],
-              organization_id: current_organization.id,
+              organization_id: current_organization.id
             )
 
           if result.success?
             render(
               json: ::V1::Customers::UsageSerializer.new(
                 result.usage,
-                root_name: 'customer_usage',
-                includes: %i[charges_usage],
-              ),
+                root_name: "customer_usage",
+                includes: %i[charges_usage]
+              )
             )
           else
             render_error_response(result)
@@ -31,9 +31,9 @@ module Api
             organization: current_organization,
             pagination: BaseQuery::Pagination.new(
               page: params[:page],
-              limit: params[:per_page] || PER_PAGE,
+              limit: params[:per_page] || PER_PAGE
             ),
-            filters: BaseQuery::Filters.new(past_usage_filters),
+            filters: BaseQuery::Filters.new(past_usage_filters)
           )
 
           if result.success?
@@ -41,10 +41,10 @@ module Api
               json: ::CollectionSerializer.new(
                 result.usage_periods,
                 ::V1::Customers::PastUsageSerializer,
-                collection_name: 'usage_periods',
+                collection_name: "usage_periods",
                 meta: pagination_metadata(result),
-                includes: %i[charges_usage],
-              ),
+                includes: %i[charges_usage]
+              )
             )
           else
             render_error_response(result)
@@ -57,9 +57,9 @@ module Api
           params.permit(
             :external_subscription_id,
             :billable_metric_code,
-            :periods_count,
+            :periods_count
           ).merge(
-            external_customer_id: params[:customer_external_id],
+            external_customer_id: params[:customer_external_id]
           )
         end
       end

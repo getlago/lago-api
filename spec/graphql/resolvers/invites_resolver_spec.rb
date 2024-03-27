@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::InvitesResolver, type: :graphql do
   let(:query) do
@@ -18,34 +18,34 @@ RSpec.describe Resolvers::InvitesResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:invite) { create(:invite, organization:) }
 
-  it 'returns a list of invites' do
+  it "returns a list of invites" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: invite.organization,
-      query:,
+      query:
     )
 
-    invites_response = result['data']['invites']
+    invites_response = result["data"]["invites"]
 
     aggregate_failures do
-      expect(invites_response['collection'].count).to eq(organization.invites.count)
-      expect(invites_response['collection'].first['id']).to eq(invite.id)
+      expect(invites_response["collection"].count).to eq(organization.invites.count)
+      expect(invites_response["collection"].first["id"]).to eq(invite.id)
 
-      expect(invites_response['metadata']['currentPage']).to eq(1)
-      expect(invites_response['metadata']['totalCount']).to eq(1)
+      expect(invites_response["metadata"]["currentPage"]).to eq(1)
+      expect(invites_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: "Missing organization id"
       )
     end
   end

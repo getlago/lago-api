@@ -10,11 +10,11 @@ module Customers
     end
 
     def call
-      return result.not_found_failure!(resource: 'customer') if customer.blank?
+      return result.not_found_failure!(resource: "customer") if customer.blank?
 
       if provider_customer.blank?
         return result.single_validation_failure!(
-          error_code: 'no_linked_payment_provider',
+          error_code: "no_linked_payment_provider"
         )
       end
 

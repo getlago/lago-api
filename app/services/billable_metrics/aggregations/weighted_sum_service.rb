@@ -95,7 +95,7 @@ module BillableMetrics
         end
         return @latest_value = BigDecimal(latest_value_from_events) if subscription.previous_subscription_id?
 
-        @latest_value = BigDecimal(0)
+        @latest_value = BigDecimal("0")
       end
 
       # NOTE: In case of upgrade/downgrade, if latest value is not persisted yet,
@@ -104,8 +104,8 @@ module BillableMetrics
         event_store = event_store_class.new(
           code: billable_metric.code,
           subscription:,
-          boundaries: { to_datetime: from_datetime },
-          filters:,
+          boundaries: {to_datetime: from_datetime},
+          filters:
         )
 
         event_store.use_from_boundary = false
@@ -127,7 +127,7 @@ module BillableMetrics
           .order(added_at: :desc)
 
         grouped_by.each do |key|
-          quantified_events = quantified_events.where('grouped_by?:key', key:)
+          quantified_events = quantified_events.where("grouped_by?:key", key:)
         end
 
         quantified_events = quantified_events.where(group_id: group.id) if group
@@ -137,7 +137,7 @@ module BillableMetrics
           return @grouped_latest_values = quantified_events.map do |quantified_event|
             {
               groups: quantified_event.grouped_by,
-              value: BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS)),
+              value: BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS))
             }
           end
         end
@@ -150,8 +150,8 @@ module BillableMetrics
         event_store = event_store_class.new(
           code: billable_metric.code,
           subscription:,
-          boundaries: { to_datetime: from_datetime },
-          filters:,
+          boundaries: {to_datetime: from_datetime},
+          filters:
         )
 
         event_store.use_from_boundary = false

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
   subject(:latest_service) do
@@ -10,14 +10,14 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:,
+        to_datetime:
       },
-      filters:,
+      filters:
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { group:, grouped_by: } }
+  let(:filters) { {group:, grouped_by:} }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
@@ -29,15 +29,15 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
     create(
       :billable_metric,
       organization:,
-      aggregation_type: 'latest_agg',
-      field_name: 'total_count',
+      aggregation_type: "latest_agg",
+      field_name: "total_count"
     )
   end
 
   let(:charge) do
     create(
       :standard_charge,
-      billable_metric:,
+      billable_metric:
     )
   end
 
@@ -55,8 +55,8 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
         subscription:,
         timestamp: Time.current - 2.days,
         properties: {
-          total_count: 18,
-        },
+          total_count: 18
+        }
       ),
 
       create(
@@ -67,25 +67,25 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
         subscription:,
         timestamp: Time.current - 1.day,
         properties: {
-          total_count: 14,
-        },
-      ),
+          total_count: 14
+        }
+      )
     ].flatten
   end
 
   before { events }
 
-  it 'aggregates the events' do
+  it "aggregates the events" do
     result = latest_service.aggregate
 
     expect(result.aggregation).to eq(14)
     expect(result.count).to eq(5)
   end
 
-  context 'when events are out of bounds' do
+  context "when events are out of bounds" do
     let(:to_datetime) { Time.current - 3.days }
 
-    it 'does not take events into account' do
+    it "does not take events into account" do
       result = latest_service.aggregate
 
       expect(result.aggregation).to eq(0)
@@ -93,12 +93,12 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
     end
   end
 
-  context 'when properties is not found on events' do
+  context "when properties is not found on events" do
     before do
-      billable_metric.update!(field_name: 'foo_bar')
+      billable_metric.update!(field_name: "foo_bar")
     end
 
-    it 'counts as zero' do
+    it "counts as zero" do
       result = latest_service.aggregate
 
       expect(result.aggregation).to eq(0)
@@ -106,7 +106,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
     end
   end
 
-  context 'when properties is a float' do
+  context "when properties is a float" do
     let(:events) do
       [
         create(
@@ -117,20 +117,20 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
           subscription:,
           timestamp: Time.current,
           properties: {
-            total_count: 14.2,
-          },
-        ),
+            total_count: 14.2
+          }
+        )
       ]
     end
 
-    it 'aggregates the events' do
+    it "aggregates the events" do
       result = latest_service.aggregate
 
       expect(result.aggregation).to eq(14.2)
     end
   end
 
-  context 'when properties is negative' do
+  context "when properties is negative" do
     let(:events) do
       [
         create(
@@ -141,20 +141,20 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
           subscription:,
           timestamp: Time.current,
           properties: {
-            total_count: -5,
-          },
-        ),
+            total_count: -5
+          }
+        )
       ]
     end
 
-    it 'returns zero' do
+    it "returns zero" do
       result = latest_service.aggregate
 
       expect(result.aggregation).to eq(0)
     end
   end
 
-  context 'when properties is missing' do
+  context "when properties is missing" do
     let(:events) do
       [
         create(
@@ -163,12 +163,12 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
           code: billable_metric.code,
           customer:,
           subscription:,
-          timestamp: Time.current,
-        ),
+          timestamp: Time.current
+        )
       ]
     end
 
-    it 'ignores the event' do
+    it "ignores the event" do
       result = latest_service.aggregate
 
       expect(result).to be_success
@@ -176,9 +176,9 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
     end
   end
 
-  context 'when group_id is given' do
+  context "when group_id is given" do
     let(:group) do
-      create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+      create(:group, billable_metric_id: billable_metric.id, key: "region", value: "europe")
     end
 
     let(:events) do
@@ -192,8 +192,8 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
           timestamp: Time.current - 2.seconds,
           properties: {
             total_count: 12,
-            region: 'europe',
-          },
+            region: "europe"
+          }
         ),
 
         create(
@@ -205,8 +205,8 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
           timestamp: Time.current - 1.second,
           properties: {
             total_count: 8,
-            region: 'europe',
-          },
+            region: "europe"
+          }
         ),
 
         create(
@@ -218,13 +218,13 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
           timestamp: Time.current - 1.second,
           properties: {
             total_count: 12,
-            region: 'africa',
-          },
-        ),
+            region: "africa"
+          }
+        )
       ].flatten
     end
 
-    it 'aggregates the events' do
+    it "aggregates the events" do
       result = latest_service.aggregate
 
       expect(result.aggregation).to eq(8)
@@ -232,8 +232,8 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
     end
   end
 
-  describe '.grouped_by_aggregation' do
-    let(:grouped_by) { ['agent_name'] }
+  describe ".grouped_by_aggregation" do
+    let(:grouped_by) { ["agent_name"] }
     let(:agent_names) { %w[aragorn frodo gimli legolas] }
 
     let(:events) do
@@ -247,8 +247,8 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
           timestamp: Time.zone.now - 1.day,
           properties: {
             total_count: 12,
-            agent_name:,
-          },
+            agent_name:
+          }
         )
       end + [
         create(
@@ -259,29 +259,29 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
           subscription:,
           timestamp: Time.zone.now - 1.day,
           properties: {
-            total_count: 12,
-          },
-        ),
+            total_count: 12
+          }
+        )
       ]
     end
 
-    it 'returns a grouped aggregations' do
+    it "returns a grouped aggregations" do
       result = latest_service.aggregate
 
       expect(result.aggregations.count).to eq(5)
 
-      result.aggregations.sort_by { |a| a.grouped_by['agent_name'] || '' }.each_with_index do |aggregation, index|
+      result.aggregations.sort_by { |a| a.grouped_by["agent_name"] || "" }.each_with_index do |aggregation, index|
         expect(aggregation.aggregation).to eq(12)
         expect(aggregation.count).to eq(1)
 
-        expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index - 1]) if index.positive?
+        expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index - 1]) if index.positive?
       end
     end
 
-    context 'without events' do
+    context "without events" do
       let(:events) { [] }
 
-      it 'returns an empty result' do
+      it "returns an empty result" do
         result = latest_service.aggregate
 
         expect(result.aggregations.count).to eq(1)
@@ -289,7 +289,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+        expect(aggregation.grouped_by).to eq({"agent_name" => nil})
       end
     end
   end

@@ -1,19 +1,19 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoice, type: :model do
   subject(:invoice) { create(:invoice, organization:) }
 
   let(:organization) { create(:organization) }
 
-  it_behaves_like 'paper_trail traceable'
+  it_behaves_like "paper_trail traceable"
 
-  describe 'sequential_id' do
+  describe "sequential_id" do
     let(:customer) { create(:customer, organization:) }
     let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating) }
 
-    it 'assigns a sequential id and organization sequential id to a new invoice' do
+    it "assigns a sequential id and organization sequential id to a new invoice" do
       invoice.save!
       invoice.finalized!
 
@@ -24,13 +24,13 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    context 'when sequential_id and organization_sequential_id are present' do
+    context "when sequential_id and organization_sequential_id are present" do
       before do
         invoice.sequential_id = 3
         invoice.organization_sequential_id = 5
       end
 
-      it 'does not replace the sequential_id and organization_sequential_id' do
+      it "does not replace the sequential_id and organization_sequential_id" do
         invoice.save!
         invoice.finalized!
 
@@ -42,13 +42,13 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    context 'when invoices already exist' do
+    context "when invoices already exist" do
       before do
         create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14)
         create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15)
       end
 
-      it 'takes the next available id' do
+      it "takes the next available id" do
         invoice.save!
         invoice.finalized!
 
@@ -60,12 +60,12 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    context 'with invoices on other organization' do
+    context "with invoices on other organization" do
       before do
         create(:invoice, sequential_id: 1, organization_sequential_id: 1)
       end
 
-      it 'scopes the sequence to the organization' do
+      it "scopes the sequence to the organization" do
         invoice.save!
         invoice.finalized!
 
@@ -77,8 +77,8 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    context 'with organization numbering and invoices in another month' do
-      let(:organization) { create(:organization, document_numbering: 'per_organization') }
+    context "with organization numbering and invoices in another month" do
+      let(:organization) { create(:organization, document_numbering: "per_organization") }
       let(:created_at) { Time.now.utc - 1.month }
 
       before do
@@ -86,7 +86,7 @@ RSpec.describe Invoice, type: :model do
         create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
       end
 
-      it 'scopes the organization_sequential_id to the organization and month' do
+      it "scopes the organization_sequential_id to the organization and month" do
         invoice.save!
         invoice.finalized!
 
@@ -99,13 +99,13 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe 'number' do
-    let(:organization) { create(:organization, name: 'LAGO') }
+  describe "number" do
+    let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
     let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating) }
 
-    it 'generates the invoice number' do
+    it "generates the invoice number" do
       invoice.save!
       invoice.finalized!
       organization_id_substring = organization.id.last(4).upcase
@@ -113,18 +113,18 @@ RSpec.describe Invoice, type: :model do
       expect(invoice.number).to eq("LAG-#{organization_id_substring}-001-001")
     end
 
-    context 'with organization numbering' do
-      let(:organization) { create(:organization, document_numbering: 'per_organization', name: 'lago') }
+    context "with organization numbering" do
+      let(:organization) { create(:organization, document_numbering: "per_organization", name: "lago") }
 
-      it 'scopes the organization_sequential_id to the organization and month' do
+      it "scopes the organization_sequential_id to the organization and month" do
         invoice.save!
         invoice.finalized!
         organization_id_substring = organization.id.last(4).upcase
 
-        expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-001")
+        expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-001")
       end
 
-      context 'with existing invoices in current month' do
+      context "with existing invoices in current month" do
         let(:created_at) { Time.now.utc }
 
         before do
@@ -132,17 +132,17 @@ RSpec.describe Invoice, type: :model do
           create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
         end
 
-        it 'scopes the organization_sequential_id to the organization and month' do
+        it "scopes the organization_sequential_id to the organization and month" do
           invoice.save!
           invoice.finalized!
 
           organization_id_substring = organization.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
       end
 
-      context 'with existing invoices in previous month' do
+      context "with existing invoices in previous month" do
         let(:created_at) { Time.now.utc - 1.month }
 
         before do
@@ -150,17 +150,17 @@ RSpec.describe Invoice, type: :model do
           create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
         end
 
-        it 'scopes the organization_sequential_id to the organization and month' do
+        it "scopes the organization_sequential_id to the organization and month" do
           invoice.save!
           invoice.finalized!
 
           organization_id_substring = organization.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
       end
 
-      context 'with existing draft invoices that have generated sequential ids' do
+      context "with existing draft invoices that have generated sequential ids" do
         let(:created_at) { Time.now.utc }
 
         let(:invoice1) do
@@ -172,7 +172,7 @@ RSpec.describe Invoice, type: :model do
             organization_sequential_id: 14,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-014",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014"
           )
         end
         let(:invoice2) do
@@ -183,7 +183,7 @@ RSpec.describe Invoice, type: :model do
             sequential_id: 5,
             organization_sequential_id: 15,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-015",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-015"
           )
         end
 
@@ -192,27 +192,27 @@ RSpec.describe Invoice, type: :model do
           invoice2
         end
 
-        it 'scopes the organization_sequential_id to the organization and month' do
+        it "scopes the organization_sequential_id to the organization and month" do
           invoice.save!
           invoice.finalized!
 
           organization_id_substring = organization.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
 
           invoice1.update!(payment_due_date: invoice1.payment_due_date + 1.day)
           invoice2.update!(payment_due_date: invoice2.payment_due_date + 1.day)
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-014")
-          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-015")
+          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
+          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-015")
 
           invoice1.finalized!
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-014")
+          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
         end
       end
 
-      context 'with existing draft invoices that does not have generated sequential ids' do
+      context "with existing draft invoices that does not have generated sequential ids" do
         let(:created_at) { Time.now.utc }
 
         let(:invoice1) do
@@ -224,7 +224,7 @@ RSpec.describe Invoice, type: :model do
             organization_sequential_id: 0,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-DRAFT",
+            number: "LAG-#{organization.id.last(4).upcase}-DRAFT"
           )
         end
         let(:invoice2) do
@@ -235,7 +235,7 @@ RSpec.describe Invoice, type: :model do
             sequential_id: 4,
             organization_sequential_id: 14,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-014",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014"
           )
         end
 
@@ -244,52 +244,52 @@ RSpec.describe Invoice, type: :model do
           invoice2
         end
 
-        it 'scopes the organization_sequential_id to the organization and month' do
+        it "scopes the organization_sequential_id to the organization and month" do
           invoice.save!
           invoice.finalized!
 
           organization_id_substring = organization.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-015")
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-015")
 
           invoice1.update!(payment_due_date: invoice1.payment_due_date + 1.day)
           invoice2.update!(payment_due_date: invoice2.payment_due_date + 1.day)
 
           expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-DRAFT")
-          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-014")
+          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
 
           invoice1.finalized!
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
       end
     end
   end
 
-  describe '#currency' do
-    let(:invoice) { build(:invoice, currency: 'JPY') }
+  describe "#currency" do
+    let(:invoice) { build(:invoice, currency: "JPY") }
 
-    it { expect(invoice.currency).to eq('JPY') }
+    it { expect(invoice.currency).to eq("JPY") }
   end
 
-  describe '#charge_amount' do
-    let(:organization) { create(:organization, name: 'LAGO') }
+  describe "#charge_amount" do
+    let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:fees) { create_list(:fee, 3, invoice:) }
 
-    it 'returns the charges amount' do
-      expect(invoice.charge_amount.to_s).to eq('0.00')
+    it "returns the charges amount" do
+      expect(invoice.charge_amount.to_s).to eq("0.00")
     end
   end
 
-  describe '#fee_total_amount_cents' do
-    let(:organization) { create(:organization, name: 'LAGO') }
+  describe "#fee_total_amount_cents" do
+    let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
 
-    it 'returns the fee amount vat included' do
+    it "returns the fee amount vat included" do
       create(:fee, invoice:, amount_cents: 100, taxes_rate: 20)
       create(:fee, invoice:, amount_cents: 133, taxes_rate: 20)
 
@@ -297,26 +297,26 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#subscription_amount' do
-    let(:organization) { create(:organization, name: 'LAGO') }
+  describe "#subscription_amount" do
+    let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:fees) { create_list(:fee, 2, invoice:) }
 
-    it 'returns the subscriptions amount' do
+    it "returns the subscriptions amount" do
       create(:fee, invoice:, amount_cents: 200)
       create(:fee, invoice:, amount_cents: 100)
       create(:charge_fee, invoice:, charge_id: create(:standard_charge).id)
 
-      expect(invoice.subscription_amount.to_s).to eq('3.00')
+      expect(invoice.subscription_amount.to_s).to eq("3.00")
     end
   end
 
-  describe '#invoice_subscription' do
+  describe "#invoice_subscription" do
     let(:invoice_subscription) { create(:invoice_subscription) }
 
-    it 'returns the invoice_subscription for the given subscription id' do
+    it "returns the invoice_subscription for the given subscription id" do
       invoice = invoice_subscription.invoice
       subscription = invoice_subscription.subscription
 
@@ -324,10 +324,10 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#subscription_fees' do
+  describe "#subscription_fees" do
     let(:invoice_subscription) { create(:invoice_subscription) }
 
-    it 'returns the fees of the corresponding invoice_subscription' do
+    it "returns the fees of the corresponding invoice_subscription" do
       invoice = invoice_subscription.invoice
       subscription = invoice_subscription.subscription
       fee = create(:fee, subscription_id: subscription.id, invoice_id: invoice.id)
@@ -336,7 +336,7 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#existing_fees_in_interval?' do
+  describe "#existing_fees_in_interval?" do
     let(:invoice_subscription) { create(:invoice_subscription) }
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
@@ -346,35 +346,35 @@ RSpec.describe Invoice, type: :model do
 
     before { fee }
 
-    it 'returns true' do
+    it "returns true" do
       expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(true)
     end
 
-    context 'when charges are in advance' do
+    context "when charges are in advance" do
       let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true) }
 
-      it 'returns false' do
+      it "returns false" do
         expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(false)
       end
 
-      context 'with charge_in_advance set to true' do
-        it 'returns true' do
+      context "with charge_in_advance set to true" do
+        it "returns true" do
           expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id, charge_in_advance: true))
             .to eq(true)
         end
       end
     end
 
-    context 'when unit number iz zero' do
+    context "when unit number iz zero" do
       let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, units: 0) }
 
-      it 'returns false' do
+      it "returns false" do
         expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(false)
       end
     end
   end
 
-  describe '#recurring_fees' do
+  describe "#recurring_fees" do
     let(:invoice_subscription) { create(:invoice_subscription) }
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
@@ -382,20 +382,20 @@ RSpec.describe Invoice, type: :model do
     let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: false) }
     let(:fee) { create(:charge_fee, subscription:, invoice:, charge:) }
 
-    it 'returns the fees of the corresponding invoice_subscription' do
+    it "returns the fees of the corresponding invoice_subscription" do
       expect(invoice.recurring_fees(subscription.id)).to eq([fee])
     end
 
-    context 'when charge is pay_in_advance' do
+    context "when charge is pay_in_advance" do
       let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true) }
 
-      it 'returns the fees of the corresponding invoice_subscription' do
+      it "returns the fees of the corresponding invoice_subscription" do
         expect(invoice.recurring_fees(subscription.id)).to eq([])
       end
     end
   end
 
-  describe '#recurring_breakdown' do
+  describe "#recurring_breakdown" do
     let(:invoice_subscription) { create(:invoice_subscription) }
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
@@ -403,16 +403,16 @@ RSpec.describe Invoice, type: :model do
     let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: false) }
     let(:fee) { create(:charge_fee, subscription:, invoice:, charge:) }
 
-    it 'returns the fees of the corresponding invoice_subscription' do
+    it "returns the fees of the corresponding invoice_subscription" do
       expect(invoice.recurring_breakdown(fee)).to eq([])
     end
   end
 
-  describe '#charge_pay_in_advance_proration_range' do
+  describe "#charge_pay_in_advance_proration_range" do
     let(:invoice_subscription) { create(:invoice_subscription) }
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
-    let(:timestamp) { DateTime.parse('2023-07-25 00:00:00 UTC') }
+    let(:timestamp) { DateTime.parse("2023-07-25 00:00:00 UTC") }
     let(:event) { create(:event, subscription_id: subscription.id, timestamp:) }
     let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization, recurring: true) }
     let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, pay_in_advance_event_id: event.id) }
@@ -420,195 +420,195 @@ RSpec.describe Invoice, type: :model do
       create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true, prorated: true)
     end
 
-    it 'returns the fees of the corresponding invoice_subscription' do
+    it "returns the fees of the corresponding invoice_subscription" do
       expect(invoice.charge_pay_in_advance_proration_range(fee, event.timestamp)).to include(
         period_duration: 31,
-        number_of_days: 7,
+        number_of_days: 7
       )
     end
   end
 
-  describe '#voidable?' do
+  describe "#voidable?" do
     subject(:voidable) { invoice.voidable? }
 
-    context 'when invoice has a voided credit note' do
+    context "when invoice has a voided credit note" do
       let(:invoice) { create(:invoice, status:, payment_status:) }
 
       before { create(:credit_note, credit_status: :voided, invoice:) }
 
-      context 'when invoice is not finalized' do
+      context "when invoice is not finalized" do
         let(:status) { [:draft, :voided].sample }
 
-        context 'when invoice is pending' do
+        context "when invoice is pending" do
           let(:payment_status) { :pending }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
 
-        context 'when invoice is failed' do
+        context "when invoice is failed" do
           let(:payment_status) { :failed }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
 
-        context 'when invoice is succeeded' do
+        context "when invoice is succeeded" do
           let(:payment_status) { :succeeded }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
       end
 
-      context 'when invoice is finalized' do
+      context "when invoice is finalized" do
         let(:status) { :finalized }
 
-        context 'when invoice is pending' do
+        context "when invoice is pending" do
           let(:payment_status) { :pending }
 
-          it 'returns true' do
+          it "returns true" do
             expect(voidable).to be true
           end
         end
 
-        context 'when invoice is failed' do
+        context "when invoice is failed" do
           let(:payment_status) { :failed }
 
-          it 'returns true' do
+          it "returns true" do
             expect(voidable).to be true
           end
         end
 
-        context 'when invoice is succeeded' do
+        context "when invoice is succeeded" do
           let(:payment_status) { :succeeded }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
       end
     end
 
-    context 'when invoice has a non-voided credit note' do
+    context "when invoice has a non-voided credit note" do
       let(:invoice) { create(:invoice, status:, payment_status:) }
 
       before { create(:credit_note, invoice:) }
 
-      context 'when invoice is not finalized' do
+      context "when invoice is not finalized" do
         let(:status) { [:draft, :voided].sample }
 
-        context 'when invoice is pending' do
+        context "when invoice is pending" do
           let(:payment_status) { :pending }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
 
-        context 'when invoice is failed' do
+        context "when invoice is failed" do
           let(:payment_status) { :failed }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
 
-        context 'when invoice is succeeded' do
+        context "when invoice is succeeded" do
           let(:payment_status) { :succeeded }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
       end
 
-      context 'when invoice is finalized' do
+      context "when invoice is finalized" do
         let(:status) { :finalized }
 
-        context 'when invoice is pending' do
+        context "when invoice is pending" do
           let(:payment_status) { :pending }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
 
-        context 'when invoice is failed' do
+        context "when invoice is failed" do
           let(:payment_status) { :failed }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
 
-        context 'when invoice is succeeded' do
+        context "when invoice is succeeded" do
           let(:payment_status) { :succeeded }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
       end
     end
 
-    context 'when invoice has no credit notes' do
+    context "when invoice has no credit notes" do
       let(:invoice) { build_stubbed(:invoice, status:, payment_status:) }
 
-      context 'when invoice is not finalized' do
+      context "when invoice is not finalized" do
         let(:status) { [:draft, :voided].sample }
 
-        context 'when invoice is pending' do
+        context "when invoice is pending" do
           let(:payment_status) { :pending }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
 
-        context 'when invoice is failed' do
+        context "when invoice is failed" do
           let(:payment_status) { :failed }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
 
-        context 'when invoice is succeeded' do
+        context "when invoice is succeeded" do
           let(:payment_status) { :succeeded }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
       end
 
-      context 'when invoice is finalized' do
+      context "when invoice is finalized" do
         let(:status) { :finalized }
 
-        context 'when invoice is pending' do
+        context "when invoice is pending" do
           let(:payment_status) { :pending }
 
-          it 'returns true' do
+          it "returns true" do
             expect(voidable).to be true
           end
         end
 
-        context 'when invoice is failed' do
+        context "when invoice is failed" do
           let(:payment_status) { :failed }
 
-          it 'returns true' do
+          it "returns true" do
             expect(voidable).to be true
           end
         end
 
-        context 'when invoice is succeeded' do
+        context "when invoice is succeeded" do
           let(:payment_status) { :succeeded }
 
-          it 'returns false' do
+          it "returns false" do
             expect(voidable).to be false
           end
         end
@@ -616,29 +616,29 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#creditable_amount_cents' do
-    context 'when invoice v1' do
-      it 'returns 0' do
+  describe "#creditable_amount_cents" do
+    context "when invoice v1" do
+      it "returns 0" do
         invoice = build(:invoice, version_number: 1)
         expect(invoice.creditable_amount_cents).to eq(0)
       end
     end
 
-    context 'when credit' do
-      it 'returns 0' do
+    context "when credit" do
+      it "returns 0" do
         invoice = build(:invoice, :credit)
         expect(invoice.creditable_amount_cents).to eq(0)
       end
     end
 
-    context 'when draft' do
-      it 'returns 0' do
+    context "when draft" do
+      it "returns 0" do
         invoice = build(:invoice, :draft)
         expect(invoice.creditable_amount_cents).to eq(0)
       end
     end
 
-    context 'when fees sum is zero' do
+    context "when fees sum is zero" do
       let(:invoice_subscription) { create(:invoice_subscription) }
       let(:invoice) { invoice_subscription.invoice }
       let(:subscription) { invoice_subscription.subscription }
@@ -649,12 +649,12 @@ RSpec.describe Invoice, type: :model do
         create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 0, taxes_rate: 20)
       end
 
-      it 'returns 0' do
+      it "returns 0" do
         expect(invoice.creditable_amount_cents).to eq(0)
       end
     end
 
-    it 'returns the expected creditable amount in cents' do
+    it "returns the expected creditable amount in cents" do
       invoice = create(:invoice, version_number: 2)
       invoice_subscription = create(:invoice_subscription, invoice:)
       subscription = invoice_subscription.subscription
@@ -665,7 +665,7 @@ RSpec.describe Invoice, type: :model do
       expect(invoice.creditable_amount_cents).to eq(160)
     end
 
-    context 'when invoice v3 with coupons' do
+    context "when invoice v3 with coupons" do
       let(:invoice) do
         create(
           :invoice,
@@ -674,7 +674,7 @@ RSpec.describe Invoice, type: :model do
           taxes_amount_cents: 36,
           total_amount_cents: 216,
           taxes_rate: 20,
-          version_number: 3,
+          version_number: 3
         )
       end
 
@@ -692,26 +692,26 @@ RSpec.describe Invoice, type: :model do
 
       before { fee }
 
-      it 'returns the expected creditable amount in cents' do
+      it "returns the expected creditable amount in cents" do
         expect(invoice.creditable_amount_cents).to eq(216)
       end
     end
   end
 
-  describe '.file_url' do
+  describe ".file_url" do
     before do
       invoice.file.attach(
-        io: StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))),
-        filename: 'invoice.pdf',
-        content_type: 'application/pdf',
+        io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+        filename: "invoice.pdf",
+        content_type: "application/pdf"
       )
     end
 
-    it 'returns the file url' do
+    it "returns the file url" do
       file_url = invoice.file_url
 
       expect(file_url).to be_present
-      expect(file_url).to include(ENV['LAGO_API_URL'])
+      expect(file_url).to include(ENV["LAGO_API_URL"])
     end
   end
 end

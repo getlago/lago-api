@@ -3,7 +3,7 @@
 module Types
   module Taxes
     class Object < Types::BaseObject
-      graphql_name 'Tax'
+      graphql_name "Tax"
 
       field :id, ID, null: false
       field :organization, Types::OrganizationType
@@ -18,10 +18,10 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :add_ons_count, Integer, null: false, description: 'Number of add ons using this tax'
-      field :charges_count, Integer, null: false, description: 'Number of charges using this tax'
-      field :customers_count, Integer, null: false, description: 'Number of customers using this tax'
-      field :plans_count, Integer, null: false, description: 'Number of plans using this tax'
+      field :add_ons_count, Integer, null: false, description: "Number of add ons using this tax"
+      field :charges_count, Integer, null: false, description: "Number of charges using this tax"
+      field :customers_count, Integer, null: false, description: "Number of customers using this tax"
+      field :plans_count, Integer, null: false, description: "Number of plans using this tax"
 
       field :auto_generated, Boolean, null: false
 

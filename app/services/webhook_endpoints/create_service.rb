@@ -12,7 +12,7 @@ module WebhookEndpoints
     def call
       webhook_endpoint = organization.webhook_endpoints.new(
         webhook_url: params[:webhook_url],
-        signature_algo: params[:signature_algo]&.to_sym || :jwt,
+        signature_algo: params[:signature_algo]&.to_sym || :jwt
       )
 
       webhook_endpoint.save!
@@ -31,12 +31,12 @@ module WebhookEndpoints
     def track_webhook_webdpoint_created(webhook_endpoint)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'webhook_endpoint_created',
+        event: "webhook_endpoint_created",
         properties: {
           webhook_endpoint_id: webhook_endpoint.id,
           organization_id: webhook_endpoint.organization_id,
-          webhook_url: webhook_endpoint.webhook_url,
-        },
+          webhook_url: webhook_endpoint.webhook_url
+        }
       )
     end
   end

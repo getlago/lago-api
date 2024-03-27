@@ -3,7 +3,7 @@
 module Types
   module Invoices
     class UpdateInvoiceInput < BaseInputObject
-      description 'Update Invoice input arguments'
+      description "Update Invoice input arguments"
 
       argument :id, ID, required: true
       argument :metadata, [Types::Invoices::Metadata::Input], required: false

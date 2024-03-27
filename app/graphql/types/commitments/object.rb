@@ -3,7 +3,7 @@
 module Types
   module Commitments
     class Object < Types::BaseObject
-      graphql_name 'Commitment'
+      graphql_name "Commitment"
 
       field :id, ID, null: false
 

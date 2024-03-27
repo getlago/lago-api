@@ -5,7 +5,7 @@ class CreatePasswordResets < ActiveRecord::Migration[7.0]
     create_table :password_resets, id: :uuid do |t|
       t.references :user, index: true, null: false, foreign_key: true, type: :uuid
 
-      t.string :token, null: false, index: { unique: true }
+      t.string :token, null: false, index: {unique: true}
 
       t.datetime :expire_at, null: false
 

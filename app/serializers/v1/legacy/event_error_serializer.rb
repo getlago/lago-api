@@ -11,7 +11,7 @@ module V1
             external_customer_id: model.external_customer_id,
             timestamp: model.timestamp.to_f,
             code: model.code,
-            properties: model.properties,
+            properties: model.properties
           }
         }
       end

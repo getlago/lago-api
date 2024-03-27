@@ -24,7 +24,7 @@ module Fees
           tax_code: tax.code,
           tax_name: tax.name,
           tax_rate: tax.rate,
-          amount_currency: fee.amount_currency,
+          amount_currency: fee.amount_currency
         )
         fee.applied_taxes << applied_tax
 

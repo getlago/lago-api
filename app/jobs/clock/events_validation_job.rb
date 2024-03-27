@@ -2,7 +2,7 @@
 
 module Clock
   class EventsValidationJob < ApplicationJob
-    queue_as 'clock'
+    queue_as "clock"
 
     unique :until_executed
 
@@ -11,11 +11,11 @@ module Clock
       Scenic.database.refresh_materialized_view(
         Events::LastHourMv.table_name,
         concurrently: false,
-        cascade: false,
+        cascade: false
       )
 
       organizations = Organization.where(
-        id: Events::LastHourMv.pluck('DISTINCT(organization_id)'),
+        id: Events::LastHourMv.pluck("DISTINCT(organization_id)")
       )
 
       organizations.find_each do |organization|

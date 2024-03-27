@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateInvite'
-      description 'Creates a new Invite'
+      graphql_name "CreateInvite"
+      description "Creates a new Invite"
 
       argument :email, String, required: true
 

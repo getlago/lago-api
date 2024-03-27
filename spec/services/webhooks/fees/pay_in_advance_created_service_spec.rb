@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Webhooks::Fees::PayInAdvanceCreatedService do
   subject(:webhook_service) { described_class.new(object: fee) }
@@ -10,7 +10,7 @@ RSpec.describe Webhooks::Fees::PayInAdvanceCreatedService do
   let(:subscription) { create(:subscription, organization:) }
   let(:fee) { create(:fee, customer:, subscription:) }
 
-  describe '.call' do
+  describe ".call" do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
 
     before do
@@ -20,14 +20,14 @@ RSpec.describe Webhooks::Fees::PayInAdvanceCreatedService do
       allow(lago_client).to receive(:post_with_response)
     end
 
-    it 'builds payload with fee.created webhook type' do
+    it "builds payload with fee.created webhook type" do
       webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_endpoints.first.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
-        expect(payload[:webhook_type]).to eq('fee.created')
-        expect(payload[:object_type]).to eq('fee')
+        expect(payload[:webhook_type]).to eq("fee.created")
+        expect(payload[:object_type]).to eq("fee")
       end
     end
   end

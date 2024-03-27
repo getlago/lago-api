@@ -22,7 +22,7 @@ module Subscriptions
     def valid_customer?
       return true if args[:customer]
 
-      result.not_found_failure!(resource: 'customer')
+      result.not_found_failure!(resource: "customer")
 
       false
     end
@@ -30,7 +30,7 @@ module Subscriptions
     def valid_plan?
       return true if args[:plan]
 
-      result.not_found_failure!(resource: 'plan')
+      result.not_found_failure!(resource: "plan")
 
       false
     end
@@ -38,7 +38,7 @@ module Subscriptions
     def valid_subscription_at?
       return true if Utils::DatetimeService.valid_format?(args[:subscription_at])
 
-      add_error(field: :subscription_at, error_code: 'invalid_date')
+      add_error(field: :subscription_at, error_code: "invalid_date")
 
       false
     end
@@ -47,13 +47,13 @@ module Subscriptions
       return true if args[:ending_at].blank?
 
       if Utils::DatetimeService.valid_format?(args[:ending_at]) &&
-         Utils::DatetimeService.valid_format?(args[:subscription_at]) &&
-         ending_at.to_date > Time.current.to_date &&
-         ending_at.to_date > subscription_at.to_date
+          Utils::DatetimeService.valid_format?(args[:subscription_at]) &&
+          ending_at.to_date > Time.current.to_date &&
+          ending_at.to_date > subscription_at.to_date
         return true
       end
 
-      add_error(field: :ending_at, error_code: 'invalid_date')
+      add_error(field: :ending_at, error_code: "invalid_date")
 
       false
     end

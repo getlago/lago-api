@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
   let(:query) do
@@ -42,7 +42,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
     stripe_provider
   end
 
-  context 'when type is present' do
+  context "when type is present" do
     let(:query) do
       <<~GQL
         query {
@@ -70,75 +70,75 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
       GQL
     end
 
-    it 'returns a list of payment providers' do
+    it "returns a list of payment providers" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
-      payment_providers_response = result['data']['paymentProviders']
+      payment_providers_response = result["data"]["paymentProviders"]
 
       aggregate_failures do
-        expect(payment_providers_response['collection'].count).to eq(1)
-        expect(payment_providers_response['collection'].first['id']).to eq(stripe_provider.id)
+        expect(payment_providers_response["collection"].count).to eq(1)
+        expect(payment_providers_response["collection"].first["id"]).to eq(stripe_provider.id)
 
-        expect(payment_providers_response['metadata']['currentPage']).to eq(1)
-        expect(payment_providers_response['metadata']['totalCount']).to eq(1)
+        expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
+        expect(payment_providers_response["metadata"]["totalCount"]).to eq(1)
       end
     end
   end
 
-  context 'when type is not present' do
-    it 'returns a list of payment providers' do
+  context "when type is not present" do
+    it "returns a list of payment providers" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
-      payment_providers_response = result['data']['paymentProviders']
+      payment_providers_response = result["data"]["paymentProviders"]
 
-      adyen_provider_result = payment_providers_response['collection'].find do |record|
-        record['__typename'] == 'AdyenProvider'
+      adyen_provider_result = payment_providers_response["collection"].find do |record|
+        record["__typename"] == "AdyenProvider"
       end
-      gocardless_provider_result = payment_providers_response['collection'].find do |record|
-        record['__typename'] == 'GocardlessProvider'
+      gocardless_provider_result = payment_providers_response["collection"].find do |record|
+        record["__typename"] == "GocardlessProvider"
       end
-      stripe_provider_result = payment_providers_response['collection'].find do |record|
-        record['__typename'] == 'StripeProvider'
+      stripe_provider_result = payment_providers_response["collection"].find do |record|
+        record["__typename"] == "StripeProvider"
       end
 
       aggregate_failures do
-        expect(payment_providers_response['collection'].count).to eq(3)
+        expect(payment_providers_response["collection"].count).to eq(3)
 
-        expect(adyen_provider_result['id']).to eq(adyen_provider.id)
-        expect(gocardless_provider_result['id']).to eq(gocardless_provider.id)
-        expect(stripe_provider_result['id']).to eq(stripe_provider.id)
+        expect(adyen_provider_result["id"]).to eq(adyen_provider.id)
+        expect(gocardless_provider_result["id"]).to eq(gocardless_provider.id)
+        expect(stripe_provider_result["id"]).to eq(stripe_provider.id)
 
-        expect(payment_providers_response['metadata']['currentPage']).to eq(1)
-        expect(payment_providers_response['metadata']['totalCount']).to eq(3)
+        expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
+        expect(payment_providers_response["metadata"]["totalCount"]).to eq(3)
       end
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(current_user: membership.user, query:)
 
-      expect_graphql_error(result:, message: 'Missing organization id')
+      expect_graphql_error(result:, message: "Missing organization id")
     end
   end
 
-  context 'when not member of the organization' do
-    it 'returns an error' do
+  context "when not member of the organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query:,
+        query:
       )
 
-      expect_graphql_error(result:, message: 'Not in organization')
+      expect_graphql_error(result:, message: "Not in organization")
     end
   end
 end

@@ -8,7 +8,7 @@ module Trackable
   end
 
   def set_tracing_information
-    CurrentContext.membership = "membership/#{membership_id || 'unidentifiable'}"
+    CurrentContext.membership = "membership/#{membership_id || "unidentifiable"}"
   end
 
   def membership_id

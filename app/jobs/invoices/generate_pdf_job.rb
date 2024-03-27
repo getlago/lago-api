@@ -2,10 +2,10 @@
 
 module Invoices
   class GeneratePdfJob < ApplicationJob
-    queue_as 'invoices'
+    queue_as "invoices"
 
     def perform(invoice)
-      result = Invoices::GeneratePdfService.call(invoice:, context: 'api')
+      result = Invoices::GeneratePdfService.call(invoice:, context: "api")
       result.raise_if_error!
     end
   end

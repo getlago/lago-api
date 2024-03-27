@@ -12,7 +12,7 @@ module Utils
       def perform_later(job_class:, arguments:)
         return job_class.perform_later(*arguments) unless ActiveRecord::Base.connection.transaction_open?
 
-        pending_jobs << { job_class:, arguments: }
+        pending_jobs << {job_class:, arguments:}
       end
 
       def perform_pending_jobs

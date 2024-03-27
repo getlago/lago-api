@@ -9,13 +9,13 @@ class AddUniqueIndexToAppliedTaxes < ActiveRecord::Migration[7.0]
     add_index :plans_taxes, %i[plan_id tax_id], unique: true
 
     add_index :fees_taxes,
-              %i[fee_id tax_id],
-              unique: true,
-              where: "created_at >= '2023-09-12'"
+      %i[fee_id tax_id],
+      unique: true,
+      where: "created_at >= '2023-09-12'"
 
     add_index :invoices_taxes,
-              %i[invoice_id tax_id],
-              unique: true,
-              where: "created_at >= '2023-09-12'"
+      %i[invoice_id tax_id],
+      unique: true,
+      where: "created_at >= '2023-09-12'"
   end
 end

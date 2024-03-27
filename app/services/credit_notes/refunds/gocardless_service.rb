@@ -29,7 +29,7 @@ module CreditNotes
           amount_cents: gocardless_result.amount,
           amount_currency: gocardless_result.currency&.upcase,
           status: gocardless_result.status,
-          provider_refund_id: gocardless_result.id,
+          provider_refund_id: gocardless_result.id
         )
         refund.save!
 
@@ -42,7 +42,7 @@ module CreditNotes
 
       def update_status(provider_refund_id:, status:)
         refund = Refund.find_by(provider_refund_id:)
-        return result.not_found_failure!(resource: 'gocardless_refund') unless refund
+        return result.not_found_failure!(resource: "gocardless_refund") unless refund
 
         result.refund = refund
         @credit_note = result.credit_note = refund.credit_note
@@ -53,13 +53,13 @@ module CreditNotes
         track_refund_status_changed(status)
 
         if FAILED_STATUSES.include?(status.to_s)
-          deliver_error_webhook(message: 'Payment refund failed', code: nil)
-          result.service_failure!(code: 'refund_failed', message: 'Refund failed to perform')
+          deliver_error_webhook(message: "Payment refund failed", code: nil)
+          result.service_failure!(code: "refund_failed", message: "Refund failed to perform")
         end
 
         result
       rescue ArgumentError
-        result.single_validation_failure!(field: :refund_status, error_code: 'value_is_invalid')
+        result.single_validation_failure!(field: :refund_status, error_code: "value_is_invalid")
       end
 
       private
@@ -82,7 +82,7 @@ module CreditNotes
       def client
         @client ||= GoCardlessPro::Client.new(
           access_token: gocardless_payment_provider.access_token,
-          environment: gocardless_payment_provider.environment,
+          environment: gocardless_payment_provider.environment
         )
       end
 
@@ -95,17 +95,17 @@ module CreditNotes
           params: {
             amount: credit_note.refund_amount_cents,
             total_amount_confirmation: credit_note.refund_amount_cents,
-            links: { payment: payment.provider_payment_id },
+            links: {payment: payment.provider_payment_id},
             metadata: {
               lago_customer_id: customer.id,
               lago_credit_note_id: credit_note.id,
               lago_invoice_id: invoice.id,
-              reason: credit_note.reason.to_s,
-            },
+              reason: credit_note.reason.to_s
+            }
           },
           headers: {
-            'Idempotency-Key' => credit_note.id,
-          },
+            "Idempotency-Key" => credit_note.id
+          }
         )
       rescue GoCardlessPro::Error => e
         deliver_error_webhook(message: e.message, code: e.code)
@@ -118,13 +118,13 @@ module CreditNotes
         return unless organization.webhook_endpoints.any?
 
         SendWebhookJob.perform_later(
-          'credit_note.provider_refund_failure',
+          "credit_note.provider_refund_failure",
           credit_note,
           provider_customer_id: customer.gocardless_customer.provider_customer_id,
           provider_error: {
             message:,
-            error_code: code,
-          },
+            error_code: code
+          }
         )
       end
 
@@ -136,9 +136,9 @@ module CreditNotes
       end
 
       def credit_note_status(status)
-        return 'pending' if PENDING_STATUSES.include?(status)
-        return 'succeeded' if SUCCESS_STATUSES.include?(status)
-        return 'failed' if FAILED_STATUSES.include?(status)
+        return "pending" if PENDING_STATUSES.include?(status)
+        return "succeeded" if SUCCESS_STATUSES.include?(status)
+        return "failed" if FAILED_STATUSES.include?(status)
 
         status
       end
@@ -146,12 +146,12 @@ module CreditNotes
       def track_refund_status_changed(status)
         SegmentTrackJob.perform_later(
           membership_id: CurrentContext.membership,
-          event: 'refund_status_changed',
+          event: "refund_status_changed",
           properties: {
             organization_id: organization.id,
             credit_note_id: credit_note.id,
-            refund_status: status,
-          },
+            refund_status: status
+          }
         )
       end
     end

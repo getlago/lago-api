@@ -2,7 +2,7 @@
 
 module Clock
   class ActivateSubscriptionsJob < ApplicationJob
-    queue_as 'clock'
+    queue_as "clock"
 
     unique :until_executed, on_conflict: :log
 

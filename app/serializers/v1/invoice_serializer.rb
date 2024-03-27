@@ -23,7 +23,7 @@ module V1
         total_amount_cents: model.total_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
-        version_number: model.version_number,
+        version_number: model.version_number
       }.merge(legacy_values)
 
       payload.merge!(customer) if include?(:customer)
@@ -40,13 +40,13 @@ module V1
 
     def customer
       {
-        customer: ::V1::CustomerSerializer.new(model.customer).serialize,
+        customer: ::V1::CustomerSerializer.new(model.customer).serialize
       }
     end
 
     def subscriptions
       ::CollectionSerializer.new(
-        model.subscriptions.includes([:customer, :plan]), ::V1::SubscriptionSerializer, collection_name: 'subscriptions'
+        model.subscriptions.includes([:customer, :plan]), ::V1::SubscriptionSerializer, collection_name: "subscriptions"
       ).serialize
     end
 
@@ -54,19 +54,19 @@ module V1
       ::CollectionSerializer.new(
         model.fees.includes([:true_up_fee, :subscription, :customer, :charge, :group, :billable_metric]),
         ::V1::FeeSerializer,
-        collection_name: 'fees',
+        collection_name: "fees"
       ).serialize
     end
 
     def credits
-      ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: 'credits').serialize
+      ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: "credits").serialize
     end
 
     def metadata
       ::CollectionSerializer.new(
         model.metadata,
         ::V1::Invoices::MetadataSerializer,
-        collection_name: 'metadata',
+        collection_name: "metadata"
       ).serialize
     end
 
@@ -74,7 +74,7 @@ module V1
       ::CollectionSerializer.new(
         model.applied_taxes,
         ::V1::Invoices::AppliedTaxSerializer,
-        collection_name: 'applied_taxes',
+        collection_name: "applied_taxes"
       ).serialize
     end
 

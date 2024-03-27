@@ -5,14 +5,14 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query wallet transactions'
+    description "Query wallet transactions"
 
-    argument :ids, [ID], required: false, description: 'List of wallet transaction IDs to fetch'
+    argument :ids, [ID], required: false, description: "List of wallet transaction IDs to fetch"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :status, Types::WalletTransactions::StatusEnum, required: false
     argument :transaction_type, Types::WalletTransactions::TransactionTypeEnum, required: false
-    argument :wallet_id, ID, required: true, description: 'Uniq ID of the wallet'
+    argument :wallet_id, ID, required: true, description: "Uniq ID of the wallet"
 
     type Types::WalletTransactions::Object.collection_type, null: false
 
@@ -34,8 +34,8 @@ module Resolvers
         filters: {
           ids:,
           status:,
-          transaction_type:,
-        },
+          transaction_type:
+        }
       )
 
       return result_error(result) unless result.success?

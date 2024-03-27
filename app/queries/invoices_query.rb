@@ -28,16 +28,16 @@ class InvoicesQuery < BaseQuery
     return nil if search_term.blank?
 
     terms = {
-      m: 'or',
+      m: "or",
       id_cont: search_term,
-      number_cont: search_term,
+      number_cont: search_term
     }
     return terms if @customer_id.present?
 
     terms.merge(
       customer_name_cont: search_term,
       customer_external_id_cont: search_term,
-      customer_email_cont: search_term,
+      customer_email_cont: search_term
     )
   end
 end

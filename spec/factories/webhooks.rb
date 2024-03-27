@@ -6,7 +6,7 @@ FactoryBot.define do
     association :object, factory: :invoice
 
     payload { Faker::Json.shallow_json(width: 3) }
-    webhook_type { 'invoice.created' }
+    webhook_type { "invoice.created" }
     endpoint { Faker::Internet.url }
 
     trait :succeeded do

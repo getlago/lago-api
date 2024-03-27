@@ -3,7 +3,7 @@
 module Types
   module Customers
     class Object < Types::BaseObject
-      graphql_name 'Customer'
+      graphql_name "Customer"
 
       field :id, ID, null: false
 
@@ -54,22 +54,22 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :active_subscriptions_count,
-            Integer,
-            null: false,
-            description: 'Number of active subscriptions per customer'
+        Integer,
+        null: false,
+        description: "Number of active subscriptions per customer"
       field :credit_notes_balance_amount_cents,
-            GraphQL::Types::BigInt,
-            null: false,
-            description: 'Credit notes credits balance available per customer'
+        GraphQL::Types::BigInt,
+        null: false,
+        description: "Credit notes credits balance available per customer"
       field :credit_notes_credits_available_count,
-            Integer,
-            null: false,
-            description: 'Number of available credits from credit notes per customer'
-      field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
-      field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'
+        Integer,
+        null: false,
+        description: "Number of available credits from credit notes per customer"
+      field :has_active_wallet, Boolean, null: false, description: "Define if a customer has an active wallet"
+      field :has_credit_notes, Boolean, null: false, description: "Define if a customer has any credit note"
 
       field :can_edit_attributes, Boolean, null: false, method: :editable? do
-        description 'Check if customer attributes are editable'
+        description "Check if customer attributes are editable"
       end
 
       def invoices
@@ -108,17 +108,17 @@ module Types
       end
 
       def credit_notes_credits_available_count
-        object.credit_notes.finalized.where('credit_notes.credit_amount_cents > 0').count
+        object.credit_notes.finalized.where("credit_notes.credit_amount_cents > 0").count
       end
 
       def credit_notes_balance_amount_cents
-        object.credit_notes.finalized.sum('credit_notes.balance_amount_cents')
+        object.credit_notes.finalized.sum("credit_notes.balance_amount_cents")
       end
 
       def billing_configuration
         {
           id: "#{object&.id}-c0nf",
-          document_locale: object&.document_locale,
+          document_locale: object&.document_locale
         }
       end
     end

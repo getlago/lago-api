@@ -37,7 +37,7 @@ module Plans
         end
 
         if params[:minimum_commitment].present? && License.premium?
-          commitment = Commitment.new(plan: new_plan, commitment_type: 'minimum_commitment')
+          commitment = Commitment.new(plan: new_plan, commitment_type: "minimum_commitment")
           minimum_commitment_params = params[:minimum_commitment].merge(plan_id: new_plan.id)
 
           commitment_override_result = Commitments::OverrideService.call(commitment:, params: minimum_commitment_params)
@@ -63,7 +63,7 @@ module Plans
 
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'plan_created',
+        event: "plan_created",
         properties: {
           code: plan.code,
           name: plan.name,
@@ -71,16 +71,16 @@ module Plans
           description: plan.description,
           plan_interval: plan.interval,
           plan_amount_cents: plan.amount_cents,
-          plan_period: plan.pay_in_advance ? 'advance' : 'arrears',
+          plan_period: plan.pay_in_advance ? "advance" : "arrears",
           trial: plan.trial_period,
           nb_charges: plan.charges.count,
-          nb_standard_charges: count_by_charge_model['standard'] || 0,
-          nb_percentage_charges: count_by_charge_model['percentage'] || 0,
-          nb_graduated_charges: count_by_charge_model['graduated'] || 0,
-          nb_package_charges: count_by_charge_model['package'] || 0,
+          nb_standard_charges: count_by_charge_model["standard"] || 0,
+          nb_percentage_charges: count_by_charge_model["percentage"] || 0,
+          nb_graduated_charges: count_by_charge_model["graduated"] || 0,
+          nb_package_charges: count_by_charge_model["package"] || 0,
           organization_id: plan.organization_id,
-          parent_id: plan.parent_id,
-        },
+          parent_id: plan.parent_id
+        }
       )
     end
   end

@@ -20,7 +20,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
               WHEN properties ? 'timestamp'
               THEN
                 CASE
-                  WHEN properties->>'timestamp' ~ '^[0-9\.]+$' -- unix timestamp
+                  WHEN properties->>'timestamp' ~ '^[0-9.]+$' -- unix timestamp
                   THEN to_timestamp((properties->>'timestamp')::integer)::timestamp
                   ELSE (properties->>'timestamp')::timestamp
                 END
@@ -33,7 +33,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
           SET timestamp = CASE
             WHEN properties?'timestamp'
             THEN CASE
-              WHEN properties->>'timestamp' ~ '^[0-9\.]+$' /* unix timestamp */
+              WHEN properties->>'timestamp' ~ '^[0-9.]+$' /* unix timestamp */
               THEN
                 to_timestamp((properties->>'timestamp')::integer)::timestamp
               ELSE
@@ -51,7 +51,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
           from_datetime = CASE
             WHEN properties?'from_datetime'
             THEN CASE
-              WHEN properties->>'from_datetime' ~ '^[0-9\.]+$' /* unix timestamp */
+              WHEN properties->>'from_datetime' ~ '^[0-9.]+$' /* unix timestamp */
               THEN
                 to_timestamp((properties->>'from_datetime')::integer)::timestamp
               ELSE
@@ -69,7 +69,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
           to_datetime = CASE
             WHEN properties?'to_datetime'
             THEN CASE
-              WHEN properties->>'to_datetime' ~ '^[0-9\.]+$' /* unix timestamp */
+              WHEN properties->>'to_datetime' ~ '^[0-9.]+$' /* unix timestamp */
               THEN
                 to_timestamp((properties->>'to_datetime')::integer)::timestamp
               ELSE
@@ -87,7 +87,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
           charges_from_datetime = CASE
             WHEN properties?'charges_from_datetime'
             THEN CASE
-              WHEN properties->>'charges_from_datetime' ~ '^[0-9\.]+$' /* unix timestamp */
+              WHEN properties->>'charges_from_datetime' ~ '^[0-9.]+$' /* unix timestamp */
               THEN
                 to_timestamp((properties->>'charges_from_datetime')::integer)::timestamp
               ELSE
@@ -105,7 +105,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
           charges_to_datetime = CASE
             WHEN properties?'charges_to_datetime'
             THEN CASE
-              WHEN properties->>'charges_to_datetime' ~ '^[0-9\.]+$' /* unix timestamp */
+              WHEN properties->>'charges_to_datetime' ~ '^[0-9.]+$' /* unix timestamp */
               THEN
                 to_timestamp((properties->>'charges_to_datetime')::integer)::timestamp
               ELSE

@@ -15,7 +15,7 @@ module Events
 
     def call
       if events_params.count > MAX_LENGTH
-        return result.single_validation_failure!(error_code: 'too_many_events', field: :events)
+        return result.single_validation_failure!(error_code: "too_many_events", field: :events)
       end
 
       validate_events
@@ -47,7 +47,7 @@ module Events
         event.timestamp = Time.zone.at(event_params[:timestamp] ? event_params[:timestamp].to_f : timestamp)
 
         result.events.push(event)
-        result.errors = result.errors.merge({ index => event.errors.messages }) unless event.valid?
+        result.errors = result.errors.merge({index => event.errors.messages}) unless event.valid?
       end
     end
 
@@ -63,11 +63,11 @@ module Events
     end
 
     def produce_kafka_event(event)
-      return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?
-      return if ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'].blank?
+      return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
+      return if ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].blank?
 
       Karafka.producer.produce_async(
-        topic: ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'],
+        topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
         payload: {
           organization_id: organization.id,
           external_customer_id: event.external_customer_id,
@@ -75,8 +75,8 @@ module Events
           transaction_id: event.transaction_id,
           timestamp: event.timestamp.to_f,
           code: event.code,
-          properties: event.properties,
-        }.to_json,
+          properties: event.properties
+        }.to_json
       )
     end
   end

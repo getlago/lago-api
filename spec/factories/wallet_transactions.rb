@@ -3,10 +3,10 @@
 FactoryBot.define do
   factory :wallet_transaction do
     wallet
-    transaction_type { 'inbound' }
-    status { 'settled' }
-    amount { '1.00' }
-    credit_amount { '1.00' }
+    transaction_type { "inbound" }
+    status { "settled" }
+    amount { "1.00" }
+    credit_amount { "1.00" }
     settled_at { Time.zone.now }
   end
 end

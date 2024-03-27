@@ -14,13 +14,13 @@ class InvoiceSubscription < ApplicationRecord
   monetize :total_amount_cents, disable_validation: true, allow_nil: true
 
   scope :order_by_charges_to_datetime,
-        lambda {
-          condition = <<-SQL
+    lambda {
+      condition = <<-SQL
             COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.created_at) DESC
-          SQL
+      SQL
 
-          order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))
-        }
+      order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))
+    }
 
   # NOTE: Billed automatically by the recurring billing process
   #       It is used to prevent double billing on billing day
@@ -46,14 +46,14 @@ class InvoiceSubscription < ApplicationRecord
   def fees
     @fees ||= Fee.where(
       subscription_id: subscription.id,
-      invoice_id: invoice.id,
+      invoice_id: invoice.id
     )
   end
 
   def previous_invoice_subscription
     self.class
       .where(subscription:)
-      .where('from_datetime <= ?', from_datetime)
+      .where("from_datetime <= ?", from_datetime)
       .where.not(id:)
       .order(from_datetime: :desc)
       .find(&:subscription_fee)
@@ -83,6 +83,6 @@ class InvoiceSubscription < ApplicationRecord
     subscription.plan.amount_currency
   end
 
-  alias charge_amount_currency total_amount_currency
-  alias subscription_amount_currency total_amount_currency
+  alias_method :charge_amount_currency, :total_amount_currency
+  alias_method :subscription_amount_currency, :total_amount_currency
 end

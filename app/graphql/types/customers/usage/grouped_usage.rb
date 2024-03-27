@@ -4,7 +4,7 @@ module Types
   module Customers
     module Usage
       class GroupedUsage < Types::BaseObject
-        graphql_name 'GroupedChargeUsage'
+        graphql_name "GroupedChargeUsage"
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false

@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Customers::TerminateRelationsJob, type: :job do
   let(:customer) { create(:customer, :deleted) }
 
-  it 'calls the service' do
+  it "calls the service" do
     allow(Customers::TerminateRelationsService)
       .to receive(:call)
       .with(customer:)

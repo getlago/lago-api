@@ -16,7 +16,7 @@ module V1
         group: model.active_groups_as_tree,
         active_subscriptions_count:,
         draft_invoices_count:,
-        plans_count:,
+        plans_count:
       }
 
       payload.merge!(filters)
@@ -47,7 +47,7 @@ module V1
       ::CollectionSerializer.new(
         model.filters,
         ::V1::BillableMetricFilterSerializer,
-        collection_name: 'filters',
+        collection_name: "filters"
       ).serialize
     end
   end

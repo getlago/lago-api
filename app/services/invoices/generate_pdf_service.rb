@@ -10,12 +10,12 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') if invoice.blank?
-      return result.not_allowed_failure!(code: 'is_draft') if invoice.draft?
+      return result.not_found_failure!(resource: "invoice") if invoice.blank?
+      return result.not_allowed_failure!(code: "is_draft") if invoice.draft?
 
       generate_pdf if should_generate_pdf?
 
-      SendWebhookJob.perform_later('invoice.generated', invoice)
+      SendWebhookJob.perform_later("invoice.generated", invoice)
 
       result.invoice = invoice
       result
@@ -40,7 +40,7 @@ module Invoices
         invoice.file.attach(
           io: pdf_result.io,
           filename: "#{invoice.number}.pdf",
-          content_type: 'application/pdf',
+          content_type: "application/pdf"
         )
 
         invoice.save!
@@ -49,11 +49,11 @@ module Invoices
 
     def template
       if invoice.one_off?
-        return 'invoices/v3/one_off' if invoice.version_number < 4
+        return "invoices/v3/one_off" if invoice.version_number < 4
 
         "invoices/v#{invoice.version_number}/one_off"
       elsif charge?
-        return 'invoices/v3/charge' if invoice.version_number < 4
+        return "invoices/v3/charge" if invoice.version_number < 4
 
         "invoices/v#{invoice.version_number}/charge"
       else
@@ -62,7 +62,7 @@ module Invoices
     end
 
     def should_generate_pdf?
-      context == 'admin' || invoice.file.blank?
+      context == "admin" || invoice.file.blank?
     end
 
     def charge?

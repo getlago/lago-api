@@ -64,14 +64,14 @@ module Subscriptions
       end
 
       def subscription_day_name
-        @subscription_day_name ||= subscription_at.strftime('%A').downcase.to_sym
+        @subscription_day_name ||= subscription_at.strftime("%A").downcase.to_sym
       end
 
       def compute_duration(*)
         WEEK_DURATION
       end
 
-      alias compute_charges_duration compute_duration
+      alias_method :compute_charges_duration, :compute_duration
     end
   end
 end

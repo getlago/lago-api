@@ -11,7 +11,7 @@ module V1
           granted_credits: model.granted_credits,
           interval: model.interval,
           threshold_credits: model.threshold_credits,
-          created_at: model.created_at.iso8601,
+          created_at: model.created_at.iso8601
         }
       end
     end

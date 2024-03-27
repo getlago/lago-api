@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'valvat'
+require "valvat"
 
 module Customers
   class EuAutoTaxesService < BaseService
@@ -25,7 +25,7 @@ module Customers
 
     def vies_check
       vies_check = Valvat.new(customer.tax_identification_number).exists?(detail: true)
-      after_commit { SendWebhookJob.perform_later('customer.vies_check', customer, vies_check:) }
+      after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check:) }
 
       vies_check
     end
@@ -34,7 +34,7 @@ module Customers
       if organization_country_code.casecmp?(customer_vies[:country_code])
         "lago_eu_#{organization_country_code.downcase}_standard"
       else
-        'lago_eu_reverse_charge'
+        "lago_eu_reverse_charge"
       end
     end
 
@@ -42,7 +42,7 @@ module Customers
       return "lago_eu_#{organization_country_code.downcase}_standard" if customer.country.blank?
       return "lago_eu_#{customer.country.downcase}_standard" if eu_countries_code.include?(customer.country.upcase)
 
-      'lago_eu_tax_exempt'
+      "lago_eu_tax_exempt"
     end
 
     def eu_countries_code

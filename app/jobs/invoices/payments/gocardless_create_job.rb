@@ -3,7 +3,7 @@
 module Invoices
   module Payments
     class GocardlessCreateJob < ApplicationJob
-      queue_as 'providers'
+      queue_as "providers"
 
       unique :until_executed
 

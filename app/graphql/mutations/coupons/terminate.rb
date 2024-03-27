@@ -5,8 +5,8 @@ module Mutations
     class Terminate < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'TerminateCoupon'
-      description 'Deletes a coupon'
+      graphql_name "TerminateCoupon"
+      description "Deletes a coupon"
 
       argument :id, ID, required: true
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
   let(:membership) { create(:membership) }
@@ -26,7 +26,7 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
     create(:subscription, customer:)
   end
 
-  it 'assigns a coupon to the customer' do
+  it "assigns a coupon to the customer" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -35,26 +35,26 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
         input: {
           couponId: coupon.id,
           customerId: customer.id,
-          frequency: 'once',
+          frequency: "once",
           amountCents: 123,
-          amountCurrency: 'EUR',
-        },
-      },
+          amountCurrency: "EUR"
+        }
+      }
     )
 
-    result_data = result['data']['createAppliedCoupon']
+    result_data = result["data"]["createAppliedCoupon"]
 
     aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['coupon']['id']).to eq(coupon.id)
-      expect(result_data['amountCents']).to eq('123')
-      expect(result_data['amountCurrency']).to eq('EUR')
-      expect(result_data['createdAt']).to be_present
+      expect(result_data["id"]).to be_present
+      expect(result_data["coupon"]["id"]).to eq(coupon.id)
+      expect(result_data["amountCents"]).to eq("123")
+      expect(result_data["amountCurrency"]).to eq("EUR")
+      expect(result_data["createdAt"]).to be_present
     end
   end
 
-  context 'without current user' do
-    it 'returns an error' do
+  context "without current user" do
+    it "returns an error" do
       result = execute_graphql(
         current_organization: organization,
         query: mutation,
@@ -63,17 +63,17 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
             couponId: coupon.id,
             customerId: customer.id,
             amountCents: 123,
-            amountCurrency: 'EUR',
-          },
-        },
+            amountCurrency: "EUR"
+          }
+        }
       )
 
       expect_unauthorized_error(result)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query: mutation,
@@ -82,9 +82,9 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
             couponId: coupon.id,
             customerId: customer.id,
             amountCents: 123,
-            amountCurrency: 'EUR',
-          },
-        },
+            amountCurrency: "EUR"
+          }
+        }
       )
 
       expect_forbidden_error(result)

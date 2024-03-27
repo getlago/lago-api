@@ -5,7 +5,7 @@ module V1
     class SubscriptionSerializer < ModelSerializer
       def serialize
         {
-          subscription_date: model.subscription_at&.to_date,
+          subscription_date: model.subscription_at&.to_date
         }
       end
     end

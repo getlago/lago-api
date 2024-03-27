@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query coupons of an organization'
+    description "Query coupons of an organization"
 
-    argument :ids, [ID], required: false, description: 'List of coupon IDs to fetch'
+    argument :ids, [ID], required: false, description: "List of coupon IDs to fetch"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false
@@ -25,8 +25,8 @@ module Resolvers
         limit:,
         status:,
         filters: {
-          ids:,
-        },
+          ids:
+        }
       )
 
       result.coupons

@@ -20,7 +20,7 @@ module Charges
           group_result = Charges::ChargeModels::StandardService.apply(
             charge:,
             aggregation_result: aggregation,
-            properties:,
+            properties:
           )
           group_result.grouped_by = aggregation.grouped_by
           group_result

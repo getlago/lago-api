@@ -6,12 +6,12 @@ module Customers
 
     def update(**args)
       customer = result.user.customers.find_by(id: args[:id])
-      return result.not_found_failure!(resource: 'customer') unless customer
+      return result.not_found_failure!(resource: "customer") unless customer
 
       unless valid_metadata_count?(metadata: args[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
-          error_code: 'invalid_count',
+          error_code: "invalid_count"
         )
       end
 
@@ -116,14 +116,14 @@ module Customers
         unless customer.editable?
           return result.single_validation_failure!(
             field: :currency,
-            error_code: 'currencies_does_not_match',
+            error_code: "currencies_does_not_match"
           )
         end
       elsif customer.currency.present? || !customer.editable?
         # NOTE: Assign currency from another resource
         return result.single_validation_failure!(
           field: :currency,
-          error_code: 'currencies_does_not_match',
+          error_code: "currencies_does_not_match"
         )
       end
 
@@ -153,19 +153,19 @@ module Customers
       handle_provider_customer ||= (billing_configuration || {})[:provider_customer_id].present?
 
       case payment_provider
-      when 'stripe'
+      when "stripe"
         handle_provider_customer ||= customer.stripe_customer&.provider_customer_id.present?
 
         return unless handle_provider_customer
 
         update_stripe_customer(customer, billing_configuration)
-      when 'gocardless'
+      when "gocardless"
         handle_provider_customer ||= customer.gocardless_customer&.provider_customer_id.present?
 
         return unless handle_provider_customer
 
         update_gocardless_customer(customer, billing_configuration)
-      when 'adyen'
+      when "adyen"
         handle_provider_customer ||= customer.adyen_customer&.provider_customer_id.present?
 
         return unless handle_provider_customer
@@ -178,7 +178,7 @@ module Customers
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::StripeCustomer,
         payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration,
+        params: billing_configuration
       )
       create_result.raise_if_error!
 
@@ -190,7 +190,7 @@ module Customers
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::GocardlessCustomer,
         payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration,
+        params: billing_configuration
       )
       create_result.raise_if_error!
 
@@ -202,7 +202,7 @@ module Customers
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::AdyenCustomer,
         payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration,
+        params: billing_configuration
       )
       create_result.raise_if_error!
 

@@ -8,7 +8,7 @@ module Invites
       result.invite = Invite.create!(
         organization_id: args[:current_organization].id,
         email: args[:email],
-        token: generate_token,
+        token: generate_token
       )
 
       result

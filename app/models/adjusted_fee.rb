@@ -9,7 +9,7 @@ class AdjustedFee < ApplicationRecord
 
   ADJUSTED_FEE_TYPES = [
     :adjusted_units,
-    :adjusted_amount,
+    :adjusted_amount
   ].freeze
 
   enum fee_type: Fee::FEE_TYPES

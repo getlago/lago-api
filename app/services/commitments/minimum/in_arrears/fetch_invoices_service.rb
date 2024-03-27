@@ -10,7 +10,7 @@ module Commitments
           ds = Subscriptions::DatesService.new_instance(
             subscription,
             invoice_subscription.timestamp,
-            current_usage: subscription.terminated?,
+            current_usage: subscription.terminated?
           )
 
           return ds unless subscription.terminated?
@@ -18,7 +18,7 @@ module Commitments
           Subscriptions::TerminatedDatesService.new(
             subscription:,
             invoice: invoice_subscription.invoice,
-            date_service: ds,
+            date_service: ds
           ).call
         end
 
@@ -32,9 +32,9 @@ module Commitments
           invoice_ids_query = subscription
             .invoice_subscriptions
             .where(
-              'from_datetime >= ? AND to_datetime <= ?',
+              "from_datetime >= ? AND to_datetime <= ?",
               dates_service.previous_beginning_of_period,
-              dates_service.end_of_period,
+              dates_service.end_of_period
             ).select(:invoice_id)
 
           Invoice.where(id: invoice_ids_query)

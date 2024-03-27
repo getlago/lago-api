@@ -15,7 +15,7 @@ class Wallet < ApplicationRecord
 
   STATUSES = [
     :active,
-    :terminated,
+    :terminated
   ].freeze
 
   enum status: STATUSES
@@ -25,7 +25,7 @@ class Wallet < ApplicationRecord
     terminated!
   end
 
-  scope :expired, -> { where('wallets.expiration_at::timestamp(0) <= ?', Time.current) }
+  scope :expired, -> { where("wallets.expiration_at::timestamp(0) <= ?", Time.current) }
 
   def currency=(currency)
     self.balance_currency = currency

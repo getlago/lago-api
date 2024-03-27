@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe Clock::TerminateEndedSubscriptionsJob, job: true do
   subject { described_class }
 
-  describe '.perform' do
+  describe ".perform" do
     let(:ending_at) { (Time.current + 2.months).beginning_of_day }
     let(:subscription1) { create(:subscription, ending_at:) }
     let(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
@@ -18,7 +18,7 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
       allow(Subscriptions::TerminateService).to receive(:call)
     end
 
-    it 'terminates the subscriptions where ending_at matches current data ' do
+    it "terminates the subscriptions where ending_at matches current data " do
       current_date = Time.current + 2.months
 
       travel_to(current_date) do
@@ -32,14 +32,14 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
       end
     end
 
-    context 'with customer timezone' do
-      let(:ending_at) { DateTime.parse('2022-10-21 00:30:00') }
+    context "with customer timezone" do
+      let(:ending_at) { DateTime.parse("2022-10-21 00:30:00") }
 
       before do
-        subscription1.customer.update!(timezone: 'America/New_York')
+        subscription1.customer.update!(timezone: "America/New_York")
       end
 
-      it 'takes timezone into account' do
+      it "takes timezone into account" do
         current_date = ending_at
 
         travel_to(current_date) do

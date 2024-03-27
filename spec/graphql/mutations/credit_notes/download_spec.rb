@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
   let(:credit_note) { create(:credit_note) }
@@ -8,7 +8,7 @@ RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
   let(:membership) { create(:membership, organization:) }
 
   let(:pdf_response) do
-    File.read(Rails.root.join('spec/fixtures/blank.pdf'))
+    File.read(Rails.root.join("spec/fixtures/blank.pdf"))
   end
 
   let(:mutation) do
@@ -23,27 +23,27 @@ RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
   end
 
   before do
-    stub_request(:post, "#{ENV['LAGO_PDF_URL']}/forms/chromium/convert/html")
+    stub_request(:post, "#{ENV["LAGO_PDF_URL"]}/forms/chromium/convert/html")
       .to_return(body: pdf_response, status: 200)
   end
 
-  it 'generates the credit note PDF' do
+  it "generates the credit note PDF" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       query: mutation,
       variables: {
         input: {
-          id: credit_note.id,
-        },
-      },
+          id: credit_note.id
+        }
+      }
     )
 
-    result_data = result['data']['downloadCreditNote']
+    result_data = result["data"]["downloadCreditNote"]
 
     aggregate_failures do
-      expect(result_data['id']).to eq(credit_note.id)
-      expect(result_data['fileUrl']).to be_present
+      expect(result_data["id"]).to eq(credit_note.id)
+      expect(result_data["fileUrl"]).to be_present
     end
   end
 end

@@ -12,11 +12,11 @@ module AdjustedFees
 
     def call
       return result.forbidden_failure! if !License.premium? || !fee.invoice.draft?
-      return result.validation_failure!(errors: { adjusted_fee: ['already_exists'] }) if fee.adjusted_fee
+      return result.validation_failure!(errors: {adjusted_fee: ["already_exists"]}) if fee.adjusted_fee
 
       charge = fee.charge
       if charge && params[:unit_amount_cents].blank? && (charge.percentage? || (charge.prorated? && charge.graduated?))
-        return result.validation_failure!(errors: { charge: ['invalid_charge_model'] })
+        return result.validation_failure!(errors: {charge: ["invalid_charge_model"]})
       end
 
       adjusted_fee = AdjustedFee.new(
@@ -32,7 +32,7 @@ module AdjustedFees
         properties: fee.properties,
         units: params[:units].presence || 0,
         unit_amount_cents: params[:unit_amount_cents].presence || 0,
-        grouped_by: fee.grouped_by,
+        grouped_by: fee.grouped_by
       )
 
       adjusted_fee.save!

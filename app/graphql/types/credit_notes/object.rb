@@ -3,8 +3,8 @@
 module Types
   module CreditNotes
     class Object < Types::BaseObject
-      description 'CreditNote'
-      graphql_name 'CreditNote'
+      description "CreditNote"
+      graphql_name "CreditNote"
 
       field :id, ID, null: false
       field :number, String, null: false
@@ -42,7 +42,7 @@ module Types
       field :items, [Types::CreditNoteItems::Object], null: false
 
       field :can_be_voided, Boolean, null: false, method: :voidable? do
-        description 'Check if credit note can be voided'
+        description "Check if credit note can be voided"
       end
 
       def applied_taxes

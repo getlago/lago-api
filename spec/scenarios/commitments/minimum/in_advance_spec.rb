@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :request do
+describe "Billing Minimum Commitments In Advance Scenario", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
-  let(:timezone) { 'UTC' }
-  let(:customer) { create(:customer, organization:, timezone:, currency: 'EUR') }
+  let(:timezone) { "UTC" }
+  let(:customer) { create(:customer, organization:, timezone:, currency: "EUR") }
   let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
-  let(:pdf_file) { StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))) }
+  let(:pdf_file) { StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))) }
   let(:pdf_result) { OpenStruct.new(io: pdf_file) }
 
   let(:plan) do
@@ -15,10 +15,10 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       :plan,
       organization:,
       amount_cents: 100_000,
-      amount_currency: 'EUR',
+      amount_currency: "EUR",
       interval: plan_interval,
       pay_in_advance: true,
-      bill_charges_monthly:,
+      bill_charges_monthly:
     )
   end
 
@@ -39,8 +39,8 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code,
-          billing_time:,
-        },
+          billing_time:
+        }
       )
 
       Subscriptions::BillingService.new.call
@@ -48,42 +48,42 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
     end
   end
 
-  context 'when plan is billed in advance' do
-    context 'with weekly plan' do
-      let(:plan_interval) { 'weekly' }
+  context "when plan is billed in advance" do
+    context "with weekly plan" do
+      let(:plan_interval) { "weekly" }
 
-      context 'with calendar billing' do
-        let(:billing_time) { 'calendar' }
+      context "with calendar billing" do
+        let(:billing_time) { "calendar" }
         let(:subscription_time) { DateTime.new(2023, 2, 1) }
         let(:commitment_fee_amount_cents) { 642_857 }
 
-        context 'when there is no previous period' do
-          context 'when plan has no minimum commitment' do
+        context "when there is no previous period" do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
         end
 
-        context 'when there is a previous period' do
+        context "when there is a previous period" do
           let(:current_period_start) { DateTime.new(2023, 2, 6, 10) }
 
           before do
@@ -93,31 +93,31 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
             perform_all_enqueued_jobs
           end
 
-          context 'when plan has no minimum commitment' do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+            it "creates an invoice with minimum commitment fee", :aggregate_failures do
               expect(invoice.fees.commitment_kind.count).to eq(1)
               expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
 
-            context 'when subscription is terminated' do
+            context "when subscription is terminated" do
               let(:invoices) { Invoice.order(:sequential_id) }
               let(:commitment_fees) { Fee.commitment_kind.pluck(:amount_cents) }
 
@@ -131,7 +131,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
                 perform_all_enqueued_jobs
               end
 
-              it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+              it "creates an invoice with minimum commitment fee", :aggregate_failures do
                 expect(invoices.first.fees.commitment_kind.count).to eq(0)
                 expect(invoices.second.fees.commitment_kind.count).to eq(1)
                 expect(invoices.third.fees.commitment_kind.count).to eq(1)
@@ -144,38 +144,38 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
         end
       end
 
-      context 'with anniversary billing' do
-        let(:billing_time) { 'anniversary' }
+      context "with anniversary billing" do
+        let(:billing_time) { "anniversary" }
         let(:subscription_time) { DateTime.new(2023, 2, 1) }
         let(:commitment_fee_amount_cents) { 900_000 }
 
-        context 'when there is no previous period' do
-          context 'when plan has no minimum commitment' do
+        context "when there is no previous period" do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
         end
 
-        context 'when there is a previous period' do
+        context "when there is a previous period" do
           let(:current_period_start) { DateTime.new(2023, 2, 8, 10) }
 
           before do
@@ -185,26 +185,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
             perform_all_enqueued_jobs
           end
 
-          context 'when plan has no minimum commitment' do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+            it "creates an invoice with minimum commitment fee", :aggregate_failures do
               expect(invoice.fees.commitment_kind.count).to eq(1)
               expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -213,41 +213,41 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       end
     end
 
-    context 'with monthly plan' do
-      let(:plan_interval) { 'monthly' }
+    context "with monthly plan" do
+      let(:plan_interval) { "monthly" }
 
-      context 'with calendar billing' do
-        let(:billing_time) { 'calendar' }
+      context "with calendar billing" do
+        let(:billing_time) { "calendar" }
         let(:subscription_time) { DateTime.new(2023, 2, 4) }
         let(:commitment_fee_amount_cents) { 803_571 }
 
-        context 'when there is no previous period' do
-          context 'when plan has no minimum commitment' do
+        context "when there is no previous period" do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
         end
 
-        context 'when there is a previous period' do
+        context "when there is a previous period" do
           let(:current_period_start) { DateTime.new(2023, 3, 1, 10) }
 
           before do
@@ -257,26 +257,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
             perform_all_enqueued_jobs
           end
 
-          context 'when plan has no minimum commitment' do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+            it "creates an invoice with minimum commitment fee", :aggregate_failures do
               expect(invoice.fees.commitment_kind.count).to eq(1)
               expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -284,38 +284,38 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
         end
       end
 
-      context 'with anniversary billing' do
-        let(:billing_time) { 'anniversary' }
+      context "with anniversary billing" do
+        let(:billing_time) { "anniversary" }
         let(:subscription_time) { DateTime.new(2023, 2, 4) }
         let(:commitment_fee_amount_cents) { 900_000 }
 
-        context 'when there is no previous period' do
-          context 'when plan has no minimum commitment' do
+        context "when there is no previous period" do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
         end
 
-        context 'when there is a previous period' do
+        context "when there is a previous period" do
           let(:current_period_start) { DateTime.new(2023, 3, 4, 10) }
 
           before do
@@ -325,26 +325,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
             perform_all_enqueued_jobs
           end
 
-          context 'when plan has no minimum commitment' do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+            it "creates an invoice with minimum commitment fee", :aggregate_failures do
               expect(invoice.fees.commitment_kind.count).to eq(1)
               expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -353,41 +353,41 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       end
     end
 
-    context 'with quarterly plan' do
-      let(:plan_interval) { 'quarterly' }
+    context "with quarterly plan" do
+      let(:plan_interval) { "quarterly" }
 
-      context 'with calendar billing' do
-        let(:billing_time) { 'calendar' }
+      context "with calendar billing" do
+        let(:billing_time) { "calendar" }
         let(:subscription_time) { DateTime.new(2023, 2, 4) }
         let(:commitment_fee_amount_cents) { 560_000 }
 
-        context 'when there is no previous period' do
-          context 'when plan has no minimum commitment' do
+        context "when there is no previous period" do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
         end
 
-        context 'when there is a previous period' do
+        context "when there is a previous period" do
           let(:current_period_start) { DateTime.new(2023, 4, 1, 10) }
 
           before do
@@ -397,26 +397,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
             perform_all_enqueued_jobs
           end
 
-          context 'when plan has no minimum commitment' do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+            it "creates an invoice with minimum commitment fee", :aggregate_failures do
               expect(invoice.fees.commitment_kind.count).to eq(1)
               expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -424,38 +424,38 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
         end
       end
 
-      context 'with anniversary billing' do
-        let(:billing_time) { 'anniversary' }
+      context "with anniversary billing" do
+        let(:billing_time) { "anniversary" }
         let(:subscription_time) { DateTime.new(2023, 2, 4) }
         let(:commitment_fee_amount_cents) { 900_000 }
 
-        context 'when there is no previous period' do
-          context 'when plan has no minimum commitment' do
+        context "when there is no previous period" do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
         end
 
-        context 'when there is a previous period' do
+        context "when there is a previous period" do
           let(:current_period_start) { DateTime.new(2023, 5, 4, 10) }
 
           before do
@@ -465,26 +465,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
             perform_all_enqueued_jobs
           end
 
-          context 'when plan has no minimum commitment' do
+          context "when plan has no minimum commitment" do
             let(:minimum_commitment) { nil }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is reached' do
+          context "when minimum commitment amount is reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-            it 'creates an invoice without minimum commitment fee' do
+            it "creates an invoice without minimum commitment fee" do
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
 
-          context 'when minimum commitment amount is not reached' do
+          context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+            it "creates an invoice with minimum commitment fee", :aggregate_failures do
               expect(invoice.fees.commitment_kind.count).to eq(1)
               expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -493,42 +493,42 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       end
     end
 
-    context 'with yearly plan and yearly charge' do
-      let(:plan_interval) { 'yearly' }
+    context "with yearly plan and yearly charge" do
+      let(:plan_interval) { "yearly" }
 
-      context 'with calendar billing' do
-        let(:billing_time) { 'calendar' }
+      context "with calendar billing" do
+        let(:billing_time) { "calendar" }
         let(:subscription_time) { DateTime.new(2022, 2, 1) }
         let(:commitment_fee_amount_cents) { 823_561 }
 
-        context 'when plan is charged yearly' do
-          context 'when there is no previous period' do
-            context 'when plan has no minimum commitment' do
+        context "when plan is charged yearly" do
+          context "when there is no previous period" do
+            context "when plan has no minimum commitment" do
               let(:minimum_commitment) { nil }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is reached' do
+            context "when minimum commitment amount is reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is not reached' do
+            context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
           end
 
-          context 'when there is a previous period' do
+          context "when there is a previous period" do
             let(:current_period_start) { DateTime.new(2023, 1, 1, 10) }
 
             before do
@@ -538,26 +538,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               perform_all_enqueued_jobs
             end
 
-            context 'when plan has no minimum commitment' do
+            context "when plan has no minimum commitment" do
               let(:minimum_commitment) { nil }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is reached' do
+            context "when minimum commitment amount is reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is not reached' do
+            context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+              it "creates an invoice with minimum commitment fee", :aggregate_failures do
                 expect(invoice.fees.commitment_kind.count).to eq(1)
                 expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
               end
@@ -565,36 +565,36 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           end
         end
 
-        context 'when plan is charged monthly' do
+        context "when plan is charged monthly" do
           let(:bill_charges_monthly) { true }
 
-          context 'when there is no previous period' do
-            context 'when plan has no minimum commitment' do
+          context "when there is no previous period" do
+            context "when plan has no minimum commitment" do
               let(:minimum_commitment) { nil }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is reached' do
+            context "when minimum commitment amount is reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is not reached' do
+            context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
           end
 
-          context 'when there is a previous period' do
+          context "when there is a previous period" do
             let(:current_period_start) { DateTime.new(2023, 1, 1, 10) }
 
             before do
@@ -604,26 +604,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               perform_all_enqueued_jobs
             end
 
-            context 'when plan has no minimum commitment' do
+            context "when plan has no minimum commitment" do
               let(:minimum_commitment) { nil }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is reached' do
+            context "when minimum commitment amount is reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is not reached' do
+            context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+              it "creates an invoice with minimum commitment fee", :aggregate_failures do
                 expect(invoice.fees.commitment_kind.count).to eq(1)
                 expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
               end
@@ -632,39 +632,39 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
         end
       end
 
-      context 'with anniversary billing' do
-        let(:billing_time) { 'anniversary' }
+      context "with anniversary billing" do
+        let(:billing_time) { "anniversary" }
         let(:subscription_time) { DateTime.new(2022, 2, 4) }
         let(:commitment_fee_amount_cents) { 900_000 }
 
-        context 'when plan is charged yearly' do
-          context 'when there is no previous period' do
-            context 'when plan has no minimum commitment' do
+        context "when plan is charged yearly" do
+          context "when there is no previous period" do
+            context "when plan has no minimum commitment" do
               let(:minimum_commitment) { nil }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is reached' do
+            context "when minimum commitment amount is reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is not reached' do
+            context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
           end
 
-          context 'when there is a previous period' do
+          context "when there is a previous period" do
             let(:current_period_start) { DateTime.new(2023, 2, 4, 10) }
 
             before do
@@ -674,26 +674,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               perform_all_enqueued_jobs
             end
 
-            context 'when plan has no minimum commitment' do
+            context "when plan has no minimum commitment" do
               let(:minimum_commitment) { nil }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is reached' do
+            context "when minimum commitment amount is reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is not reached' do
+            context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+              it "creates an invoice with minimum commitment fee", :aggregate_failures do
                 expect(invoice.fees.commitment_kind.count).to eq(1)
                 expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
               end
@@ -701,36 +701,36 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           end
         end
 
-        context 'when plan is charged monthly' do
+        context "when plan is charged monthly" do
           let(:bill_charges_monthly) { true }
 
-          context 'when there is no previous period' do
-            context 'when plan has no minimum commitment' do
+          context "when there is no previous period" do
+            context "when plan has no minimum commitment" do
               let(:minimum_commitment) { nil }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is reached' do
+            context "when minimum commitment amount is reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is not reached' do
+            context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
           end
 
-          context 'when there is a previous period' do
+          context "when there is a previous period" do
             let(:current_period_start) { DateTime.new(2023, 2, 4, 10) }
 
             before do
@@ -740,26 +740,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               perform_all_enqueued_jobs
             end
 
-            context 'when plan has no minimum commitment' do
+            context "when plan has no minimum commitment" do
               let(:minimum_commitment) { nil }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is reached' do
+            context "when minimum commitment amount is reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
-              it 'creates an invoice without minimum commitment fee' do
+              it "creates an invoice without minimum commitment fee" do
                 expect(invoice.fees.commitment_kind.count).to eq(0)
               end
             end
 
-            context 'when minimum commitment amount is not reached' do
+            context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it 'creates an invoice with minimum commitment fee', :aggregate_failures do
+              it "creates an invoice with minimum commitment fee", :aggregate_failures do
                 expect(invoice.fees.commitment_kind.count).to eq(1)
                 expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
               end

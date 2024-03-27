@@ -7,8 +7,8 @@ module V1
         {
           before_vat: model.before_taxes,
           item: {
-            lago_id: model.item_id,
-          },
+            lago_id: model.item_id
+          }
         }
       end
     end

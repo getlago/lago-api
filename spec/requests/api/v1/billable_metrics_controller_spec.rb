@@ -1,34 +1,34 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::BillableMetricsController, type: :request do
   let(:organization) { create(:organization) }
 
   let(:group) do
     {
-      key: 'cloud',
+      key: "cloud",
       values: [
-        { name: 'AWS', key: 'region', values: %w[usa europe] },
-        { name: 'Google', key: 'region', values: ['usa'] },
-      ],
+        {name: "AWS", key: "region", values: %w[usa europe]},
+        {name: "Google", key: "region", values: ["usa"]}
+      ]
     }
   end
 
-  describe 'create' do
+  describe "create" do
     let(:create_params) do
       {
-        name: 'BM1',
-        code: 'BM1_code',
-        description: 'description',
-        aggregation_type: 'sum_agg',
-        field_name: 'amount_sum',
-        recurring: true,
+        name: "BM1",
+        code: "BM1_code",
+        description: "description",
+        aggregation_type: "sum_agg",
+        field_name: "amount_sum",
+        recurring: true
       }
     end
 
-    it 'creates a billable_metric' do
-      post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: create_params })
+    it "creates a billable_metric" do
+      post_with_token(organization, "/api/v1/billable_metrics", {billable_metric: create_params})
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to be_present
@@ -40,79 +40,79 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metric][:filters]).to eq([])
     end
 
-    context 'with group parameter' do
-      it 'creates billable metric\'s group' do
+    context "with group parameter" do
+      it "creates billable metric's group" do
         post_with_token(
           organization,
-          '/api/v1/billable_metrics',
-          { billable_metric: create_params.merge(group:) },
+          "/api/v1/billable_metrics",
+          {billable_metric: create_params.merge(group:)}
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
       end
     end
 
-    context 'with invalid group parameter' do
-      it 'returns an error' do
+    context "with invalid group parameter" do
+      it "returns an error" do
         post_with_token(
           organization,
-          '/api/v1/billable_metrics',
-          { billable_metric: create_params.merge(group: { foo: 'bar' }) },
+          "/api/v1/billable_metrics",
+          {billable_metric: create_params.merge(group: {foo: "bar"})}
         )
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to eq({ group: %w[value_is_invalid] })
+          expect(json[:error_details]).to eq({group: %w[value_is_invalid]})
         end
       end
     end
 
-    context 'with weighted sum aggregation' do
+    context "with weighted sum aggregation" do
       let(:create_params) do
         {
-          name: 'BM1',
-          code: 'BM1_code',
-          description: 'description',
-          aggregation_type: 'weighted_sum_agg',
-          field_name: 'amount_sum',
+          name: "BM1",
+          code: "BM1_code",
+          description: "description",
+          aggregation_type: "weighted_sum_agg",
+          field_name: "amount_sum",
           recurring: true,
-          weighted_interval: 'seconds',
+          weighted_interval: "seconds"
         }
       end
 
-      it 'creates a billable_metric' do
-        post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: create_params })
+      it "creates a billable_metric" do
+        post_with_token(organization, "/api/v1/billable_metrics", {billable_metric: create_params})
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metric][:lago_id]).to be_present
         expect(json[:billable_metric][:recurring]).to eq(
           create_params[:recurring
-                    ],
+                    ]
         )
-        expect(json[:billable_metric][:aggregation_type]).to eq('weighted_sum_agg')
-        expect(json[:billable_metric][:weighted_interval]).to eq('seconds')
+        expect(json[:billable_metric][:aggregation_type]).to eq("weighted_sum_agg")
+        expect(json[:billable_metric][:weighted_interval]).to eq("seconds")
       end
     end
   end
 
-  describe 'update' do
+  describe "update" do
     let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:code) { 'BM1_code' }
+    let(:code) { "BM1_code" }
     let(:update_params) do
       {
-        name: 'BM1',
+        name: "BM1",
         code:,
-        description: 'description',
-        aggregation_type: 'sum_agg',
-        field_name: 'amount_sum',
+        description: "description",
+        aggregation_type: "sum_agg",
+        field_name: "amount_sum"
       }
     end
 
-    it 'updates a billable_metric' do
+    it "updates a billable_metric" do
       put_with_token(
         organization,
         "/api/v1/billable_metrics/#{billable_metric.code}",
-        { billable_metric: update_params },
+        {billable_metric: update_params}
       )
 
       expect(response).to have_http_status(:success)
@@ -121,93 +121,93 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metric][:filters]).to eq([])
     end
 
-    context 'with group parameter' do
-      it 'updates billable metric\'s group' do
+    context "with group parameter" do
+      it "updates billable metric's group" do
         create(:group, billable_metric:)
 
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params.merge(group:) },
+          {billable_metric: update_params.merge(group:)}
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
       end
     end
 
-    context 'with invalid group parameter' do
-      it 'returns an error' do
+    context "with invalid group parameter" do
+      it "returns an error" do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params.merge(group: { foo: 'bar' }) },
+          {billable_metric: update_params.merge(group: {foo: "bar"})}
         )
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to eq({ group: %w[value_is_invalid] })
+          expect(json[:error_details]).to eq({group: %w[value_is_invalid]})
         end
       end
     end
 
-    context 'when billable metric does not exist' do
-      it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/billable_metrics/invalid', { billable_metric: update_params })
+    context "when billable metric does not exist" do
+      it "returns not_found error" do
+        put_with_token(organization, "/api/v1/billable_metrics/invalid", {billable_metric: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when billable metric code already exists in organization scope (validation error)' do
+    context "when billable metric code already exists in organization scope (validation error)" do
       let(:billable_metric2) { create(:billable_metric, organization:) }
       let(:code) { billable_metric2.code }
 
       before { billable_metric2 }
 
-      it 'returns unprocessable_entity error' do
+      it "returns unprocessable_entity error" do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params },
+          {billable_metric: update_params}
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
 
-    context 'with weighted sum aggregation' do
+    context "with weighted sum aggregation" do
       let(:update_params) do
         {
-          name: 'BM1',
-          code: 'BM1_code',
-          description: 'description',
-          aggregation_type: 'weighted_sum_agg',
-          field_name: 'amount_sum',
+          name: "BM1",
+          code: "BM1_code",
+          description: "description",
+          aggregation_type: "weighted_sum_agg",
+          field_name: "amount_sum",
           recurring: true,
-          weighted_interval: 'seconds',
+          weighted_interval: "seconds"
         }
       end
 
-      it 'updates a billable_metric' do
+      it "updates a billable_metric" do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params },
+          {billable_metric: update_params}
         )
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metric][:lago_id]).to be_present
         expect(json[:billable_metric][:recurring]).to be_truthy
-        expect(json[:billable_metric][:aggregation_type]).to eq('weighted_sum_agg')
-        expect(json[:billable_metric][:weighted_interval]).to eq('seconds')
+        expect(json[:billable_metric][:aggregation_type]).to eq("weighted_sum_agg")
+        expect(json[:billable_metric][:weighted_interval]).to eq("seconds")
       end
     end
   end
 
-  describe 'show' do
+  describe "show" do
     let(:billable_metric) { create(:billable_metric, organization:) }
 
-    it 'returns a billable metric' do
+    it "returns a billable metric" do
       get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
 
       expect(response).to have_http_status(:success)
@@ -215,16 +215,16 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metric][:code]).to eq(billable_metric.code)
     end
 
-    context 'when billable metric does not exist' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/billable_metrics/555')
+    context "when billable metric does not exist" do
+      it "returns not found" do
+        get_with_token(organization, "/api/v1/billable_metrics/555")
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when billable metric is deleted' do
-      it 'returns not found' do
+    context "when billable metric is deleted" do
+      it "returns not found" do
         billable_metric.discard
         get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
 
@@ -233,17 +233,17 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
   end
 
-  describe 'destroy' do
+  describe "destroy" do
     let(:billable_metric) { create(:billable_metric, organization:) }
 
     before { billable_metric }
 
-    it 'deletes a billable_metric' do
+    it "deletes a billable_metric" do
       expect { delete_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}") }
         .to change(BillableMetric, :count).by(-1)
     end
 
-    it 'returns deleted billable_metric' do
+    it "returns deleted billable_metric" do
       delete_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
 
       expect(response).to have_http_status(:success)
@@ -251,22 +251,22 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metric][:code]).to eq(billable_metric.code)
     end
 
-    context 'when billable metric does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, '/api/v1/billable_metrics/invalid')
+    context "when billable metric does not exist" do
+      it "returns not_found error" do
+        delete_with_token(organization, "/api/v1/billable_metrics/invalid")
 
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'index' do
+  describe "index" do
     let(:billable_metric) { create(:billable_metric, organization:) }
 
     before { billable_metric }
 
-    it 'returns billable metrics' do
-      get_with_token(organization, '/api/v1/billable_metrics')
+    it "returns billable metrics" do
+      get_with_token(organization, "/api/v1/billable_metrics")
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metrics].count).to eq(1)
@@ -274,13 +274,13 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metrics].first[:code]).to eq(billable_metric.code)
     end
 
-    context 'with pagination' do
+    context "with pagination" do
       let(:billable_metric2) { create(:billable_metric, organization:) }
 
       before { billable_metric2 }
 
-      it 'returns billable metrics with correct meta data' do
-        get_with_token(organization, '/api/v1/billable_metrics?page=1&per_page=1')
+      it "returns billable metrics with correct meta data" do
+        get_with_token(organization, "/api/v1/billable_metrics?page=1&per_page=1")
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metrics].count).to eq(1)

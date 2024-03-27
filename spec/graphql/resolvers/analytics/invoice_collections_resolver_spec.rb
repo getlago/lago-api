@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::Analytics::InvoiceCollectionsResolver, type: :graphql do
   let(:query) do
@@ -21,68 +21,68 @@ RSpec.describe Resolvers::Analytics::InvoiceCollectionsResolver, type: :graphql 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  context 'without premium feature' do
-    it 'returns an error' do
+  context "without premium feature" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'unauthorized',
+        message: "unauthorized"
       )
     end
   end
 
-  context 'with premium feature' do
+  context "with premium feature" do
     around { |test| lago_premium!(&test) }
 
-    it 'returns a list of invoice collections' do
+    it "returns a list of invoice collections" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
-      invoice_collections_response = result['data']['invoiceCollections']
-      month = DateTime.parse invoice_collections_response['collection'].first['month']
+      invoice_collections_response = result["data"]["invoiceCollections"]
+      month = DateTime.parse invoice_collections_response["collection"].first["month"]
 
       aggregate_failures do
         expect(month).to eq(DateTime.current.beginning_of_month)
-        expect(invoice_collections_response['collection'].first['amountCents']).to eq('0')
-        expect(invoice_collections_response['collection'].first['invoicesCount']).to eq('0')
+        expect(invoice_collections_response["collection"].first["amountCents"]).to eq("0")
+        expect(invoice_collections_response["collection"].first["invoicesCount"]).to eq("0")
       end
     end
 
-    context 'without current organization' do
-      it 'returns an error' do
+    context "without current organization" do
+      it "returns an error" do
         result = execute_graphql(current_user: membership.user, query:)
 
         expect_graphql_error(
           result:,
-          message: 'Missing organization id',
+          message: "Missing organization id"
         )
       end
     end
 
-    context 'when not member of the organization' do
-      it 'returns an error' do
+    context "when not member of the organization" do
+      it "returns an error" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: create(:organization),
-          query:,
+          query:
         )
 
         expect_graphql_error(
           result:,
-          message: 'Not in organization',
+          message: "Not in organization"
         )
       end
     end
 
-    describe '#resolve' do
+    describe "#resolve" do
       subject(:resolve) { resolver.resolve }
 
       let(:resolver) { described_class.new(object: nil, context: nil, field: nil) }
@@ -96,7 +96,7 @@ RSpec.describe Resolvers::Analytics::InvoiceCollectionsResolver, type: :graphql 
         resolve
       end
 
-      it 'calls ::Analytics::InvoiceCollection.find_all_by' do
+      it "calls ::Analytics::InvoiceCollection.find_all_by" do
         expect(Analytics::InvoiceCollection).to have_received(:find_all_by).with(current_organization.id, months: 12)
       end
     end

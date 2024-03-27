@@ -2,7 +2,7 @@
 
 module Events
   class LastHourMv < ApplicationRecord
-    self.table_name = 'last_hour_events_mv'
+    self.table_name = "last_hour_events_mv"
 
     def readonly?
       true

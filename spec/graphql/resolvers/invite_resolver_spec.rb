@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::InviteResolver, type: :graphql do
   let(:query) do
@@ -23,35 +23,35 @@ RSpec.describe Resolvers::InviteResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:invite) { create(:invite, organization:) }
 
-  it 'returns a single invite' do
+  it "returns a single invite" do
     result = execute_graphql(
       query:,
       variables: {
-        token: invite.token,
-      },
+        token: invite.token
+      }
     )
 
-    data = result['data']['invite']
+    data = result["data"]["invite"]
 
-    expect(data['token']).to eq(invite.token)
-    expect(data['email']).to eq(invite.email)
-    expect(data['organization']['name']).to eq(organization.name)
+    expect(data["token"]).to eq(invite.token)
+    expect(data["email"]).to eq(invite.email)
+    expect(data["organization"]["name"]).to eq(organization.name)
   end
 
-  context 'when invite is not found' do
-    it 'returns an error' do
+  context "when invite is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: invite.organization,
         query:,
         variables: {
-          token: 'foo',
-        },
+          token: "foo"
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found',
+        message: "Resource not found"
       )
     end
   end

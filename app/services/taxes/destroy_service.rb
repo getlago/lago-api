@@ -9,7 +9,7 @@ module Taxes
     end
 
     def call
-      return result.not_found_failure!(resource: 'tax') unless tax
+      return result.not_found_failure!(resource: "tax") unless tax
 
       # NOTE: we must retrieve the list of draft invoice before proceeding to destroy
       #       as we need the applied_tax relation

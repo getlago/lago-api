@@ -15,7 +15,7 @@ module V1
           base_amount_cents: model.base_amount_cents,
           amount_cents: model.amount_cents,
           amount_currency: model.amount_currency,
-          created_at: model.created_at&.iso8601,
+          created_at: model.created_at&.iso8601
         }
       end
     end

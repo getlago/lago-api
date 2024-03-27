@@ -5,7 +5,7 @@ class AddUniqueIdToSubscriptions < ActiveRecord::Migration[7.0]
     add_column :subscriptions, :unique_id, :string
 
     LagoApi::Application.load_tasks
-    Rake::Task['subscriptions:fill_unique_id'].invoke
+    Rake::Task["subscriptions:fill_unique_id"].invoke
 
     change_column_null :subscriptions, :unique_id, false
   end

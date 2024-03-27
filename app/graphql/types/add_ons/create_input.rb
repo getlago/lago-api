@@ -3,7 +3,7 @@
 module Types
   module AddOns
     class CreateInput < Types::BaseInputObject
-      graphql_name 'CreateAddOnInput'
+      graphql_name "CreateAddOnInput"
 
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true

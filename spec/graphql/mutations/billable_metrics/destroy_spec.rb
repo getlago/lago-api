@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::BillableMetrics::Destroy, type: :graphql do
   let(:membership) { create(:membership) }
@@ -17,22 +17,22 @@ RSpec.describe Mutations::BillableMetrics::Destroy, type: :graphql do
     GQL
   end
 
-  it 'deletes a billable metric' do
+  it "deletes a billable metric" do
     result = execute_graphql(
       current_user: membership.user,
       query: mutation,
-      variables: { input: { id: billable_metric.id } },
+      variables: {input: {id: billable_metric.id}}
     )
 
-    data = result['data']['destroyBillableMetric']
-    expect(data['id']).to eq(billable_metric.id)
+    data = result["data"]["destroyBillableMetric"]
+    expect(data["id"]).to eq(billable_metric.id)
   end
 
-  context 'without current_user' do
-    it 'returns an error' do
+  context "without current_user" do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
-        variables: { input: { id: billable_metric.id } },
+        variables: {input: {id: billable_metric.id}}
       )
 
       expect_unauthorized_error(result)

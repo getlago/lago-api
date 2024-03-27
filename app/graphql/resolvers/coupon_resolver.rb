@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query a single coupon of an organization'
+    description "Query a single coupon of an organization"
 
-    argument :id, ID, required: true, description: 'Uniq ID of the coupon'
+    argument :id, ID, required: true, description: "Uniq ID of the coupon"
 
     type Types::Coupons::Object, null: true
 
@@ -16,7 +16,7 @@ module Resolvers
 
       current_organization.coupons.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'coupon')
+      not_found_error(resource: "coupon")
     end
   end
 end

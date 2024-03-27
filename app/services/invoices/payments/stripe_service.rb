@@ -38,13 +38,13 @@ module Invoices
           amount_cents: stripe_result.amount,
           amount_currency: stripe_result.currency&.upcase,
           provider_payment_id: stripe_result.id,
-          status: stripe_result.status,
+          status: stripe_result.status
         )
         payment.save!
 
         update_invoice_payment_status(
           payment_status: invoice_payment_status(payment.status),
-          processing: payment.status == 'processing',
+          processing: payment.status == "processing"
         )
 
         result.payment = payment
@@ -52,7 +52,7 @@ module Invoices
       end
 
       def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
-        payment = if metadata[:payment_type] == 'one-time'
+        payment = if metadata[:payment_type] == "one-time"
           create_payment(provider_payment_id:, metadata:)
         else
           Payment.find_by(provider_payment_id:)
@@ -67,7 +67,7 @@ module Invoices
 
         update_invoice_payment_status(
           payment_status: invoice_payment_status(status),
-          processing: status == 'processing',
+          processing: status == "processing"
         )
 
         result
@@ -81,17 +81,17 @@ module Invoices
         res = Stripe::Checkout::Session.create(
           payment_url_payload,
           {
-            api_key: stripe_api_key,
-          },
+            api_key: stripe_api_key
+          }
         )
 
-        result.payment_url = res['url']
+        result.payment_url = res["url"]
 
         result
       rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::AuthenticationError, Stripe::PermissionError => e
         deliver_error_webhook(e)
 
-        result.single_validation_failure!(error_code: 'payment_provider_error')
+        result.single_validation_failure!(error_code: "payment_provider_error")
       end
 
       private
@@ -111,7 +111,7 @@ module Invoices
           payment_provider_customer_id: customer.stripe_customer.id,
           amount_cents: invoice.total_amount_cents,
           amount_currency: invoice.currency&.upcase,
-          provider_payment_id:,
+          provider_payment_id:
         )
       end
 
@@ -144,11 +144,11 @@ module Invoices
         # NOTE: Retrieve list of existing payment_methods
         payment_method = Stripe::PaymentMethod.list(
           {
-            customer: customer.stripe_customer.provider_customer_id,
+            customer: customer.stripe_customer.provider_customer_id
           },
           {
-            api_key: stripe_api_key,
-          },
+            api_key: stripe_api_key
+          }
         ).first
         customer.stripe_customer.payment_method_id = payment_method&.id
         customer.stripe_customer.save!
@@ -160,8 +160,8 @@ module Invoices
         result = Stripe::Customer.retrieve(
           customer.stripe_customer.provider_customer_id,
           {
-            api_key: stripe_api_key,
-          },
+            api_key: stripe_api_key
+          }
         )
         # TODO: stripe customer should be updated/deleted
         return if result.deleted?
@@ -181,13 +181,13 @@ module Invoices
           stripe_payment_payload,
           {
             api_key: stripe_api_key,
-            idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}",
-          },
+            idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}"
+          }
         )
       rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
         #       For now we keep it as pending, the user can still update it manually
-        return if e.code == 'amount_too_small'
+        return if e.code == "amount_too_small"
 
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
@@ -209,8 +209,8 @@ module Invoices
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,
             invoice_issuing_date: invoice.issuing_date.iso8601,
-            invoice_type: invoice.invoice_type,
-          },
+            invoice_type: invoice.invoice_type
+          }
         }
       end
 
@@ -223,12 +223,12 @@ module Invoices
                 currency: invoice.currency.downcase,
                 unit_amount: invoice.total_amount_cents,
                 product_data: {
-                  name: invoice.number,
-                },
-              },
-            },
+                  name: invoice.number
+                }
+              }
+            }
           ],
-          mode: 'payment',
+          mode: "payment",
           success_url: success_redirect_url,
           customer: customer.stripe_customer.provider_customer_id,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
@@ -238,9 +238,9 @@ module Invoices
               lago_invoice_id: invoice.id,
               invoice_issuing_date: invoice.issuing_date.iso8601,
               invoice_type: invoice.invoice_type,
-              payment_type: 'one-time',
-            },
-          },
+              payment_type: "one-time"
+            }
+          }
         }
       end
 
@@ -258,9 +258,9 @@ module Invoices
           params: {
             payment_status:,
             # NOTE: A proper `processing` payment status should be introduced for invoices
-            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded,
+            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
           },
-          webhook_notification: deliver_webhook,
+          webhook_notification: deliver_webhook
         )
         result.raise_if_error!
       end
@@ -273,13 +273,13 @@ module Invoices
         return unless invoice.organization.webhook_endpoints.any?
 
         SendWebhookJob.perform_later(
-          'invoice.payment_failure',
+          "invoice.payment_failure",
           invoice,
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {
             message: stripe_error.message,
-            error_code: stripe_error.code,
-          },
+            error_code: stripe_error.code
+          }
         )
       end
 
@@ -295,7 +295,7 @@ module Invoices
         # NOTE: Invoice exists but status is failed
         return result if invoice.failed?
 
-        result.not_found_failure!(resource: 'stripe_payment')
+        result.not_found_failure!(resource: "stripe_payment")
       end
 
       def stripe_payment_provider

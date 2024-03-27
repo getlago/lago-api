@@ -22,10 +22,10 @@ module BillableMetrics
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = event_store.count
-        result.options = { running_total: running_total(options) }
+        result.options = {running_total: running_total(options)}
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -61,7 +61,7 @@ module BillableMetrics
 
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       # NOTE: Return cumulative sum of field_name based on the number of free units (per_events or per_total_aggregation).
@@ -90,19 +90,19 @@ module BillableMetrics
       end
 
       def compute_pay_in_advance_aggregation
-        return BigDecimal(0) unless event
-        return BigDecimal(0) if event.properties.blank?
+        return BigDecimal("0") unless event
+        return BigDecimal("0") if event.properties.blank?
 
         value = event.properties.fetch(billable_metric.field_name, 0).to_s
 
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: grouped_by_values,
+          grouped_by: grouped_by_values
         )
 
         unless cached_aggregation
-          return_value = BigDecimal(value).negative? ? '0' : value
+          return_value = BigDecimal(value).negative? ? "0" : value
           handle_event_metadata(current_aggregation: value, max_aggregation: value, units_applied: value)
 
           return BigDecimal(return_value)

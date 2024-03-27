@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::CreditNotesController, type: :request do
   let(:organization) { create(:organization) }
@@ -13,18 +13,18 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       :invoice,
       organization:,
       customer:,
-      payment_status: 'succeeded',
-      currency: 'EUR',
+      payment_status: "succeeded",
+      currency: "EUR",
       fees_amount_cents: 100,
       taxes_amount_cents: 120,
-      total_amount_cents: 120,
+      total_amount_cents: 120
     )
   end
 
-  describe 'GET /credit_notes/:id' do
+  describe "GET /credit_notes/:id" do
     before { credit_note_items }
 
-    it 'returns a credit note' do
+    it "returns a credit note" do
       get_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}")
 
       aggregate_failures do
@@ -46,7 +46,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
           balance_amount_currency: credit_note.balance_amount_currency,
           created_at: credit_note.created_at.iso8601,
           updated_at: credit_note.updated_at.iso8601,
-          applied_taxes: [],
+          applied_taxes: []
         )
 
         expect(json[:credit_note][:items].count).to eq(2)
@@ -55,39 +55,39 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(json[:credit_note][:items][0]).to include(
           lago_id: item.id,
           amount_cents: item.amount_cents,
-          amount_currency: item.amount_currency,
+          amount_currency: item.amount_currency
         )
 
         expect(json[:credit_note][:items][0][:fee][:item]).to include(
           type: item.fee.fee_type,
           code: item.fee.item_code,
-          name: item.fee.item_name,
+          name: item.fee.item_name
         )
       end
     end
 
-    context 'when credit note does not exists' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/credit_notes/foo')
+    context "when credit note does not exists" do
+      it "returns not found" do
+        get_with_token(organization, "/api/v1/credit_notes/foo")
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note is draft' do
+    context "when credit note is draft" do
       let(:credit_note) { create(:credit_note, :draft) }
 
-      it 'returns not found' do
+      it "returns not found" do
         get_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}")
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note belongs to another organization' do
+    context "when credit note belongs to another organization" do
       let(:wrong_credit_note) { create(:credit_note) }
 
-      it 'returns not found' do
+      it "returns not found" do
         get_with_token(organization, "/api/v1/credit_notes/#{wrong_credit_note.id}")
 
         expect(response).to have_http_status(:not_found)
@@ -95,32 +95,32 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'PUT /credit_notes/:id' do
-    let(:update_params) { { refund_status: 'succeeded' } }
+  describe "PUT /credit_notes/:id" do
+    let(:update_params) { {refund_status: "succeeded"} }
 
-    it 'updates the credit note' do
+    it "updates the credit note" do
       put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}", credit_note: update_params)
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
         expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
-        expect(json[:credit_note][:refund_status]).to eq('succeeded')
+        expect(json[:credit_note][:refund_status]).to eq("succeeded")
       end
     end
 
-    context 'when credit note does not exist' do
-      it 'returns a not found error' do
-        put_with_token(organization, '/api/v1/credit_notes/555', credit_note: update_params)
+    context "when credit note does not exist" do
+      it "returns a not found error" do
+        put_with_token(organization, "/api/v1/credit_notes/555", credit_note: update_params)
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when provided refund status is invalid' do
-      let(:update_params) { { refund_status: 'foo_bar' } }
+    context "when provided refund status is invalid" do
+      let(:update_params) { {refund_status: "foo_bar"} }
 
-      it 'returns an unprocessable entity error' do
+      it "returns an unprocessable entity error" do
         put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}", credit_note: update_params)
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -128,8 +128,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'GET /credit_notes/:id/download' do
-    it 'enqueues a job to generate the PDF' do
+  describe "GET /credit_notes/:id/download" do
+    it "enqueues a job to generate the PDF" do
       post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
 
       aggregate_failures do
@@ -138,10 +138,10 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'when a file is attached to the credit note' do
+    context "when a file is attached to the credit note" do
       let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
 
-      it 'returns the credit note object' do
+      it "returns the credit note object" do
         post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
 
         aggregate_failures do
@@ -151,28 +151,28 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'when credit note does not exist' do
-      it 'returns not found' do
-        post_with_token(organization, '/api/v1/credit_notes/foo/download')
+    context "when credit note does not exist" do
+      it "returns not found" do
+        post_with_token(organization, "/api/v1/credit_notes/foo/download")
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note is draft' do
+    context "when credit note is draft" do
       let(:credit_note) { create(:credit_note, :draft) }
 
-      it 'returns not found' do
+      it "returns not found" do
         post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note belongs to another organization' do
+    context "when credit note belongs to another organization" do
       let(:wrong_credit_note) { create(:credit_note) }
 
-      it 'returns not found' do
+      it "returns not found" do
         post_with_token(organization, "/api/v1/credit_notes/#{wrong_credit_note.id}/download")
 
         expect(response).to have_http_status(:not_found)
@@ -180,7 +180,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'GET /credit_notes' do
+  describe "GET /credit_notes" do
     let(:second_customer) { create(:customer, organization:) }
     let(:second_invoice) { create(:invoice, customer: second_customer, organization:) }
     let(:second_credit_note) { create(:credit_note, invoice: second_invoice, customer: second_invoice.customer) }
@@ -192,8 +192,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       draft_credit_note
     end
 
-    it 'returns a list of credit_notes' do
-      get_with_token(organization, '/api/v1/credit_notes')
+    it "returns a list of credit_notes" do
+      get_with_token(organization, "/api/v1/credit_notes")
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -203,9 +203,9 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with pagination' do
-      it 'returns the metadata' do
-        get_with_token(organization, '/api/v1/credit_notes?page=1&per_page=1')
+    context "with pagination" do
+      it "returns the metadata" do
+        get_with_token(organization, "/api/v1/credit_notes?page=1&per_page=1")
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -216,14 +216,14 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
             next_page: 2,
             prev_page: nil,
             total_pages: 2,
-            total_count: 2,
+            total_count: 2
           )
         end
       end
     end
 
-    context 'with external_customer_id filter' do
-      it 'returns credit notes of the customer' do
+    context "with external_customer_id filter" do
+      it "returns credit notes of the customer" do
         get_with_token(organization, "/api/v1/credit_notes?external_customer_id=#{customer.external_id}")
 
         aggregate_failures do
@@ -236,7 +236,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'POST /credit_notes' do
+  describe "POST /credit_notes" do
     let(:fee1) { create(:fee, invoice:) }
     let(:fee2) { create(:charge_fee, invoice:) }
 
@@ -245,95 +245,95 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     let(:create_params) do
       {
         invoice_id:,
-        reason: 'duplicated_charge',
-        description: 'Duplicated charge',
+        reason: "duplicated_charge",
+        description: "Duplicated charge",
         credit_amount_cents: 10,
         refund_amount_cents: 5,
         items: [
           {
             fee_id: fee1.id,
-            amount_cents: 10,
+            amount_cents: 10
           },
           {
             fee_id: fee2.id,
-            amount_cents: 5,
-          },
-        ],
+            amount_cents: 5
+          }
+        ]
       }
     end
 
     around { |test| lago_premium!(&test) }
 
-    it 'creates a credit note' do
-      post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
+    it "creates a credit note" do
+      post_with_token(organization, "/api/v1/credit_notes", {credit_note: create_params})
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
         expect(json[:credit_note]).to include(
-          credit_status: 'available',
-          refund_status: 'pending',
-          reason: 'duplicated_charge',
-          description: 'Duplicated charge',
+          credit_status: "available",
+          refund_status: "pending",
+          reason: "duplicated_charge",
+          description: "Duplicated charge",
           total_amount_cents: 15,
-          total_amount_currency: 'EUR',
+          total_amount_currency: "EUR",
           credit_amount_cents: 10,
-          credit_amount_currency: 'EUR',
+          credit_amount_currency: "EUR",
           balance_amount_cents: 10,
-          balance_amount_currency: 'EUR',
+          balance_amount_currency: "EUR",
           refund_amount_cents: 5,
-          refund_amount_currency: 'EUR',
-          applied_taxes: [],
+          refund_amount_currency: "EUR",
+          applied_taxes: []
         )
 
         expect(json[:credit_note][:items][0][:lago_id]).to be_present
         expect(json[:credit_note][:items][0][:amount_cents]).to eq(10)
-        expect(json[:credit_note][:items][0][:amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][0][:amount_currency]).to eq("EUR")
         expect(json[:credit_note][:items][0][:fee][:lago_id]).to eq(fee1.id)
 
         expect(json[:credit_note][:items][1][:lago_id]).to be_present
         expect(json[:credit_note][:items][1][:amount_cents]).to eq(5)
-        expect(json[:credit_note][:items][1][:amount_currency]).to eq('EUR')
+        expect(json[:credit_note][:items][1][:amount_currency]).to eq("EUR")
         expect(json[:credit_note][:items][1][:fee][:lago_id]).to eq(fee2.id)
       end
     end
 
-    context 'when invoice is not found' do
-      let(:invoice_id) { 'foo_id' }
+    context "when invoice is not found" do
+      let(:invoice_id) { "foo_id" }
 
-      it 'returns not found' do
-        post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
+      it "returns not found" do
+        post_with_token(organization, "/api/v1/credit_notes", {credit_note: create_params})
 
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'PUT /credit_notes/:id/void' do
-    it 'voids the credit note' do
+  describe "PUT /credit_notes/:id/void" do
+    it "voids the credit note" do
       put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/void")
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
         expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
-        expect(json[:credit_note][:credit_status]).to eq('voided')
+        expect(json[:credit_note][:credit_status]).to eq("voided")
         expect(json[:credit_note][:balance_amount_cents]).to eq(0)
       end
     end
 
-    context 'when credit note does not exist' do
-      it 'returns a not found error' do
-        put_with_token(organization, '/api/v1/credit_notes/555/void')
+    context "when credit note does not exist" do
+      it "returns a not found error" do
+        put_with_token(organization, "/api/v1/credit_notes/555/void")
 
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note is not voidable' do
+    context "when credit note is not voidable" do
       before { credit_note.update!(credit_amount_cents: 0, credit_status: :voided) }
 
-      it 'returns an unprocessable entity error' do
+      it "returns an unprocessable entity error" do
         put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/void")
 
         expect(response).to have_http_status(:method_not_allowed)
@@ -341,7 +341,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'GET /credit_notes/estimate' do
+  describe "GET /credit_notes/estimate" do
     let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100) }
 
     let(:invoice_id) { invoice.id }
@@ -349,14 +349,14 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     let(:estimate_params) do
       {
         invoice_id:,
-        items: fees.map { |f| { fee_id: f.id, amount_cents: 50 } },
+        items: fees.map { |f| {fee_id: f.id, amount_cents: 50} }
       }
     end
 
     around { |test| lago_premium!(&test) }
 
-    it 'returns the computed amounts for credit note creation' do
-      post_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
+    it "returns the computed amounts for credit note creation" do
+      post_with_token(organization, "/api/v1/credit_notes/estimate", {credit_note: estimate_params})
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -364,7 +364,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         estimated_credit_note = json[:estimated_credit_note]
         expect(estimated_credit_note[:lago_invoice_id]).to eq(invoice.id)
         expect(estimated_credit_note[:invoice_number]).to eq(invoice.number)
-        expect(estimated_credit_note[:currency]).to eq('EUR')
+        expect(estimated_credit_note[:currency]).to eq("EUR")
         expect(estimated_credit_note[:taxes_amount_cents]).to eq(0)
         expect(estimated_credit_note[:sub_total_excluding_taxes_amount_cents]).to eq(100)
         expect(estimated_credit_note[:max_creditable_amount_cents]).to eq(100)
@@ -375,11 +375,11 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with invalid invoice' do
+    context "with invalid invoice" do
       let(:invoice) { create(:invoice) }
 
-      it 'returns not found' do
-        post_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
+      it "returns not found" do
+        post_with_token(organization, "/api/v1/credit_notes/estimate", {credit_note: estimate_params})
 
         expect(response).to have_http_status(:not_found)
       end

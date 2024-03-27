@@ -10,9 +10,9 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') unless invoice
+      return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless License.premium?
-      return result.not_allowed_failure!(code: 'invalid_type_or_status') unless valid_type_or_status?
+      return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
       @credit_note = CreditNote.new(
         customer: invoice.customer,
@@ -20,7 +20,7 @@ module CreditNotes
         total_amount_currency: invoice.currency,
         credit_amount_currency: invoice.currency,
         refund_amount_currency: invoice.currency,
-        balance_amount_currency: invoice.currency,
+        balance_amount_currency: invoice.currency
       )
 
       validate_items
@@ -50,7 +50,7 @@ module CreditNotes
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),
           amount_cents: amount_cents.round,
           precise_amount_cents: amount_cents,
-          amount_currency: invoice.currency,
+          amount_currency: invoice.currency
         )
         credit_note.items << item
 
@@ -65,7 +65,7 @@ module CreditNotes
     def compute_amounts_and_taxes
       taxes_result = CreditNotes::ApplyTaxesService.call(
         invoice:,
-        items: credit_note.items,
+        items: credit_note.items
       )
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents

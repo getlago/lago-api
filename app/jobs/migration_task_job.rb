@@ -4,7 +4,7 @@ class TaskNotFoundError < StandardError
 end
 
 class MigrationTaskJob < ApplicationJob
-  queue_as 'default'
+  queue_as "default"
 
   retry_on TaskNotFoundError, attempts: 5
 

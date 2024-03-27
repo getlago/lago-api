@@ -3,7 +3,7 @@
 module Types
   module CreditNotes
     class RefundStatusTypeEnum < Types::BaseEnum
-      graphql_name 'CreditNoteRefundStatusEnum'
+      graphql_name "CreditNoteRefundStatusEnum"
 
       CreditNote::REFUND_STATUS.each do |type|
         value type

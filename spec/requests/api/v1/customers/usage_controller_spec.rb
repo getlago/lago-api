@@ -1,51 +1,51 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:disable RSpec/FilePath
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
 
-  let(:plan) { create(:plan, interval: 'monthly') }
+  let(:plan) { create(:plan, interval: "monthly") }
 
   let(:subscription) do
     create(
       :subscription,
       plan:,
       customer:,
-      started_at: Time.zone.now - 2.years,
+      started_at: Time.zone.now - 2.years
     )
   end
 
-  describe 'GET /customers/:customer_id/current_usage' do
+  describe "GET /customers/:customer_id/current_usage" do
     let(:tax) { create(:tax, organization:, rate: 20) }
 
-    let(:metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+    let(:metric) { create(:billable_metric, aggregation_type: "count_agg") }
     let(:charge) do
       create(
         :graduated_charge,
         plan: subscription.plan,
-        charge_model: 'graduated',
+        charge_model: "graduated",
         billable_metric: metric,
         properties: {
           graduated_ranges: [
             {
               from_value: 0,
               to_value: nil,
-              per_unit_amount: '0.01',
-              flat_amount: '0.01',
-            },
-          ],
-        },
+              per_unit_amount: "0.01",
+              flat_amount: "0.01"
+            }
+          ]
+        }
       )
     end
 
     let(:path) do
       [
-        '/api/v1/customers',
+        "/api/v1/customers",
         customer.external_id,
-        "current_usage?external_subscription_id=#{subscription.external_id}",
-      ].join('/')
+        "current_usage?external_subscription_id=#{subscription.external_id}"
+      ].join("/")
     end
 
     before do
@@ -60,11 +60,11 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
         customer:,
         subscription:,
         code: metric.code,
-        timestamp: Time.zone.now,
+        timestamp: Time.zone.now
       )
     end
 
-    it 'returns the usage for the customer' do
+    it "returns the usage for the customer" do
       get_with_token(organization, path)
 
       aggregate_failures do
@@ -74,27 +74,27 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
         expect(json[:customer_usage][:to_date]).to eq(Time.zone.today.end_of_month.iso8601)
         expect(json[:customer_usage][:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
         expect(json[:customer_usage][:amount_cents]).to eq(5)
-        expect(json[:customer_usage][:amount_currency]).to eq('EUR')
+        expect(json[:customer_usage][:amount_currency]).to eq("EUR")
         expect(json[:customer_usage][:total_amount_cents]).to eq(6)
-        expect(json[:customer_usage][:total_amount_currency]).to eq('EUR')
+        expect(json[:customer_usage][:total_amount_currency]).to eq("EUR")
         expect(json[:customer_usage][:vat_amount_cents]).to eq(1)
-        expect(json[:customer_usage][:vat_amount_currency]).to eq('EUR')
+        expect(json[:customer_usage][:vat_amount_currency]).to eq("EUR")
 
         charge_usage = json[:customer_usage][:charges_usage].first
         expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
         expect(charge_usage[:billable_metric][:code]).to eq(metric.code)
-        expect(charge_usage[:billable_metric][:aggregation_type]).to eq('count_agg')
-        expect(charge_usage[:charge][:charge_model]).to eq('graduated')
-        expect(charge_usage[:units]).to eq('4.0')
+        expect(charge_usage[:billable_metric][:aggregation_type]).to eq("count_agg")
+        expect(charge_usage[:charge][:charge_model]).to eq("graduated")
+        expect(charge_usage[:units]).to eq("4.0")
         expect(charge_usage[:amount_cents]).to eq(5)
-        expect(charge_usage[:amount_currency]).to eq('EUR')
+        expect(charge_usage[:amount_currency]).to eq("EUR")
         expect(charge_usage[:groups]).to eq([])
       end
     end
 
-    context 'with one dimension group' do
-      let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
-      let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
+    context "with one dimension group" do
+      let(:aws) { create(:group, billable_metric: metric, key: "cloud", value: "aws") }
+      let(:google) { create(:group, billable_metric: metric, key: "cloud", value: "google") }
       let(:charge) do
         create(
           :standard_charge,
@@ -105,14 +105,14 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
             build(
               :group_property,
               group: aws,
-              values: { amount: '10', amount_currency: 'EUR' },
+              values: {amount: "10", amount_currency: "EUR"}
             ),
             build(
               :group_property,
               group: google,
-              values: { amount: '20', amount_currency: 'EUR' },
-            ),
-          ],
+              values: {amount: "20", amount_currency: "EUR"}
+            )
+          ]
         )
       end
 
@@ -125,7 +125,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'aws' },
+          properties: {cloud: "aws"}
         )
 
         create(
@@ -135,43 +135,43 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'google' },
+          properties: {cloud: "google"}
         )
       end
 
-      it 'returns the group usage for the customer' do
+      it "returns the group usage for the customer" do
         get_with_token(organization, path)
 
         charge_usage = json[:customer_usage][:charges_usage].first
         groups_usage = charge_usage[:groups]
 
         aggregate_failures do
-          expect(charge_usage[:units]).to eq('4.0')
+          expect(charge_usage[:units]).to eq("4.0")
           expect(charge_usage[:amount_cents]).to eq(5000)
           expect(groups_usage).to contain_exactly(
             {
               lago_id: aws.id,
-              key: 'cloud',
-              value: 'aws',
-              units: '3.0',
+              key: "cloud",
+              value: "aws",
+              units: "3.0",
               amount_cents: 3000,
-              events_count: 3,
+              events_count: 3
             },
-            { lago_id: google.id, key: 'cloud', value: 'google', units: '1.0', amount_cents: 2000, events_count: 1 },
+            {lago_id: google.id, key: "cloud", value: "google", units: "1.0", amount_cents: 2000, events_count: 1}
           )
         end
       end
     end
 
-    context 'with two dimensions group' do
-      let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
-      let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
-      let(:aws_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: aws.id) }
+    context "with two dimensions group" do
+      let(:aws) { create(:group, billable_metric: metric, key: "cloud", value: "aws") }
+      let(:google) { create(:group, billable_metric: metric, key: "cloud", value: "google") }
+      let(:aws_usa) { create(:group, billable_metric: metric, key: "region", value: "usa", parent_group_id: aws.id) }
       let(:aws_france) do
-        create(:group, billable_metric: metric, key: 'region', value: 'france', parent_group_id: aws.id)
+        create(:group, billable_metric: metric, key: "region", value: "france", parent_group_id: aws.id)
       end
       let(:google_usa) do
-        create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: google.id)
+        create(:group, billable_metric: metric, key: "region", value: "usa", parent_group_id: google.id)
       end
 
       let(:charge) do
@@ -184,19 +184,19 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
             build(
               :group_property,
               group: aws_usa,
-              values: { amount: '10', amount_currency: 'EUR' },
+              values: {amount: "10", amount_currency: "EUR"}
             ),
             build(
               :group_property,
               group: aws_france,
-              values: { amount: '20', amount_currency: 'EUR' },
+              values: {amount: "20", amount_currency: "EUR"}
             ),
             build(
               :group_property,
               group: google_usa,
-              values: { amount: '30', amount_currency: 'EUR' },
-            ),
-          ],
+              values: {amount: "30", amount_currency: "EUR"}
+            )
+          ]
         )
       end
 
@@ -209,7 +209,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'aws', region: 'usa' },
+          properties: {cloud: "aws", region: "usa"}
         )
 
         create(
@@ -219,7 +219,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'aws', region: 'france' },
+          properties: {cloud: "aws", region: "france"}
         )
 
         create(
@@ -229,39 +229,39 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'google', region: 'usa' },
+          properties: {cloud: "google", region: "usa"}
         )
       end
 
-      it 'returns the group usage for the customer' do
+      it "returns the group usage for the customer" do
         get_with_token(organization, path)
 
         charge_usage = json[:customer_usage][:charges_usage].first
         groups_usage = charge_usage[:groups]
 
         aggregate_failures do
-          expect(charge_usage[:units]).to eq('4.0')
+          expect(charge_usage[:units]).to eq("4.0")
           expect(charge_usage[:amount_cents]).to eq(7000)
           expect(groups_usage).to contain_exactly(
             {
               lago_id: aws_usa.id,
-              key: 'aws',
-              value: 'usa',
-              units: '2.0',
+              key: "aws",
+              value: "usa",
+              units: "2.0",
               amount_cents: 2000,
-              events_count: 2,
+              events_count: 2
             },
-            { lago_id: aws_france.id, key: 'aws', value: 'france', units: '1.0', amount_cents: 2000, events_count: 1 },
-            { lago_id: google_usa.id, key: 'google', value: 'usa', units: '1.0', amount_cents: 3000, events_count: 1 },
+            {lago_id: aws_france.id, key: "aws", value: "france", units: "1.0", amount_cents: 2000, events_count: 1},
+            {lago_id: google_usa.id, key: "google", value: "usa", units: "1.0", amount_cents: 3000, events_count: 1}
           )
         end
       end
     end
 
-    context 'when customer does not belongs to the organization' do
+    context "when customer does not belongs to the organization" do
       let(:customer) { create(:customer) }
 
-      it 'returns not found' do
+      it "returns not found" do
         get_with_token(organization, path)
 
         expect(response).to have_http_status(:not_found)
@@ -269,13 +269,13 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
     end
   end
 
-  describe 'GET /customers/:customer_id/past_usage' do
+  describe "GET /customers/:customer_id/past_usage" do
     let(:invoice_subscription) do
       create(
         :invoice_subscription,
-        charges_from_datetime: DateTime.parse('2023-08-17T00:00:00'),
-        charges_to_datetime: DateTime.parse('2023-09-16T23:59:59'),
-        subscription:,
+        charges_from_datetime: DateTime.parse("2023-08-17T00:00:00"),
+        charges_to_datetime: DateTime.parse("2023-09-16T23:59:59"),
+        subscription:
       )
     end
 
@@ -292,10 +292,10 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
 
     let(:path) do
       [
-        '/api/v1/customers',
+        "/api/v1/customers",
         customer.external_id,
-        "past_usage?external_subscription_id=#{subscription.external_id}&periods_count=2",
-      ].join('/')
+        "past_usage?external_subscription_id=#{subscription.external_id}&periods_count=2"
+      ].join("/")
     end
 
     before do
@@ -303,7 +303,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
       fee2
     end
 
-    it 'returns the past usage' do
+    it "returns the past usage" do
       get_with_token(organization, path)
 
       aggregate_failures do
@@ -334,32 +334,32 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
       end
     end
 
-    context 'when missing external_subscription_id' do
+    context "when missing external_subscription_id" do
       let(:path) do
         [
-          '/api/v1/customers',
+          "/api/v1/customers",
           customer.external_id,
-          'past_usage',
-        ].join('/')
+          "past_usage"
+        ].join("/")
       end
 
-      it 'returns an unprocessable entity' do
+      it "returns an unprocessable entity" do
         get_with_token(organization, path)
 
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
 
-    context 'with invalid billable metric code' do
+    context "with invalid billable metric code" do
       let(:path) do
         [
-          '/api/v1/customers',
+          "/api/v1/customers",
           customer.external_id,
-          "past_usage?billable_metric_code=foo&external_subscription_id=#{subscription.external_id}",
-        ].join('/')
+          "past_usage?billable_metric_code=foo&external_subscription_id=#{subscription.external_id}"
+        ].join("/")
       end
 
-      it 'returns a not found error' do
+      it "returns a not found error" do
         get_with_token(organization, path)
 
         expect(response).to have_http_status(:not_found)

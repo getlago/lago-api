@@ -22,10 +22,10 @@ module Invoices
         invoice.update!(ready_to_be_refreshed: false) if invoice.ready_to_be_refreshed?
 
         old_fee_values = invoice_credit_note_items.map do |item|
-          { credit_note_item_id: item.id, fee_amount_cents: item.fee&.amount_cents }
+          {credit_note_item_id: item.id, fee_amount_cents: item.fee&.amount_cents}
         end
         cn_subscription_ids = invoice.credit_notes.map do |cn|
-          { credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id) }
+          {credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id)}
         end
         invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
 
@@ -41,13 +41,13 @@ module Invoices
           subscriptions: Subscription.find(subscription_ids),
           timestamp:,
           recurring:,
-          refresh: true,
+          refresh: true
         ).raise_if_error!
 
         calculate_result = Invoices::CalculateFeesService.call(
           invoice: invoice.reload,
           recurring:,
-          context:,
+          context:
         )
 
         invoice.credit_notes.each do |credit_note|
@@ -72,15 +72,15 @@ module Invoices
     def fetch_timestamp
       fee = invoice.fees.first
       # NOTE: Adding 1 second because of to_i rounding.
-      return invoice.created_at + 1.second unless fee&.properties&.[]('timestamp')
+      return invoice.created_at + 1.second unless fee&.properties&.[]("timestamp")
 
-      DateTime.parse(fee.properties['timestamp'])
+      DateTime.parse(fee.properties["timestamp"])
     end
 
     def invoice_credit_note_items
       CreditNoteItem
         .joins(:credit_note)
-        .where(credit_note: { invoice_id: invoice.id })
+        .where(credit_note: {invoice_id: invoice.id})
     end
   end
 end

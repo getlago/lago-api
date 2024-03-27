@@ -7,7 +7,7 @@ module Api
         service = ::Customers::CreateService.new
         result = service.create_from_api(
           organization: current_organization,
-          params: create_params.to_h.deep_symbolize_keys,
+          params: create_params.to_h.deep_symbolize_keys
         )
 
         if result.success?
@@ -26,9 +26,9 @@ module Api
           render(
             json: {
               customer: {
-                portal_url: result.url,
-              },
-            },
+                portal_url: result.url
+              }
+            }
           )
         else
           render_error_response(result)
@@ -44,17 +44,17 @@ module Api
           json: ::CollectionSerializer.new(
             customers,
             ::V1::CustomerSerializer,
-            collection_name: 'customers',
+            collection_name: "customers",
             meta: pagination_metadata(customers),
-            includes: %i[taxes],
-          ),
+            includes: %i[taxes]
+          )
         )
       end
 
       def show
         customer = current_organization.customers.find_by(external_id: params[:external_id])
 
-        return not_found_error(resource: 'customer') unless customer
+        return not_found_error(resource: "customer") unless customer
 
         render_customer(customer)
       end
@@ -79,9 +79,9 @@ module Api
           render(
             json: ::V1::PaymentProviders::CustomerCheckoutSerializer.new(
               customer,
-              root_name: 'customer',
-              checkout_url: result.checkout_url,
-            ),
+              root_name: "customer",
+              checkout_url: result.checkout_url
+            )
           )
         else
           render_error_response(result)
@@ -122,15 +122,15 @@ module Api
 
             # NOTE(legacy): vat has been moved to tax model
             :vat_rate,
-            provider_payment_methods: [],
+            provider_payment_methods: []
           ],
           metadata: [
             :id,
             :key,
             :value,
-            :display_in_invoice,
+            :display_in_invoice
           ],
-          tax_codes: [],
+          tax_codes: []
         )
       end
 
@@ -138,9 +138,9 @@ module Api
         render(
           json: ::V1::CustomerSerializer.new(
             customer,
-            root_name: 'customer',
-            includes: %i[taxes],
-          ),
+            root_name: "customer",
+            includes: %i[taxes]
+          )
         )
       end
     end

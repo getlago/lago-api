@@ -5,10 +5,10 @@ module V1
     class InvoicedUsageSerializer < ModelSerializer
       def serialize
         {
-          month: model['month'],
-          code: model['code'],
-          currency: model['currency'],
-          amount_cents: model['amount_cents'],
+          month: model["month"],
+          code: model["code"],
+          currency: model["currency"],
+          amount_cents: model["amount_cents"]
         }
       end
     end

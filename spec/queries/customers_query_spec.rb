@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CustomersQuery, type: :query do
   subject(:customer_query) do
@@ -11,13 +11,13 @@ RSpec.describe CustomersQuery, type: :query do
   let(:organization) { membership.organization }
 
   let(:customer_first) do
-    create(:customer, organization:, name: 'defgh', external_id: '11', email: '1@example.com')
+    create(:customer, organization:, name: "defgh", external_id: "11", email: "1@example.com")
   end
   let(:customer_second) do
-    create(:customer, organization:, name: 'abcde', external_id: '22', email: '2@example.com')
+    create(:customer, organization:, name: "abcde", external_id: "22", email: "2@example.com")
   end
   let(:customer_third) do
-    create(:customer, organization:, name: 'presuv', external_id: '33', email: '3@example.com')
+    create(:customer, organization:, name: "presuv", external_id: "33", email: "3@example.com")
   end
 
   before do
@@ -26,11 +26,11 @@ RSpec.describe CustomersQuery, type: :query do
     customer_third
   end
 
-  it 'returns all customers' do
+  it "returns all customers" do
     result = customer_query.call(
       search_term: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.customers.pluck(:id)
@@ -43,12 +43,12 @@ RSpec.describe CustomersQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term' do
-    it 'returns only two customers' do
+  context "when searching for /de/ term" do
+    it "returns only two customers" do
       result = customer_query.call(
-        search_term: 'de',
+        search_term: "de",
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.customers.pluck(:id)
@@ -62,15 +62,15 @@ RSpec.describe CustomersQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term and filtering by id' do
-    it 'returns only one customer' do
+  context "when searching for /de/ term and filtering by id" do
+    it "returns only one customer" do
       result = customer_query.call(
-        search_term: 'de',
+        search_term: "de",
         page: 1,
         limit: 10,
         filters: {
-          ids: [customer_second.id],
-        },
+          ids: [customer_second.id]
+        }
       )
 
       returned_ids = result.customers.pluck(:id)

@@ -3,9 +3,9 @@
 module LagoEuVat
   class Rate
     def initialize
-      file_path = Rails.root.join('lib/lago_eu_vat/lago_eu_vat/eu_vat_rates.json')
+      file_path = Rails.root.join("lib/lago_eu_vat/lago_eu_vat/eu_vat_rates.json")
       json_file = File.read(file_path)
-      @json_countries_rates = JSON.parse(json_file)['items']
+      @json_countries_rates = JSON.parse(json_file)["items"]
     end
 
     def countries_code
@@ -15,10 +15,10 @@ module LagoEuVat
     def country_rates(country_code:)
       # NOTE: country rates are ordered by date, so we select the most recent applicable
       country_rates = json_countries_rates[country_code].select do |period|
-        Time.zone.now >= DateTime.parse(period['effective_from'])
+        Time.zone.now >= DateTime.parse(period["effective_from"])
       end
 
-      country_rates.first.fetch('rates')
+      country_rates.first.fetch("rates")
     end
 
     private

@@ -10,8 +10,8 @@ module Memberships
     end
 
     def call
-      return result.not_found_failure!(resource: 'user') unless user
-      return result.not_found_failure!(resource: 'organization') unless organization
+      return result.not_found_failure!(resource: "user") unless user
+      return result.not_found_failure!(resource: "organization") unless organization
 
       result.membership = Membership.create!(user:, organization:)
       result

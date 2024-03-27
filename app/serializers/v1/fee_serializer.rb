@@ -23,7 +23,7 @@ module V1
           group_invoice_display_name: model.group_name,
           lago_item_id: model.item_id,
           item_type: model.item_type,
-          grouped_by: model.grouped_by,
+          grouped_by: model.grouped_by
         },
         pay_in_advance:,
         invoiceable:,
@@ -42,7 +42,7 @@ module V1
         succeeded_at: model.succeeded_at&.iso8601,
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
-        amount_details: model.amount_details,
+        amount_details: model.amount_details
       }.merge(legacy_values)
 
       payload.merge!(date_boundaries) if model.charge? || model.subscription?
@@ -63,23 +63,23 @@ module V1
 
         return {
           from_date: interval[:charges_from_date]&.to_datetime&.iso8601,
-          to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601,
+          to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601
         }
       end
 
       {
         from_date:,
-        to_date:,
+        to_date:
       }
     end
 
     def from_date
-      property = model.charge? ? 'charges_from_datetime' : 'from_datetime'
+      property = model.charge? ? "charges_from_datetime" : "from_datetime"
       model.properties[property]&.to_datetime&.iso8601
     end
 
     def to_date
-      property = model.charge? ? 'charges_to_datetime' : 'to_datetime'
+      property = model.charge? ? "charges_to_datetime" : "to_datetime"
       model.properties[property]&.to_datetime&.iso8601
     end
 
@@ -88,17 +88,17 @@ module V1
 
       event = Event.find_by(
         organization_id: model.subscription.organization,
-        id: model.pay_in_advance_event_id,
+        id: model.pay_in_advance_event_id
       )
 
-      { event_transaction_id: event&.transaction_id }
+      {event_transaction_id: event&.transaction_id}
     end
 
     def applied_taxes
       ::CollectionSerializer.new(
         model.applied_taxes,
         ::V1::Fees::AppliedTaxSerializer,
-        collection_name: 'applied_taxes',
+        collection_name: "applied_taxes"
       ).serialize
     end
 

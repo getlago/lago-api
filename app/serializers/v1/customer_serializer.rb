@@ -29,7 +29,7 @@ module V1
         applicable_timezone: model.applicable_timezone,
         net_payment_term: model.net_payment_term,
         external_salesforce_id: model.external_salesforce_id,
-        billing_configuration:,
+        billing_configuration:
       }.merge(legacy_values.except(:billing_configuration))
 
       payload = payload.merge(metadata)
@@ -45,7 +45,7 @@ module V1
       ::CollectionSerializer.new(
         model.metadata,
         ::V1::Customers::MetadataSerializer,
-        collection_name: 'metadata',
+        collection_name: "metadata"
       ).serialize
     end
 
@@ -55,7 +55,7 @@ module V1
         payment_provider: model.payment_provider,
         payment_provider_code: model.payment_provider_code,
         vat_rate: model.vat_rate,
-        document_locale: model.document_locale,
+        document_locale: model.document_locale
       }.merge(legacy_values[:billing_configuration])
 
       case model.payment_provider&.to_sym
@@ -79,14 +79,14 @@ module V1
     end
 
     def taxes
-      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
+      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: "taxes").serialize
     end
 
     def vies_check
       vies_value = options.fetch(:vies_check)
 
       {
-        vies_check: vies_value.is_a?(Hash) ? vies_value : { valid: false },
+        vies_check: vies_value.is_a?(Hash) ? vies_value : {valid: false}
       }
     end
   end

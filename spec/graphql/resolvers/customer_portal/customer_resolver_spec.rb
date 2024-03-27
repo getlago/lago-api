@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::CustomerResolver, type: :graphql do
   let(:query) do
@@ -18,28 +18,28 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) do
-    create(:customer, organization:, currency: 'EUR')
+    create(:customer, organization:, currency: "EUR")
   end
 
-  it 'returns a single customer' do
+  it "returns a single customer" do
     result = execute_graphql(
       customer_portal_user: customer,
-      query:,
+      query:
     )
 
-    customer_response = result['data']['customerPortalUser']
+    customer_response = result["data"]["customerPortalUser"]
 
     aggregate_failures do
-      expect(customer_response['id']).to eq(customer.id)
-      expect(customer_response['name']).to eq(customer.name)
-      expect(customer_response['currency']).to eq('EUR')
+      expect(customer_response["id"]).to eq(customer.id)
+      expect(customer_response["name"]).to eq(customer.name)
+      expect(customer_response["currency"]).to eq("EUR")
     end
   end
 
-  context 'without customer portal user' do
-    it 'returns an error' do
+  context "without customer portal user" do
+    it "returns an error" do
       result = execute_graphql(
-        query:,
+        query:
       )
 
       expect_unauthorized_error(result)

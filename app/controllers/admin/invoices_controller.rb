@@ -3,7 +3,7 @@
 module Admin
   class InvoicesController < BaseController
     def regenerate
-      result = ::Invoices::GeneratePdfService.call(invoice:, context: 'admin')
+      result = ::Invoices::GeneratePdfService.call(invoice:, context: "admin")
 
       return render_error_response(result) unless result.success?
 

@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'GenerateCustomerPortalUrl'
-      description 'Generate customer portal URL'
+      graphql_name "GenerateCustomerPortalUrl"
+      description "Generate customer portal URL"
 
       argument :id, ID, required: true
 
@@ -20,7 +20,7 @@ module Mutations
         result = ::CustomerPortal::GenerateUrlService.call(customer:)
 
         if result.success?
-          { url: result.url }
+          {url: result.url}
         else
           result_error(result)
         end

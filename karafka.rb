@@ -2,8 +2,8 @@
 
 class KarafkaApp < Karafka::App
   setup do |config|
-    config.kafka = { 'bootstrap.servers': ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] }
-    config.client_id = 'Lago'
+    config.kafka = {"bootstrap.servers": ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"]}
+    config.client_id = "Lago"
     # Recreate consumers with each batch. This will allow Rails code reload to work in the
     # development mode. Otherwise Karafka process would not be aware of code changes
     config.consumer_persistence = !Rails.env.development?
@@ -24,7 +24,7 @@ class KarafkaApp < Karafka::App
       Karafka.logger,
       # If you set this to true, logs will contain each message details
       # Please note, that this can be extensive
-      log_messages: false,
-    ),
+      log_messages: false
+    )
   )
 end

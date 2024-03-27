@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::TaxesResolver, type: :graphql do
   let(:query) do
@@ -20,45 +20,45 @@ RSpec.describe Resolvers::TaxesResolver, type: :graphql do
 
   before { tax }
 
-  it 'returns a list of taxes' do
+  it "returns a list of taxes" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
-    taxes_response = result['data']['taxes']
+    taxes_response = result["data"]["taxes"]
 
     aggregate_failures do
-      expect(taxes_response['collection'].first).to include(
-        'id' => tax.id,
-        'name' => tax.name,
+      expect(taxes_response["collection"].first).to include(
+        "id" => tax.id,
+        "name" => tax.name
       )
 
-      expect(taxes_response['metadata']).to include(
-        'currentPage' => 1,
-        'totalCount' => 1,
+      expect(taxes_response["metadata"]).to include(
+        "currentPage" => 1,
+        "totalCount" => 1
       )
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(current_user: membership.user, query:)
 
-      expect_graphql_error(result:, message: 'Missing organization id')
+      expect_graphql_error(result:, message: "Missing organization id")
     end
   end
 
-  context 'when not member of the organization' do
-    it 'returns an error' do
+  context "when not member of the organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query:,
+        query:
       )
 
-      expect_graphql_error(result:, message: 'Not in organization')
+      expect_graphql_error(result:, message: "Not in organization")
     end
   end
 end

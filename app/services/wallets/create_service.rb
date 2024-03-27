@@ -10,13 +10,13 @@ module Wallets
         name: args[:name],
         rate_amount: args[:rate_amount],
         expiration_at: args[:expiration_at],
-        status: :active,
+        status: :active
       )
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
           customer: result.current_customer,
-          currency: args[:currency],
+          currency: args[:currency]
         )
         return currency_result unless currency_result.success?
 
@@ -28,7 +28,7 @@ module Wallets
             recurring_transaction_rules: args[:recurring_transaction_rules],
             paid_credits: args[:paid_credits],
             granted_credits: args[:granted_credits],
-            wallet:,
+            wallet:
           )
         end
       end
@@ -40,7 +40,7 @@ module Wallets
         wallet_id: wallet.id,
         paid_credits: args[:paid_credits],
         granted_credits: args[:granted_credits],
-        source: :manual,
+        source: :manual
       )
 
       result
@@ -61,9 +61,9 @@ module Wallets
         wallet:,
         paid_credits:,
         granted_credits:,
-        threshold_credits: recurring_rule[:threshold_credits] || '0.0',
+        threshold_credits: recurring_rule[:threshold_credits] || "0.0",
         interval: recurring_rule[:interval],
-        rule_type: recurring_rule[:rule_type].to_s,
+        rule_type: recurring_rule[:rule_type].to_s
       )
     end
   end

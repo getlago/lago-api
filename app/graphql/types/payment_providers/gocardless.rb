@@ -3,7 +3,7 @@
 module Types
   module PaymentProviders
     class Gocardless < Types::BaseObject
-      graphql_name 'GocardlessProvider'
+      graphql_name "GocardlessProvider"
 
       field :code, String, null: false
       field :has_access_token, Boolean, null: false

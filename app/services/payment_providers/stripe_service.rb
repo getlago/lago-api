@@ -4,13 +4,13 @@ module PaymentProviders
   class StripeService < BaseService
     # NOTE: find the complete list of event types at https://stripe.com/docs/api/events/types
     WEBHOOKS_EVENTS = [
-      'setup_intent.succeeded',
-      'payment_intent.payment_failed',
-      'payment_intent.succeeded',
-      'payment_method.detached',
-      'charge.refund.updated',
-      'customer.updated',
-      'charge.succeeded',
+      "setup_intent.succeeded",
+      "payment_intent.payment_failed",
+      "payment_intent.succeeded",
+      "payment_method.detached",
+      "charge.refund.updated",
+      "customer.updated",
+      "charge.succeeded"
     ].freeze
 
     def create_or_update(**args)
@@ -18,7 +18,7 @@ module PaymentProviders
         organization_id: args[:organization_id],
         code: args[:code],
         id: args[:id],
-        payment_provider_type: 'stripe',
+        payment_provider_type: "stripe"
       )
 
       stripe_provider = if payment_provider_result.success?
@@ -26,7 +26,7 @@ module PaymentProviders
       else
         PaymentProviders::StripeProvider.new(
           organization_id: args[:organization_id],
-          code: args[:code],
+          code: args[:code]
         )
       end
 
@@ -47,7 +47,7 @@ module PaymentProviders
         #       attached to the provider
         reattach_provider_customers(
           organization_id: args[:organization_id],
-          stripe_provider:,
+          stripe_provider:
         )
       end
 
@@ -63,17 +63,17 @@ module PaymentProviders
       stripe_webhook = ::Stripe::WebhookEndpoint.create(
         {
           url: URI.join(
-            ENV['LAGO_API_URL'],
-            "webhooks/stripe/#{organization_id}?code=#{URI.encode_www_form_component(stripe_provider.code)}",
+            ENV["LAGO_API_URL"],
+            "webhooks/stripe/#{organization_id}?code=#{URI.encode_www_form_component(stripe_provider.code)}"
           ),
-          enabled_events: WEBHOOKS_EVENTS,
+          enabled_events: WEBHOOKS_EVENTS
         },
-        { api_key: stripe_provider.secret_key },
+        {api_key: stripe_provider.secret_key}
       )
 
       stripe_provider.update!(
         webhook_id: stripe_webhook.id,
-        webhook_secret: stripe_webhook.secret,
+        webhook_secret: stripe_webhook.secret
       )
 
       result.stripe_provider = stripe_provider
@@ -93,7 +93,7 @@ module PaymentProviders
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id:,
         code:,
-        payment_provider_type: 'stripe',
+        payment_provider_type: "stripe"
       )
 
       return payment_provider_result unless payment_provider_result.success?
@@ -101,20 +101,20 @@ module PaymentProviders
       event = ::Stripe::Webhook.construct_event(
         params,
         signature,
-        payment_provider_result.payment_provider&.webhook_secret,
+        payment_provider_result.payment_provider&.webhook_secret
       )
 
       PaymentProviders::Stripe::HandleEventJob.perform_later(
         organization:,
-        event: event.to_json,
+        event: event.to_json
       )
 
       result.event = event
       result
     rescue JSON::ParserError
-      result.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+      result.service_failure!(code: "webhook_error", message: "Invalid payload")
     rescue ::Stripe::SignatureVerificationError
-      result.service_failure!(code: 'webhook_error', message: 'Invalid signature')
+      result.service_failure!(code: "webhook_error", message: "Invalid signature")
     end
 
     def handle_event(organization:, event_json:)
@@ -125,7 +125,7 @@ module PaymentProviders
       end
 
       case event.type
-      when 'setup_intent.succeeded'
+      when "setup_intent.succeeded"
         service = PaymentProviderCustomers::StripeService.new
 
         result = service
@@ -133,7 +133,7 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
         result.raise_if_error!
 
@@ -142,13 +142,13 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
 
         result.raise_if_error! || result
-      when 'customer.updated'
+      when "customer.updated"
         payment_method_id = event.data.object.invoice_settings.default_payment_method ||
-                            event.data.object.default_source
+          event.data.object.default_source
 
         result = PaymentProviderCustomers::StripeService
           .new
@@ -156,44 +156,44 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.id,
             payment_method_id:,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
 
         result.raise_if_error! || result
-      when 'charge.succeeded'
+      when "charge.succeeded"
         Invoices::Payments::StripeService
           .new.update_payment_status(
             organization_id: organization.id,
             provider_payment_id: event.data.object.payment_intent,
-            status: 'succeeded',
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            status: "succeeded",
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
-      when 'payment_intent.payment_failed', 'payment_intent.succeeded'
-        status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
+      when "payment_intent.payment_failed", "payment_intent.succeeded"
+        status = (event.type == "payment_intent.succeeded") ? "succeeded" : "failed"
 
         Invoices::Payments::StripeService
           .new.update_payment_status(
             organization_id: organization.id,
             provider_payment_id: event.data.object.id,
             status:,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
-      when 'payment_method.detached'
+      when "payment_method.detached"
         result = PaymentProviderCustomers::StripeService
           .new
           .delete_payment_method(
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.id,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
         result.raise_if_error! || result
-      when 'charge.refund.updated'
+      when "charge.refund.updated"
         CreditNotes::Refunds::StripeService
           .new.update_status(
             provider_refund_id: event.data.object.id,
             status: event.data.object.status,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
       end
     rescue BaseService::NotFoundFailure => e
@@ -210,9 +210,9 @@ module PaymentProviders
       return if stripe_provider.webhook_id.blank?
 
       ::Stripe::WebhookEndpoint.delete(
-        stripe_provider.webhook_id, {}, { api_key: }
+        stripe_provider.webhook_id, {}, {api_key:}
       )
-    rescue StandardError => e
+    rescue => e
       # NOTE: Since removing the webbook end-point is not critical
       #       we don't want any error with it to break the update of the
       #       payment provider
@@ -225,7 +225,7 @@ module PaymentProviders
     def reattach_provider_customers(organization_id:, stripe_provider:)
       PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(payment_provider_id: nil, customers: { organization_id: })
+        .where(payment_provider_id: nil, customers: {organization_id:})
         .update_all(payment_provider_id: stripe_provider.id)
     end
   end

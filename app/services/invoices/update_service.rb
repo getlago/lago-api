@@ -11,20 +11,20 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') if invoice.nil?
-      return result.not_allowed_failure!(code: 'metadata_on_draft_invoice') if invoice.draft? && params[:metadata]
+      return result.not_found_failure!(resource: "invoice") if invoice.nil?
+      return result.not_allowed_failure!(code: "metadata_on_draft_invoice") if invoice.draft? && params[:metadata]
 
       if params.key?(:payment_status) && !valid_payment_status?(params[:payment_status])
         return result.single_validation_failure!(
           field: :payment_status,
-          error_code: 'value_is_invalid',
+          error_code: "value_is_invalid"
         )
       end
 
       unless valid_metadata_count?(metadata: params[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
-          error_code: 'invalid_count',
+          error_code: "invalid_count"
         )
       end
 
@@ -32,7 +32,7 @@ module Invoices
       invoice.payment_status = params[:payment_status] if params.key?(:payment_status)
 
       if invoice.draft? && (old_payment_status != invoice.payment_status)
-        return result.not_allowed_failure!(code: 'payment_status_update_on_draft_invoice')
+        return result.not_allowed_failure!(code: "payment_status_update_on_draft_invoice")
       end
 
       if params.key?(:ready_for_payment_processing) && !invoice.voided?
@@ -69,12 +69,12 @@ module Invoices
     def track_payment_status_changed
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'payment_status_changed',
+        event: "payment_status_changed",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          payment_status: invoice.payment_status,
-        },
+          payment_status: invoice.payment_status
+        }
       )
     end
 
@@ -95,7 +95,7 @@ module Invoices
     def deliver_webhook
       return unless webhook_notification
 
-      SendWebhookJob.perform_later('invoice.payment_status_updated', invoice)
+      SendWebhookJob.perform_later("invoice.payment_status_updated", invoice)
     end
   end
 end

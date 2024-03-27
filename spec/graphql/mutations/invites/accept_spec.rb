@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Invites::Accept, type: :graphql do
   let(:membership) { create(:membership) }
@@ -21,11 +21,11 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
     GQL
   end
 
-  describe 'Invite revoke mutation' do
-    context 'with a new user' do
+  describe "Invite revoke mutation" do
+    context "with a new user" do
       let(:invite) { create(:invite, organization:) }
 
-      it 'accepts the invite ' do
+      it "accepts the invite " do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
@@ -34,22 +34,22 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
             input: {
               email: invite.email,
               password:,
-              token: invite.token,
-            },
-          },
+              token: invite.token
+            }
+          }
         )
 
-        data = result['data']['acceptInvite']
+        data = result["data"]["acceptInvite"]
 
-        expect(data['user']['email']).to eq(invite.email)
-        expect(data['token']).to be_present
+        expect(data["user"]["email"]).to eq(invite.email)
+        expect(data["token"]).to be_present
       end
     end
 
-    context 'when invite is revoked' do
+    context "when invite is revoked" do
       let(:invite) { create(:invite, organization:, status: :revoked) }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
@@ -58,21 +58,21 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
             input: {
               email: invite.email,
               password:,
-              token: invite.token,
-            },
-          },
+              token: invite.token
+            }
+          }
         )
 
-        expect(result['errors'].first['extensions']['status']).to eq(404)
-        expect(result['errors'].first['extensions']['code']).to eq('not_found')
-        expect(result['errors'].first['extensions']['details']['invite']).to eq(['not_found'])
+        expect(result["errors"].first["extensions"]["status"]).to eq(404)
+        expect(result["errors"].first["extensions"]["code"]).to eq("not_found")
+        expect(result["errors"].first["extensions"]["details"]["invite"]).to eq(["not_found"])
       end
     end
 
-    context 'when invite is already accepted' do
+    context "when invite is already accepted" do
       let(:invite) { create(:invite, organization:, status: :accepted) }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
@@ -81,14 +81,14 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
             input: {
               email: invite.email,
               password:,
-              token: invite.token,
-            },
-          },
+              token: invite.token
+            }
+          }
         )
 
-        expect(result['errors'].first['extensions']['status']).to eq(404)
-        expect(result['errors'].first['extensions']['code']).to eq('not_found')
-        expect(result['errors'].first['extensions']['details']['invite']).to eq(['not_found'])
+        expect(result["errors"].first["extensions"]["status"]).to eq(404)
+        expect(result["errors"].first["extensions"]["code"]).to eq("not_found")
+        expect(result["errors"].first["extensions"]["details"]["invite"]).to eq(["not_found"])
       end
     end
   end

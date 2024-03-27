@@ -3,7 +3,7 @@
 module Types
   module Plans
     class Object < Types::BaseObject
-      graphql_name 'Plan'
+      graphql_name "Plan"
 
       field :id, ID, null: false
       field :organization, Types::OrganizationType
@@ -28,8 +28,8 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :active_subscriptions_count, Integer, null: false
-      field :charges_count, Integer, null: false, description: 'Number of charges attached to a plan'
-      field :customers_count, Integer, null: false, description: 'Number of customers attached to a plan'
+      field :charges_count, Integer, null: false, description: "Number of charges attached to a plan"
+      field :customers_count, Integer, null: false, description: "Number of customers attached to a plan"
       field :draft_invoices_count, Integer, null: false
       field :subscriptions_count, Integer, null: false
 
@@ -45,7 +45,7 @@ module Types
         count = object.subscriptions.count
         return count unless object.children
 
-        count + object.children.joins(:subscriptions).select('subscriptions.id').distinct.count
+        count + object.children.joins(:subscriptions).select("subscriptions.id").distinct.count
       end
     end
   end

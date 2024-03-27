@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         key: model.key,
-        values: model.values.sort,
+        values: model.values.sort
       }
     end
   end

@@ -36,7 +36,7 @@ module Invoices
           amount_cents: gocardless_result.amount,
           amount_currency: gocardless_result.currency&.upcase,
           provider_payment_id: gocardless_result.id,
-          status: gocardless_result.status,
+          status: gocardless_result.status
         )
         payment.save!
 
@@ -49,7 +49,7 @@ module Invoices
 
       def update_payment_status(provider_payment_id:, status:)
         payment = Payment.find_by(provider_payment_id:)
-        return result.not_found_failure!(resource: 'gocardless_payment') unless payment
+        return result.not_found_failure!(resource: "gocardless_payment") unless payment
 
         result.payment = payment
         result.invoice = payment.invoice
@@ -81,7 +81,7 @@ module Invoices
       def client
         @client ||= GoCardlessPro::Client.new(
           access_token: gocardless_payment_provider.access_token,
-          environment: gocardless_payment_provider.environment,
+          environment: gocardless_payment_provider.environment
         )
       end
 
@@ -93,8 +93,8 @@ module Invoices
         result = client.mandates.list(
           params: {
             customer: customer.gocardless_customer.provider_customer_id,
-            status: %w[pending_customer_approval pending_submission submitted active],
-          },
+            status: %w[pending_customer_approval pending_submission submitted active]
+          }
         )
 
         mandate = result&.records&.first
@@ -114,15 +114,15 @@ module Invoices
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
-              invoice_issuing_date: invoice.issuing_date.iso8601,
+              invoice_issuing_date: invoice.issuing_date.iso8601
             },
             links: {
-              mandate: mandate_id,
-            },
+              mandate: mandate_id
+            }
           },
           headers: {
-            'Idempotency-Key' => "#{invoice.id}/#{invoice.payment_attempts}",
-          },
+            "Idempotency-Key" => "#{invoice.id}/#{invoice.payment_attempts}"
+          }
         )
       rescue GoCardlessPro::Error => e
         deliver_error_webhook(e)
@@ -144,9 +144,9 @@ module Invoices
           invoice: result.invoice,
           params: {
             payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded,
+            ready_for_payment_processing: payment_status.to_sym != :succeeded
           },
-          webhook_notification: deliver_webhook,
+          webhook_notification: deliver_webhook
         )
         update_invoice_result.raise_if_error!
       end
@@ -159,13 +159,13 @@ module Invoices
         return unless invoice.organization.webhook_endpoints.any?
 
         SendWebhookJob.perform_later(
-          'invoice.payment_failure',
+          "invoice.payment_failure",
           invoice,
           provider_customer_id: customer.gocardless_customer.provider_customer_id,
           provider_error: {
             message: gocardless_error.message,
-            error_code: gocardless_error.code,
-          },
+            error_code: gocardless_error.code
+          }
         )
       end
     end

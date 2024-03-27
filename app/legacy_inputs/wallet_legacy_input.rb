@@ -8,5 +8,5 @@ class WalletLegacyInput < BaseLegacyInput
 
     args
   end
-  alias update_input create_input
+  alias_method :update_input, :create_input
 end

@@ -5,7 +5,7 @@ class QuantifiedEvent < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
-  RECURRING_TOTAL_UNITS = 'total_aggregated_units'
+  RECURRING_TOTAL_UNITS = "total_aggregated_units"
 
   belongs_to :organization
   belongs_to :billable_metric

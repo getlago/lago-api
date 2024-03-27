@@ -2,7 +2,7 @@
 
 module Plans
   class DestroyJob < ApplicationJob
-    queue_as 'default'
+    queue_as "default"
 
     def perform(plan)
       plan.children.each do |children_plan|

@@ -5,7 +5,7 @@ module Resolvers
     class InvoicesResolver < Resolvers::BaseResolver
       include AuthenticableCustomerPortalUser
 
-      description 'Query invoices of a customer'
+      description "Query invoices of a customer"
 
       argument :limit, Integer, required: false
       argument :page, Integer, required: false
@@ -21,12 +21,12 @@ module Resolvers
           search_term:,
           page:,
           limit:,
-          status:,
+          status:
         )
 
         result.invoices
       rescue ActiveRecord::RecordNotFound
-        not_found_error(resource: 'customer')
+        not_found_error(resource: "customer")
       end
     end
   end

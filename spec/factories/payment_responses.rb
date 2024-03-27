@@ -5,13 +5,13 @@ FactoryBot.define do
     OpenStruct.new(
       status: 200,
       response: {
-        'additionalData' => {
-          'recurringProcessingModel' => 'UnscheduledCardOnFile',
+        "additionalData" => {
+          "recurringProcessingModel" => "UnscheduledCardOnFile"
         },
-        'pspReference' => SecureRandom.uuid,
-        'resultCode' => 'Authorised',
-        'merchantReference' => SecureRandom.uuid,
-      },
+        "pspReference" => SecureRandom.uuid,
+        "resultCode" => "Authorised",
+        "merchantReference" => SecureRandom.uuid
+      }
     )
   end
 
@@ -19,9 +19,9 @@ FactoryBot.define do
     OpenStruct.new(
       status: 422,
       response: {
-        'errorType' => 'validation',
-        'message' => 'There are no payment methods available for the given parameters.',
-      },
+        "errorType" => "validation",
+        "message" => "There are no payment methods available for the given parameters."
+      }
     )
   end
 
@@ -29,21 +29,21 @@ FactoryBot.define do
     OpenStruct.new(
       status: 200,
       response: {
-        'amount' => {
-          'currency' => 'EUR',
-          'value' => 0,
+        "amount" => {
+          "currency" => "EUR",
+          "value" => 0
         },
-        'expiresAt' => '2023-05-19T10:00:19+02:00',
-        'merchantAccount' => SecureRandom.uuid,
-        'recurringProcessingModel' => 'UnscheduledCardOnFile',
-        'reference' => SecureRandom.uuid,
-        'reusable' => false,
-        'shopperReference' => SecureRandom.uuid,
-        'storePaymentMethodMode' => 'enabled',
-        'id' => SecureRandom.uuid,
-        'status' => 'active',
-        'url' => 'https://test.adyen.link/test',
-      },
+        "expiresAt" => "2023-05-19T10:00:19+02:00",
+        "merchantAccount" => SecureRandom.uuid,
+        "recurringProcessingModel" => "UnscheduledCardOnFile",
+        "reference" => SecureRandom.uuid,
+        "reusable" => false,
+        "shopperReference" => SecureRandom.uuid,
+        "storePaymentMethodMode" => "enabled",
+        "id" => SecureRandom.uuid,
+        "status" => "active",
+        "url" => "https://test.adyen.link/test"
+      }
     )
   end
 
@@ -51,9 +51,9 @@ FactoryBot.define do
     OpenStruct.new(
       status: 422,
       response: {
-        'errorType' => 'validation',
-        'message' => 'There are no payment methods available for the given parameters.',
-      },
+        "errorType" => "validation",
+        "message" => "There are no payment methods available for the given parameters."
+      }
     )
   end
 
@@ -61,29 +61,29 @@ FactoryBot.define do
     OpenStruct.new(
       status: 200,
       response: {
-        'paymentMethods' => [
+        "paymentMethods" => [
           {
-            'brands' => %w[amex bcmc cartebancaire mc visa visadankort],
-            'name' => 'Credit Card',
-            'type' => 'scheme',
-          },
+            "brands" => %w[amex bcmc cartebancaire mc visa visadankort],
+            "name" => "Credit Card",
+            "type" => "scheme"
+          }
         ],
-        'storedPaymentMethods' => [
+        "storedPaymentMethods" => [
           {
-            'brand' => 'visa',
-            'expiryMonth' => '03',
-            'expiryYear' => '30',
-            'holderName' => 'Checkout Shopper PlaceHolder',
-            'id' => SecureRandom.uuid,
-            'lastFour' => '1234',
-            'name' => 'VISA',
-            'networkTxReference' => SecureRandom.uuid,
-            'supportedRecurringProcessingModels' => %w[CardOnFile Subscription UnscheduledCardOnFile],
-            'supportedShopperInteractions' => %w[Ecommerce ContAuth],
-            'type' => 'scheme',
-          },
-        ],
-      },
+            "brand" => "visa",
+            "expiryMonth" => "03",
+            "expiryYear" => "30",
+            "holderName" => "Checkout Shopper PlaceHolder",
+            "id" => SecureRandom.uuid,
+            "lastFour" => "1234",
+            "name" => "VISA",
+            "networkTxReference" => SecureRandom.uuid,
+            "supportedRecurringProcessingModels" => %w[CardOnFile Subscription UnscheduledCardOnFile],
+            "supportedShopperInteractions" => %w[Ecommerce ContAuth],
+            "type" => "scheme"
+          }
+        ]
+      }
     )
   end
 end

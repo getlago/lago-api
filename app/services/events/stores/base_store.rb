@@ -117,7 +117,7 @@ module Events
         @period_duration ||= Subscriptions::DatesService.new_instance(
           subscription,
           to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?,
+          current_usage: subscription.terminated? && subscription.upgraded?
         ).charges_duration_in_days
       end
     end

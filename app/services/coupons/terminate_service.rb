@@ -4,7 +4,7 @@ module Coupons
   class TerminateService < BaseService
     def terminate(id)
       coupon = result.user.coupons.find_by(id:)
-      return result.not_found_failure!(resource: 'coupon') unless coupon
+      return result.not_found_failure!(resource: "coupon") unless coupon
 
       coupon.mark_as_terminated! unless coupon.terminated?
 

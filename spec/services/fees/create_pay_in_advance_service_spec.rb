@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   subject(:fee_service) { described_class.new(charge:, event:, estimate:) }
@@ -24,7 +24,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       external_subscription_id: subscription.external_id,
       external_customer_id: customer.external_id,
       organization_id: organization.id,
-      properties: event_properties,
+      properties: event_properties
     )
   end
 
@@ -32,7 +32,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
 
   before { tax }
 
-  describe '#call' do
+  describe "#call" do
     let(:aggregation_result) do
       BaseService::Result.new.tap do |result|
         result.aggregation = 9
@@ -60,7 +60,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         .and_return(charge_result)
     end
 
-    it 'creates a fee' do
+    it "creates a fee" do
       result = fee_service.call
 
       aggregate_failures do
@@ -71,8 +71,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           subscription:,
           charge:,
           amount_cents: 10,
-          amount_currency: 'EUR',
-          fee_type: 'charge',
+          amount_currency: "EUR",
+          fee_type: "charge",
           pay_in_advance: true,
           invoiceable: charge,
           units: 9,
@@ -81,62 +81,62 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           group: nil,
           charge_filter: nil,
           pay_in_advance_event_id: event.id,
-          payment_status: 'pending',
+          payment_status: "pending",
           unit_amount_cents: 1,
           precise_unit_amount: 0.01111111111,
 
           taxes_rate: 20.0,
-          taxes_amount_cents: 2,
+          taxes_amount_cents: 2
         )
         expect(result.fees.first.applied_taxes.count).to eq(1)
       end
     end
 
-    it 'delivers a webhook' do
+    it "delivers a webhook" do
       fee_service.call
 
       expect(SendWebhookJob).to have_been_enqueued
-        .with('fee.created', Fee)
+        .with("fee.created", Fee)
     end
 
-    context 'when aggregation fails' do
+    context "when aggregation fails" do
       let(:aggregation_result) do
-        BaseService::Result.new.service_failure!(code: 'failure', message: 'Failure')
+        BaseService::Result.new.service_failure!(code: "failure", message: "Failure")
       end
 
-      it 'returns a failure' do
+      it "returns a failure" do
         result = fee_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq('failure')
-          expect(result.error.error_message).to eq('Failure')
+          expect(result.error.code).to eq("failure")
+          expect(result.error.error_message).to eq("Failure")
         end
       end
     end
 
-    context 'when charge model fails' do
+    context "when charge model fails" do
       let(:charge_result) do
-        BaseService::Result.new.service_failure!(code: 'failure', message: 'Failure')
+        BaseService::Result.new.service_failure!(code: "failure", message: "Failure")
       end
 
-      it 'returns a failure' do
+      it "returns a failure" do
         result = fee_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq('failure')
-          expect(result.error.error_message).to eq('Failure')
+          expect(result.error.code).to eq("failure")
+          expect(result.error.error_message).to eq("Failure")
         end
       end
     end
 
-    context 'when charge has groups' do
+    context "when charge has groups" do
       let(:parent_group_id) { nil }
       let(:group) do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+        create(:group, billable_metric:, key: "region", value: "europe", parent_group_id:)
       end
 
       let(:charge) do
@@ -150,11 +150,11 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
               :group_property,
               group:,
               values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
+                amount: "20",
+                amount_currency: "EUR"
+              }
+            )
+          ]
         )
       end
 
@@ -165,12 +165,12 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           external_subscription_id: subscription.external_id,
           external_customer_id: customer.external_id,
           properties: {
-            region: 'europe',
-          },
+            region: "europe"
+          }
         )
       end
 
-      it 'creates a fee' do
+      it "creates a fee" do
         result = fee_service.call
 
         aggregate_failures do
@@ -181,8 +181,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             subscription:,
             charge:,
             amount_cents: 10,
-            amount_currency: 'EUR',
-            fee_type: 'charge',
+            amount_currency: "EUR",
+            fee_type: "charge",
             pay_in_advance: true,
             invoiceable: charge,
             units: 9,
@@ -194,15 +194,15 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             precise_unit_amount: 0.01111111111,
 
             taxes_rate: 20.0,
-            taxes_amount_cents: 2,
+            taxes_amount_cents: 2
           )
           expect(result.fees.first.applied_taxes.count).to eq(1)
         end
       end
 
-      context 'when group has a parent' do
+      context "when group has a parent" do
         let(:parent_group_id) do
-          create(:group, billable_metric:, key: 'cloud', value: 'AWS').id
+          create(:group, billable_metric:, key: "cloud", value: "AWS").id
         end
 
         let(:event) do
@@ -212,13 +212,13 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             external_subscription_id: subscription.external_id,
             external_customer_id: customer.external_id,
             properties: {
-              cloud: 'AWS',
-              region: 'europe',
-            },
+              cloud: "AWS",
+              region: "europe"
+            }
           )
         end
 
-        it 'creates a fee' do
+        it "creates a fee" do
           result = fee_service.call
 
           aggregate_failures do
@@ -229,8 +229,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
               subscription:,
               charge:,
               amount_cents: 10,
-              amount_currency: 'EUR',
-              fee_type: 'charge',
+              amount_currency: "EUR",
+              fee_type: "charge",
               pay_in_advance: true,
               invoiceable: charge,
               units: 9,
@@ -242,14 +242,14 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
               precise_unit_amount: 0.01111111111,
 
               taxes_rate: 20.0,
-              taxes_amount_cents: 2,
+              taxes_amount_cents: 2
             )
             expect(result.fees.first.applied_taxes.count).to eq(1)
           end
         end
       end
 
-      context 'when event does not match a group' do
+      context "when event does not match a group" do
         let(:event) do
           create(
             :event,
@@ -257,12 +257,12 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             external_subscription_id: subscription.external_id,
             external_customer_id: customer.external_id,
             properties: {
-              region: 'usa',
-            },
+              region: "usa"
+            }
           )
         end
 
-        it 'does not create fees' do
+        it "does not create fees" do
           result = fee_service.call
 
           aggregate_failures do
@@ -273,36 +273,36 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       end
     end
 
-    context 'when charge has a charge filter' do
+    context "when charge has a charge filter" do
       let(:event_properties) do
         {
-          payment_method: 'card',
-          card_location: 'domestic',
-          scheme: 'visa',
-          card_type: 'credit',
+          payment_method: "card",
+          card_location: "domestic",
+          scheme: "visa",
+          card_type: "credit"
         }
       end
 
       let(:card_location) do
-        create(:billable_metric_filter, billable_metric:, key: 'card_location', values: %i[domestic])
+        create(:billable_metric_filter, billable_metric:, key: "card_location", values: %i[domestic])
       end
-      let(:scheme) { create(:billable_metric_filter, billable_metric:, key: 'scheme', values: %i[visa mastercard]) }
+      let(:scheme) { create(:billable_metric_filter, billable_metric:, key: "scheme", values: %i[visa mastercard]) }
 
       let(:filter) { create(:charge_filter, charge:) }
       let(:filter_values) do
         [
           create(
             :charge_filter_value,
-            values: ['domestic'],
+            values: ["domestic"],
             billable_metric_filter: card_location,
-            charge_filter: filter,
+            charge_filter: filter
           ),
           create(
             :charge_filter_value,
             values: %w[visa mastercard],
             billable_metric_filter: scheme,
-            charge_filter: filter,
-          ),
+            charge_filter: filter
+          )
         ]
       end
 
@@ -310,7 +310,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
 
       before { filter_values }
 
-      it 'creates a fee' do
+      it "creates a fee" do
         result = fee_service.call
 
         expect(result).to be_success
@@ -320,8 +320,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           subscription:,
           charge:,
           amount_cents: 10,
-          amount_currency: 'EUR',
-          fee_type: 'charge',
+          amount_currency: "EUR",
+          fee_type: "charge",
           pay_in_advance: true,
           invoiceable: charge,
           units: 9,
@@ -334,24 +334,24 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           precise_unit_amount: 0.01111111111,
 
           taxes_rate: 20.0,
-          taxes_amount_cents: 2,
+          taxes_amount_cents: 2
         )
         expect(result.fees.first.applied_taxes.count).to eq(1)
       end
 
-      context 'when event does not match the charge filter' do
+      context "when event does not match the charge filter" do
         let(:charge_filter) { ChargeFilter }
 
         let(:event_properties) do
           {
-            payment_method: 'card',
-            card_location: 'international',
-            scheme: 'visa',
-            card_type: 'credit',
+            payment_method: "card",
+            card_location: "international",
+            scheme: "visa",
+            card_type: "credit"
           }
         end
 
-        it 'creates a fee' do
+        it "creates a fee" do
           result = fee_service.call
 
           expect(result).to be_success
@@ -361,8 +361,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             subscription:,
             charge:,
             amount_cents: 10,
-            amount_currency: 'EUR',
-            fee_type: 'charge',
+            amount_currency: "EUR",
+            fee_type: "charge",
             pay_in_advance: true,
             invoiceable: charge,
             units: 9,
@@ -375,20 +375,20 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             precise_unit_amount: 0.01111111111,
 
             taxes_rate: 20.0,
-            taxes_amount_cents: 2,
+            taxes_amount_cents: 2
           )
           expect(result.fees.first.applied_taxes.count).to eq(1)
         end
       end
     end
 
-    context 'when charge has a grouped_by property' do
+    context "when charge has a grouped_by property" do
       let(:charge) do
         create(
           :standard_charge,
           billable_metric:,
           pay_in_advance: true,
-          properties: { 'grouped_by' => ['operator'], 'amount' => '100' },
+          properties: {"grouped_by" => ["operator"], "amount" => "100"}
         )
       end
 
@@ -397,11 +397,11 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           :event,
           organization:,
           external_subscription_id: subscription.external_id,
-          properties: { 'operator' => 'foo' },
+          properties: {"operator" => "foo"}
         )
       end
 
-      it 'creates a fee' do
+      it "creates a fee" do
         result = fee_service.call
 
         aggregate_failures do
@@ -412,8 +412,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             subscription:,
             charge:,
             amount_cents: 10,
-            amount_currency: 'EUR',
-            fee_type: 'charge',
+            amount_currency: "EUR",
+            fee_type: "charge",
             pay_in_advance: true,
             invoiceable: charge,
             units: 9,
@@ -423,20 +423,20 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             pay_in_advance_event_id: event.id,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
-            grouped_by: { 'operator' => 'foo' },
+            grouped_by: {"operator" => "foo"},
 
             taxes_rate: 20.0,
-            taxes_amount_cents: 2,
+            taxes_amount_cents: 2
           )
           expect(result.fees.first.applied_taxes.count).to eq(1)
         end
       end
     end
 
-    context 'when in estimate mode' do
+    context "when in estimate mode" do
       let(:estimate) { true }
 
-      it 'does not persist the fee' do
+      it "does not persist the fee" do
         result = fee_service.call
 
         aggregate_failures do
@@ -448,8 +448,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             subscription:,
             charge:,
             amount_cents: 10,
-            amount_currency: 'EUR',
-            fee_type: 'charge',
+            amount_currency: "EUR",
+            fee_type: "charge",
             pay_in_advance: true,
             invoiceable: charge,
             units: 9,
@@ -461,21 +461,21 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             precise_unit_amount: 0.01111111111,
 
             taxes_rate: 20.0,
-            taxes_amount_cents: 2,
+            taxes_amount_cents: 2
           )
           expect(result.fees.first.applied_taxes.size).to eq(1)
         end
       end
 
-      it 'does not deliver a webhook' do
+      it "does not deliver a webhook" do
         fee_service.call
 
         expect(SendWebhookJob).not_to have_been_enqueued
-          .with('fee.created', Fee)
+          .with("fee.created", Fee)
       end
     end
 
-    context 'when in current and max aggregation result' do
+    context "when in current and max aggregation result" do
       let(:aggregation_result) do
         BaseService::Result.new.tap do |result|
           result.amount = 10
@@ -487,7 +487,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         end
       end
 
-      it 'creates a cached aggregation' do
+      it "creates a cached aggregation" do
         aggregate_failures do
           expect { fee_service.call }.to change(CachedAggregation, :count).by(1)
 

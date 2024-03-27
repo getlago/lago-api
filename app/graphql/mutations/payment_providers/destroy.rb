@@ -5,8 +5,8 @@ module Mutations
     class Destroy < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'DestroyPaymentProvider'
-      description 'Destroy a payment provider'
+      graphql_name "DestroyPaymentProvider"
+      description "Destroy a payment provider"
 
       argument :id, ID, required: true
 

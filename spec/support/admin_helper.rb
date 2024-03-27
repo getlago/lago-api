@@ -4,7 +4,7 @@ RSpec.configure do |config|
   config.before(:each, type: :admin) do
     allow(Google::Auth::IDTokens)
       .to receive(:verify_oidc)
-      .and_return({ email: 'test@getlago.com' })
+      .and_return({email: "test@getlago.com"})
   end
 end
 
@@ -20,7 +20,7 @@ module AdminHelper
   end
 
   def json
-    return response.body unless response.media_type.include?('json')
+    return response.body unless response.media_type.include?("json")
 
     JSON.parse(response.body, symbolize_names: true)
   end
@@ -28,8 +28,8 @@ module AdminHelper
   private
 
   def apply_headers(headers)
-    headers['Content-Type'] = 'application/json'
-    headers['Accept'] = 'application/json'
-    headers['Authorization'] = 'Bearer 123456'
+    headers["Content-Type"] = "application/json"
+    headers["Accept"] = "application/json"
+    headers["Authorization"] = "Bearer 123456"
   end
 end

@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :invite do
     organization
 
-    status { 'pending' }
+    status { "pending" }
     email { Faker::Internet.email }
     token { SecureRandom.hex(20) }
   end

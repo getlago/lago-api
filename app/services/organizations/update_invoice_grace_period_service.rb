@@ -21,7 +21,7 @@ module Organizations
       organization.invoices.draft.each do |invoice|
         invoice.update!(
           issuing_date: grace_period_issuing_date(invoice),
-          payment_due_date: grace_period_payment_due_date(invoice),
+          payment_due_date: grace_period_payment_due_date(invoice)
         )
       end
 

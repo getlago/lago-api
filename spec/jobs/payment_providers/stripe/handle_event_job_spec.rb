@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::HandleEventJob, type: :job do
   let(:stripe_service) { instance_double(PaymentProviders::StripeService) }
@@ -18,10 +18,10 @@ RSpec.describe PaymentProviders::Stripe::HandleEventJob, type: :job do
       .and_return(result)
   end
 
-  it 'calls the handle event service' do
+  it "calls the handle event service" do
     described_class.perform_now(
       organization:,
-      event: stripe_event,
+      event: stripe_event
     )
 
     expect(PaymentProviders::StripeService).to have_received(:new)

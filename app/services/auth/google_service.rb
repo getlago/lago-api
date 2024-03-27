@@ -12,7 +12,7 @@ module Auth
         client_id,
         BASE_SCOPE,
         nil, # token_store is nil because we don't need to store the token
-        "#{ENV['LAGO_FRONT_URL']}/auth/google/callback",
+        "#{ENV["LAGO_FRONT_URL"]}/auth/google/callback"
       )
 
       result.url = authorizer.get_authorization_url(request:)
@@ -25,17 +25,17 @@ module Auth
       return result unless result.success?
 
       google_oidc = oidc_verifier(code:)
-      user = User.find_by(email: google_oidc['email'])
+      user = User.find_by(email: google_oidc["email"])
 
       unless user.present? && user.memberships&.active&.any?
-        return result.single_validation_failure!(error_code: 'user_does_not_exist')
+        return result.single_validation_failure!(error_code: "user_does_not_exist")
       end
 
       UsersService.new.new_token(user)
     rescue Google::Auth::IDTokens::SignatureError
-      result.single_validation_failure!(error_code: 'invalid_google_token')
+      result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
-      result.single_validation_failure!(error_code: 'invalid_google_code')
+      result.single_validation_failure!(error_code: "invalid_google_code")
     end
 
     def register_user(code, organization_name)
@@ -44,11 +44,11 @@ module Auth
 
       google_oidc = oidc_verifier(code:)
 
-      UsersService.new.register(google_oidc['email'], SecureRandom.hex, organization_name)
+      UsersService.new.register(google_oidc["email"], SecureRandom.hex, organization_name)
     rescue Google::Auth::IDTokens::SignatureError
-      result.single_validation_failure!(error_code: 'invalid_google_token')
+      result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
-      result.single_validation_failure!(error_code: 'invalid_google_code')
+      result.single_validation_failure!(error_code: "invalid_google_code")
     end
 
     def accept_invite(code, invite_token)
@@ -58,34 +58,34 @@ module Auth
       google_oidc = oidc_verifier(code:)
       invite = Invite.find_by(token: invite_token, status: :pending)
 
-      return result.not_found_failure!(resource: 'invite') unless invite
+      return result.not_found_failure!(resource: "invite") unless invite
 
-      unless google_oidc['email'] == invite.email
-        return result.single_validation_failure!(error_code: 'invite_email_mistmatch')
+      unless google_oidc["email"] == invite.email
+        return result.single_validation_failure!(error_code: "invite_email_mistmatch")
       end
 
       Invites::AcceptService.new.call(
         invite:,
-        email: google_oidc['email'],
+        email: google_oidc["email"],
         token: invite_token,
-        password: SecureRandom.hex,
+        password: SecureRandom.hex
       )
     rescue Google::Auth::IDTokens::SignatureError
-      result.single_validation_failure!(error_code: 'invalid_google_token')
+      result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
-      result.single_validation_failure!(error_code: 'invalid_google_code')
+      result.single_validation_failure!(error_code: "invalid_google_code")
     end
 
     private
 
     def client_id
-      @client_id ||= Google::Auth::ClientId.new(ENV['GOOGLE_AUTH_CLIENT_ID'], ENV['GOOGLE_AUTH_CLIENT_SECRET'])
+      @client_id ||= Google::Auth::ClientId.new(ENV["GOOGLE_AUTH_CLIENT_ID"], ENV["GOOGLE_AUTH_CLIENT_SECRET"])
     end
 
     def ensure_google_auth_setup
-      return if ENV['GOOGLE_AUTH_CLIENT_ID'].present? && ENV['GOOGLE_AUTH_CLIENT_SECRET'].present?
+      return if ENV["GOOGLE_AUTH_CLIENT_ID"].present? && ENV["GOOGLE_AUTH_CLIENT_SECRET"].present?
 
-      result.service_failure!(code: 'google_auth_missing_setup', message: 'Google auth is not set up')
+      result.service_failure!(code: "google_auth_missing_setup", message: "Google auth is not set up")
     end
 
     def oidc_verifier(code:)
@@ -93,11 +93,11 @@ module Auth
         client_id,
         BASE_SCOPE,
         nil, # token_store is nil because we don't need to store the token
-        "#{ENV['LAGO_FRONT_URL']}/auth/google/callback",
+        "#{ENV["LAGO_FRONT_URL"]}/auth/google/callback"
       )
 
       credentials = authorizer.get_credentials_from_code(code:)
-      Google::Auth::IDTokens.verify_oidc(credentials.id_token, aud: ENV['GOOGLE_AUTH_CLIENT_ID'])
+      Google::Auth::IDTokens.verify_oidc(credentials.id_token, aud: ENV["GOOGLE_AUTH_CLIENT_ID"])
     end
   end
 end

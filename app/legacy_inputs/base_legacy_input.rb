@@ -13,7 +13,7 @@ class BaseLegacyInput
   def date_in_organization_timezone(date, end_of_day: false)
     return if date.blank?
 
-    result = date.to_date.in_time_zone(organization&.timezone || 'UTC')
+    result = date.to_date.in_time_zone(organization&.timezone || "UTC")
     result = result.end_of_day if end_of_day
     result.utc
   end

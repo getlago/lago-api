@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::LoginUser, type: :graphql do
   let(:membership) { create(:membership) }
@@ -19,63 +19,63 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
     GQL
   end
 
-  it 'returns token and user' do
+  it "returns token and user" do
     result = execute_graphql(
       query: mutation,
       variables: {
         input: {
           email: user.email,
-          password: 'ILoveLago',
-        },
-      },
+          password: "ILoveLago"
+        }
+      }
     )
 
-    result_data = result['data']['loginUser']
+    result_data = result["data"]["loginUser"]
 
     aggregate_failures do
-      expect(result_data['token']).to be_present
-      expect(result_data['user']['id']).to eq(user.id)
+      expect(result_data["token"]).to be_present
+      expect(result_data["user"]["id"]).to eq(user.id)
     end
   end
 
-  context 'with bad credentials' do
-    it 'returns an error' do
+  context "with bad credentials" do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
         variables: {
           input: {
             email: user.email,
-            password: 'badpassword',
-          },
-        },
+            password: "badpassword"
+          }
+        }
       )
 
       aggregate_failures do
         expect_unprocessable_entity(result)
-        expect(result['errors'].first.dig('extensions', 'details').keys).to include('base')
-        expect(result['errors'].first.dig('extensions', 'details', 'base')).to include('incorrect_login_or_password')
+        expect(result["errors"].first.dig("extensions", "details").keys).to include("base")
+        expect(result["errors"].first.dig("extensions", "details", "base")).to include("incorrect_login_or_password")
       end
     end
   end
 
-  context 'with revoked membership' do
+  context "with revoked membership" do
     let(:revoked_membership) { create(:membership, status: :revoked) }
 
-    it 'returns an error' do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
         variables: {
           input: {
             email: revoked_membership.user.email,
-            password: 'ILoveLago',
-          },
-        },
+            password: "ILoveLago"
+          }
+        }
       )
 
       aggregate_failures do
         expect_unprocessable_entity(result)
-        expect(result['errors'].first.dig('extensions', 'details').keys).to include('base')
-        expect(result['errors'].first.dig('extensions', 'details', 'base')).to include('incorrect_login_or_password')
+        expect(result["errors"].first.dig("extensions", "details").keys).to include("base")
+        expect(result["errors"].first.dig("extensions", "details", "base")).to include("incorrect_login_or_password")
       end
     end
   end

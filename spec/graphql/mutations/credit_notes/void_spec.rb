@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
   let(:membership) { create(:membership) }
@@ -21,50 +21,50 @@ RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
     GQL
   end
 
-  it 'voids the credit note' do
+  it "voids the credit note" do
     result = execute_graphql(
       current_user: membership.user,
       query: mutation,
       variables: {
         input: {
-          id: credit_note.id,
-        },
-      },
+          id: credit_note.id
+        }
+      }
     )
 
-    result_data = result['data']['voidCreditNote']
+    result_data = result["data"]["voidCreditNote"]
 
     aggregate_failures do
-      expect(result_data['id']).to eq(credit_note.id)
-      expect(result_data['creditStatus']).to eq('voided')
+      expect(result_data["id"]).to eq(credit_note.id)
+      expect(result_data["creditStatus"]).to eq("voided")
     end
   end
 
-  context 'when credit note is not found' do
-    it 'returns an error' do
+  context "when credit note is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query: mutation,
         variables: {
           input: {
-            id: 'foo_bar',
-          },
-        },
+            id: "foo_bar"
+          }
+        }
       )
 
       expect_not_found(result)
     end
   end
 
-  context 'without current user' do
-    it 'returns an error' do
+  context "without current user" do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
         variables: {
           input: {
-            id: credit_note.id,
-          },
-        },
+            id: credit_note.id
+          }
+        }
       )
 
       expect_unauthorized_error(result)

@@ -10,8 +10,8 @@ module Admin
       render(
         json: ::V1::MembershipSerializer.new(
           result.membership,
-          root_name: 'membership',
-        ),
+          root_name: "membership"
+        )
       )
     end
 

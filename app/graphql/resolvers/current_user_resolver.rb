@@ -5,7 +5,7 @@ module Resolvers
   class CurrentUserResolver < GraphQL::Schema::Resolver
     include AuthenticableApiUser
 
-    description 'Retrieves currently connected user'
+    description "Retrieves currently connected user"
 
     type Types::UserType, null: false
 

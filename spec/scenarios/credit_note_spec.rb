@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Create credit note Scenarios', :scenarios, type: :request do
+describe "Create credit note Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:customer) { create(:customer, organization:) }
 
@@ -14,7 +14,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       organization:,
       interval: :monthly,
       amount_cents: 17_900,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -24,7 +24,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       organization:,
       interval: :monthly,
       amount_cents: 39_900,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -36,7 +36,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       expiration: :no_expiration,
       coupon_type: :fixed_amount,
       frequency: :forever,
-      limited_plans: true,
+      limited_plans: true
     )
   end
 
@@ -44,7 +44,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     create(:coupon_plan, coupon:, plan: plan2)
   end
 
-  let(:plan_tax) { create(:tax, organization:, name: 'Plan Tax', rate: 10, applied_to_organization: false) }
+  let(:plan_tax) { create(:tax, organization:, name: "Plan Tax", rate: 10, applied_to_organization: false) }
   let(:plan_applied_tax) { create(:plan_applied_tax, plan: plan2, tax: plan_tax) }
   let(:plan_applied_tax2) { create(:plan_applied_tax, plan: plan2, tax:) }
 
@@ -56,21 +56,21 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     plan_applied_tax2
   end
 
-  it 'Allows creation of partial credit note' do
+  it "Allows creation of partial credit note" do
     # Creates two subscriptions
     travel_to(DateTime.new(2022, 12, 19, 12)) do
       create_subscription(
         external_customer_id: customer.external_id,
         external_id: "#{customer.external_id}_1",
         plan_code: plan1.code,
-        billing_time: :anniversary,
+        billing_time: :anniversary
       )
 
       create_subscription(
         external_customer_id: customer.external_id,
         external_id: "#{customer.external_id}_2",
         plan_code: plan2.code,
-        billing_time: :anniversary,
+        billing_time: :anniversary
       )
     end
 
@@ -79,7 +79,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       apply_coupon(
         external_customer_id: customer.external_id,
         coupon_code: coupon_target.coupon.code,
-        amount_cents: 250_00,
+        amount_cents: 250_00
       )
     end
 
@@ -111,13 +111,13 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         items: [
           {
             fee_id: fee1.id,
-            amount_cents: fee1.amount_cents,
+            amount_cents: fee1.amount_cents
           },
           {
             fee_id: fee2.id,
-            amount_cents: fee2.amount_cents,
-          },
-        ],
+            amount_cents: fee2.amount_cents
+          }
+        ]
       )
 
       estimate = json[:estimated_credit_note]
@@ -133,9 +133,9 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         items: [
           {
             fee_id: fee2.id,
-            amount_cents: 26_260,
-          },
-        ],
+            amount_cents: 26_260
+          }
+        ]
       )
 
       # Estimate the credit notes amount on one partial fee
@@ -156,9 +156,9 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         items: [
           {
             fee_id: fee2.id,
-            amount_cents: 26_260,
-          },
-        ],
+            amount_cents: 26_260
+          }
+        ]
       )
     end
 
@@ -168,14 +168,14 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     expect(credit_note.coupons_adjustment_amount_cents).to eq(16_454)
   end
 
-  context 'when applying multiple time the same coupon' do
+  context "when applying multiple time the same coupon" do
     let(:plan) do
       create(
         :plan,
         organization:,
         interval: :monthly,
         amount_cents: 1_999,
-        pay_in_advance: false,
+        pay_in_advance: false
       )
     end
 
@@ -183,7 +183,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       create(
         :standard_charge,
         plan:,
-        min_amount_cents: 99_290,
+        min_amount_cents: 99_290
       )
     end
 
@@ -191,7 +191,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       create(
         :standard_charge,
         plan:,
-        min_amount_cents: 299_770,
+        min_amount_cents: 299_770
       )
     end
 
@@ -199,7 +199,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       create(
         :standard_charge,
         plan:,
-        min_amount_cents: 3_130,
+        min_amount_cents: 3_130
       )
     end
 
@@ -207,7 +207,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       create(
         :standard_charge,
         plan:,
-        min_amount_cents: 6_460,
+        min_amount_cents: 6_460
       )
     end
 
@@ -215,7 +215,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       create(
         :standard_charge,
         plan:,
-        min_amount_cents: 3_130,
+        min_amount_cents: 3_130
       )
     end
 
@@ -228,7 +228,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         coupon_type: :fixed_amount,
         frequency: :forever,
         limited_plans: false,
-        reusable: true,
+        reusable: true
       )
     end
 
@@ -240,14 +240,14 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       charge5
     end
 
-    it 'Allows creation of partial credit note' do
+    it "Allows creation of partial credit note" do
       # Creates two subscriptions
       travel_to(DateTime.new(2022, 12, 19, 12)) do
         create_subscription(
           external_customer_id: customer.external_id,
           external_id: "#{customer.external_id}_1",
           plan_code: plan.code,
-          billing_time: :anniversary,
+          billing_time: :anniversary
         )
       end
 
@@ -256,13 +256,13 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         apply_coupon(
           external_customer_id: customer.external_id,
           coupon_code: coupon.code,
-          amount_cents: 1_000,
+          amount_cents: 1_000
         )
 
         apply_coupon(
           external_customer_id: customer.external_id,
           coupon_code: coupon.code,
-          amount_cents: 1_000,
+          amount_cents: 1_000
         )
       end
 
@@ -305,25 +305,25 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
           items: [
             {
               fee_id: fee6.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
             {
               fee_id: fee2.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
             {
               fee_id: fee3.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
             {
               fee_id: fee4.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
             {
               fee_id: fee5.id,
-              amount_cents: 100,
-            },
-          ],
+              amount_cents: 100
+            }
+          ]
         )
 
         estimate = json[:estimated_credit_note]

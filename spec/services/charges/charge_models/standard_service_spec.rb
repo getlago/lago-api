@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Charges::ChargeModels::StandardService, type: :service do
   subject(:apply_standard_service) do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties,
+      properties: charge.properties
     )
   end
 
@@ -25,30 +25,30 @@ RSpec.describe Charges::ChargeModels::StandardService, type: :service do
   let(:charge) do
     create(
       :standard_charge,
-      charge_model: 'standard',
+      charge_model: "standard",
       properties: {
-        amount: '5.12345',
-      },
+        amount: "5.12345"
+      }
     )
   end
 
-  it 'applies the charge model to the value' do
+  it "applies the charge model to the value" do
     expect(apply_standard_service.amount).to eq(51.2345)
     expect(apply_standard_service.unit_amount).to eq(5.12345)
   end
 
-  context 'when aggregation result contains total_aggregated_units' do
+  context "when aggregation result contains total_aggregated_units" do
     let(:total_aggregated_units) { 10 }
 
-    it 'assigns the total_aggregated_units to the result' do
+    it "assigns the total_aggregated_units to the result" do
       expect(apply_standard_service.total_aggregated_units).to eq(total_aggregated_units)
     end
   end
 
-  context 'when aggregation result contains full_units_number' do
+  context "when aggregation result contains full_units_number" do
     let(:full_units_number) { 100 }
 
-    it 'applies the charge model to the value' do
+    it "applies the charge model to the value" do
       expect(apply_standard_service.unit_amount).to eq(0.512345)
     end
   end

@@ -5,8 +5,8 @@ module Mutations
     class Revoke < BaseMutation
       include AuthenticableApiUser
 
-      graphql_name 'RevokeMembership'
-      description 'Revoke a membership'
+      graphql_name "RevokeMembership"
+      description "Revoke a membership"
 
       argument :id, ID, required: true
 

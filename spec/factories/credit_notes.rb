@@ -7,23 +7,23 @@ FactoryBot.define do
 
     issuing_date { Time.zone.today }
 
-    reason { 'duplicated_charge' }
+    reason { "duplicated_charge" }
     total_amount_cents { 120 }
-    total_amount_currency { 'EUR' }
+    total_amount_currency { "EUR" }
     taxes_amount_cents { 20 }
 
-    credit_status { 'available' }
+    credit_status { "available" }
     credit_amount_cents { 120 }
-    credit_amount_currency { 'EUR' }
+    credit_amount_currency { "EUR" }
     balance_amount_cents { 120 }
-    balance_amount_currency { 'EUR' }
+    balance_amount_currency { "EUR" }
 
     trait :with_file do
       after(:build) do |credit_note|
         credit_note.file.attach(
-          io: File.open(Rails.root.join('spec/fixtures/blank.pdf')),
-          filename: 'blank.pdf',
-          content_type: 'application/pdf',
+          io: File.open(Rails.root.join("spec/fixtures/blank.pdf")),
+          filename: "blank.pdf",
+          content_type: "application/pdf"
         )
       end
     end

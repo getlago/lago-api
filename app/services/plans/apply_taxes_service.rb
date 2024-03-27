@@ -10,11 +10,11 @@ module Plans
     end
 
     def call
-      return result.not_found_failure!(resource: 'plan') unless plan
-      return result.not_found_failure!(resource: 'tax') if (tax_codes - taxes.pluck(:code)).present?
+      return result.not_found_failure!(resource: "plan") unless plan
+      return result.not_found_failure!(resource: "tax") if (tax_codes - taxes.pluck(:code)).present?
 
       plan.applied_taxes.where(
-        tax_id: plan.taxes.where.not(code: tax_codes).pluck(:id),
+        tax_id: plan.taxes.where.not(code: tax_codes).pluck(:id)
       ).destroy_all
 
       result.applied_taxes = tax_codes.map do |tax_code|

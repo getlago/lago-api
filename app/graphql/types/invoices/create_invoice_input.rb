@@ -3,7 +3,7 @@
 module Types
   module Invoices
     class CreateInvoiceInput < BaseInputObject
-      description 'Create Invoice input arguments'
+      description "Create Invoice input arguments"
 
       argument :currency, Types::CurrencyEnum, required: false
       argument :customer_id, ID, required: true

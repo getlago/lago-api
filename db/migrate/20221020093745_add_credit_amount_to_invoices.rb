@@ -7,8 +7,8 @@ class AddCreditAmountToInvoices < ActiveRecord::Migration[7.0]
       t.string :credit_amount_currency
     end
 
-    currency_list = WalletTransaction.joins(:wallet).pluck('DISTINCT(wallets.currency)')
-    currency_list << 'EUR' if currency_list.blank?
+    currency_list = WalletTransaction.joins(:wallet).pluck("DISTINCT(wallets.currency)")
+    currency_list << "EUR" if currency_list.blank?
     currency_sql = currency_list.each_with_object([]) do |code, currencies|
       currency = Money::Currency.new(code)
       currencies << "('#{code}', #{currency.exponent}, #{currency.subunit_to_unit})"
@@ -36,7 +36,7 @@ class AddCreditAmountToInvoices < ActiveRecord::Migration[7.0]
               INNER JOIN wallets ON wallet_transactions.wallet_id = wallets.id
               INNER JOIN (
                 SELECT *
-                FROM (VALUES #{currency_sql.join(', ')}) AS t(currency, exponent, subunit_to_unit)
+                FROM (VALUES #{currency_sql.join(", ")}) AS t(currency, exponent, subunit_to_unit)
               ) currencies ON currencies.currency = wallets.currency
             GROUP BY wallet_transactions.invoice_id, currencies.currency, currencies.exponent, currencies.subunit_to_unit
           ) AS prepaid_amounts ON prepaid_amounts.invoice_id = invoices.id

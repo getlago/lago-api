@@ -4,8 +4,8 @@ module Types
   module Invoices
     module Metadata
       class Input < Types::BaseInputObject
-        description 'Attributes for creating or updating invoice metadata object'
-        graphql_name 'InvoiceMetadataInput'
+        description "Attributes for creating or updating invoice metadata object"
+        graphql_name "InvoiceMetadataInput"
 
         argument :id, ID, required: false
         argument :key, String, required: true

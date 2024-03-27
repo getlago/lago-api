@@ -10,17 +10,17 @@ module Admin
     private
 
     def authenticate
-      auth_header = request.headers['Authorization']
+      auth_header = request.headers["Authorization"]
 
       return unauthorized_error unless auth_header
 
-      token = auth_header.split(' ').second
+      token = auth_header.split(" ").second
       payload = Google::Auth::IDTokens.verify_oidc(
         token,
-        aud: ENV['GOOGLE_AUTH_CLIENT_ID'],
+        aud: ENV["GOOGLE_AUTH_CLIENT_ID"]
       )
 
-      CurrentContext.email = payload['email']
+      CurrentContext.email = payload["email"]
 
       true
     rescue Google::Auth::IDTokens::SignatureError
@@ -28,7 +28,7 @@ module Admin
     end
 
     def set_context_source
-      CurrentContext.source = 'admin'
+      CurrentContext.source = "admin"
     end
   end
 end

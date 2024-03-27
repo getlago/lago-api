@@ -9,7 +9,7 @@ module V1
           external_customer_id: model.customer&.external_id,
           payment_provider: model.customer&.payment_provider,
           lago_invoice_id: model.id,
-          payment_url: options[:payment_url],
+          payment_url: options[:payment_url]
         }
       end
     end

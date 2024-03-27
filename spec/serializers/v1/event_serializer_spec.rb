@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe ::V1::EventSerializer do
-  subject(:serializer) { described_class.new(event, root_name: 'event') }
+  subject(:serializer) { described_class.new(event, root_name: "event") }
 
   let(:event) do
     create(
@@ -11,26 +11,26 @@ RSpec.describe ::V1::EventSerializer do
       customer_id: nil,
       subscription_id: nil,
       properties: {
-        item_value: '12',
-      },
+        item_value: "12"
+      }
     )
   end
 
   let(:result) { JSON.parse(serializer.to_json) }
 
-  it 'serializes the event' do
+  it "serializes the event" do
     aggregate_failures do
-      expect(result['event']).to include(
-        'lago_id' => event.id,
-        'transaction_id' => event.transaction_id,
-        'lago_customer_id' => event.customer_id,
-        'external_customer_id' => event.external_customer_id,
-        'code' => event.code,
-        'timestamp' => event.timestamp.iso8601(3),
-        'properties' => event.properties,
-        'lago_subscription_id' => event.subscription_id,
-        'external_subscription_id' => event.external_subscription_id,
-        'created_at' => event.created_at.iso8601,
+      expect(result["event"]).to include(
+        "lago_id" => event.id,
+        "transaction_id" => event.transaction_id,
+        "lago_customer_id" => event.customer_id,
+        "external_customer_id" => event.external_customer_id,
+        "code" => event.code,
+        "timestamp" => event.timestamp.iso8601(3),
+        "properties" => event.properties,
+        "lago_subscription_id" => event.subscription_id,
+        "external_subscription_id" => event.external_subscription_id,
+        "created_at" => event.created_at.iso8601
       )
     end
   end

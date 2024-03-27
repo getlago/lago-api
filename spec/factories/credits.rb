@@ -6,14 +6,14 @@ FactoryBot.define do
     applied_coupon
 
     amount_cents { 200 }
-    amount_currency { 'EUR' }
+    amount_currency { "EUR" }
   end
 
-  factory :credit_note_credit, class: 'Credit' do
+  factory :credit_note_credit, class: "Credit" do
     invoice
     credit_note
 
     amount_cents { 200 }
-    amount_currency { 'EUR' }
+    amount_currency { "EUR" }
   end
 end

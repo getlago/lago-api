@@ -8,8 +8,8 @@ FactoryBot.define do
     association :payment_provider_customer, factory: :stripe_customer
 
     amount_cents { 200 }
-    amount_currency { 'EUR' }
+    amount_currency { "EUR" }
     provider_refund_id { SecureRandom.uuid }
-    status { 'pending' }
+    status { "pending" }
   end
 end

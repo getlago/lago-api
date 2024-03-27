@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::WalletsResolver, type: :graphql do
   let(:query) do
@@ -26,76 +26,76 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
     wallet_transaction
   end
 
-  it 'returns a list of wallet transactions' do
+  it "returns a list of wallet transactions" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       query:,
       variables: {
-        walletId: wallet.id,
-      },
+        walletId: wallet.id
+      }
     )
 
-    wallet_transactions_response = result['data']['walletTransactions']
+    wallet_transactions_response = result["data"]["walletTransactions"]
 
     aggregate_failures do
-      expect(wallet_transactions_response['collection'].count).to eq(wallet.wallet_transactions.count)
-      expect(wallet_transactions_response['collection'].first['id']).to eq(wallet_transaction.id)
+      expect(wallet_transactions_response["collection"].count).to eq(wallet.wallet_transactions.count)
+      expect(wallet_transactions_response["collection"].first["id"]).to eq(wallet_transaction.id)
 
-      expect(wallet_transactions_response['metadata']['currentPage']).to eq(1)
-      expect(wallet_transactions_response['metadata']['totalCount']).to eq(1)
+      expect(wallet_transactions_response["metadata"]["currentPage"]).to eq(1)
+      expect(wallet_transactions_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query:,
         variables: {
-          walletId: wallet.id,
-        },
+          walletId: wallet.id
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: "Missing organization id"
       )
     end
   end
 
-  context 'when not member of the organization' do
-    it 'returns an error' do
+  context "when not member of the organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
         query:,
         variables: {
-          walletId: wallet.id,
-        },
+          walletId: wallet.id
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Not in organization',
+        message: "Not in organization"
       )
     end
   end
 
-  context 'when wallet does not exists' do
-    it 'returns an error' do
+  context "when wallet does not exists" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         query:,
         variables: {
-          walletId: '123456',
-        },
+          walletId: "123456"
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found',
+        message: "Resource not found"
       )
     end
   end

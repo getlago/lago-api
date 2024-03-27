@@ -49,7 +49,7 @@ module CreditNotes
     def valid_fee?
       return true if item.fee.present?
 
-      result.not_found_failure!(resource: 'fee')
+      result.not_found_failure!(resource: "fee")
 
       false
     end
@@ -58,21 +58,21 @@ module CreditNotes
     def valid_item_amount?
       return true if item.amount_cents.positive?
 
-      add_error(field: :amount_cents, error_code: 'invalid_value')
+      add_error(field: :amount_cents, error_code: "invalid_value")
     end
 
     # NOTE: Check if item amount is less than or equal to fee remaining creditable amount
     def valid_individual_amount?
       return true if item.amount_cents <= fee.creditable_amount_cents
 
-      add_error(field: :amount_cents, error_code: 'higher_than_remaining_fee_amount')
+      add_error(field: :amount_cents, error_code: "higher_than_remaining_fee_amount")
     end
 
     # NOTE: Check if item amount is less than or equal to invoice remaining creditable amount
     def valid_global_amount?
       return true if total_item_amount_cents <= invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
 
-      add_error(field: :amount_cents, error_code: 'higher_than_remaining_invoice_amount')
+      add_error(field: :amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end
   end
 end

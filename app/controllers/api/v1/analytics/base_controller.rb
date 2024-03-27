@@ -19,8 +19,8 @@ module Api
             json: ::CollectionSerializer.new(
               result.records,
               "::V1::Analytics::#{controller_name.classify}Serializer".constantize,
-              collection_name: controller_name,
-            ),
+              collection_name: controller_name
+            )
           )
         end
       end

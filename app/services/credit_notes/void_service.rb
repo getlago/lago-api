@@ -9,10 +9,10 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'credit_note') if credit_note.nil? || credit_note.draft?
+      return result.not_found_failure!(resource: "credit_note") if credit_note.nil? || credit_note.draft?
 
       result.credit_note = credit_note
-      return result.not_allowed_failure!(code: 'no_voidable_amount') unless credit_note.voidable?
+      return result.not_allowed_failure!(code: "no_voidable_amount") unless credit_note.voidable?
 
       credit_note.mark_as_voided!
 

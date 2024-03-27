@@ -3,7 +3,7 @@
 module Types
   module Charges
     class Input < Types::BaseInputObject
-      graphql_name 'ChargeInput'
+      graphql_name "ChargeInput"
 
       argument :billable_metric_id, ID, required: true
       argument :charge_model, Types::Charges::ChargeModelEnum, required: true

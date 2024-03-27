@@ -20,7 +20,7 @@ module BillableMetrics
         end
 
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
-        result.options = { running_total: running_total(options) }
+        result.options = {running_total: running_total(options)}
         result.count = result.aggregation
         result
       end
@@ -70,14 +70,14 @@ module BillableMetrics
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: grouped_by_values,
+          grouped_by: grouped_by_values
         )
 
         unless cached_aggregation
           handle_event_metadata(
             current_aggregation: newly_applied_units,
             max_aggregation: newly_applied_units,
-            units_applied: newly_applied_units,
+            units_applied: newly_applied_units
           )
 
           return newly_applied_units
@@ -140,16 +140,16 @@ module BillableMetrics
       end
 
       def count_unique_group_scope(events)
-        events = events.where('quantified_events.properties @> ?', { group.key.to_s => group.value }.to_json)
+        events = events.where("quantified_events.properties @> ?", {group.key.to_s => group.value}.to_json)
         return events unless group.parent
 
-        events.where('quantified_events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+        events.where("quantified_events.properties @> ?", {group.parent.key.to_s => group.parent.value}.to_json)
       end
 
       protected
 
       def operation_type
-        @operation_type ||= event.properties.fetch('operation_type', 'add')&.to_sym
+        @operation_type ||= event.properties.fetch("operation_type", "add")&.to_sym
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)

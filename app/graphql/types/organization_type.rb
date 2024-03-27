@@ -2,7 +2,7 @@
 
 module Types
   class OrganizationType < SafeOrganizationType
-    description 'Organization Type'
+    description "Organization Type"
 
     # Some fields (id, name, ...) are defined by the parent type SafeOrganizationType
 
@@ -47,7 +47,7 @@ module Types
         invoice_footer: object&.invoice_footer,
         invoice_grace_period: object&.invoice_grace_period,
         document_locale: object&.document_locale,
-        eu_tax_management: object&.eu_tax_management,
+        eu_tax_management: object&.eu_tax_management
       }
     end
 

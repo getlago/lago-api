@@ -5,7 +5,7 @@ class ChargeFilterValue < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
-  ALL_FILTER_VALUES = '__ALL_FILTER_VALUES__'
+  ALL_FILTER_VALUES = "__ALL_FILTER_VALUES__"
 
   belongs_to :charge_filter
   belongs_to :billable_metric_filter, -> { with_discarded }

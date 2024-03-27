@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'VoidInvoice'
-      description 'Void an invoice'
+      graphql_name "VoidInvoice"
+      description "Void an invoice"
 
       argument :id, ID, required: true
 
@@ -16,7 +16,7 @@ module Mutations
       def resolve(**args)
         validate_organization!
         result = ::Invoices::VoidService.call(
-          invoice: current_organization.invoices.not_generating.find_by(id: args[:id]),
+          invoice: current_organization.invoices.not_generating.find_by(id: args[:id])
         )
         result.success? ? result.invoice : result_error(result)
       end

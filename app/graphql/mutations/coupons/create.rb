@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'CreateCoupon'
-      description 'Creates a new Coupon'
+      graphql_name "CreateCoupon"
+      description "Creates a new Coupon"
 
       input_object_class Types::Coupons::CreateInput
 

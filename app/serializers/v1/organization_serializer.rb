@@ -25,7 +25,7 @@ module V1
         document_numbering: model.document_numbering,
         document_number_prefix: model.document_number_prefix,
         tax_identification_number: model.tax_identification_number,
-        billing_configuration:,
+        billing_configuration:
       }.merge(legacy_values.except(:billing_configuration))
 
       payload = payload.merge(taxes) if include?(:taxes)
@@ -39,7 +39,7 @@ module V1
       {
         invoice_footer: model.invoice_footer,
         invoice_grace_period: model.invoice_grace_period,
-        document_locale: model.document_locale,
+        document_locale: model.document_locale
       }.merge(legacy_values[:billing_configuration])
     end
 
@@ -51,7 +51,7 @@ module V1
       ::CollectionSerializer.new(
         model.taxes.applied_to_organization,
         ::V1::TaxSerializer,
-        collection_name: 'taxes',
+        collection_name: "taxes"
       ).serialize
     end
 

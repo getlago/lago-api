@@ -7,19 +7,19 @@ module ApiErrors
     render(
       json: {
         status: 400,
-        error: "BadRequest: #{error.message}",
+        error: "BadRequest: #{error.message}"
       },
-      status: :bad_request,
+      status: :bad_request
     )
   end
 
-  def unauthorized_error(message: 'Unauthorized')
+  def unauthorized_error(message: "Unauthorized")
     render(
       json: {
         status: 401,
-        error: message,
+        error: message
       },
-      status: :unauthorized,
+      status: :unauthorized
     )
   end
 
@@ -27,11 +27,11 @@ module ApiErrors
     render(
       json: {
         status: 422,
-        error: 'Unprocessable Entity',
-        code: 'validation_errors',
-        error_details: errors,
+        error: "Unprocessable Entity",
+        code: "validation_errors",
+        error_details: errors
       },
-      status: :unprocessable_entity,
+      status: :unprocessable_entity
     )
   end
 
@@ -39,10 +39,10 @@ module ApiErrors
     render(
       json: {
         status: 403,
-        error: 'Forbidden',
-        code:,
+        error: "Forbidden",
+        code:
       },
-      status: :forbidden,
+      status: :forbidden
     )
   end
 
@@ -50,10 +50,10 @@ module ApiErrors
     render(
       json: {
         status: 405,
-        error: 'Method Not Allowed',
-        code:,
+        error: "Method Not Allowed",
+        code:
       },
-      status: :method_not_allowed,
+      status: :method_not_allowed
     )
   end
 

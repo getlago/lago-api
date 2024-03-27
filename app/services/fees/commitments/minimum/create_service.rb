@@ -24,7 +24,7 @@ module Fees
             invoice:,
             subscription:,
             fee_type: :commitment,
-            invoiceable_type: 'Commitment',
+            invoiceable_type: "Commitment",
             invoiceable_id: minimum_commitment.id,
             amount_cents: true_up_fee_result.amount_cents,
             unit_amount_cents: true_up_fee_result.amount_cents,
@@ -32,7 +32,7 @@ module Fees
             invoice_display_name: minimum_commitment.invoice_name,
             units: 1,
             precise_unit_amount:,
-            taxes_amount_cents: 0,
+            taxes_amount_cents: 0
           )
 
           taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)

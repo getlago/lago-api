@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'RetryWebhook'
-      description 'Retry a Webhook'
+      graphql_name "RetryWebhook"
+      description "Retry a Webhook"
 
       argument :id, ID, required: true
 

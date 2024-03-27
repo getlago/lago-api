@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe BillPaidCreditJob, type: :job do
   let(:wallet_transaction) { create(:wallet_transaction) }
@@ -17,18 +17,18 @@ RSpec.describe BillPaidCreditJob, type: :job do
       .and_return(result)
   end
 
-  it 'calls the paid credit service call method' do
+  it "calls the paid credit service call method" do
     described_class.perform_now(wallet_transaction, timestamp)
 
     expect(Invoices::PaidCreditService).to have_received(:call)
   end
 
-  context 'when result is a failure' do
+  context "when result is a failure" do
     let(:result) do
-      BaseService::Result.new.single_validation_failure!(error_code: 'error')
+      BaseService::Result.new.single_validation_failure!(error_code: "error")
     end
 
-    it 'raises an error' do
+    it "raises an error" do
       expect do
         described_class.perform_now(wallet_transaction, timestamp)
       end.to raise_error(BaseService::FailedResult)
@@ -36,11 +36,11 @@ RSpec.describe BillPaidCreditJob, type: :job do
       expect(Invoices::PaidCreditService).to have_received(:call)
     end
 
-    context 'with a previously created invoice' do
+    context "with a previously created invoice" do
       let(:previous_invoice) { create(:invoice, :generating) }
       let(:invoice) { previous_invoice }
 
-      it 'raises an error' do
+      it "raises an error" do
         expect do
           described_class.perform_now(wallet_transaction, timestamp, invoice: previous_invoice)
         end.to raise_error(BaseService::FailedResult)
@@ -49,12 +49,12 @@ RSpec.describe BillPaidCreditJob, type: :job do
       end
     end
 
-    context 'when a generating invoice is attached to the result' do
+    context "when a generating invoice is attached to the result" do
       let(:previous_invoice) { create(:invoice, :generating) }
 
       before { result.invoice = previous_invoice }
 
-      it 'retries the job with the invoice' do
+      it "retries the job with the invoice" do
         described_class.perform_now(wallet_transaction, timestamp)
 
         expect(Invoices::PaidCreditService).to have_received(:call)
@@ -64,12 +64,12 @@ RSpec.describe BillPaidCreditJob, type: :job do
       end
     end
 
-    context 'when a not generating invoice is attached to the result' do
+    context "when a not generating invoice is attached to the result" do
       let(:previous_invoice) { create(:invoice, :draft) }
 
       before { result.invoice = previous_invoice }
 
-      it 'raises an error' do
+      it "raises an error" do
         expect do
           described_class.perform_now(wallet_transaction, timestamp)
         end.to raise_error(BaseService::FailedResult)

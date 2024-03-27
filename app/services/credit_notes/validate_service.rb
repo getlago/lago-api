@@ -53,7 +53,7 @@ module CreditNotes
       if credit_note.refund_amount_cents.positive?
         return true if invoice.succeeded?
 
-        add_error(field: :refund_amount_cents, error_code: 'cannot_refund_unpaid_invoice')
+        add_error(field: :refund_amount_cents, error_code: "cannot_refund_unpaid_invoice")
         return false
       end
 
@@ -63,7 +63,7 @@ module CreditNotes
     def valid_invoice_type?
       return unless invoice.credit?
 
-      add_error(field: :base, error_code: 'cannot_credit_invoice')
+      add_error(field: :base, error_code: "cannot_credit_invoice")
       false
     end
 
@@ -71,28 +71,28 @@ module CreditNotes
     def valid_items_amount?
       return true if total_amount_cents == total_items_amount_cents
 
-      add_error(field: :base, error_code: 'does_not_match_item_amounts')
+      add_error(field: :base, error_code: "does_not_match_item_amounts")
     end
 
     # NOTE: Check if refunded amount is less than or equal to invoice total amount
     def valid_refund_amount?
       return true if credit_note.refund_amount_cents <= invoice.total_amount_cents - refunded_invoice_amount_cents
 
-      add_error(field: :refund_amount_cents, error_code: 'higher_than_remaining_invoice_amount')
+      add_error(field: :refund_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end
 
     # NOTE: Check if credited amount is less than or equal to invoice fee amount
     def valid_credit_amount?
       return true if credit_note.credit_amount_cents <= invoice.fee_total_amount_cents - credited_invoice_amount_cents
 
-      add_error(field: :credit_amount_cents, error_code: 'higher_than_remaining_invoice_amount')
+      add_error(field: :credit_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end
 
     # NOTE: Check if total amount is less than or equal to invoice fee amount
     def valid_global_amount?
       return true if total_amount_cents <= invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
 
-      add_error(field: :base, error_code: 'higher_than_remaining_invoice_amount')
+      add_error(field: :base, error_code: "higher_than_remaining_invoice_amount")
     end
   end
 end

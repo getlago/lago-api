@@ -2,7 +2,7 @@
 
 module WalletTransactions
   class CreateJob < ApplicationJob
-    queue_as 'wallets'
+    queue_as "wallets"
 
     def perform(organization_id:, wallet_id:, paid_credits:, granted_credits:, source:)
       WalletTransactions::CreateService.new.create(
@@ -10,7 +10,7 @@ module WalletTransactions
         wallet_id:,
         paid_credits:,
         granted_credits:,
-        source:,
+        source:
       )
     end
   end

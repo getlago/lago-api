@@ -10,11 +10,11 @@ module Invoices
 
         def self.service_class(payment_provider)
           case payment_provider&.to_s
-          when 'stripe'
+          when "stripe"
             Invoices::Payments::StripeService
-          when 'adyen'
+          when "adyen"
             Invoices::Payments::AdyenService
-          when 'gocardless'
+          when "gocardless"
             Invoices::Payments::GocardlessService
           else
             raise(NotImplementedError)

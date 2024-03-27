@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
   let(:webhook) { create(:webhook, :failed, webhook_endpoint:) }
@@ -20,22 +20,22 @@ RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
 
   before { webhook }
 
-  it 'retries a webhook' do
+  it "retries a webhook" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       query: mutation,
       variables: {
         input: {
-          id: webhook.id,
-        },
-      },
+          id: webhook.id
+        }
+      }
     )
 
-    result_data = result['data']['retryWebhook']
+    result_data = result["data"]["retryWebhook"]
 
     aggregate_failures do
-      expect(result_data['id']).to eq(webhook.id)
+      expect(result_data["id"]).to eq(webhook.id)
     end
   end
 end

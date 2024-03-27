@@ -24,9 +24,9 @@ class CustomerCreditNotesQuery < BaseQuery
     return nil if search_term.blank?
 
     {
-      m: 'or',
+      m: "or",
       number_cont: search_term,
-      id_cont: search_term,
+      id_cont: search_term
     }
   end
 end

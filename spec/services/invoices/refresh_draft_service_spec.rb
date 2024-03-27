@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::RefreshDraftService, type: :service do
   subject(:refresh_service) { described_class.new(invoice:) }
 
-  describe '#call' do
+  describe "#call" do
     let(:status) { :draft }
     let(:invoice) do
       create(:invoice, status:, organization:, customer:)
@@ -22,7 +22,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         organization:,
         subscription_at: started_at,
         started_at:,
-        created_at: started_at,
+        created_at: started_at
       )
     end
 
@@ -35,29 +35,29 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       allow(Invoices::CalculateFeesService).to receive(:call).and_call_original
     end
 
-    context 'when invoice is ready to be finalized' do
+    context "when invoice is ready to be finalized" do
       let(:invoice) do
         create(:invoice, status:, organization:, customer:, ready_to_be_refreshed: true)
       end
 
-      it 'updates ready_to_be_refreshed to false' do
+      it "updates ready_to_be_refreshed to false" do
         expect { refresh_service.call }.to change(invoice, :ready_to_be_refreshed).to(false)
       end
     end
 
-    context 'when invoice is finalized' do
+    context "when invoice is finalized" do
       let(:status) { :finalized }
 
-      it 'does not refresh it' do
+      it "does not refresh it" do
         result = refresh_service.call
         expect(Invoices::CalculateFeesService).not_to have_received(:call)
         expect(result).to be_success
       end
     end
 
-    it 'regenerates fees' do
+    it "regenerates fees" do
       fee = create(:fee, invoice:)
-      create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+      create(:standard_charge, plan: subscription.plan, charge_model: "standard")
 
       expect { refresh_service.call }
         .to change { invoice.reload.fees.count }.from(1).to(2)
@@ -67,7 +67,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       expect(invoice.invoice_subscriptions.first.recurring).to be_truthy
     end
 
-    it 'assigns credit notes to new created fee' do
+    it "assigns credit notes to new created fee" do
       credit_note = create(:credit_note, invoice:)
       fee = create(:fee, invoice:, subscription:)
       create(:credit_note_item, credit_note:, fee:)
@@ -75,7 +75,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       expect { refresh_service.call }.to change { credit_note.reload.items.pluck(:fee_id) }
     end
 
-    it 'updates taxes_rate' do
+    it "updates taxes_rate" do
       expect { refresh_service.call }
         .to change { invoice.reload.taxes_rate }.from(0.0).to(15)
     end

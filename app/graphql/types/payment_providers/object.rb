@@ -3,19 +3,19 @@
 module Types
   module PaymentProviders
     class Object < Types::BaseUnion
-      graphql_name 'PaymentProvider'
+      graphql_name "PaymentProvider"
 
       possible_types Types::PaymentProviders::Adyen,
-                     Types::PaymentProviders::Gocardless,
-                     Types::PaymentProviders::Stripe
+        Types::PaymentProviders::Gocardless,
+        Types::PaymentProviders::Stripe
 
       def self.resolve_type(object, _context)
         case object.class.to_s
-        when 'PaymentProviders::AdyenProvider'
+        when "PaymentProviders::AdyenProvider"
           Types::PaymentProviders::Adyen
-        when 'PaymentProviders::StripeProvider'
+        when "PaymentProviders::StripeProvider"
           Types::PaymentProviders::Stripe
-        when 'PaymentProviders::GocardlessProvider'
+        when "PaymentProviders::GocardlessProvider"
           Types::PaymentProviders::Gocardless
         else
           raise "Unexpected Payment provider type: #{object.inspect}"

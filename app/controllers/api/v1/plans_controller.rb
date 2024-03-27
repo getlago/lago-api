@@ -9,7 +9,7 @@ module Api
           **input_params
             .merge(organization_id: current_organization.id)
             .to_h
-            .deep_symbolize_keys,
+            .deep_symbolize_keys
         )
 
         if result.success?
@@ -43,7 +43,7 @@ module Api
 
       def show
         plan = current_organization.plans.parents.find_by(code: params[:code])
-        return not_found_error(resource: 'plan') unless plan
+        return not_found_error(resource: "plan") unless plan
 
         render_plan(plan)
       end
@@ -58,10 +58,10 @@ module Api
           json: ::CollectionSerializer.new(
             plans,
             ::V1::PlanSerializer,
-            collection_name: 'plans',
+            collection_name: "plans",
             meta: pagination_metadata(plans),
-            includes: %i[charges taxes minimum_commitment],
-          ),
+            includes: %i[charges taxes minimum_commitment]
+          )
         )
       end
 
@@ -84,7 +84,7 @@ module Api
             :id,
             :invoice_display_name,
             :amount_cents,
-            { tax_codes: [] },
+            {tax_codes: []}
           ],
           charges: [
             :id,
@@ -96,26 +96,26 @@ module Api
             :invoiceable,
             :min_amount_cents,
             {
-              properties: {},
+              properties: {}
             },
             {
               filters: [
                 :invoice_display_name,
                 {
                   properties: {},
-                  values: {},
-                },
-              ],
+                  values: {}
+                }
+              ]
             },
             {
               group_properties: [
                 :group_id,
                 :invoice_display_name,
-                { values: {} },
-              ],
+                {values: {}}
+              ]
             },
-            { tax_codes: [] },
-          ],
+            {tax_codes: []}
+          ]
         )
       end
 
@@ -123,9 +123,9 @@ module Api
         render(
           json: ::V1::PlanSerializer.new(
             plan,
-            root_name: 'plan',
-            includes: %i[charges taxes minimum_commitment],
-          ),
+            root_name: "plan",
+            includes: %i[charges taxes minimum_commitment]
+          )
         )
       end
     end

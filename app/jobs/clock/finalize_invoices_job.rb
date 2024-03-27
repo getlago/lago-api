@@ -2,7 +2,7 @@
 
 module Clock
   class FinalizeInvoicesJob < ApplicationJob
-    queue_as 'clock'
+    queue_as "clock"
 
     def perform
       Invoice.ready_to_be_finalized.each do |invoice|

@@ -9,7 +9,7 @@ module WebhookEndpoints
     end
 
     def call
-      return result.not_found_failure!(resource: 'webhook_endpoint') unless webhook_endpoint
+      return result.not_found_failure!(resource: "webhook_endpoint") unless webhook_endpoint
 
       webhook_endpoint.destroy!
       track_webhook_endpoint_deleted
@@ -25,12 +25,12 @@ module WebhookEndpoints
     def track_webhook_endpoint_deleted
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'webhook_endpoint_deleted',
+        event: "webhook_endpoint_deleted",
         properties: {
           webhook_endpoint_id: webhook_endpoint.id,
           organization_id: webhook_endpoint.organization_id,
-          webhook_url: webhook_endpoint.webhook_url,
-        },
+          webhook_url: webhook_endpoint.webhook_url
+        }
       )
     end
   end

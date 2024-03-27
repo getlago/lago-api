@@ -14,11 +14,11 @@ class AppliedCouponsQuery < BaseQuery
 
   def base_scope
     organization.applied_coupons
-      .joins(:customer).where(customers: { deleted_at: nil })
+      .joins(:customer).where(customers: {deleted_at: nil})
   end
 
   def with_external_customer(scope)
-    scope.where(customers: { external_id: filters.external_customer_id })
+    scope.where(customers: {external_id: filters.external_customer_id})
   end
 
   def with_status(scope)

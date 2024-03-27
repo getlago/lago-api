@@ -5,11 +5,11 @@ FactoryBot.define do
     organization
     name { Faker::Name.name }
     code { Faker::Alphanumeric.alphanumeric(number: 10) }
-    coupon_type { 'fixed_amount' }
-    status { 'active' }
-    expiration { 'no_expiration' }
+    coupon_type { "fixed_amount" }
+    status { "active" }
+    expiration { "no_expiration" }
     amount_cents { 200 }
-    amount_currency { 'EUR' }
-    frequency { 'once' }
+    amount_currency { "EUR" }
+    frequency { "once" }
   end
 end

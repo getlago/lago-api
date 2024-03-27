@@ -20,7 +20,7 @@ module V1
         created_at: model.created_at.iso8601,
         previous_plan_code: model.previous_subscription&.plan&.code,
         next_plan_code: model.next_subscription&.plan&.code,
-        downgrade_plan_date: model.downgrade_plan_date&.iso8601,
+        downgrade_plan_date: model.downgrade_plan_date&.iso8601
       }.merge(legacy_values)
 
       payload = payload.merge(customer:) if include?(:customer)
@@ -42,7 +42,7 @@ module V1
     def plan
       ::V1::PlanSerializer.new(
         model.plan,
-        includes: %i[charges taxes minimum_commitment],
+        includes: %i[charges taxes minimum_commitment]
       ).serialize
     end
   end

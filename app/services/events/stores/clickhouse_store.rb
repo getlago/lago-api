@@ -4,7 +4,7 @@ module Events
   module Stores
     class ClickhouseStore < BaseStore
       DECIMAL_SCALE = 26
-      DEDUPLICATION_GROUP = 'events_raw.transaction_id, events_raw.properties, events_raw.timestamp'
+      DEDUPLICATION_GROUP = "events_raw.transaction_id, events_raw.properties, events_raw.timestamp"
 
       # NOTE: keeps in mind that events could contains duplicated transaction_id
       #       and should be deduplicated depending on the aggregation logic
@@ -14,8 +14,8 @@ module Events
           .where(code:)
           .order(timestamp: :asc)
 
-        scope = scope.where('events_raw.timestamp >= ?', from_datetime) if force_from || use_from_boundary
-        scope = scope.where('events_raw.timestamp <= ?', to_datetime) if to_datetime
+        scope = scope.where("events_raw.timestamp >= ?", from_datetime) if force_from || use_from_boundary
+        scope = scope.where("events_raw.timestamp <= ?", to_datetime) if to_datetime
         scope = scope.where(numeric_condition) if numeric_property
 
         scope = with_grouped_by_values(scope) if grouped_by_values?
@@ -37,12 +37,12 @@ module Events
 
       def grouped_last_event
         groups = grouped_by.map { |group| sanitized_property_name(group) }
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select(Arel.sql(
             (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+            ["#{sanitized_numeric_property} AS property", "events_raw.timestamp"]).join(", ")
           ))
           .to_sql
 
@@ -61,7 +61,7 @@ module Events
       end
 
       def prorated_events_values(total_duration)
-        ratio_sql = duration_ratio_sql('events_raw.timestamp', to_datetime, total_duration)
+        ratio_sql = duration_ratio_sql("events_raw.timestamp", to_datetime, total_duration)
 
         events.group(DEDUPLICATION_GROUP)
           .pluck(Arel.sql("#{sanitized_numeric_property} * (#{ratio_sql})"))
@@ -69,7 +69,7 @@ module Events
 
       def count
         cte_sql = events.group(DEDUPLICATION_GROUP)
-          .select('COUNT(events_raw.transaction_id) as transaction_count')
+          .select("COUNT(events_raw.transaction_id) as transaction_count")
           .group(:transaction_id)
           .to_sql
 
@@ -91,16 +91,16 @@ module Events
         group_names = groups.map.with_index { |_, index| "g_#{index}" }
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
-          .select((groups + ['events_raw.transaction_id']).join(', '))
+          .select((groups + ["events_raw.transaction_id"]).join(", "))
 
         sql = <<-SQL
           with events as (#{cte_sql.to_sql})
 
           select
-            #{group_names.join(', ')},
+            #{group_names.join(", ")},
             toDecimal128(count(), #{DECIMAL_SCALE})
           from events
-          group by #{group_names.join(',')}
+          group by #{group_names.join(",")}
         SQL
 
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
@@ -110,14 +110,14 @@ module Events
       #       unique property
       def active_unique_property?(event)
         previous_event = events
-          .where('events_raw.properties[?] = ?', aggregation_property, event.properties[aggregation_property])
-          .where('events_raw.timestamp < ?', event.timestamp)
+          .where("events_raw.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
+          .where("events_raw.timestamp < ?", event.timestamp)
           .reorder(timestamp: :desc)
           .first
 
         previous_event && (
-          previous_event.properties['operation_type'].nil? ||
-          previous_event.properties['operation_type'] == 'add'
+          previous_event.properties["operation_type"].nil? ||
+          previous_event.properties["operation_type"] == "add"
         )
       end
 
@@ -126,12 +126,12 @@ module Events
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
             query.query,
-            { decimal_scale: DECIMAL_SCALE },
-          ],
+            {decimal_scale: DECIMAL_SCALE}
+          ]
         )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
 
-        result['aggregation']
+        result["aggregation"]
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -141,9 +141,9 @@ module Events
           ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               query.breakdown_query,
-              { decimal_scale: DECIMAL_SCALE },
-            ],
-          ),
+              {decimal_scale: DECIMAL_SCALE}
+            ]
+          )
         ).rows
       end
 
@@ -156,13 +156,13 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
-              timezone: customer.applicable_timezone,
-            },
-          ],
+              timezone: customer.applicable_timezone
+            }
+          ]
         )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
 
-        result['aggregation']
+        result["aggregation"]
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
@@ -174,9 +174,9 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
-              timezone: customer.applicable_timezone,
-            },
-          ],
+              timezone: customer.applicable_timezone
+            }
+          ]
         )
 
         ::Clickhouse::EventsRaw.connection.select_all(sql).to_a
@@ -189,9 +189,9 @@ module Events
             query.grouped_query,
             {
               to_datetime: to_datetime.ceil,
-              decimal_scale: DECIMAL_SCALE,
-            },
-          ],
+              decimal_scale: DECIMAL_SCALE
+            }
+          ]
         )
 
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
@@ -206,9 +206,9 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
-              timezone: customer.applicable_timezone,
-            },
-          ],
+              timezone: customer.applicable_timezone
+            }
+          ]
         )
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
@@ -219,12 +219,12 @@ module Events
 
       def grouped_max
         groups = grouped_by.map { |group| sanitized_property_name(group) }
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select(Arel.sql(
             (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+            ["#{sanitized_numeric_property} AS property", "events_raw.timestamp"]).join(", ")
           ))
           .to_sql
 
@@ -250,12 +250,12 @@ module Events
 
       def grouped_last
         groups = grouped_by.map { |group| sanitized_property_name(group) }
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select(Arel.sql(
             (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+            ["#{sanitized_numeric_property} AS property", "events_raw.timestamp"]).join(", ")
           ))
           .to_sql
 
@@ -291,10 +291,10 @@ module Events
         groups = grouped_by.map.with_index do |group, index|
           "#{sanitized_property_name(group)} AS g_#{index}"
         end
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
-          .select((groups + [Arel.sql("#{sanitized_numeric_property} AS property")]).join(', '))
+          .select((groups + [Arel.sql("#{sanitized_numeric_property} AS property")]).join(", "))
 
         sql = <<-SQL
           with events as (#{cte_sql.to_sql})
@@ -313,11 +313,11 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          duration_ratio_sql('events_raw.timestamp', to_datetime, period_duration)
+          duration_ratio_sql("events_raw.timestamp", to_datetime, period_duration)
         end
 
         cte_sql = events
-          .reorder('')
+          .reorder("")
           .group(DEDUPLICATION_GROUP)
           .select(Arel.sql("(#{sanitized_numeric_property}) * (#{ratio}) AS prorated_value"))
           .to_sql
@@ -336,18 +336,18 @@ module Events
         groups = grouped_by.map.with_index do |group, index|
           "#{sanitized_property_name(group)} AS g_#{index}"
         end
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(', ')
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
 
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          duration_ratio_sql('events_raw.timestamp', to_datetime, period_duration)
+          duration_ratio_sql("events_raw.timestamp", to_datetime, period_duration)
         end
 
         cte_sql = events
-          .reorder('')
+          .reorder("")
           .group(DEDUPLICATION_GROUP)
-          .select((groups + [Arel.sql("(#{sanitized_numeric_property}) * (#{ratio}) AS prorated_value")]).join(', '))
+          .select((groups + [Arel.sql("(#{sanitized_numeric_property}) * (#{ratio}) AS prorated_value")]).join(", "))
           .to_sql
 
         sql = <<-SQL
@@ -364,7 +364,7 @@ module Events
       end
 
       def sum_date_breakdown
-        date_field = date_in_customer_timezone_sql('events_raw.timestamp')
+        date_field = date_in_customer_timezone_sql("events_raw.timestamp")
 
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select("toDate(#{date_field}) as day, #{sanitized_numeric_property} as property")
@@ -382,7 +382,7 @@ module Events
         SQL
 
         ::Clickhouse::EventsRaw.connection.select_all(Arel.sql(sql)).rows.map do |row|
-          { date: row.first.to_date, value: row.last }
+          {date: row.first.to_date, value: row.last}
         end
       end
 
@@ -396,13 +396,13 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
-              initial_value: initial_value || 0,
-            },
-          ],
+              initial_value: initial_value || 0
+            }
+          ]
         )
 
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
-        result['aggregation']
+        result["aggregation"]
       end
 
       def grouped_weighted_sum(initial_values: [])
@@ -414,7 +414,7 @@ module Events
           value = 0
           previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
           value = previous_group[:value] if previous_group
-          { groups: group[:groups], value: }
+          {groups: group[:groups], value:}
         end
 
         # NOTE: add the initial values for groups that are not in the events
@@ -431,9 +431,9 @@ module Events
             {
               from_datetime:,
               to_datetime: to_datetime.ceil,
-              decimal_scale: DECIMAL_SCALE,
-            },
-          ],
+              decimal_scale: DECIMAL_SCALE
+            }
+          ]
         )
 
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
@@ -451,31 +451,31 @@ module Events
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE,
-                initial_value: initial_value || 0,
-              },
-            ],
-          ),
+                initial_value: initial_value || 0
+              }
+            ]
+          )
         ).rows
       end
 
       def group_scope(scope)
-        scope = scope.where('events_raw.properties[?] = ?', group.key.to_s, group.value.to_s)
+        scope = scope.where("events_raw.properties[?] = ?", group.key.to_s, group.value.to_s)
         return scope unless group.parent
 
-        scope.where('events_raw.properties[?] = ?', group.parent.key.to_s, group.parent.value.to_s)
+        scope.where("events_raw.properties[?] = ?", group.parent.key.to_s, group.parent.value.to_s)
       end
 
       def filters_scope(scope)
         matching_filters.each do |key, values|
-          scope = scope.where('events_raw.properties[?] IN ?', key.to_s, values)
+          scope = scope.where("events_raw.properties[?] IN ?", key.to_s, values)
         end
 
         ignored_filters.each do |filters|
           sql = filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events_raw.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)],
+              ["(coalesce(events_raw.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
             )
-          end.join(' OR ')
+          end.join(" OR ")
 
           scope = scope.where.not(sql)
         end
@@ -485,7 +485,7 @@ module Events
 
       def with_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
-          scope = scope.where('events_raw.properties[?] = ?', grouped_by, grouped_by_value)
+          scope = scope.where("events_raw.properties[?] = ?", grouped_by, grouped_by_value)
         end
 
         scope
@@ -493,23 +493,23 @@ module Events
 
       def sanitized_property_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['events_raw.properties[?]', property],
+          ["events_raw.properties[?]", property]
         )
       end
 
       def numeric_condition
         ActiveRecord::Base.sanitize_sql_for_conditions(
           [
-            'toDecimal128OrNull(events_raw.properties[?], ?) IS NOT NULL',
+            "toDecimal128OrNull(events_raw.properties[?], ?) IS NOT NULL",
             aggregation_property,
-            DECIMAL_SCALE,
-          ],
+            DECIMAL_SCALE
+          ]
         )
       end
 
       def sanitized_numeric_property
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
+          ["toDecimal128(events_raw.properties[?], ?)", aggregation_property, DECIMAL_SCALE]
         )
       end
 
@@ -521,7 +521,7 @@ module Events
         end
 
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          [sql, { date:, timezone: customer.applicable_timezone }],
+          [sql, {date:, timezone: customer.applicable_timezone}]
         )
       end
 
@@ -544,7 +544,7 @@ module Events
 
           result = {
             groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
-            value: row.last,
+            value: row.last
           }
 
           result[:timestamp] = row[-2] if timestamp

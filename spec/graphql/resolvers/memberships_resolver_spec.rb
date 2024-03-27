@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
   let(:query) do
@@ -17,25 +17,25 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  it 'returns a list of memberships' do
+  it "returns a list of memberships" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
-    memberships_response = result['data']['memberships']
+    memberships_response = result["data"]["memberships"]
 
     aggregate_failures do
-      expect(memberships_response['collection'].count).to eq(organization.memberships.count)
-      expect(memberships_response['collection'].first['id']).to eq(membership.id)
+      expect(memberships_response["collection"].count).to eq(organization.memberships.count)
+      expect(memberships_response["collection"].first["id"]).to eq(membership.id)
 
-      expect(memberships_response['metadata']['currentPage']).to eq(1)
-      expect(memberships_response['metadata']['totalCount']).to eq(1)
+      expect(memberships_response["metadata"]["currentPage"]).to eq(1)
+      expect(memberships_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
-  describe 'traversal attack attempt' do
+  describe "traversal attack attempt" do
     let!(:other_org) { create(:organization) }
 
     let(:other_user) { create(:user) }
@@ -63,15 +63,15 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
     end
 
     let(:other_org_result_data) do
-      result.dig('data', 'memberships', 'collection')
-        &.find { |h| h['id'] == other_user_membership.id }
-        &.dig('user', 'organizations')
-        &.find { |h| h['id'] == other_org.id }
+      result.dig("data", "memberships", "collection")
+        &.find { |h| h["id"] == other_user_membership.id }
+        &.dig("user", "organizations")
+        &.find { |h| h["id"] == other_org.id }
     end
 
     before do
@@ -80,40 +80,40 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
       other_user_other_membership
     end
 
-    context 'with non-sensitive field' do
-      let(:organization_field) { 'name' }
+    context "with non-sensitive field" do
+      let(:organization_field) { "name" }
 
-      it 'allows the query' do
+      it "allows the query" do
         expect(other_org_result_data).to eq(
-          'id' => other_org.id,
-          'name' => other_org.name,
+          "id" => other_org.id,
+          "name" => other_org.name
         )
       end
     end
 
-    context 'with sensitive field' do
-      let(:organization_field) { 'apiKey' }
+    context "with sensitive field" do
+      let(:organization_field) { "apiKey" }
 
-      it 'rejects the query for a sensitive field' do
+      it "rejects the query for a sensitive field" do
         expect(other_org_result_data).to be nil
         expect_graphql_error(
           result:,
-          message: "Field 'apiKey' doesn't exist on type 'SafeOrganization'",
+          message: "Field 'apiKey' doesn't exist on type 'SafeOrganization'"
         )
       end
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: "Missing organization id"
       )
     end
   end

@@ -8,18 +8,18 @@ class WalletTransaction < ApplicationRecord
 
   STATUSES = [
     :pending,
-    :settled,
+    :settled
   ].freeze
 
   TRANSACTION_TYPES = [
     :inbound,
-    :outbound,
+    :outbound
   ].freeze
 
   SOURCES = [
     :manual,
     :interval,
-    :threshold,
+    :threshold
   ].freeze
 
   enum status: STATUSES

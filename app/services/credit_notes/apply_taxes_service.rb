@@ -25,7 +25,7 @@ module CreditNotes
           tax_code: invoice_applied_tax&.tax_code || tax.code,
           tax_name: invoice_applied_tax&.tax_name || tax.name,
           tax_rate: invoice_applied_tax&.tax_rate || tax.rate,
-          amount_currency: invoice.currency,
+          amount_currency: invoice.currency
         )
         result.applied_taxes << applied_tax
 

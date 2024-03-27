@@ -18,7 +18,7 @@ module Wallets
         update_params = {
           balance_cents: wallet.balance_cents + amount_cents,
           credits_balance: wallet.credits_balance + credits_amount,
-          last_balance_sync_at: Time.current,
+          last_balance_sync_at: Time.current
         }
 
         if reset_consumed_credits

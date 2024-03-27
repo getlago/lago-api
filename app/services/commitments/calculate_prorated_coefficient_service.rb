@@ -31,25 +31,25 @@ module Commitments
       all_invoice_subscriptions = subscription
         .invoice_subscriptions
         .where(invoice_id: invoices_result.invoices.ids)
-        .where('from_datetime >= ?', dates_service.previous_beginning_of_period)
+        .where("from_datetime >= ?", dates_service.previous_beginning_of_period)
         .order(
           Arel.sql(
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              'COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.timestamp) ASC',
-            ),
-          ),
+              "COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.timestamp) ASC"
+            )
+          )
         )
 
       days = Utils::DatetimeService.date_diff_with_timezone(
         all_invoice_subscriptions.first.from_datetime,
         subscription.terminated? ? subscription.terminated_at : invoice_subscription.to_datetime,
-        subscription.customer.applicable_timezone,
+        subscription.customer.applicable_timezone
       )
 
       days_total = Utils::DatetimeService.date_diff_with_timezone(
         dates_service.previous_beginning_of_period,
         dates_service.end_of_period,
-        subscription.customer.applicable_timezone,
+        subscription.customer.applicable_timezone
       )
 
       days / days_total.to_f

@@ -13,7 +13,7 @@ module V1
         properties: model.properties,
         lago_subscription_id: model.subscription_id,
         external_subscription_id: model.external_subscription_id,
-        created_at: model.created_at.iso8601,
+        created_at: model.created_at.iso8601
       }
     end
   end

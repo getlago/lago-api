@@ -4,8 +4,8 @@ module Mutations
   module PaymentProviders
     module Adyen
       class Create < Base
-        graphql_name 'AddAdyenPaymentProvider'
-        description 'Add Adyen payment provider'
+        graphql_name "AddAdyenPaymentProvider"
+        description "Add Adyen payment provider"
 
         input_object_class Types::PaymentProviders::AdyenInput
 

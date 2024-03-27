@@ -4,8 +4,8 @@ module Mutations
   module PaymentProviders
     module Gocardless
       class Update < Base
-        graphql_name 'UpdateGocardlessPaymentProvider'
-        description 'Update Gocardless payment provider'
+        graphql_name "UpdateGocardlessPaymentProvider"
+        description "Update Gocardless payment provider"
 
         input_object_class Types::PaymentProviders::UpdateInput
 

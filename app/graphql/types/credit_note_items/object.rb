@@ -3,7 +3,7 @@
 module Types
   module CreditNoteItems
     class Object < Types::BaseObject
-      graphql_name 'CreditNoteItem'
+      graphql_name "CreditNoteItem"
 
       field :id, ID, null: false
 

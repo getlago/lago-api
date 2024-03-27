@@ -8,10 +8,10 @@ module BillableMetrics
     end
 
     def call
-      return result.not_found_failure!(resource: 'billable_metric') unless metric
+      return result.not_found_failure!(resource: "billable_metric") unless metric
 
       draft_invoice_ids = Invoice.draft.joins(plans: [:billable_metrics])
-        .where(billable_metrics: { id: metric.id }).distinct.pluck(:id)
+        .where(billable_metrics: {id: metric.id}).distinct.pluck(:id)
 
       ActiveRecord::Base.transaction do
         metric.discard!
@@ -50,15 +50,15 @@ module BillableMetrics
     def track_billable_metric_deleted
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'billable_metric_deleted',
+        event: "billable_metric_deleted",
         properties: {
           code: metric.code,
           name: metric.name,
           description: metric.description,
           aggregation_type: metric.aggregation_type,
           aggregation_property: metric.field_name,
-          organization_id: metric.organization_id,
-        },
+          organization_id: metric.organization_id
+        }
       )
     end
   end
