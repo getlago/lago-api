@@ -10,7 +10,7 @@ en:
     bill_to: Bill to
     breakdown: Breakdown
     breakdown_for_days: Used %{breakdown_duration} out of %{breakdown_total_duration} days
-    breakdown_of: Breakdown of %{fee_group_name}
+    breakdown_of: Breakdown of %{fee_filter_display_name}
     coupons: Coupons
     credit_notes: Credit notes
     date_from: From

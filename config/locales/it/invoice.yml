@@ -10,7 +10,7 @@ it:
     bill_to: Fatturare a
     breakdown: Ripartizione
     breakdown_for_days: Utilizzati %{breakdown_duration} su %{breakdown_total_duration} giorni
-    breakdown_of: Ripartizione di %{fee_group_name}
+    breakdown_of: Ripartizione di %{fee_filter_display_name}
     coupons: Coupon
     credit_notes: Note di Credito
     date_from: Dal

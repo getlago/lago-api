@@ -397,10 +397,10 @@ html
                   td.body-2 width="20%" = MoneyHelper.format(subscription_item(subscription_id).amount)
               - subscription_charge_items(subscription_id).where(fees: { true_up_parent_fee: nil }).group_by { |i| i.fee.charge_id }.each do |_charge_id, items|
                 - item = items.first
-                - if items.all? { |i| i.fee.group_id? }
+                - if items.all? { |i| i.fee.charge_filter_id? }
                   - items.each do |item|
                     tr
-                      td.body-1 = item.fee.invoice_name + FeeDisplayHelper.grouped_by_display(item.fee) + ' • ' + item.fee.group_name
+                      td.body-1 = item.fee.invoice_name + FeeDisplayHelper.grouped_by_display(item.fee) + ' • ' + item.fee.filter_display_name
                       td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                       td.body-2 width="20%" = MoneyHelper.format(item.amount)
                   - items.select { |i| i.fee.true_up_fee.present? }.each do |item|
