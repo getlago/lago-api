@@ -7,11 +7,12 @@ module Mutations
 
     argument :email, String, required: true
     argument :password, String, required: true
+    argument :otp_attempt, String, required: false
 
     type Types::Payloads::LoginUserType
 
-    def resolve(email:, password:)
-      result = UsersService.new.login(email, password)
+    def resolve(email:, password:, otp_attempt: nil)
+      result = UsersService.new.login(email, password, otp_attempt)
       result.success? ? result : result_error(result)
     end
   end
