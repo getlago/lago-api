@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_03_14_163426) do
+ActiveRecord::Schema[7.0].define(version: 2024_03_27_071539) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -481,8 +481,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_14_163426) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.decimal "total_aggregated_units"
     t.string "invoice_display_name"
+    t.decimal "total_aggregated_units"
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
     t.jsonb "amount_details", default: {}, null: false
     t.uuid "charge_filter_id"
@@ -615,6 +615,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_14_163426) do
     t.datetime "voided_at"
     t.integer "organization_sequential_id", default: 0, null: false
     t.boolean "ready_to_be_refreshed", default: false, null: false
+    t.boolean "payment_disputed", default: false, null: false
+    t.datetime "payment_dispute_lost_at"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
@@ -676,9 +678,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_14_163426) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
+    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
-    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"

@@ -11,6 +11,7 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
   before_save :ensure_number
+  before_save :assign_payment_dispute_lost_at
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -96,6 +97,8 @@ class Invoice < ApplicationRecord
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :payment_disputed, inclusion: { in: [false] }, if: :voided?
+  validates :payment_disputed, inclusion: { in: [false, true] }, unless: :voided?
 
   def self.ransackable_attributes(_ = nil)
     %w[id number]
@@ -249,7 +252,7 @@ class Invoice < ApplicationRecord
   end
 
   def voidable?
-    return false if credit_notes.where.not(credit_status: :voided).any?
+    return false if payment_disputed? || credit_notes.where.not(credit_status: :voided).any?
 
     finalized? && (pending? || failed?)
   end
@@ -336,6 +339,10 @@ class Invoice < ApplicationRecord
     raise(SequenceError, 'Unable to acquire lock on the database') unless result
 
     result
+  end
+
+  def assign_payment_dispute_lost_at
+    self.payment_dispute_lost_at = DateTime.current if !payment_disputed_was && payment_disputed
   end
 
   def switched_from_customer_numbering?
