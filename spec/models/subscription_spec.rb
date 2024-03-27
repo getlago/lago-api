@@ -182,6 +182,26 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
+  describe '#in_trial_period?' do
+    context 'when plan has no trial' do
+      it { expect(subscription.in_trial_period?).to be false }
+    end
+
+    context 'when subscription is in trial' do
+      let(:subscription) { create(:subscription, plan:, started_at: 5.days.ago) }
+      let(:plan) { create(:plan, trial_period: 10) }
+
+      it { expect(subscription.in_trial_period?).to be true }
+    end
+
+    context 'when subscription trial has ended' do
+      let(:subscription) { create(:subscription, plan:, started_at: 5.days.ago) }
+      let(:plan) { create(:plan, trial_period: 2) }
+
+      it { expect(subscription.in_trial_period?).to be false }
+    end
+  end
+
   describe '#initial_started_at' do
     let(:customer) { create(:customer) }
     let(:subscription) do

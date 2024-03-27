@@ -89,6 +89,13 @@ class Subscription < ApplicationRecord
     initial_started_at + plan.trial_period.days
   end
 
+  def in_trial_period?
+    return false unless active?
+    return false if initial_started_at.future?
+
+    trial_end_datetime.present? && trial_end_datetime.future?
+  end
+
   def started_in_past?
     started_at.to_date < created_at.to_date
   end
