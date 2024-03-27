@@ -29,7 +29,6 @@ RSpec.describe Organizations::UpdateService do
       timezone:,
       logo:,
       email_settings:,
-      eu_tax_management: true,
       billing_configuration: {
         invoice_footer: 'invoice footer',
         document_locale: 'fr',
@@ -58,7 +57,6 @@ RSpec.describe Organizations::UpdateService do
 
         expect(result.organization.invoice_footer).to eq('invoice footer')
         expect(result.organization.document_locale).to eq('fr')
-        expect(result.organization.eu_tax_management).to be_truthy
       end
     end
 
@@ -253,20 +251,65 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context 'when eu tax management is activated' do
-      let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
+    context 'with eu tax management' do
+      context 'with org within the EU' do
+        let(:params) { { eu_tax_management: true, country: 'fr' } }
+        let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
-      before do
-        allow(Taxes::AutoGenerateService).to receive(:new).and_return(tax_auto_generate_service)
-        allow(tax_auto_generate_service).to receive(:call)
+        before do
+          allow(Taxes::AutoGenerateService).to receive(:new).and_return(tax_auto_generate_service)
+          allow(tax_auto_generate_service).to receive(:call)
+        end
+
+        it 'calls the taxes auto generate service' do
+          result = update_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(tax_auto_generate_service).to have_received(:call)
+          end
+        end
       end
 
-      it 'calls the taxes auto generate service' do
-        result = update_service.call
+      context 'with org outside the EU' do
+        let(:params) { { eu_tax_management: true, country: 'us' } }
+        let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(tax_auto_generate_service).to have_received(:call)
+        before do
+          allow(Taxes::AutoGenerateService).to receive(:new).and_return(tax_auto_generate_service)
+          allow(tax_auto_generate_service).to receive(:call)
+        end
+
+        it 'calls the taxes auto generate service' do
+          result = update_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq({ eu_tax_management: ['org_must_be_in_eu'] })
+            expect(tax_auto_generate_service).not_to have_received(:call)
+          end
+        end
+      end
+
+      context 'with org is outside the EU but feature is already enabled' do
+        let(:params) { { eu_tax_management: false } }
+        let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
+
+        before do
+          organization.country = 'us'
+          organization.eu_tax_management = true
+          allow(Taxes::AutoGenerateService).to receive(:new).and_return(tax_auto_generate_service)
+          allow(tax_auto_generate_service).to receive(:call)
+        end
+
+        it 'can disable eu_tax_management' do
+          result = update_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(tax_auto_generate_service).not_to have_received(:call)
+          end
         end
       end
     end

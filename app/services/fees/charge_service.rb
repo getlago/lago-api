@@ -137,7 +137,7 @@ module Fees
         precise_unit_amount: amount_result.unit_amount,
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
-        charge_filter:,
+        charge_filter_id: charge_filter&.id,
       )
 
       if (adjusted = adjusted_fee(group, amount_result.grouped_by))&.adjusted_display_name?
@@ -182,6 +182,7 @@ module Fees
         persist_recurring_value(
           aggregation_result.aggregations || [aggregation_result],
           group,
+          charge_filter,
         )
       end
 
@@ -219,7 +220,7 @@ module Fees
       )
     end
 
-    def persist_recurring_value(aggregation_results, group)
+    def persist_recurring_value(aggregation_results, group, charge_filter)
       return if is_current_usage
 
       # NOTE: Only weighted sum aggregation is setting this value
@@ -233,6 +234,7 @@ module Fees
           organization_id: billable_metric.organization_id,
           external_subscription_id: subscription.external_id,
           group_id: group&.id,
+          charge_filter_id: charge_filter&.id,
           billable_metric_id: billable_metric.id,
           added_at: aggregation_result.recurring_updated_at,
           grouped_by: aggregation_result.grouped_by || {},
@@ -252,6 +254,7 @@ module Fees
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(filter: charge_filter)
+        filters[:charge_filter] = charge_filter
         filters[:matching_filters] = result.matching_filters
         filters[:ignored_filters] = result.ignored_filters
       end

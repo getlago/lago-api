@@ -49,6 +49,25 @@ RSpec.describe Wallets::Balance::DecreaseOngoingService, type: :service do
           expect { decrease_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
         end
       end
+
+      context 'without any usage' do
+        let(:wallet) do
+          create(
+            :wallet,
+            balance_cents: 200,
+            ongoing_balance_cents: 200,
+            ongoing_usage_balance_cents: 0,
+            credits_balance: 2.0,
+            credits_ongoing_balance: 2.0,
+            credits_ongoing_usage_balance: 0.0,
+          )
+        end
+        let(:credits_amount) { BigDecimal('0.0') }
+
+        it 'calls wallet transaction create job' do
+          expect { decrease_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
     end
   end
 end

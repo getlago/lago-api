@@ -36,6 +36,10 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
   before { charge }
 
   describe '#call' do
+    it 'does not persist any events' do
+      expect { estimate_service.call }.not_to change(Event, :count)
+    end
+
     it 'returns a list of fees' do
       result = estimate_service.call
 

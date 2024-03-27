@@ -12,8 +12,13 @@ module Sequenced
 
     def ensure_sequential_id
       return if sequential_id.present?
+      return unless should_assign_sequential_id?
 
       self.sequential_id = generate_sequential_id
+    end
+
+    def should_assign_sequential_id?
+      true
     end
 
     def generate_sequential_id

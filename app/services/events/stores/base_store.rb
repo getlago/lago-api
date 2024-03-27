@@ -13,7 +13,7 @@ module Events
         @grouped_by_values = filters[:grouped_by_values]
 
         @matching_filters = filters[:matching_filters] || {}
-        @ignored_filters = filters[:ignored_filters] || {}
+        @ignored_filters = filters[:ignored_filters] || []
 
         @aggregation_property = nil
         @numeric_property = false

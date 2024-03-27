@@ -227,20 +227,27 @@ module Fees
     end
 
     def full_period_amount
-      from_date = boundaries.from_datetime.to_date
-      to_date = boundaries.to_datetime.to_date
+      from_datetime = boundaries.from_datetime
+      to_datetime = boundaries.to_datetime
 
       if plan.has_trial?
         # NOTE: amount is 0 if trial cover the full period
-        return 0 if subscription.trial_end_date >= to_date
+        return 0 if subscription.trial_end_datetime >= to_datetime
 
         # NOTE: from_date is the trial end date if it happens during the period
         #       for this case, we should not apply the full period amount
         #       but the prorata between the trial end date end the invoice to_date
-        if (subscription.trial_end_date > from_date) && (subscription.trial_end_date < to_date)
-          number_of_day_to_bill = (to_date + 1.day - subscription.trial_end_date).to_i
+        if (subscription.trial_end_datetime > from_datetime) && (subscription.trial_end_datetime < to_datetime)
+          number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
+            subscription.trial_end_datetime,
+            to_datetime,
+            customer.applicable_timezone,
+          )
 
-          return number_of_day_to_bill * single_day_price(subscription, optional_from_date: from_date)
+          return number_of_day_to_bill * single_day_price(
+            subscription,
+            optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date,
+          )
         end
       end
 
