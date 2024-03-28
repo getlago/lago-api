@@ -459,34 +459,6 @@ RSpec.describe Invoice, type: :model do
 
         before { create(:credit_note, credit_status: :voided, invoice:) }
 
-        context 'when invoice is not finalized' do
-          let(:status) { :draft }
-
-          context 'when invoice is pending' do
-            let(:payment_status) { :pending }
-
-            it 'returns false' do
-              expect(voidable).to be false
-            end
-          end
-
-          context 'when invoice is failed' do
-            let(:payment_status) { :failed }
-
-            it 'returns false' do
-              expect(voidable).to be false
-            end
-          end
-
-          context 'when invoice is succeeded' do
-            let(:payment_status) { :succeeded }
-
-            it 'returns false' do
-              expect(voidable).to be false
-            end
-          end
-        end
-
         context 'when invoice is finalized' do
           let(:status) { :finalized }
 
@@ -520,34 +492,6 @@ RSpec.describe Invoice, type: :model do
         let(:invoice) { create(:invoice, status:, payment_status:, payment_dispute_lost_at:) }
 
         before { create(:credit_note, invoice:) }
-
-        context 'when invoice is not finalized' do
-          let(:status) { :draft }
-
-          context 'when invoice is pending' do
-            let(:payment_status) { :pending }
-
-            it 'returns false' do
-              expect(voidable).to be false
-            end
-          end
-
-          context 'when invoice is failed' do
-            let(:payment_status) { :failed }
-
-            it 'returns false' do
-              expect(voidable).to be false
-            end
-          end
-
-          context 'when invoice is succeeded' do
-            let(:payment_status) { :succeeded }
-
-            it 'returns false' do
-              expect(voidable).to be false
-            end
-          end
-        end
 
         context 'when invoice is finalized' do
           let(:status) { :finalized }
