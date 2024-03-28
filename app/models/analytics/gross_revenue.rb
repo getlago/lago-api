@@ -57,6 +57,7 @@ module Analytics
             LEFT JOIN credit_notes cn ON cn.invoice_id = i.id
             WHERE i.organization_id = :organization_id
             AND i.status = 1
+            AND i.payment_dispute_lost_at IS NULL
             #{and_external_customer_id_sql}
             GROUP BY i.id, i.issuing_date, i.total_amount_cents, i.currency
             ORDER BY i.issuing_date ASC

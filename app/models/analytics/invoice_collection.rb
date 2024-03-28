@@ -49,7 +49,8 @@ module Analytics
                 COALESCE(SUM(i.total_amount_cents::float), 0) AS amount_cents
             FROM invoices i
             WHERE i.organization_id = :organization_id
-                AND i.status = 1
+            AND i.status = 1
+            AND i.payment_dispute_lost_at IS NULL
             GROUP BY payment_status, month, currency
           )
           SELECT

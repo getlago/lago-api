@@ -64,6 +64,7 @@ module Analytics
             WHERE fee_type = 2
               AND c.organization_id = :organization_id
               AND i.status = 1
+              AND i.payment_dispute_lost_at IS NULL
             ORDER BY issuing_date ASC
           ),
           quarterly_advance AS (
