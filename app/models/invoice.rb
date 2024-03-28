@@ -96,8 +96,7 @@ class Invoice < ApplicationRecord
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
-  validates :payment_disputed, inclusion: { in: [false] }, if: :voided?
-  validates :payment_disputed, inclusion: { in: [false, true] }, unless: :voided?
+  validates :payment_dispute_lost_at, absence: true, if: :voided?
 
   def self.ransackable_attributes(_ = nil)
     %w[id number]
@@ -251,7 +250,7 @@ class Invoice < ApplicationRecord
   end
 
   def voidable?
-    return false if payment_disputed? || credit_notes.where.not(credit_status: :voided).any?
+    return false if payment_dispute_lost_at? || credit_notes.where.not(credit_status: :voided).any?
 
     finalized? && (pending? || failed?)
   end
@@ -265,15 +264,8 @@ class Invoice < ApplicationRecord
     subscription_from != charges_from && subscription_to != charges_to
   end
 
-  def mark_as_disputed!(timestamp = Time.current)
+  def mark_as_dispute_lost!(timestamp = Time.current)
     self.payment_dispute_lost_at ||= timestamp
-    self.payment_disputed = true
-    save!
-  end
-
-  def mark_as_not_disputed!
-    self.payment_dispute_lost_at = nil
-    self.payment_disputed = false
     save!
   end
 

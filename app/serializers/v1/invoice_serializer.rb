@@ -13,7 +13,6 @@ module V1
         invoice_type: model.invoice_type,
         status: model.status,
         payment_status: model.payment_status,
-        payment_disputed: model.payment_disputed,
         payment_dispute_lost_at: model.payment_dispute_lost_at,
         currency: model.currency,
         fees_amount_cents: model.fees_amount_cents,
