@@ -35,6 +35,11 @@ module Types
 
         BillableMetric.with_discarded.find_by(id: object.billable_metric_id)
       end
+
+      def filters
+        # NOTE: Ensure filters are keeping the initial ordering
+        object.filters.order(updated_at: :asc)
+      end
     end
   end
 end

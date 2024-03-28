@@ -34,6 +34,10 @@ module ChargeFilters
 
           filter.invoice_display_name = filter_param[:invoice_display_name]
           filter.properties = filter_param[:properties]
+          if filter.save! && !filter.changed?
+            # NOTE: Make sure update_at is touched even if not changed to keep the right order
+            filter.touch # rubocop:disable Rails/SkipsModelValidations
+          end
 
           # NOTE: Create or update the filter values
           filter_param[:values].each do |key, values|
@@ -44,9 +48,11 @@ module ChargeFilters
             )
 
             filter_value.values = values
+            if filter_value.save! && !filter_value.changed?
+              # NOTE: Make sure update_at is touched even if not changed to keep the right order
+              filter_value.touch # rubocop:disable Rails/SkipsModelValidations
+            end
           end
-
-          filter.save!
 
           result.filters << filter
         end
