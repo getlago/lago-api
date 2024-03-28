@@ -1,11 +1,45 @@
 # frozen_string_literal: true
 
 class AddTrialEndedAtToSubscriptions < ActiveRecord::Migration[7.0]
-  def change
+  class Subscription < ApplicationRecord
+    belongs_to :customer
+    belongs_to :plan
+
+    # NOTE: We reimplement the logic from Subscription#initial_started_at  differently to avoid N+1 queries
+    #       eager loading subscription.customer.subscriptions is not enough.
+    def initial_started_at
+      customer.subscriptions.select do |s|
+        s.external_id == external_id && s.started_at.present?
+      end.min_by(&:started_at)&.started_at || subscription_at
+    end
+  end
+
+  class Customer < ApplicationRecord
+    has_many :subscriptions
+  end
+
+  class Plan < ApplicationRecord
+    has_many :subscriptions
+  end
+
+  def up
     add_column :subscriptions, :trial_ended_at, :datetime
 
-    # TODO: We need to migrate all subscriptions that have ended their trial period
-    # It's not too critical because the FreeTrialBillingService will only look at subscriptions
-    # with trial ending TODAY. It will ignore subscriptions that have already ended their trial period.
+    Subscription
+      .joins(:plan)
+      .where(trial_ended_at: nil)
+      .where.not(plans: { trial_period: nil })
+      .includes(:plan, customer: :subscriptions)
+      .find_each do |subscription|
+        trial_ended_at = subscription.initial_started_at.to_date + subscription.plan.trial_period.days
+
+        next if trial_ended_at.to_date >= Time.zone.today
+
+        subscription.update(trial_ended_at:)
+      end
+  end
+
+  def down
+    remove_column :subscriptions, :trial_ended_at
   end
 end
