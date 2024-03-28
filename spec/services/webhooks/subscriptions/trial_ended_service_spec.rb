@@ -2,10 +2,10 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::Subscriptions::TerminatedService do
+RSpec.describe Webhooks::Subscriptions::TrialEndedService do
   subject(:webhook_service) { described_class.new(object: subscription) }
 
-  let(:subscription) { create(:subscription, status: :terminated) }
+  let(:subscription) { create(:subscription, plan: create(:plan, trial_period: 1)) }
   let(:organization) { subscription.organization }
 
   describe '.call' do
@@ -18,13 +18,13 @@ RSpec.describe Webhooks::Subscriptions::TerminatedService do
       allow(lago_client).to receive(:post_with_response)
     end
 
-    it 'builds payload with subscription.terminated webhook type' do
+    it 'builds payload with subscription.trial_ended webhook type' do
       webhook_service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_endpoints.first.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
-        expect(payload[:webhook_type]).to eq('subscription.terminated')
+        expect(payload[:webhook_type]).to eq('subscription.trial_ended')
         expect(payload[:object_type]).to eq('subscription')
       end
     end

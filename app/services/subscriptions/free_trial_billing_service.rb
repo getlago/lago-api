@@ -10,18 +10,24 @@ module Subscriptions
 
     def call
       ending_trial_subscriptions.each do |subscription|
-        # if subscription.plan_pay_in_advance
-        #   BillSubscriptionJob.perform_later([subscription], timestamp)
-        # end
+        if subscription.plan_pay_in_advance && have_not_been_billed?(subscription)
+          BillSubscriptionJob.perform_later([subscription], timestamp)
+        end
 
-        # TODO: Send webhook
-        subscription.update!(trial_ended_at: timestamp)
+        subscription.update(trial_ended_at: timestamp)
+
+        SendWebhookJob.perform_later('subscription.trial_ended', subscription)
       end
     end
 
     private
 
     attr_reader :timestamp
+
+    def have_not_been_billed?(subscription)
+      # N+1
+      subscription.invoice_subscriptions.recurring.where(timestamp: subscription.started_at.all_day).exists?
+    end
 
     def ending_trial_subscriptions
       sql = <<-SQL
