@@ -227,6 +227,14 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       end
     end
 
+    context 'when plan is pay_in_advance and subscription_at is current date but there is a trial period' do
+      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+
+      it 'does not enqueue a job to bill the subscription' do
+        expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+      end
+    end
+
     context 'when customer is missing' do
       let(:customer) { nil }
       let(:external_customer_id) { nil }
