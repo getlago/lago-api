@@ -10,18 +10,27 @@ module Subscriptions
 
     def call
       ending_trial_subscriptions.each do |subscription|
-        # if subscription.plan_pay_in_advance
-        #   BillSubscriptionJob.perform_later([subscription], timestamp)
-        # end
+        if subscription.plan_pay_in_advance && !already_billed?(subscription)
+          BillSubscriptionJob.perform_later([subscription], timestamp)
+        end
 
-        # TODO: Send webhook
         subscription.update!(trial_ended_at: timestamp)
+
+        SendWebhookJob.perform_later('subscription.trial_ended', subscription)
       end
     end
 
     private
 
     attr_reader :timestamp
+
+    def already_billed?(subscription)
+      # N+1
+      # This is to avoid billing at the end of the trial if the customer was billed at the beginning
+      # It's only for users who started billing customer AND upgraded their lago with this feature
+      # during the customer trial period
+      subscription.invoice_subscriptions.where(timestamp: subscription.started_at.all_day).exists?
+    end
 
     def ending_trial_subscriptions
       sql = <<-SQL

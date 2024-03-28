@@ -14,8 +14,8 @@ module Subscriptions
         .pending
         .where(previous_subscription: nil)
         .where(
-          "DATE(subscriptions.subscription_at#{Utils::Timezone.at_time_zone_sql}) <= " \
-          "DATE(?#{Utils::Timezone.at_time_zone_sql})",
+          "DATE(subscriptions.subscription_at#{at_time_zone}) <= " \
+          "DATE(?#{at_time_zone})",
           Time.zone.at(timestamp),
         )
         .find_each do |subscription|
@@ -23,7 +23,9 @@ module Subscriptions
 
           SendWebhookJob.perform_later('subscription.started', subscription)
 
-          BillSubscriptionJob.perform_later([subscription], timestamp) if subscription.plan.pay_in_advance?
+          if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
+            BillSubscriptionJob.perform_later([subscription], timestamp)
+          end
         end
     end
 

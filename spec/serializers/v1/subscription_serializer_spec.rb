@@ -27,6 +27,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
           'billing_time' => subscription.billing_time,
           'created_at' => subscription.created_at.iso8601,
           'ending_at' => subscription.ending_at.iso8601,
+          'trial_ended_at' => nil,
         )
 
         expect(result['subscription']['customer']['lago_id']).to be_present

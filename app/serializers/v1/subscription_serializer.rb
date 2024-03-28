@@ -14,6 +14,7 @@ module V1
         billing_time: model.billing_time,
         subscription_at: model.subscription_at&.iso8601,
         started_at: model.started_at&.iso8601,
+        trial_ended_at: model.trial_ended_at&.iso8601,
         ending_at: model.ending_at&.iso8601,
         terminated_at: model.terminated_at&.iso8601,
         canceled_at: model.canceled_at&.iso8601,
