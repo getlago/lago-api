@@ -7,45 +7,51 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
 
   let(:timestamp) { Time.current }
 
-  describe 'activate_all_expired' do
-    let(:active_subscription) { create(:subscription) }
-    let(:pending_subscriptions) { create_list(:subscription, 3, :pending, subscription_at: timestamp) }
-
-    let(:future_pending_subscriptions) do
-      create_list(:subscription, 2, :pending, subscription_at: (timestamp + 10.days))
-    end
-
-    before do
-      active_subscription
-      pending_subscriptions
-      future_pending_subscriptions
-    end
-
+  describe '.activate_all_expired' do
     it 'activates all pending subscriptions with subscription date set to today' do
+      create(:subscription)
+      create_list(:subscription, 2, :pending, subscription_at: timestamp)
+      create(:subscription, :pending, subscription_at: timestamp, plan: create(:plan, pay_in_advance: true))
+      create_list(:subscription, 2, :pending, subscription_at: (timestamp + 10.days))
+
       expect { activate_service.activate_all_pending }
         .to change(Subscription.pending, :count).by(-3)
         .and change(Subscription.active, :count).by(3)
-    end
-
-    it 'enqueues a SendWebhookJob' do
-      expect do
-        activate_service.activate_all_pending
-      end.to have_enqueued_job(SendWebhookJob).at_least(1).times
+        .and have_enqueued_job(SendWebhookJob).exactly(3).times
+        .and have_enqueued_job(BillSubscriptionJob).once
     end
 
     context 'with customer timezone' do
       let(:timestamp) { DateTime.parse('2023-08-24 00:07:00') }
-      let(:pending_subscription) { pending_subscriptions.first }
-
-      before do
-        pending_subscription.customer.update!(timezone: 'America/Bogota')
-        pending_subscription.update!(subscription_at: DateTime.parse('2023-08-24 04:17:00'))
+      let!(:pending_subscription) do
+        create(
+          :subscription,
+          :pending,
+          { subscription_at: timestamp, customer: create(:customer, timezone: 'America/Bogota') },
+        )
       end
 
       it 'takes timezone into account' do
+        activate_service.activate_all_pending
+        expect(pending_subscription.reload).to be_active
+      end
+    end
+
+    context 'with a subscription in trial' do
+      it do
+        create(:subscription, :pending, subscription_at: timestamp, plan: create(:plan, pay_in_advance: true))
+        create(
+          :subscription,
+          :pending,
+          subscription_at: timestamp,
+          plan: create(:plan, pay_in_advance: true, trial_period: 10),
+        )
+
         expect { activate_service.activate_all_pending }
-          .to change(Subscription.pending, :count).by(-3)
-          .and change(Subscription.active, :count).by(3)
+          .to change(Subscription.pending, :count).by(-2)
+          .and change(Subscription.active, :count).by(2)
+          .and have_enqueued_job(SendWebhookJob).exactly(2).times
+          .and have_enqueued_job(BillSubscriptionJob).once
       end
     end
   end

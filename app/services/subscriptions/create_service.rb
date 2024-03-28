@@ -39,6 +39,7 @@ module Subscriptions
           customer:,
           currency: plan.amount_currency,
         )
+
         return currency_result unless currency_result.success?
 
         result.subscription = handle_subscription
@@ -93,6 +94,10 @@ module Subscriptions
       plan.yearly_amount_cents < current_subscription.plan.yearly_amount_cents
     end
 
+    def should_be_billed_today?(sub)
+      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
+    end
+
     def create_subscription
       new_subscription = Subscription.new(
         customer:,
@@ -112,9 +117,9 @@ module Subscriptions
         new_subscription.mark_as_active!
       end
 
-      if new_subscription.active? && new_subscription.subscription_at.today? && plan.pay_in_advance?
-        # NOTE: Since job is laucnhed from inside a db transaction
-        #       we must wait for it to be commited before processing the job.
+      if should_be_billed_today?(new_subscription)
+        # NOTE: Since job is launched from inside a db transaction
+        #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
         perform_later(job_class: BillSubscriptionJob, arguments: [[new_subscription], Time.zone.now.to_i])
       end
@@ -149,7 +154,7 @@ module Subscriptions
       # Collection that groups all billable subscriptions for an invoice
       billable_subscriptions = billable_subscriptions(new_subscription)
 
-      # NOTE: When upgrading, the new subscription becomes active immediatly
+      # NOTE: When upgrading, the new subscription becomes active immediately
       #       The previous one must be terminated
       Subscriptions::TerminateService.call(subscription: current_subscription, upgrade: true)
 
@@ -159,7 +164,7 @@ module Subscriptions
       # NOTE: If plan is in advance we should create only one invoice for termination fees and for new plan fees
       if billable_subscriptions.any?
         # NOTE: Since job is launched from inside a db transaction
-        #       we must wait for it to be commited before processing the job
+        #       we must wait for it to be committed before processing the job
         #       We do not set offset anymore but instead retry jobs
         perform_later(
           job_class: BillSubscriptionJob,
@@ -262,9 +267,8 @@ module Subscriptions
         [current_subscription]
       end.to_a
 
-      return billable_subscriptions unless plan.pay_in_advance?
-
-      billable_subscriptions << new_subscription
+      billable_subscriptions << new_subscription if plan.pay_in_advance? && !new_subscription.in_trial_period?
+      billable_subscriptions
     end
   end
 end

@@ -69,10 +69,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   let(:terminated_at) { nil }
   let(:status) { :active }
 
-  let(:plan) { create(:plan, organization:, interval:, pay_in_advance:) }
+  let(:plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:) }
   let(:pay_in_advance) { false }
   let(:billing_time) { :calendar }
   let(:interval) { 'monthly' }
+  let(:trial_period) { 0 }
 
   let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
 
@@ -731,6 +732,22 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
+          end
+        end
+      end
+
+      context 'when plan is in trial period' do
+        let(:trial_period) { 45 }
+        let(:started_at) { 40.days.ago }
+
+        it 'does not create a subscription fee' do
+          subscription.created_at
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.fees.subscription_kind.count).to eq(0)
           end
         end
       end

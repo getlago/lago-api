@@ -46,6 +46,10 @@ module Clockwork
     Clock::TerminateCouponsJob.perform_later
   end
 
+  every(1.hour, 'schedule:bill_ended_trial_subscriptions', at: '*:35') do
+    Clock::FreeTrialSubscriptionsBillerJob.perform_later
+  end
+
   every(1.hour, 'schedule:terminate_wallets', at: '*:45') do
     Clock::TerminateWalletsJob.perform_later
   end
