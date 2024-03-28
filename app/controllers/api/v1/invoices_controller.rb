@@ -124,6 +124,17 @@ module Api
         end
       end
 
+      def lose_dispute
+        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+
+        result = Invoices::LoseDisputeService.call(invoice:)
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       def retry_payment
         invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
         return not_found_error(resource: 'invoice') unless invoice
