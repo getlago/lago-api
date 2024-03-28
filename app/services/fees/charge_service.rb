@@ -22,9 +22,13 @@ module Fees
         result.fees.each do |fee|
           fee.save!
 
-          if invoice.draft? && fee.true_up_parent_fee.nil? && adjusted_fee(fee.group, fee.grouped_by)
-            adjusted_fee(fee.group, fee.grouped_by).update!(fee:)
-          end
+          next unless invoice.draft? && fee.true_up_parent_fee.nil? && adjusted_fee(
+            group: fee.group,
+            charge_filter: fee.charge_filter,
+            grouped_by: fee.grouped_by,
+          )
+
+          adjusted_fee(group: fee.group, charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).update!(fee:)
         end
       end
 
@@ -88,8 +92,9 @@ module Fees
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
       if invoice.draft? && (adjusted = adjusted_fee(
-        group,
-        amount_result.grouped_by,
+        group:,
+        charge_filter:,
+        grouped_by: amount_result.grouped_by,
       )) && !adjusted.adjusted_display_name?
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted,
@@ -140,23 +145,33 @@ module Fees
         charge_filter_id: charge_filter&.id,
       )
 
-      if (adjusted = adjusted_fee(group, amount_result.grouped_by))&.adjusted_display_name?
+      if (adjusted = adjusted_fee(
+        group:,
+        charge_filter:,
+        grouped_by: amount_result.grouped_by,
+      ))&.adjusted_display_name?
         new_fee.invoice_display_name = adjusted.invoice_display_name
       end
 
       result.fees << new_fee
     end
 
-    def adjusted_fee(group, grouped_by)
+    def adjusted_fee(group:, charge_filter:, grouped_by:)
       @adjusted_fee ||= {}
 
-      key = [group&.id, (grouped_by || {}).map { |k, v| "#{k}-#{v}" }.sort.join('|')].compact.join('|')
+      key = [
+        group&.id,
+        charge_filter&.id,
+        (grouped_by || {}).map do |k, v|
+          "#{k}-#{v}"
+        end.sort.join('|'),
+      ].compact.join('|')
       key = 'default' if key.blank?
 
       return @adjusted_fee[key] if @adjusted_fee.key?(key)
 
       scope = AdjustedFee
-        .where(invoice:, subscription:, charge:, group:, fee_type: :charge)
+        .where(invoice:, subscription:, charge:, group:, charge_filter:, fee_type: :charge)
         .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
         .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3))
 
