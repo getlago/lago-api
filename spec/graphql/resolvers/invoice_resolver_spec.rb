@@ -15,6 +15,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           prepaidCreditAmountCents
           refundableAmountCents
           creditableAmountCents
+          paymentDisputeLosable
           paymentStatus
           status
           customer {
@@ -108,6 +109,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       expect(data['id']).to eq(invoice.id)
       expect(data['number']).to eq(invoice.number)
       expect(data['paymentStatus']).to eq(invoice.payment_status)
+      expect(data['paymentDisputeLosable']).to eq(true)
       expect(data['status']).to eq(invoice.status)
       expect(data['customer']['id']).to eq(customer.id)
       expect(data['customer']['name']).to eq(customer.name)

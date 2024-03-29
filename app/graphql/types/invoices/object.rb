@@ -15,9 +15,11 @@ module Types
       field :version_number, Integer, null: false
 
       field :invoice_type, Types::Invoices::InvoiceTypeEnum, null: false
+      field :payment_dispute_losable, Boolean, null: false, method: :payment_dispute_losable?
+      field :payment_dispute_lost_at, GraphQL::Types::ISO8601DateTime
       field :payment_status, Types::Invoices::PaymentStatusTypeEnum, null: false
       field :status, Types::Invoices::StatusTypeEnum, null: false
-      field :voidable, Boolean, null: false
+      field :voidable, Boolean, null: false, method: :voidable?
 
       field :currency, Types::CurrencyEnum
       field :taxes_rate, Float, null: false
@@ -52,10 +54,6 @@ module Types
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
-      end
-
-      def voidable
-        object.voidable?
       end
     end
   end

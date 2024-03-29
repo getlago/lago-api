@@ -14,6 +14,8 @@ RSpec.describe Types::Invoices::Object do
   it { is_expected.to have_field(:version_number).of_type('Int!') }
 
   it { is_expected.to have_field(:invoice_type).of_type('InvoiceTypeEnum!') }
+  it { is_expected.to have_field(:payment_dispute_losable).of_type('Boolean!') }
+  it { is_expected.to have_field(:payment_dispute_lost_at).of_type('ISO8601DateTime') }
   it { is_expected.to have_field(:payment_status).of_type('InvoicePaymentStatusTypeEnum!') }
   it { is_expected.to have_field(:status).of_type('InvoiceStatusTypeEnum!') }
   it { is_expected.to have_field(:voidable).of_type('Boolean!') }
@@ -47,5 +49,4 @@ RSpec.describe Types::Invoices::Object do
   it { is_expected.to have_field(:fees).of_type('[Fee!]') }
   it { is_expected.to have_field(:invoice_subscriptions).of_type('[InvoiceSubscription!]') }
   it { is_expected.to have_field(:subscriptions).of_type('[Subscription!]') }
-
 end
