@@ -169,4 +169,10 @@ class BaseService
   def graphql_context?
     source&.to_sym == :graphql
   end
+
+  def at_time_zone(customer: 'customers', organization: 'organizations')
+    <<-SQL
+      ::timestamptz AT TIME ZONE COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
+    SQL
+  end
 end
