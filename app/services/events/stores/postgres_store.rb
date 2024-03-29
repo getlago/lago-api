@@ -340,15 +340,15 @@ module Events
           )
         end
 
-        ignored_filters.each do |filters|
-          sql = filters.map do |key, values|
+        conditions = ignored_filters.map do |filters|
+          filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
               ["(coalesce(events.properties ->> ?, '') IN (?))", key.to_s, values.map(&:to_s)],
             )
-          end.join(' OR ')
-
-          scope = scope.where.not(sql)
+          end.join(' AND ')
         end
+        sql = conditions.map { "(#{_1})" }.join(' OR ')
+        scope = scope.where.not(sql) if sql.present?
 
         scope
       end
