@@ -246,7 +246,7 @@ module Events
       end
 
       def sum_date_breakdown
-        date_field = Utils::TimezoneService.date_in_customer_timezone_sql(customer, 'events.timestamp')
+        date_field = Utils::Timezone.date_in_customer_timezone_sql(customer, 'events.timestamp')
 
         events.group(Arel.sql("DATE(#{date_field})"))
           .reorder(Arel.sql("DATE(#{date_field}) ASC"))
@@ -383,8 +383,8 @@ module Events
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
       #       Dates are in customer timezone to make sure the duration is good
       def duration_ratio_sql(from, to, duration)
-        from_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, from)
-        to_in_timezone = Utils::TimezoneService.date_in_customer_timezone_sql(customer, to)
+        from_in_timezone = Utils::Timezone.date_in_customer_timezone_sql(customer, from)
+        to_in_timezone = Utils::Timezone.date_in_customer_timezone_sql(customer, to)
 
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{duration}::numeric"
       end

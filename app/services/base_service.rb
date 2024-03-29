@@ -171,8 +171,6 @@ class BaseService
   end
 
   def at_time_zone(customer: 'customers', organization: 'organizations')
-    <<-SQL
-      ::timestamptz AT TIME ZONE COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
-    SQL
+    Utils::Timezone.at_time_zone_sql(customer:, organization:)
   end
 end

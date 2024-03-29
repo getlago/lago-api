@@ -152,7 +152,7 @@ module Fees
       end
 
       # NOTE: Number of days of the first period since subscription creation
-      days_to_bill = Utils::DatetimeService.date_diff_with_timezone(
+      days_to_bill = Utils::Datetime.date_diff_with_timezone(
         from_datetime,
         to_datetime,
         customer.applicable_timezone,
@@ -209,7 +209,7 @@ module Fees
       end
 
       # NOTE: number of days between the upgrade and the end of the period
-      number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
+      number_of_day_to_bill = Utils::Datetime.date_diff_with_timezone(
         from_datetime,
         to_datetime,
         customer.applicable_timezone,
@@ -238,7 +238,7 @@ module Fees
         #       for this case, we should not apply the full period amount
         #       but the prorata between the trial end date end the invoice to_date
         if (subscription.trial_end_datetime > from_datetime) && (subscription.trial_end_datetime < to_datetime)
-          number_of_day_to_bill = Utils::DatetimeService.date_diff_with_timezone(
+          number_of_day_to_bill = Utils::Datetime.date_diff_with_timezone(
             subscription.trial_end_datetime,
             to_datetime,
             customer.applicable_timezone,

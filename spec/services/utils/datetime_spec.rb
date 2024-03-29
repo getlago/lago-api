@@ -2,23 +2,23 @@
 
 require 'rails_helper'
 
-RSpec.describe Utils::DatetimeService, type: :service do
-  subject(:datetime_service) { described_class }
+RSpec.describe Utils::Datetime, type: :service do
+  subject(:datetime) { described_class }
 
   describe '.valid_format?' do
     it 'returns false for invalid format' do
-      expect(datetime_service.valid_format?('aaa')).to be_falsey
+      expect(datetime).not_to be_valid_format('aaa')
     end
 
     context 'when parameter is string and is valid' do
       it 'returns true' do
-        expect(datetime_service.valid_format?('2022-12-13T12:00:00Z')).to be_truthy
+        expect(datetime).to be_valid_format('2022-12-13T12:00:00Z')
       end
     end
 
     context 'when parameter is datetime object' do
       it 'returns true' do
-        expect(datetime_service.valid_format?(Time.current)).to be_truthy
+        expect(datetime).to be_valid_format(Time.current)
       end
     end
   end
@@ -29,7 +29,7 @@ RSpec.describe Utils::DatetimeService, type: :service do
     let(:timezone) { 'Europe/Paris' }
 
     let(:result) do
-      datetime_service.date_diff_with_timezone(
+      datetime.date_diff_with_timezone(
         from_datetime,
         to_datetime,
         timezone,

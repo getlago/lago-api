@@ -49,10 +49,8 @@ module Wallets
     def valid_expiration_at?
       return true if args[:expiration_at].blank?
 
-      if Utils::DatetimeService.valid_format?(args[:expiration_at]) && expiration_at.to_date > Time.current.to_date
-
-        return true
-      end
+      future = Utils::Datetime.valid_format?(args[:expiration_at]) && expiration_at.to_date > Time.current.to_date
+      return true if future
 
       add_error(field: :expiration_at, error_code: 'invalid_date')
 
