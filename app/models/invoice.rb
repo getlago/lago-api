@@ -191,7 +191,7 @@ class Invoice < ApplicationRecord
 
     return {} unless event
 
-    number_of_days = Utils::DatetimeService.date_diff_with_timezone(
+    number_of_days = Utils::Datetime.date_diff_with_timezone(
       event.timestamp,
       date_service.charges_to_datetime,
       customer.applicable_timezone,

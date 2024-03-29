@@ -33,7 +33,7 @@ module Wallets
     def valid_expiration_at?(expiration_at:)
       return true if expiration_at.blank?
 
-      if Utils::DatetimeService.valid_format?(expiration_at)
+      if Utils::Datetime.valid_format?(expiration_at)
         parsed_expiration_at = if expiration_at.is_a?(String)
           DateTime.strptime(expiration_at)
         else

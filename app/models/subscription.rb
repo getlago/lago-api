@@ -146,7 +146,7 @@ class Subscription < ApplicationRecord
   # When upgrade, we want to bill one day less since date of the upgrade will be
   # included in the first invoice for the new plan
   def date_diff_with_timezone(from_datetime, to_datetime)
-    number_od_days = Utils::DatetimeService.date_diff_with_timezone(
+    number_od_days = Utils::Datetime.date_diff_with_timezone(
       from_datetime,
       to_datetime,
       customer.applicable_timezone,

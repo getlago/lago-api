@@ -13,7 +13,7 @@ module BillableMetrics
 
         # In order to get proration coefficient we have to divide number of seconds with number
         # of seconds in one day (86400). That way we will get number of days when the service was used.
-        proration_coefficient = Utils::DatetimeService.date_diff_with_timezone(
+        proration_coefficient = Utils::Datetime.date_diff_with_timezone(
           event.timestamp,
           to_datetime,
           customer.applicable_timezone,
