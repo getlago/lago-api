@@ -318,4 +318,24 @@ RSpec.describe Fee, type: :model do
       end
     end
   end
+
+  describe '.has_charge_filter?' do
+    subject(:fee) { create(:add_on_fee) }
+
+    it { expect(fee).not_to be_has_charge_filters }
+
+    context 'when fee is a charge fee' do
+      subject(:fee) { create(:charge_fee) }
+
+      it { expect(fee).not_to be_has_charge_filters }
+
+      context 'when charge has filters' do
+        let(:charge_filter) { create(:charge_filter, charge: fee.charge) }
+
+        before { charge_filter }
+
+        it { expect(fee).to be_has_charge_filters }
+      end
+    end
+  end
 end
