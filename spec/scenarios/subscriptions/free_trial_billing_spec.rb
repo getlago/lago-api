@@ -104,4 +104,52 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       end
     end
   end
+
+  context 'with free trial > billing period' do
+    let(:trial_period) { 45 }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+
+    it 'bills subscription at the end of the free trial' do
+      travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
+        create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        expect(customer.reload.invoices.count).to eq(0)
+      end
+
+      travel_to(Time.zone.parse('2024-03-10')) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_customer_id: customer.external_id,
+          },
+        )
+      end
+
+      travel_to(Time.zone.parse('2024-04-01')) do
+        perform_billing
+        expect(customer.reload.invoices.count).to eq(1)
+      end
+
+      invoice = customer.invoices.first
+      expect(invoice.fees.subscription).not_to exist
+      expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+
+      travel_to(Time.zone.parse('2024-04-19')) do
+        perform_billing
+        expect(customer.reload.invoices.count).to eq(2)
+      end
+
+      free_trial_invoice = customer.invoices.order(created_at: :desc).first
+      expect(free_trial_invoice.fees.subscription.first.amount_cents).to eq(2_000_000) # 5_000_000 * 12 / 30
+      expect(free_trial_invoice.fees.charge).not_to exist
+    end
+  end
 end

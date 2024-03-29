@@ -200,7 +200,14 @@ module Invoices
 
       # NOTE: Charges should not be billed in advance when we are just upgrading to a new
       #       pay_in_advance subscription
-      return false if subscription.plan.pay_in_advance? && subscription.invoices.created_before(invoice).count.zero?
+      # check if a subscription fee already present
+      if subscription.plan.pay_in_advance? && !subscription.in_trial_period? && subscription.invoices.created_before(invoice).count.zero?
+        return false
+      end
+
+      if subscription.trial_ended_at&.to_date == Time.current && should_create_subscription_fee?(subscription)
+        return false
+      end
 
       true
     end
