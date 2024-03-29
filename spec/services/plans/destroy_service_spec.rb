@@ -81,7 +81,7 @@ RSpec.describe Plans::DestroyService, type: :service do
     end
 
     context 'with pending subscriptions' do
-      let(:subscriptions) { create_list(:pending_subscription, 2, plan:) }
+      let(:subscriptions) { create_list(:subscription, 2, :pending, plan:) }
 
       before { subscriptions }
 

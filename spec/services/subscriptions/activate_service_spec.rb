@@ -9,10 +9,10 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
 
   describe 'activate_all_expired' do
     let(:active_subscription) { create(:subscription) }
-    let(:pending_subscriptions) { create_list(:pending_subscription, 3, subscription_at: timestamp) }
+    let(:pending_subscriptions) { create_list(:subscription, 3, :pending, subscription_at: timestamp) }
 
     let(:future_pending_subscriptions) do
-      create_list(:pending_subscription, 2, subscription_at: (timestamp + 10.days))
+      create_list(:subscription, 2, :pending, subscription_at: (timestamp + 10.days))
     end
 
     before do

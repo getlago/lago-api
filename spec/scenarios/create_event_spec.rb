@@ -304,7 +304,8 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   context 'with external_subscription_id but multiple subscriptions' do
     let(:subscription2) do
       create(
-        :pending_subscription,
+        :subscription,
+        :pending,
         customer:,
         external_id: subscription.external_id,
       )

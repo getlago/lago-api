@@ -72,7 +72,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
       let(:query_filters) { { status: [:active, :pending] } }
 
       it 'returns correct subscriptions' do
-        create(:pending_subscription, customer:, plan:)
+        create(:subscription, :pending, customer:, plan:)
         create(:subscription, customer:, plan:, status: :canceled)
         create(:subscription, customer:, plan:, status: :terminated)
         result = subscriptions_query.call
@@ -92,7 +92,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
       let(:query_filters) { { status: [:pending] } }
 
       it 'returns only pending subscriptions' do
-        create(:pending_subscription, customer:, plan:)
+        create(:subscription, :pending, customer:, plan:)
         create(:subscription, customer:, plan:, status: :canceled)
         create(:subscription, customer:, plan:, status: :terminated)
 
@@ -113,7 +113,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
       let(:query_filters) { { status: [:canceled] } }
 
       it 'returns only pending subscriptions' do
-        create(:pending_subscription, customer:, plan:)
+        create(:subscription, :pending, customer:, plan:)
         create(:subscription, customer:, plan:, status: :canceled)
         create(:subscription, customer:, plan:, status: :terminated)
 
@@ -134,7 +134,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
       let(:query_filters) { { status: [:terminated] } }
 
       it 'returns only pending subscriptions' do
-        create(:pending_subscription, customer:, plan:)
+        create(:subscription, :pending, customer:, plan:)
         create(:subscription, customer:, plan:, status: :canceled)
         create(:subscription, customer:, plan:, status: :terminated)
 
@@ -153,7 +153,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
     context 'with no status filter' do
       it 'returns only active subscriptions' do
-        create(:pending_subscription, customer:, plan:)
+        create(:subscription, :pending, customer:, plan:)
 
         result = subscriptions_query.call
 

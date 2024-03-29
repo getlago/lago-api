@@ -338,7 +338,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     context 'when subscription is pending and starting in the future' do
-      let(:subscription) { create(:pending_subscription) }
+      let(:subscription) { create(:subscription, :pending) }
 
       it 'returns true' do
         expect(subscription.starting_in_the_future?).to be true
@@ -347,7 +347,7 @@ RSpec.describe Subscription, type: :model do
 
     context 'when subscription is pending and downgraded' do
       let(:old_subscription) { create(:subscription) }
-      let(:subscription) { create(:pending_subscription, previous_subscription: old_subscription) }
+      let(:subscription) { create(:subscription, :pending, previous_subscription: old_subscription) }
 
       it 'returns false' do
         expect(subscription.starting_in_the_future?).to be false

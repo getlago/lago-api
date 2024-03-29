@@ -172,7 +172,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   end
 
   describe 'update' do
-    let(:subscription) { create(:pending_subscription, customer:, plan:) }
+    let(:subscription) { create(:subscription, :pending, customer:, plan:) }
     let(:update_params) do
       {
         name: 'subscription name new',
