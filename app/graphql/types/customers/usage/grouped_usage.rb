@@ -37,7 +37,7 @@ module Types
         end
 
         def filters
-          return [] unless object.first.charge&.filters&.any?
+          return [] unless object.first.has_charge_filters?
 
           object.sort_by { |f| f.charge_filter&.display_name }
         end
