@@ -171,12 +171,6 @@ module Wallets
       )
     end
 
-    def at_time_zone(customer: 'customers', organization: 'organizations')
-      <<-SQL
-      ::timestamptz AT TIME ZONE COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
-      SQL
-    end
-
     def end_of_month
       <<-SQL
         (DATE_TRUNC('month', :today#{at_time_zone}) + INTERVAL '1 month - 1 day')::date
