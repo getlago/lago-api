@@ -31,7 +31,7 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     context 'when subscription is starting in the future' do
-      let(:subscription) { create(:pending_subscription) }
+      let(:subscription) { create(:subscription, :pending) }
 
       it 'does not enqueue a BillSubscriptionJob' do
         expect do
@@ -41,7 +41,7 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     context 'when downgrade subscription is pending' do
-      let(:subscription) { create(:pending_subscription, previous_subscription: create(:subscription)) }
+      let(:subscription) { create(:subscription, :pending, previous_subscription: create(:subscription)) }
 
       it 'does cancel it' do
         result = terminate_service.call

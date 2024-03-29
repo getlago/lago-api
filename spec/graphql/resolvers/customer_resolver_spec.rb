@@ -101,8 +101,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   end
 
   context 'when active and pending subscriptions are requested' do
-    let(:second_subscription) { create(:pending_subscription, customer:) }
-    let(:third_subscription) { create(:pending_subscription, customer:, previous_subscription: subscription) }
+    let(:second_subscription) { create(:subscription, :pending, customer:) }
+    let(:third_subscription) { create(:subscription, :pending, customer:, previous_subscription: subscription) }
 
     let(:query) do
       <<~GQL

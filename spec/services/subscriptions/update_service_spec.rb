@@ -54,7 +54,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     end
 
     context 'when subscription is starting in the future' do
-      let(:subscription) { create(:pending_subscription) }
+      let(:subscription) { create(:subscription, :pending) }
 
       it 'updates the subscription_at as well' do
         result = update_service.call
