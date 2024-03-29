@@ -491,6 +491,63 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
   end
 
+  describe 'POST /invoices/:id/lose_dispute' do
+    context 'when invoice does not exist' do
+      it 'returns not found error' do
+        post_with_token(organization, '/api/v1/invoices/555/lose_dispute', {})
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when invoice exists' do
+      let(:invoice) { create(:invoice, customer:, organization:, status:) }
+
+      context 'when invoice is finalized' do
+        let(:status) { :finalized }
+
+        it 'marks the dispute as lost' do
+          expect {
+            post_with_token(organization, "/api/v1/invoices/#{invoice.id}/lose_dispute", {})
+          }.to change { invoice.reload.payment_dispute_lost_at }.from(nil)
+        end
+
+        it 'returns the invoice' do
+          post_with_token(organization, "/api/v1/invoices/#{invoice.id}/lose_dispute", {})
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:lago_id]).to eq(invoice.id)
+        end
+      end
+
+      context 'when invoice is voided' do
+        let(:status) { :voided }
+
+        it 'returns method not allowed error' do
+          post_with_token(organization, "/api/v1/invoices/#{invoice.id}/lose_dispute", {})
+          expect(response).to have_http_status(:method_not_allowed)
+        end
+      end
+
+      context 'when invoice is draft' do
+        let(:status) { :draft }
+
+        it 'returns method not allowed error' do
+          post_with_token(organization, "/api/v1/invoices/#{invoice.id}/lose_dispute", {})
+          expect(response).to have_http_status(:method_not_allowed)
+        end
+      end
+
+      context 'when invoice is generating' do
+        let(:status) { :generating }
+
+        it 'returns not found error' do
+          post_with_token(organization, "/api/v1/invoices/#{invoice.id}/lose_dispute", {})
+          expect(response).to have_http_status(:not_found)
+        end
+      end
+    end
+  end
+
   describe 'POST /invoices/:id/download' do
     let(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
