@@ -302,7 +302,9 @@ RSpec.describe Fee, type: :model do
     context 'when it is standard charge fee with grouped_by property' do
       it 'returns valid response' do
         expect(fee.invoice_sorting_clause)
-          .to eq("#{fee.invoice_name} #{fee.grouped_by.values.join} #{fee.group_name}".downcase)
+          .to eq(
+            "#{fee.invoice_name} #{fee.grouped_by.values.join} #{fee.group_name} #{fee.filter_display_name}".downcase,
+          )
       end
     end
 
@@ -314,7 +316,9 @@ RSpec.describe Fee, type: :model do
       end
 
       it 'returns valid response' do
-        expect(fee.invoice_sorting_clause).to eq("#{fee.invoice_name} #{fee.group_name}".downcase)
+        expect(
+          fee.invoice_sorting_clause,
+        ).to eq("#{fee.invoice_name} #{fee.group_name} #{fee.filter_display_name}".downcase)
       end
     end
   end

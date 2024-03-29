@@ -6,7 +6,7 @@ module Types
       class ChargeFilter < Types::BaseObject
         graphql_name 'ChargeFilterUsage'
 
-        field :id, ID, null: false, method: :charge_filter_id
+        field :id, ID, null: true, method: :charge_filter_id
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
@@ -16,10 +16,6 @@ module Types
 
         def values
           object.charge_filter&.to_h || {} # rubocop:disable Lint/RedundantSafeNavigation
-        end
-
-        def invoice_display_name
-          object.charge_filter&.display_name
         end
       end
     end
