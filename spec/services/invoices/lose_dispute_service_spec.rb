@@ -19,6 +19,10 @@ RSpec.describe Invoices::LoseDisputeService, type: :service do
           expect(result.error.resource).to eq('invoice')
         end
       end
+
+      it 'does not enqueue a send webhook job for the invoice' do
+        expect { lose_dispute_service.call }.not_to have_enqueued_job(SendWebhookJob)
+      end
     end
 
     context 'when invoice exists' do
@@ -36,6 +40,10 @@ RSpec.describe Invoices::LoseDisputeService, type: :service do
             expect(result.error.code).to eq('not_disputable')
           end
         end
+
+        it 'does not enqueue a send webhook job for the invoice' do
+          expect { lose_dispute_service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
       end
 
       context 'when the invoice is draft' do
@@ -50,6 +58,10 @@ RSpec.describe Invoices::LoseDisputeService, type: :service do
             expect(result.error.code).to eq('not_disputable')
           end
         end
+
+        it 'does not enqueue a send webhook job for the invoice' do
+          expect { lose_dispute_service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
       end
 
       context 'when the invoice is finalized' do
@@ -62,6 +74,12 @@ RSpec.describe Invoices::LoseDisputeService, type: :service do
             expect(result).to be_success
             expect(result.invoice.payment_dispute_lost_at).to be_present
           end
+        end
+
+        it 'enqueues a send webhook job for the invoice' do
+          expect do
+            lose_dispute_service.call
+          end.to have_enqueued_job(SendWebhookJob).with('invoice.payment_dispute_lost', Invoice)
         end
       end
     end

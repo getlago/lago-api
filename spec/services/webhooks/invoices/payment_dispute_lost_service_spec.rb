@@ -2,13 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::Invoices::VoidedService do
-  subject(:webhook_invoice_service) { described_class.new(object: invoice) }
+RSpec.describe Webhooks::Invoices::PaymentDisputeLostService do
+  subject(:service) { described_class.new(object: invoice) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:) }
-  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:invoice) { create(:invoice, :dispute_lost, customer:, organization:) }
 
   before do
     create_list(:fee, 2, invoice:)
@@ -25,14 +25,14 @@ RSpec.describe Webhooks::Invoices::VoidedService do
       allow(lago_client).to receive(:post_with_response)
     end
 
-    it 'builds payload with invoice.voided webhook type' do
-      webhook_invoice_service.call
+    it 'builds payload with invoice.payment_dispute_lost webhook type' do
+      service.call
 
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(organization.webhook_endpoints.first.webhook_url)
       expect(lago_client).to have_received(:post_with_response) do |payload|
-        expect(payload[:webhook_type]).to eq('invoice.voided')
-        expect(payload[:object_type]).to eq('invoice')
+        expect(payload[:webhook_type]).to eq('invoice.payment_dispute_lost')
+        expect(payload[:object_type]).to eq('payment_dispute_lost')
       end
     end
   end
