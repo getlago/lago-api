@@ -89,6 +89,14 @@ class Subscription < ApplicationRecord
     initial_started_at + plan.trial_period.days
   end
 
+  def in_trial_period?
+    return false if trial_ended_at
+    return false unless active?
+    return false if initial_started_at.future?
+
+    trial_end_datetime.present? && trial_end_datetime.future?
+  end
+
   def started_in_past?
     started_at.to_date < created_at.to_date
   end
@@ -139,7 +147,7 @@ class Subscription < ApplicationRecord
   # When upgrade, we want to bill one day less since date of the upgrade will be
   # included in the first invoice for the new plan
   def date_diff_with_timezone(from_datetime, to_datetime)
-    number_od_days = Utils::DatetimeService.date_diff_with_timezone(
+    number_od_days = Utils::Datetime.date_diff_with_timezone(
       from_datetime,
       to_datetime,
       customer.applicable_timezone,

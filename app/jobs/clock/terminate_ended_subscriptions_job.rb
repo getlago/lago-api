@@ -10,8 +10,11 @@ module Clock
       Subscription
         .joins(customer: :organization)
         .active
-        .where("DATE(subscriptions.ending_at#{Utils::TimezoneService.at_time_zone}) = "\
-               "DATE(?#{Utils::TimezoneService.at_time_zone})", Time.current)
+        .where(
+          "DATE(subscriptions.ending_at#{Utils::Timezone.at_time_zone_sql}) = " \
+          "DATE(?#{Utils::Timezone.at_time_zone_sql})",
+          Time.current,
+        )
         .find_each do |subscription|
           Subscriptions::TerminateService.call(subscription:)
         end

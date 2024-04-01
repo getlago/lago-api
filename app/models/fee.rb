@@ -140,4 +140,8 @@ class Fee < ApplicationRecord
 
     @add_on = AddOn.with_discarded.find_by(id: applied_add_on.add_on_id)
   end
+
+  def has_charge_filters?
+    charge&.filters&.any?
+  end
 end

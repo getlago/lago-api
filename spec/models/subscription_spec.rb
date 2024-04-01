@@ -182,6 +182,26 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
+  describe '#in_trial_period?' do
+    context 'when plan has no trial' do
+      it { expect(subscription.in_trial_period?).to be false }
+    end
+
+    context 'when subscription is in trial' do
+      let(:subscription) { create(:subscription, plan:, started_at: 5.days.ago) }
+      let(:plan) { create(:plan, trial_period: 10) }
+
+      it { expect(subscription.in_trial_period?).to be true }
+    end
+
+    context 'when subscription trial has ended' do
+      let(:subscription) { create(:subscription, plan:, started_at: 5.days.ago) }
+      let(:plan) { create(:plan, trial_period: 2) }
+
+      it { expect(subscription.in_trial_period?).to be false }
+    end
+  end
+
   describe '#initial_started_at' do
     let(:customer) { create(:customer) }
     let(:subscription) do
@@ -318,7 +338,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     context 'when subscription is pending and starting in the future' do
-      let(:subscription) { create(:pending_subscription) }
+      let(:subscription) { create(:subscription, :pending) }
 
       it 'returns true' do
         expect(subscription.starting_in_the_future?).to be true
@@ -327,7 +347,7 @@ RSpec.describe Subscription, type: :model do
 
     context 'when subscription is pending and downgraded' do
       let(:old_subscription) { create(:subscription) }
-      let(:subscription) { create(:pending_subscription, previous_subscription: old_subscription) }
+      let(:subscription) { create(:subscription, :pending, previous_subscription: old_subscription) }
 
       it 'returns false' do
         expect(subscription.starting_in_the_future?).to be false

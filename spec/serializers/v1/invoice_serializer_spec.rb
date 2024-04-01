@@ -24,6 +24,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         'invoice_type' => invoice.invoice_type,
         'status' => invoice.status,
         'payment_status' => invoice.payment_status,
+        'payment_dispute_lost_at' => invoice.payment_dispute_lost_at,
         'currency' => invoice.currency,
         'fees_amount_cents' => invoice.fees_amount_cents,
         'coupons_amount_cents' => invoice.coupons_amount_cents,

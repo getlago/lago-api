@@ -169,4 +169,8 @@ class BaseService
   def graphql_context?
     source&.to_sym == :graphql
   end
+
+  def at_time_zone(customer: 'customers', organization: 'organizations')
+    Utils::Timezone.at_time_zone_sql(customer:, organization:)
+  end
 end

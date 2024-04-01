@@ -48,6 +48,8 @@ module V1
       end
 
       def filters(fees)
+        return [] unless fees.first.charge&.filters&.any?
+
         fees.sort_by { |f| f.charge_filter&.display_name.to_s }.map do |f|
           {
             units: f.units,

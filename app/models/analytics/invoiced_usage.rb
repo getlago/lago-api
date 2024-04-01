@@ -44,10 +44,12 @@ module Analytics
               f.amount_currency AS currency,
               f.created_at AS fee_created_at
             FROM fees f
+            LEFT JOIN invoices i ON f.invoice_id = i.id
             LEFT JOIN subscriptions s ON s.id = f.subscription_id
             LEFT JOIN customers c ON c.id = s.customer_id
             WHERE f.invoiceable_type = 'Charge'
             AND f.fee_type = 0
+            AND i.payment_dispute_lost_at IS NULL
             AND c.organization_id = :organization_id
           ),
           total_revenue_per_bm AS (

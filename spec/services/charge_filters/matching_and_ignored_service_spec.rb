@@ -56,7 +56,14 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     )
 
     expect(service.ignored_filters).to eq(
-      [{ 'card_type' => ['credit'] }],
+      [
+        {
+          'card_location' => ['domestic'],
+          'card_type' => ['credit'],
+          'payment_method' => ['card'],
+          'scheme' => %w[visa mastercard],
+        },
+      ],
     )
   end
 

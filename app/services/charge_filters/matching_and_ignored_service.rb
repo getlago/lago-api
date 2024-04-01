@@ -36,23 +36,18 @@ module ChargeFilters
       #           key2: [value3, value4]
       #         }
       #       ]
-      result.ignored_filters = children.each_with_object([]) do |child_filter, res|
-        child = child_filter.to_h_with_all_values
-        child_result = {}
+      result.ignored_filters = children.map do |child|
+        res = child.to_h_with_all_values
 
-        child.each do |key, values|
-          # NOTE: The parent filter does not have the key, so we ignore all values
-          next child_result[key] = values unless result.matching_filters[key]
-
-          # NOTE: The parent filter, has the same values for the key, so no need to filter them
-          next if values == result.matching_filters[key]
-
-          # NOTE: The parent filter has some values for the key, so we get only the parent ones
-          child_result[key] = values.select { result.matching_filters[key].include?(_1) }
+        if res.keys == result.matching_filters.keys
+          # NOTE: when child and filter have the same keys, we need to remove the filter value from the child
+          res.each do |key, values|
+            res[key] = values - result.matching_filters[key]
+          end
         end
 
-        res << child_result
-      end.uniq
+        res
+      end
 
       result
     end

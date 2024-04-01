@@ -15,6 +15,7 @@ class SendWebhookJob < ApplicationJob
     'invoice.generated' => Webhooks::Invoices::GeneratedService,
     'invoice.drafted' => Webhooks::Invoices::DraftedService,
     'invoice.voided' => Webhooks::Invoices::VoidedService,
+    'invoice.payment_dispute_lost' => Webhooks::Invoices::PaymentDisputeLostService,
     'invoice.payment_status_updated' => Webhooks::Invoices::PaymentStatusUpdatedService,
     'invoice.payment_failure' => Webhooks::PaymentProviders::InvoicePaymentFailureService,
     'event.error' => Webhooks::Events::ErrorService,

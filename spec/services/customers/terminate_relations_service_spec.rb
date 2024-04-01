@@ -22,7 +22,7 @@ RSpec.describe Customers::TerminateRelationsService, type: :service do
   end
 
   context 'with a pending subscription' do
-    let(:subscription) { create(:pending_subscription, customer:) }
+    let(:subscription) { create(:subscription, :pending, customer:) }
 
     before { subscription }
 
