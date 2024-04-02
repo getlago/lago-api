@@ -192,14 +192,15 @@ module Invoices
     end
 
     def should_create_charge_fees?(subscription)
+      return true if subscription.terminated?
+
       # We should take a look at charges if subscription is created in the past and if it is not upgrade
       if subscription.plan.pay_in_advance? && subscription.started_in_past? && subscription.previous_subscription.nil?
         return true
       end
 
-      # NOTE: Charges should not be billed in advance when we are just upgrading to a new
-      #       pay_in_advance subscription
-      return false if subscription.plan.pay_in_advance? && subscription.invoices.created_before(invoice).count.zero?
+      return false if subscription.plan.pay_in_advance? &&
+                      subscription.started_at.to_date == timestamp.to_date
 
       true
     end
