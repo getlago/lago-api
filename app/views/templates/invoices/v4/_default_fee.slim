@@ -1,7 +1,10 @@
 - fee = self
 tr
   td
-    .body-1 = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
+    .body-1
+      = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
+      - if fee.charge_filter_id?
+        = ' • ' + fee.filter_display_name(separator: ' • ')
     - if fee.billable_metric.weighted_sum_agg?
       .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(fee.subscription.plan.interval))
     - if fee.charge.percentage?
