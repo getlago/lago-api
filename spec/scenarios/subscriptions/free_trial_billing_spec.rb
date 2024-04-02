@@ -152,4 +152,59 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       expect(free_trial_invoice.fees.charge).not_to exist
     end
   end
+
+  context 'with free trial ending on billing day' do
+    let(:trial_period) { 10 }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+
+    it 'bills subscription and usage-based charges' do
+      travel_to(Time.zone.parse('2024-03-22T12:12:00')) do
+        create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+          },
+        )
+
+        expect(customer.reload.invoices.count).to eq(0)
+      end
+
+      travel_to(Time.zone.parse('2024-03-23')) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_customer_id: customer.external_id,
+          },
+        )
+      end
+
+      expect(customer.reload.invoices.count).to eq(0)
+
+      travel_to(Time.zone.parse('2024-04-01')) do
+        perform_billing
+        expect(customer.reload.invoices.count).to eq(2) # Fixme
+      end
+
+      # Anniversary invoice, with usage-based charge
+      # I'd expect either 1 invoice with subscriptions + charge fees
+      # or 2 invoices, one with subscriptions and another with charge fees
+      # but we get 2 invoices: one with subscriptions and one with nothing. Charge fees are missing.
+
+      customer.invoices.each do |i|
+        pp i.fees.map(&:fee_type)
+      end
+
+      travel_to(Time.zone.parse('2024-04-19')) do
+        perform_billing
+        expect(customer.reload.invoices.count).to eq(2)
+      end
+
+      invoice = customer.invoices.order(created_at: :desc).first
+      expect(invoice.fees.subscription.first.amount_cents).to eq(5_000_000) # full fee, trial is over
+      expect(invoice.fees.charge.first.amount_cents).to eq(1000) # Missing because there was no previous invoice
+    end
+  end
 end
