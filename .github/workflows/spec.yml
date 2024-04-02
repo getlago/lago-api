@@ -23,9 +23,6 @@ jobs:
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
       RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
-      ENCRYPTION_PRIMARY_KEY: 5I9mjfzry2P787x4S5ZuDdJwXNgYEwqo
-      ENCRYPTION_DETERMINISTIC_KEY: SGiZzmh18EjBF9gSW8LCNk7pelauWVr4
-      ENCRYPTION_KEY_DERIVATION_SALT: q3pkMw34ZkRPFSf2LmtWe705yw532Pf7
       LAGO_API_URL: https://api.lago.dev
       LAGO_PDF_URL: https://pdf.lago.dev
       SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
