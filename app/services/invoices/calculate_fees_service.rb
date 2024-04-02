@@ -2,7 +2,7 @@
 
 module Invoices
   class CalculateFeesService < BaseService
-    def initialize(invoice:, recurring: false, context: nil)
+    def initialize(invoice:, recurring: false, context: nil, skip_charge: false)
       @invoice = invoice
       @timestamp = invoice.invoice_subscriptions.first&.timestamp
 
@@ -11,6 +11,8 @@ module Invoices
       @recurring = recurring
 
       @context = context
+
+      @skip_charge = skip_charge
 
       super
     end
@@ -64,7 +66,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context
+    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context, :skip_charge
 
     delegate :customer, :currency, to: :invoice
 
@@ -193,6 +195,8 @@ module Invoices
     end
 
     def should_create_charge_fees?(subscription)
+      return false if skip_charge
+
       # We should take a look at charges if subscription is created in the past and if it is not upgrade
       if subscription.plan.pay_in_advance? && subscription.started_in_past? && subscription.previous_subscription.nil?
         return true

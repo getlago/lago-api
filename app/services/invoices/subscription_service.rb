@@ -2,7 +2,7 @@
 
 module Invoices
   class SubscriptionService < BaseService
-    def initialize(subscriptions:, timestamp:, recurring:, invoice: nil)
+    def initialize(subscriptions:, timestamp:, recurring:, invoice: nil, skip_charge: false)
       @subscriptions = subscriptions
       @timestamp = timestamp
 
@@ -17,6 +17,8 @@ module Invoices
       #       and if the generating invoice was persisted,
       #       the process can be retried without creating a new invoice
       @invoice = invoice
+
+      @skip_charge = skip_charge
 
       super
     end
@@ -34,6 +36,7 @@ module Invoices
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
           recurring:,
+          skip_charge:,
         )
 
         fee_result.raise_if_error!
@@ -60,7 +63,7 @@ module Invoices
 
     private
 
-    attr_accessor :subscriptions, :timestamp, :recurring, :customer, :currency, :invoice
+    attr_accessor :subscriptions, :timestamp, :recurring, :customer, :currency, :invoice, :skip_charge
 
     def active_subscriptions
       @active_subscriptions ||= subscriptions.select(&:active?)

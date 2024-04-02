@@ -5,12 +5,13 @@ class BillSubscriptionJob < ApplicationJob
 
   retry_on Sequenced::SequenceError, ActiveJob::DeserializationError
 
-  def perform(subscriptions, timestamp, recurring: false, invoice: nil)
+  def perform(subscriptions, timestamp, recurring: false, invoice: nil, skip_charge: false)
     result = Invoices::SubscriptionService.call(
       subscriptions:,
       timestamp:,
       recurring:,
       invoice:,
+      skip_charge:,
     )
     return if result.success?
 
@@ -22,6 +23,7 @@ class BillSubscriptionJob < ApplicationJob
       timestamp,
       recurring:,
       invoice: result.invoice,
+      skip_charge:,
     )
   end
 end
