@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class AdyenService < BaseService
-    WEBHOOKS_EVENTS = %w[AUTHORISATION REFUND REFUND_FAILED].freeze
+    WEBHOOKS_EVENTS = %w[AUTHORISATION REFUND REFUND_FAILED CHARGEBACK].freeze
 
     def create_or_update(**args)
       payment_provider_result = PaymentProviders::FindService.call(
@@ -105,6 +105,11 @@ module PaymentProviders
 
         result = service.update_status(provider_refund_id:, status:)
         result.raise_if_error! || result
+      when 'CHARGEBACK'
+        PaymentProviders::Webhooks::Adyen::ChargebackService.call(
+          organization_id: organization.id,
+          event_json:,
+        )
       when 'REFUND_FAILED'
         return result if event['success'] != 'true'
 

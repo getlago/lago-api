@@ -151,6 +151,23 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
         end
       end
     end
+
+    context 'when dispute was lost' do
+      let(:invoice) { create(:invoice, :dispute_lost, customer:, organization:) }
+
+      it 'does not create a refund' do
+        result = gocardless_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.credit_note).to eq(credit_note)
+          expect(result.refund).to be_nil
+
+          expect(gocardless_refunds_service).not_to have_received(:create)
+        end
+      end
+    end
   end
 
   describe '#update_status' do

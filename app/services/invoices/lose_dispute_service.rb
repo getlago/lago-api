@@ -2,8 +2,10 @@
 
 module Invoices
   class LoseDisputeService < BaseService
-    def initialize(invoice:)
+    def initialize(invoice:, payment_dispute_lost_at: nil, reason: nil)
       @invoice = invoice
+      @payment_dispute_lost_at = payment_dispute_lost_at.presence || DateTime.current
+      @reason = reason
       super
     end
 
@@ -12,10 +14,10 @@ module Invoices
 
       result.invoice = invoice
 
-      invoice.mark_as_dispute_lost!
+      invoice.mark_as_dispute_lost!(payment_dispute_lost_at)
 
       if invoice.organization.webhook_endpoints.any?
-        SendWebhookJob.perform_later('invoice.payment_dispute_lost', result.invoice)
+        SendWebhookJob.perform_later('invoice.payment_dispute_lost', result.invoice, provider_error: reason)
       end
 
       result
@@ -25,6 +27,6 @@ module Invoices
 
     private
 
-    attr_reader :invoice
+    attr_reader :invoice, :payment_dispute_lost_at, :reason
   end
 end

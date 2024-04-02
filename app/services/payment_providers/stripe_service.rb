@@ -11,6 +11,7 @@ module PaymentProviders
       'charge.refund.updated',
       'customer.updated',
       'charge.succeeded',
+      'charge.dispute.closed',
     ].freeze
 
     def create_or_update(**args)
@@ -168,6 +169,11 @@ module PaymentProviders
             status: 'succeeded',
             metadata: event.data.object.metadata.to_h.symbolize_keys,
           )
+      when 'charge.dispute.closed'
+        PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService.call(
+          organization_id: organization.id,
+          event_json:,
+        )
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
         status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
 
