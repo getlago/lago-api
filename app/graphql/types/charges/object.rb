@@ -42,6 +42,11 @@ module Types
         scope = scope.with_discarded if object.discarded?
         scope.includes(:group).sort_by { |gp| gp.group&.name }
       end
+
+      def filters
+        # NOTE: Ensure filters are keeping the initial ordering
+        object.filters.order(updated_at: :asc)
+      end
     end
   end
 end

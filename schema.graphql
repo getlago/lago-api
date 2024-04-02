@@ -250,7 +250,7 @@ input ChargeFilterInput {
 type ChargeFilterUsage {
   amountCents: BigInt!
   eventsCount: Int!
-  id: ID!
+  id: ID
   invoiceDisplayName: String
   units: Float!
   values: ChargeFilterValues!
