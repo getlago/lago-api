@@ -15,9 +15,7 @@ module AdjustedFees
       return result.validation_failure!(errors: { adjusted_fee: ['already_exists'] }) if fee.adjusted_fee
 
       charge = fee.charge
-      if charge && params[:unit_amount_cents].blank? && (charge.percentage? || (charge.prorated? && charge.graduated?))
-        return result.validation_failure!(errors: { charge: ['invalid_charge_model'] })
-      end
+      return result.validation_failure!(errors: { charge: ['invalid_charge_model'] }) if disabled_charge_model?(charge)
 
       adjusted_fee = AdjustedFee.new(
         fee:,
@@ -51,5 +49,11 @@ module AdjustedFees
     private
 
     attr_reader :organization, :fee, :params
+
+    def disabled_charge_model?(charge)
+      unit_adjustment = params[:units].present? && params[:unit_amount_cents].blank?
+
+      charge && unit_adjustment && (charge.percentage? || (charge.prorated? && charge.graduated?))
+    end
   end
 end
