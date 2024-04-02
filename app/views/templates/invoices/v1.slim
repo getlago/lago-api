@@ -580,7 +580,7 @@ html
                 - if fees.all? { |f| f.group_id? }
                   - fees.select { |f| f.units.positive? }.each do |fee|
                     .body-3 = fees.first.invoice_name
-                    .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_filter_display_name: fee.filter_display_name)
+                    .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_filter_display_name: fee.filter_display_name(separator: ' • '))
                     .breakdown-details.mb-24
                       table.breakdown-details-table width="100%"
                         - recurring_breakdown(fee).each do |breakdown|

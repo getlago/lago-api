@@ -400,7 +400,7 @@ html
                 - if items.all? { |i| i.fee.charge_filter_id? }
                   - items.each do |item|
                     tr
-                      td.body-1 = item.fee.invoice_name + FeeDisplayHelper.grouped_by_display(item.fee) + ' • ' + item.fee.filter_display_name
+                      td.body-1 = item.fee.invoice_name + FeeDisplayHelper.grouped_by_display(item.fee) + ' • ' + item.fee.filter_display_name(separator: ' • ')
                       td.body-2 width="20%" == TaxHelper.applied_taxes(item)
                       td.body-2 width="20%" = MoneyHelper.format(item.amount)
                   - items.select { |i| i.fee.true_up_fee.present? }.each do |item|
