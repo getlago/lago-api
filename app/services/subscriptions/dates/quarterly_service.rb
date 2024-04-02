@@ -105,9 +105,9 @@ module Subscriptions
         year = nil
         month = nil
 
-        # NOTE: in anniversary mode if both subscription date and current date are
-        #       the last day of month, anniversary day is on the current day
-        day = if subscription.anniversary? && last_day_of_month?(date) && last_day_of_month?(subscription_at)
+        # NOTE: if subscription anniversary day is higher than the current last day of the month,
+        #       anniversary day is on the current day
+        day = if subscription.anniversary? && last_day_of_month?(date) && (date.day < subscription_at.day)
           date.day
         else
           subscription_at.day
