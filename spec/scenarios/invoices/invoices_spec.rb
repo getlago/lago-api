@@ -38,14 +38,14 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       subscription = customer.subscriptions.first
       expect(subscription.invoices.count).to eq(0)
 
-      travel_to(DateTime.new(2024, 3, 11, 3)) do
+      travel_to(DateTime.new(2024, 3, 11, 22)) do
         perform_billing
       end
 
       invoice = subscription.invoices.first
       expect(invoice.total_amount_cents).to eq(2371) # (31 - 3 - 7) * 35 / 31
 
-      travel_to(DateTime.new(2024, 3, 11, 6)) do
+      travel_to(DateTime.new(2024, 3, 11, 23)) do
         terminate_subscription(subscription)
       end
 
@@ -55,7 +55,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       expect(invoice.reload.credit_notes.count).to eq(1)
       expect(invoice.credit_notes.first.total_amount_cents).to eq(2371)
 
-      travel_to(DateTime.new(2024, 3, 11, 22)) do
+      travel_to(DateTime.new(2024, 3, 11, 23, 5)) do
         create_subscription(
           {
             external_customer_id: customer.external_id,

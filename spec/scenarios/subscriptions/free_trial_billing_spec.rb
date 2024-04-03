@@ -75,7 +75,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         expect(customer.reload.invoices.count).to eq(1)
         invoice = customer.reload.invoices.sole
         expect(invoice.fees.count).to eq(1)
-        expect(invoice.fees.subscription.first.amount_cents).to eq(2_741_935) # (31 - 4 - 10) / 31 * 5_000_000 = 2_741_935
+        expect(invoice.fees.subscription.first.amount_cents).to eq(2_741_935) # (31 - 4 - 10) / 31 * 5000000 = 2741935
       end
     end
 
@@ -172,7 +172,8 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
     let(:billable_metric) { create(:billable_metric, organization:) }
 
     it 'bills subscription and usage-based charges' do
-      travel_to(Time.zone.parse('2024-03-22T12:12:00')) do
+      start_time = Time.zone.parse('2024-03-22T12:12:00')
+      travel_to(start_time) do
         create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
         create_subscription(
           {
@@ -197,21 +198,22 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
       expect(customer.reload.invoices.count).to eq(0)
 
+      # NOTE: Subscriptions::BillingService will bill the subscription because it's billing day
+      #       Subscriptions::FreeTrialBillingService will ignore it because the trial ends at 12:12:00
       travel_to(Time.zone.parse('2024-04-01')) do
-        expect do
-          Clock::SubscriptionsBillerJob.perform_later
-          perform_all_enqueued_jobs
-        end.to change { customer.reload.invoices.count }.from(0).to(1)
-
-        expect do
-          Clock::FreeTrialSubscriptionsBillerJob.perform_later
-          perform_all_enqueued_jobs
-        end.not_to change { customer.reload.invoices.count }
+        perform_billing
+        invoice = customer.invoices.order(created_at: :desc).sole
+        expect(invoice.fees.subscription.first.amount_cents).to eq(5_000_000) # full fee, trial is over
+        expect(invoice.fees.charge.first.amount_cents).to eq(1000)
       end
 
-      invoice = customer.invoices.order(created_at: :desc).first
-      expect(invoice.fees.subscription.first.amount_cents).to eq(5_000_000) # full fee, trial is over
-      expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+      # NOTE: After the trial ends, we don't invoice again because it was done above
+      #       but we terminate the trial and send the webhook
+      travel_to(Time.zone.parse('2024-04-01T13:11:00')) do
+        perform_billing
+        expect(customer.reload.invoices.count).to eq(1)
+        expect(customer.subscriptions.sole.trial_ended_at).to be_within(1.minute).of(start_time + trial_period.days)
+      end
     end
   end
 end
