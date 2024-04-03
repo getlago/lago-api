@@ -19,12 +19,17 @@ Rails.application.configure do
   config.action_dispatch.show_exceptions = false
   config.action_controller.allow_forgery_protection = false
   config.active_storage.service = :test
+
   config.action_mailer.perform_caching = false
   config.action_mailer.delivery_method = :test
+
+  config.active_record.encryption.primary_key = 'test'
+  config.active_record.encryption.deterministic_key = 'test'
+  config.active_record.encryption.key_derivation_salt = 'test'
+
   config.active_support.deprecation = :stderr
   config.active_support.disallowed_deprecation = :raise
   config.active_support.disallowed_deprecation_warnings = []
-  config.action_mailer.delivery_method = :test
 
   Dotenv.load
 
