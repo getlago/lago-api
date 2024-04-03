@@ -66,5 +66,27 @@ RSpec.describe Organizations::UpdateInvoiceGracePeriodService, type: :service do
         end
       end
     end
+
+    context 'when grace_period is the same as the current one' do
+      let(:grace_period) { organization.invoice_grace_period }
+
+      it 'does not finalize any draft invoices' do
+        current_date = DateTime.parse('22 Jun 2022')
+
+        travel_to(current_date) do
+          update_service.call
+
+          expect(Invoices::FinalizeService).not_to have_received(:call)
+        end
+      end
+
+      it 'does not update issuing_date on draft invoices' do
+        current_date = DateTime.parse('22 Jun 2022')
+
+        travel_to(current_date) do
+          expect { update_service.call }.not_to change { invoice_to_not_be_finalized.reload.issuing_date }
+        end
+      end
+    end
   end
 end

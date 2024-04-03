@@ -9,20 +9,22 @@ module Organizations
     end
 
     def call
-      organization.invoice_grace_period = grace_period
-      organization.save!
+      if grace_period != organization.invoice_grace_period
+        organization.invoice_grace_period = grace_period
+        organization.save!
 
-      # NOTE: Finalize related draft invoices.
-      organization.invoices.ready_to_be_finalized.each do |invoice|
-        Invoices::FinalizeService.call(invoice:)
-      end
+        # NOTE: Finalize related draft invoices.
+        organization.invoices.ready_to_be_finalized.each do |invoice|
+          Invoices::FinalizeService.call(invoice:)
+        end
 
-      # NOTE: Update issuing_date on draft invoices.
-      organization.invoices.draft.each do |invoice|
-        invoice.update!(
-          issuing_date: grace_period_issuing_date(invoice),
-          payment_due_date: grace_period_payment_due_date(invoice),
-        )
+        # NOTE: Update issuing_date on draft invoices.
+        organization.invoices.draft.each do |invoice|
+          invoice.update!(
+            issuing_date: grace_period_issuing_date(invoice),
+            payment_due_date: grace_period_payment_due_date(invoice),
+          )
+        end
       end
 
       result.organization = organization

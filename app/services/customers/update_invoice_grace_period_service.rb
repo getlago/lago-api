@@ -9,20 +9,22 @@ module Customers
     end
 
     def call
-      customer.invoice_grace_period = grace_period
-      customer.save!
+      if grace_period != customer.invoice_grace_period
+        customer.invoice_grace_period = grace_period
+        customer.save!
 
-      # NOTE: Finalize related draft invoices.
-      customer.invoices.ready_to_be_finalized.each do |invoice|
-        Invoices::FinalizeService.call(invoice:)
-      end
+        # NOTE: Finalize related draft invoices.
+        customer.invoices.ready_to_be_finalized.each do |invoice|
+          Invoices::FinalizeService.call(invoice:)
+        end
 
-      # NOTE: Update issuing_date on draft invoices.
-      customer.invoices.draft.each do |invoice|
-        invoice.update!(
-          issuing_date: grace_period_issuing_date(invoice),
-          payment_due_date: grace_period_payment_due_date(invoice),
-        )
+        # NOTE: Update issuing_date on draft invoices.
+        customer.invoices.draft.each do |invoice|
+          invoice.update!(
+            issuing_date: grace_period_issuing_date(invoice),
+            payment_due_date: grace_period_payment_due_date(invoice),
+          )
+        end
       end
 
       result.customer = customer
