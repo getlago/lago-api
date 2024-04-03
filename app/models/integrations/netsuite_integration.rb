@@ -2,7 +2,6 @@
 
 module Integrations
   class NetsuiteIntegration < BaseIntegration
-
     validates :connection_id, :client_secret, :client_id, :account_id, presence: true
 
     def connection_id=(connection_id)
