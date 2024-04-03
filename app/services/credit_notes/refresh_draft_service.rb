@@ -60,6 +60,8 @@ module CreditNotes
     # NOTE: credit note item value needs to be recalculated based on the ratio between old fee value and
     #       new fee value
     def calculate_item_value(item, old_fee_amount_cents)
+      return 0 if old_fee_amount_cents.zero?
+
       item.precise_amount_cents.fdiv(old_fee_amount_cents) * fee.amount_cents
     end
   end
