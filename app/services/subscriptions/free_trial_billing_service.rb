@@ -10,11 +10,13 @@ module Subscriptions
 
     def call
       ending_trial_subscriptions.each do |subscription|
-        if subscription.plan_pay_in_advance && !already_billed_on_day_one?(subscription)
+        if subscription.plan_pay_in_advance &&
+           !subscription.was_already_billed_today &&
+           !already_billed_on_day_one?(subscription)
           BillSubscriptionJob.perform_later([subscription], timestamp, skip_charges: true)
         end
 
-        subscription.update!(trial_ended_at: timestamp)
+        subscription.update!(trial_ended_at: subscription.trial_end_date_from_query)
 
         SendWebhookJob.perform_later('subscription.trial_ended', subscription)
       end
@@ -35,9 +37,12 @@ module Subscriptions
     def ending_trial_subscriptions
       sql = <<-SQL
         WITH
-          initial_started_at AS (#{initial_started_at})
+          initial_started_at AS (#{initial_started_at}),
+          already_billed_today AS (#{already_billed_today})
         SELECT DISTINCT
           plans.pay_in_advance AS plan_pay_in_advance,
+          already_billed_today.invoiced_count > 0 AS was_already_billed_today,
+          #{trial_end_date} as trial_end_date_from_query,
           subscriptions.*
         FROM
           subscriptions
@@ -45,10 +50,12 @@ module Subscriptions
           INNER JOIN initial_started_at ON initial_started_at.external_id = subscriptions.external_id
           INNER JOIN customers ON subscriptions.customer_id = customers.id
           INNER JOIN organizations ON customers.organization_id = organizations.id
+          LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
         WHERE
           subscriptions.status = 1
           AND subscriptions.trial_ended_at IS NULL
-          AND DATE_TRUNC('hour', initial_started_at#{at_time_zone} + plans.trial_period * INTERVAL '1 day' + INTERVAL '1 hour') = DATE_TRUNC('hour', '#{timestamp}'#{at_time_zone})
+          AND #{trial_end_date} <= '#{timestamp}'
+          AND #{trial_end_date} > '#{timestamp - 2.hours}'
       SQL
 
       Subscription.find_by_sql([sql, { timestamp: }])
@@ -61,6 +68,30 @@ module Subscriptions
           FIRST_VALUE(started_at) OVER (PARTITION BY external_id ORDER BY started_at) AS initial_started_at
         FROM
           subscriptions
+      SQL
+    end
+
+    def trial_end_date
+      <<-SQL
+        (initial_started_at + plans.trial_period * INTERVAL '1 day')
+      SQL
+    end
+
+    def already_billed_today
+      <<-SQL
+        SELECT
+          invoice_subscriptions.subscription_id,
+          COUNT(invoice_subscriptions.id) AS invoiced_count
+        FROM invoice_subscriptions
+          INNER JOIN subscriptions AS sub ON invoice_subscriptions.subscription_id = sub.id
+          INNER JOIN customers AS cus ON sub.customer_id = cus.id
+          INNER JOIN organizations AS org ON cus.organization_id = org.id
+        WHERE invoice_subscriptions.recurring = 't'
+          AND invoice_subscriptions.timestamp IS NOT NULL
+          AND DATE(
+            (invoice_subscriptions.timestamp)#{at_time_zone(customer: 'cus', organization: 'org')}
+          ) = DATE('#{timestamp}'#{at_time_zone(customer: 'cus', organization: 'org')})
+        GROUP BY invoice_subscriptions.subscription_id
       SQL
     end
   end
