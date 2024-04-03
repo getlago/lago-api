@@ -52,6 +52,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
         expect(customer.reload.invoices.count).to eq(0)
       end
+      subscription = customer.subscriptions.sole
 
       # Ensure nothing happened
       travel_to(Time.zone.parse('2024-03-10T12:12:00')) do
@@ -59,9 +60,22 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         expect(customer.reload.invoices.count).to eq(0)
       end
 
-      travel_to(Time.zone.parse('2024-03-15T15:00:00')) do
+      # NOTE: The subscription was started at 12:12:00, so the trial period ends exactly at 12:12:00
+      #       This ensure that Subscriptions::FreeTrialBillingService grabs subscriptions that
+      #       ended in the last hour.
+      travel_to(Time.zone.parse('2024-03-15T12:02:00')) do
+        expect(subscription).to be_in_trial_period
+        perform_billing
+        expect(customer.reload.invoices.count).to eq(0)
+      end
+
+      travel_to(Time.zone.parse('2024-03-15T13:02:00')) do
+        expect(subscription).not_to be_in_trial_period
         perform_billing
         expect(customer.reload.invoices.count).to eq(1)
+        invoice = customer.reload.invoices.sole
+        expect(invoice.fees.count).to eq(1)
+        expect(invoice.fees.subscription.first.amount_cents).to eq(2_741_935) # (31 - 4 - 10) / 31 * 5_000_000 = 2_741_935
       end
     end
 
@@ -142,7 +156,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       expect(invoice.fees.subscription).not_to exist
       expect(invoice.fees.charge.first.amount_cents).to eq(1000)
 
-      travel_to(Time.zone.parse('2024-04-19')) do
+      travel_to(Time.zone.parse('2024-04-19T13:01:00')) do
         perform_billing
         expect(customer.reload.invoices.count).to eq(2)
       end

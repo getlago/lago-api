@@ -10,7 +10,7 @@ module Subscriptions
 
     def call
       ending_trial_subscriptions.each do |subscription|
-        if subscription.plan_pay_in_advance && !already_billed?(subscription)
+        if subscription.plan_pay_in_advance && !already_billed_on_day_one?(subscription)
           BillSubscriptionJob.perform_later([subscription], timestamp, skip_charges: true)
         end
 
@@ -24,11 +24,11 @@ module Subscriptions
 
     attr_reader :timestamp
 
-    def already_billed?(subscription)
-      # N+1
-      # This is to avoid billing at the end of the trial if the customer was billed at the beginning
-      # It's only for users who started billing customer AND upgraded their lago with this feature
-      # during the customer trial period
+    # This is to avoid billing at the end of the trial if the customer was billed at the beginning
+    # It's only for users who started billing customer AND upgraded their lago with this feature
+    # during the customer trial period
+    # Unfortunately, this introduces an N+1 query
+    def already_billed_on_day_one?(subscription)
       subscription.invoice_subscriptions.where(timestamp: subscription.started_at.all_day).exists?
     end
 
@@ -48,7 +48,7 @@ module Subscriptions
         WHERE
           subscriptions.status = 1
           AND subscriptions.trial_ended_at IS NULL
-          AND DATE(initial_started_at#{at_time_zone} + plans.trial_period * INTERVAL '1 day') = DATE('#{timestamp}'#{at_time_zone})
+          AND DATE_TRUNC('hour', initial_started_at#{at_time_zone} + plans.trial_period * INTERVAL '1 day' + INTERVAL '1 hour') = DATE_TRUNC('hour', '#{timestamp}'#{at_time_zone})
       SQL
 
       Subscription.find_by_sql([sql, { timestamp: }])
