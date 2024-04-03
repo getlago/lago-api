@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_03_28_153701) do
+ActiveRecord::Schema[7.0].define(version: 2024_04_03_084644) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -542,6 +542,19 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_28_153701) do
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
   end
 
+  create_table "integrations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "type", null: false
+    t.string "secrets"
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code", "organization_id"], name: "index_integrations_on_code_and_organization_id", unique: true
+    t.index ["organization_id"], name: "index_integrations_on_organization_id"
+  end
+
   create_table "invites", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "membership_id"
@@ -681,6 +694,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_28_153701) do
     t.string "document_number_prefix"
     t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
+    t.string "premium_integrations", default: [], null: false, array: true
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
@@ -998,6 +1012,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_03_28_153701) do
   add_foreign_key "group_properties", "groups", on_delete: :cascade
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
   add_foreign_key "groups", "groups", column: "parent_group_id"
+  add_foreign_key "integrations", "organizations"
   add_foreign_key "invites", "memberships"
   add_foreign_key "invites", "organizations"
   add_foreign_key "invoice_metadata", "invoices"
