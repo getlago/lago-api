@@ -184,9 +184,15 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       expect(customer.reload.invoices.count).to eq(0)
 
       travel_to(Time.zone.parse('2024-04-01')) do
-        expect { Clock::SubscriptionsBillerJob.perform_now }.to change { customer.reload.invoices.count }.from(0).to(1)
+        expect do
+          Clock::SubscriptionsBillerJob.perform_later
+          perform_all_enqueued_jobs
+        end.to change { customer.reload.invoices.count }.from(0).to(1)
 
-        expect { Clock::FreeTrialSubscriptionsBillerJob.perform_now }.not_to change { customer.reload.invoices.count }
+        expect do
+          Clock::FreeTrialSubscriptionsBillerJob.perform_later
+          perform_all_enqueued_jobs
+        end.not_to change { customer.reload.invoices.count }
       end
 
       invoice = customer.invoices.order(created_at: :desc).first

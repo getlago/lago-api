@@ -11,7 +11,7 @@ module Subscriptions
     def call
       ending_trial_subscriptions.each do |subscription|
         if subscription.plan_pay_in_advance && !already_billed?(subscription)
-          BillSubscriptionJob.perform_later([subscription], timestamp)
+          BillSubscriptionJob.perform_later([subscription], timestamp, skip_charges: true)
         end
 
         subscription.update!(trial_ended_at: timestamp)
