@@ -13,6 +13,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
   class Group < ApplicationRecord
     belongs_to :billable_metric
     belongs_to :parent, class_name: 'Group', foreign_key: 'parent_group_id', optional: true
+    has_many :children, class_name: 'Group', foreign_key: 'parent_group_id'
     has_many :properties, class_name: 'GroupProperty'
   end
 
@@ -77,7 +78,9 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
       end
 
       # NOTE: Create filter values for the remaining groups
-      (charge.billable_metric.groups.where.not(parent_group_id: nil) - migrated_groups).each do |group|
+      charge.billable_metric.groups.where.not(id: migrated_groups.map(&:id)).includes(:children).each do |group|
+        next if group.children.any?
+
         # Create charge filter
         filter = charge.filters.create!(
           invoice_display_name: charge.invoice_display_name,
