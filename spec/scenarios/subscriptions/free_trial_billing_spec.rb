@@ -17,19 +17,29 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
     )
   end
 
+  def create_customer_subscription!
+    create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
+    create_subscription(
+      {
+        external_customer_id: customer.external_id,
+        external_id: customer.external_id,
+        plan_code: plan.code,
+      },
+    )
+  end
+
+  def create_usage_event!
+    create_event(
+      { code: billable_metric.code, transaction_id: SecureRandom.uuid, external_customer_id: customer.external_id },
+    )
+  end
+
   context 'without free trial' do
     let(:trial_period) { 0 }
 
     it 'bills the customer at the beginning of the subscription' do
       travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
-        create_subscription(
-          {
-            external_customer_id: customer.external_id,
-            external_id: customer.external_id,
-            plan_code: plan.code,
-          },
-        )
-
+        create_customer_subscription!
         expect(customer.reload.invoices.count).to eq(1)
         expect(customer.invoices.first.fees.subscription).to exist
       end
@@ -41,14 +51,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
     it 'bills the customer at the end of the free trial' do
       travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
-        create_subscription(
-          {
-            external_customer_id: customer.external_id,
-            external_id: customer.external_id,
-            plan_code: plan.code,
-          },
-        )
-
+        create_customer_subscription!
         expect(customer.reload.invoices.count).to eq(0)
       end
       subscription = customer.subscriptions.sole
@@ -82,14 +85,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
     #       BEFORE the feature to bill at the end of the free trial was implemented
     it 'does not bill the customer if it was already billed at the beginning of the trial' do
       travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
-        create_subscription(
-          {
-            external_customer_id: customer.external_id,
-            external_id: customer.external_id,
-            plan_code: plan.code,
-          },
-        )
-
+        create_customer_subscription!
         expect(customer.reload.invoices.count).to eq(0)
 
         plan.update! trial_period: 0 # disable trial to force billing
@@ -123,27 +119,11 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
     it 'bills subscription at the end of the free trial' do
       travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
-        create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
-        create_subscription(
-          {
-            external_customer_id: customer.external_id,
-            external_id: customer.external_id,
-            plan_code: plan.code,
-          },
-        )
-
+        create_customer_subscription!
         expect(customer.reload.invoices.count).to eq(0)
       end
 
-      travel_to(Time.zone.parse('2024-03-10')) do
-        create_event(
-          {
-            code: billable_metric.code,
-            transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
-          },
-        )
-      end
+      travel_to(Time.zone.parse('2024-03-10')) { create_usage_event! }
 
       travel_to(Time.zone.parse('2024-04-01')) do
         perform_billing
@@ -171,27 +151,11 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
     it 'bills subscription and usage-based charges' do
       start_time = Time.zone.parse('2024-03-22T12:12:00')
       travel_to(start_time) do
-        create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
-        create_subscription(
-          {
-            external_customer_id: customer.external_id,
-            external_id: customer.external_id,
-            plan_code: plan.code,
-          },
-        )
-
+        create_customer_subscription!
         expect(customer.reload.invoices.count).to eq(0)
       end
 
-      travel_to(Time.zone.parse('2024-03-23')) do
-        create_event(
-          {
-            code: billable_metric.code,
-            transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
-          },
-        )
-      end
+      travel_to(Time.zone.parse('2024-03-23')) { create_usage_event! }
 
       expect(customer.reload.invoices.count).to eq(0)
 
@@ -222,27 +186,11 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         # but April 2nd, 2024 in Asia/Tokyo
         start_time = Time.parse('2024-03-22T18:12:00 UTC').in_time_zone(timezone)
         travel_to(start_time) do
-          create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
-          create_subscription(
-            {
-              external_customer_id: customer.external_id,
-              external_id: customer.external_id,
-              plan_code: plan.code,
-            },
-          )
-
+          create_customer_subscription!
           expect(customer.reload.invoices.count).to eq(0)
         end
 
-        travel_to(Time.zone.parse('2024-03-28')) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
-            },
-          )
-        end
+        travel_to(Time.zone.parse('2024-03-28')) { create_usage_event! }
 
         expect(customer.reload.invoices.count).to eq(0)
 
@@ -274,27 +222,11 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       it 'bills subscription and usage-based charges' do
         start_time = Time.zone.parse('2024-03-22T12:12:00')
         travel_to(start_time) do
-          create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
-          create_subscription(
-            {
-              external_customer_id: customer.external_id,
-              external_id: customer.external_id,
-              plan_code: plan.code,
-            },
-          )
-
+          create_customer_subscription!
           expect(customer.reload.invoices.count).to eq(0)
         end
 
-        travel_to(Time.zone.parse('2024-03-23')) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
-            },
-          )
-        end
+        travel_to(Time.zone.parse('2024-03-23')) { create_usage_event! }
 
         expect(customer.reload.invoices.count).to eq(0)
 
