@@ -124,6 +124,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
     context 'with group properties on charges' do
       let(:group) { create(:group, billable_metric:) }
+      let(:billable_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: group.key, values: [group.value])
+      end
       let(:create_params) do
         {
           name: 'P1',
@@ -150,6 +153,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
         }
       end
 
+      before { billable_metric_filter }
+
       it 'creates a plan' do
         post_with_token(organization, '/api/v1/plans', { plan: create_params })
 
@@ -163,6 +168,16 @@ RSpec.describe Api::V1::PlansController, type: :request do
               group_id: group.id,
               invoice_display_name: 'Europe',
               values: { amount: '0.22' },
+            },
+          ],
+        )
+
+        expect(json[:plan][:charges].first[:filters]).to eq(
+          [
+            {
+              invoice_display_name: 'Europe',
+              properties: { amount: '0.22' },
+              values: { group.key.to_sym => [group.value] },
             },
           ],
         )
@@ -414,6 +429,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
     context 'with group properties on charges' do
       let(:group) { create(:group, billable_metric:) }
+      let(:billable_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: group.key, values: [group.value])
+      end
       let(:update_params) do
         {
           name: 'P1',
@@ -440,6 +458,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
         }
       end
 
+      before { billable_metric_filter }
+
       it 'creates a plan' do
         put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
 
@@ -453,6 +473,16 @@ RSpec.describe Api::V1::PlansController, type: :request do
               group_id: group.id,
               invoice_display_name: 'Europe',
               values: { amount: '0.22' },
+            },
+          ],
+        )
+
+        expect(json[:plan][:charges].first[:filters]).to eq(
+          [
+            {
+              invoice_display_name: 'Europe',
+              properties: { amount: '0.22' },
+              values: { group.key.to_sym => [group.value] },
             },
           ],
         )

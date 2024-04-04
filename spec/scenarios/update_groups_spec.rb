@@ -208,17 +208,18 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
           group: {
             key: 'cloud',
             values: [
-              { name: 'aws', key: 'country', values: %w[usa france] },
+              { name: 'azure', key: 'country', values: %w[usa france] },
               { name: 'google', key: 'country', values: ['usa'] },
             ],
           },
         )
         perform_invoices_refresh
 
-        expect(cards.groups.parents.pluck(:value)).to contain_exactly('aws', 'google')
+        expect(cards.groups.parents.pluck(:value)).to contain_exactly('azure', 'google')
         expect(cards.groups.children.pluck(:value)).to contain_exactly('usa', 'france', 'usa')
         expect(cards.charges.first.group_properties.count).to eq(0)
-        expect(invoice.reload.total_amount_cents).to eq(13_000)
+        expect(cards.charges.first.filters.count).to eq(2)
+        expect(invoice.reload.total_amount_cents).to eq(19_000)
       end
     end
   end

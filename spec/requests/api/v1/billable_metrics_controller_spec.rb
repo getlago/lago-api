@@ -49,6 +49,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
+        expect(json[:billable_metric][:filters].count).to eq(2)
       end
     end
 
@@ -132,6 +133,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
+        expect(json[:billable_metric][:filters].count).to eq(2)
       end
     end
 

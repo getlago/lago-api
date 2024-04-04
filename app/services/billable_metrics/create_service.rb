@@ -2,7 +2,7 @@
 
 module BillableMetrics
   class CreateService < BaseService
-    def create(**args)
+    def create(args)
       ActiveRecord::Base.transaction do
         metric = BillableMetric.create!(
           organization_id: args[:organization_id],
