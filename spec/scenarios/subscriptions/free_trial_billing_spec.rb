@@ -213,6 +213,63 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       end
     end
 
+    context 'with customer with a timezone' do
+      let(:trial_period) { 10 }
+      let(:timezone) { 'Asia/Tokyo' }
+
+      it 'follows customer timezone for billing' do
+        # Trial ends on April 1st, 2024 in UTC
+        # but April 2nd, 2024 in Asia/Tokyo
+        start_time = Time.parse('2024-03-22T18:12:00 UTC').in_time_zone(timezone)
+        travel_to(start_time) do
+          create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+            },
+          )
+
+          expect(customer.reload.invoices.count).to eq(0)
+        end
+
+        travel_to(Time.zone.parse('2024-03-28')) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+            },
+          )
+        end
+
+        expect(customer.reload.invoices.count).to eq(0)
+
+        # NOTE: Billing day in Asia/Tokyo
+        travel_to(Time.parse('2024-03-31T15:10:00 UTC')) do # 2024-04-01T00:10:00 Asia/Tokyo
+          perform_billing
+          invoice = customer.invoices.order(created_at: :desc).sole
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+        end
+
+        # April 1st in both timezone, nothing should happen
+        travel_to(Time.parse('2024-04-01T13:11:00 UTC')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(1)
+        end
+
+        travel_to(Time.parse('2024-04-01T19:11:00 UTC')) do # April 2nd, 2024 04:11:00 Asia/Tokyo, trial ended
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(2)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(4_833_333) # Trial ends on the 2nd in customer tz
+        end
+      end
+    end
+
     context 'with SubscriptionsBillerJob running after FreeTrialSubscriptionsBillerJob' do
       it 'bills subscription and usage-based charges' do
         start_time = Time.zone.parse('2024-03-22T12:12:00')
