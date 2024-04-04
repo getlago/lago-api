@@ -81,6 +81,61 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe '#editable?' do
+    subject(:editable) { customer.editable? }
+
+    context 'when customer has a wallet' do
+      let(:customer) { wallet.customer }
+      let(:wallet) { create(:wallet) }
+
+      it 'returns false' do
+        expect(editable).to eq(false)
+      end
+    end
+
+    context 'when customer has a coupon applied' do
+      let(:customer) { applied_coupon.customer }
+      let(:applied_coupon) { create(:applied_coupon) }
+
+      it 'returns false' do
+        expect(editable).to eq(false)
+      end
+    end
+
+    context 'when customer has an addon applied' do
+      let(:customer) { applied_add_on.customer }
+      let(:applied_add_on) { create(:applied_add_on) }
+
+      it 'returns false' do
+        expect(editable).to eq(false)
+      end
+    end
+
+    context 'when customer has an invoice' do
+      let(:customer) { invoice.customer }
+      let(:invoice) { create(:invoice) }
+
+      it 'returns false' do
+        expect(editable).to eq(false)
+      end
+    end
+
+    context 'when customer has a subscription' do
+      let(:customer) { subscription.customer }
+      let(:subscription) { create(:subscription) }
+
+      it 'returns false' do
+        expect(editable).to eq(false)
+      end
+    end
+
+    context 'when customer has no record that prevents editing' do
+      it 'returns true' do
+        expect(editable).to eq(true)
+      end
+    end
+  end
+
   describe '#provider_customer' do
     subject(:customer) { create(:customer, organization:, payment_provider:) }
 
