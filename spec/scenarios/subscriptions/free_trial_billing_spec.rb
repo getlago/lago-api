@@ -3,11 +3,10 @@
 require 'rails_helper'
 
 describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: nil) }
-
   let(:timezone) { 'UTC' }
+  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:, timezone:) }
-
   let(:plan) do
     create(
       :plan,
@@ -121,7 +120,6 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
   context 'with free trial > billing period' do
     let(:trial_period) { 45 }
-    let(:billable_metric) { create(:billable_metric, organization:) }
 
     it 'bills subscription at the end of the free trial' do
       travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
@@ -169,7 +167,6 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
   context 'with free trial ending on billing day' do
     let(:trial_period) { 10 }
-    let(:billable_metric) { create(:billable_metric, organization:) }
 
     it 'bills subscription and usage-based charges' do
       start_time = Time.zone.parse('2024-03-22T12:12:00')
@@ -213,6 +210,60 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         perform_billing
         expect(customer.reload.invoices.count).to eq(1)
         expect(customer.subscriptions.sole.trial_ended_at).to be_within(1.minute).of(start_time + trial_period.days)
+      end
+    end
+
+    context 'with SubscriptionsBillerJob running after FreeTrialSubscriptionsBillerJob' do
+      it 'bills subscription and usage-based charges' do
+        start_time = Time.zone.parse('2024-03-22T12:12:00')
+        travel_to(start_time) do
+          create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+            },
+          )
+
+          expect(customer.reload.invoices.count).to eq(0)
+        end
+
+        travel_to(Time.zone.parse('2024-03-23')) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+            },
+          )
+        end
+
+        expect(customer.reload.invoices.count).to eq(0)
+
+        travel_to(Time.zone.parse('2024-04-01T13:01:00')) do
+          Clock::FreeTrialSubscriptionsBillerJob.perform_later
+          perform_all_enqueued_jobs
+
+          invoice = customer.invoices.order(created_at: :desc).sole
+          expect(customer.subscriptions.sole.trial_ended_at).to be_within(1.minute).of(start_time + trial_period.days)
+          # NOTE: The charge are not billed because FreeTrialBillingService use `skip_charges: true`
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(5_000_000) # full fee, trial is over
+        end
+
+        # NOTE: A new invoice is created because the end of trial invoice is created with `recurring: false`
+        #       Only the usage-based is charged because subscription was already billed
+        #       see Invoices::CalculateFeesService.should_create_subscription_fee?
+        travel_to(Time.zone.parse('2024-04-01T15:11:00')) do
+          Clock::SubscriptionsBillerJob.perform_later
+          perform_all_enqueued_jobs
+
+          expect(customer.reload.invoices.count).to eq(2)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.charge.sole.amount_cents).to eq(1000)
+        end
       end
     end
   end

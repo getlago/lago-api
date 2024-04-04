@@ -197,9 +197,9 @@ module Invoices
       return false if skip_charges
 
       # We should take a look at charges if subscription is created in the past and if it is not upgrade
-      if subscription.plan.pay_in_advance? && subscription.started_in_past? && subscription.previous_subscription.nil?
-        return true
-      end
+      return true if subscription.plan.pay_in_advance? &&
+                     subscription.started_in_past? &&
+                     subscription.previous_subscription.nil?
 
       return false if subscription.plan.pay_in_advance? &&
                       subscription.started_at.to_date == timestamp.to_date
