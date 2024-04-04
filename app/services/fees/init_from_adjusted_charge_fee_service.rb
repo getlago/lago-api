@@ -22,7 +22,7 @@ module Fees
 
     attr_reader :adjusted_fee, :boundaries, :properties
 
-    delegate :group, :charge, :invoice, :subscription, to: :adjusted_fee
+    delegate :group, :charge, :charge_filter, :invoice, :subscription, to: :adjusted_fee
 
     def compute_amount
       adjusted_fee_result = BaseService::Result.new
@@ -78,6 +78,7 @@ module Fees
         amount_details:,
         invoice_display_name: adjusted_fee.invoice_display_name,
         grouped_by: adjusted_fee.grouped_by,
+        charge_filter_id: charge_filter&.id,
       )
     end
   end

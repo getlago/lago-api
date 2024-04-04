@@ -322,15 +322,21 @@ RSpec.describe ChargeFilter, type: :model do
   end
 
   describe '#display_name' do
-    subject(:charge_filter) { build(:charge_filter, invoice_display_name:, values:) }
+    subject(:charge_filter) { create(:charge_filter, charge:, invoice_display_name:) }
+
+    let(:charge) { create(:standard_charge) }
+    let(:method_filter) { create(:billable_metric_filter, key: 'card', values: %w[card apple_pay]) }
+    let(:scheme_filter) { create(:billable_metric_filter, key: 'card', values: %w[visa mastercard]) }
 
     let(:invoice_display_name) { Faker::Fantasy::Tolkien.character }
     let(:values) do
       [
-        build(:charge_filter_value, values: ['card']),
-        build(:charge_filter_value, values: ['visa']),
+        create(:charge_filter_value, values: ['card'], charge_filter:, billable_metric_filter: method_filter),
+        create(:charge_filter_value, values: ['visa'], charge_filter:, billable_metric_filter: scheme_filter),
       ]
     end
+
+    before { values }
 
     it 'returns the invoice display name' do
       expect(charge_filter.display_name).to eq(invoice_display_name)

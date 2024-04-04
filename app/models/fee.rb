@@ -103,8 +103,8 @@ class Fee < ApplicationRecord
     charge&.group_properties&.find_by(group:)&.invoice_display_name || group&.name
   end
 
-  def filter_display_name
-    charge_filter&.display_name
+  def filter_display_name(separator: ', ')
+    charge_filter&.display_name(separator:)
   end
 
   def invoice_sorting_clause

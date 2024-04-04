@@ -15,8 +15,12 @@ class ChargeFilter < ApplicationRecord
 
   default_scope -> { kept }
 
-  def display_name
-    invoice_display_name.presence || values.map(&:values).flatten.join(', ')
+  def display_name(separator: ', ')
+    invoice_display_name.presence || (values.order(updated_at: :asc).map do |value|
+      next value.billable_metric_filter.key if value.values == [ChargeFilterValue::ALL_FILTER_VALUES]
+
+      value.values
+    end).flatten.join(separator)
   end
 
   def to_h
