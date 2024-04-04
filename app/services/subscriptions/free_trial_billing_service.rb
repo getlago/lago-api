@@ -13,10 +13,10 @@ module Subscriptions
         if subscription.plan_pay_in_advance &&
            !subscription.was_already_billed_today &&
            !already_billed_on_day_one?(subscription)
-          BillSubscriptionJob.perform_later([subscription], timestamp, skip_charges: true)
+          BillSubscriptionJob.perform_later([subscription], timestamp, recurring: false, skip_charges: true)
         end
 
-        subscription.update!(trial_ended_at: subscription.trial_end_date_from_query)
+        subscription.update!(trial_ended_at: subscription.trial_end_utc_date_from_query)
 
         SendWebhookJob.perform_later('subscription.trial_ended', subscription)
       end
@@ -42,7 +42,7 @@ module Subscriptions
         SELECT DISTINCT
           plans.pay_in_advance AS plan_pay_in_advance,
           already_billed_today.invoiced_count > 0 AS was_already_billed_today,
-          #{trial_end_date} as trial_end_date_from_query,
+          #{trial_end_date} as trial_end_utc_date_from_query,
           subscriptions.*
         FROM
           subscriptions
@@ -54,8 +54,8 @@ module Subscriptions
         WHERE
           subscriptions.status = 1
           AND subscriptions.trial_ended_at IS NULL
-          AND #{trial_end_date} <= '#{timestamp}'
-          AND #{trial_end_date} > '#{timestamp - 2.hours}'
+          AND #{trial_end_date + at_time_zone} <= '#{timestamp}'#{at_time_zone}
+          AND #{trial_end_date + at_time_zone} > '#{timestamp - 2.hours}'#{at_time_zone}
       SQL
 
       Subscription.find_by_sql([sql, { timestamp: }])
