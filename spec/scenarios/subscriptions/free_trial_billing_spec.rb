@@ -171,8 +171,17 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
         # Ensure charge fees are not added when refreshing the invoice
         travel_to(Time.zone.parse('2024-04-21T13:22:00')) do
+          invoice = customer.invoices.order(created_at: :desc).first
+          Invoices::RefreshDraftJob.perform_later(invoice)
+          perform_all_enqueued_jobs
+          expect(customer.reload.invoices.count).to eq(2)
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(2_000_000)
+          expect(invoice.status).to eq('draft')
+
           Clock::FinalizeInvoicesJob.perform_later
           perform_all_enqueued_jobs
+
           expect(customer.reload.invoices.count).to eq(2)
           invoice = customer.invoices.order(created_at: :desc).first
           expect(invoice.fees.count).to eq(1)

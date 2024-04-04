@@ -35,7 +35,6 @@ module Invoices
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
           recurring:,
-          skip_charges:,
         )
 
         fee_result.raise_if_error!
@@ -74,6 +73,7 @@ module Invoices
         invoice_type: :subscription,
         currency:,
         datetime: Time.zone.at(timestamp),
+        skip_charges:,
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, recurring:)
