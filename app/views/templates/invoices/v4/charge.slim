@@ -428,10 +428,16 @@ html
               - if fee.charge.prorated?
                 - pay_in_advance_range = charge_pay_in_advance_proration_range(fee, invoice_subscription(fee.subscription.id).timestamp)
                 td
-                  .body-1 = fee.invoice_name
+                  .body-1
+                    = fee.invoice_name + FeeDisplayHelper.grouped_by_display(self)
+                    - if fee.charge_filter_id?
+                      = ' • ' + fee.filter_display_name(separator: ' • ')
                   .body-3 = I18n.t('invoice.breakdown_for_days', breakdown_duration: pay_in_advance_range[:number_of_days], breakdown_total_duration: pay_in_advance_range[:period_duration])
               - else
-                td.body-1 = fee.invoice_name
+                td.body-1
+                  = fee.invoice_name + FeeDisplayHelper.grouped_by_display(self)
+                  - if fee.charge_filter_id?
+                    = ' • ' + fee.filter_display_name(separator: ' • ')
               td.body-2 = fee.units
               td.body-2 = MoneyHelper.format(fee.unit_amount)
               td.body-2 == TaxHelper.applied_taxes(fee)
