@@ -31,8 +31,6 @@ module Invoices
 
         timestamp = fetch_timestamp
 
-        skip_charges = invoice.fees.charge_kind.none?
-
         invoice.fees.destroy_all
 
         invoice.invoice_subscriptions.destroy_all
@@ -50,7 +48,6 @@ module Invoices
           invoice: invoice.reload,
           recurring:,
           context:,
-          skip_charges:,
         )
 
         invoice.credit_notes.each do |credit_note|
