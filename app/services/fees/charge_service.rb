@@ -55,7 +55,7 @@ module Fees
     def init_fees
       result.fees = []
 
-      if billable_metric.selectable_groups.any?
+      if billable_metric.selectable_groups.any? && charge.filters.none? # NOTE: ignore migrated groups
         # NOTE: Create a fee for each groups defined on the charge.
         charge.group_properties.each do |group_properties|
           group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
@@ -63,7 +63,7 @@ module Fees
         end
 
         # NOTE: Create a fee for groups not defined (with default properties).
-        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).each do |group|
+        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).find_each do |group|
           init_charge_fees(properties: charge.properties, group:)
         end
       else

@@ -2,7 +2,7 @@
 
 module Plans
   class CreateService < BaseService
-    def create(**args)
+    def create(args)
       plan = Plan.new(
         organization_id: args[:organization_id],
         name: args[:name],

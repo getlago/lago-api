@@ -6,10 +6,10 @@ module Api
       def create
         service = ::BillableMetrics::CreateService.new
         result = service.create(
-          **input_params
-            .merge(organization_id: current_organization.id)
-            .to_h
-            .symbolize_keys,
+          BillableMetricInput.new(
+            current_organization,
+            input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys,
+          ).create_input,
         )
 
         if result.success?
@@ -30,7 +30,13 @@ module Api
           organization_id: current_organization.id,
         )
 
-        result = ::BillableMetrics::UpdateService.call(billable_metric:, params: input_params.to_h)
+        result = ::BillableMetrics::UpdateService.call(
+          billable_metric:,
+          params: BillableMetricInput.new(
+            current_organization,
+            input_params.to_h.deep_symbolize_keys,
+          ).update_input,
+        )
 
         if result.success?
           render(

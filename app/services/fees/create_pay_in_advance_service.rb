@@ -14,10 +14,10 @@ module Fees
       fees = []
 
       ActiveRecord::Base.transaction do
-        if charge.billable_metric.selectable_groups.any?
-          fees += create_group_properties_fees
-        elsif charge.filters.any?
+        if charge.filters.any?
           fees << create_charge_filter_fee
+        elsif charge.billable_metric.selectable_groups.any?
+          fees += create_group_properties_fees
         else
           fees << create_fee(properties: charge.properties)
         end
@@ -93,7 +93,7 @@ module Fees
         end
 
         # NOTE: Create a fee for groups not defined (with default properties).
-        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).each do |group|
+        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).find_each do |group|
           next unless event_linked_to?(group:)
 
           group_fees << create_fee(properties: charge.properties, group:)
