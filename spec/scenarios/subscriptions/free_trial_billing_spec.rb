@@ -128,20 +128,100 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       travel_to(Time.zone.parse('2024-04-01')) do
         perform_billing
         expect(customer.reload.invoices.count).to eq(1)
+        invoice = customer.invoices.sole
+        expect(invoice.fees.count).to eq(1)
+        expect(invoice.fees.charge.first.amount_cents).to eq(1000)
       end
-
-      invoice = customer.invoices.first
-      expect(invoice.fees.subscription).not_to exist
-      expect(invoice.fees.charge.first.amount_cents).to eq(1000)
 
       travel_to(Time.zone.parse('2024-04-19T13:01:00')) do
         perform_billing
         expect(customer.reload.invoices.count).to eq(2)
+        free_trial_invoice = customer.invoices.order(created_at: :desc).first
+        expect(free_trial_invoice.fees.count).to eq(1)
+        expect(free_trial_invoice.fees.subscription.first.amount_cents).to eq(2_000_000) # 5_000_000 * 12 / 30
       end
+    end
 
-      free_trial_invoice = customer.invoices.order(created_at: :desc).first
-      expect(free_trial_invoice.fees.subscription.first.amount_cents).to eq(2_000_000) # 5_000_000 * 12 / 30
-      expect(free_trial_invoice.fees.charge).not_to exist
+    context 'with a grace period' do
+      it 'bills the customer at the end of the free trial but finalize after grace period' do
+        travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
+          customer.update! invoice_grace_period: 2
+          create_customer_subscription!
+          expect(customer.reload.invoices.count).to eq(0)
+        end
+
+        travel_to(Time.zone.parse('2024-03-10')) { create_usage_event! }
+
+        travel_to(Time.zone.parse('2024-04-01')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(1)
+          invoice = customer.invoices.sole
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+        end
+
+        travel_to(Time.zone.parse('2024-04-19T13:01:00')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(2)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(2_000_000) # 5_000_000 * 12 / 30
+          expect(invoice.status).to eq('draft')
+        end
+
+        # Ensure charge fees are not added when refreshing the invoice
+        travel_to(Time.zone.parse('2024-04-21T13:22:00')) do
+          Clock::FinalizeInvoicesJob.perform_later
+          perform_all_enqueued_jobs
+          expect(customer.reload.invoices.count).to eq(2)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(2_000_000)
+          expect(invoice.status).to eq('finalized')
+        end
+      end
+    end
+
+    context 'with a plan with minimum commitment' do
+      it 'bills minimum commitment on billing day, despite being in trial' do
+        travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
+          create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000_000)
+          create_customer_subscription!
+          expect(customer.reload.invoices.count).to eq(0)
+        end
+
+        travel_to(Time.zone.parse('2024-03-10')) { create_usage_event! }
+
+        travel_to(Time.zone.parse('2024-04-01')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(1)
+          invoice = customer.invoices.sole
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+        end
+
+        travel_to(Time.zone.parse('2024-04-10')) { create_usage_event! }
+
+        travel_to(Time.zone.parse('2024-04-19T13:01:00')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(2)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(2_000_000) # 5_000_000 * 12 / 30
+        end
+
+        travel_to(Time.zone.parse('2024-05-01')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(3)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(3)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(5_000_000)
+          expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+          # The minimum commitment true up look at usage in previous month,
+          # when the trial ended and the customer paid only 2_000_000 in subscription fee
+          expect(invoice.fees.commitment.first.amount_cents).to eq(10_000_000 - 2_000_000 - 1000)
+        end
+      end
     end
   end
 
