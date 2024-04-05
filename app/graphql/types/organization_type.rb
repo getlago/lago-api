@@ -32,6 +32,8 @@ module Types
 
     field :eu_tax_management, Boolean, null: false
 
+    field :premium_integrations, [Types::Integrations::IntegrationTypeEnum], null: false
+
     field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
     field :email_settings, [Types::Organizations::EmailSettingsEnum], null: true
     field :taxes, [Types::Taxes::Object], null: true, resolver: Resolvers::TaxesResolver
@@ -53,6 +55,13 @@ module Types
 
     def webhook_url
       object.webhook_endpoints.map(&:webhook_url).first
+    end
+
+    def premium_integrations
+      # TODO: Also check if Nango ENV var is set in order to lock/unlock this feature
+      #       This would enable us to use premium add_on logic on OSS version
+
+      object.premium_integrations
     end
   end
 end

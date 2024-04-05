@@ -3410,6 +3410,17 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
 
+union Integration = NetsuiteIntegration
+
+type IntegrationCollection {
+  collection: [Integration!]!
+  metadata: CollectionMetadata!
+}
+
+enum IntegrationTypeEnum {
+  netsuite
+}
+
 type Invite {
   acceptedAt: ISO8601DateTime!
   email: String!
@@ -4334,6 +4345,15 @@ type Mutation {
   ): Invoice
 }
 
+type NetsuiteIntegration {
+  accountId: String
+  clientId: String
+  clientSecret: String
+  code: String!
+  id: ID!
+  name: String!
+}
+
 """
 Organization Type
 """
@@ -4359,6 +4379,7 @@ type Organization {
   logoUrl: String
   name: String!
   netPaymentTerm: Int!
+  premiumIntegrations: [IntegrationTypeEnum!]!
   state: String
   stripePaymentProviders: [StripeProvider!]
   taxIdentificationNumber: String
@@ -4701,6 +4722,21 @@ type Query {
   Query gross revenue of an organization
   """
   grossRevenues(currency: CurrencyEnum, externalCustomerId: String): GrossRevenueCollection!
+
+  """
+  Query a single integration
+  """
+  integration(
+    """
+    Uniq ID of the integration
+    """
+    id: ID
+  ): Integration
+
+  """
+  Query organization's integrations
+  """
+  integrations(limit: Int, page: Int, type: IntegrationTypeEnum): IntegrationCollection
 
   """
   Query a single Invite

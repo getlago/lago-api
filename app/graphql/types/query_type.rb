@@ -29,6 +29,8 @@ module Types
     field :events, resolver: Resolvers::EventsResolver
     field :google_auth_url, resolver: Resolvers::Auth::Google::AuthUrlResolver
     field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
+    field :integration, resolver: Resolvers::IntegrationResolver
+    field :integrations, resolver: Resolvers::IntegrationsResolver
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
     field :invoice, resolver: Resolvers::InvoiceResolver

@@ -46,6 +46,8 @@ class Organization < ApplicationRecord
     :per_organization,
   ].freeze
 
+  INTEGRATIONS = %w[netsuite].freeze
+
   enum document_numbering: DOCUMENT_NUMBERINGS
 
   before_create :generate_api_key
