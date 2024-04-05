@@ -52,7 +52,9 @@ module Types
 
     field :destroy_payment_provider, mutation: Mutations::PaymentProviders::Destroy
 
+    field :create_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Create
     field :destroy_integration, mutation: Mutations::Integrations::Destroy
+    field :update_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Update
 
     field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download

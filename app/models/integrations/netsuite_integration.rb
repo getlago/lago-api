@@ -35,5 +35,37 @@ module Integrations
     def client_id
       get_from_settings('client_id')
     end
+
+    def sync_credit_notes=(value)
+      push_to_settings(key: 'sync_credit_notes', value:)
+    end
+
+    def sync_credit_notes
+      get_from_settings('sync_credit_notes')
+    end
+
+    def sync_invoices=(value)
+      push_to_settings(key: 'sync_invoices', value:)
+    end
+
+    def sync_invoices
+      get_from_settings('sync_invoices')
+    end
+
+    def sync_payments=(value)
+      push_to_settings(key: 'sync_payments', value:)
+    end
+
+    def sync_payments
+      get_from_settings('sync_payments')
+    end
+
+    def sync_sales_orders=(value)
+      push_to_settings(key: 'sync_sales_orders', value:)
+    end
+
+    def sync_sales_orders
+      get_from_settings('sync_sales_orders')
+    end
   end
 end
