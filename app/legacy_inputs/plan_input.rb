@@ -35,7 +35,6 @@ class PlanInput < BaseLegacyInput
         values[group.parent.key] = [group.parent.value] if group.parent
 
         charge[:filters] << {
-          invoice_display_name: charge[:invoice_display_name],
           properties: charge[:properties],
           values:,
         }

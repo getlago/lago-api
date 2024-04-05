@@ -82,10 +82,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         next if group.children.any?
 
         # Create charge filter
-        filter = charge.filters.create!(
-          invoice_display_name: charge.invoice_display_name,
-          properties: charge.properties,
-        )
+        filter = charge.filters.create!(properties: charge.properties)
 
         # Create filter values
         bm_filter = BillableMetricFilter.find_by(billable_metric_id: group.billable_metric_id, key: group.key)
