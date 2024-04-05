@@ -42,12 +42,14 @@ module ChargeFilters
         if res.keys == result.matching_filters.keys
           # NOTE: when child and filter have the same keys, we need to remove the filter value from the child
           res.each do |key, values|
+            next if filter.to_h[key] == [ChargeFilterValue::ALL_FILTER_VALUES]
+
             res[key] = values - result.matching_filters[key]
           end
         end
 
         res
-      end
+      end.compact
 
       result
     end

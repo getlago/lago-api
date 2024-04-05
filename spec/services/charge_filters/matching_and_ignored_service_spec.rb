@@ -3,152 +3,153 @@
 require 'rails_helper'
 
 RSpec.describe ChargeFilters::MatchingAndIgnoredService do
-  subject(:service) { described_class.call(filter: filter1) }
+  subject(:service_result) { described_class.call(filter: current_filter) }
 
-  let(:payment_method) do
-    create(:billable_metric_filter, key: 'payment_method', values: %i[card virtual_card transfer])
+  let(:billable_metric) { create(:billable_metric) }
+  let(:charge) { create(:standard_charge, billable_metric:) }
+
+  let(:filter_steps) { create(:billable_metric_filter, billable_metric:, key: 'steps', values: %w[25 50 75 100]) }
+  let(:filter_size) { create(:billable_metric_filter, billable_metric:, key: 'size', values: %w[512 1024]) }
+  let(:filter_model) do
+    create(:billable_metric_filter, billable_metric:, key: 'model', values: %w[llama-1 llama-2 llama-3 llama-4])
   end
-  let(:card_location) { create(:billable_metric_filter, key: 'card_location', values: %i[domestic]) }
-  let(:scheme) { create(:billable_metric_filter, key: 'scheme', values: %i[visa mastercard]) }
-  let(:card_type) { create(:billable_metric_filter, key: 'card_type', values: %i[credit debit]) }
 
-  let(:filter1) { create(:charge_filter) }
-  let(:filter1_values) do
+  let(:f1) { create(:charge_filter, charge:, invoice_display_name: 'f1') }
+  let(:f1_values) do
     [
-      create(:charge_filter_value, values: ['card'], billable_metric_filter: payment_method, charge_filter: filter1),
-      create(:charge_filter_value, values: ['domestic'], billable_metric_filter: card_location, charge_filter: filter1),
+      create(:charge_filter_value, values: ['25'], billable_metric_filter: filter_steps, charge_filter: f1),
+      create(:charge_filter_value, values: ['512'], billable_metric_filter: filter_size, charge_filter: f1),
+      create(:charge_filter_value, values: ['llama-2'], billable_metric_filter: filter_model, charge_filter: f1),
+    ]
+  end
+
+  let(:f2) { create(:charge_filter, charge:, invoice_display_name: 'f2') }
+  let(:f2_values) do
+    [
+      create(:charge_filter_value, values: ['25'], billable_metric_filter: filter_steps, charge_filter: f2),
+      create(:charge_filter_value, values: ['512'], billable_metric_filter: filter_size, charge_filter: f2),
+    ]
+  end
+
+  let(:f3) { create(:charge_filter, charge:, invoice_display_name: 'f3') }
+  let(:f3_values) do
+    [
       create(
         :charge_filter_value,
-        values: %w[visa mastercard],
-        billable_metric_filter: scheme,
-        charge_filter: filter1,
+        values: [ChargeFilterValue::ALL_FILTER_VALUES],
+        billable_metric_filter: filter_steps,
+        charge_filter: f3,
+      ),
+      create(
+        :charge_filter_value,
+        values: [ChargeFilterValue::ALL_FILTER_VALUES],
+        billable_metric_filter: filter_size,
+        charge_filter: f3,
       ),
     ]
   end
 
-  let(:filter2) { create(:charge_filter, charge: filter1.charge) }
-  let(:filter2_values) do
+  let(:f4) { create(:charge_filter, charge:, invoice_display_name: 'f4') }
+  let(:f4_values) do
     [
-      create(:charge_filter_value, values: ['card'], billable_metric_filter: payment_method, charge_filter: filter2),
-      create(:charge_filter_value, values: ['domestic'], billable_metric_filter: card_location, charge_filter: filter2),
       create(
         :charge_filter_value,
-        values: %w[visa mastercard],
-        billable_metric_filter: scheme,
-        charge_filter: filter2,
+        values: [ChargeFilterValue::ALL_FILTER_VALUES],
+        billable_metric_filter: filter_size,
+        charge_filter: f4,
       ),
-      create(:charge_filter_value, values: ['credit'], billable_metric_filter: card_type, charge_filter: filter2),
+    ]
+  end
+
+  let(:f5) { create(:charge_filter, charge:, invoice_display_name: 'f5') }
+  let(:f5_values) do
+    [
+      create(
+        :charge_filter_value,
+        values: ['512'],
+        billable_metric_filter: filter_size,
+        charge_filter: f5,
+      ),
     ]
   end
 
   before do
-    filter1_values
-    filter2_values
+    f1
+    f1_values
+    f2
+    f2_values
+    f3
+    f3_values
+    f4
+    f4_values
+    f5
+    f5_values
   end
 
-  it 'returns a formatted hash', :aggregate_failures do
-    expect(service.matching_filters).to eq(
-      {
-        'payment_method' => ['card'],
-        'card_location' => ['domestic'],
-        'scheme' => %w[visa mastercard],
-      },
-    )
-
-    expect(service.ignored_filters).to eq(
-      [
-        {
-          'card_location' => ['domestic'],
-          'card_type' => ['credit'],
-          'payment_method' => ['card'],
-          'scheme' => %w[visa mastercard],
-        },
-      ],
-    )
-  end
-
-  context 'when filter does not have children' do
-    subject(:service) { described_class.call(filter: filter2) }
+  describe 'for f1' do
+    let(:current_filter) { f1 }
 
     it 'returns a formatted hash', :aggregate_failures do
-      expect(service.matching_filters).to eq(
-        {
-          'payment_method' => ['card'],
-          'card_location' => ['domestic'],
-          'scheme' => %w[visa mastercard],
-          'card_type' => ['credit'],
-        },
-      )
-
-      expect(service.ignored_filters).to eq([])
+      expect(service_result.matching_filters).to eq({ 'size' => %w[512], 'steps' => %w[25], 'model' => %w[llama-2] })
+      expect(service_result.ignored_filters).to eq([])
     end
   end
 
-  context 'when provided filter is empty' do
-    subject(:service) { described_class.call(filter: ChargeFilter.new(charge: filter1.charge)) }
+  describe 'for f2' do
+    let(:current_filter) { f2 }
 
-    it 'returns all filter values as ignored filters' do
-      expect(service.matching_filters).to eq({})
-      expect(service.ignored_filters).to eq(
+    it 'returns a formatted hash', :aggregate_failures do
+      expect(service_result.matching_filters).to eq({ 'size' => %w[512], 'steps' => %w[25] })
+      expect(service_result.ignored_filters).to eq(
         [
-          {
-            'payment_method' => ['card'],
-            'card_location' => ['domestic'],
-            'scheme' => %w[visa mastercard],
-          },
-          {
-            'payment_method' => ['card'],
-            'card_location' => ['domestic'],
-            'scheme' => %w[visa mastercard],
-            'card_type' => ['credit'],
-          },
+          { 'model' => %w[llama-2], 'size' => %w[512], 'steps' => %w[25] },
+          { 'size' => ['1024'], 'steps' => %w[50 75 100] },
         ],
       )
     end
   end
 
-  context 'when filter has children that only match part of the values' do
-    let(:filter1_values) do
-      [
-        create(
-          :charge_filter_value,
-          values: %w[card virtual_card],
-          billable_metric_filter: payment_method,
-          charge_filter: filter1,
-        ),
-      ]
-    end
-
-    let(:filter2_values) do
-      [
-        create(
-          :charge_filter_value,
-          values: %w[card],
-          billable_metric_filter: payment_method,
-          charge_filter: filter2,
-        ),
-        create(
-          :charge_filter_value,
-          values: %w[visa],
-          billable_metric_filter: scheme,
-          charge_filter: filter2,
-        ),
-      ]
-    end
+  describe 'for f3' do
+    let(:current_filter) { f3 }
 
     it 'returns a formatted hash', :aggregate_failures do
-      expect(service.matching_filters).to eq(
-        {
-          'payment_method' => %w[card virtual_card],
-        },
-      )
-
-      expect(service.ignored_filters).to eq(
+      expect(service_result.matching_filters).to eq({ 'size' => %w[512 1024], 'steps' => %w[25 50 75 100] })
+      expect(service_result.ignored_filters).to eq(
         [
-          {
-            'payment_method' => ['card'],
-            'scheme' => ['visa'],
-          },
+          { 'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25'] },
+          { 'size' => ['512'], 'steps' => ['25'] },
+        ],
+      )
+    end
+  end
+
+  describe 'for f4' do
+    let(:current_filter) { f4 }
+
+    it 'returns a formatted hash', :aggregate_failures do
+      expect(service_result.matching_filters).to eq({ 'size' => %w[512 1024] })
+      expect(service_result.ignored_filters).to eq(
+        [
+          { 'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25'] },
+          { 'size' => ['512'], 'steps' => ['25'] },
+          { 'size' => %w[512 1024], 'steps' => %w[25 50 75 100] },
+          { 'size' => ['512'] },
+        ],
+      )
+    end
+  end
+
+  describe 'for f5' do
+    let(:current_filter) { f5 }
+
+    it 'returns a formatted hash', :aggregate_failures do
+      expect(service_result.matching_filters).to eq({ 'size' => %w[512] })
+      expect(service_result.ignored_filters).to eq(
+        [
+          { 'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25'] },
+          { 'size' => ['512'], 'steps' => ['25'] },
+          { 'size' => %w[512 1024], 'steps' => %w[25 50 75 100] },
+          { 'size' => ['1024'] },
         ],
       )
     end
