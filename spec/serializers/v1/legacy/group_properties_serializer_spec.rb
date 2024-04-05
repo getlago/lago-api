@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ::V1::GroupPropertiesSerializer do
+RSpec.describe ::V1::Legacy::GroupPropertiesSerializer do
   subject(:serializer) { described_class.new(group_properties, root_name: 'group_properties') }
 
   let(:group_properties) { create(:group_property) }

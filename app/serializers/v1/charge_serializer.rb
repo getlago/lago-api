@@ -15,10 +15,9 @@ module V1
         prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,
         properties: model.properties,
-      }
+      }.merge(legacy_values)
 
       payload.merge!(charge_filters)
-      payload.merge!(group_properties)
 
       payload.merge!(taxes) if include?(:taxes)
 
@@ -26,14 +25,6 @@ module V1
     end
 
     private
-
-    def group_properties
-      ::CollectionSerializer.new(
-        model.group_properties,
-        ::V1::GroupPropertiesSerializer,
-        collection_name: 'group_properties',
-      ).serialize
-    end
 
     def taxes
       ::CollectionSerializer.new(
@@ -49,6 +40,10 @@ module V1
         ::V1::ChargeFilterSerializer,
         collection_name: 'filters',
       ).serialize
+    end
+
+    def legacy_values
+      V1::Legacy::ChargeSerializer.new(model).serialize
     end
   end
 end
