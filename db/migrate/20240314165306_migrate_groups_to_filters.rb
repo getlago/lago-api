@@ -78,7 +78,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
       end
 
       # NOTE: Create filter values for the remaining groups
-      charge.billable_metric.groups.where.not(id: migrated_groups.map(&:id)).includes(:children).each do |group|
+      charge.billable_metric.groups.where.not(id: migrated_groups.map(&:id)).includes(:children).find_each do |group|
         next if group.children.any?
 
         # Create charge filter
