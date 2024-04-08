@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class InvoicesQuery < BaseQuery
-  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil) # rubocop:disable Metrics/ParameterLists
+  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil) # rubocop:disable Metrics/ParameterLists, Layout/LineLength
     @search_term = search_term
     @customer_id = customer_id
 
@@ -10,6 +10,7 @@ class InvoicesQuery < BaseQuery
     invoices = invoices.where(customer_id:) if customer_id.present?
     invoices = invoices.where(status:) if status.present?
     invoices = invoices.where(payment_status:) if payment_status.present?
+    invoices = invoices.where.not(payment_dispute_lost_at: nil) unless payment_dispute_lost.nil?
     invoices = invoices.order(issuing_date: :desc, created_at: :desc).page(page).per(limit)
 
     result.invoices = invoices

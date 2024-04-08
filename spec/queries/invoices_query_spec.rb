@@ -61,6 +61,16 @@ RSpec.describe InvoicesQuery, type: :query do
       number: '5555555555',
     )
   end
+  let(:invoice_sixth) do
+    create(
+      :invoice,
+      :dispute_lost,
+      organization:,
+      payment_status: 'pending',
+      customer: customer_first,
+      number: '6666666666',
+    )
+  end
 
   before do
     invoice_first
@@ -68,6 +78,7 @@ RSpec.describe InvoicesQuery, type: :query do
     invoice_third
     invoice_fourth
     invoice_fifth
+    invoice_sixth
   end
 
   it 'returns all invoices' do
@@ -82,12 +93,13 @@ RSpec.describe InvoicesQuery, type: :query do
     returned_ids = result.invoices.pluck(:id)
 
     aggregate_failures do
-      expect(result.invoices.count).to eq(5)
+      expect(result.invoices.count).to eq(6)
       expect(returned_ids).to include(invoice_first.id)
       expect(returned_ids).to include(invoice_second.id)
       expect(returned_ids).to include(invoice_third.id)
       expect(returned_ids).to include(invoice_fourth.id)
       expect(returned_ids).to include(invoice_fifth.id)
+      expect(returned_ids).to include(invoice_sixth.id)
     end
   end
 
@@ -159,6 +171,30 @@ RSpec.describe InvoicesQuery, type: :query do
         expect(returned_ids).to include(invoice_third.id)
         expect(returned_ids).not_to include(invoice_fourth.id)
         expect(returned_ids).not_to include(invoice_fifth.id)
+      end
+    end
+  end
+
+  context 'when filtering by payment dispute lost' do
+    it 'returns 1 invoices' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        payment_dispute_lost: true,
+        page: 1,
+        limit: 10,
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(result.invoices.count).to eq(1)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+        expect(returned_ids).to include(invoice_sixth.id)
       end
     end
   end
@@ -245,12 +281,13 @@ RSpec.describe InvoicesQuery, type: :query do
       returned_ids = result.invoices.pluck(:id)
 
       aggregate_failures do
-        expect(result.invoices.count).to eq(3)
+        expect(result.invoices.count).to eq(4)
         expect(returned_ids).to include(invoice_first.id)
         expect(returned_ids).not_to include(invoice_second.id)
         expect(returned_ids).to include(invoice_third.id)
         expect(returned_ids).not_to include(invoice_fourth.id)
         expect(returned_ids).to include(invoice_fifth.id)
+        expect(returned_ids).to include(invoice_sixth.id)
       end
     end
   end

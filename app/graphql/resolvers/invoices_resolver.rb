@@ -10,6 +10,7 @@ module Resolvers
     argument :ids, [ID], required: false, description: 'List of invoice IDs to fetch'
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
+    argument :payment_dispute_lost, Boolean, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
     argument :search_term, String, required: false
     argument :status, Types::Invoices::StatusTypeEnum, required: false
@@ -22,7 +23,8 @@ module Resolvers
       limit: nil,
       payment_status: nil,
       status: nil,
-      search_term: nil
+      search_term: nil,
+      payment_dispute_lost: nil
     )
       query = InvoicesQuery.new(organization: current_organization)
       result = query.call(
@@ -30,6 +32,7 @@ module Resolvers
         page:,
         limit:,
         payment_status:,
+        payment_dispute_lost:,
         status:,
         filters: {
           ids:,
