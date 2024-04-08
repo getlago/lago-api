@@ -15,22 +15,25 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
     GQL
   end
 
-  it 'deletes an integration' do
-    result = execute_graphql(
-      current_user: membership.user,
-      query: mutation,
-      variables: {
-        input: { id: integration.id },
-      },
-    )
+  before { integration }
 
-    data = result['data']['destroyIntegration']
-    expect(data['id']).to eq(integration.id)
+  it 'deletes an integration' do
+    expect do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        query: mutation,
+        variables: {
+          input: { id: integration.id },
+        },
+      )
+    end.to change(::Integrations::BaseIntegration, :count).by(-1)
   end
 
   context 'without current user' do
     it 'returns an error' do
       result = execute_graphql(
+        current_organization: membership.organization,
         query: mutation,
         variables: {
           input: { id: integration.id },
@@ -38,6 +41,20 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
       )
 
       expect_unauthorized_error(result)
+    end
+  end
+
+  context 'without current organization' do
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        query: mutation,
+        variables: {
+          input: { id: integration.id },
+        },
+      )
+
+      expect_forbidden_error(result)
     end
   end
 end

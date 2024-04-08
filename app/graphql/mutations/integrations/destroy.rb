@@ -11,9 +11,10 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        result = ::Integrations::DestroyService
-          .new(context[:current_user])
-          .destroy(id:)
+        validate_organization!
+
+        integration = current_organization.integrations.find_by(id:)
+        result = ::Integrations::DestroyService.call(integration:)
 
         result.success? ? result.integration : result_error(result)
       end

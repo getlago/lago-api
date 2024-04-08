@@ -2,11 +2,13 @@
 
 module Integrations
   class DestroyService < BaseService
-    def destroy(id:)
-      integration = Integrations::BaseIntegration.find_by(
-        id:,
-        organization_id: result.user.organization_ids,
-      )
+    def initialize(integration:)
+      @integration = integration
+
+      super
+    end
+
+    def call
       return result.not_found_failure!(resource: 'integration') unless integration
 
       integration.destroy!
@@ -14,5 +16,9 @@ module Integrations
       result.integration = integration
       result
     end
+
+    private
+
+    attr_reader :integration
   end
 end
