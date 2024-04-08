@@ -3,7 +3,7 @@ require:
   - rubocop-performance
   - rubocop-rails
   - rubocop-thread_safety
-  - rubocop-graphql
+#  - rubocop-graphql
 
 AllCops:
   NewCops: disable
@@ -298,14 +298,14 @@ Style/HashTransformKeys:
 Style/HashTransformValues:
   Enabled: false
 
-GraphQL/ArgumentDescription:
-  Enabled: false
-
-GraphQL/FieldDescription:
-  Enabled: false
-
-GraphQL/ObjectDescription:
-  Enabled: false
-
-GraphQL/ExtractType:
-  Enabled: false
+#GraphQL/ArgumentDescription:
+#  Enabled: false
+#
+#GraphQL/FieldDescription:
+#  Enabled: false
+#
+#GraphQL/ObjectDescription:
+#  Enabled: false
+#
+#GraphQL/ExtractType:
+#  Enabled: false

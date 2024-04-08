@@ -2,27 +2,15 @@ name: Pronto
 on: [pull_request]
 
 jobs:
-  linters:
-    name: Linters
+  run:
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'dependabot[bot]' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - run: |
           git fetch --no-tags --prune --depth=10 origin +refs/heads/*:refs/remotes/origin/*
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-      - name: Setup pronto
-        run: |
-          gem install rugged -v 1.6.3
-          gem install pronto
-          gem install pronto-rubocop
-          gem install rubocop -v 1.44.1
-          gem install rubocop-rspec
-          gem install rubocop-performance
-          gem install rubocop-rails
-          gem install rubocop-thread_safety
-          gem install rubocop-graphql
-      - name: Run Pronto
-        run: PRONTO_PULL_REQUEST_ID="${{ github.event.pull_request.number }}" PRONTO_GITHUB_ACCESS_TOKEN="${{ secrets.GH_TOKEN }}" pronto run -f github_status github_pr -c origin/${{ github.base_ref }}
+      - uses: adwerx/pronto-ruby@main # use a tag version here
+        with:
+          target: origin/${{ github.base_ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

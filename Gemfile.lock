@@ -847,6 +847,7 @@ DEPENDENCIES
   ransack (~> 4.0.0)
   rspec-graphql_matchers
   rspec-rails
+  rubocop
   rubocop-graphql
   rubocop-performance
   rubocop-rails
@@ -875,4 +876,4 @@ RUBY VERSION
    ruby 3.2.3p157
 
 BUNDLED WITH
-   2.5.5
+   2.5.6
