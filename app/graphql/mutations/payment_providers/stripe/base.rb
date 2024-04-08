@@ -8,8 +8,6 @@ module Mutations
         include RequiredOrganization
 
         def resolve(**args)
-          validate_organization!
-
           result = ::PaymentProviders::StripeService
             .new(context[:current_user])
             .create_or_update(**args.merge(organization_id: current_organization.id))

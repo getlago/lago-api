@@ -15,8 +15,6 @@ module Resolvers
     type Types::Subscriptions::Object.collection_type, null: false
 
     def resolve(page: nil, limit: nil, plan_code: nil, status: nil)
-      validate_organization!
-
       result = SubscriptionsQuery.call(
         organization: current_organization,
         pagination: BaseQuery::Pagination.new(page:, limit:),

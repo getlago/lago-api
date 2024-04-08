@@ -10,7 +10,6 @@ module Resolvers
     type Types::OrganizationType, null: true
 
     def resolve
-      validate_organization!
       current_organization
     end
   end

@@ -14,8 +14,6 @@ module Mutations
       type Types::Wallets::Object
 
       def resolve(**args)
-        validate_organization!
-
         result = ::Wallets::CreateService
           .new(context[:current_user])
           .create(

@@ -12,8 +12,6 @@ module Resolvers
     type Types::AddOns::Object, null: true
 
     def resolve(id: nil)
-      validate_organization!
-
       current_organization.add_ons.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'add_on')

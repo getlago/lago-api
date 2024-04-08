@@ -27,7 +27,6 @@ module Mutations
       type Types::Plans::Object
 
       def resolve(**args)
-        validate_organization!
         args[:charges].map!(&:to_h)
 
         result = ::Plans::CreateService

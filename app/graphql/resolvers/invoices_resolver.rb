@@ -24,8 +24,6 @@ module Resolvers
       status: nil,
       search_term: nil
     )
-      validate_organization!
-
       query = InvoicesQuery.new(organization: current_organization)
       result = query.call(
         search_term:,

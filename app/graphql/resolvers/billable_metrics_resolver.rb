@@ -18,8 +18,6 @@ module Resolvers
     type Types::BillableMetrics::Object.collection_type, null: false
 
     def resolve(**args)
-      validate_organization!
-
       result = ::BillableMetricsQuery.new(organization: current_organization).call(
         search_term: args[:search_term],
         page: args[:page],

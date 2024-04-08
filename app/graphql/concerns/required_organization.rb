@@ -3,6 +3,19 @@
 module RequiredOrganization
   extend ActiveSupport::Concern
 
+  def self.included(base)
+    base.prepend(Module.new do
+      if base.method_defined?(:resolve)
+        define_method :resolve do |*args, **kwargs, &block|
+          validate_organization!
+          super(*args, **kwargs, &block)
+        end
+      end
+    end)
+  end
+    
+  private
+
   def current_organization
     context[:current_organization]
   end

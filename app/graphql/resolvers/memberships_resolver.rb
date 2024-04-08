@@ -13,8 +13,6 @@ module Resolvers
     type Types::MembershipType.collection_type, null: false
 
     def resolve(page: nil, limit: nil)
-      validate_organization!
-
       current_organization
         .memberships
         .active

@@ -14,8 +14,6 @@ module Mutations
       type Types::WebhookEndpoints::Object
 
       def resolve(**args)
-        validate_organization!
-
         result = ::WebhookEndpoints::CreateService.call(
           organization: current_organization,
           params: args,

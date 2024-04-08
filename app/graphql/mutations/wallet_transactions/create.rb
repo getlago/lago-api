@@ -16,8 +16,6 @@ module Mutations
       type Types::WalletTransactions::Object.collection_type
 
       def resolve(**args)
-        validate_organization!
-
         result = ::WalletTransactions::CreateService.new.create(
           organization_id: current_organization.id,
           wallet_id: args[:wallet_id],

@@ -12,8 +12,6 @@ module Resolvers
     type Types::Wallets::Object, null: true
 
     def resolve(id:)
-      validate_organization!
-
       current_organization.wallets.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'wallet')

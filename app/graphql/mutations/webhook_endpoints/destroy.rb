@@ -14,8 +14,6 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        validate_organization!
-
         webhook_endpoint = current_organization.webhook_endpoints.find_by(id:)
         result = ::WebhookEndpoints::DestroyService.call(webhook_endpoint:)
 

@@ -26,8 +26,6 @@ module Resolvers
       limit: nil,
       search_term: nil
     )
-      validate_organization!
-
       query = ::TaxesQuery.new(organization: current_organization)
       result = query.call(
         search_term:,

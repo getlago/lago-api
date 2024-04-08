@@ -34,6 +34,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
 
   it 'updates a wallet' do
     result = execute_graphql(
+      current_organization: organization,
       current_user: membership.user,
       query: mutation,
       variables: {
@@ -59,7 +60,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['name']).to eq('New name')
       expect(result_data['status']).to eq('active')
-      expect(result_data['expirationAt']).to eq((Time.zone.now + 1.year).iso8601)
+      expect(result_data['expirationAt']).to eq(expiration_at.iso8601)
       expect(result_data['recurringTransactionRules'].count).to eq(1)
       expect(result_data['recurringTransactionRules'][0]['lagoId']).to eq(recurring_transaction_rule.id)
       expect(result_data['recurringTransactionRules'][0]['ruleType']).to eq('interval')

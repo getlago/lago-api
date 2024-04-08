@@ -14,8 +14,6 @@ module Mutations
       type Types::Subscriptions::Object
 
       def resolve(**args)
-        validate_organization!
-
         subscription = current_organization.subscriptions.find_by(id: args[:id])
         result = ::Subscriptions::TerminateService.call(subscription:)
 

@@ -12,8 +12,6 @@ module Resolvers
     type Types::CreditNotes::Object, null: true
 
     def resolve(id: nil)
-      validate_organization!
-
       current_organization.credit_notes.finalized.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'credit_note')

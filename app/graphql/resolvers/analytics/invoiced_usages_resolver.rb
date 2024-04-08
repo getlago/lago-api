@@ -13,8 +13,6 @@ module Resolvers
       type Types::Analytics::InvoicedUsages::Object.collection_type, null: false
 
       def resolve(**args)
-        validate_organization!
-
         raise unauthorized_error unless License.premium?
 
         ::Analytics::InvoicedUsage.find_all_by(current_organization.id, **args.merge({ months: 12 }))

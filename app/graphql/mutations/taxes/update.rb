@@ -13,8 +13,6 @@ module Mutations
       type Types::Taxes::Object
 
       def resolve(**args)
-        validate_organization!
-
         tax = current_organization.taxes.find_by(id: args[:id])
         result = ::Taxes::UpdateService.call(tax:, params: args)
 
