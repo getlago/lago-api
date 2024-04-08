@@ -7,6 +7,20 @@ module SecretsStorable
     encrypts :secrets
   end
 
+  class_methods do
+    def secrets_accessors(*method_names)
+      method_names.each do |name|
+        define_method(name) do
+          get_from_secrets(name.to_s)
+        end
+
+        define_method("#{name}=".to_sym) do |value|
+          push_to_secrets(key: name.to_s, value:)
+        end
+      end
+    end
+  end
+
   def secrets_json
     JSON.parse(secrets || '{}')
   end

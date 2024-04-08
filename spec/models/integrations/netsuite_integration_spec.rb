@@ -40,4 +40,32 @@ RSpec.describe Integrations::NetsuiteIntegration, type: :model do
       expect(netsuite_integration.client_id).to eq('client_id')
     end
   end
+
+  describe '#sync_credit_notes' do
+    it 'assigns and retrieve a setting' do
+      netsuite_integration.sync_credit_notes = true
+      expect(netsuite_integration.sync_credit_notes).to eq(true)
+    end
+  end
+
+  describe '#sync_invoices' do
+    it 'assigns and retrieve a setting' do
+      netsuite_integration.sync_invoices = true
+      expect(netsuite_integration.sync_invoices).to eq(true)
+    end
+  end
+
+  describe '#sync_payments' do
+    it 'assigns and retrieve a setting' do
+      netsuite_integration.sync_payments = true
+      expect(netsuite_integration.sync_payments).to eq(true)
+    end
+  end
+
+  describe '#sync_sales_orders' do
+    it 'assigns and retrieve a setting' do
+      netsuite_integration.sync_sales_orders = true
+      expect(netsuite_integration.sync_sales_orders).to eq(true)
+    end
+  end
 end
