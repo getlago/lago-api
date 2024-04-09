@@ -7,6 +7,7 @@ class PlanInput < BaseLegacyInput
 
     args[:charges].each do |charge|
       next if charge[:group_properties].blank?
+      next charge[:group] = [] if charge[:filters].present?
 
       billable_metric = organization.billable_metrics.find_by(id: charge[:billable_metric_id])
       next unless billable_metric

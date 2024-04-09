@@ -38,10 +38,12 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
       expect(result['data']['billableMetrics']['collection'].first['id']).to eq(metric.id)
 
       expect(result['data']['billableMetrics']['collection'].first['filters'].first['key']).to eq(filter1.key)
-      expect(result['data']['billableMetrics']['collection'].first['filters'].first['values']).to match_array(filter1.values)
+      expect(result['data']['billableMetrics']['collection'].first['filters'].first['values'])
+        .to match_array(filter1.values)
 
       expect(result['data']['billableMetrics']['collection'].first['filters'].second['key']).to eq(filter2.key)
-      expect(result['data']['billableMetrics']['collection'].first['filters'].second['values']).to match_array(filter2.values)
+      expect(result['data']['billableMetrics']['collection'].first['filters'].second['values'])
+        .to match_array(filter2.values)
 
       expect(result['data']['billableMetrics']['metadata']['currentPage']).to eq(1)
       expect(result['data']['billableMetrics']['metadata']['totalCount']).to eq(1)

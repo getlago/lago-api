@@ -63,7 +63,7 @@ module Fees
         end
 
         # NOTE: Create a fee for groups not defined (with default properties).
-        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).each do |group|
+        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).find_each do |group|
           init_charge_fees(properties: charge.properties, group:)
         end
       else

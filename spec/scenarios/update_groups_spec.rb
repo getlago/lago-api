@@ -218,7 +218,7 @@ describe 'Update Groups Scenarios', :scenarios, type: :request do
         expect(cards.groups.parents.pluck(:value)).to contain_exactly('azure', 'google')
         expect(cards.groups.children.pluck(:value)).to contain_exactly('usa', 'france', 'usa')
         expect(cards.charges.first.group_properties.count).to eq(0)
-        expect(cards.charges.first.filters.count).to eq(2)
+        expect(cards.charges.first.filters.count).to eq(5)
         expect(invoice.reload.total_amount_cents).to eq(19_000)
       end
     end

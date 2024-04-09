@@ -33,6 +33,8 @@ class BillableMetricInput < BaseLegacyInput
           end
         end
       end
+    elsif args[:filters].present?
+      args[:group] = {}
     end
 
     args
