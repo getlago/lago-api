@@ -11,8 +11,6 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        validate_organization!
-
         integration = current_organization.integrations.find_by(id:)
         result = ::Integrations::DestroyService.call(integration:)
 

@@ -12,8 +12,6 @@ module Mutations
         type Types::Integrations::Netsuite
 
         def resolve(**args)
-          validate_organization!
-
           integration = current_organization.integrations.find_by(id: args[:id])
           result = ::Integrations::Netsuite::UpdateService.call(integration:, params: args)
 
