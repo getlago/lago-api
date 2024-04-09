@@ -1,4 +1,4 @@
-name: Pronto
+name: Rubocop
 on: [pull_request]
 
 jobs:
@@ -9,20 +9,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - run: |
-          git fetch --no-tags --prune --depth=10 origin +refs/heads/*:refs/remotes/origin/*
+        with:
+          fetch-depth: 0
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
-      - name: Setup pronto
+      - name: Setup Rubocop
+        # A bug requires the use of `bundle install` to use `rubocop-rails`. A fix is coming to Rubocop.
+        # See: https://github.com/rubocop/rubocop/issues/12823
         run: |
-          gem install rugged -v 1.6.3
-          gem install pronto
-          gem install pronto-rubocop
-          gem install rubocop -v 1.44.1
-          gem install rubocop-rspec
-          gem install rubocop-performance
-          gem install rubocop-rails
-          gem install rubocop-thread_safety
-          gem install rubocop-graphql
-      - name: Run Pronto
-        run: PRONTO_PULL_REQUEST_ID="${{ github.event.pull_request.number }}" PRONTO_GITHUB_ACCESS_TOKEN="${{ secrets.GH_TOKEN }}" pronto run -f github_status github_pr -c origin/${{ github.base_ref }}
+          bundle install
+      - name: Run Rubocop
+        run: |
+          FILES=$(git diff --diff-filter=d --name-only origin/${{ github.base_ref }}...HEAD -- '*.rb')
+          if [ -z "$FILES" ]; then
+            echo "No Ruby files to lint"
+            exit 0
+          else
+            echo "Linting Ruby files"
+            bundle exec rubocop $FILES
+          fi
