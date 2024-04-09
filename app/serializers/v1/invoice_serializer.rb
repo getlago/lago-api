@@ -53,7 +53,17 @@ module V1
 
     def fees
       ::CollectionSerializer.new(
-        model.fees.includes([:true_up_fee, :subscription, :customer, :charge, :group, :billable_metric]),
+        model.fees.includes(
+          [
+            :true_up_fee,
+            :subscription,
+            :customer,
+            :charge,
+            :group,
+            :charge_filter,
+            :billable_metric,
+          ],
+        ),
         ::V1::FeeSerializer,
         collection_name: 'fees',
       ).serialize

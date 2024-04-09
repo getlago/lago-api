@@ -8,6 +8,10 @@ module V1
           vat_amount_cents: model.taxes_amount_cents,
           vat_amount_currency: model.currency,
           unit_amount_cents: model.unit_amount_cents,
+          lago_group_id: model.group_id,
+          item: {
+            group_invoice_display_name: model.group_name,
+          },
         }
       end
     end

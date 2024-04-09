@@ -13,11 +13,10 @@ module V1
         recurring: model.recurring,
         created_at: model.created_at.iso8601,
         field_name: model.field_name,
-        group: model.active_groups_as_tree,
         active_subscriptions_count:,
         draft_invoices_count:,
         plans_count:,
-      }
+      }.merge(legacy_values)
 
       payload.merge!(filters)
 
@@ -49,6 +48,10 @@ module V1
         ::V1::BillableMetricFilterSerializer,
         collection_name: 'filters',
       ).serialize
+    end
+
+    def legacy_values
+      V1::Legacy::BillableMetricSerializer.new(model).serialize
     end
   end
 end

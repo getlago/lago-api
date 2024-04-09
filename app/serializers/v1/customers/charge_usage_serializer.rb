@@ -9,7 +9,7 @@ module V1
 
           {
             units: fees.map { |f| BigDecimal(f.units) }.sum.to_s,
-            events_count: fees.map { |f| f.events_count&.to_i || 0 }.sum,
+            events_count: fees.map { |f| f.events_count&.to_i }.sum,
             amount_cents: fees.sum(&:amount_cents),
             amount_currency: fee.amount_currency,
             charge: {
@@ -32,6 +32,7 @@ module V1
 
       private
 
+      # TODO: Remove after migration to filters and refresh of cache
       def groups(fees)
         fees.sort_by { |f| f.group&.name.to_s }.map do |f|
           next unless f.group

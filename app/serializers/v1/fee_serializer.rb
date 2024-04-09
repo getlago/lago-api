@@ -5,7 +5,6 @@ module V1
     def serialize
       payload = {
         lago_id: model.id,
-        lago_group_id: model.group_id,
         lago_charge_filter_id: model.charge_filter_id,
         lago_invoice_id: model.invoice_id,
         lago_true_up_fee_id: model.true_up_fee&.id,
@@ -20,7 +19,6 @@ module V1
           name: model.item_name,
           invoice_display_name: model.invoice_name,
           filter_invoice_display_name: model.charge_filter&.display_name,
-          group_invoice_display_name: model.group_name,
           lago_item_id: model.item_id,
           item_type: model.item_type,
           grouped_by: model.grouped_by,
@@ -43,7 +41,7 @@ module V1
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
         amount_details: model.amount_details,
-      }.merge(legacy_values)
+      }.deep_merge(legacy_values)
 
       payload.merge!(date_boundaries) if model.charge? || model.subscription?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
