@@ -12,8 +12,6 @@ module Resolvers
     type Types::WebhookEndpoints::Object, null: true
 
     def resolve(id:)
-      validate_organization!
-
       current_organization.webhook_endpoints.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'webhook_endpoint')

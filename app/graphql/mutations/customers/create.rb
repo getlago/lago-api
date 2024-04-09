@@ -14,8 +14,6 @@ module Mutations
       type Types::Customers::Object
 
       def resolve(**args)
-        validate_organization!
-
         result = ::Customers::CreateService
           .new(context[:current_user])
           .create(**args.merge(organization_id: current_organization.id))

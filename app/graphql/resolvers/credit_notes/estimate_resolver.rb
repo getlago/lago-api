@@ -14,8 +14,6 @@ module Resolvers
       type Types::CreditNotes::Estimate, null: false
 
       def resolve(invoice_id:, items:)
-        validate_organization!
-
         result = ::CreditNotes::EstimateService.call(
           invoice: current_organization.invoices.not_generating.find_by(id: invoice_id),
           items:,

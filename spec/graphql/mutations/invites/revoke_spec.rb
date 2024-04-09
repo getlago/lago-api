@@ -3,8 +3,9 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Invites::Revoke, type: :graphql do
-  let(:organization) { create(:organization) }
-  let(:user) { create(:user) }
+  let(:membership) { create(:membership)}
+  let(:organization) { membership.organization }
+  let(:user) { membership.user }
 
   let(:mutation) do
     <<-GQL

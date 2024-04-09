@@ -14,8 +14,6 @@ module Resolvers
     type Types::CreditNotes::Object.collection_type, null: true
 
     def resolve(invoice_id: nil, page: nil, limit: nil)
-      validate_organization!
-
       Invoice.find(invoice_id)
         .credit_notes
         .finalized

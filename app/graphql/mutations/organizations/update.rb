@@ -14,8 +14,6 @@ module Mutations
       type Types::OrganizationType
 
       def resolve(**args)
-        validate_organization!
-
         result = ::Organizations::UpdateService.call(organization: current_organization, params: args)
         result.success? ? result.organization : result_error(result)
       end

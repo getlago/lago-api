@@ -21,8 +21,6 @@ module Mutations
       type Types::AppliedCoupons::Object
 
       def resolve(**args)
-        validate_organization!
-
         customer = Customer.find_by(
           id: args[:customer_id],
           organization_id: current_organization.id,

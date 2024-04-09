@@ -12,8 +12,6 @@ module Resolvers
     type Types::Integrations::Object, null: true
 
     def resolve(id: nil)
-      validate_organization!
-
       current_organization.integrations.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'integration')

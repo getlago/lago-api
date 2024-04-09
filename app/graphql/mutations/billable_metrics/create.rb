@@ -14,8 +14,6 @@ module Mutations
       type Types::BillableMetrics::Object
 
       def resolve(**args)
-        validate_organization!
-
         result = ::BillableMetrics::CreateService
           .new(context[:current_user])
           .create(**args.merge(organization_id: current_organization.id))

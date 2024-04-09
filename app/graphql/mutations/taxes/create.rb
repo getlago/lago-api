@@ -13,8 +13,6 @@ module Mutations
       type Types::Taxes::Object
 
       def resolve(**args)
-        validate_organization!
-
         result = ::Taxes::CreateService.call(organization: current_organization, params: args)
         result.success? ? result.tax : result_error(result)
       end

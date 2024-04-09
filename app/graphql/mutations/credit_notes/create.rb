@@ -21,7 +21,6 @@ module Mutations
       type Types::CreditNotes::Object
 
       def resolve(**args)
-        validate_organization!
         args[:items].map!(&:to_h)
 
         result = ::CreditNotes::CreateService

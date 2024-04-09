@@ -14,8 +14,6 @@ module Mutations
       field :url, String, null: false
 
       def resolve(id:)
-        validate_organization!
-
         customer = current_organization.customers.find_by(id:)
         result = ::CustomerPortal::GenerateUrlService.call(customer:)
 

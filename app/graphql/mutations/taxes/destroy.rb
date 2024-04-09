@@ -14,8 +14,6 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        validate_organization!
-
         tax = current_organization.taxes.find_by(id:)
         result = ::Taxes::DestroyService.call(tax:)
 

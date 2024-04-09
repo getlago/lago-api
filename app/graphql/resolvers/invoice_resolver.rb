@@ -12,8 +12,6 @@ module Resolvers
     type Types::Invoices::Object, null: true
 
     def resolve(id:)
-      validate_organization!
-
       current_organization.invoices.not_generating.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'invoice')

@@ -13,8 +13,6 @@ module Resolvers
     type Types::PaymentProviders::Object, null: true
 
     def resolve(id: nil, code: nil)
-      validate_organization!
-
       if id.present?
         current_organization.payment_providers.find(id)
       else

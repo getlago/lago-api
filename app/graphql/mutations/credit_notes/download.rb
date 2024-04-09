@@ -14,8 +14,6 @@ module Mutations
       type Types::CreditNotes::Object
 
       def resolve(**args)
-        validate_organization!
-
         result = ::CreditNotes::GenerateService.new(
           credit_note: context[:current_user].credit_notes.find_by(id: args[:id]),
         ).call

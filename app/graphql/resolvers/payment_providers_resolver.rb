@@ -14,8 +14,6 @@ module Resolvers
     type Types::PaymentProviders::Object.collection_type, null: true
 
     def resolve(type: nil, page: nil, limit: nil)
-      validate_organization!
-
       scope = current_organization.payment_providers.page(page).per(limit)
       scope = scope.where(type: provider_type(type)) if type.present?
       scope

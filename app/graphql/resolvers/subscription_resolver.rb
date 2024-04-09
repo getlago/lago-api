@@ -12,8 +12,6 @@ module Resolvers
     type Types::Subscriptions::Object, null: true
 
     def resolve(id: nil)
-      validate_organization!
-
       current_organization.subscriptions.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'subscription')

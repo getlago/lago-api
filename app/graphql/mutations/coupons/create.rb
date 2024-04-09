@@ -14,8 +14,6 @@ module Mutations
       type Types::Coupons::Object
 
       def resolve(**args)
-        validate_organization!
-
         result = ::Coupons::CreateService
           .new(context[:current_user])
           .create(args.merge(organization_id: current_organization.id))

@@ -15,9 +15,7 @@ module Resolvers
 
     type Types::Coupons::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, status: nil, search_term: nil)
-      validate_organization!
-
+    def resolve(ids: nil, page: nil, limit: nil, status: nil, search_term: nil)      
       query = CouponsQuery.new(organization: current_organization)
       result = query.call(
         search_term:,

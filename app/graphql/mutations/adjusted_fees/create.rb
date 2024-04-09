@@ -14,8 +14,6 @@ module Mutations
       type Types::Fees::Object
 
       def resolve(**args)
-        validate_organization!
-
         fee = Fee.find_by(id: args[:fee_id])
 
         result = ::AdjustedFees::CreateService.call(

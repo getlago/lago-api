@@ -14,8 +14,6 @@ module Mutations
       type Types::Webhooks::Object
 
       def resolve(id:)
-        validate_organization!
-
         webhook = current_organization.webhooks.find_by(id:)
         result = ::Webhooks::RetryService.call(webhook:)
 

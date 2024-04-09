@@ -14,8 +14,6 @@ module Mutations
       type Types::Invoices::Object
 
       def resolve(**args)
-        validate_organization!
-
         invoice = current_organization.invoices.not_generating.find_by(id: args[:id])
         result = ::Invoices::Payments::RetryService.new(invoice:).call
 

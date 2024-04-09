@@ -24,8 +24,6 @@ module Resolvers
       status: nil,
       transaction_type: nil
     )
-      validate_organization!
-
       query = WalletTransactionsQuery.new(organization: current_organization)
       result = query.call(
         wallet_id:,

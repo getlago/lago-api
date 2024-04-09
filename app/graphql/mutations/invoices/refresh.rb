@@ -14,7 +14,6 @@ module Mutations
       type Types::Invoices::Object
 
       def resolve(**args)
-        validate_organization!
         result = ::Invoices::RefreshDraftService.call(
           invoice: current_organization.invoices.not_generating.find_by(id: args[:id]),
         )

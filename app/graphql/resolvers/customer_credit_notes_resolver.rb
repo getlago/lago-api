@@ -16,8 +16,6 @@ module Resolvers
     type Types::CreditNotes::Object.collection_type, null: true
 
     def resolve(customer_id: nil, ids: nil, page: nil, limit: nil, search_term: nil)
-      validate_organization!
-
       query = CustomerCreditNotesQuery.new(organization: current_organization)
       result = query.call(
         search_term:,

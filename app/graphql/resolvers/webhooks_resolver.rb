@@ -16,8 +16,6 @@ module Resolvers
     type Types::Webhooks::Object.collection_type, null: false
 
     def resolve(webhook_endpoint_id:, page: nil, limit: nil, status: nil, search_term: nil)
-      validate_organization!
-
       webhook_endpoint = WebhookEndpoint.find(webhook_endpoint_id)
 
       query = WebhooksQuery.new(webhook_endpoint:)

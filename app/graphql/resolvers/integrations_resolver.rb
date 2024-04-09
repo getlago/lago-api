@@ -14,8 +14,6 @@ module Resolvers
     type Types::Integrations::Object.collection_type, null: true
 
     def resolve(type: nil, page: nil, limit: nil)
-      validate_organization!
-
       scope = current_organization.integrations.page(page).per(limit)
       scope = scope.where(type: integration_type(type)) if type.present?
       scope

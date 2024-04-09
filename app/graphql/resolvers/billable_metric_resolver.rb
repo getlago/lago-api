@@ -12,8 +12,6 @@ module Resolvers
     type Types::BillableMetrics::Object, null: true
 
     def resolve(id: nil)
-      validate_organization!
-
       current_organization.billable_metrics.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: 'billable_metric')
