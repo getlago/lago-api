@@ -31,7 +31,13 @@ module Subscriptions
     # during the customer trial period
     # Unfortunately, this introduces an N+1 query
     def already_billed_on_day_one?(subscription)
-      subscription.invoice_subscriptions.where(timestamp: subscription.started_at.all_day).exists?
+      Fee.subscription_kind.where(
+        invoice_id: subscription.invoice_subscriptions.select('invoices.id').joins(:invoice).where(
+          'invoices.invoice_type' => :subscription,
+          'invoices.status' => %i[draft finalized],
+          timestamp: subscription.started_at.all_day,
+        ),
+      ).any?
     end
 
     def ending_trial_subscriptions
