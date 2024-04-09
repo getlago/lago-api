@@ -5,8 +5,6 @@ require 'rails_helper'
 RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
   subject(:service) { described_class.new(timestamp:) }
 
-  before { travel_to timestamp }
-
   describe '#call' do
     let(:timestamp) { Time.zone.parse('2024-04-15T13:00:00') }
     let(:plan) { create(:plan, trial_period: 10, pay_in_advance: true) }
