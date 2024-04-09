@@ -14,18 +14,18 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
     context 'without any ending trial subscriptions' do
       it 'does not set trial_ended_at', :aggregate_failures do
         sub1 = create(:subscription, plan:, started_at: 2.days.ago)
-        sub2 = create(:subscription, plan:, started_at: 15.days.ago)
 
         expect { service.call }.not_to change { sub1.reload.trial_ended_at }.from(nil)
-        expect { service.call }.not_to change { sub2.reload.trial_ended_at }.from(nil)
       end
     end
 
     context 'with ending trial subscriptions' do
       it 'sets trial_ended_at to trial end date' do
         sub = create(:subscription, plan:, started_at: Time.zone.parse('2024-04-05T12:12:00'))
+        sub2 = create(:subscription, plan:, started_at: 15.days.ago)
         service.call
         expect(sub.reload.trial_ended_at).to be_within(1.second).of(sub.trial_end_datetime)
+        expect(sub2.reload.trial_ended_at).to be_within(1.second).of(sub2.trial_end_datetime)
       end
     end
 

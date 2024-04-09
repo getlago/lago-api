@@ -61,7 +61,6 @@ module Subscriptions
           subscriptions.status = 1
           AND subscriptions.trial_ended_at IS NULL
           AND #{trial_end_date + at_time_zone} <= '#{timestamp}'#{at_time_zone}
-          AND #{trial_end_date + at_time_zone} > '#{timestamp - 2.hours}'#{at_time_zone}
       SQL
 
       Subscription.find_by_sql([sql, { timestamp: }])
