@@ -3,7 +3,10 @@
 module Mutations
   module Integrations
     module Netsuite
-      class Update < Base
+      class Update < BaseMutation
+        include AuthenticableApiUser
+        include RequiredOrganization
+
         graphql_name 'UpdateNetsuiteIntegration'
         description 'Update Netsuite integration'
 

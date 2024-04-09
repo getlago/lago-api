@@ -2,7 +2,10 @@
 
 module Mutations
   module Integrations
-    class Destroy < Base
+    class Destroy < BaseMutation
+      include AuthenticableApiUser
+      include RequiredOrganization
+
       graphql_name 'DestroyIntegration'
       description 'Destroy an integration'
 

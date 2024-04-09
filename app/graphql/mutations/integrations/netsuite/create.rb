@@ -3,7 +3,10 @@
 module Mutations
   module Integrations
     module Netsuite
-      class Create < Base
+      class Create < BaseMutation
+        include AuthenticableApiUser
+        include RequiredOrganization
+
         graphql_name 'CreateNetsuiteIntegration'
         description 'Create Netsuite integration'
 
