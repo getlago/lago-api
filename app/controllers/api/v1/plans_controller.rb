@@ -6,7 +6,7 @@ module Api
       def create
         service = ::Plans::CreateService.new
         result = service.create(
-          PlanInput.new(
+          PlanLegacyInput.new(
             current_organization,
             input_params
               .merge(organization_id: current_organization.id)
@@ -26,7 +26,7 @@ module Api
         plan = current_organization.plans.parents.find_by(code: params[:code])
         result = ::Plans::UpdateService.call(
           plan:,
-          params: PlanInput.new(
+          params: PlanLegacyInput.new(
             current_organization,
             input_params.to_h.deep_symbolize_keys,
           ).update_input,

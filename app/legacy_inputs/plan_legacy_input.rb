@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class PlanInput < BaseLegacyInput
+class PlanLegacyInput < BaseLegacyInput
   def create_input
     return args unless args[:charges].is_a?(Array)
     return args unless args[:charges].any? { |c| c[:group_properties].present? }
