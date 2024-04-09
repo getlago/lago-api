@@ -3,7 +3,10 @@
 module Mutations
   module Integrations
     module Netsuite
-      class Create < Base
+      class Create < BaseMutation
+        include AuthenticableApiUser
+        include RequiredOrganization
+
         graphql_name 'CreateNetsuiteIntegration'
         description 'Create Netsuite integration'
 
@@ -12,8 +15,6 @@ module Mutations
         type Types::Integrations::Netsuite
 
         def resolve(**args)
-          validate_organization!
-
           result = ::Integrations::Netsuite::CreateService
             .new(context[:current_user])
             .call(**args.merge(organization_id: current_organization.id))
