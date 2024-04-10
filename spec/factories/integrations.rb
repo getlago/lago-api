@@ -15,4 +15,19 @@ FactoryBot.define do
       { account_id: 'acc_12345', client_id: 'cli_12345', script_endpoint_url: Faker::Internet.url }
     end
   end
+
+  factory :okta_integration, class: 'Integrations::OktaIntegration' do
+    organization
+    type { 'Integrations::OktaIntegration' }
+    code { 'okta' }
+    name { 'Okta Integration' }
+
+    settings do
+      { client_id: SecureRandom.uuid, domain: 'foo.test' }
+    end
+
+    secrets do
+      { client_secret: SecureRandom.uuid }.to_json
+    end
+  end
 end

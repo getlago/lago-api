@@ -98,5 +98,8 @@ module Types
     field :google_accept_invite, mutation: Mutations::Auth::Google::AcceptInvite
     field :google_login_user, mutation: Mutations::Auth::Google::LoginUser
     field :google_register_user, mutation: Mutations::Auth::Google::RegisterUser
+
+    field :create_okta_integration, mutation: Mutations::Integrations::Okta::Create
+    field :update_okta_integration, mutation: Mutations::Integrations::Okta::Update
   end
 end
