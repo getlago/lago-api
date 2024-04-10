@@ -13,11 +13,13 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
     before { integration }
 
     let(:name) { 'Netsuite 1' }
+    let(:script_endpoint_url) { Faker::Internet.url }
 
     let(:update_args) do
       {
         name:,
         code: 'netsuite1',
+        script_endpoint_url:,
       }
     end
 
@@ -55,6 +57,7 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
 
             integration = Integrations::NetsuiteIntegration.order(:updated_at).last
             expect(integration.name).to eq(name)
+            expect(integration.script_endpoint_url).to eq(script_endpoint_url)
           end
         end
 

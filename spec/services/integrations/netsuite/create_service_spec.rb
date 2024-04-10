@@ -11,6 +11,7 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
     subject(:service_call) { service.call(**create_args) }
 
     let(:name) { 'Netsuite 1' }
+    let(:script_endpoint_url) { Faker::Internet.url }
 
     let(:create_args) do
       {
@@ -21,6 +22,7 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
         client_id: 'cl1',
         client_secret: 'secret',
         account_id: 'acc1',
+        script_endpoint_url:,
       }
     end
 
@@ -62,6 +64,7 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
 
             integration = Integrations::NetsuiteIntegration.order(:created_at).last
             expect(integration.name).to eq(name)
+            expect(integration.script_endpoint_url).to eq(script_endpoint_url)
           end
         end
 

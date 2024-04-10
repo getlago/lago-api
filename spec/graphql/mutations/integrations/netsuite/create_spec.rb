@@ -6,6 +6,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
   let(:membership) { create(:membership) }
   let(:code) { 'netsuite1' }
   let(:name) { 'Netsuite 1' }
+  let(:script_endpoint_url) { Faker::Internet.url }
 
   let(:mutation) do
     <<-GQL
@@ -19,7 +20,8 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
           syncSalesOrders,
           syncInvoices,
           syncCreditNotes,
-          syncPayments
+          syncPayments,
+          scriptEndpointUrl
         }
       }
     GQL
@@ -38,6 +40,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
         input: {
           code:,
           name:,
+          scriptEndpointUrl: script_endpoint_url,
           accountId: '012',
           clientId: '123',
           clientSecret: '456',
@@ -52,6 +55,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['code']).to eq(code)
       expect(result_data['name']).to eq(name)
+      expect(result_data['scriptEndpointUrl']).to eq(script_endpoint_url)
     end
   end
 

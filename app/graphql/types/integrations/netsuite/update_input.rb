@@ -15,6 +15,7 @@ module Types
         argument :client_id, String, required: false
         argument :client_secret, String, required: false
         argument :connection_id, String, required: false
+        argument :script_endpoint_url, String, required: false
 
         argument :sync_credit_notes, Boolean, required: false
         argument :sync_invoices, Boolean, required: false

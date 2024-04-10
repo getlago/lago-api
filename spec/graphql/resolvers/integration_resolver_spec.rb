@@ -11,6 +11,7 @@ RSpec.describe Resolvers::IntegrationResolver, type: :graphql do
             id
             code
             name
+            scriptEndpointUrl
             __typename
           }
         }
@@ -42,6 +43,7 @@ RSpec.describe Resolvers::IntegrationResolver, type: :graphql do
       expect(integration_response['id']).to eq(netsuite_integration.id)
       expect(integration_response['code']).to eq(netsuite_integration.code)
       expect(integration_response['name']).to eq(netsuite_integration.name)
+      expect(integration_response['scriptEndpointUrl']).to eq(netsuite_integration.script_endpoint_url)
     end
   end
 
