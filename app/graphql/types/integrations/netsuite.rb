@@ -11,6 +11,7 @@ module Types
       field :code, String, null: false
       field :id, ID, null: false
       field :name, String, null: false
+      field :script_endpoint_url, String, null: true
       field :sync_credit_notes, Boolean
       field :sync_invoices, Boolean
       field :sync_payments, Boolean

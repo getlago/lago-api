@@ -8,6 +8,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:code) { 'netsuite1' }
   let(:name) { 'Netsuite 1' }
+  let(:script_endpoint_url) { Faker::Internet.url }
 
   let(:mutation) do
     <<-GQL
@@ -21,7 +22,8 @@ RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
           syncSalesOrders,
           syncInvoices,
           syncCreditNotes,
-          syncPayments
+          syncPayments,
+          scriptEndpointUrl
         }
       }
     GQL
@@ -44,6 +46,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
           id: integration.id,
           name:,
           code:,
+          scriptEndpointUrl: script_endpoint_url,
         },
       },
     )
@@ -53,6 +56,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['name']).to eq(name)
       expect(result_data['code']).to eq(code)
+      expect(result_data['scriptEndpointUrl']).to eq(script_endpoint_url)
     end
   end
 

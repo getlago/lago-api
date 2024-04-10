@@ -41,6 +41,15 @@ RSpec.describe Integrations::NetsuiteIntegration, type: :model do
     end
   end
 
+  describe '#script_endpoint_url' do
+    let(:url) { Faker::Internet.url }
+
+    it 'assigns and retrieve a setting' do
+      netsuite_integration.script_endpoint_url = url
+      expect(netsuite_integration.script_endpoint_url).to eq(url)
+    end
+  end
+
   describe '#sync_credit_notes' do
     it 'assigns and retrieve a setting' do
       netsuite_integration.sync_credit_notes = true

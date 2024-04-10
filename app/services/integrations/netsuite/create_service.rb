@@ -24,6 +24,8 @@ module Integrations
           sync_sales_orders: ActiveModel::Type::Boolean.new.cast(args[:sync_sales_orders]),
         )
 
+        integration.script_endpoint_url = args[:script_endpoint_url] if args.key?(:script_endpoint_url)
+
         integration.save!
 
         result.integration = integration
