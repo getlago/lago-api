@@ -11,7 +11,6 @@ module Integrations
       end
 
       def call
-        byebug
         return result.not_found_failure!(resource: 'integration') unless integration
 
         unless integration.organization.premium_integrations.include?('okta')

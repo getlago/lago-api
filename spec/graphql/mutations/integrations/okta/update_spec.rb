@@ -43,7 +43,7 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
     )
 
     result_data = result['data']['updateOktaIntegration']
-    byebug
+
     aggregate_failures do
       expect(result_data['domain']).to eq('foo.bar')
     end
