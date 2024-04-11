@@ -9,7 +9,7 @@ module V1
 
           {
             units: fees.map { |f| BigDecimal(f.units) }.sum.to_s,
-            events_count: fees.map { |f| f.events_count&.to_i }.sum,
+            events_count: fees.sum(0) { |f| f.events_count.to_i },
             amount_cents: fees.sum(&:amount_cents),
             amount_currency: fee.amount_currency,
             charge: {
@@ -56,7 +56,7 @@ module V1
             units: f.units,
             amount_cents: f.amount_cents,
             events_count: f.events_count,
-            invoice_display_name: f.charge_filter&.display_name,
+            invoice_display_name: f.charge_filter&.invoice_display_name,
             values: f.charge_filter&.to_h,
           }
         end.compact
