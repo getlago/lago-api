@@ -12,6 +12,12 @@ if ENV['REDIS_PASSWORD'].present? && !ENV['REDIS_PASSWORD'].empty?
   redis_config = redis_config.merge({ password: ENV['REDIS_PASSWORD'] })
 end
 
+if ENV['LAGO_SIDEKIQ_WEB'] == 'true'
+  require 'sidekiq/web'
+  Sidekiq::Web.use(ActionDispatch::Cookies)
+  Sidekiq::Web.use(ActionDispatch::Session::CookieStore, key: '_interslice_session')
+end
+
 Sidekiq.configure_server do |config|
   config.redis = redis_config
   config.logger = Sidekiq::Logger.new($stdout)
