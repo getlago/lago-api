@@ -197,6 +197,8 @@ module Invoices
         return true
       end
 
+      # NOTE: Charges should not be billed in advance when we are just upgrading to a new
+      #       pay_in_advance subscription
       return false if subscription.plan.pay_in_advance? && subscription.invoices.created_before(invoice).count.zero?
 
       true
