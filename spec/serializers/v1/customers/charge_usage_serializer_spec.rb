@@ -153,7 +153,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         'units' => '10.0',
         'amount_cents' => 100,
         'events_count' => 12,
-        'invoice_display_name' => charge_filter.display_name,
+        'invoice_display_name' => charge_filter.invoice_display_name,
         'values' => {},
       )
 
@@ -161,7 +161,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         'units' => '10.0',
         'amount_cents' => 100,
         'events_count' => 12,
-        'invoice_display_name' => charge_filter.display_name,
+        'invoice_display_name' => charge_filter.invoice_display_name,
         'values' => {},
       )
     end

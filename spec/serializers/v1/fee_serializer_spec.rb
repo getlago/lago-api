@@ -57,6 +57,7 @@ RSpec.describe ::V1::FeeSerializer do
         'name' => fee.item_name,
         'invoice_display_name' => fee.invoice_name,
         'filter_invoice_display_name' => fee.charge_filter&.display_name,
+        'filters' => nil,
         'lago_item_id' => fee.item_id,
         'item_type' => fee.item_type,
         'grouped_by' => fee.grouped_by,
