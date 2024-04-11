@@ -127,7 +127,7 @@ module Api
       def lose_dispute
         invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
 
-        result = Invoices::LoseDisputeService.call(invoice:)
+        result = Invoices::LoseDisputeService.call(invoice:, payment_dispute_lost_at: DateTime.current)
         if result.success?
           render_invoice(result.invoice)
         else

@@ -69,8 +69,7 @@ module CreditNotes
       delegate :organization, :customer, :invoice, to: :credit_note
 
       def should_process_refund?
-        return false unless credit_note.refunded?
-        return false if credit_note.succeeded?
+        return false if !credit_note.refunded? || credit_note.succeeded? || invoice.payment_dispute_lost_at?
 
         payment.present?
       end

@@ -79,7 +79,7 @@ RSpec.describe Invoices::LoseDisputeService, type: :service do
         it 'enqueues a send webhook job for the invoice' do
           expect do
             lose_dispute_service.call
-          end.to have_enqueued_job(SendWebhookJob).with('invoice.payment_dispute_lost', Invoice)
+          end.to have_enqueued_job(SendWebhookJob).with('invoice.payment_dispute_lost', invoice, provider_error: nil)
         end
       end
     end

@@ -1,0 +1,100 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService, type: :service do
+  subject(:service) { described_class.new(organization_id:, event_json:) }
+
+  let(:organization_id) { organization.id }
+  let(:organization) { create(:organization) }
+  let(:membership) { create(:membership, organization:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:payment) { create(:payment, invoice:, provider_payment_id: 'pi_3OzgpDH4tiDZlIUa0Ezzggtg') }
+  let(:lose_dispute_service) { Invoices::LoseDisputeService.new(invoice:) }
+  let(:invoice) { create(:invoice, customer:, organization:, status:, payment_status: 'succeeded') }
+
+  describe '#call' do
+    before { payment }
+
+    context 'when dispute is lost' do
+      let(:event_json) do
+        path = Rails.root.join('spec/fixtures/stripe/charge_dispute_lost_event.json')
+        File.read(path)
+      end
+
+      context 'when invoice is draft' do
+        let(:status) { 'draft' }
+
+        it 'does not updates invoice payment dispute lost' do
+          expect do
+            service.call
+            payment.invoice.reload
+          end.not_to change(payment.invoice.reload, :payment_dispute_lost_at).from(nil)
+        end
+
+        it 'does not deliver webhook' do
+          expect { service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
+      context 'when invoice is finalized' do
+        let(:status) { 'finalized' }
+
+        it 'updates invoice payment dispute lost' do
+          expect do
+            service.call
+            payment.invoice.reload
+          end.to change(payment.invoice, :payment_dispute_lost_at).from(nil)
+        end
+
+        it 'delivers a webhook' do
+          expect do
+            service.call
+            payment.invoice.reload
+          end.to have_enqueued_job(SendWebhookJob).with(
+            'invoice.payment_dispute_lost',
+            payment.invoice,
+            provider_error: 'fraudulent',
+          )
+        end
+      end
+    end
+
+    context 'when dispute is won' do
+      let(:event_json) do
+        path = Rails.root.join('spec/fixtures/stripe/charge_dispute_won_event.json')
+        File.read(path)
+      end
+
+      context 'when invoice is draft' do
+        let(:status) { 'draft' }
+
+        it 'does not updates invoice payment dispute lost' do
+          expect do
+            service.call
+            payment.invoice.reload
+          end.not_to change(payment.invoice.reload, :payment_dispute_lost_at).from(nil)
+        end
+
+        it 'does not deliver webhook' do
+          expect { service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
+      context 'when invoice is finalized' do
+        let(:status) { 'finalized' }
+
+        it 'does not updates invoice payment dispute lost' do
+          expect do
+            service.call
+            payment.invoice.reload
+          end.not_to change(payment.invoice.reload, :payment_dispute_lost_at).from(nil)
+        end
+
+        it 'does not deliver webhook' do
+          expect { service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
+      end
+    end
+  end
+end
