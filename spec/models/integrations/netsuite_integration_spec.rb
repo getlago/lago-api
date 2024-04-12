@@ -32,6 +32,13 @@ RSpec.describe Integrations::NetsuiteIntegration, type: :model do
       netsuite_integration.account_id = 'account_id'
       expect(netsuite_integration.account_id).to eq('account_id')
     end
+
+    context 'when format is invalid' do
+      it 'assigns and retrieve a setting with correct format' do
+        netsuite_integration.account_id = '  THIS is    account  id  '
+        expect(netsuite_integration.account_id).to eq('this-is-account-id')
+      end
+    end
   end
 
   describe '.client_id' do
