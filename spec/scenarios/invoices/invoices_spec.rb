@@ -917,9 +917,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
     let(:tax) { create(:tax, organization:, rate: 0) }
-    let(:metric) do
-      create(:billable_metric, organization:, aggregation_type: 'sum_agg', recurring: true, field_name: 'amount')
-    end
+    let(:metric) { create(:billable_metric, organization:) }
 
     it 'bills fees correctly' do
       travel_to(DateTime.parse('2024-02-01 03:00:00')) do
@@ -946,9 +944,54 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         terminated_invoice = subscription.invoices.order(created_at: :desc).first
         credit_note = customer.credit_notes.first
 
-        expect(first_invoice.credit_notes.count).to eq(1)
+        expect(first_invoice.reload.credit_notes.count).to eq(1)
         expect(credit_note.credit_amount_cents).to eq(2_800) # Only one day is billed
         expect(terminated_invoice.total_amount_cents).to eq(0) # There are no charges
+      end
+    end
+
+    context 'with usage events' do
+      it 'bills the usage correctly' do
+        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '12' })
+
+        travel_to(DateTime.parse('2024-02-01 03:00:00')) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+              billing_time: 'calendar',
+            },
+          )
+        end
+        subscription = customer.subscriptions.first
+        first_invoice = subscription.invoices.first
+
+        travel_to(DateTime.parse('2024-02-01 10:00:00')) do
+          create_event(
+            {
+              code: metric.code,
+              transaction_id: SecureRandom.uuid,
+              organization_id: organization.id,
+              external_customer_id: customer.external_id,
+            },
+          )
+        end
+
+        travel_to(DateTime.parse('2024-02-01 18:00:00')) do
+          expect {
+            terminate_subscription(subscription)
+            perform_all_enqueued_jobs
+          }.to change { subscription.reload.status }.from('active').to('terminated')
+            .and change { customer.invoices.count }.from(1).to(2)
+
+          terminated_invoice = subscription.invoices.order(created_at: :desc).first
+          credit_note = customer.credit_notes.sole
+
+          expect(first_invoice.reload.credit_notes.count).to eq(1)
+          expect(credit_note.credit_amount_cents).to eq(2_800) # Only one day is billed
+          expect(terminated_invoice.fees.charge.sole.total_amount_cents).to eq(1200)
+        end
       end
     end
   end

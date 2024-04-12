@@ -99,7 +99,7 @@ module Invoices
         .where(invoiceable: true)
         .where
         .not(pay_in_advance: true, billable_metric: { recurring: false })
-        .each do |charge|
+        .find_each do |charge|
           next if should_not_create_charge_fee?(charge, subscription)
 
           fee_result = Fees::ChargeService.new(invoice:, charge:, subscription:, boundaries:).create
@@ -197,8 +197,9 @@ module Invoices
         return true
       end
 
-      return false if subscription.plan.pay_in_advance? &&
-                      subscription.started_at.to_date == timestamp.to_date
+      # NOTE: Charges should not be billed in advance when we are just upgrading to a new
+      #       pay_in_advance subscription
+      return false if subscription.plan.pay_in_advance? && subscription.invoices.created_before(invoice).count.zero?
 
       true
     end

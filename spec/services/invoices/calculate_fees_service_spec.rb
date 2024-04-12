@@ -679,8 +679,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               expect(invoice.subscriptions.first).to eq(subscription)
               expect(invoice.payment_status).to eq('pending')
               expect(invoice.fees.subscription_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.first.amount_cents).to eq(0) # because there is no usage
+              expect(invoice.fees.charge_kind.count).to eq(0)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -714,8 +713,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               expect(invoice.subscriptions.first).to eq(subscription)
               expect(invoice.payment_status).to eq('pending')
               expect(invoice.fees.subscription_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.first.amount_cents).to eq(0) # because there is no usage
+              expect(invoice.fees.charge_kind.count).to eq(0)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -809,9 +807,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
-      context 'when subscription is billed on started_at day' do
-        let(:timestamp) { created_at + 10.minutes }
-
+      context 'when subscription started on creation day' do
         it 'does not create any charge fees' do
           result = invoice_service.call
 
@@ -860,8 +856,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               expect(invoice).to be_pending
               expect(invoice.fees.subscription_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.first.amount_cents).to eq(0) # because there is no usage
+              expect(invoice.fees.charge_kind.count).to eq(0)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -895,8 +890,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               expect(invoice).to be_pending
               expect(invoice.fees.subscription_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.first.amount_cents).to eq(0) # because there is no usage
+              expect(invoice.fees.charge_kind.count).to eq(0)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -1075,8 +1069,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               expect(invoice.subscriptions.first).to eq(subscription)
               expect(invoice.fees.subscription_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.first.amount_cents).to eq(0) # because there is no usage
+              expect(invoice.fees.charge_kind.count).to eq(0)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
