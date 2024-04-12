@@ -3,6 +3,7 @@
 class AddOn < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
+  include IntegrationMappable
   include Discard::Model
   self.discard_column = :deleted_at
 
