@@ -4,6 +4,9 @@ require 'active_support/core_ext/integer/time'
 require 'opentelemetry/sdk'
 
 Rails.application.configure do
+  config.middleware.use(ActionDispatch::Cookies)
+  config.middleware.use(ActionDispatch::Session::CookieStore, key: '_lago_production')
+
   config.cache_classes = true
   config.eager_load = true
   config.consider_all_requests_local = false
