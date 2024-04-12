@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_04_11_114759) do
+ActiveRecord::Schema[7.0].define(version: 2024_04_12_085450) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -542,6 +542,17 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_11_114759) do
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
   end
 
+  create_table "integration_collection_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "integration_id", null: false
+    t.integer "mapping_type", null: false
+    t.string "type", null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["integration_id"], name: "index_integration_collection_mappings_on_integration_id"
+    t.index ["mapping_type", "integration_id"], name: "index_int_collection_mappings_on_mapping_type_and_int_id", unique: true
+  end
+
   create_table "integration_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "integration_id", null: false
     t.string "mappable_type", null: false
@@ -1025,6 +1036,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_11_114759) do
   add_foreign_key "group_properties", "groups", on_delete: :cascade
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
   add_foreign_key "groups", "groups", column: "parent_group_id"
+  add_foreign_key "integration_collection_mappings", "integrations"
   add_foreign_key "integration_mappings", "integrations"
   add_foreign_key "integrations", "organizations"
   add_foreign_key "invites", "memberships"

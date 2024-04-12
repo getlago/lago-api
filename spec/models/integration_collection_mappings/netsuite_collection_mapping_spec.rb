@@ -2,8 +2,14 @@
 
 require 'rails_helper'
 
-RSpec.describe Integrations::NetsuiteMapping, type: :model do
-  subject(:mapping) { build(:netsuite_mapping) }
+RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping, type: :model do
+  subject(:mapping) { build(:netsuite_collection_mapping) }
+
+  let(:mapping_types) do
+    %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit]
+  end
+
+  it { is_expected.to define_enum_for(:mapping_type).with_values(mapping_types) }
 
   describe '#netsuite_id' do
     let(:netsuite_id) { SecureRandom.uuid }

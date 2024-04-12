@@ -2,8 +2,10 @@
 
 require 'rails_helper'
 
-RSpec.describe Integrations::BaseMapping, type: :model do
+RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping, type: :model do
   subject(:mapping) { described_class.new }
+
+  it { is_expected.to belong_to(:integration) }
 
   describe '#push_to_settings' do
     it 'push the value into settings' do

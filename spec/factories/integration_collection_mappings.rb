@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :netsuite_mapping, class: 'IntegrationMappings::NetsuiteMapping' do
+  factory :netsuite_collection_mapping, class: 'IntegrationCollectionMappings::NetsuiteCollectionMapping' do
     association :integration, factory: :netsuite_integration
-    association :mappable, factory: :add_on
+    mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample }
 
     settings do
       {
