@@ -121,7 +121,11 @@ module Subscriptions
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
-        perform_later(job_class: BillSubscriptionJob, arguments: [[new_subscription], Time.zone.now.to_i])
+        perform_later(
+          job_class: BillSubscriptionJob,
+          arguments: [[new_subscription], Time.zone.now.to_i],
+          skip_charges: true,
+        )
       end
 
       if new_subscription.active?
@@ -268,6 +272,7 @@ module Subscriptions
       end.to_a
 
       billable_subscriptions << new_subscription if plan.pay_in_advance? && !new_subscription.in_trial_period?
+
       billable_subscriptions
     end
   end

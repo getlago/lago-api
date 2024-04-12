@@ -172,6 +172,124 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         expect(invoice.fees.subscription.first.amount_cents).to eq(10_000_000)
       end
     end
+
+    context 'when the upgrade happens on day one' do
+      it 'bills the usage instantly and the subscription of the upgraded plan at the end of trial period' do
+        travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
+          create_customer_subscription!
+          expect(customer.reload.invoices.count).to eq(0)
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(0)
+        end
+
+        travel_to(Time.zone.parse('2024-03-05T13:00:00')) { create_usage_event! }
+
+        # Upgrade to a new plan
+        # It create an invoice with the old plan because there was some usage
+        travel_to(Time.zone.parse('2024-03-05T13:15:00')) do
+          upgrade_plan = create(:plan, organization:, trial_period: 13, amount_cents: 10_000_000, pay_in_advance: true)
+          create(:standard_charge, plan: upgrade_plan, billable_metric:, properties: { amount: '12' })
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: upgrade_plan.code,
+            },
+          )
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(1)
+          invoice = customer.invoices.sole
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+        end
+
+        travel_to(Time.zone.parse('2024-03-05T15:00:00')) { create_usage_event! }
+        travel_to(Time.zone.parse('2024-03-05T15:01:00')) { create_usage_event! }
+
+        # Using plan.started_at + upgrade_plan.trial_period days, the trial ends
+        travel_to(Time.zone.parse('2024-03-18T13:00:00')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(2)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(4_516_129) # (31 - 4 - 13) / 31 * 10000000
+        end
+
+        travel_to(Time.zone.parse('2024-04-01T12:12:00')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(3)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(2)
+          expect(invoice.fees.charge.first.amount_cents).to eq(2400)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(10_000_000)
+        end
+      end
+    end
+
+    context 'with a grace period' do
+      it 'bills the usage instantly and the subscription of the upgraded plan at the end of trial period' do
+        travel_to(Time.zone.parse('2024-03-05T12:12:00')) do
+          customer.update! invoice_grace_period: 2
+          create_customer_subscription!
+          expect(customer.reload.invoices.count).to eq(0)
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(0)
+        end
+
+        travel_to(Time.zone.parse('2024-03-05T13:00:00')) { create_usage_event! }
+
+        # Upgrade to a new plan
+        # It create an invoice with the old plan because there was some usage
+        travel_to(Time.zone.parse('2024-03-05T13:15:00')) do
+          upgrade_plan = create(:plan, organization:, trial_period: 13, amount_cents: 10_000_000, pay_in_advance: true)
+          create(:standard_charge, plan: upgrade_plan, billable_metric:, properties: { amount: '12' })
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: upgrade_plan.code,
+            },
+          )
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(1)
+          invoice = customer.invoices.sole
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+          expect(invoice.status).to eq('draft')
+        end
+
+        travel_to(Time.zone.parse('2024-03-07T18:00:00')) do
+          Clock::FinalizeInvoicesJob.perform_later
+          perform_all_enqueued_jobs
+
+          invoice = customer.invoices.reload.sole
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.charge.first.amount_cents).to eq(1000)
+          expect(invoice.status).to eq('finalized')
+        end
+
+        travel_to(Time.zone.parse('2024-03-05T15:00:00')) { create_usage_event! }
+        travel_to(Time.zone.parse('2024-03-05T15:01:00')) { create_usage_event! }
+
+        # Using plan.started_at + upgrade_plan.trial_period days, the trial ends
+        travel_to(Time.zone.parse('2024-03-18T13:00:00')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(2)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(1)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(4_516_129) # (31 - 4 - 13) / 31 * 10000000
+        end
+
+        travel_to(Time.zone.parse('2024-04-01T12:12:00')) do
+          perform_billing
+          expect(customer.reload.invoices.count).to eq(3)
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.fees.count).to eq(2)
+          expect(invoice.fees.charge.first.amount_cents).to eq(2400)
+          expect(invoice.fees.subscription.first.amount_cents).to eq(10_000_000)
+        end
+      end
+    end
   end
 
   context 'with free trial > billing period' do
@@ -322,7 +440,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       travel_to(Time.zone.parse('2024-04-01T13:11:00')) do
         perform_billing
         expect(customer.reload.invoices.count).to eq(1)
-        expect(customer.subscriptions.sole.trial_ended_at).to be_within(1.minute).of(start_time + trial_period.days)
+        expect(customer.subscriptions.sole.trial_ended_at).to match_datetime(start_time + trial_period.days)
       end
     end
 
@@ -384,7 +502,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
           perform_all_enqueued_jobs
 
           invoice = customer.invoices.order(created_at: :desc).sole
-          expect(customer.subscriptions.sole.trial_ended_at).to be_within(1.minute).of(start_time + trial_period.days)
+          expect(customer.subscriptions.sole.trial_ended_at).to match_datetime(start_time + trial_period.days)
           # NOTE: The charge are not billed because FreeTrialBillingService use `skip_charges: true`
           expect(invoice.fees.count).to eq(1)
           expect(invoice.fees.subscription.first.amount_cents).to eq(5_000_000) # full fee, trial is over

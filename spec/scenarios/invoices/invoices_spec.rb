@@ -1453,7 +1453,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       end
 
       subscription_invoice = Invoice.draft.first
-      subscription = subscription_invoice.subscriptions.first
+      subscription = subscription_invoice.subscriptions.sole
       expect(subscription_invoice.total_amount_cents).to eq(658) # 17 days - From 15th Dec. to 31st Dec.
 
       ### 17 Dec: Create event + refresh.
@@ -1481,12 +1481,14 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription.invoices.count }.from(1).to(2)
 
         # Credit note is created (31 - 20) * 548 / 17.0 * 1.2 = 425.5 rounded at 426
-        credit_note = subscription_invoice.credit_notes.first
+        credit_note = subscription_invoice.reload.credit_notes.first
         expect(credit_note.credit_amount_cents).to eq(426)
         expect(credit_note.balance_amount_cents).to eq(426)
 
         # Invoice for termination is created
         termination_invoice = subscription.invoices.order(created_at: :desc).first
+
+        pp subscription.invoices.count
 
         # Total amount does not reflect the credit note as it's not finalized.
         expect(termination_invoice.total_amount_cents).to eq(120)

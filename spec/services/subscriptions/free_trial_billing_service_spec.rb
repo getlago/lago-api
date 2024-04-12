@@ -22,8 +22,8 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
         sub = create(:subscription, plan:, started_at: Time.zone.parse('2024-04-05T12:12:00'))
         sub2 = create(:subscription, plan:, started_at: 15.days.ago)
         service.call
-        expect(sub.reload.trial_ended_at).to be_within(1.second).of(sub.trial_end_datetime)
-        expect(sub2.reload.trial_ended_at).to be_within(1.second).of(sub2.trial_end_datetime)
+        expect(sub.reload.trial_ended_at).to match_datetime(sub.trial_end_datetime)
+        expect(sub2.reload.trial_ended_at).to match_datetime(sub2.trial_end_datetime)
       end
     end
 
@@ -47,7 +47,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
         customer = create(:customer, timezone: 'America/Los_Angeles')
         sub = create(:subscription, plan:, customer:, started_at:)
         service.call
-        expect(sub.reload.trial_ended_at).to be_within(1.second).of(sub.trial_end_datetime)
+        expect(sub.reload.trial_ended_at).to match_datetime(sub.trial_end_datetime)
       end
     end
   end

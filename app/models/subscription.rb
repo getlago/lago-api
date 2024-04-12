@@ -91,7 +91,6 @@ class Subscription < ApplicationRecord
 
   def in_trial_period?
     return false if trial_ended_at
-    return false unless active?
     return false if initial_started_at.future?
 
     trial_end_datetime.present? && trial_end_datetime.future?
