@@ -7,6 +7,7 @@ module Types
         graphql_name 'NetsuiteMapping'
 
         field :id, ID, null: false
+        field :integration_id, ID, null: false
         field :mappable_id, ID, null: false
         field :mappable_type, Types::IntegrationMappings::Netsuite::MappableTypeEnum, null: false
         field :netsuite_account_code, String, null: false
