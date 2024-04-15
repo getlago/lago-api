@@ -5,7 +5,7 @@ require 'lago_http_client'
 module Integrations
   module Aggregator
     class BaseService < BaseService
-      BASE_URL = 'https://api.nango.dev/'.freeze
+      BASE_URL = 'https://api.nango.dev/'
 
       def initialize(integration:)
         @integration = integration
