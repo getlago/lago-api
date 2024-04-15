@@ -10,6 +10,9 @@ RSpec.describe BillableMetric, type: :model do
   it { is_expected.to have_many(:filters).dependent(:delete_all) }
   it { is_expected.to have_many(:netsuite_mappings).dependent(:destroy) }
 
+  it { validate_presence_of(:field_name) }
+  it { validate_presence_of(:custom_aggregator) }
+
   describe '#aggregation_type=' do
     let(:billable_metric) { described_class.new }
 

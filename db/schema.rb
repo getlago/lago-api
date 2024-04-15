@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_04_12_085450) do
+ActiveRecord::Schema[7.0].define(version: 2024_04_15_122310) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -151,6 +151,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_12_085450) do
     t.datetime "deleted_at"
     t.boolean "recurring", default: false, null: false
     t.enum "weighted_interval", enum_type: "billable_metric_weighted_interval"
+    t.text "custom_aggregator"
     t.index ["deleted_at"], name: "index_billable_metrics_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
@@ -481,8 +482,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_12_085450) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.string "invoice_display_name"
     t.decimal "total_aggregated_units"
+    t.string "invoice_display_name"
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
     t.jsonb "amount_details", default: {}, null: false
     t.uuid "charge_filter_id"
@@ -714,9 +715,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_12_085450) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
-    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
+    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.string "premium_integrations", default: [], null: false, array: true
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
