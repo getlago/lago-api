@@ -70,7 +70,7 @@ module Subscriptions
       else
         [subscription]
       end
-      BillSubscriptionJob.perform_later(billable_subscriptions, timestamp)
+      BillSubscriptionJob.perform_later(billable_subscriptions, timestamp, invoicing_reason: :upgrading)
 
       SendWebhookJob.perform_later('subscription.terminated', subscription)
       SendWebhookJob.perform_later('subscription.started', next_subscription)
@@ -90,9 +90,17 @@ module Subscriptions
       if async
         # NOTE: Wait to ensure job is performed at the end of the database transaction.
         # See https://github.com/getlago/lago-api/blob/main/app/services/subscriptions/create_service.rb#L46.
-        BillSubscriptionJob.set(wait: 2.seconds).perform_later([subscription], subscription.terminated_at)
+        BillSubscriptionJob.set(wait: 2.seconds).perform_later(
+          [subscription],
+          subscription.terminated_at,
+          invoicing_reason: :subscription_terminating,
+        )
       else
-        BillSubscriptionJob.perform_now([subscription], subscription.terminated_at)
+        BillSubscriptionJob.perform_now(
+          [subscription],
+          subscription.terminated_at,
+          invoicing_reason: :subscription_terminating,
+        )
       end
     end
 

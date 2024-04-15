@@ -19,6 +19,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_19_085012) do
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "billable_metric_weighted_interval", ["seconds"]
+  create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge"]
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
@@ -626,9 +627,12 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_19_085012) do
     t.datetime "to_datetime"
     t.datetime "charges_from_datetime"
     t.datetime "charges_to_datetime"
+    t.enum "invoicing_reason", enum_type: "subscription_invoicing_reason"
     t.index ["invoice_id", "subscription_id"], name: "index_invoice_subscriptions_on_invoice_id_and_subscription_id", unique: true, where: "(created_at >= '2023-11-23 00:00:00'::timestamp without time zone)"
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id", "charges_from_datetime", "charges_to_datetime"], name: "index_invoice_subscriptions_on_charges_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
+    t.index ["subscription_id", "invoicing_reason"], name: "index_unique_starting_subscription_invoice", unique: true, where: "(invoicing_reason = 'subscription_starting'::subscription_invoicing_reason)"
+    t.index ["subscription_id", "invoicing_reason"], name: "index_unique_terminating_subscription_invoice", unique: true, where: "(invoicing_reason = 'subscription_terminating'::subscription_invoicing_reason)"
     t.index ["subscription_id"], name: "index_invoice_subscriptions_on_subscription_id"
   end
 

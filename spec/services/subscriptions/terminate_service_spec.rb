@@ -221,7 +221,7 @@ RSpec.describe Subscriptions::TerminateService do
         terminate_service.terminate_and_start_next(timestamp:)
 
         expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription, next_subscription], timestamp)
+          .with([subscription, next_subscription], timestamp, invoicing_reason: :upgrading)
       end
     end
   end

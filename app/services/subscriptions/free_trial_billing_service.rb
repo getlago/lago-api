@@ -13,7 +13,12 @@ module Subscriptions
         if subscription.plan_pay_in_advance &&
            !subscription.was_already_billed_today &&
            !already_billed_on_day_one?(subscription)
-          BillSubscriptionJob.perform_later([subscription], timestamp, recurring: false, skip_charges: true)
+          BillSubscriptionJob.perform_later(
+            [subscription],
+            timestamp,
+            invoicing_reason: :subscription_starting,
+            skip_charges: true,
+          )
         end
 
         subscription.update!(trial_ended_at: subscription.trial_end_utc_date_from_query)

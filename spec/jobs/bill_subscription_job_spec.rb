@@ -7,17 +7,17 @@ RSpec.describe BillSubscriptionJob, type: :job do
   let(:timestamp) { Time.zone.now.to_i }
 
   let(:invoice) { nil }
-  let(:recurring) { false }
+  let(:invoicing_reason) { :subscription_starting }
   let(:result) { BaseService::Result.new }
 
   before do
     allow(Invoices::SubscriptionService).to receive(:call)
-      .with(subscriptions:, timestamp:, recurring:, invoice:, skip_charges: false)
+      .with(subscriptions:, timestamp:, invoicing_reason:, invoice:, skip_charges: false)
       .and_return(result)
   end
 
   it 'calls the invoices create service' do
-    described_class.perform_now(subscriptions, timestamp)
+    described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
 
     expect(Invoices::SubscriptionService).to have_received(:call)
   end
@@ -29,7 +29,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
     it 'raises an error' do
       expect do
-        described_class.perform_now(subscriptions, timestamp)
+        described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
       end.to raise_error(BaseService::FailedResult)
 
       expect(Invoices::SubscriptionService).to have_received(:call)
@@ -40,7 +40,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
       it 'raises an error' do
         expect do
-          described_class.perform_now(subscriptions, timestamp, invoice:)
+          described_class.perform_now(subscriptions, timestamp, invoicing_reason:, invoice:)
         end.to raise_error(BaseService::FailedResult)
 
         expect(Invoices::SubscriptionService).to have_received(:call)
@@ -53,12 +53,12 @@ RSpec.describe BillSubscriptionJob, type: :job do
       before { result.invoice = result_invoice }
 
       it 'retries the job with the invoice' do
-        described_class.perform_now(subscriptions, timestamp)
+        described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
 
         expect(Invoices::SubscriptionService).to have_received(:call)
 
         expect(described_class).to have_been_enqueued
-          .with(subscriptions, timestamp, recurring: false, invoice: result_invoice, skip_charges: false)
+          .with(subscriptions, timestamp, invoicing_reason:, invoice: result_invoice, skip_charges: false)
       end
     end
 
@@ -69,7 +69,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
       it 'raises an error' do
         expect do
-          described_class.perform_now(subscriptions, timestamp)
+          described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
         end.to raise_error(BaseService::FailedResult)
 
         expect(Invoices::SubscriptionService).to have_received(:call)

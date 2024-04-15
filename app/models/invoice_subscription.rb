@@ -13,6 +13,15 @@ class InvoiceSubscription < ApplicationRecord
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :total_amount_cents, disable_validation: true, allow_nil: true
 
+  INVOICING_REASONS = {
+    subscription_starting: 'subscription_starting',
+    subscription_periodic: 'subscription_periodic',
+    subscription_terminating: 'subscription_terminating',
+    in_advance_charge: 'in_advance_charge',
+  }.freeze
+
+  enum invoicing_reason: INVOICING_REASONS
+
   scope :order_by_charges_to_datetime,
         lambda {
           condition = <<-SQL

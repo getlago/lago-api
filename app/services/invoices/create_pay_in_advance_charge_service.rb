@@ -67,7 +67,7 @@ module Invoices
         charge_in_advance: true,
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
-          .call(invoice:, subscriptions: [subscription], timestamp:, recurring: false)
+          .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)
           .raise_if_error!
       end
       invoice_result.raise_if_error!

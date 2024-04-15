@@ -24,7 +24,7 @@ module Subscriptions
           SendWebhookJob.perform_later('subscription.started', subscription)
 
           if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
-            BillSubscriptionJob.perform_later([subscription], timestamp)
+            BillSubscriptionJob.perform_later([subscription], timestamp, invoicing_reason: :subscription_starting)
           end
         end
     end

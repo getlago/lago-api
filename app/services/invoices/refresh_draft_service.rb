@@ -11,6 +11,14 @@ module Invoices
       #       should be kept to prevent double billing on billing day
       @recurring = invoice.invoice_subscriptions.first&.recurring || false
 
+      # NOTE: upgrading is used as a not persisted reasong as it means
+      #       one subscription starting and a second one terminating
+      @invoicing_reason = if @recurring
+        :subscription_periodic
+      else
+        invoice.invoice_subscriptions.first&.invoicing_reason&.to_sym || :upgrading
+      end
+
       super
     end
 
@@ -40,7 +48,7 @@ module Invoices
           invoice:,
           subscriptions: Subscription.find(subscription_ids),
           timestamp:,
-          recurring:,
+          invoicing_reason:,
           refresh: true,
         ).raise_if_error!
 
@@ -67,7 +75,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscription_ids, :recurring, :context
+    attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context
 
     def fetch_timestamp
       fee = invoice.fees.first
