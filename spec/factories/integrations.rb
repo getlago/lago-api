@@ -23,7 +23,7 @@ FactoryBot.define do
     name { 'Okta Integration' }
 
     settings do
-      { client_id: SecureRandom.uuid, domain: 'foo.test' }
+      { client_id: SecureRandom.uuid, domain: 'foo.test', organization_name: 'Foobar' }
     end
 
     secrets do

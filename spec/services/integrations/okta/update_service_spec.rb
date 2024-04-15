@@ -7,6 +7,7 @@ RSpec.describe Integrations::Okta::UpdateService, type: :service do
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
   let(:domain) { 'foo.bar' }
+  let(:organization_name) { 'Footest' }
 
   describe '#call' do
     subject(:service_call) { described_class.call(integration:, params: update_args) }
@@ -16,6 +17,7 @@ RSpec.describe Integrations::Okta::UpdateService, type: :service do
     let(:update_args) do
       {
         domain:,
+        organization_name:,
       }
     end
 
@@ -50,7 +52,11 @@ RSpec.describe Integrations::Okta::UpdateService, type: :service do
             service_call
 
             integration = Integrations::OktaIntegration.order(:updated_at).last
-            expect(integration.domain).to eq(domain)
+
+            aggregate_failures do
+              expect(integration.domain).to eq(domain)
+              expect(integration.organization_name).to eq(organization_name)
+            end
           end
         end
 

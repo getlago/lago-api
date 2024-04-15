@@ -101,5 +101,7 @@ module Types
 
     field :create_okta_integration, mutation: Mutations::Integrations::Okta::Create
     field :update_okta_integration, mutation: Mutations::Integrations::Okta::Update
+
+    field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize
   end
 end

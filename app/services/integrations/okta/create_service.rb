@@ -17,6 +17,7 @@ module Integrations
           client_id: args[:client_id],
           client_secret: args[:client_secret],
           domain: args[:domain],
+          organization_name: args[:organization_name],
         )
 
         integration.save!

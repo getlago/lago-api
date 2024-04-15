@@ -17,6 +17,7 @@ RSpec.describe Integrations::Okta::CreateService, type: :service do
         client_id: 'cl1',
         client_secret: 'secret',
         domain:,
+        organization_name: 'Foobar',
       }
     end
 
