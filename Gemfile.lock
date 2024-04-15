@@ -217,6 +217,11 @@ GEM
     faraday-retry (1.0.3)
     ffi (1.15.5)
     formatador (1.1.0)
+    flipper (1.2.2)
+      concurrent-ruby (< 2)
+    flipper-redis (1.2.2)
+      flipper (~> 1.2.2)
+      redis (>= 3.0, < 6)
     globalid (1.2.1)
       activesupport (>= 6.1)
     gocardless_pro (2.34.0)
@@ -851,6 +856,8 @@ DEPENDENCIES
   dotenv
   factory_bot_rails
   faker
+  flipper
+  flipper-redis
   gocardless_pro (~> 2.34)
   google-cloud-storage
   googleauth (~> 1.11.0)
