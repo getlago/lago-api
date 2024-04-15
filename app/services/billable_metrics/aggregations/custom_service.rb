@@ -10,11 +10,13 @@ module BillableMetrics
         result.count = event_store.count
 
         aggregation_result = perform_custom_aggregation
+        in_advance_aggregation_result = compute_pay_in_advance_aggregation
 
         result.aggregation = aggregation_result[:total_units]
-        result.custom_aggregation = aggregation_result
+        result.current_usage_units = result.aggregation # TODO: Used cached aggregation
+        result.custom_aggregation = event ? in_advance_aggregation_result : aggregation_result
         result.options = options
-        result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
+        result.pay_in_advance_aggregation = in_advance_aggregation_result[:total_units]
         result
       end
 
@@ -35,7 +37,7 @@ module BillableMetrics
       end
 
       def current_state
-        # TODO: fecth state from the cached aggregation
+        # TODO: fecth state from the cached aggregation for recurring and current usage
         INITIAL_STATE
       end
 
@@ -48,15 +50,19 @@ module BillableMetrics
           events_properties = event_store.events.page(batch).per(BATCH_SIZE)
             .map { |event| { timestamp: event.timestamp, properties: event.properties } }
 
-          sandboxed_result = LagoUtils::RubySandbox.run(aggregator(events_properties, state))
-
-          state = {
-            total_units: BigDecimal(sandboxed_result['total_units'].to_s),
-            amount: BigDecimal(sandboxed_result['amount']),
-          }
+          state = sandboxed_aggregation(events_properties, state)
         end
 
         state
+      end
+
+      def sandboxed_aggregation(events_properties, state)
+        sandboxed_result = LagoUtils::RubySandbox.run(aggregator(events_properties, state))
+
+        {
+          total_units: BigDecimal(sandboxed_result['total_units'].to_s),
+          amount: BigDecimal(sandboxed_result['amount'].to_s),
+        }
       end
 
       def aggregator(events_properties, current_state)
@@ -97,7 +103,7 @@ module BillableMetrics
       end
 
       def compute_pay_in_advance_aggregation
-        return BigDecimal(0) unless event
+        return INITIAL_STATE unless event
 
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,
@@ -105,12 +111,59 @@ module BillableMetrics
           grouped_by: grouped_by_values,
         )
 
+        # NOTE: The aggregation was never performed on the period,
+        #       we need to perform a full aggregation and cache it
         unless cached_aggregation
-          # TODO(custom_agg): Implement custom aggregation logic
+          state = perform_custom_aggregation
+
+          assign_cached_metadata(
+            current_aggregation: state[:total_units],
+            max_aggregation: state[:total_units],
+            units_applied: state[:total_units],
+            current_amount: state[:amount],
+          )
+
+          return state
         end
 
-        # TODO(custom_agg): Implement custom aggregation logic
-        BigDecimal(0)
+        # NOTE: Retrieve values from the previous aggregation
+        old_aggregation = cached_aggregation.current_aggregation_decimal
+        old_max = cached_aggregation.max_aggregation_decimal
+        old_amount = cached_aggregation.current_amount_decimal
+
+        # NOTE: compute aggregation for the current event, using the previous state
+        event_aggregation = sandboxed_aggregation(
+          [{ timestamp: event.timestamp, properties: event.properties }],
+          { total_units: old_aggregation, amount: old_amount },
+        )
+
+        units_applied = event_aggregation[:total_units] - old_aggregation
+        max_aggregation = if event_aggregation[:total_units] > old_max
+          event_aggregation[:total_units]
+        else
+          old_max
+        end
+
+        # NOTE: Update the metadata for the current event
+        assign_cached_metadata(
+          current_aggregation: event_aggregation[:total_units],
+          max_aggregation:,
+          units_applied:,
+          current_amount: event_aggregation[:amount],
+        )
+
+        # NOTE: Return the amount and units to be charged for the current event
+        {
+          total_units: units_applied,
+          amount: event_aggregation[:amount] - old_amount,
+        }
+      end
+
+      def assign_cached_metadata(current_aggregation:, max_aggregation:, units_applied: nil, current_amount: nil)
+        result.current_aggregation = current_aggregation unless current_aggregation.nil?
+        result.max_aggregation = max_aggregation unless max_aggregation.nil?
+        result.units_applied = units_applied unless units_applied.nil?
+        result.current_amount = current_amount unless current_amount.nil?
       end
     end
   end

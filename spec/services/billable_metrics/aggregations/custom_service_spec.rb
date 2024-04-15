@@ -17,7 +17,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { grouped_by:, matching_filters:, ignored_filters: } }
+  let(:filters) { { grouped_by:, matching_filters:, ignored_filters:, event: } }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
@@ -26,6 +26,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
   let(:grouped_by) { nil }
   let(:matching_filters) { nil }
   let(:ignored_filters) { nil }
+  let(:event) { nil }
 
   let(:billable_metric) do
     create(:custom_billable_metric, organization:, custom_aggregator:)
@@ -148,6 +149,70 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       expect(result.count).to eq(0)
       expect(result.options).to eq({})
       expect(result.custom_aggregation).to eq({ total_units: 0, amount: 0 })
+    end
+  end
+
+  context 'when the charge is payed in advance' do
+    let(:charge) { create(:standard_charge, billable_metric:, properties: charge_properties, pay_in_advance: true) }
+
+    let(:event_list) do
+      [
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          subscription:,
+          customer:,
+          timestamp: Time.zone.now - 4.days,
+          properties: { value: 11, storage_zone: 'storage_eu' },
+        ),
+      ]
+    end
+    let(:event) { event_list.first }
+
+    it 'aggregates the events', :aggregate_failures do
+      result = custom_service.aggregate
+
+      expect(result.aggregation).to eq(11)
+      expect(result.count).to eq(1)
+      expect(result.options).to eq({})
+      expect(result.custom_aggregation).to eq({ total_units: 11.0, amount: 0.1 })
+
+      expect(result.pay_in_advance_aggregation).to eq(11)
+      expect(result.current_aggregation).to eq(11.0)
+      expect(result.max_aggregation).to eq(11.0)
+      expect(result.units_applied).to eq(11.0)
+      expect(result.current_amount).to eq(0.1)
+    end
+
+    context 'with a cached aggregation' do
+      before do
+        create(
+          :cached_aggregation,
+          organization:,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          timestamp: Time.zone.now - 4.days,
+          current_aggregation: 11.0,
+          max_aggregation: 11.0,
+          current_amount: 0.1,
+        )
+      end
+
+      it 'aggregates the events with the cached aggregation', :aggregate_failures do
+        result = custom_service.aggregate
+
+        expect(result.aggregation).to eq(11)
+        expect(result.count).to eq(1)
+        expect(result.options).to eq({})
+        expect(result.custom_aggregation).to eq({ total_units: 11.0, amount: 0.4 })
+
+        expect(result.pay_in_advance_aggregation).to eq(11)
+        expect(result.current_aggregation).to eq(22.0)
+        expect(result.max_aggregation).to eq(22.0)
+        expect(result.units_applied).to eq(11.0)
+        expect(result.current_amount).to eq(0.5)
+      end
     end
   end
 end

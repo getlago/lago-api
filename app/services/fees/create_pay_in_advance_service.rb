@@ -140,6 +140,7 @@ module Fees
         charge_id: charge.id,
         charge_filter_id: charge_filter&.id,
         current_aggregation: aggregation_result.current_aggregation,
+        current_amount: aggregation_result.current_amount,
         max_aggregation: aggregation_result.max_aggregation,
         max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,
         grouped_by: format_grouped_by,
