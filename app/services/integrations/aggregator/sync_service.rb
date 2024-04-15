@@ -13,7 +13,7 @@ module Integrations
           syncs: sync_items,
         }
 
-        response = http_client.post_with_response(payload, generate_headers)
+        response = http_client.post_with_response(payload, headers)
         result.response = response
 
         result

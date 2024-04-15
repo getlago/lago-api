@@ -29,7 +29,7 @@ module Integrations
         "#{BASE_URL}#{action_path}"
       end
 
-      def generate_headers
+      def headers
         {
           'Connection-Id' => integration.connection_id,
           'Authorization' => "Bearer #{secret_key}",
