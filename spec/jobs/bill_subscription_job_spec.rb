@@ -12,7 +12,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
   before do
     allow(Invoices::SubscriptionService).to receive(:call)
-      .with(subscriptions:, timestamp:, recurring:, invoice:)
+      .with(subscriptions:, timestamp:, recurring:, invoice:, skip_charges: false)
       .and_return(result)
   end
 
@@ -58,7 +58,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
         expect(Invoices::SubscriptionService).to have_received(:call)
 
         expect(described_class).to have_been_enqueued
-          .with(subscriptions, timestamp, recurring: false, invoice: result_invoice)
+          .with(subscriptions, timestamp, recurring: false, invoice: result_invoice, skip_charges: false)
       end
     end
 

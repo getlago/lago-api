@@ -19,8 +19,10 @@ jobs:
         run: |
           bundle install
       - name: Run Rubocop
+        # We must pass the list of files because for now, rubocop on the entire project throws too many errors.
+        # We exclude the db/schema.rb file explicitly because passing a list of files will override the `AllCops.Exclude` config in .rubocop.yml
         run: |
-          FILES=$(git diff --diff-filter=d --name-only origin/${{ github.base_ref }}...HEAD -- '*.rb')
+          FILES=$(git diff --diff-filter=d --name-only origin/${{ github.base_ref }}...HEAD -- '*.rb' ':!db/*schema.rb')
           if [ -z "$FILES" ]; then
             echo "No Ruby files to lint"
             exit 0

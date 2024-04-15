@@ -169,9 +169,10 @@ module Invoices
 
       return false if subscription.plan.pay_in_advance? && fee_exists
       return false unless should_create_yearly_subscription_fee?(subscription)
+      return false if subscription.in_trial_period? && !subscription.trial_end_datetime&.today?
 
       # NOTE: When a subscription is terminated we still need to charge the subscription
-      #       fee if the plan is in pay in arrear, otherwise this fee will never
+      #       fee if the plan is in pay in arrears, otherwise this fee will never
       #       be created.
       subscription.active? ||
         (subscription.terminated? && subscription.plan.pay_in_arrear?) ||
@@ -192,14 +193,12 @@ module Invoices
     end
 
     def should_create_charge_fees?(subscription)
-      # We should take a look at charges if subscription is created in the past and if it is not upgrade
-      if subscription.plan.pay_in_advance? && subscription.started_in_past? && subscription.previous_subscription.nil?
-        return true
-      end
+      return false if invoice.skip_charges
 
-      # NOTE: Charges should not be billed in advance when we are just upgrading to a new
-      #       pay_in_advance subscription
-      return false if subscription.plan.pay_in_advance? && subscription.invoices.created_before(invoice).count.zero?
+      # We should take a look at charges if subscription is created in the past and if it is not upgrade
+      return true if subscription.plan.pay_in_advance? &&
+                     subscription.started_in_past? &&
+                     subscription.previous_subscription.nil?
 
       true
     end

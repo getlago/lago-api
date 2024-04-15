@@ -121,6 +121,7 @@ module ScenariosHelper
 
   def perform_billing
     Clock::SubscriptionsBillerJob.perform_later
+    Clock::FreeTrialSubscriptionsBillerJob.perform_later
     perform_all_enqueued_jobs
   end
 
