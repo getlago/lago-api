@@ -2,8 +2,6 @@
 
 module Subscriptions
   class CreateService < BaseService
-    include Utils::TransactionalJobs
-
     def initialize(customer:, plan:, params:)
       super
 
@@ -44,8 +42,6 @@ module Subscriptions
 
         result.subscription = handle_subscription
       end
-
-      perform_pending_jobs
 
       track_subscription_created(result.subscription)
       result
@@ -121,15 +117,11 @@ module Subscriptions
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
-        perform_later(
-          job_class: BillSubscriptionJob,
-          arguments: [[new_subscription], Time.zone.now.to_i],
-          skip_charges: true,
-        )
+        after_commit { BillSubscriptionJob.perform_later([new_subscription], Time.zone.now.to_i, skip_charges: true) }
       end
 
       if new_subscription.active?
-        perform_later(job_class: SendWebhookJob, arguments: ['subscription.started', new_subscription])
+        after_commit { SendWebhookJob.perform_later('subscription.started', new_subscription) }
       end
 
       new_subscription
@@ -163,17 +155,14 @@ module Subscriptions
       Subscriptions::TerminateService.call(subscription: current_subscription, upgrade: true)
 
       new_subscription.mark_as_active!
-      perform_later(job_class: SendWebhookJob, arguments: ['subscription.started', new_subscription])
+      after_commit { SendWebhookJob.perform_later('subscription.started', new_subscription) }
 
       # NOTE: If plan is in advance we should create only one invoice for termination fees and for new plan fees
       if billable_subscriptions.any?
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job
         #       We do not set offset anymore but instead retry jobs
-        perform_later(
-          job_class: BillSubscriptionJob,
-          arguments: [billable_subscriptions, Time.zone.now.to_i + 1.second],
-        )
+        after_commit { BillSubscriptionJob.perform_later(billable_subscriptions, Time.zone.now.to_i + 1.second) }
       end
 
       new_subscription
