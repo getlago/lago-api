@@ -21,13 +21,15 @@ RSpec.describe Integrations::Aggregator::SendRestletEndpointService do
       integration.save!
     end
 
-    it 'successfully calls sync endpoint' do
+    it 'successfully sends restlet endpoint' do
       send_restlet_endpoint_service.call
 
-      expect(LagoHttpClient::Client).to have_received(:new)
-        .with(endpoint)
-      expect(lago_client).to have_received(:post_with_response) do |payload|
-        expect(payload[:restletEndpoint]).to eq('https://example.com')
+      aggregate_failures do
+        expect(LagoHttpClient::Client).to have_received(:new)
+          .with(endpoint)
+        expect(lago_client).to have_received(:post_with_response) do |payload|
+          expect(payload[:restletEndpoint]).to eq('https://example.com')
+        end
       end
     end
   end
