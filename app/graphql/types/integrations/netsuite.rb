@@ -9,6 +9,7 @@ module Types
       field :client_id, String, null: true
       field :client_secret, String, null: true
       field :code, String, null: false
+      field :has_mappings_configured, Boolean
       field :id, ID, null: false
       field :name, String, null: false
       field :script_endpoint_url, String, null: true
@@ -21,6 +22,13 @@ module Types
       #       front end application. Instead we send an obfuscated value
       def client_secret
         "#{'•' * 8}…#{object.client_secret[-3..]}"
+      end
+
+      def has_mappings_configured
+        object.integration_collection_mappings
+          .where(type: 'IntegrationCollectionMappings::NetsuiteCollectionMapping')
+          .where(mapping_type: :fallback_item)
+          .any?
       end
     end
   end
