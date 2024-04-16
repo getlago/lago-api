@@ -4455,6 +4455,20 @@ type Mutation {
   ): Invoice
 }
 
+type NetsuiteCollectionMapping {
+  id: ID!
+  integrationId: ID!
+  mappingType: NetsuiteMappingTypeEnum!
+  netsuiteAccountCode: String!
+  netsuiteId: String!
+  netsuiteName: String
+}
+
+type NetsuiteCollectionMappingCollection {
+  collection: [NetsuiteCollectionMapping!]!
+  metadata: CollectionMetadata!
+}
+
 type NetsuiteIntegration {
   accountId: String
   clientId: String
@@ -4467,6 +4481,35 @@ type NetsuiteIntegration {
   syncInvoices: Boolean
   syncPayments: Boolean
   syncSalesOrders: Boolean
+}
+
+enum NetsuiteMappableTypeEnum {
+  AddOn
+  BillableMetric
+}
+
+type NetsuiteMapping {
+  id: ID!
+  integrationId: ID!
+  mappableId: ID!
+  mappableType: NetsuiteMappableTypeEnum!
+  netsuiteAccountCode: String!
+  netsuiteId: String!
+  netsuiteName: String
+}
+
+type NetsuiteMappingCollection {
+  collection: [NetsuiteMapping!]!
+  metadata: CollectionMetadata!
+}
+
+enum NetsuiteMappingTypeEnum {
+  coupon
+  fallback_item
+  minimum_commitment
+  prepaid_credit
+  subscription_fee
+  tax
 }
 
 type OktaIntegration {
@@ -4935,6 +4978,36 @@ type Query {
   Query MRR of an organization
   """
   mrrs(currency: CurrencyEnum): MrrCollection!
+
+  """
+  Query a single integration collection mapping
+  """
+  netsuiteCollectionMapping(
+    """
+    Unique ID of the integration collection mappings
+    """
+    id: ID!
+  ): NetsuiteCollectionMapping
+
+  """
+  Query netsuite integration collection mappings
+  """
+  netsuiteCollectionMappings(integrationId: ID, limit: Int, mappingType: String, page: Int): NetsuiteCollectionMappingCollection
+
+  """
+  Query a single integration mapping
+  """
+  netsuiteMapping(
+    """
+    Unique ID of the integration mappings
+    """
+    id: ID!
+  ): NetsuiteMapping
+
+  """
+  Query netsuite integration mappings
+  """
+  netsuiteMappings(integrationId: ID, limit: Int, mappableType: String, page: Int): NetsuiteMappingCollection
 
   """
   Query the current organization
