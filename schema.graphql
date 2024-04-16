@@ -4474,6 +4474,7 @@ type NetsuiteIntegration {
   clientId: String
   clientSecret: String
   code: String!
+  hasMappingsConfigured: Boolean
   id: ID!
   name: String!
   scriptEndpointUrl: String
