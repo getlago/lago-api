@@ -272,6 +272,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect(json[:wallets].count).to eq(1)
       expect(json[:wallets].first[:lago_id]).to eq(wallet.id)
       expect(json[:wallets].first[:name]).to eq(wallet.name)
+      expect(json[:wallets].first[:recurring_transaction_rules]).to be_empty
     end
 
     context 'with pagination' do

@@ -73,6 +73,7 @@ module Api
             ::V1::WalletSerializer,
             collection_name: 'wallets',
             meta: pagination_metadata(wallets),
+            includes: %i[recurring_transaction_rules],
           ),
         )
       end
