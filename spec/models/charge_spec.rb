@@ -511,4 +511,17 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe '#validate_custom_model' do
+    subject(:charge) { build(:charge, billable_metric:, charge_model: 'custom') }
+
+    let(:billable_metric) { create(:billable_metric, aggregation_type: :count_agg) }
+
+    it 'returns an error for invalid metric type' do
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:charge_model]).to include('invalid_aggregation_type_or_charge_model')
+      end
+    end
+  end
 end

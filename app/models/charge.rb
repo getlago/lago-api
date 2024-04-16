@@ -24,6 +24,7 @@ class Charge < ApplicationRecord
     percentage
     volume
     graduated_percentage
+    custom
   ].freeze
 
   enum charge_model: CHARGE_MODELS
@@ -42,6 +43,7 @@ class Charge < ApplicationRecord
   validate :validate_prorated
   validate :validate_min_amount_cents
   validate :validate_uniqueness_group_properties
+  validate :validate_custom_model
 
   monetize :min_amount_cents, with_currency: ->(charge) { charge.plan.amount_currency }
 
@@ -123,5 +125,12 @@ class Charge < ApplicationRecord
   def validate_uniqueness_group_properties
     group_ids = group_properties.map(&:group_id)
     errors.add(:group_properties, :taken) if group_ids.size > group_ids.uniq.size
+  end
+
+  def validate_custom_model
+    return unless custom?
+    return if billable_metric.custom_agg?
+
+    errors.add(:charge_model, :invalid_aggregation_type_or_charge_model)
   end
 end

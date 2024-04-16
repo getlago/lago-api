@@ -879,6 +879,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "custom_agg",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -2743,6 +2749,12 @@
             },
             {
               "name": "graduated_percentage",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "custom",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

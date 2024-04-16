@@ -40,4 +40,9 @@ FactoryBot.define do
     aggregation_type { 'unique_count_agg' }
     field_name { 'item_id' }
   end
+
+  factory :custom_billable_metric, parent: :billable_metric do
+    aggregation_type { 'custom_agg' }
+    custom_aggreator { 'puts "foo bar"' }
+  end
 end
