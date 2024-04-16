@@ -3,6 +3,9 @@
 Rails.application.routes.draw do
   mount Sidekiq::Web => '/sidekiq' if defined? Sidekiq::Web
 
+  # The goal is to load this production but we need a good way to restrict access
+  mount Flipper::UI.app(Flipper) => '/flipper' if Rails.env.development?
+
   mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql' if Rails.env.development?
 
   post '/graphql', to: 'graphql#execute'

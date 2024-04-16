@@ -83,6 +83,7 @@ gem 'valvat', require: false
 # Feature flags
 gem 'flipper'
 gem 'flipper-redis'
+gem 'flipper-ui'
 
 group :development, :test, :staging do
   gem 'factory_bot_rails'
