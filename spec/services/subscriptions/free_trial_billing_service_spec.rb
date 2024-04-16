@@ -31,9 +31,9 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
       it 'sets trial_ended_at' do
         customer = create(:customer)
         attr = { customer:, plan:, external_id: 'abc123' }
-        sub = create(:subscription, started_at: 6.days.ago, **attr)
-        started_at = (10.days + 1.hour).ago
+        started_at = timestamp - 10.days - 1.hour
         create(:subscription, started_at:, terminated_at: 6.days.ago, status: :terminated, **attr)
+        sub = create(:subscription, started_at: 6.days.ago, **attr)
 
         expect { service.call }.to change { sub.reload.trial_ended_at }.from(nil).to(sub.trial_end_datetime)
       end
