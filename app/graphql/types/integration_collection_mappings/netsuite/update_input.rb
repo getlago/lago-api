@@ -6,6 +6,8 @@ module Types
       class UpdateInput < Types::BaseInputObject
         graphql_name 'UpdateNetsuiteIntegrationCollectionMappingInput'
 
+        argument :id, ID, required: true
+
         argument :integration_id, ID, required: false
         argument :netsuite_account_code, String, required: false
         argument :netsuite_id, String, required: false
