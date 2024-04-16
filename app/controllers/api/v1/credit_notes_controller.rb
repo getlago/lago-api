@@ -109,7 +109,7 @@ module Api
             ::V1::CreditNoteSerializer,
             collection_name: 'credit_notes',
             meta: pagination_metadata(credit_notes),
-            includes: %i[applied_taxes],
+            includes: %i[items applied_taxes],
           ),
         )
       end

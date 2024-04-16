@@ -199,6 +199,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(response).to have_http_status(:success)
         expect(json[:credit_notes].count).to eq(2)
         expect(json[:credit_notes].first[:lago_id]).to eq(second_credit_note.id)
+        expect(json[:credit_notes].first[:items]).to be_empty
         expect(json[:credit_notes].last[:lago_id]).to eq(credit_note.id)
       end
     end
