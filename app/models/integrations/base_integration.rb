@@ -11,7 +11,8 @@ module Integrations
     belongs_to :organization
 
     has_many :integration_mappings, class_name: 'IntegrationMappings::BaseMapping', foreign_key: 'integration_id'
-    has_many :integration_collection_mappings, class_name: 'IntegrationCollectionMappings::BaseCollectionMapping',
+    has_many :integration_collection_mappings,
+             class_name: 'IntegrationCollectionMappings::BaseCollectionMapping',
              foreign_key: 'integration_id'
 
     validates :code, uniqueness: { scope: :organization_id }
