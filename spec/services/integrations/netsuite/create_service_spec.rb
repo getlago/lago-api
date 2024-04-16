@@ -58,7 +58,7 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
       context 'with netsuite premium integration present' do
         before do
           organization.update!(premium_integrations: ['netsuite'])
-          allow(Integrations::Aggregator::PerformSyncJob).to receive(:perform_later)
+          allow(Integrations::Aggregator::SendRestletEndpointJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do

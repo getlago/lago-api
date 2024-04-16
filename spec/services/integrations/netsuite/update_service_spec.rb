@@ -49,7 +49,10 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
       end
 
       context 'with netsuite premium integration present' do
-        before { organization.update!(premium_integrations: ['netsuite']) }
+        before do
+          organization.update!(premium_integrations: ['netsuite'])
+          allow(Integrations::Aggregator::SendRestletEndpointJob).to receive(:perform_later)
+        end
 
         context 'without validation errors' do
           it 'updates an integration' do
