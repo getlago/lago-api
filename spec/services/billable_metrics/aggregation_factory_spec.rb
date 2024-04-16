@@ -111,5 +111,11 @@ RSpec.describe BillableMetrics::AggregationFactory, type: :service do
         end
       end
     end
+
+    context 'with custom_agg aggregation' do
+      let(:billable_aggregation) { :custom_billable_metric }
+
+      it { expect(result).to be_a(BillableMetrics::Aggregations::CustomService) }
+    end
   end
 end
