@@ -40,6 +40,12 @@ module Types
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
+    field :netsuite_collection_mapping,
+          resolver: Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingResolver
+    field :netsuite_collection_mappings,
+          resolver: Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingsResolver
+    field :netsuite_mapping, resolver: Resolvers::IntegrationMappings::NetsuiteMappingResolver
+    field :netsuite_mappings, resolver: Resolvers::IntegrationMappings::NetsuiteMappingsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :payment_provider, resolver: Resolvers::PaymentProviderResolver
