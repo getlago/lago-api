@@ -28,6 +28,8 @@ module Integrations
 
         integration.save!
 
+        Integrations::Aggregator::PerformSyncJob.perform_later(integration:)
+
         result.integration = integration
         result
       rescue ActiveRecord::RecordInvalid => e
