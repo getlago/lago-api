@@ -29,7 +29,7 @@ module Integrations
 
         integration.save!
 
-        if integration.script_endpoint_url && integration.script_endpoint_url != old_script_url
+        if integration.type == 'Integrations::NetsuiteIntegration'  && integration.script_endpoint_url != old_script_url
           Integrations::Aggregator::SendRestletEndpointJob.perform_later(integration:)
         end
 
