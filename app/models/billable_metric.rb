@@ -3,6 +3,7 @@
 class BillableMetric < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+  include IntegrationMappable
   self.discard_column = :deleted_at
 
   belongs_to :organization

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_04_04_123257) do
+ActiveRecord::Schema[7.0].define(version: 2024_04_12_085450) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -481,8 +481,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_04_123257) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.decimal "total_aggregated_units"
     t.string "invoice_display_name"
+    t.decimal "total_aggregated_units"
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
     t.jsonb "amount_details", default: {}, null: false
     t.uuid "charge_filter_id"
@@ -540,6 +540,29 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_04_123257) do
     t.index ["billable_metric_id"], name: "index_groups_on_billable_metric_id"
     t.index ["deleted_at"], name: "index_groups_on_deleted_at"
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
+  end
+
+  create_table "integration_collection_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "integration_id", null: false
+    t.integer "mapping_type", null: false
+    t.string "type", null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["integration_id"], name: "index_integration_collection_mappings_on_integration_id"
+    t.index ["mapping_type", "integration_id"], name: "index_int_collection_mappings_on_mapping_type_and_int_id", unique: true
+  end
+
+  create_table "integration_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "integration_id", null: false
+    t.string "mappable_type", null: false
+    t.uuid "mappable_id", null: false
+    t.string "type", null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["integration_id"], name: "index_integration_mappings_on_integration_id"
+    t.index ["mappable_type", "mappable_id"], name: "index_integration_mappings_on_mappable"
   end
 
   create_table "integrations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -691,9 +714,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_04_123257) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
+    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
-    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.string "premium_integrations", default: [], null: false, array: true
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
@@ -1013,6 +1036,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_04_123257) do
   add_foreign_key "group_properties", "groups", on_delete: :cascade
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
   add_foreign_key "groups", "groups", column: "parent_group_id"
+  add_foreign_key "integration_collection_mappings", "integrations"
+  add_foreign_key "integration_mappings", "integrations"
   add_foreign_key "integrations", "organizations"
   add_foreign_key "invites", "memberships"
   add_foreign_key "invites", "organizations"

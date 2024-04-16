@@ -9,6 +9,7 @@ RSpec.describe AddOn, type: :model do
   it { is_expected.to have_many(:fees) }
   it { is_expected.to have_many(:applied_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:taxes) }
+  it { is_expected.to have_many(:netsuite_mappings).dependent(:destroy) }
 
   it { is_expected.to validate_presence_of(:name) }
   it { is_expected.to validate_numericality_of(:amount_cents) }
