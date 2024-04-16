@@ -59,6 +59,12 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
             expect(integration.name).to eq(name)
             expect(integration.script_endpoint_url).to eq(script_endpoint_url)
           end
+
+          it 'calls Integrations::Aggregator::SendRestletEndpointJob' do
+            service_call
+
+            expect(Integrations::Aggregator::SendRestletEndpointJob).to have_received(:perform_later).with(integration:)
+          end
         end
 
         context 'with validation error' do

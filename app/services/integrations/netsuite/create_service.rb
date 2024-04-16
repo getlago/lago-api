@@ -28,7 +28,7 @@ module Integrations
 
         integration.save!
 
-        Integrations::Aggregator::PerformSyncJob.perform_later(integration:)
+        Integrations::Aggregator::SendRestletEndpointJob.perform_later(integration:)
 
         result.integration = integration
         result
