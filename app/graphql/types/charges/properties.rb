@@ -27,6 +27,9 @@ module Types
 
       # NOTE: Volume charge model
       field :volume_ranges, [Types::Charges::VolumeRange], null: true
+
+      # NOTE: properties for the custom aggregation
+      field :custom_properties, GraphQL::Types::JSON, null: true
     end
   end
 end
