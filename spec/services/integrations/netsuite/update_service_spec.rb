@@ -49,7 +49,10 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
       end
 
       context 'with netsuite premium integration present' do
-        before { organization.update!(premium_integrations: ['netsuite']) }
+        before do
+          organization.update!(premium_integrations: ['netsuite'])
+          allow(Integrations::Aggregator::SendRestletEndpointJob).to receive(:perform_later)
+        end
 
         context 'without validation errors' do
           it 'updates an integration' do
@@ -58,6 +61,12 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
             integration = Integrations::NetsuiteIntegration.order(:updated_at).last
             expect(integration.name).to eq(name)
             expect(integration.script_endpoint_url).to eq(script_endpoint_url)
+          end
+
+          it 'calls Integrations::Aggregator::SendRestletEndpointJob' do
+            service_call
+
+            expect(Integrations::Aggregator::SendRestletEndpointJob).to have_received(:perform_later).with(integration:)
           end
         end
 

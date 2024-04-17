@@ -58,7 +58,7 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
       context 'with netsuite premium integration present' do
         before do
           organization.update!(premium_integrations: ['netsuite'])
-          allow(Integrations::Aggregator::PerformSyncJob).to receive(:perform_later)
+          allow(Integrations::Aggregator::SendRestletEndpointJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
@@ -70,11 +70,11 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
             expect(integration.script_endpoint_url).to eq(script_endpoint_url)
           end
 
-          it 'calls Integrations::Aggregator::PerformSyncJob' do
+          it 'calls Integrations::Aggregator::SendRestletEndpointJob' do
             service_call
 
             integration = Integrations::NetsuiteIntegration.order(:created_at).last
-            expect(Integrations::Aggregator::PerformSyncJob).to have_received(:perform_later).with(integration:)
+            expect(Integrations::Aggregator::SendRestletEndpointJob).to have_received(:perform_later).with(integration:)
           end
         end
 

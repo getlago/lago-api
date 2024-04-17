@@ -17,6 +17,8 @@ module Integrations
           return result.not_allowed_failure!(code: 'premium_integration_missing')
         end
 
+        old_script_url = integration.script_endpoint_url
+
         integration.name = params[:name] if params.key?(:name)
         integration.code = params[:code] if params.key?(:code)
         integration.script_endpoint_url = params[:script_endpoint_url] if params.key?(:script_endpoint_url)
@@ -26,6 +28,10 @@ module Integrations
         integration.sync_sales_orders = params[:sync_sales_orders] if params.key?(:sync_sales_orders)
 
         integration.save!
+
+        if integration.type == 'Integrations::NetsuiteIntegration' && integration.script_endpoint_url != old_script_url
+          Integrations::Aggregator::SendRestletEndpointJob.perform_later(integration:)
+        end
 
         result.integration = integration
         result

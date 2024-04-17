@@ -28,7 +28,9 @@ module Integrations
 
         integration.save!
 
-        Integrations::Aggregator::PerformSyncJob.perform_later(integration:)
+        if integration.type == 'Integrations::NetsuiteIntegration'
+          Integrations::Aggregator::SendRestletEndpointJob.perform_later(integration:)
+        end
 
         result.integration = integration
         result
