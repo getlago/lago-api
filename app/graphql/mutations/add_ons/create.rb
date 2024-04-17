@@ -6,14 +6,14 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'addons:create'
+
       graphql_name 'CreateAddOn'
       description 'Creates a new add-on'
 
       input_object_class Types::AddOns::CreateInput
 
       type Types::AddOns::Object
-
-      permission 'addons:create'
 
       def resolve(**args)
         result = ::AddOns::CreateService

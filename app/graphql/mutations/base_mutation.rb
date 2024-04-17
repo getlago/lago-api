@@ -9,13 +9,11 @@ module Mutations
     input_object_class Types::BaseInputObject
     object_class Types::BaseObject
 
-    def self.permission(permission)
-      @permission = permission
-    end
+    private
 
     def ready?(**args)
-      if @permission
-        context[:permissions][@permission]
+      if defined? self.class::REQUIRED_PERMISSION
+        context[:permissions][self.class::REQUIRED_PERMISSION]
       else
         super
       end

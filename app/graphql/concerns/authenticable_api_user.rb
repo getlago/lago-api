@@ -5,10 +5,10 @@ module AuthenticableApiUser
 
   private
 
-  def ready?(*)
-    return true if context[:current_user]
+  def ready?(**args)
+    raise unauthorized_error unless context[:current_user]
 
-    raise unauthorized_error
+    super
   end
 
   def unauthorized_error

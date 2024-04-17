@@ -8,7 +8,7 @@ module GraphQLHelper
   end
 
   # rubocop:disable Metrics/ParameterLists, Layout/LineLength
-  def execute_graphql(current_user: nil, query: nil, current_organization: nil, customer_portal_user: nil, request: nil, **kwargs)
+  def execute_graphql(current_user: nil, query: nil, current_organization: nil, customer_portal_user: nil, request: nil, permissions: nil, **kwargs)
     # rubocop:enable Metrics/ParameterLists, Layout/LineLength
     args = kwargs.merge(
       context: {
@@ -17,6 +17,7 @@ module GraphQLHelper
         current_organization:,
         customer_portal_user:,
         request:,
+        permissions:,
       },
     )
 
