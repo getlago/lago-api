@@ -1,0 +1,12 @@
+organizations:
+  show:
+    settings: true
+  info:
+    update: true
+  invoice:
+    update: true
+    delete: false
+  taxes:
+    update: true
+  emails:
+    update: true

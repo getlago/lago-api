@@ -27,6 +27,8 @@ RSpec.describe Resolvers::OrganizationResolver, type: :graphql do
 
     data = result['data']['organization']
 
+    pp data
+
     aggregate_failures do
       expect(data['id']).to eq(organization.id)
       expect(data['name']).to eq(organization.name)

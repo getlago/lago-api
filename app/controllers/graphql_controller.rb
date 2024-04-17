@@ -26,6 +26,7 @@ class GraphqlController < ApplicationController
       current_organization:,
       customer_portal_user:,
       request:,
+      permissions: current_user.memberships.find_by(organization: current_organization).permissions_hash,
     }
     result = LagoApiSchema.execute(query, variables:, context:, operation_name:)
     render(json: result)

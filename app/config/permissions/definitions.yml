@@ -1,0 +1,25 @@
+addons:
+  show:
+  create:
+  update:
+  delete:
+
+organizations:
+  show:
+    settings:
+  info:
+    update:
+  invoice:
+    update:
+  taxes:
+    update:
+  emails:
+    update:
+  integrations:
+    create:
+    update:
+    delete:
+  members:
+    create:
+    update:
+    delete:
