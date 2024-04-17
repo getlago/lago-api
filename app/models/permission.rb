@@ -2,7 +2,8 @@
 
 class Permission
   def self.yaml_to_hash(filename)
-    YAML.parse_file(Rails.root.join('app/config/permissions', filename)).to_ruby.to_dotted_hash(separator: ':')
+    h = YAML.parse_file(Rails.root.join('app/config/permissions', filename)).to_ruby
+    DottedHash.new(h, separator: ':')
   end
 
   # rubocop:disable Layout/ClassStructure

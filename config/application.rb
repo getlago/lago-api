@@ -34,5 +34,3 @@ module LagoApi
     end
   end
 end
-
-require_relative '../app/support/hash'
