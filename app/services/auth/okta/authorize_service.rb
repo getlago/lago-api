@@ -48,6 +48,7 @@ module Auth
         redis_client = ::Redis.new(url: ENV['REDIS_URL'])
 
         redis_client.set(state, email)
+        redis_client.expire(state, 90)
       end
 
       def state
