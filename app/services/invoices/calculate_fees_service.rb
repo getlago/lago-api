@@ -90,7 +90,14 @@ module Invoices
       fee_result.raise_if_error!
     end
 
+    def charge_boundaries_valid?(boundaries)
+      # TODO: Investigate why invalid boundaries are even possible
+      boundaries[:charges_from_datetime] < boundaries[:charges_to_datetime]
+    end
+
     def create_charges_fees(subscription, boundaries)
+      return unless charge_boundaries_valid?(boundaries)
+
       subscription
         .plan
         .charges
