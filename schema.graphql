@@ -3666,6 +3666,7 @@ type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
   organization: Organization!
+  permissions: Permissions!
   revokedAt: ISO8601DateTime!
   role: String
   status: MembershipStatus!
@@ -4527,7 +4528,7 @@ type Organization {
   legalName: String
   legalNumber: String
   logoUrl: String
-  name: String!
+  name: String
   netPaymentTerm: Int!
   premiumIntegrations: [IntegrationTypeEnum!]!
   state: String
@@ -4575,6 +4576,27 @@ union PaymentProvider = AdyenProvider | GocardlessProvider | StripeProvider
 type PaymentProviderCollection {
   collection: [PaymentProvider!]!
   metadata: CollectionMetadata!
+}
+
+"""
+Permissions Type
+"""
+type Permissions {
+  addons:create: Boolean!
+  addons:delete: Boolean!
+  addons:show: Boolean!
+  addons:update: Boolean!
+  organizations:emails:update: Boolean!
+  organizations:info:update: Boolean!
+  organizations:integrations:create: Boolean!
+  organizations:integrations:delete: Boolean!
+  organizations:integrations:update: Boolean!
+  organizations:invoice:update: Boolean!
+  organizations:members:create: Boolean!
+  organizations:members:delete: Boolean!
+  organizations:members:update: Boolean!
+  organizations:show:settings: Boolean!
+  organizations:taxes:update: Boolean!
 }
 
 type Plan {
@@ -5302,7 +5324,7 @@ Safe Organization Type
 type SafeOrganization {
   id: ID!
   logoUrl: String
-  name: String!
+  name: String
   timezone: TimezoneEnum
 }
 
