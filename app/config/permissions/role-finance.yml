@@ -1,0 +1,12 @@
+addons:
+  show: true
+  update: true
+
+organizations:
+  show:
+    settings: true
+  invoice:
+    update: true
+    delete: true
+  taxes:
+    update: true

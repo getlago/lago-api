@@ -5,6 +5,7 @@ module Types
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :id, ID, null: false
     field :organization, Types::OrganizationType, null: false
+    field :permissions, Types::PermissionsType, null: false
     field :revoked_at, GraphQL::Types::ISO8601DateTime, null: false
     field :role, String, null: true
     field :status, Types::Memberships::StatusEnum, null: false

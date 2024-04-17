@@ -8,5 +8,17 @@ module Mutations
     field_class Types::BaseField
     input_object_class Types::BaseInputObject
     object_class Types::BaseObject
+
+    def self.permission(permission)
+      @permission = permission
+    end
+
+    def ready?(**args)
+      if @permission
+        context[:permissions][@permission]
+      else
+        super
+      end
+    end
   end
 end

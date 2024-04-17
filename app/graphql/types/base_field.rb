@@ -4,24 +4,20 @@ module Types
   class BaseField < GraphQL::Schema::Field
     argument_class Types::BaseArgument
 
-    attr_reader :permission
+    attr_reader :permissions
 
-    def initialize(*args, permission: nil, **kwargs, &block)
-      @permission = permission.to_s if permission
-
-      if @permission
-        kwargs[:null] = true
+    def initialize(*args, permission: nil, permissions: nil, **kwargs, &block)
+      if permission
+        @permissions = [permission.to_s]
+      elsif permissions
+        @permissions = Array.wrap(permissions).map(&:to_s)
       end
+
+      kwargs[:null] = true if @permissions
 
       super(*args, **kwargs, &block)
 
-      extension(Extensions::FieldAuthorizationExtension) if @permission
+      extension(Extensions::FieldAuthorizationExtension) if @permissions
     end
-
-    # def authorized?(object, args, context)
-    #   return false if permission
-    #
-    #   super
-    # end
   end
 end

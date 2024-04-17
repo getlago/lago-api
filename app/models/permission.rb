@@ -1,40 +1,17 @@
 # frozen_string_literal: true
 
-class Hash
-  def to_dotted_hash(recursive_key: '', separator: '.')
-    each_with_object({}) do |(k, v), ret|
-      key = recursive_key + k.to_s
-      if v.is_a? Hash
-        ret.merge!(v.to_dotted_hash(recursive_key: key + separator, separator:))
-      else
-        ret[key] = v
-      end
-    end
-  end
-end
-
-class Permission < ApplicationRecord
-  belongs_to :membership
-
-  def self.all_permissions
-    DEFAULT_PERMISSIONS_HASH.merge(YAML.parse_file(Rails.root.join('app/config/permissions/template-analyst.yml'))
-      .to_ruby
-      .to_dotted_hash(separator: ':')
-      .keys.each_with_object({}) do |v, memo|
-        memo[v] = true
-        memo
-      end)
+class Permission
+  def self.yaml_to_hash(filename)
+    YAML.parse_file(Rails.root.join('app/config/permissions', filename)).to_ruby.to_dotted_hash(separator: ':')
   end
 
   # rubocop:disable Layout/ClassStructure
-  ADMIN_PERMISSIONS_HASH = all_permissions.each_with_object({}) do |v, memo|
-    memo[v] = true
-    memo
-  end.freeze
+  DEFAULT_PERMISSIONS_HASH = yaml_to_hash('definition.yml').freeze
 
-  DEFAULT_PERMISSIONS_HASH = all_permissions.each_with_object({}) do |v, memo|
-    memo[v] = false
-    memo
-  end.freeze
+  ADMIN_PERMISSIONS_HASH = DEFAULT_PERMISSIONS_HASH.transform_values { true }.freeze
+
+  MANAGER_PERMISSIONS_HASH = yaml_to_hash('role-manager.yml').freeze
+
+  FINANCE_PERMISSIONS_HASH = yaml_to_hash('role-finance.yml').freeze
   # rubocop:enable Layout/ClassStructure
 end

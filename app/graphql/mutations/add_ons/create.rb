@@ -13,6 +13,8 @@ module Mutations
 
       type Types::AddOns::Object
 
+      permission 'addons:create'
+
       def resolve(**args)
         result = ::AddOns::CreateService
           .new(context[:current_user])
