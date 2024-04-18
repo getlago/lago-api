@@ -81,7 +81,7 @@ gem 'karafka'
 gem 'valvat', require: false
 
 # Feature flags
-gem 'flipper'
+gem 'flipper', '1.3.0'
 gem 'flipper-redis'
 
 group :development, :test, :staging do
