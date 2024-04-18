@@ -1,25 +1,84 @@
-addons:
-  show:
+---
+analytics:
+  view:
+billable_metrics:
+  view:
   create:
   update:
   delete:
-
-organizations:
-  show:
-    settings:
-  info:
-    update:
-  invoice:
-    update:
+plans:
+  view: true
+  create:
+  update:
+  delete:
+addons:
+  view: true
+  create:
+  update:
+  delete:
+coupons:
+  view: true
+  create:
+  update:
+  delete:
+  attach:
+  detach:
+customers:
+  view: true
+  create:
+  update:
+  delete:
+subscriptions:
+  create:
+  create_override ?? or create:
+  update:
+  delete:
+wallets:
+  create:
+  update:
+  topup:
+invoices:
+  view: true
+  send: true
+  update: true
+  void: true
+  create:
+draft_invoices:
+  update: true
+credit_notes:
+  view: true
+  create: true
+  void: true
+customer_settings:
+  view: true
+  edit:
+    tax_rates: true
+    payment_terms: true
+    grace_period: true
+    lang: true
+developers:
+  view:
+  keys:
+    view:
+organization:
+  view:
+  edit:
+  invoices:
+    view:
+    edit:
   taxes:
-    update:
+    view:
+    edit:
   emails:
-    update:
+    view:
+    edit:
   integrations:
+    view:
     create:
     update:
-    delete: true
+    delete:
   members:
+    view:
     create:
     update:
     delete:
