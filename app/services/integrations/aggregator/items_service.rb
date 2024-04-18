@@ -15,7 +15,7 @@ module Integrations
         @items = []
 
         ActiveRecord::Base.transaction do
-          MAX_SUBSEQUENT_REQUESTS.times do |i|
+          MAX_SUBSEQUENT_REQUESTS.times do |_i|
             response = http_client.get(headers:, params:)
 
             handle_items(response['records'])

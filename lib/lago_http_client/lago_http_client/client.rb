@@ -27,9 +27,9 @@ module LagoHttpClient
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-      JSON.parse(response.body&.presence || '{}')
+      JSON.parse(response.body.presence || '{}')
     rescue JSON::ParserError
-      response.body&.presence || '{}'
+      response.body.presence || '{}'
     end
 
     def post_with_response(body, headers)
@@ -82,7 +82,7 @@ module LagoHttpClient
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-      JSON.parse(response.body&.presence || '{}')
+      JSON.parse(response.body.presence || '{}')
     end
 
     private
