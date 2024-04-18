@@ -70,8 +70,13 @@ module LagoHttpClient
       response
     end
 
-    def get
-      req = Net::HTTP::Get.new(uri.path)
+    def get(headers: {}, params: nil)
+      path = params ? "#{uri.path}?#{URI.encode_www_form(params)}" : uri.path
+      req = Net::HTTP::Get.new(path)
+
+      headers.keys.each do |key|
+        req[key] = headers[key]
+      end
 
       response = http_client.request(req)
 

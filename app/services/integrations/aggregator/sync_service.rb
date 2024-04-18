@@ -22,14 +22,6 @@ module Integrations
       private
 
       # NOTE: Extend it with other providers if needed
-      def provider
-        case integration.type
-        when 'Integrations::NetsuiteIntegration'
-          'netsuite'
-        end
-      end
-
-      # NOTE: Extend it with other providers if needed
       def sync_items
         case integration.type
         when 'Integrations::NetsuiteIntegration'
@@ -38,6 +30,7 @@ module Integrations
             netsuite-items-sync
             netsuite-subsidiaries-sync
             netsuite-contacts-sync
+            netsuite-tax-items-sync
           ]
         end
       end
