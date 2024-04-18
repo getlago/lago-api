@@ -4,6 +4,7 @@ class FeatureFlag
   FEATURES = {
     feature1: {
       description: 'Feature 1 description',
+      owner: 'Julien Bourdeau',
     },
   }.with_indifferent_access.freeze
 
