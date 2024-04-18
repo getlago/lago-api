@@ -49,7 +49,7 @@
                 - fees.select { |f| f.units.positive? }.each do |fee|
                   tr
                     td style="padding-left: 16px;"
-                      .body-1 = fee.group_name
+                      .body-1 = fee.filter_display_name(separator: ' • ')
                       - if fee.billable_metric.weighted_sum_agg?
                         .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
                       - if fee.charge.percentage?
@@ -111,7 +111,7 @@
                 - fees.select { |f| f.units.positive? }.each do |fee|
                   tr
                     td style="padding-left: 16px;"
-                      .body-1 = fee.group_name
+                      .body-1 = fee.filter_display_name(separator: ' • ')
                       - if fee.billable_metric.weighted_sum_agg?
                         .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(subscription.plan.interval))
                       - if fee.charge.percentage?
@@ -210,7 +210,7 @@
           - if fees.all? { |f| f.group_id? }
             - fees.select { |f| f.units.positive? }.each do |fee|
               .body-3 = fees.first.invoice_name
-              .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_group_name: fee.group_name)
+              .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_filter_display_name: fee.filter_display_name(separator: ' • '))
               .breakdown-details.mb-24
                 table.breakdown-details-table width="100%"
                   - recurring_breakdown(fee).each do |breakdown|

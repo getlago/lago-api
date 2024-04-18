@@ -33,22 +33,22 @@
               - fee = fees.first
               - next unless fee.charge.pay_in_advance?
 
-              / Fees for groups
-              - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
+              / Fees for filters
+              - if fees.all? { |f| f.charge_filter_id? } && fees.sum(&:units) > 0
                 - fees.select { |f| f.units.positive? }.each do |fee|
                   - if fee.amount_details.blank?
                     == SlimHelper.render('templates/invoices/v4/_default_fee', fee)
                   - else
-                    == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
+                    == SlimHelper.render('templates/invoices/v4/_fee_with_filters', fee)
 
                 / True up fees attached to the fee
                 - if fee.true_up_fee.present?
                   == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
-              / Fees without group
+              / Fees without filters
               - else
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
-                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_filters', fee)
 
     / Charge fees section for subscription invoice
     - if subscription? && subscription_fees(subscription.id).charge_kind.any?
@@ -69,22 +69,22 @@
               - fee = fees.first
               - next if fee.charge.pay_in_advance?
 
-              / Fees for groups
-              - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
+              / Fees for filters
+              - if fees.all? { |f| f.charge_filter_id? } && fees.sum(&:units) > 0
                 - fees.select { |f| f.units.positive? }.each do |fee|
                   - if fee.amount_details.blank?
-                    == SlimHelper.render('templates/invoices/v4/_default_fee_with_groups', fee)
+                    == SlimHelper.render('templates/invoices/v4/_default_fee_with_filters', fee)
                   - else
-                    == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
+                    == SlimHelper.render('templates/invoices/v4/_fee_with_filters', fee)
 
                 / True up fees attached to the fee
                 - fees.select { |f| f.true_up_fee.present? }.each do |fee|
                   == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
-              / Fees without group
+              / Fees without filters
               - else
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
-                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_filters', fee)
 
       - if commitment_fee
         table.invoice-resume-table width="100%"
@@ -112,22 +112,22 @@
               - fee = fees.first
               - next unless fee.charge.pay_in_advance?
 
-              / Fees for groups
-              - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
+              / Fees for filters
+              - if fees.all? { |f| f.charge_filter_id? } && fees.sum(&:units) > 0
                 - fees.select { |f| f.units.positive? }.each do |fee|
                   - if fee.amount_details.blank?
                     == SlimHelper.render('templates/invoices/v4/_default_fee', fee)
                   - else
-                    == SlimHelper.render('templates/invoices/v4/_fee_with_groups', fee)
+                    == SlimHelper.render('templates/invoices/v4/_fee_with_filters', fee)
 
                 / True up fees attached to the fee
                 - if fee.true_up_fee.present?
                   == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
 
-              / Fees without group
+              / Fees without filters
               - else
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
-                  == SlimHelper.render('templates/invoices/v4/_fees_without_groups', fee)
+                  == SlimHelper.render('templates/invoices/v4/_fees_without_filters', fee)
 
     / Total section
     .invoice-resume.overflow-auto
@@ -191,11 +191,11 @@
 
           - number_of_days_in_period = 0
 
-          / Fees for groups
-          - if fees.all? { |f| f.group_id? }
+          / Fees for filters
+          - if fees.all? { |f| f.charge_filter_id? }
             - fees.select { |f| f.units.positive? }.each do |fee|
               .body-3 = fees.first.invoice_name
-              .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_group_name: fee.group_name)
+              .body-1.mb-24 = I18n.t('invoice.breakdown_of', fee_filter_display_name: fee.filter_display_name(separator: ' • '))
               .breakdown-details.mb-24
                 table.breakdown-details-table width="100%"
                   - recurring_breakdown(fee).each do |breakdown|

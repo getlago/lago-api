@@ -45,7 +45,6 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               itemType
               itemCode
               itemName
-              group { id key value }
               charge { id billableMetric { code } }
               taxesRate
               taxesAmountCents
@@ -53,6 +52,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               trueUpParentFee { id }
               units
               preciseUnitAmount
+              chargeFilter { invoiceDisplayName values }
               appliedTaxes {
                 taxCode
                 taxName
@@ -74,8 +74,11 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
             creditableAmountCents
             charge {
               id
-              billableMetric { code group flatGroups { id key } }
-              groupProperties { groupId }
+              billableMetric {
+                code
+                filters { key values }
+              }
+              filters { invoiceDisplayName values }
             }
           }
         }
@@ -118,10 +121,12 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     end
   end
 
-  it 'includes group for each fee' do
-    group1 = create(:group, key: 'cloud', value: 'aws')
-    group2 = create(:group, key: 'region', value: 'usa', parent_group_id: group1.id)
-    fee.update!(group_id: group2.id)
+  it 'includes filters for each fee' do
+    billable_metric_filter = create(:billable_metric_filter, key: 'cloud', values: %w[aws gcp])
+    charge_filter = create(:charge_filter, invoice_display_name: nil)
+    charge_filter_value = create(:charge_filter_value, billable_metric_filter:, charge_filter:, values: ['aws'])
+
+    fee.update!(charge_filter_id: charge_filter.id)
 
     result = execute_graphql(
       current_user: membership.user,
@@ -130,11 +135,8 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       variables: { id: invoice.id },
     )
 
-    group = result['data']['invoice']['invoiceSubscriptions'][0]['fees'][0]['group']
-
-    expect(group['id']).to eq(group2.id)
-    expect(group['key']).to eq('aws')
-    expect(group['value']).to eq('usa')
+    fee = result['data']['invoice']['invoiceSubscriptions'][0]['fees'][0]
+    expect(fee['chargeFilter']['values'][billable_metric_filter.key]).to eq(charge_filter_value.values)
   end
 
   context 'when invoice is not found' do

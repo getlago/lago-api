@@ -6,10 +6,13 @@ module Api
       def create
         service = ::Plans::CreateService.new
         result = service.create(
-          **input_params
-            .merge(organization_id: current_organization.id)
-            .to_h
-            .deep_symbolize_keys,
+          PlanLegacyInput.new(
+            current_organization,
+            input_params
+              .merge(organization_id: current_organization.id)
+              .to_h
+              .deep_symbolize_keys,
+          ).create_input,
         )
 
         if result.success?
@@ -21,7 +24,13 @@ module Api
 
       def update
         plan = current_organization.plans.parents.find_by(code: params[:code])
-        result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
+        result = ::Plans::UpdateService.call(
+          plan:,
+          params: PlanLegacyInput.new(
+            current_organization,
+            input_params.to_h.deep_symbolize_keys,
+          ).update_input,
+        )
 
         if result.success?
           render_plan(result.plan)

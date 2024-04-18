@@ -10,7 +10,7 @@ es:
     bill_to: Factura destinada a
     breakdown: Desglose
     breakdown_for_days: Utilizados %{breakdown_duration} de %{breakdown_total_duration} días
-    breakdown_of: Desglose de %{fee_group_name}
+    breakdown_of: Desglose de %{fee_filter_display_name}
     credit_notes: Notas de crédito
     date_from: Tarifas desde
     date_to: hasta

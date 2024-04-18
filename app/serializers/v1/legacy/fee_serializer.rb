@@ -10,7 +10,7 @@ module V1
           unit_amount_cents: model.unit_amount_cents,
           lago_group_id: model.group_id,
           item: {
-            group_invoice_display_name: model.group_name,
+            group_invoice_display_name: model.charge_filter&.display_name,
           },
         }
       end

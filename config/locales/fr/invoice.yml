@@ -10,7 +10,7 @@ fr:
     bill_to: Facturé à
     breakdown: Détails de consommation
     breakdown_for_days: "%{breakdown_duration} sur %{breakdown_total_duration} jours"
-    breakdown_of: Détails de consommation de %{fee_group_name}
+    breakdown_of: Détails de consommation de %{fee_filter_display_name}
     coupons: Réduction(s)
     credit_notes: Avoir(s)
     date_from: Du
