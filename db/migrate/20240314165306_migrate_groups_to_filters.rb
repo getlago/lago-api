@@ -44,6 +44,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         key: group.key,
       )
 
+      filter.deleted_at = group.deleted_at
       filter.values ||= []
       filter.values << group.value
       filter.values.uniq!
@@ -59,6 +60,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         filter = charge.filters.create!(
           invoice_display_name: property.invoice_display_name,
           properties: property.values,
+          deleted_at: property.deleted_at,
         )
 
         group = property.group
@@ -84,7 +86,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         next if group.children.any?
 
         # Create charge filter
-        filter = charge.filters.create!(properties: charge.properties)
+        filter = charge.filters.create!(properties: charge.properties, deleted_at: group.deleted_at)
 
         # Create filter values
         bm_filter = BillableMetricFilter.find_by(billable_metric_id: group.billable_metric_id, key: group.key)
