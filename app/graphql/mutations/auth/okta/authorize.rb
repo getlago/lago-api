@@ -11,7 +11,7 @@ module Mutations
         type Types::Auth::Okta::Authorize
 
         def resolve(email:)
-          result = ::Auth::Okta::AuthorizeService.new(email:).call
+          result = ::Auth::Okta::AuthorizeService.call(email:)
           result.success? ? result : result_error(result)
         end
       end
