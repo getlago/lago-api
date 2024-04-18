@@ -94,11 +94,7 @@ module Auth
       end
 
       def find_or_create_membership
-        membership = user.memberships.find_or_initialize_by(organization_id: result.okta_integration.organization_id)
-
-        membership.save! if membership.new_record?
-
-        result.membership = membership
+        user.memberships.find_or_create_by(organization_id: result.okta_integration.organization_id)
       end
     end
   end
