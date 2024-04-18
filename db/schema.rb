@@ -703,28 +703,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_25_082113) do
     t.index ["tax_id"], name: "index_invoices_taxes_on_tax_id"
   end
 
-  create_table "jackson_index", id: :serial, force: :cascade do |t|
-    t.string "key", limit: 1500, null: false
-    t.string "storeKey", limit: 1500, null: false
-    t.index ["key", "storeKey"], name: "_jackson_index_key_store"
-    t.index ["key"], name: "_jackson_index_key"
-  end
-
-  create_table "jackson_store", primary_key: "key", id: { type: :string, limit: 1500 }, force: :cascade do |t|
-    t.text "value", null: false
-    t.string "iv", limit: 64
-    t.string "tag", limit: 64
-    t.datetime "createdAt", precision: nil, default: -> { "now()" }, null: false
-    t.datetime "modifiedAt", precision: nil
-    t.string "namespace", limit: 64
-    t.index ["namespace"], name: "_jackson_store_namespace"
-  end
-
-  create_table "jackson_ttl", primary_key: "key", id: { type: :string, limit: 1500 }, force: :cascade do |t|
-    t.bigint "expiresAt", null: false
-    t.index ["expiresAt"], name: "_jackson_ttl_expires_at"
-  end
-
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "user_id", null: false
@@ -763,9 +741,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_25_082113) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
-    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
+    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.string "premium_integrations", default: [], null: false, array: true
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
@@ -1101,7 +1079,6 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_25_082113) do
   add_foreign_key "invoices", "organizations"
   add_foreign_key "invoices_taxes", "invoices"
   add_foreign_key "invoices_taxes", "taxes"
-  add_foreign_key "jackson_index", "jackson_store", column: "storeKey", primary_key: "key", name: "FK_937b040fb2592b4671cbde09e83", on_delete: :cascade
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "password_resets", "users"
