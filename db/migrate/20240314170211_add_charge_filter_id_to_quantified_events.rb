@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
+  disable_ddl_transaction!
+
   class BillableMetricFilter < ApplicationRecord
   end
 

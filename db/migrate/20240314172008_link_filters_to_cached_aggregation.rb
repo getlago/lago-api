@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
+  disable_ddl_transaction!
+
   class BillableMetricFilter < ApplicationRecord
   end
 
@@ -46,16 +48,20 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
 
   def up
     # NOTE: Associate cached aggregations with charge filters
+    puts 'Migrate cached aggregations' # rubocop:disable Rails/Output
+
     CachedAggregation.where.associated(:group).where(charge_filter_id: nil).find_each do |agg|
       link_charge_filter(agg)
     end
 
     # NOTE: Associate fees with charge filters
+    puts 'Migrate fees' # rubocop:disable Rails/Output
     Fee.where.associated(:group).where(charge_filter_id: nil).find_each do |fee|
       link_charge_filter(fee)
     end
 
     # NOTE: Associate adjusted fees with charge filters
+    puts 'Migrate adjusted fees' # rubocop:disable Rails/Output
     AdjustedFee.where.associated(:group).where(charge_filter_id: nil).find_each do |fee|
       link_charge_filter(fee)
     end
