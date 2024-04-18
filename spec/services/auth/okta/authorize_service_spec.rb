@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Auth::Okta::AuthorizeService do
+RSpec.describe Auth::Okta::AuthorizeService, type: :with_redis do
   subject(:service) { described_class.new(email:) }
 
   let(:organization) { create(:organization) }

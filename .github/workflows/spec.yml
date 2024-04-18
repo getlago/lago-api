@@ -18,14 +18,9 @@ jobs:
           POSTGRES_DB: lago
           POSTGRES_USER: lago
           POSTGRES_PASSWORD: lago
-      redis:
-        image: redis:6-alpine
-        ports:
-          - "6379:6379"
     env:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
-      REDIS_URL: 'redis://localhost:6379'
       RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
       LAGO_API_URL: https://api.lago.dev

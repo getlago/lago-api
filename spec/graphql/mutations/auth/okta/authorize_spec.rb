@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Auth::Okta::Authorize, type: :graphql do
+RSpec.describe Mutations::Auth::Okta::Authorize, type: %i[graphql with_redis] do
   let(:user) { create(:user) }
   let(:okta_integration) { create(:okta_integration) }
 
