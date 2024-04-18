@@ -6,8 +6,7 @@ module Charges
       protected
 
       def compute_amount
-        # TODO(custom_agg): Implement custom aggregation logic
-        0
+        aggregation_result.custom_aggregation&.[](:amount) || 0
       end
 
       def unit_amount

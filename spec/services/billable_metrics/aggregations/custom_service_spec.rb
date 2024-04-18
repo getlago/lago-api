@@ -17,28 +17,137 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { group:, grouped_by: } }
+  let(:filters) { { grouped_by:, matching_filters:, ignored_filters: } }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
 
-  let(:group) { nil }
   let(:grouped_by) { nil }
+  let(:matching_filters) { nil }
+  let(:ignored_filters) { nil }
 
   let(:billable_metric) do
-    create(:custom_billable_metric, organization:)
+    create(:custom_billable_metric, organization:, custom_aggregator:)
+  end
+  let(:custom_aggregator) do
+    <<~RUBY
+      def aggregate(event, previous_state, aggregation_properties)
+        previous_units = previous_state[:total_units]
+        event_units = BigDecimal(event.properties['value'].to_s)
+        storage_zone = event.properties['storage_zone']
+        total_units = previous_units + event_units
+        ranges = aggregation_properties['ranges']
+
+        result_amount = ranges.each_with_object(0) do |range, amount|
+          # Range was already reached
+          next amount if range['to'] && previous_units > range['to']
+
+          zone_amount = BigDecimal(range[storage_zone] || '0')
+
+          if !range['to'] || total_units <= range['to']
+            # Last matching range is reached
+            units_to_use = if previous_units > range['from']
+              # All new units are in the current range
+              event_units
+            else
+              # Takes only the new units in the current range
+              total_units - range['from']
+            end
+            break amount += zone_amount * units_to_use
+
+          else
+            # Range is not the last one
+            units_to_use = if previous_units > range['from']
+              # All remaining units in the range
+              range['to'] - previous_units
+            else
+              # All units in the range
+              range['to'] - range['from']
+            end
+
+            amount += zone_amount * units_to_use
+          end
+
+          amount
+        end
+        { total_units: total_units, amount: result_amount }
+      end
+    RUBY
   end
 
-  let(:charge) { create(:standard_charge, billable_metric:) }
+  let(:charge) { create(:standard_charge, billable_metric:, properties: charge_properties) }
+  let(:charge_properties) do
+    {
+      amount: '10',
+      custom_properties: {
+        ranges: [
+          { from: 0, to: 10, storage_eu: '0', storage_us: '0', storage_asia: '0' },
+          { from: 10, to: 20, storage_eu: '0.10', storage_us: '0.20', storage_asia: '0.30' },
+          { from: 20, to: nil, storage_eu: '0.20', storage_us: '0.30', storage_asia: '0.40' },
+        ],
+      },
+    }
+  end
 
   let(:from_datetime) { (Time.current - 1.month).beginning_of_day }
   let(:to_datetime) { Time.current.end_of_day }
 
+  let(:event_list) do
+    [
+      create(
+        :event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        subscription:,
+        customer:,
+        timestamp: Time.zone.now - 4.days,
+        properties: { value: 1, storage_zone: 'storage_eu' },
+      ),
+      create(
+        :event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        subscription:,
+        customer:,
+        timestamp: Time.zone.now - 3.days,
+        properties: { value: 10, storage_zone: 'storage_asia' },
+      ),
+      create(
+        :event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        subscription:,
+        customer:,
+        timestamp: Time.zone.now - 2.days,
+        properties: { value: 35, storage_zone: 'storage_us' },
+      ),
+    ]
+  end
+
+  before do
+    event_list
+  end
+
   it 'aggregates the events' do
     result = custom_service.aggregate
 
-    expect(result.aggregation).to eq(0)
-    expect(result.count).to eq(0)
+    expect(result.aggregation).to eq(46)
+    expect(result.count).to eq(3)
+    expect(result.options).to eq({})
+    expect(result.custom_aggregation).to eq({ total_units: 46, amount: 8.1 })
+  end
+
+  context 'when there are no events' do
+    let(:event_list) { [] }
+
+    it 'returns an empty state' do
+      result = custom_service.aggregate
+
+      expect(result.aggregation).to eq(0)
+      expect(result.count).to eq(0)
+      expect(result.options).to eq({})
+      expect(result.custom_aggregation).to eq({ total_units: 0, amount: 0 })
+    end
   end
 end
