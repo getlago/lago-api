@@ -19,8 +19,6 @@ module Mutations
           .where(id:)
           .where(integration: { organization: current_organization }).first
 
-        return not_found_error(resource: 'integration_collection_mapping') unless integration_collection_mapping
-
         result = ::IntegrationCollectionMappings::DestroyService.call(integration_collection_mapping:)
 
         result.success? ? result.integration_collection_mapping : result_error(result)

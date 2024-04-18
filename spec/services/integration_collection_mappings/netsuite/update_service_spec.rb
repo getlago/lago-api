@@ -22,7 +22,7 @@ RSpec.describe IntegrationCollectionMappings::Netsuite::UpdateService, type: :se
     end
 
     context 'without validation errors' do
-      it 'updates an integration mapping' do
+      it 'updates an integration collection mapping' do
         service_call
 
         integration_collection_mapping =
@@ -33,6 +33,12 @@ RSpec.describe IntegrationCollectionMappings::Netsuite::UpdateService, type: :se
           expect(integration_collection_mapping.netsuite_name).to eq('Name1')
           expect(integration_collection_mapping.netsuite_account_code).to eq('code-2')
         end
+      end
+
+      it 'returns an integration collection mapping in result object' do
+        result = service_call
+
+        expect(result.integration_collection_mapping).to be_a(IntegrationCollectionMappings::NetsuiteCollectionMapping)
       end
     end
 

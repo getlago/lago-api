@@ -73,6 +73,12 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
             expect(integration.script_endpoint_url).to eq(script_endpoint_url)
           end
 
+          it 'returns an integration in result object' do
+            result = service_call
+
+            expect(result.integration).to be_a(Integrations::NetsuiteIntegration)
+          end
+
           it 'calls Integrations::Aggregator::SendRestletEndpointJob' do
             service_call
 
