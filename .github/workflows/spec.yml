@@ -47,10 +47,8 @@ jobs:
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
       - name: Set up Postgres database schema
-        run: bin/rails db:schema:load:primary
+        run: bin/rails db:migrate:primary
       - name: Set up Clickhouse database schema
         run: bin/rails db:migrate:clickhouse
-      - name: Set up Clickhouse database schema
-        run: bin/rails db:schema:dump:clickhouse
       - name: Run tests
         run: bundle exec rspec
