@@ -13,7 +13,7 @@ module Mutations
 
     def ready?(**args)
       if defined? self.class::REQUIRED_PERMISSION
-        context[:permissions][self.class::REQUIRED_PERMISSION]
+        context.dig(:permissions, self.class::REQUIRED_PERMISSION)
       else
         super
       end

@@ -88,6 +88,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
             amountCurrency: 'EUR',
           },
         },
+        permissions: Permission::ADMIN_PERMISSIONS_HASH,
       )
 
       expect_forbidden_error(result)
