@@ -78,6 +78,12 @@ module LagoHttpClient
         req[key] = headers[key]
       end
 
+      headers.each do |header|
+        key = header.keys.first
+        value = header[key]
+        req[key] = value
+      end
+
       response = http_client.request(req)
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)

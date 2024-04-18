@@ -11,23 +11,23 @@ module Auth
       end
 
       def call
-        result = check_state
+        check_state
 
         return result unless result.success?
 
-        result = check_okta_integration(result.email)
+        check_okta_integration
 
         return result unless result.success?
 
-        params = {
-          client_id: result.okta_integration.client_id,
-          client_secret: result.okta_integration.client_secret,
-          grant_type: 'authorization_code',
-          code:,
-          redirect_uri: "#{ENV['LAGO_FRONT_URL']}/auth/okta/callback",
-        }
+        query_okta_access_token
+        check_userinfo
 
-        # TODO: call the Okta API to exchange the code for a token
+        return result unless result.success?
+
+        find_or_create_user
+        find_or_create_membership
+
+        UsersService.new.new_token(result.user)
       end
 
       private
@@ -45,19 +45,60 @@ module Auth
         redis_client.del(state)
 
         result.email = email
-        result
       end
 
-      def check_integration(email)
+      def check_integration
         okta_integration = ::Integrations::OktaIntegration
           .where('settings->>\'domain\' IS NOT NULL')
-          .where('settings->>\'domain\' = ?', email.split('@').last)
+          .where('settings->>\'domain\' = ?', result.email.split('@').last)
           .first
 
         return result.single_validation_failure!(error_code: 'domain_not_configured') if okta_integration.blank?
 
         result.okta_integration = okta_integration
-        result
+      end
+
+      def query_okta_access_token
+        params = {
+          client_id: result.okta_integration.client_id,
+          client_secret: result.okta_integration.client_secret,
+          grant_type: 'authorization_code',
+          code:,
+          redirect_uri: "#{ENV['LAGO_FRONT_URL']}/auth/okta/callback",
+        }
+
+        token_client = LagoHttpClient.new("https://#{result.okta_integration.organization_name.downcase}.okta.com/oauth2/default/v1/token")
+        response = token_client.post(params, {})
+        result.okta_access_token = response['access_token']
+      end
+
+      def check_userinfo
+        userinfo_client = LagoHttpClient.new("https://#{result.okta_integration.organization_name.downcase}.okta.com/oauth2/default/v1/userinfo")
+        userinfo_headers = { 'Authorization' => "Bearer #{okta_access_token}" }
+        response = userinfo_client.get(userinfo_headers)
+
+        return result.single_validation_failure!(error_code: 'okta_userinfo_error') if response['email'] != result.email
+
+        result.userinfo = response
+      end
+
+      def find_or_create_user
+        user = User.find_or_initialize_by(email: result.email)
+
+        if user.new_record?
+          user.password = SecureRandom.hex(16)
+          user.save!
+        end
+
+        result.user = user
+      end
+
+      def find_or_create_membership
+        membership = user.memberships.find_or_initialize_by(organization_id: result.okta_integration.organization_id)
+
+        membership.save! if membership.new_record?
+
+        result.membership = membership
       end
     end
   end
