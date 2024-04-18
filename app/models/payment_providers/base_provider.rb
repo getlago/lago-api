@@ -21,20 +21,6 @@ module PaymentProviders
     validates :code, uniqueness: { scope: :organization_id }
     validates :name, presence: true
 
-    def webhook_secret=(value)
-      push_to_settings(key: 'webhook_secret', value:)
-    end
-
-    def webhook_secret
-      get_from_settings('webhook_secret')
-    end
-
-    def success_redirect_url=(value)
-      push_to_settings(key: 'success_redirect_url', value:)
-    end
-
-    def success_redirect_url
-      get_from_settings('success_redirect_url')
-    end
+    settings_accessors :webhook_secret, :success_redirect_url
   end
 end

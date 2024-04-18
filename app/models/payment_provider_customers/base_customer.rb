@@ -3,6 +3,7 @@
 module PaymentProviderCustomers
   class BaseCustomer < ApplicationRecord
     include PaperTrailTraceable
+    include SettingsStorable
 
     self.table_name = 'payment_provider_customers'
 
@@ -14,33 +15,10 @@ module PaymentProviderCustomers
 
     validates :customer_id, uniqueness: { scope: :type }
 
-    def push_to_settings(key:, value:)
-      self.settings ||= {}
-      settings[key] = value
-    end
-
-    def get_from_settings(key)
-      (settings || {})[key]
-    end
-
-    def provider_mandate_id
-      get_from_settings('provider_mandate_id')
-    end
-
-    def provider_mandate_id=(provider_mandate_id)
-      push_to_settings(key: 'provider_mandate_id', value: provider_mandate_id)
-    end
+    settings_accessors :provider_mandate_id, :sync_with_provider
 
     def provider_payment_methods
       nil
-    end
-
-    def sync_with_provider
-      get_from_settings('sync_with_provider')
-    end
-
-    def sync_with_provider=(sync_with_provider)
-      push_to_settings(key: 'sync_with_provider', value: sync_with_provider)
     end
   end
 end
