@@ -153,6 +153,41 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     end
   end
 
+  context 'with permission-protected fields' do
+    let(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        query: mutation,
+        permissions: permissions,
+        variables: {
+          input: {
+            webhookUrl: 'https://app.test.dev',
+          },
+        },
+      )
+    end
+    context 'with permission' do
+      let(:permissions) { ['developers:view'] }
+
+      it 'updates the organization' do
+        result_data = result['data']['updateOrganization']
+
+        expect(result_data['webhookUrl']).to eq('https://app.test.dev')
+      end
+    end
+
+    context 'without permission' do
+      let(:permissions) { [''] }
+
+      it 'updates the organization' do
+        result_data = result['data']['updateOrganization']
+
+        expect(result_data['webhookUrl']).not_to eq('https://app.test.dev')
+      end
+    end
+  end
+
   context 'without current user' do
     it 'returns an error' do
       result = execute_graphql(
@@ -160,7 +195,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            webhookUrl: 'http://foo.bar',
+            legalName: 'Foobar',
           },
         },
       )
@@ -176,7 +211,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            webhookUrl: 'http://foo.bar',
+            legalName: 'Foobar',
           },
         },
       )

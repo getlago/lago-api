@@ -20,7 +20,7 @@ module Types
       argument :state, String, required: false
       argument :zipcode, String, required: false
 
-      argument :webhook_url, String, required: false
+      argument :webhook_url, String, required: false, permission: 'developers:view'
 
       argument :timezone, Types::TimezoneEnum, required: false
 
