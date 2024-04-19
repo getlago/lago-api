@@ -61,6 +61,8 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
 
       filter.values.uniq!
       filter.save!
+    rescue StandardError => e
+      puts "#group_id: #{group.id} #{e.message}" # rubocop:disable Rails/Output
     end
 
     # NOTE: Only takes BM with groups into account
@@ -80,7 +82,15 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
 
         group = property.group
         migrated_groups << group
-        bm_filter = BillableMetricFilter.find_by(billable_metric_id: group.billable_metric_id, key: group.key)
+        bm_filters = BillableMetricFilter.where(
+          billable_metric_id: group.billable_metric_id,
+          key: group.key,
+        )
+        bm_filter = if group.deleted_at.present?
+          bm_filters.where.not(deleted_at: nil).first
+        else
+          bm_filters.where(deleted_at: nil).first
+        end
 
         # NOTE: Create filter value
         filter.values.create!(billable_metric_filter_id: bm_filter.id, values: [group.value])
@@ -88,10 +98,15 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         next unless group.parent_group_id?
 
         # NOTE: When two dimensions, we create a filter value for the parent
-        parent_bm_filter = BillableMetricFilter.find_by(
+        parent_bm_filters = BillableMetricFilter.where(
           billable_metric_id: group.parent.billable_metric_id,
           key: group.parent.key,
         )
+        parent_bm_filter = if group.parent.deleted_at.present?
+          parent_bm_filters.where.not(deleted_at: nil).first
+        else
+          parent_bm_filters.where(deleted_at: nil).first
+        end
 
         filter.values.create!(billable_metric_filter_id: parent_bm_filter.id, values: [group.parent.value])
       end
@@ -104,18 +119,33 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         filter = charge.filters.create!(properties: charge.properties, deleted_at: group.deleted_at)
 
         # Create filter values
-        bm_filter = BillableMetricFilter.find_by(billable_metric_id: group.billable_metric_id, key: group.key)
+        bm_filters = BillableMetricFilter.where(
+          billable_metric_id: group.billable_metric_id,
+          key: group.key,
+        )
+        bm_filter = if group.deleted_at.present?
+          bm_filters.where.not(deleted_at: nil).first
+        else
+          bm_filters.where(deleted_at: nil).first
+        end
         filter.values.create!(billable_metric_filter_id: bm_filter.id, values: [group.value])
 
         next unless group.parent_group_id?
 
-        parent_bm_filter = BillableMetricFilter.find_by(
+        parent_bm_filters = BillableMetricFilter.where(
           billable_metric_id: group.parent.billable_metric_id,
           key: group.parent.key,
         )
+        parent_bm_filter = if group.parent.deleted_at.present?
+          parent_bm_filters.where.not(deleted_at: nil).first
+        else
+          parent_bm_filters.where(deleted_at: nil).first
+        end
 
         filter.values.create!(billable_metric_filter_id: parent_bm_filter.id, values: [group.parent.value])
       end
+    rescue StandardError => e
+      puts "#charge_id: #{charge.id} #{e.message}" # rubocop:disable Rails/Output
     end
   end
 
