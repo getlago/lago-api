@@ -26,13 +26,13 @@ customers:
   delete: false
 subscriptions:
   create: false
-  create_override: false
   update: false
   delete: false
 wallets:
   create: false
   update: false
-  topup: false
+  top_up: false
+  terminate: false
 invoices:
   create: false
 developers:

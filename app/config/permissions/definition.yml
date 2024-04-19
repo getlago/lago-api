@@ -30,13 +30,13 @@ customers:
   delete:
 subscriptions:
   create:
-  create_override ?? or create:
   update:
   delete:
 wallets:
   create:
   update:
-  topup:
+  top_up:
+  terminate:
 invoices:
   view: true
   send: true
