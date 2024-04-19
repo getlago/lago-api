@@ -93,7 +93,11 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         end
 
         # NOTE: Create filter value
-        filter.values.create!(billable_metric_filter_id: bm_filter.id, values: [group.value])
+        filter.values.create!(
+          billable_metric_filter_id: bm_filter.id,
+          values: [group.value],
+          deleted_at: group.deleted_at,
+        )
 
         next unless group.parent_group_id?
 
@@ -108,7 +112,11 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
           parent_bm_filters.where(deleted_at: nil).first
         end
 
-        filter.values.create!(billable_metric_filter_id: parent_bm_filter.id, values: [group.parent.value])
+        filter.values.create!(
+          billable_metric_filter_id: parent_bm_filter.id,
+          values: [group.parent.value],
+          deleted_at: group.parent.deleted_at,
+        )
       end
 
       # NOTE: Create filter values for the remaining groups
@@ -128,7 +136,11 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         else
           bm_filters.where(deleted_at: nil).first
         end
-        filter.values.create!(billable_metric_filter_id: bm_filter.id, values: [group.value])
+        filter.values.create!(
+          billable_metric_filter_id: bm_filter.id,
+          values: [group.value],
+          deleted_at: group.deleted_at,
+        )
 
         next unless group.parent_group_id?
 
@@ -142,7 +154,11 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
           parent_bm_filters.where(deleted_at: nil).first
         end
 
-        filter.values.create!(billable_metric_filter_id: parent_bm_filter.id, values: [group.parent.value])
+        filter.values.create!(
+          billable_metric_filter_id: parent_bm_filter.id,
+          values: [group.parent.value],
+          deleted_at: group.parent.deleted_at,
+        )
       end
     rescue StandardError => e
       puts "#charge_id: #{charge.id} #{e.message}" # rubocop:disable Rails/Output
