@@ -11,6 +11,12 @@ class WalletTransaction < ApplicationRecord
     :settled,
   ].freeze
 
+  TRANSACTION_STATUSES = [
+    :paid,
+    :offered,
+    :voided,
+  ].freeze
+
   TRANSACTION_TYPES = [
     :inbound,
     :outbound,
@@ -23,6 +29,7 @@ class WalletTransaction < ApplicationRecord
   ].freeze
 
   enum status: STATUSES
+  enum transaction_status: TRANSACTION_STATUSES
   enum transaction_type: TRANSACTION_TYPES
   enum source: SOURCES
 
