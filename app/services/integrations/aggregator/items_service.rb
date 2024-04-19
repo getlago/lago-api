@@ -44,7 +44,17 @@ module Integrations
       def handle_items(new_items)
         @items = items.concat(new_items)
 
-        # TODO: Store items in DB
+        new_items.each do |item|
+          integration_item = IntegrationItem.new(
+            integration:,
+            external_id: item['id'],
+            account_code: item['account_code'],
+            name: item['name'],
+            item_type: :standard,
+          )
+
+          integration_item.save!
+        end
       end
 
       def params
