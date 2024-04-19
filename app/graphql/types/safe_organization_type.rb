@@ -13,7 +13,7 @@ module Types
 
     field :id, ID, null: false
     field :logo_url, String
-    field :name, String, null: false, permission: 'non_existing_permission'
+    field :name, String, null: false
     field :timezone, Types::TimezoneEnum, null: true
   end
 end

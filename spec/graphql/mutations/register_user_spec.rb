@@ -35,7 +35,6 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
           organizationName: 'FooBar',
         },
       },
-      permissions: { 'non_existing_permission' => true },
     )
 
     aggregate_failures do

@@ -41,6 +41,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       current_user: membership.user,
       current_organization: membership.organization,
       query: mutation,
+      permissions: ['developers:view'],
       variables: {
         input: {
           legalNumber: '1234',

@@ -22,7 +22,7 @@ module Types
     field :zipcode, String
 
     field :api_key, String, null: false
-    field :webhook_url, String
+    field :webhook_url, String, permission: 'developers:view'
 
     field :document_number_prefix, String, null: false
     field :document_numbering, Types::Organizations::DocumentNumberingEnum, null: false
