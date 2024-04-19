@@ -39,19 +39,35 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
   def up
     # NOTE: For each group, we create a filter with the same key and values
     Group.find_each do |group|
-      filter = ::BillableMetricFilter.find_or_initialize_by(
+      filters = ::BillableMetricFilter.where(
         billable_metric_id: group.billable_metric_id,
         key: group.key,
       )
+      filters = if group.deleted_at.present?
+        filters.where.not(deleted_at: nil)
+      else
+        filters.where(deleted_at: nil)
+      end
+
+      filter = filters.first
+      filter ||= ::BillableMetricFilter.new(
+        billable_metric_id: group.billable_metric_id,
+        key: group.key,
+      )
+      filter.deleted_at = group.deleted_at if group.deleted_at.present?
 
       filter.values ||= []
       filter.values << group.value
+
       filter.values.uniq!
       filter.save!
     end
 
+    # NOTE: Only takes BM with groups into account
+    bm_ids = Group.select(:billable_metric_id).distinct
+
     # NOTE: For each charge, we create charge filters with the same values
-    Charge.where.associated(:group_properties).distinct.find_each do |charge|
+    Charge.joins(:billable_metric).where(billable_metrics: { id: bm_ids }).find_each do |charge|
       migrated_groups = []
 
       charge.group_properties.each do |property|
@@ -59,6 +75,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         filter = charge.filters.create!(
           invoice_display_name: property.invoice_display_name,
           properties: property.values,
+          deleted_at: property.deleted_at,
         )
 
         group = property.group
@@ -84,7 +101,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         next if group.children.any?
 
         # Create charge filter
-        filter = charge.filters.create!(properties: charge.properties)
+        filter = charge.filters.create!(properties: charge.properties, deleted_at: group.deleted_at)
 
         # Create filter values
         bm_filter = BillableMetricFilter.find_by(billable_metric_id: group.billable_metric_id, key: group.key)
