@@ -4528,7 +4528,7 @@ type Organization {
   legalName: String
   legalNumber: String
   logoUrl: String
-  name: String
+  name: String!
   netPaymentTerm: Int!
   premiumIntegrations: [IntegrationTypeEnum!]!
   state: String
@@ -4584,19 +4584,66 @@ Permissions Type
 type Permissions {
   addons:create: Boolean!
   addons:delete: Boolean!
-  addons:show: Boolean!
   addons:update: Boolean!
-  organizations:emails:update: Boolean!
-  organizations:info:update: Boolean!
-  organizations:integrations:create: Boolean!
-  organizations:integrations:delete: Boolean!
-  organizations:integrations:update: Boolean!
-  organizations:invoice:update: Boolean!
-  organizations:members:create: Boolean!
-  organizations:members:delete: Boolean!
-  organizations:members:update: Boolean!
-  organizations:show:settings: Boolean!
-  organizations:taxes:update: Boolean!
+  addons:view: Boolean!
+  analytics:view: Boolean!
+  billableMetrics:create: Boolean!
+  billableMetrics:delete: Boolean!
+  billableMetrics:update: Boolean!
+  billableMetrics:view: Boolean!
+  coupons:attach: Boolean!
+  coupons:create: Boolean!
+  coupons:delete: Boolean!
+  coupons:detach: Boolean!
+  coupons:update: Boolean!
+  coupons:view: Boolean!
+  creditNotes:create: Boolean!
+  creditNotes:view: Boolean!
+  creditNotes:void: Boolean!
+  customerSettings:edit:gracePeriod: Boolean!
+  customerSettings:edit:lang: Boolean!
+  customerSettings:edit:paymentTerms: Boolean!
+  customerSettings:edit:taxRates: Boolean!
+  customerSettings:view: Boolean!
+  customers:create: Boolean!
+  customers:delete: Boolean!
+  customers:update: Boolean!
+  customers:view: Boolean!
+  developers:keys:view: Boolean!
+  developers:view: Boolean!
+  draftInvoices:update: Boolean!
+  invoices:create: Boolean!
+  invoices:send: Boolean!
+  invoices:update: Boolean!
+  invoices:view: Boolean!
+  invoices:void: Boolean!
+  organization:edit: Boolean!
+  organization:emails:edit: Boolean!
+  organization:emails:view: Boolean!
+  organization:integrations:create: Boolean!
+  organization:integrations:delete: Boolean!
+  organization:integrations:update: Boolean!
+  organization:integrations:view: Boolean!
+  organization:invoices:edit: Boolean!
+  organization:invoices:view: Boolean!
+  organization:members:create: Boolean!
+  organization:members:delete: Boolean!
+  organization:members:update: Boolean!
+  organization:members:view: Boolean!
+  organization:taxes:edit: Boolean!
+  organization:taxes:view: Boolean!
+  organization:view: Boolean!
+  plans:create: Boolean!
+  plans:delete: Boolean!
+  plans:update: Boolean!
+  plans:view: Boolean!
+  subscriptions:create: Boolean!
+  subscriptions:delete: Boolean!
+  subscriptions:update: Boolean!
+  wallets:create: Boolean!
+  wallets:terminate: Boolean!
+  wallets:topUp: Boolean!
+  wallets:update: Boolean!
 }
 
 type Plan {
@@ -5324,7 +5371,7 @@ Safe Organization Type
 type SafeOrganization {
   id: ID!
   logoUrl: String
-  name: String
+  name: String!
   timezone: TimezoneEnum
 }
 
