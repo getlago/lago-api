@@ -7,6 +7,7 @@ module V1
         lago_id: model.id,
         lago_wallet_id: model.wallet_id,
         status: model.status,
+        transaction_status: model.transaction_status,
         transaction_type: model.transaction_type,
         amount: model.amount,
         credit_amount: model.credit_amount,
