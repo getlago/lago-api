@@ -49,22 +49,24 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
   def up
     # NOTE: Associate cached aggregations with charge filters
     puts 'Migrate cached aggregations' # rubocop:disable Rails/Output
-
-    CachedAggregation.where.associated(:group).where(charge_filter_id: nil).find_each do |agg|
-      link_charge_filter(agg)
-    end
+    CachedAggregation.where.associated(:group)
+      .where(charge_filter_id: nil)
+      .includes(charge: :filters, group: :parent)
+      .find_each { |agg| link_charge_filter(agg) }
 
     # NOTE: Associate fees with charge filters
     puts 'Migrate fees' # rubocop:disable Rails/Output
-    Fee.where.associated(:group).where(charge_filter_id: nil).find_each do |fee|
-      link_charge_filter(fee)
-    end
+    Fee.where.associated(:group)
+      .where(charge_filter_id: nil)
+      .includes(charge: :filters, group: :parent)
+      .find_each { |fee| link_charge_filter(fee) }
 
     # NOTE: Associate adjusted fees with charge filters
     puts 'Migrate adjusted fees' # rubocop:disable Rails/Output
-    AdjustedFee.where.associated(:group).where(charge_filter_id: nil).find_each do |fee|
-      link_charge_filter(fee)
-    end
+    AdjustedFee.where.associated(:group)
+      .where(charge_filter_id: nil)
+      .includes(charge: :filters, group: :parent)
+      .find_each { |fee| link_charge_filter(fee) }
   end
 
   def down; end
