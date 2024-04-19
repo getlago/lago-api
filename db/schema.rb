@@ -939,6 +939,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_19_085012) do
     t.datetime "updated_at", null: false
     t.uuid "invoice_id"
     t.integer "source", default: 0, null: false
+    t.integer "transaction_status", default: 0, null: false
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
   end
