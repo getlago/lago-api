@@ -13,6 +13,13 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
   class ChargeFilterValue < ApplicationRecord
     belongs_to :charge_filter
     belongs_to :billable_metric_filter
+
+    def to_h
+      # NOTE: Ensure filters are keeping the initial ordering
+      values.order(updated_at: :asc).each_with_object({}) do |filter_value, result|
+        result[filter_value.billable_metric_filter.key] = filter_value.values
+      end
+    end
   end
 
   class QuantifiedEvent < ApplicationRecord
