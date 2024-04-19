@@ -6567,6 +6567,7 @@ type WalletTransaction {
   id: ID!
   settledAt: ISO8601DateTime
   status: WalletTransactionStatusEnum!
+  transactionStatus: WalletTransactionTransactionStatusEnum!
   transactionType: WalletTransactionTransactionTypeEnum!
   updatedAt: ISO8601DateTime!
   wallet: Wallet
@@ -6580,6 +6581,12 @@ type WalletTransactionCollection {
 enum WalletTransactionStatusEnum {
   pending
   settled
+}
+
+enum WalletTransactionTransactionStatusEnum {
+  offered
+  paid
+  voided
 }
 
 enum WalletTransactionTransactionTypeEnum {
