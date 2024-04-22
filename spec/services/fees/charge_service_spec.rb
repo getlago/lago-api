@@ -353,10 +353,13 @@ RSpec.describe Fees::ChargeService do
 
       context 'with all types of aggregation' do
         BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|
-          next if aggregation_type.to_sym == :custom_agg # TODO(custom_agg): will be implemented in a next PR
-
           before do
-            billable_metric.update!(aggregation_type:, field_name: 'foo_bar', weighted_interval: 'seconds')
+            billable_metric.update!(
+              aggregation_type:,
+              field_name: 'foo_bar',
+              weighted_interval: 'seconds',
+              custom_aggregator: 'puts "foo bar"',
+            )
           end
 
           it 'creates fees' do
@@ -1747,13 +1750,12 @@ RSpec.describe Fees::ChargeService do
   describe '.current_usage' do
     context 'with all types of aggregation' do
       BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|
-        next if aggregation_type.to_sym == :custom_agg # TODO(custom_agg): will be implemented in a next PR
-
         before do
           billable_metric.update!(
             aggregation_type:,
             field_name: 'foo_bar',
             weighted_interval: 'seconds',
+            custom_aggregator: 'puts "foo bar"',
           )
 
           charge.update!(min_amount_cents: 1000)

@@ -75,6 +75,13 @@ FactoryBot.define do
       end
     end
 
+    factory :custom_charge do
+      charge_model { 'custom' }
+      properties do
+        { custom_properties: { rate: '20' } }
+      end
+    end
+
     trait :pay_in_advance do
       pay_in_advance { true }
     end

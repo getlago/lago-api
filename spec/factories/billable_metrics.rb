@@ -43,6 +43,6 @@ FactoryBot.define do
 
   factory :custom_billable_metric, parent: :billable_metric do
     aggregation_type { 'custom_agg' }
-    custom_aggreator { 'puts "foo bar"' }
+    custom_aggregator { 'puts "foo bar"' }
   end
 end

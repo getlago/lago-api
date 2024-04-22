@@ -1,0 +1,32 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+Rspec.describe Charges::ChargeModels::CustomService, type: :service do
+  subject(:apply_custom_service) do
+    described_class.apply(
+      charge:,
+      aggregation_result:,
+      properties: charge.properties,
+    )
+  end
+
+  let(:aggregation_result) { BaseService::Result.new }
+  let(:aggregation) { 10 }
+  let(:total_aggregated_units) { nil }
+  let(:full_units_number) { nil }
+
+  let(:charge) { create(:custom_charge, billable_metric:) }
+  let(:billable_metric) { create(:custom_billable_metric) }
+
+  before do
+    aggregation_result.aggregation = aggregation
+    aggregation_result.total_aggregated_units = total_aggregated_units if total_aggregated_units
+    aggregation_result.full_units_number = full_units_number if full_units_number
+  end
+
+  it 'applies the charge model to the value' do
+    expect(apply_custom_service.amount).to eq(0)
+    expect(apply_custom_service.unit_amount).to eq(0)
+  end
+end
