@@ -23,4 +23,6 @@ RSpec.describe Types::Charges::PropertiesInput do
   it { is_expected.to accept_argument(:rate).of_type('String') }
 
   it { is_expected.to accept_argument(:volume_ranges).of_type('[VolumeRangeInput!]') }
+
+  it { is_expected.to accept_argument(:custom_properties).of_type('JSON') }
 end

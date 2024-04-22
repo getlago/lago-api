@@ -2,8 +2,8 @@
 
 module Charges
   class FilterChargeModelPropertiesService < BaseService
-    def initialize(charge_model:, properties:)
-      @charge_model = charge_model
+    def initialize(charge:, properties:)
+      @charge = charge
       @properties = properties&.with_indifferent_access || {}
 
       super
@@ -16,33 +16,44 @@ module Charges
 
     private
 
-    attr_reader :charge_model, :properties
+    attr_reader :charge, :properties
+
+    delegate :charge_model, to: :charge
 
     def slice_properties
+      attributes = []
+      attributes << :custom_properties if charge.billable_metric.custom_agg?
+      attributes += charge_model_attributes || []
+
+      sliced_attributes = properties.slice(*attributes)
+      sliced_attributes[:grouped_by].reject!(&:empty?) if charge.standard? && sliced_attributes[:grouped_by].present?
+      sliced_attributes
+    end
+
+    def charge_model_attributes
       case charge_model&.to_sym
       when :standard
-        properties.slice(:amount, :grouped_by).tap do |p|
-          next if p[:grouped_by].blank?
+        attributes = %i[amount]
+        attributes << :grouped_by if properties[:grouped_by].present?
 
-          p[:grouped_by].reject!(&:empty?)
-        end
+        attributes
       when :graduated
-        properties.slice(:graduated_ranges)
+        %i[graduated_ranges]
       when :graduated_percentage
-        properties.slice(:graduated_percentage_ranges)
+        %i[graduated_percentage_ranges]
       when :package
-        properties.slice(:amount, :free_units, :package_size)
+        %i[amount free_units package_size]
       when :percentage
-        properties.slice(
-          :fixed_amount,
-          :free_units_per_events,
-          :free_units_per_total_aggregation,
-          :per_transaction_max_amount,
-          :per_transaction_min_amount,
-          :rate,
-        )
+        %i[
+          fixed_amount
+          free_units_per_events
+          free_units_per_total_aggregation
+          per_transaction_max_amount
+          per_transaction_min_amount
+          rate
+        ]
       when :volume
-        properties.slice(:volume_ranges)
+        %i[volume_ranges]
       end
     end
   end

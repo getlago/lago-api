@@ -83,7 +83,7 @@ module Plans
 
       properties = params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
       charge.properties = Charges::FilterChargeModelPropertiesService.call(
-        charge_model: charge.charge_model,
+        charge:,
         properties:,
       ).properties
 
@@ -171,7 +171,7 @@ module Plans
           charge.update!(
             invoice_display_name: payload_charge[:invoice_display_name],
             properties: Charges::FilterChargeModelPropertiesService.call(
-              charge_model: charge.charge_model,
+              charge:,
               properties:,
             ).properties,
           )
@@ -208,7 +208,7 @@ module Plans
     def sanitize_charges(plan, args_charges, created_charges_ids)
       args_charges_ids = args_charges.map { |c| c[:id] }.compact
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
-      plan.charges.where(id: charges_ids).each { |charge| discard_charge!(charge) }
+      plan.charges.where(id: charges_ids).find_each { |charge| discard_charge!(charge) }
     end
 
     def discard_charge!(charge)

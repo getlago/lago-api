@@ -4637,6 +4637,7 @@ input PlanOverridesInput {
 
 type Properties {
   amount: String
+  customProperties: JSON
   fixedAmount: String
   freeUnits: BigInt
   freeUnitsPerEvents: BigInt
@@ -4653,6 +4654,7 @@ type Properties {
 
 input PropertiesInput {
   amount: String
+  customProperties: JSON
   fixedAmount: String
   freeUnits: BigInt
   freeUnitsPerEvents: BigInt

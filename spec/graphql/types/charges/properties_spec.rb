@@ -23,4 +23,6 @@ RSpec.describe Types::Charges::Properties do
   it { is_expected.to have_field(:rate).of_type('String') }
 
   it { is_expected.to have_field(:volume_ranges).of_type('[VolumeRange!]') }
+
+  it { is_expected.to have_field(:custom_properties).of_type('JSON') }
 end
