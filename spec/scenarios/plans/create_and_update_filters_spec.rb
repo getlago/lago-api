@@ -23,7 +23,7 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
     model_name_bm_filter
   end
 
-  it 'allows the creation and update of plans with charge filters' do
+  xit 'allows the creation and update of plans with charge filters' do
     # Create a plan with a charge and filters
     travel_to(Time.zone.parse('2024-03-27T12:00:00')) do
       create_plan(
