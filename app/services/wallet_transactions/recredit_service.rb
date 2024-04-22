@@ -15,11 +15,13 @@ module WalletTransactions
 
       return result.not_allowed_failure!(code: 'wallet_not_active') unless wallet.active?
 
-      transaction_result = WalletTransactions::CreateService.new.call(
-        organization_id: customer.organization_id,
-        wallet_id: wallet.id,
-        granted_credits: wallet_transaction.credit_amount.to_s,
-        reset_consumed_credits: true,
+      transaction_result = WalletTransactions::CreateService.call(
+        organization: customer.organization,
+        params: {
+          wallet_id: wallet.id,
+          granted_credits: wallet_transaction.credit_amount.to_s,
+          reset_consumed_credits: true,
+        },
       )
 
       return transaction_result unless transaction_result.success?

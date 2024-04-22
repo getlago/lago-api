@@ -8,10 +8,12 @@ module Wallets
 
         WalletTransactions::CreateJob.perform_later(
           organization_id: wallet.organization.id,
-          wallet_id: wallet.id,
-          paid_credits: recurring_transaction_rule.paid_credits.to_s,
-          granted_credits: recurring_transaction_rule.granted_credits.to_s,
-          source: :interval,
+          params: {
+            wallet_id: wallet.id,
+            paid_credits: recurring_transaction_rule.paid_credits.to_s,
+            granted_credits: recurring_transaction_rule.granted_credits.to_s,
+            source: :interval,
+          },
         )
       end
     end
@@ -102,7 +104,6 @@ module Wallets
     end
 
     # NOTE: Billed quarterly on anniversary date
-    # rubocop:disable Layout/LineLength
     def quarterly_anniversary
       billing_day = <<-SQL
         DATE_PART('day', (wallets.created_at#{at_time_zone})) = ANY (
@@ -139,7 +140,6 @@ module Wallets
         conditions: [billing_month, billing_day],
       )
     end
-    # rubocop:enable Layout/LineLength
 
     def yearly_anniversary
       billing_month = <<-SQL

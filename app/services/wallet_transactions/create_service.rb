@@ -2,22 +2,29 @@
 
 module WalletTransactions
   class CreateService < BaseService
-    def call(**args)
-      return result unless valid?(**args)
+    def initialize(organization:, params:)
+      @organization = organization
+      @params = params
+
+      super
+    end
+
+    def call
+      return result unless valid?
 
       wallet_transactions = []
-      @source = args[:source] || :manual
+      @source = params[:source] || :manual
 
-      if args[:paid_credits]
-        transaction = handle_paid_credits(wallet: result.current_wallet, paid_credits: args[:paid_credits])
+      if params[:paid_credits]
+        transaction = handle_paid_credits(wallet: result.current_wallet, paid_credits: params[:paid_credits])
         wallet_transactions << transaction
       end
 
-      if args[:granted_credits]
+      if params[:granted_credits]
         transaction = handle_granted_credits(
           wallet: result.current_wallet,
-          granted_credits: args[:granted_credits],
-          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(args[:reset_consumed_credits]),
+          granted_credits: params[:granted_credits],
+          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits]),
         )
         wallet_transactions << transaction
       end
@@ -28,7 +35,7 @@ module WalletTransactions
 
     private
 
-    attr_reader :source
+    attr_reader :organization, :params, :source
 
     def handle_paid_credits(wallet:, paid_credits:)
       paid_credits_amount = BigDecimal(paid_credits)
@@ -81,8 +88,8 @@ module WalletTransactions
       end
     end
 
-    def valid?(**args)
-      WalletTransactions::ValidateService.new(result, **args).valid?
+    def valid?
+      WalletTransactions::ValidateService.new(result, **params.merge(organization_id: organization.id)).valid?
     end
   end
 end

@@ -38,10 +38,12 @@ module Wallets
 
         WalletTransactions::CreateJob.set(wait: 2.seconds).perform_later(
           organization_id: wallet.organization.id,
-          wallet_id: wallet.id,
-          paid_credits: threshold_rule.paid_credits.to_s,
-          granted_credits: threshold_rule.granted_credits.to_s,
-          source: :threshold,
+          params: {
+            wallet_id: wallet.id,
+            paid_credits: threshold_rule.paid_credits.to_s,
+            granted_credits: threshold_rule.granted_credits.to_s,
+            source: :threshold,
+          },
         )
       end
 

@@ -4,11 +4,9 @@ module Api
   module V1
     class WalletTransactionsController < Api::BaseController
       def create
-        result = WalletTransactions::CreateService.new.call(
-          organization_id: current_organization.id,
-          wallet_id: input_params[:wallet_id],
-          paid_credits: input_params[:paid_credits],
-          granted_credits: input_params[:granted_credits],
+        result = WalletTransactions::CreateService.call(
+          organization: current_organization,
+          params: input_params,
         )
 
         if result.success?

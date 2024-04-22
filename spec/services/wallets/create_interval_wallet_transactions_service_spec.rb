@@ -36,10 +36,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           expect(WalletTransactions::CreateJob).to have_been_enqueued
             .with(
               organization_id: customer.organization_id,
-              wallet_id: wallet.id,
-              paid_credits: recurring_transaction_rule.paid_credits.to_s,
-              granted_credits: recurring_transaction_rule.granted_credits.to_s,
-              source: :interval,
+              params: {
+                wallet_id: wallet.id,
+                paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                source: :interval,
+              },
             )
         end
       end
@@ -62,10 +64,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           expect(WalletTransactions::CreateJob).to have_been_enqueued
             .with(
               organization_id: customer.organization_id,
-              wallet_id: wallet.id,
-              paid_credits: recurring_transaction_rule.paid_credits.to_s,
-              granted_credits: recurring_transaction_rule.granted_credits.to_s,
-              source: :interval,
+              params: {
+                wallet_id: wallet.id,
+                paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                source: :interval,
+              },
             )
         end
       end
@@ -87,10 +91,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
             expect(WalletTransactions::CreateJob).to have_been_enqueued
               .with(
                 organization_id: customer.organization_id,
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
+                params: {
+                  wallet_id: wallet.id,
+                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                  source: :interval,
+                },
               )
           end
         end
@@ -108,10 +114,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           expect(WalletTransactions::CreateJob).to have_been_enqueued
             .with(
               organization_id: customer.organization_id,
-              wallet_id: wallet.id,
-              paid_credits: recurring_transaction_rule.paid_credits.to_s,
-              granted_credits: recurring_transaction_rule.granted_credits.to_s,
-              source: :interval,
+              params: {
+                wallet_id: wallet.id,
+                paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                source: :interval,
+              },
             )
         end
       end
@@ -133,10 +141,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
             expect(WalletTransactions::CreateJob).to have_been_enqueued
               .with(
                 organization_id: customer.organization_id,
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
+                params: {
+                  wallet_id: wallet.id,
+                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                  source: :interval,
+                },
               )
           end
         end
@@ -153,10 +163,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
             expect(WalletTransactions::CreateJob).to have_been_enqueued
               .with(
                 organization_id: customer.organization_id,
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
+                params: {
+                  wallet_id: wallet.id,
+                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                  source: :interval,
+                },
               )
           end
         end
@@ -174,10 +186,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           expect(WalletTransactions::CreateJob).to have_been_enqueued
             .with(
               organization_id: customer.organization_id,
-              wallet_id: wallet.id,
-              paid_credits: recurring_transaction_rule.paid_credits.to_s,
-              granted_credits: recurring_transaction_rule.granted_credits.to_s,
-              source: :interval,
+              params: {
+                wallet_id: wallet.id,
+                paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                source: :interval,
+              },
             )
         end
       end
@@ -199,10 +213,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
             expect(WalletTransactions::CreateJob).to have_been_enqueued
               .with(
                 organization_id: customer.organization_id,
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
+                params: {
+                  wallet_id: wallet.id,
+                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                  source: :interval,
+                },
               )
           end
         end
