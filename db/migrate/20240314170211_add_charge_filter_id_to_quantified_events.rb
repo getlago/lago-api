@@ -8,11 +8,6 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
 
   class ChargeFilter < ApplicationRecord
     has_many :values, class_name: 'ChargeFilterValue'
-  end
-
-  class ChargeFilterValue < ApplicationRecord
-    belongs_to :charge_filter
-    belongs_to :billable_metric_filter
 
     def to_h
       # NOTE: Ensure filters are keeping the initial ordering
@@ -20,6 +15,11 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
         result[filter_value.billable_metric_filter.key] = filter_value.values
       end
     end
+  end
+
+  class ChargeFilterValue < ApplicationRecord
+    belongs_to :charge_filter
+    belongs_to :billable_metric_filter
   end
 
   class QuantifiedEvent < ApplicationRecord
