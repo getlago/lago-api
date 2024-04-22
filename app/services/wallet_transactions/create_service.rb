@@ -42,6 +42,7 @@ module WalletTransactions
         credit_amount: paid_credits_amount,
         status: :pending,
         source:,
+        transaction_status: :paid,
       )
       Wallets::Balance::IncreaseOngoingService.new(wallet:, credits_amount: paid_credits_amount).call
 
@@ -67,6 +68,7 @@ module WalletTransactions
           status: :settled,
           settled_at: Time.current,
           source:,
+          transaction_status: :offered,
         )
 
         Wallets::Balance::IncreaseService.new(
