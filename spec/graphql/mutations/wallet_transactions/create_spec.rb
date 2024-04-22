@@ -23,7 +23,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
     wallet
   end
 
-  it 'create a wallet transaction' do
+  it 'creates a wallet transaction' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,

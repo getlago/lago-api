@@ -24,7 +24,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     subscription
   end
 
-  describe '#create' do
+  describe '#call' do
     let(:paid_credits) { '10.00' }
     let(:granted_credits) { '15.00' }
     let(:create_args) do
@@ -38,12 +38,12 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     end
 
     it 'creates a wallet transactions' do
-      expect { create_service.create(**create_args) }
+      expect { create_service.call(**create_args) }
         .to change(WalletTransaction, :count).by(2)
     end
 
     it 'sets expected transaction status', :aggregate_failures do
-      create_service.create(**create_args)
+      create_service.call(**create_args)
 
       paid_transaction = WalletTransaction.where(wallet_id: wallet.id).paid.first
       offered_transaction = WalletTransaction.where(wallet_id: wallet.id).offered.first
@@ -53,7 +53,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     end
 
     it 'sets correct source' do
-      create_service.create(**create_args)
+      create_service.call(**create_args)
 
       wallet_transactions = WalletTransaction.where(wallet_id: wallet.id).order(created_at: :desc)
 
@@ -64,19 +64,19 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     end
 
     it 'enqueues the BillPaidCreditJob' do
-      expect { create_service.create(**create_args) }
+      expect { create_service.call(**create_args) }
         .to have_enqueued_job(BillPaidCreditJob)
     end
 
     it 'updates wallet balance only with granted credits' do
-      create_service.create(**create_args)
+      create_service.call(**create_args)
 
       expect(wallet.reload.balance_cents).to eq(2500)
       expect(wallet.reload.credits_balance).to eq(25.0)
     end
 
     it 'updates wallet ongoing balance with granted and paid credits' do
-      create_service.create(**create_args)
+      create_service.call(**create_args)
 
       expect(wallet.reload.ongoing_balance_cents).to eq(3500)
       expect(wallet.reload.credits_ongoing_balance).to eq(35.0)
@@ -86,7 +86,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       let(:paid_credits) { '-15.00' }
 
       it 'returns an error' do
-        result = create_service.create(**create_args)
+        result = create_service.call(**create_args)
 
         expect(result).not_to be_success
         expect(result.error.messages[:paid_credits]).to eq(['invalid_paid_credits'])
