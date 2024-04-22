@@ -27,9 +27,9 @@ module LagoHttpClient
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-      JSON.parse(response.body&.presence || '{}')
+      JSON.parse(response.body.presence || '{}')
     rescue JSON::ParserError
-      response.body&.presence || '{}'
+      response.body.presence || '{}'
     end
 
     def post_with_response(body, headers)
@@ -70,14 +70,19 @@ module LagoHttpClient
       response
     end
 
-    def get
-      req = Net::HTTP::Get.new(uri.path)
+    def get(headers: {}, params: nil)
+      path = params ? "#{uri.path}?#{URI.encode_www_form(params)}" : uri.path
+      req = Net::HTTP::Get.new(path)
+
+      headers.keys.each do |key|
+        req[key] = headers[key]
+      end
 
       response = http_client.request(req)
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-      JSON.parse(response.body&.presence || '{}')
+      JSON.parse(response.body.presence || '{}')
     end
 
     private

@@ -21,6 +21,14 @@ module Integrations
 
       attr_reader :integration
 
+      # NOTE: Extend it with other providers if needed
+      def provider
+        case integration.type
+        when 'Integrations::NetsuiteIntegration'
+          'netsuite'
+        end
+      end
+
       def http_client
         LagoHttpClient::Client.new(endpoint_url)
       end

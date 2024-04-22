@@ -16,6 +16,7 @@ RSpec.describe Integrations::Aggregator::SyncService do
         netsuite-items-sync
         netsuite-subsidiaries-sync
         netsuite-contacts-sync
+        netsuite-tax-items-sync
       ]
     end
 
