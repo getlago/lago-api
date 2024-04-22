@@ -24,7 +24,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     subscription
   end
 
-  describe '.create' do
+  describe '#create' do
     let(:paid_credits) { '10.00' }
     let(:granted_credits) { '15.00' }
     let(:create_args) do
@@ -40,6 +40,16 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     it 'creates a wallet transactions' do
       expect { create_service.create(**create_args) }
         .to change(WalletTransaction, :count).by(2)
+    end
+
+    it 'sets expected transaction status', :aggregate_failures do
+      create_service.create(**create_args)
+
+      paid_transaction = WalletTransaction.where(wallet_id: wallet.id).paid.first
+      offered_transaction = WalletTransaction.where(wallet_id: wallet.id).offered.first
+
+      expect(paid_transaction.credit_amount).to eq(10)
+      expect(offered_transaction.credit_amount).to eq(15)
     end
 
     it 'sets correct source' do
