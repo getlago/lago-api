@@ -46,7 +46,7 @@ RSpec.describe Integrations::Aggregator::ItemsService do
       aggregate_failures do
         expect(LagoHttpClient::Client).to have_received(:new).with(items_endpoint)
         expect(lago_client).to have_received(:get)
-        expect(result.items.pluck('id')).to eq(%w[755 745 753 484 828])
+        expect(result.items.pluck('external_id')).to eq(%w[755 745 753 484 828])
         expect(IntegrationItem.count).to eq(5)
       end
     end

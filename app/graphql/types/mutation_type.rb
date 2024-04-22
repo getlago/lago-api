@@ -56,6 +56,9 @@ module Types
     field :destroy_integration, mutation: Mutations::Integrations::Destroy
     field :update_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Update
 
+    field :fetch_integration_items, mutation: Mutations::IntegrationItems::FetchItems
+    field :fetch_integration_tax_items, mutation: Mutations::IntegrationItems::FetchTaxItems
+
     field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download
     field :update_credit_note, mutation: Mutations::CreditNotes::Update

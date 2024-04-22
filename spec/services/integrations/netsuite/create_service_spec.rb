@@ -59,6 +59,8 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
         before do
           organization.update!(premium_integrations: ['netsuite'])
           allow(Integrations::Aggregator::SendRestletEndpointJob).to receive(:perform_later)
+          allow(Integrations::Aggregator::FetchItemsJob).to receive(:perform_later)
+          allow(Integrations::Aggregator::FetchTaxItemsJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
@@ -75,6 +77,20 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
 
             integration = Integrations::NetsuiteIntegration.order(:created_at).last
             expect(Integrations::Aggregator::SendRestletEndpointJob).to have_received(:perform_later).with(integration:)
+          end
+
+          it 'calls Integrations::Aggregator::FetchItemsJob' do
+            service_call
+
+            integration = Integrations::NetsuiteIntegration.order(:created_at).last
+            expect(Integrations::Aggregator::FetchItemsJob).to have_received(:perform_later).with(integration:)
+          end
+
+          it 'calls Integrations::Aggregator::FetchTaxItemsJob' do
+            service_call
+
+            integration = Integrations::NetsuiteIntegration.order(:created_at).last
+            expect(Integrations::Aggregator::FetchTaxItemsJob).to have_received(:perform_later).with(integration:)
           end
         end
 
