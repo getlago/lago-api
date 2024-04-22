@@ -5000,7 +5000,7 @@ type Query {
   """
   Query netsuite integration collection mappings
   """
-  netsuiteCollectionMappings(integrationId: ID, limit: Int, mappingType: String, page: Int): NetsuiteCollectionMappingCollection
+  netsuiteCollectionMappings(integrationId: ID, limit: Int, mappingType: NetsuiteMappingTypeEnum, page: Int): NetsuiteCollectionMappingCollection
 
   """
   Query a single integration mapping
@@ -5015,7 +5015,7 @@ type Query {
   """
   Query netsuite integration mappings
   """
-  netsuiteMappings(integrationId: ID, limit: Int, mappableType: String, page: Int): NetsuiteMappingCollection
+  netsuiteMappings(integrationId: ID, limit: Int, mappableType: NetsuiteMappableTypeEnum, page: Int): NetsuiteMappingCollection
 
   """
   Query the current organization

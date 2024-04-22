@@ -24424,8 +24424,8 @@
                   "name": "mappingType",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
+                    "kind": "ENUM",
+                    "name": "NetsuiteMappingTypeEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -24514,8 +24514,8 @@
                   "name": "mappableType",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
+                    "kind": "ENUM",
+                    "name": "NetsuiteMappableTypeEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
