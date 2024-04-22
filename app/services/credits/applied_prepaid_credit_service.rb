@@ -25,6 +25,7 @@ module Credits
           credit_amount:,
           status: :settled,
           settled_at: Time.current,
+          transaction_status: :paid,
         )
 
         result.wallet_transaction = wallet_transaction

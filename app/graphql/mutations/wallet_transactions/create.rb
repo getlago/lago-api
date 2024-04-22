@@ -16,7 +16,7 @@ module Mutations
       type Types::WalletTransactions::Object.collection_type
 
       def resolve(**args)
-        result = ::WalletTransactions::CreateService.new.create(
+        result = ::WalletTransactions::CreateService.new(context[:current_user]).call(
           organization_id: current_organization.id,
           wallet_id: args[:wallet_id],
           paid_credits: args[:paid_credits],

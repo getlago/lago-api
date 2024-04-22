@@ -2,7 +2,7 @@
 
 module WalletTransactions
   class CreateService < BaseService
-    def create(**args)
+    def call(**args)
       return result unless valid?(**args)
 
       wallet_transactions = []

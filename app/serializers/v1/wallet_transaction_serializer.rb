@@ -12,7 +12,7 @@ module V1
         amount: model.amount,
         credit_amount: model.credit_amount,
         settled_at: model.settled_at&.iso8601,
-        created_at: model.created_at&.iso8601,
+        created_at: model.created_at.iso8601,
       }
     end
   end

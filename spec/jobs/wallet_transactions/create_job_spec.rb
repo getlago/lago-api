@@ -10,7 +10,7 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
   it 'calls the WalletTransactions::CreateService' do
     allow(WalletTransactions::CreateService).to receive(:new)
       .and_return(wallet_transaction_create_service)
-    allow(wallet_transaction_create_service).to receive(:create)
+    allow(wallet_transaction_create_service).to receive(:call)
 
     described_class.perform_now(
       organization_id: '123456',
@@ -20,7 +20,7 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
       source: 'manual',
     )
 
-    expect(wallet_transaction_create_service).to have_received(:create).with(
+    expect(wallet_transaction_create_service).to have_received(:call).with(
       organization_id: '123456',
       wallet_id: '123456',
       paid_credits: '1.00',
