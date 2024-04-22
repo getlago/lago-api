@@ -10,6 +10,16 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
   describe '#call' do
     let(:plan) { create(:plan, trial_period: 10, pay_in_advance: true) }
 
+    context 'with a plan witout trial period' do
+      it 'does not set trial_ended_at' do
+        sub = create(:subscription, plan: create(:plan, trial_period: 0, pay_in_advance: true), started_at: 2.days.ago)
+        sub2 = create(:subscription, plan: create(:plan, pay_in_advance: true), started_at: 2.days.ago)
+        service.call
+        expect(sub.reload.trial_ended_at).to be_nil
+        expect(sub2.reload.trial_ended_at).to be_nil
+      end
+    end
+
     context 'without any ending trial subscriptions' do
       it 'does not set trial_ended_at', :aggregate_failures do
         sub1 = create(:subscription, plan:, started_at: 2.days.ago)
