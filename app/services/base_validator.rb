@@ -3,7 +3,7 @@
 class BaseValidator
   def initialize(result, **args)
     @result = result
-    @args = args
+    @args = args.to_h.with_indifferent_access
 
     @errors = {}
   end
