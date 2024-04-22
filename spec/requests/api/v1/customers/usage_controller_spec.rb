@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:disable RSpec/FilePath
+RSpec.describe Api::V1::Customers::UsageController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
 
@@ -92,31 +92,35 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
       end
     end
 
-    context 'with one dimension group' do
-      let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
-      let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
+    context 'with filters' do
+      let(:billable_metric_filter) do
+        create(:billable_metric_filter, billable_metric: metric, key: 'cloud', values: %w[aws google])
+      end
+
       let(:charge) do
         create(
           :standard_charge,
           plan: subscription.plan,
           billable_metric: metric,
-          properties: {},
-          group_properties: [
-            build(
-              :group_property,
-              group: aws,
-              values: { amount: '10', amount_currency: 'EUR' },
-            ),
-            build(
-              :group_property,
-              group: google,
-              values: { amount: '20', amount_currency: 'EUR' },
-            ),
-          ],
+          properties: { amount: '0' },
         )
       end
 
+      let(:charge_filter_aws) { create(:charge_filter, charge:, properties: { amount: '10' }) }
+      let(:charge_filter_gcp) { create(:charge_filter, charge:, properties: { amount: '20' }) }
+
+      let(:charge_filter_value_aws) do
+        create(:charge_filter_value, charge_filter: charge_filter_aws, billable_metric_filter:, values: ['aws'])
+      end
+
+      let(:charge_filter_value_gcp) do
+        create(:charge_filter_value, charge_filter: charge_filter_gcp, billable_metric_filter:, values: ['google'])
+      end
+
       before do
+        charge_filter_value_aws
+        charge_filter_value_gcp
+
         create_list(
           :event,
           3,
@@ -146,32 +150,91 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
         groups_usage = charge_usage[:groups]
 
         aggregate_failures do
-          expect(charge_usage[:units]).to eq('4.0')
+          expect(charge_usage[:units]).to eq('8.0')
           expect(charge_usage[:amount_cents]).to eq(5000)
           expect(groups_usage).to contain_exactly(
             {
-              lago_id: aws.id,
+              lago_id: "charge-filter-#{charge_filter_aws.id}",
               key: 'cloud',
               value: 'aws',
               units: '3.0',
               amount_cents: 3000,
               events_count: 3,
             },
-            { lago_id: google.id, key: 'cloud', value: 'google', units: '1.0', amount_cents: 2000, events_count: 1 },
+            {
+              lago_id: "charge-filter-#{charge_filter_gcp.id}",
+              key: 'cloud',
+              value: 'google',
+              units: '1.0',
+              amount_cents: 2000,
+              events_count: 1,
+            },
           )
         end
       end
     end
 
-    context 'with two dimensions group' do
-      let(:aws) { create(:group, billable_metric: metric, key: 'cloud', value: 'aws') }
-      let(:google) { create(:group, billable_metric: metric, key: 'cloud', value: 'google') }
-      let(:aws_usa) { create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: aws.id) }
-      let(:aws_france) do
-        create(:group, billable_metric: metric, key: 'region', value: 'france', parent_group_id: aws.id)
+    context 'with multiple filter values' do
+      let(:billable_metric_filter_cloud) do
+        create(:billable_metric_filter, billable_metric: metric, key: 'cloud', values: %w[aws google])
       end
-      let(:google_usa) do
-        create(:group, billable_metric: metric, key: 'region', value: 'usa', parent_group_id: google.id)
+      let(:billable_metric_filter_region) do
+        create(:billable_metric_filter, billable_metric: metric, key: 'region', values: %w[usa france])
+      end
+
+      let(:charge_filter_aws_usa) { create(:charge_filter, charge:, properties: { amount: '10' }) }
+      let(:charge_filter_aws_france) { create(:charge_filter, charge:, properties: { amount: '20' }) }
+      let(:charge_filter_google_usa) { create(:charge_filter, charge:, properties: { amount: '30' }) }
+
+      let(:charge_filter_value11) do
+        create(
+          :charge_filter_value,
+          charge_filter: charge_filter_aws_usa,
+          billable_metric_filter: billable_metric_filter_cloud,
+          values: ['aws'],
+        )
+      end
+      let(:charge_filter_value12) do
+        create(
+          :charge_filter_value,
+          charge_filter: charge_filter_aws_usa,
+          billable_metric_filter: billable_metric_filter_region,
+          values: ['usa'],
+        )
+      end
+
+      let(:charge_filter_value21) do
+        create(
+          :charge_filter_value,
+          charge_filter: charge_filter_aws_france,
+          billable_metric_filter: billable_metric_filter_cloud,
+          values: ['aws'],
+        )
+      end
+      let(:charge_filter_value22) do
+        create(
+          :charge_filter_value,
+          charge_filter: charge_filter_aws_france,
+          billable_metric_filter: billable_metric_filter_region,
+          values: ['france'],
+        )
+      end
+
+      let(:charge_filter_value31) do
+        create(
+          :charge_filter_value,
+          charge_filter: charge_filter_google_usa,
+          billable_metric_filter: billable_metric_filter_cloud,
+          values: ['google'],
+        )
+      end
+      let(:charge_filter_value32) do
+        create(
+          :charge_filter_value,
+          charge_filter: charge_filter_google_usa,
+          billable_metric_filter: billable_metric_filter_region,
+          values: ['usa'],
+        )
       end
 
       let(:charge) do
@@ -179,28 +242,18 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
           :standard_charge,
           plan: subscription.plan,
           billable_metric: metric,
-          properties: {},
-          group_properties: [
-            build(
-              :group_property,
-              group: aws_usa,
-              values: { amount: '10', amount_currency: 'EUR' },
-            ),
-            build(
-              :group_property,
-              group: aws_france,
-              values: { amount: '20', amount_currency: 'EUR' },
-            ),
-            build(
-              :group_property,
-              group: google_usa,
-              values: { amount: '30', amount_currency: 'EUR' },
-            ),
-          ],
+          properties: { amount: '0' },
         )
       end
 
       before do
+        charge_filter_value11
+        charge_filter_value12
+        charge_filter_value21
+        charge_filter_value22
+        charge_filter_value31
+        charge_filter_value32
+
         create_list(
           :event,
           2,
@@ -240,19 +293,33 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do # rubocop:
         groups_usage = charge_usage[:groups]
 
         aggregate_failures do
-          expect(charge_usage[:units]).to eq('4.0')
+          expect(charge_usage[:units]).to eq('8.0')
           expect(charge_usage[:amount_cents]).to eq(7000)
           expect(groups_usage).to contain_exactly(
             {
-              lago_id: aws_usa.id,
-              key: 'aws',
-              value: 'usa',
+              lago_id: "charge-filter-#{charge_filter_aws_usa.id}",
+              key: 'cloud, region',
+              value: 'aws, usa',
               units: '2.0',
               amount_cents: 2000,
               events_count: 2,
             },
-            { lago_id: aws_france.id, key: 'aws', value: 'france', units: '1.0', amount_cents: 2000, events_count: 1 },
-            { lago_id: google_usa.id, key: 'google', value: 'usa', units: '1.0', amount_cents: 3000, events_count: 1 },
+            {
+              lago_id: "charge-filter-#{charge_filter_aws_france.id}",
+              key: 'cloud, region',
+              value: 'aws, france',
+              units: '1.0',
+              amount_cents: 2000,
+              events_count: 1,
+            },
+            {
+              lago_id: "charge-filter-#{charge_filter_google_usa.id}",
+              key: 'cloud, region',
+              value: 'google, usa',
+              units: '1.0',
+              amount_cents: 3000,
+              events_count: 1,
+            },
           )
         end
       end
