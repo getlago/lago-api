@@ -13,7 +13,8 @@ class ChargeFilterValue < ApplicationRecord
   validates :values, presence: true
   validate :validate_values
 
-  default_scope -> { kept }
+  # NOTE: Ensure filters are keeping the initial ordering
+  default_scope -> { kept.order(updated_at: :asc) }
 
   delegate :key, to: :billable_metric_filter
 
