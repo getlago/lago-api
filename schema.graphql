@@ -3458,6 +3458,25 @@ type IntegrationCollection {
   metadata: CollectionMetadata!
 }
 
+type IntegrationItem {
+  accountCode: String
+  externalId: String!
+  id: ID!
+  integrationId: ID!
+  itemType: IntegrationItemTypeEnum!
+  name: String
+}
+
+type IntegrationItemCollection {
+  collection: [IntegrationItem!]!
+  metadata: CollectionMetadata!
+}
+
+enum IntegrationItemTypeEnum {
+  standard
+  tax
+}
+
 enum IntegrationTypeEnum {
   netsuite
 }
@@ -4884,6 +4903,11 @@ type Query {
     """
     id: ID
   ): Integration
+
+  """
+  Query integration items of an integration
+  """
+  integrationItems(integrationId: ID!, itemType: IntegrationItemTypeEnum, limit: Int, page: Int, searchTerm: String): IntegrationItemCollection!
 
   """
   Query organization's integrations
