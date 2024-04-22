@@ -10,7 +10,7 @@ module Resolvers
 
       argument :integration_id, ID, required: false
       argument :limit, Integer, required: false
-      argument :mapping_type, String, required: false
+      argument :mapping_type, Types::IntegrationCollectionMappings::Netsuite::MappingTypeEnum, required: false
       argument :page, Integer, required: false
 
       type Types::IntegrationCollectionMappings::Netsuite::Object.collection_type, null: true
