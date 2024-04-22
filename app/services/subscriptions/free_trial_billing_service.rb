@@ -59,6 +59,7 @@ module Subscriptions
           LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
         WHERE
           subscriptions.status = 1
+          AND plans.trial_period > 0
           AND subscriptions.trial_ended_at IS NULL
           AND #{trial_end_date + at_time_zone} <= '#{timestamp}'#{at_time_zone}
       SQL
