@@ -34,13 +34,15 @@ module V1
 
       # TODO: Remove after migration to filters and refresh of cache
       def groups(fees)
-        fees.sort_by { |f| f.group&.name.to_s }.map do |f|
-          next unless f.group
+        fees.sort_by { |f| f.charge_filter&.display_name.to_s }.map do |f|
+          next unless f.charge_filter
+
+          values = f.charge_filter.to_h || {}
 
           {
-            lago_id: f.group.id,
-            key: f.group.parent&.value || f.group.key,
-            value: f.group.value,
+            lago_id: "charge-filter-#{f.charge_filter_id}",
+            key: values.keys.join(', '),
+            value: values.values.flatten.join(', '),
             units: f.units,
             amount_cents: f.amount_cents,
             events_count: f.events_count,

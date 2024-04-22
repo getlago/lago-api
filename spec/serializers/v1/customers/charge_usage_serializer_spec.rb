@@ -68,26 +68,26 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     subject(:serializer_groups) { serializer.__send__(:groups, fees) }
 
     let(:fees) { [fee1, fee2] }
-    let(:group) { create(:group) }
+    let(:charge_filter) { create(:charge_filter) }
 
     context 'when all fees have groups' do
-      let(:fee1) { create(:fee, group:) }
-      let(:fee2) { create(:fee, group:) }
+      let(:fee1) { create(:fee, charge_filter:) }
+      let(:fee2) { create(:fee, charge_filter:) }
 
       let(:groups) do
         [
           {
-            lago_id: fee2.group.id,
-            key: fee2.group.key,
-            value: fee2.group.value,
+            lago_id: "charge-filter-#{fee2.charge_filter_id}",
+            key: fee2.charge_filter.to_h.keys.join(', '),
+            value: fee2.charge_filter.to_h.values.flatten.join(', '),
             units: fee2.units,
             amount_cents: fee2.amount_cents,
             events_count: fee2.events_count,
           },
           {
-            lago_id: fee1.group.id,
-            key: fee1.group.key,
-            value: fee1.group.value,
+            lago_id: "charge-filter-#{fee1.charge_filter_id}",
+            key: fee1.charge_filter.to_h.keys.join(', '),
+            value: fee1.charge_filter.to_h.values.flatten.join(', '),
             units: fee1.units,
             amount_cents: fee1.amount_cents,
             events_count: fee1.events_count,
@@ -100,16 +100,16 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       end
     end
 
-    context 'when one fee does not have a group' do
+    context 'when one fee does not have a filter' do
       let(:fee1) { create(:fee) }
-      let(:fee2) { create(:fee, group:) }
+      let(:fee2) { create(:fee, charge_filter:) }
 
       let(:groups) do
         [
           {
-            lago_id: fee2.group.id,
-            key: fee2.group.key,
-            value: fee2.group.value,
+            lago_id: "charge-filter-#{fee2.charge_filter_id}",
+            key: fee2.charge_filter.to_h.keys.join(', '),
+            value: fee2.charge_filter.to_h.values.flatten.join(', '),
             units: fee2.units,
             amount_cents: fee2.amount_cents,
             events_count: fee2.events_count,
