@@ -51,7 +51,9 @@ module Api
       end
 
       def show
-        plan = current_organization.plans.parents.find_by(code: params[:code])
+        plan = current_organization.plans.parents
+          .includes(charges: { filters: { values: :billable_metric_filter } })
+          .find_by(code: params[:code])
         return not_found_error(resource: 'plan') unless plan
 
         render_plan(plan)
@@ -65,7 +67,7 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            plans,
+            plans.includes(charges: { filters: { values: :billable_metric_filter } }),
             ::V1::PlanSerializer,
             collection_name: 'plans',
             meta: pagination_metadata(plans),
