@@ -5,8 +5,9 @@ require 'rails_helper'
 RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
   subject(:service) { described_class.new(timestamp:) }
 
+  let(:timestamp) { Time.zone.now }
+
   describe '#call' do
-    let(:timestamp) { Time.zone.parse('2024-04-15T13:00:00') }
     let(:plan) { create(:plan, trial_period: 10, pay_in_advance: true) }
 
     context 'without any ending trial subscriptions' do
@@ -17,7 +18,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
       end
     end
 
-    xcontext 'with ending trial subscriptions' do
+    context 'with ending trial subscriptions' do
       it 'sets trial_ended_at to trial end date' do
         sub = create(:subscription, plan:, started_at: Time.zone.parse('2024-04-05T12:12:00'))
         sub2 = create(:subscription, plan:, started_at: 15.days.ago)
