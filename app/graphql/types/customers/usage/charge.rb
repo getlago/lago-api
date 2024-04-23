@@ -14,7 +14,6 @@ module Types
         field :charge, Types::Charges::Object, null: false
         field :filters, [Types::Customers::Usage::ChargeFilter], null: true
         field :grouped_usage, [Types::Customers::Usage::GroupedUsage], null: false
-        field :groups, [Types::Customers::Usage::ChargeGroup], null: true
 
         def units
           object.map { |f| BigDecimal(f.units) }.sum
@@ -34,12 +33,6 @@ module Types
 
         def billable_metric
           object.first.billable_metric
-        end
-
-        def groups
-          object
-            .select(&:group)
-            .sort_by { |f| f.group.name }
         end
 
         def filters

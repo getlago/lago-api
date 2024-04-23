@@ -12,7 +12,6 @@ module Types
 
         field :filters, [Types::Customers::Usage::ChargeFilter], null: true
         field :grouped_by, GraphQL::Types::JSON, null: true
-        field :groups, [Types::Customers::Usage::ChargeGroup], null: true
 
         def amount_cents
           object.sum(&:amount_cents)
@@ -28,12 +27,6 @@ module Types
 
         def grouped_by
           object.first.grouped_by
-        end
-
-        def groups
-          object
-            .select(&:group)
-            .sort_by { |f| f.group.name }
         end
 
         def filters
