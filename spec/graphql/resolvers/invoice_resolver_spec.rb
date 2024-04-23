@@ -156,20 +156,23 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
 
   context 'with a deleted billable metric' do
     let(:billable_metric) { create(:billable_metric, :deleted) }
-    let(:group) { create(:group, :deleted, billable_metric:) }
-    let(:fee) { create(:charge_fee, subscription:, invoice:, group:, charge:, amount_cents: 10) }
-
-    let(:group_property) do
-      build(
-        :group_property,
+    let(:billable_metric_filter) { create(:billable_metric_filter, :deleted, billable_metric:) }
+    let(:charge_filter) do
+      create(:charge_filter, :deleted, charge:, properties: { amount: '10' })
+    end
+    let(:charge_filter_value) do
+      create(
+        :charge_filter_value,
         :deleted,
-        group:,
-        values: { amount: '10', amount_currency: 'EUR' },
+        charge_filter:,
+        billable_metric_filter:,
+        values: [billable_metric_filter.values.first],
       )
     end
+    let(:fee) { create(:charge_fee, subscription:, invoice:, charge_filter:, charge:, amount_cents: 10) }
 
     let(:charge) do
-      create(:standard_charge, :deleted, billable_metric:, group_properties: [group_property])
+      create(:standard_charge, :deleted, billable_metric:)
     end
 
     it 'returns the invoice with the deleted resources' do
