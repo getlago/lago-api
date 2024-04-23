@@ -10,5 +10,4 @@ RSpec.describe Types::Customers::Usage::GroupedUsage do
   it { is_expected.to have_field(:units).of_type('Float!') }
   it { is_expected.to have_field(:filters).of_type('[ChargeFilterUsage!]') }
   it { is_expected.to have_field(:grouped_by).of_type('JSON') }
-  it { is_expected.to have_field(:groups).of_type('[GroupUsage!]') }
 end

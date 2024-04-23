@@ -11,6 +11,5 @@ RSpec.describe Types::Customers::Usage::Charge do
   it { is_expected.to have_field(:billable_metric).of_type('BillableMetric!') }
   it { is_expected.to have_field(:charge).of_type('Charge!') }
   it { is_expected.to have_field(:grouped_usage).of_type('[GroupedChargeUsage!]!') }
-  it { is_expected.to have_field(:groups).of_type('[GroupUsage!]') }
   it { is_expected.to have_field(:filters).of_type('[ChargeFilterUsage!]') }
 end

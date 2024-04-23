@@ -297,7 +297,6 @@ type ChargeUsage {
   eventsCount: Int!
   filters: [ChargeFilterUsage!]
   groupedUsage: [GroupedChargeUsage!]!
-  groups: [GroupUsage!]
   units: Float!
 }
 
@@ -3444,22 +3443,11 @@ type Group {
   value: String!
 }
 
-type GroupUsage {
-  amountCents: BigInt!
-  eventsCount: Int!
-  id: ID!
-  invoiceDisplayName: String
-  key: String
-  units: Float!
-  value: String!
-}
-
 type GroupedChargeUsage {
   amountCents: BigInt!
   eventsCount: Int!
   filters: [ChargeFilterUsage!]
   groupedBy: JSON
-  groups: [GroupUsage!]
   units: Float!
 }
 
