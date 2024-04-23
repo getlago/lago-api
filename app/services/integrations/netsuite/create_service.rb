@@ -32,6 +32,9 @@ module Integrations
           Integrations::Aggregator::SendRestletEndpointJob.perform_later(integration:)
         end
 
+        Integrations::Aggregator::FetchItemsJob.perform_later(integration:)
+        Integrations::Aggregator::FetchTaxItemsJob.perform_later(integration:)
+
         result.integration = integration
         result
       rescue ActiveRecord::RecordInvalid => e

@@ -46,7 +46,7 @@ RSpec.describe Integrations::Aggregator::TaxItemsService do
       aggregate_failures do
         expect(LagoHttpClient::Client).to have_received(:new).with(tax_items_endpoint)
         expect(lago_client).to have_received(:get)
-        expect(result.tax_items.pluck('id')).to eq(%w[-3557 -3879 -4692 -5307])
+        expect(result.tax_items.pluck('external_id')).to eq(%w[-3557 -3879 -4692 -5307])
         expect(IntegrationItem.count).to eq(4)
         expect(IntegrationItem.first.item_type).to eq('tax')
       end

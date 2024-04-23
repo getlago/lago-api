@@ -42,8 +42,6 @@ module Integrations
       end
 
       def handle_items(new_items)
-        @items = items.concat(new_items)
-
         new_items.each do |item|
           integration_item = IntegrationItem.new(
             integration:,
@@ -54,6 +52,8 @@ module Integrations
           )
 
           integration_item.save!
+
+          @items << integration_item
         end
       end
 
