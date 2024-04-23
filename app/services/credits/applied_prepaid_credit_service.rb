@@ -35,6 +35,8 @@ module Credits
         invoice.prepaid_credit_amount_cents += amount_cents
       end
 
+      SendWebhookJob.perform_later('wallet_transaction.created', result.wallet_transaction)
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

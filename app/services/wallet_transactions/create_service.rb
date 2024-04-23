@@ -29,7 +29,12 @@ module WalletTransactions
         wallet_transactions << transaction
       end
 
-      result.wallet_transactions = wallet_transactions.compact
+      transactions = wallet_transactions.compact
+      if organization.webhook_endpoints.any?
+        transactions.each { |wt| SendWebhookJob.perform_later('wallet_transaction.created', wt) }
+      end
+
+      result.wallet_transactions = transactions
       result
     end
 
@@ -53,10 +58,7 @@ module WalletTransactions
       )
       Wallets::Balance::IncreaseOngoingService.new(wallet:, credits_amount: paid_credits_amount).call
 
-      BillPaidCreditJob.perform_later(
-        wallet_transaction,
-        Time.current.to_i,
-      )
+      BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
 
       wallet_transaction
     end

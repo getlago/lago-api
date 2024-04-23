@@ -77,6 +77,12 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       expect(wallet.reload.credits_ongoing_balance).to eq(35.0)
     end
 
+    it 'enqueues a SendWebhookJob for each wallet transaction' do
+      expect do
+        create_service.call
+      end.to have_enqueued_job(SendWebhookJob).twice.with('wallet_transaction.created', WalletTransaction)
+    end
+
     context 'with validation error' do
       let(:paid_credits) { '-15.00' }
 

@@ -46,6 +46,11 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
       expect(wallet.credits_balance).to eq(9.0)
     end
 
+    it 'enqueues a SendWebhookJob' do
+      expect { credit_service.call }.to have_enqueued_job(SendWebhookJob)
+        .with('wallet_transaction.created', WalletTransaction)
+    end
+
     context 'when wallet credits are less than invoice amount' do
       let(:amount_cents) { 1500 }
 
