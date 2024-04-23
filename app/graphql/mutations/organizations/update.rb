@@ -11,7 +11,7 @@ module Mutations
 
       input_object_class Types::Organizations::UpdateOrganizationInput
 
-      type Types::OrganizationType
+      type Types::CurrentOrganizationType
 
       def resolve(**args)
         result = ::Organizations::UpdateService.call(organization: current_organization, params: args)
