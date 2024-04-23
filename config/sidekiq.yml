@@ -10,6 +10,7 @@ queues:
   - webhook
   - invoices
   - wallets
+  - integrations
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
