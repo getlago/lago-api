@@ -9,6 +9,7 @@ module Integrations
 
       def call
         return unless integration.type == 'Integrations::NetsuiteIntegration'
+        return unless integration.script_endpoint_url
 
         payload = {
           restletEndpoint: integration.script_endpoint_url,
