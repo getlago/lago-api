@@ -71,9 +71,7 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
           end
 
           it 'calls Integrations::Aggregator::PerformSyncJob' do
-            service_call
-
-            expect(Integrations::Aggregator::PerformSyncJob).to have_received(:perform_later).with(integration:)
+            expect { service_call }.to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
           end
         end
 

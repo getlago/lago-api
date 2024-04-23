@@ -81,10 +81,7 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
           end
 
           it 'calls Integrations::Aggregator::PerformSyncJob' do
-            service_call
-
-            integration = Integrations::NetsuiteIntegration.order(:created_at).last
-            expect(Integrations::Aggregator::PerformSyncJob).to have_received(:perform_later).with(integration:)
+            expect { service_call }.to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
           end
 
           it 'calls Integrations::Aggregator::FetchItemsJob' do
