@@ -9,7 +9,7 @@ module Types
         field :id, ID, null: false
         field :integration_id, ID, null: false
         field :mapping_type, Types::IntegrationCollectionMappings::Netsuite::MappingTypeEnum, null: false
-        field :netsuite_account_code, String, null: false
+        field :netsuite_account_code, String, null: true
         field :netsuite_id, String, null: false
         field :netsuite_name, String, null: true
       end

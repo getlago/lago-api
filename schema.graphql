@@ -1846,7 +1846,7 @@ input CreateNetsuiteIntegrationCollectionMappingInput {
   clientMutationId: String
   integrationId: ID!
   mappingType: NetsuiteMappingTypeEnum!
-  netsuiteAccountCode: String!
+  netsuiteAccountCode: String
   netsuiteId: String!
   netsuiteName: String
 }
@@ -4624,7 +4624,7 @@ type NetsuiteCollectionMapping {
   id: ID!
   integrationId: ID!
   mappingType: NetsuiteMappingTypeEnum!
-  netsuiteAccountCode: String!
+  netsuiteAccountCode: String
   netsuiteId: String!
   netsuiteName: String
 }
