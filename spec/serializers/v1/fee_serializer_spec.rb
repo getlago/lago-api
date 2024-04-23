@@ -69,13 +69,14 @@ RSpec.describe ::V1::FeeSerializer do
   end
 
   context 'when fee is charge' do
-    let(:charge) { group_property.charge }
-    let(:group_property) { create(:group_property) }
+    let(:charge) { charge_filter.charge }
+    let(:charge_filter) { create(:charge_filter) }
 
     let(:fee) do
       create(
         :charge_fee,
         charge:,
+        charge_filter:,
         properties: {
           charges_from_datetime: Time.current,
           charges_to_datetime: Time.current,
@@ -91,7 +92,7 @@ RSpec.describe ::V1::FeeSerializer do
         'code' => fee.item_code,
         'name' => fee.item_name,
         'invoice_display_name' => fee.invoice_name,
-        'group_invoice_display_name' => fee.filter_display_name,
+        'filter_invoice_display_name' => fee.filter_display_name,
         'lago_item_id' => fee.item_id,
         'item_type' => fee.item_type,
       )
