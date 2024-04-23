@@ -92,6 +92,7 @@ module Plans
       ).properties
 
       if args[:filters].present?
+        charge.save!
         ChargeFilters::CreateOrUpdateBatchService.call(
           charge:,
           filters_params: args[:filters].map(&:with_indifferent_access),

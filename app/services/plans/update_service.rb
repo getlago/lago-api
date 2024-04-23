@@ -88,6 +88,7 @@ module Plans
       ).properties
 
       if params[:filters].present?
+        charge.save!
         ChargeFilters::CreateOrUpdateBatchService.call(
           charge:,
           filters_params: params[:filters].map(&:with_indifferent_access),
@@ -156,14 +157,6 @@ module Plans
             return group_result if group_result.error
           end
 
-          filters = payload_charge.delete(:filters)
-          unless filters.nil?
-            ChargeFilters::CreateOrUpdateBatchService.call(
-              charge:,
-              filters_params: filters.map(&:with_indifferent_access),
-            ).raise_if_error!
-          end
-
           properties = payload_charge.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
             payload_charge[:charge_model],
           )
@@ -175,6 +168,14 @@ module Plans
               properties:,
             ).properties,
           )
+
+          filters = payload_charge.delete(:filters)
+          unless filters.nil?
+            ChargeFilters::CreateOrUpdateBatchService.call(
+              charge:,
+              filters_params: filters.map(&:with_indifferent_access),
+            ).raise_if_error!
+          end
 
           tax_codes = payload_charge.delete(:tax_codes)
           if tax_codes

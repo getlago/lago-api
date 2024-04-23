@@ -144,8 +144,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
   describe 'GET /invoices/:id' do
     it 'returns an invoice' do
-      group = create(:group)
-      create(:fee, invoice_id: invoice.id, group:)
+      charge_filter = create(:charge_filter)
+      create(:fee, invoice_id: invoice.id, charge_filter:)
 
       get_with_token(organization, "/api/v1/invoices/#{invoice.id}")
 
@@ -160,7 +160,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           credits: [],
           applied_taxes: [],
         )
-        expect(json[:invoice][:fees].first).to include(lago_group_id: group.id)
+        expect(json[:invoice][:fees].first).to include(lago_charge_filter_id: charge_filter.id)
       end
     end
 
@@ -184,25 +184,29 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     context 'when invoice has a fee for a deleted billable metric' do
       let(:billable_metric) { create(:billable_metric, :deleted) }
-      let(:group) { create(:group, :deleted, billable_metric:) }
-      let(:fee) { create(:charge_fee, invoice:, group:, charge:) }
-
-      let(:group_property) do
-        build(
-          :group_property,
+      let(:billable_metric_filter) { create(:billable_metric_filter, :deleted, billable_metric:) }
+      let(:charge_filter) do
+        create(:charge_filter, :deleted, charge:, properties: { amount: '10' })
+      end
+      let(:charge_filter_value) do
+        create(
+          :charge_filter_value,
           :deleted,
-          group:,
-          values: { amount: '10', amount_currency: 'EUR' },
+          charge_filter:,
+          billable_metric_filter:,
+          values: [billable_metric_filter.values.first],
         )
       end
+      let(:fee) { create(:charge_fee, invoice:, charge_filter:, charge:) }
 
       let(:charge) do
-        create(:standard_charge, :deleted, billable_metric:, group_properties: [group_property])
+        create(:standard_charge, :deleted, billable_metric:)
       end
 
       before do
         charge
         fee
+        charge_filter_value
       end
 
       it 'returns the invoice with the deleted resources' do
@@ -221,7 +225,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           )
 
           json_fee = json[:invoice][:fees].first
-          expect(json_fee[:lago_group_id]).to eq(group.id)
+          expect(json_fee[:lago_charge_filter_id]).to eq(charge_filter.id)
           expect(json_fee[:item]).to include(
             type: 'charge',
             code: billable_metric.code,
