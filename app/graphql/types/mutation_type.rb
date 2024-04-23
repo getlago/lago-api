@@ -117,5 +117,6 @@ module Types
     field :update_okta_integration, mutation: Mutations::Integrations::Okta::Update
 
     field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize
+    field :okta_login, mutation: Mutations::Auth::Okta::Login
   end
 end
