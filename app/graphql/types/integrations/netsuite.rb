@@ -9,6 +9,7 @@ module Types
       field :client_id, String, null: true
       field :client_secret, String, null: true
       field :code, String, null: false
+      field :connection_id, ID, null: false
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
       field :name, String, null: false
