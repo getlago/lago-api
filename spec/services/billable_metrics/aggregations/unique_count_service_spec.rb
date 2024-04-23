@@ -18,7 +18,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:filters) do
-    { group:, event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
+    { event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
   end
 
   let(:subscription) do
@@ -35,7 +35,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
   let(:started_at) { subscription_at }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
-  let(:group) { nil }
   let(:grouped_by) { nil }
   let(:charge_filter) { nil }
   let(:matching_filters) { nil }
@@ -366,20 +365,6 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         result = count_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0)
-      end
-
-      context 'when dimensions are used' do
-        let(:properties) { { unique_id: '111', region: 'europe' } }
-
-        let(:group) do
-          create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
-        end
-
-        it 'assigns an pay_in_advance aggregation' do
-          result = count_service.aggregate
-
-          expect(result.pay_in_advance_aggregation).to eq(1)
-        end
       end
 
       context 'when charge filter is used' do

@@ -19,7 +19,6 @@ module Events
         scope = scope.where(numeric_condition) if numeric_property
 
         scope = with_grouped_by_values(scope) if grouped_by_values?
-        scope = group_scope(scope) if group.present?
         filters_scope(scope)
       end
 
@@ -456,13 +455,6 @@ module Events
             ],
           ),
         ).rows
-      end
-
-      def group_scope(scope)
-        scope = scope.where('events_raw.properties[?] = ?', group.key.to_s, group.value.to_s)
-        return scope unless group.parent
-
-        scope.where('events_raw.properties[?] = ?', group.parent.key.to_s, group.parent.value.to_s)
       end
 
       def filters_scope(scope)

@@ -9,7 +9,6 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       subscription:,
       boundaries:,
       filters: {
-        group:,
         grouped_by:,
         grouped_by_values:,
         matching_filters:,
@@ -35,7 +34,6 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     }
   end
 
-  let(:group) { nil }
   let(:grouped_by) { nil }
   let(:grouped_by_values) { nil }
   let(:matching_filters) { {} }
@@ -48,7 +46,6 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       properties = { billable_metric.field_name => i + 1 }
 
       if i.even?
-        properties[group.key.to_s] = group.value.to_s if group
         matching_filters.each { |key, values| properties[key] = values.first }
 
         if grouped_by_values.present?
@@ -95,14 +92,6 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
   describe '.events' do
     it 'returns a list of events' do
       expect(event_store.events.count).to eq(5)
-    end
-
-    context 'with group' do
-      let(:group) { create(:group, billable_metric:) }
-
-      it 'returns a list of events' do
-        expect(event_store.events.count).to eq(3)
-      end
     end
 
     context 'with grouped_by_values' do
@@ -967,12 +956,12 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       end
     end
 
-    context 'with group' do
-      let(:group) { create(:group, billable_metric:, key: 'region', value: 'europe') }
+    context 'with filters' do
+      let(:matching_filters) { { region: ['europe'] } }
 
       let(:events_values) do
         [
-          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000, region: group.value },
+          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000, region: 'europe' },
         ]
       end
 

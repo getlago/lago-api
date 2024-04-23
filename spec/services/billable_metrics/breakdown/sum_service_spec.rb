@@ -13,7 +13,8 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
         to_datetime:,
       },
       filters: {
-        group:,
+        matching_filters:,
+        ignored_filters:,
       },
     )
   end
@@ -33,7 +34,8 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
   let(:started_at) { subscription_at }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
-  let(:group) { nil }
+  let(:matching_filters) { nil }
+  let(:ignored_filters) { nil }
 
   let(:billable_metric) do
     create(

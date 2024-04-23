@@ -14,7 +14,8 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
         charges_duration: (to_datetime - from_datetime).fdiv(1.day).round,
       },
       filters: {
-        group:,
+        matching_filters:,
+        ignored_filters:,
       },
     )
   end
@@ -61,7 +62,8 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
 
   let(:subscription_at) { Time.zone.parse('2022-06-09') }
   let(:started_at) { subscription_at }
-  let(:group) { nil }
+  let(:matching_filters) { nil }
+  let(:ignored_filters) { nil }
 
   let(:from_datetime) { Time.zone.parse('2022-07-09 00:00:00 UTC') }
   let(:to_datetime) { Time.zone.parse('2022-08-08 23:59:59 UTC') }

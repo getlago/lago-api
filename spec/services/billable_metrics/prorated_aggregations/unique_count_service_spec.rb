@@ -18,7 +18,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { group:, event: pay_in_advance_event, grouped_by: } }
+  let(:filters) { { event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters: } }
 
   let(:subscription) do
     create(
@@ -35,8 +35,9 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   let(:started_at) { subscription_at }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
-  let(:group) { nil }
   let(:grouped_by) { nil }
+  let(:matching_filters) { nil }
+  let(:ignored_filters) { nil }
 
   let(:billable_metric) do
     create(
@@ -155,7 +156,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         end
       end
 
-      context 'when dimensions are used' do
+      context 'when filters are used' do
         let(:event) do
           create(
             :event,
@@ -167,9 +168,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           )
         end
 
-        let(:group) do
-          create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
-        end
+        let(:matching_filters) { { region: ['europe'] } }
 
         it 'returns the number of persisted metric' do
           expect(result.aggregation).to eq(1)
@@ -508,7 +507,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         end
       end
 
-      context 'when dimensions are used' do
+      context 'when filters are used' do
         let(:events) do
           agent_names.each do |agent_name|
             create(
@@ -522,9 +521,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           end
         end
 
-        let(:group) do
-          create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
-        end
+        let(:matching_filters) { { region: ['europe'] } }
 
         it 'returns the number of persisted metric' do
           expect(result.aggregations.count).to eq(2)

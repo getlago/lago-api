@@ -18,13 +18,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:filters) do
-    { group:, event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
+    { event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
   end
 
   let(:subscription) { create(:subscription, started_at: Time.current.beginning_of_month - 6.months) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
-  let(:group) { nil }
   let(:grouped_by) { nil }
   let(:charge_filter) { nil }
   let(:matching_filters) { nil }
@@ -295,10 +294,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when group_id is given' do
-    let(:group) do
-      create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
-    end
+  context 'when filters are given' do
+    let(:matching_filters) { { region: ['europe'] } }
 
     before do
       create(
