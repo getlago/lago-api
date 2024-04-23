@@ -52,6 +52,7 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
         before do
           organization.update!(premium_integrations: ['netsuite'])
           allow(Integrations::Aggregator::SendRestletEndpointJob).to receive(:perform_later)
+          allow(Integrations::Aggregator::PerformSyncJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
@@ -67,6 +68,12 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
             service_call
 
             expect(Integrations::Aggregator::SendRestletEndpointJob).to have_received(:perform_later).with(integration:)
+          end
+
+          it 'calls Integrations::Aggregator::PerformSyncJob' do
+            service_call
+
+            expect(Integrations::Aggregator::PerformSyncJob).to have_received(:perform_later).with(integration:)
           end
         end
 

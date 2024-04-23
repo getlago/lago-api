@@ -30,6 +30,7 @@ module Integrations
 
         if integration.type == 'Integrations::NetsuiteIntegration'
           Integrations::Aggregator::SendRestletEndpointJob.perform_later(integration:)
+          Integrations::Aggregator::PerformSyncJob.set(wait: 2.seconds).perform_later(integration:)
         end
 
         Integrations::Aggregator::FetchItemsJob.perform_later(integration:)
