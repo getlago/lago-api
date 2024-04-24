@@ -33,6 +33,12 @@ RSpec.describe IntegrationMappings::Netsuite::UpdateService, type: :service do
           expect(integration_mapping.netsuite_account_code).to eq('code-2')
         end
       end
+
+      it 'returns an integration mapping in result object' do
+        result = service_call
+
+        expect(result.integration_mapping).to be_a(IntegrationMappings::NetsuiteMapping)
+      end
     end
 
     context 'with validation error' do

@@ -32,6 +32,12 @@ RSpec.describe IntegrationCollectionMappings::Netsuite::CreateService, type: :se
           expect(integration_collection_mapping.integration_id).to eq(integration.id)
         end
       end
+
+      it 'returns an integration collection mapping in result object' do
+        result = service_call
+
+        expect(result.integration_collection_mapping).to be_a(IntegrationCollectionMappings::NetsuiteCollectionMapping)
+      end
     end
 
     context 'with validation error' do
