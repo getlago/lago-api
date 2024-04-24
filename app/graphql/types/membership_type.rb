@@ -7,7 +7,7 @@ module Types
     field :organization, Types::OrganizationType, null: false
     field :user, Types::UserType, null: false
 
-    # TODO: Add permissions here
+    field :permissions, Types::PermissionsType, null: false
     field :role, Types::Memberships::RoleEnum, null: true
     field :status, Types::Memberships::StatusEnum, null: false
 

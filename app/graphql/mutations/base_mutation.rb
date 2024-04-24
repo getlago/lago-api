@@ -8,5 +8,15 @@ module Mutations
     field_class Types::BaseField
     input_object_class Types::BaseInputObject
     object_class Types::BaseObject
+
+    private
+
+    def ready?(**args)
+      if defined? self.class::REQUIRED_PERMISSION
+        context.dig(:permissions, self.class::REQUIRED_PERMISSION)
+      else
+        super
+      end
+    end
   end
 end

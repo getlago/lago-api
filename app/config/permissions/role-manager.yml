@@ -1,0 +1,63 @@
+---
+analytics:
+  view: false
+billable_metrics:
+  view: false
+  create: false
+  update: false
+  delete: false
+plans:
+  create: false
+  update: false
+  delete: false
+addons:
+  create: false
+  update: false
+  delete: false
+coupons:
+  create: false
+  update: false
+  delete: false
+  attach: true
+  detach: true
+customers:
+  create: true
+  update: true
+  delete: true
+subscriptions:
+  create: true
+  update: true
+  delete: true
+wallets:
+  create: true
+  update: true
+  top_up: true
+  terminate: true
+invoices:
+  create: true
+developers:
+  view: false
+  keys:
+    view: false
+organization:
+  view: false
+  edit: false
+  invoices:
+    view: false
+    edit: false
+  taxes:
+    view: false
+    edit: false
+  emails:
+    view: false
+    edit: false
+  integrations:
+    view: false
+    create: false
+    update: false
+    delete: false
+  members:
+    view: false
+    create: false
+    update: false
+    delete: false

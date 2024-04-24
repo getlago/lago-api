@@ -20,4 +20,8 @@ class User < ApplicationRecord
 
   validates :email, presence: true
   validates :password, presence: true
+
+  def can?(permission, organization:)
+    memberships.find { |m| m.organization_id == organization.id }&.can?(permission)
+  end
 end
