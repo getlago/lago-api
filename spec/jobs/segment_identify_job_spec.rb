@@ -10,7 +10,7 @@ describe SegmentIdentifyJob, job: true do
     let(:membership) { create(:membership) }
 
     before do
-      stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => '')
+      ENV['LAGO_DISABLE_SEGMENT'] = ''
       allow(CurrentContext).to receive(:membership).and_return(membership_id)
     end
 
@@ -32,7 +32,7 @@ describe SegmentIdentifyJob, job: true do
 
     context 'when LAGO_CLOUD is true' do
       before do
-        stub_const('ENV', 'LAGO_CLOUD' => 'true')
+        ENV['LAGO_CLOUD'] = 'true'
       end
 
       it 'includes hosting type equal to cloud' do
@@ -62,7 +62,7 @@ describe SegmentIdentifyJob, job: true do
 
     context 'when LAGO_DISABLE_SEGMENT is true' do
       it 'does not call SegmentIdentifyJob' do
-        stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => 'true')
+        ENV['LAGO_DISABLE_SEGMENT'] = 'true'
 
         expect(SEGMENT_CLIENT).not_to receive(:identify)
         subject.perform_now(membership_id:)

@@ -13,7 +13,7 @@ describe SegmentTrackJob, job: true do
     end
 
     before do
-      stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => '')
+      ENV['LAGO_DISABLE_SEGMENT'] = ''
       allow(CurrentContext).to receive(:membership).and_return(membership_id)
     end
 
@@ -34,7 +34,7 @@ describe SegmentTrackJob, job: true do
 
     context 'when LAGO_CLOUD is true' do
       it 'includes hosting type equal to cloud' do
-        stub_const('ENV', 'LAGO_CLOUD' => 'true')
+        ENV['LAGO_CLOUD'] = 'true'
 
         expect(SEGMENT_CLIENT).to receive(:track).with(
           hash_including(properties: hash_including(hosting_type: 'cloud')),
@@ -56,7 +56,7 @@ describe SegmentTrackJob, job: true do
 
     context 'when LAGO_DISABLE_SEGMENT is true' do
       it 'does not call SegmentTrackJob' do
-        stub_const('ENV', 'LAGO_DISABLE_SEGMENT' => 'true')
+        ENV['LAGO_DISABLE_SEGMENT'] = 'true'
 
         expect(SEGMENT_CLIENT).not_to receive(:track)
         subject.perform_now(membership_id:, event:, properties:)
