@@ -981,6 +981,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_25_131701) do
     t.bigint "ongoing_usage_balance_cents", default: 0, null: false
     t.decimal "credits_ongoing_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "credits_ongoing_usage_balance", precision: 30, scale: 5, default: "0.0", null: false
+    t.boolean "depleted_ongoing_balance", default: false, null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 

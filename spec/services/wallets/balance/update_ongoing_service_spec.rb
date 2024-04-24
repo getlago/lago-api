@@ -27,6 +27,8 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
         .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(4.5)
         .and change(wallet, :ongoing_balance_cents).from(800).to(550)
         .and change(wallet, :credits_ongoing_balance).from(8.0).to(5.5)
+
+      expect(wallet).not_to be_depleted_ongoing_balance
     end
 
     context 'when credits_amount is greater than the balance' do
@@ -38,6 +40,20 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
           .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(15)
           .and change(wallet, :ongoing_balance_cents).from(800).to(-500)
           .and change(wallet, :credits_ongoing_balance).from(8.0).to(-5.0)
+      end
+
+      it 'sets depleted_ongoing_balance to true' do
+        expect { update_service.call }
+          .to change(wallet.reload, :depleted_ongoing_balance).from(false).to(true)
+
+        expect { update_service.call }
+          .not_to change(wallet.reload, :depleted_ongoing_balance).from(true)
+      end
+
+      it 'sends depleted_ongoing_balance webhook' do
+        expect { update_service.call }
+          .to have_enqueued_job(SendWebhookJob)
+          .with('wallet.depleted_ongoing_balance', Wallet)
       end
     end
 
