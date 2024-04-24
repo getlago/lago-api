@@ -59,7 +59,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
 
     context 'when current date is 1 day before subscription ending_at' do
       it 'sends webhook that subscription is going to be terminated but only if config is overridden' do
-        current_date = ending_at - 1.days
+        current_date = ending_at - 1.day
 
         travel_to(current_date) do
           # First validate that with default config nothing is sent
@@ -67,7 +67,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
 
           # Now validate that with custom config, it is actually sent
           ENV['LAGO_SUBSCRIPTION_TERMINATION_ALERT_SENT_AT_DAYS'] = '1,15,45'
-          expect { described_class.perform_now}
+          expect { described_class.perform_now }
             .to have_enqueued_job(SendWebhookJob)
             .with('subscription.termination_alert', Subscription)
             .exactly(:once)

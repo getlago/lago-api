@@ -15,10 +15,13 @@ describe SegmentTrackJob, job: true do
     before do
       ENV['LAGO_DISABLE_SEGMENT'] = ''
       allow(CurrentContext).to receive(:membership).and_return(membership_id)
+      allow(SEGMENT_CLIENT).to receive(:track)
     end
 
     it "calls SegmentTrackJob's process method" do
-      expect(SEGMENT_CLIENT).to receive(:track)
+      subject.perform_now(membership_id:, event:, properties:)
+
+      expect(SEGMENT_CLIENT).to have_received(:track)
         .with(
           user_id: membership_id,
           event:,
@@ -28,29 +31,27 @@ describe SegmentTrackJob, job: true do
             version: Utils::VersionService.new.version.version.number,
           },
         )
-
-      subject.perform_now(membership_id:, event:, properties:)
     end
 
     context 'when LAGO_CLOUD is true' do
       it 'includes hosting type equal to cloud' do
         ENV['LAGO_CLOUD'] = 'true'
 
-        expect(SEGMENT_CLIENT).to receive(:track).with(
+        subject.perform_now(membership_id:, event:, properties:)
+
+        expect(SEGMENT_CLIENT).to have_received(:track).with(
           hash_including(properties: hash_including(hosting_type: 'cloud')),
         )
-
-        subject.perform_now(membership_id:, event:, properties:)
       end
     end
 
     context 'when membership is nil' do
       it 'sends event to an unidentifiable membership' do
-        expect(SEGMENT_CLIENT).to receive(:track).with(
+        subject.perform_now(membership_id: nil, event:, properties:)
+
+        expect(SEGMENT_CLIENT).to have_received(:track).with(
           hash_including(user_id: 'membership/unidentifiable'),
         )
-
-        subject.perform_now(membership_id: nil, event:, properties:)
       end
     end
 
@@ -58,8 +59,9 @@ describe SegmentTrackJob, job: true do
       it 'does not call SegmentTrackJob' do
         ENV['LAGO_DISABLE_SEGMENT'] = 'true'
 
-        expect(SEGMENT_CLIENT).not_to receive(:track)
         subject.perform_now(membership_id:, event:, properties:)
+
+        expect(SEGMENT_CLIENT).not_to have_received(:track)
       end
     end
   end
