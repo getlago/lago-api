@@ -9,11 +9,11 @@ module IntegrationCollectionMappings
           mapping_type: args[:mapping_type],
         )
 
-        integration_collection_mapping.netsuite_id = args[:netsuite_id] if args.key?(:netsuite_id)
-        if args.key?(:netsuite_account_code)
-          integration_collection_mapping.netsuite_account_code = args[:netsuite_account_code]
+        integration_collection_mapping.external_id = args[:external_id] if args.key?(:external_id)
+        if args.key?(:external_account_code)
+          integration_collection_mapping.external_account_code = args[:external_account_code]
         end
-        integration_collection_mapping.netsuite_name = args[:netsuite_name] if args.key?(:netsuite_name)
+        integration_collection_mapping.external_name = args[:external_name] if args.key?(:external_name)
 
         integration_collection_mapping.save!
 

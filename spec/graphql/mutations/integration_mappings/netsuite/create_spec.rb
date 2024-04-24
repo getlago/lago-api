@@ -7,9 +7,9 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Create, type: :graphql 
   let(:mappable) { create(:add_on, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
-  let(:netsuite_account_code) { Faker::Barcode.ean }
-  let(:netsuite_id) { SecureRandom.uuid }
-  let(:netsuite_name) { Faker::Commerce.department }
+  let(:external_account_code) { Faker::Barcode.ean }
+  let(:external_id) { SecureRandom.uuid }
+  let(:external_name) { Faker::Commerce.department }
 
   let(:mutation) do
     <<-GQL
@@ -19,9 +19,9 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Create, type: :graphql 
           integrationId,
           mappableId,
           mappableType,
-          netsuiteAccountCode,
-          netsuiteId,
-          netsuiteName
+          externalAccountCode,
+          externalId,
+          externalName
         }
       }
     GQL
@@ -37,9 +37,9 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Create, type: :graphql 
           integrationId: integration.id,
           mappableId: mappable.id,
           mappableType: 'AddOn',
-          netsuiteAccountCode: netsuite_account_code,
-          netsuiteId: netsuite_id,
-          netsuiteName: netsuite_name,
+          externalAccountCode: external_account_code,
+          externalId: external_id,
+          externalName: external_name,
         },
       },
     )
@@ -51,9 +51,9 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Create, type: :graphql 
       expect(result_data['integrationId']).to eq(integration.id)
       expect(result_data['mappableId']).to eq(mappable.id)
       expect(result_data['mappableType']).to eq('AddOn')
-      expect(result_data['netsuiteAccountCode']).to eq(netsuite_account_code)
-      expect(result_data['netsuiteId']).to eq(netsuite_id)
-      expect(result_data['netsuiteName']).to eq(netsuite_name)
+      expect(result_data['externalAccountCode']).to eq(external_account_code)
+      expect(result_data['externalId']).to eq(external_id)
+      expect(result_data['externalName']).to eq(external_name)
     end
   end
 
@@ -67,9 +67,9 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Create, type: :graphql 
             integrationId: integration.id,
             mappableId: mappable.id,
             mappableType: 'AddOn',
-            netsuiteAccountCode: netsuite_account_code,
-            netsuiteId: netsuite_id,
-            netsuiteName: netsuite_name,
+            externalAccountCode: external_account_code,
+            externalId: external_id,
+            externalName: external_name,
           },
         },
       )
@@ -88,9 +88,9 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Create, type: :graphql 
             integrationId: integration.id,
             mappableId: mappable.id,
             mappableType: 'AddOn',
-            netsuiteAccountCode: netsuite_account_code,
-            netsuiteId: netsuite_id,
-            netsuiteName: netsuite_name,
+            externalAccountCode: external_account_code,
+            externalId: external_id,
+            externalName: external_name,
           },
         },
       )

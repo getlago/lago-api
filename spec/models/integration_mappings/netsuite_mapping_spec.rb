@@ -5,30 +5,30 @@ require 'rails_helper'
 RSpec.describe IntegrationMappings::NetsuiteMapping, type: :model do
   subject(:mapping) { build(:netsuite_mapping) }
 
-  describe '#netsuite_id' do
-    let(:netsuite_id) { SecureRandom.uuid }
+  describe '#external_id' do
+    let(:external_id) { SecureRandom.uuid }
 
     it 'assigns and retrieve a setting' do
-      mapping.netsuite_id = netsuite_id
-      expect(mapping.netsuite_id).to eq(netsuite_id)
+      mapping.external_id = external_id
+      expect(mapping.external_id).to eq(external_id)
     end
   end
 
-  describe '#netsuite_account_code' do
-    let(:netsuite_account_code) { 'netsuite-code-1' }
+  describe '#external_account_code' do
+    let(:external_account_code) { 'netsuite-code-1' }
 
     it 'assigns and retrieve a setting' do
-      mapping.netsuite_account_code = netsuite_account_code
-      expect(mapping.netsuite_account_code).to eq(netsuite_account_code)
+      mapping.external_account_code = external_account_code
+      expect(mapping.external_account_code).to eq(external_account_code)
     end
   end
 
-  describe '#netsuite_name' do
-    let(:netsuite_name) { 'Credits and Discounts' }
+  describe '#external_name' do
+    let(:external_name) { 'Credits and Discounts' }
 
     it 'assigns and retrieve a setting' do
-      mapping.netsuite_name = netsuite_name
-      expect(mapping.netsuite_name).to eq(netsuite_name)
+      mapping.external_name = external_name
+      expect(mapping.external_name).to eq(external_name)
     end
   end
 end

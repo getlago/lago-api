@@ -6,13 +6,13 @@ module Types
       class UpdateInput < Types::BaseInputObject
         graphql_name 'UpdateNetsuiteIntegrationMappingInput'
 
+        argument :external_account_code, String, required: false
+        argument :external_id, String, required: false
+        argument :external_name, String, required: false
         argument :id, ID, required: true
         argument :integration_id, ID, required: false
         argument :mappable_id, ID, required: false
         argument :mappable_type, Types::IntegrationMappings::Netsuite::MappableTypeEnum, required: false
-        argument :netsuite_account_code, String, required: false
-        argument :netsuite_id, String, required: false
-        argument :netsuite_name, String, required: false
       end
     end
   end

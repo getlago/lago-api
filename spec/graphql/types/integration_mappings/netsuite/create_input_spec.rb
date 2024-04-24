@@ -8,7 +8,7 @@ RSpec.describe Types::IntegrationMappings::Netsuite::CreateInput do
   it { is_expected.to accept_argument(:integration_id).of_type('ID!') }
   it { is_expected.to accept_argument(:mappable_id).of_type('ID!') }
   it { is_expected.to accept_argument(:mappable_type).of_type('NetsuiteMappableTypeEnum!') }
-  it { is_expected.to accept_argument(:netsuite_account_code).of_type('String!') }
-  it { is_expected.to accept_argument(:netsuite_id).of_type('String!') }
-  it { is_expected.to accept_argument(:netsuite_name).of_type('String') }
+  it { is_expected.to accept_argument(:external_account_code).of_type('String!') }
+  it { is_expected.to accept_argument(:external_id).of_type('String!') }
+  it { is_expected.to accept_argument(:external_name).of_type('String') }
 end

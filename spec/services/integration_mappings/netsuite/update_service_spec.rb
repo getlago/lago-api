@@ -15,9 +15,9 @@ RSpec.describe IntegrationMappings::Netsuite::UpdateService, type: :service do
 
     let(:update_args) do
       {
-        netsuite_id: '456',
-        netsuite_name: 'Name1',
-        netsuite_account_code: 'code-2',
+        external_id: '456',
+        external_name: 'Name1',
+        external_account_code: 'code-2',
       }
     end
 
@@ -28,9 +28,9 @@ RSpec.describe IntegrationMappings::Netsuite::UpdateService, type: :service do
         integration_mapping = IntegrationMappings::NetsuiteMapping.order(:updated_at).last
 
         aggregate_failures do
-          expect(integration_mapping.netsuite_id).to eq('456')
-          expect(integration_mapping.netsuite_name).to eq('Name1')
-          expect(integration_mapping.netsuite_account_code).to eq('code-2')
+          expect(integration_mapping.external_id).to eq('456')
+          expect(integration_mapping.external_name).to eq('Name1')
+          expect(integration_mapping.external_account_code).to eq('code-2')
         end
       end
 

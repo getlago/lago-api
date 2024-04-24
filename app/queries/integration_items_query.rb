@@ -8,7 +8,7 @@ class IntegrationItemsQuery < BaseQuery
     integration_items = base_scope.result
     integration_items = integration_items.where(integration_id:) if integration_id.present?
     integration_items = integration_items.where(item_type: filters[:item_type]) unless filters[:item_type].nil?
-    integration_items = integration_items.order(name: :asc).page(page).per(limit)
+    integration_items = integration_items.order(external_name: :asc).page(page).per(limit)
 
     result.integration_items = integration_items
     result
@@ -27,9 +27,9 @@ class IntegrationItemsQuery < BaseQuery
 
     {
       m: 'or',
-      name_cont: search_term,
+      external_name_cont: search_term,
       external_id_cont: search_term,
-      account_code_cont: search_term,
+      external_account_code_cont: search_term,
     }
   end
 end

@@ -2,6 +2,6 @@
 
 module IntegrationCollectionMappings
   class NetsuiteCollectionMapping < BaseCollectionMapping
-    settings_accessors :netsuite_id, :netsuite_account_code, :netsuite_name
+    settings_accessors :external_id, :external_account_code, :external_name
   end
 end

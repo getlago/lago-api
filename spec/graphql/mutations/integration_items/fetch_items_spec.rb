@@ -16,7 +16,7 @@ RSpec.describe Mutations::IntegrationItems::FetchItems, type: :graphql do
     <<~GQL
       mutation($input: FetchIntegrationItemsInput!) {
         fetchIntegrationItems(input: $input) {
-          collection { name, accountCode, externalId }
+          collection { externalName, externalAccountCode, externalId }
         }
       }
     GQL

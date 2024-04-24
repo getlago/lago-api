@@ -10,9 +10,9 @@ RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingResolver, type: :g
           id
           mappableId
           mappableType
-          netsuiteId
-          netsuiteAccountCode
-          netsuiteName
+          externalId
+          externalAccountCode
+          externalName
         }
       }
     GQL
@@ -41,10 +41,10 @@ RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingResolver, type: :g
       expect(integration_mapping_response['id']).to eq(netsuite_mapping.id)
       expect(integration_mapping_response['mappableId']).to eq(netsuite_mapping.mappable_id)
       expect(integration_mapping_response['mappableType']).to eq(netsuite_mapping.mappable_type)
-      expect(integration_mapping_response['netsuiteId']).to eq(netsuite_mapping.netsuite_id)
-      expect(integration_mapping_response['netsuiteName']).to eq(netsuite_mapping.netsuite_name)
-      expect(integration_mapping_response['netsuiteAccountCode'])
-        .to eq(netsuite_mapping.netsuite_account_code)
+      expect(integration_mapping_response['externalId']).to eq(netsuite_mapping.external_id)
+      expect(integration_mapping_response['externalName']).to eq(netsuite_mapping.external_name)
+      expect(integration_mapping_response['externalAccountCode'])
+        .to eq(netsuite_mapping.external_account_code)
     end
   end
 

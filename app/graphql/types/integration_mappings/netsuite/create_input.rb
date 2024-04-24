@@ -6,12 +6,12 @@ module Types
       class CreateInput < Types::BaseInputObject
         graphql_name 'CreateNetsuiteIntegrationMappingInput'
 
+        argument :external_account_code, String, required: true
+        argument :external_id, String, required: true
+        argument :external_name, String, required: false
         argument :integration_id, ID, required: true
         argument :mappable_id, ID, required: true
         argument :mappable_type, Types::IntegrationMappings::Netsuite::MappableTypeEnum, required: true
-        argument :netsuite_account_code, String, required: true
-        argument :netsuite_id, String, required: true
-        argument :netsuite_name, String, required: false
       end
     end
   end

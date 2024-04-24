@@ -1844,11 +1844,11 @@ input CreateNetsuiteIntegrationCollectionMappingInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  externalAccountCode: String
+  externalId: String!
+  externalName: String
   integrationId: ID!
   mappingType: NetsuiteMappingTypeEnum!
-  netsuiteAccountCode: String
-  netsuiteId: String!
-  netsuiteName: String
 }
 
 """
@@ -1881,12 +1881,12 @@ input CreateNetsuiteIntegrationMappingInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  externalAccountCode: String!
+  externalId: String!
+  externalName: String
   integrationId: ID!
   mappableId: ID!
   mappableType: NetsuiteMappableTypeEnum!
-  netsuiteAccountCode: String!
-  netsuiteId: String!
-  netsuiteName: String
 }
 
 """
@@ -3544,12 +3544,12 @@ type IntegrationCollection {
 }
 
 type IntegrationItem {
-  accountCode: String
+  externalAccountCode: String
   externalId: String!
+  externalName: String
   id: ID!
   integrationId: ID!
   itemType: IntegrationItemTypeEnum!
-  name: String
 }
 
 type IntegrationItemCollection {
@@ -4625,12 +4625,12 @@ type Mutation {
 }
 
 type NetsuiteCollectionMapping {
+  externalAccountCode: String
+  externalId: String!
+  externalName: String
   id: ID!
   integrationId: ID!
   mappingType: NetsuiteMappingTypeEnum!
-  netsuiteAccountCode: String
-  netsuiteId: String!
-  netsuiteName: String
 }
 
 type NetsuiteCollectionMappingCollection {
@@ -4660,13 +4660,13 @@ enum NetsuiteMappableTypeEnum {
 }
 
 type NetsuiteMapping {
+  externalAccountCode: String!
+  externalId: String!
+  externalName: String
   id: ID!
   integrationId: ID!
   mappableId: ID!
   mappableType: NetsuiteMappableTypeEnum!
-  netsuiteAccountCode: String!
-  netsuiteId: String!
-  netsuiteName: String
 }
 
 type NetsuiteMappingCollection {
@@ -6524,12 +6524,12 @@ input UpdateNetsuiteIntegrationCollectionMappingInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  externalAccountCode: String
+  externalId: String
+  externalName: String
   id: ID!
   integrationId: ID
   mappingType: NetsuiteMappingTypeEnum
-  netsuiteAccountCode: String
-  netsuiteId: String
-  netsuiteName: String
 }
 
 """
@@ -6563,13 +6563,13 @@ input UpdateNetsuiteIntegrationMappingInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  externalAccountCode: String
+  externalId: String
+  externalName: String
   id: ID!
   integrationId: ID
   mappableId: ID
   mappableType: NetsuiteMappableTypeEnum
-  netsuiteAccountCode: String
-  netsuiteId: String
-  netsuiteName: String
 }
 
 """
