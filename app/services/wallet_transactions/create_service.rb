@@ -56,7 +56,6 @@ module WalletTransactions
         source:,
         transaction_status: :paid,
       )
-      Wallets::Balance::IncreaseOngoingService.new(wallet:, credits_amount: paid_credits_amount).call
 
       BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
 
