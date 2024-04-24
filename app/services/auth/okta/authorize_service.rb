@@ -43,12 +43,7 @@ module Auth
       attr_reader :email
 
       def initialize_state
-        redis_config = { url: ENV['REDIS_URL'] }
-        redis_config.merge({ password: ENV['REDIS_PASSWORD'] }) if ENV['REDIS_PASSWORD'].present?
-        redis_client = ::Redis.new(url: ENV['REDIS_URL'])
-
-        redis_client.set(state, email)
-        redis_client.expire(state, 90)
+        Rails.cache.write(state, email, expires_in: 90.seconds)
       end
 
       def state
