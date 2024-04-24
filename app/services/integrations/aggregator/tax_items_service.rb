@@ -46,7 +46,7 @@ module Integrations
           integration_item = IntegrationItem.new(
             integration:,
             external_id: item['id'],
-            name: item['name'],
+            external_name: item['name'],
             item_type: :tax,
           )
 

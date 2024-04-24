@@ -7,9 +7,9 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
   let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
-  let(:netsuite_account_code) { Faker::Barcode.ean }
-  let(:netsuite_id) { SecureRandom.uuid }
-  let(:netsuite_name) { Faker::Commerce.department }
+  let(:external_account_code) { Faker::Barcode.ean }
+  let(:external_id) { SecureRandom.uuid }
+  let(:external_name) { Faker::Commerce.department }
 
   let(:mutation) do
     <<-GQL
@@ -18,9 +18,9 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
           id,
           integrationId,
           mappingType,
-          netsuiteAccountCode,
-          netsuiteId,
-          netsuiteName
+          externalAccountCode,
+          externalId,
+          externalName
         }
       }
     GQL
@@ -35,9 +35,9 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
         input: {
           integrationId: integration.id,
           mappingType: mapping_type,
-          netsuiteAccountCode: netsuite_account_code,
-          netsuiteId: netsuite_id,
-          netsuiteName: netsuite_name,
+          externalAccountCode: external_account_code,
+          externalId: external_id,
+          externalName: external_name,
         },
       },
     )
@@ -48,9 +48,9 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
       expect(result_data['id']).to be_present
       expect(result_data['integrationId']).to eq(integration.id)
       expect(result_data['mappingType']).to eq(mapping_type)
-      expect(result_data['netsuiteAccountCode']).to eq(netsuite_account_code)
-      expect(result_data['netsuiteId']).to eq(netsuite_id)
-      expect(result_data['netsuiteName']).to eq(netsuite_name)
+      expect(result_data['externalAccountCode']).to eq(external_account_code)
+      expect(result_data['externalId']).to eq(external_id)
+      expect(result_data['externalName']).to eq(external_name)
     end
   end
 
@@ -63,9 +63,9 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
           input: {
             integrationId: integration.id,
             mappingType: mapping_type,
-            netsuiteAccountCode: netsuite_account_code,
-            netsuiteId: netsuite_id,
-            netsuiteName: netsuite_name,
+            externalAccountCode: external_account_code,
+            externalId: external_id,
+            externalName: external_name,
           },
         },
       )
@@ -83,9 +83,9 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
           input: {
             integrationId: integration.id,
             mappingType: mapping_type,
-            netsuiteAccountCode: netsuite_account_code,
-            netsuiteId: netsuite_id,
-            netsuiteName: netsuite_name,
+            externalAccountCode: external_account_code,
+            externalId: external_id,
+            externalName: external_name,
           },
         },
       )

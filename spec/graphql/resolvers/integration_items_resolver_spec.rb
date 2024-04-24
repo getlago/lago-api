@@ -7,7 +7,7 @@ RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
     <<~GQL
       query($integrationId: ID!, $itemType: IntegrationItemTypeEnum) {
         integrationItems(integrationId: $integrationId, itemType: $itemType, limit: 5) {
-          collection { id externalId itemType name }
+          collection { id externalId itemType externalName }
           metadata { currentPage, totalCount }
         }
       }

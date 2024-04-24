@@ -9,9 +9,9 @@ RSpec.describe Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappi
         netsuiteCollectionMapping(id: $netsuiteCollectionMappingId) {
           id
           mappingType
-          netsuiteId
-          netsuiteAccountCode
-          netsuiteName
+          externalId
+          externalAccountCode
+          externalName
         }
       }
     GQL
@@ -39,10 +39,10 @@ RSpec.describe Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappi
     aggregate_failures do
       expect(integration_mapping_response['id']).to eq(netsuite_collection_mapping.id)
       expect(integration_mapping_response['mappingType']).to eq(netsuite_collection_mapping.mapping_type)
-      expect(integration_mapping_response['netsuiteId']).to eq(netsuite_collection_mapping.netsuite_id)
-      expect(integration_mapping_response['netsuiteName']).to eq(netsuite_collection_mapping.netsuite_name)
-      expect(integration_mapping_response['netsuiteAccountCode'])
-        .to eq(netsuite_collection_mapping.netsuite_account_code)
+      expect(integration_mapping_response['externalId']).to eq(netsuite_collection_mapping.external_id)
+      expect(integration_mapping_response['externalName']).to eq(netsuite_collection_mapping.external_name)
+      expect(integration_mapping_response['externalAccountCode'])
+        .to eq(netsuite_collection_mapping.external_account_code)
     end
   end
 

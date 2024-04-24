@@ -17,11 +17,11 @@ module IntegrationCollectionMappings
 
         integration_collection_mapping.integration_id = params[:integration_id] if params.key?(:integration_id)
         integration_collection_mapping.mapping_type = params[:mapping_type] if params.key?(:mapping_type)
-        integration_collection_mapping.netsuite_id = params[:netsuite_id] if params.key?(:netsuite_id)
-        if params.key?(:netsuite_account_code)
-          integration_collection_mapping.netsuite_account_code = params[:netsuite_account_code]
+        integration_collection_mapping.external_id = params[:external_id] if params.key?(:external_id)
+        if params.key?(:external_account_code)
+          integration_collection_mapping.external_account_code = params[:external_account_code]
         end
-        integration_collection_mapping.netsuite_name = params[:netsuite_name] if params.key?(:netsuite_name)
+        integration_collection_mapping.external_name = params[:external_name] if params.key?(:external_name)
 
         integration_collection_mapping.save!
 

@@ -15,6 +15,6 @@ class IntegrationItem < ApplicationRecord
   validates :external_id, presence: true
 
   def self.ransackable_attributes(_auth_object = nil)
-    %w[account_code external_id name]
+    %w[external_account_code external_id external_name]
   end
 end

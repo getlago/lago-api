@@ -9,7 +9,7 @@ RSpec.describe Types::IntegrationMappings::Netsuite::Object do
   it { is_expected.to have_field(:integration_id).of_type('ID!') }
   it { is_expected.to have_field(:mappable_id).of_type('ID!') }
   it { is_expected.to have_field(:mappable_type).of_type('NetsuiteMappableTypeEnum!') }
-  it { is_expected.to have_field(:netsuite_account_code).of_type('String!') }
-  it { is_expected.to have_field(:netsuite_id).of_type('String!') }
-  it { is_expected.to have_field(:netsuite_name).of_type('String') }
+  it { is_expected.to have_field(:external_account_code).of_type('String!') }
+  it { is_expected.to have_field(:external_id).of_type('String!') }
+  it { is_expected.to have_field(:external_name).of_type('String') }
 end

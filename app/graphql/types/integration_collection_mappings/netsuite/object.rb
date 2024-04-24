@@ -6,12 +6,12 @@ module Types
       class Object < Types::BaseObject
         graphql_name 'NetsuiteCollectionMapping'
 
+        field :external_account_code, String, null: true
+        field :external_id, String, null: false
+        field :external_name, String, null: true
         field :id, ID, null: false
         field :integration_id, ID, null: false
         field :mapping_type, Types::IntegrationCollectionMappings::Netsuite::MappingTypeEnum, null: false
-        field :netsuite_account_code, String, null: true
-        field :netsuite_id, String, null: false
-        field :netsuite_name, String, null: true
       end
     end
   end

@@ -8,11 +8,11 @@ module Types
 
         argument :id, ID, required: true
 
+        argument :external_account_code, String, required: false
+        argument :external_id, String, required: false
+        argument :external_name, String, required: false
         argument :integration_id, ID, required: false
         argument :mapping_type, Types::IntegrationCollectionMappings::Netsuite::MappingTypeEnum, required: false
-        argument :netsuite_account_code, String, required: false
-        argument :netsuite_id, String, required: false
-        argument :netsuite_name, String, required: false
       end
     end
   end

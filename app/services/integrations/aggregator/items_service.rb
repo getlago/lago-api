@@ -46,8 +46,8 @@ module Integrations
           integration_item = IntegrationItem.new(
             integration:,
             external_id: item['id'],
-            account_code: item['account_code'],
-            name: item['name'],
+            external_account_code: item['account_code'],
+            external_name: item['name'],
             item_type: :standard,
           )
 

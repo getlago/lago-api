@@ -7,9 +7,9 @@ FactoryBot.define do
 
     settings do
       {
-        netsuite_id: 'netsuite-123',
-        netsuite_account_code: 'netsuite-code-1',
-        netsuite_name: 'Credits and Discounts',
+        external_id: 'netsuite-123',
+        external_account_code: 'netsuite-code-1',
+        external_name: 'Credits and Discounts',
       }
     end
   end
