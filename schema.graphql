@@ -3769,9 +3769,9 @@ input LoseInvoiceDisputeInput {
 type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
-  organization: Organization!
+  organization: SafeOrganization!
   revokedAt: ISO8601DateTime!
-  role: String
+  role: MembershipRole
   status: MembershipStatus!
   updatedAt: ISO8601DateTime!
   user: User!
@@ -3780,6 +3780,10 @@ type Membership {
 type MembershipCollection {
   collection: [Membership!]!
   metadata: CollectionMetadata!
+}
+
+enum MembershipRole {
+  admin
 }
 
 enum MembershipStatus {
@@ -6681,7 +6685,8 @@ type User {
   createdAt: ISO8601DateTime!
   email: String
   id: ID!
-  organizations: [SafeOrganization!]
+  memberships: [Membership!]!
+  organizations: [SafeOrganization!]!
   premium: Boolean!
   updatedAt: ISO8601DateTime!
 }

@@ -17740,7 +17740,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "Organization",
+                  "name": "SafeOrganization",
                   "ofType": null
                 }
               },
@@ -17772,8 +17772,8 @@
               "name": "role",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "MembershipRole",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -17896,6 +17896,23 @@
           ],
           "inputFields": null,
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "MembershipRole",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "admin",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "ENUM",
@@ -31296,18 +31313,48 @@
               ]
             },
             {
+              "name": "memberships",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "Membership",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "organizations",
               "description": null,
               "type": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
+                  "kind": "LIST",
                   "name": null,
                   "ofType": {
-                    "kind": "OBJECT",
-                    "name": "SafeOrganization",
-                    "ofType": null
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "SafeOrganization",
+                      "ofType": null
+                    }
                   }
                 }
               },

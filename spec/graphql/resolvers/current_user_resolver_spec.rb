@@ -10,8 +10,12 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
           id
           email
           premium
-          organizations {
-            id
+          memberships {
+            role
+            status
+            organization {
+              name
+            }
           }
         }
       }
@@ -20,6 +24,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
 
   it 'returns current_user' do
     user = create(:user)
+    create(:membership, user:, role: :admin)
 
     result = execute_graphql(
       current_user: user,
@@ -30,6 +35,36 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
       expect(result['data']['currentUser']['email']).to eq(user.email)
       expect(result['data']['currentUser']['id']).to eq(user.id)
       expect(result['data']['currentUser']['premium']).to be_falsey
+      expect(result['data']['currentUser']['memberships'][0]['role']).to eq 'admin'
+      expect(result['data']['currentUser']['memberships'][0]['organization']['name']).not_to be_empty
+    end
+  end
+
+  describe 'with organizations instead of memberships' do
+    let(:query) do
+      <<~GRAPHQL
+        query {
+          currentUser {
+            id
+            email
+            premium
+            organizations {
+              id
+            }
+          }
+        }
+      GRAPHQL
+    end
+
+    it 'returns organizations' do
+      organization = create(:organization)
+      membership = create(:membership, organization:)
+      result = execute_graphql(
+        current_user: membership.user,
+        query:,
+      )
+
+      expect(result['data']['currentUser']['organizations'][0]['id']).to eq organization.id
     end
   end
 
@@ -47,7 +82,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
         query:,
       )
 
-      expect(result['data']['currentUser']['organizations']).not_to include(revoked_membership.organization)
+      expect(result['data']['currentUser']['memberships']).not_to include(revoked_membership)
     end
   end
 

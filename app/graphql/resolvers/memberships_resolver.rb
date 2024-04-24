@@ -15,6 +15,7 @@ module Resolvers
     def resolve(page: nil, limit: nil)
       current_organization
         .memberships
+        .includes(:user)
         .active
         .page(page)
         .per(limit)
