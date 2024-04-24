@@ -80,8 +80,8 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       expect { refresh_service.call }
         .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1100)
         .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(11.0)
-        .and change(wallet, :ongoing_balance_cents).from(800).to(0)
-        .and change(wallet, :credits_ongoing_balance).from(8.0).to(0)
+        .and change(wallet, :ongoing_balance_cents).from(800).to(-100)
+        .and change(wallet, :credits_ongoing_balance).from(8.0).to(-1.0)
     end
 
     it 'returns the wallet' do

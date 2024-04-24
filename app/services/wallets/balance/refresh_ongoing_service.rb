@@ -17,8 +17,8 @@ module Wallets
             organization_id: customer.organization_id,
           ).invoice.total_amount
         end
-        credits_amount = total_amount.to_f.fdiv(wallet.rate_amount)
-        Wallets::Balance::DecreaseOngoingService.call(wallet:, credits_amount:).raise_if_error!
+        usage_credits_amount = total_amount.to_f.fdiv(wallet.rate_amount)
+        Wallets::Balance::UpdateOngoingService.call(wallet:, usage_credits_amount:).raise_if_error!
 
         result.wallet = wallet
         result

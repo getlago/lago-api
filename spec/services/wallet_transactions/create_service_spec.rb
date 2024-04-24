@@ -70,11 +70,11 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       expect(wallet.reload.credits_balance).to eq(25.0)
     end
 
-    it 'updates wallet ongoing balance with granted and paid credits' do
+    it 'updates wallet ongoing balance only with granted credits' do
       create_service
 
-      expect(wallet.reload.ongoing_balance_cents).to eq(3500)
-      expect(wallet.reload.credits_ongoing_balance).to eq(35.0)
+      expect(wallet.reload.ongoing_balance_cents).to eq(2500)
+      expect(wallet.reload.credits_ongoing_balance).to eq(25.0)
     end
 
     it 'enqueues a SendWebhookJob for each wallet transaction' do
