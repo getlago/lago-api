@@ -3822,6 +3822,7 @@ type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
   organization: Organization!
+  permissions: Permissions!
   revokedAt: ISO8601DateTime!
   role: MembershipRole
   status: MembershipStatus!
@@ -3836,6 +3837,8 @@ type MembershipCollection {
 
 enum MembershipRole {
   admin
+  finance
+  manager
 }
 
 enum MembershipStatus {
@@ -4776,6 +4779,74 @@ union PaymentProvider = AdyenProvider | GocardlessProvider | StripeProvider
 type PaymentProviderCollection {
   collection: [PaymentProvider!]!
   metadata: CollectionMetadata!
+}
+
+"""
+Permissions Type
+"""
+type Permissions {
+  addonsCreate: Boolean!
+  addonsDelete: Boolean!
+  addonsUpdate: Boolean!
+  addonsView: Boolean!
+  analyticsView: Boolean!
+  billableMetricsCreate: Boolean!
+  billableMetricsDelete: Boolean!
+  billableMetricsUpdate: Boolean!
+  billableMetricsView: Boolean!
+  couponsAttach: Boolean!
+  couponsCreate: Boolean!
+  couponsDelete: Boolean!
+  couponsDetach: Boolean!
+  couponsUpdate: Boolean!
+  couponsView: Boolean!
+  creditNotesCreate: Boolean!
+  creditNotesView: Boolean!
+  creditNotesVoid: Boolean!
+  customerSettingsEditGracePeriod: Boolean!
+  customerSettingsEditLang: Boolean!
+  customerSettingsEditPaymentTerms: Boolean!
+  customerSettingsEditTaxRates: Boolean!
+  customerSettingsView: Boolean!
+  customersCreate: Boolean!
+  customersDelete: Boolean!
+  customersUpdate: Boolean!
+  customersView: Boolean!
+  developersKeysView: Boolean!
+  developersView: Boolean!
+  draftInvoicesUpdate: Boolean!
+  invoicesCreate: Boolean!
+  invoicesSend: Boolean!
+  invoicesUpdate: Boolean!
+  invoicesView: Boolean!
+  invoicesVoid: Boolean!
+  organizationEdit: Boolean!
+  organizationEmailsEdit: Boolean!
+  organizationEmailsView: Boolean!
+  organizationIntegrationsCreate: Boolean!
+  organizationIntegrationsDelete: Boolean!
+  organizationIntegrationsUpdate: Boolean!
+  organizationIntegrationsView: Boolean!
+  organizationInvoicesEdit: Boolean!
+  organizationInvoicesView: Boolean!
+  organizationMembersCreate: Boolean!
+  organizationMembersDelete: Boolean!
+  organizationMembersUpdate: Boolean!
+  organizationMembersView: Boolean!
+  organizationTaxesEdit: Boolean!
+  organizationTaxesView: Boolean!
+  organizationView: Boolean!
+  plansCreate: Boolean!
+  plansDelete: Boolean!
+  plansUpdate: Boolean!
+  plansView: Boolean!
+  subscriptionsCreate: Boolean!
+  subscriptionsDelete: Boolean!
+  subscriptionsUpdate: Boolean!
+  walletsCreate: Boolean!
+  walletsTerminate: Boolean!
+  walletsTopUp: Boolean!
+  walletsUpdate: Boolean!
 }
 
 type Plan {

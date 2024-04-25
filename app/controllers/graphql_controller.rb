@@ -26,6 +26,7 @@ class GraphqlController < ApplicationController
       current_organization:,
       customer_portal_user:,
       request:,
+      permissions: current_user&.memberships&.find_by(organization: current_organization)&.permissions_hash || {},
     }
     result = LagoApiSchema.execute(query, variables:, context:, operation_name:)
     render(json: result)
@@ -59,11 +60,11 @@ class GraphqlController < ApplicationController
     end
   end
 
-  def handle_error_in_development(e)
-    logger.error(e.message)
-    logger.error(e.backtrace.join("\n"))
+  def handle_error_in_development(error)
+    logger.error(error.message)
+    logger.error(error.backtrace.join("\n"))
 
-    render(json: { errors: [{ message: e.message, backtrace: e.backtrace }], data: {} }, status: 500)
+    render(json: { errors: [{ message: error.message, backtrace: error.backtrace }], data: {} }, status: 500)
   end
 
   def render_graphql_error(code:, status:, message: nil)
