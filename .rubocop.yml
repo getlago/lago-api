@@ -171,6 +171,9 @@ RSpec/MultipleMemoizedHelpers:
 RSpec/NestedGroups:
   Enabled: false
 
+RSpec/NamedSubject:
+  Enabled: false
+
 Style/BlockDelimiters:
   Description: >-
                 Avoid using {...} for multi-line blocks (multiline chaining is always ugly).
