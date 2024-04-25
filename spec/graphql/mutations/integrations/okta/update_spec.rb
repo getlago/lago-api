@@ -17,6 +17,7 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
           clientId,
           clientSecret,
           domain,
+          organizationName,
         }
       }
     GQL
@@ -38,6 +39,7 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
         input: {
           id: integration.id,
           domain: 'foo.bar',
+          organizationName: 'Footest',
         },
       },
     )
@@ -46,6 +48,7 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
 
     aggregate_failures do
       expect(result_data['domain']).to eq('foo.bar')
+      expect(result_data['organizationName']).to eq('Footest')
     end
   end
 
@@ -58,6 +61,7 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
           input: {
             id: integration.id,
             domain: 'foo.bar',
+            organizationName: 'Footest',
           },
         },
       )
@@ -75,6 +79,7 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
           input: {
             id: integration.id,
             domain: 'foo.bar',
+            organizationName: 'Footest',
           },
         },
       )

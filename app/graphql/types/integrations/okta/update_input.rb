@@ -11,6 +11,7 @@ module Types
         argument :client_id, String, required: false
         argument :client_secret, String, required: false
         argument :domain, String, required: false
+        argument :organization_name, String, required: false
       end
     end
   end

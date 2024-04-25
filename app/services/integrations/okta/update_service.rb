@@ -20,6 +20,7 @@ module Integrations
         integration.client_id = params[:client_id] if params.key?(:client_id)
         integration.client_secret = params[:client_secret] if params.key?(:client_secret)
         integration.domain = params[:domain] if params.key?(:domain)
+        integration.organization_name = params[:organization_name] if params.key?(:organization_name)
 
         integration.save!
 
