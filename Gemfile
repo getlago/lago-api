@@ -33,6 +33,7 @@ gem 'scenic'
 gem 'with_advisory_lock'
 
 # Currencies, Countries, Timezones...
+gem 'bigdecimal'
 gem 'countries'
 gem 'money-rails'
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
@@ -54,8 +55,9 @@ gem 'analytics-ruby', '~> 2.4.0', require: 'segment/analytics'
 gem 'lograge'
 gem 'logstash-event'
 
-# Multipart support
+# HTTP and Multipart support
 gem 'multipart-post'
+gem 'mutex_m'
 
 # Monitoring
 gem 'newrelic_rpm'
