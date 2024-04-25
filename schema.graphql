@@ -6899,8 +6899,8 @@ enum WalletTransactionStatusEnum {
 }
 
 enum WalletTransactionTransactionStatusEnum {
-  offered
-  paid
+  granted
+  purchased
   voided
 }
 

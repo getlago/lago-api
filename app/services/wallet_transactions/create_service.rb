@@ -54,7 +54,7 @@ module WalletTransactions
         credit_amount: paid_credits_amount,
         status: :pending,
         source:,
-        transaction_status: :paid,
+        transaction_status: :purchased,
       )
 
       BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
@@ -76,7 +76,7 @@ module WalletTransactions
           status: :settled,
           settled_at: Time.current,
           source:,
-          transaction_status: :offered,
+          transaction_status: :granted,
         )
 
         Wallets::Balance::IncreaseService.new(
