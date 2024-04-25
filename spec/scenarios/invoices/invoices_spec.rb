@@ -1488,8 +1488,6 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         # Invoice for termination is created
         termination_invoice = subscription.invoices.order(created_at: :desc).first
 
-        pp subscription.invoices.count
-
         # Total amount does not reflect the credit note as it's not finalized.
         expect(termination_invoice.total_amount_cents).to eq(120)
         expect(termination_invoice.credits.count).to eq(0)
