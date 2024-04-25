@@ -13,6 +13,12 @@ module GraphQLHelper
       permissions = Array.wrap(permissions).index_with { true }
     end
 
+    permissions.keys.each do |permission|
+      next if Permission::DEFAULT_PERMISSIONS_HASH.key?(permission)
+
+      raise "Unknown permission: #{permission}"
+    end
+
     args = kwargs.merge(
       context: {
         controller:,
