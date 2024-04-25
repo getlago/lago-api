@@ -2,12 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Auth::Okta::Login, type: %i[graphql with_redis] do
+RSpec.describe Mutations::Auth::Okta::Login, type: :graphql do
   let(:okta_integration) { create(:okta_integration, domain: 'bar.com', organization_name: 'foo') }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
   let(:okta_token_response) { OpenStruct.new(body: { 'access_token': 'access_token' }) }
   let(:okta_userinfo_response) { OpenStruct.new({ 'email': 'foo@bar.com' }) }
   let(:state) { SecureRandom.uuid }
+  let(:memory_store) { ActiveSupport::Cache.lookup_store(:memory_store) }
 
   let(:mutation) do
     <<~GQL
@@ -24,7 +25,10 @@ RSpec.describe Mutations::Auth::Okta::Login, type: %i[graphql with_redis] do
 
   before do
     okta_integration
-    Redis.new.set(state, 'foo@bar.com')
+
+    allow(Rails).to receive(:cache).and_return(memory_store)
+    memory_store.write(state, 'foo@bar.com')
+
     allow(LagoHttpClient::Client).to receive(:new).and_return(lago_http_client)
     allow(lago_http_client).to receive(:post).and_return(okta_token_response)
     allow(lago_http_client).to receive(:get).and_return(okta_userinfo_response)

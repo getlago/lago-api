@@ -34,14 +34,10 @@ module Auth
       attr_reader :code, :state
 
       def check_state
-        redis_config = { url: ENV['REDIS_URL'] }
-        redis_config.merge({ password: ENV['REDIS_PASSWORD'] }) if ENV['REDIS_PASSWORD'].present?
-        redis_client = ::Redis.new(url: ENV['REDIS_URL'])
-
-        email = redis_client.get(state)
+        email = Rails.cache.read(state)
         raise Auth::Okta::ValidationError, 'state_not_found' if email.blank?
 
-        redis_client.del(state)
+        Rails.cache.delete(state)
 
         result.email = email
       end
@@ -74,7 +70,7 @@ module Auth
       def check_userinfo
         userinfo_client = LagoHttpClient::Client.new("https://#{result.okta_integration.organization_name.downcase}.okta.com/oauth2/default/v1/userinfo")
         userinfo_headers = { 'Authorization' => "Bearer #{result.okta_access_token}" }
-        response = userinfo_client.get(userinfo_headers)
+        response = userinfo_client.get(headers: userinfo_headers)
 
         raise Auth::Okta::ValidationError, 'okta_userinfo_error' if response['email'] != result.email
 

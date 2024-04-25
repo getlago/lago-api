@@ -2,17 +2,21 @@
 
 require 'rails_helper'
 
-RSpec.describe Auth::Okta::LoginService, type: :with_redis do
+RSpec.describe Auth::Okta::LoginService do
   let(:service) { described_class.new(code: 'code', state:) }
   let(:okta_integration) { create(:okta_integration, domain: 'bar.com', organization_name: 'foo') }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
   let(:okta_token_response) { OpenStruct.new(body: { 'access_token': 'access_token' }) }
   let(:okta_userinfo_response) { OpenStruct.new({ 'email': 'foo@bar.com' }) }
+  let(:memory_store) { ActiveSupport::Cache.lookup_store(:memory_store) }
   let(:state) { SecureRandom.uuid }
 
   before do
     okta_integration
-    Redis.new.set(state, 'foo@bar.com')
+
+    allow(Rails).to receive(:cache).and_return(memory_store)
+    memory_store.write(state, 'foo@bar.com')
+
     allow(LagoHttpClient::Client).to receive(:new).and_return(lago_http_client)
     allow(lago_http_client).to receive(:post).and_return(okta_token_response)
     allow(lago_http_client).to receive(:get).and_return(okta_userinfo_response)
@@ -31,7 +35,7 @@ RSpec.describe Auth::Okta::LoginService, type: :with_redis do
 
     context 'when state is not found' do
       before do
-        Redis.new.del(state)
+        Rails.cache.clear
       end
 
       it 'returns error' do
