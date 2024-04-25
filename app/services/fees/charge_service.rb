@@ -23,12 +23,11 @@ module Fees
           fee.save!
 
           next unless invoice.draft? && fee.true_up_parent_fee.nil? && adjusted_fee(
-            group: fee.group,
             charge_filter: fee.charge_filter,
             grouped_by: fee.grouped_by,
           )
 
-          adjusted_fee(group: fee.group, charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).update!(fee:)
+          adjusted_fee(charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).update!(fee:)
         end
       end
 
@@ -55,44 +54,30 @@ module Fees
     def init_fees
       result.fees = []
 
-      if billable_metric.selectable_groups.any? && charge.filters.none? # NOTE: ignore migrated groups
-        # NOTE: Create a fee for each groups defined on the charge.
-        charge.group_properties.each do |group_properties|
-          group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
-          init_charge_fees(properties: group_properties.values, group:)
-        end
+      return init_charge_fees(properties: charge.properties) unless charge.filters.any?
 
-        # NOTE: Create a fee for groups not defined (with default properties).
-        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).find_each do |group|
-          init_charge_fees(properties: charge.properties, group:)
-        end
-      else
-        return init_charge_fees(properties: charge.properties) unless charge.filters.any?
-
-        # NOTE: Create a fee for each filters defined on the charge.
-        charge.filters.each do |charge_filter|
-          init_charge_fees(properties: charge_filter.properties, charge_filter:)
-        end
-
-        # NOTE: Create a fee for events not matching any filters.
-        init_charge_fees(properties: charge.properties, charge_filter: ChargeFilter.new(charge:))
+      # NOTE: Create a fee for each filters defined on the charge.
+      charge.filters.each do |charge_filter|
+        init_charge_fees(properties: charge_filter.properties, charge_filter:)
       end
+
+      # NOTE: Create a fee for events not matching any filters.
+      init_charge_fees(properties: charge.properties, charge_filter: ChargeFilter.new(charge:))
     end
 
-    def init_charge_fees(properties:, group: nil, charge_filter: nil)
-      charge_model_result = apply_aggregation_and_charge_model(properties:, group:, charge_filter:)
+    def init_charge_fees(properties:, charge_filter: nil)
+      charge_model_result = apply_aggregation_and_charge_model(properties:, charge_filter:)
       return result.fail_with_error!(charge_model_result.error) unless charge_model_result.success?
 
       (charge_model_result.grouped_results || [charge_model_result]).each do |amount_result|
-        init_fee(amount_result, properties:, group:, charge_filter:)
+        init_fee(amount_result, properties:, charge_filter:)
       end
     end
 
-    def init_fee(amount_result, properties:, group:, charge_filter:)
+    def init_fee(amount_result, properties:, charge_filter:)
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
       if invoice.draft? && (adjusted = adjusted_fee(
-        group:,
         charge_filter:,
         grouped_by: amount_result.grouped_by,
       )) && !adjusted.adjusted_display_name?
@@ -135,7 +120,6 @@ module Fees
         total_aggregated_units: amount_result.total_aggregated_units || units,
         properties: boundaries.to_h,
         events_count: amount_result.count,
-        group_id: group&.id,
         payment_status: :pending,
         taxes_amount_cents: 0,
         unit_amount_cents:,
@@ -145,18 +129,17 @@ module Fees
         charge_filter_id: charge_filter&.id,
       )
 
-      if (adjusted = adjusted_fee(group:, charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?
+      if (adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?
         new_fee.invoice_display_name = adjusted.invoice_display_name
       end
 
       result.fees << new_fee
     end
 
-    def adjusted_fee(group:, charge_filter:, grouped_by:)
+    def adjusted_fee(charge_filter:, grouped_by:)
       @adjusted_fee ||= {}
 
       key = [
-        group&.id,
         charge_filter&.id,
         (grouped_by || {}).map do |k, v|
           "#{k}-#{v}"
@@ -167,7 +150,7 @@ module Fees
       return @adjusted_fee[key] if @adjusted_fee.key?(key)
 
       scope = AdjustedFee
-        .where(invoice:, subscription:, charge:, group:, charge_filter:, fee_type: :charge)
+        .where(invoice:, subscription:, charge:, charge_filter:, fee_type: :charge)
         .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
         .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3))
 
@@ -185,16 +168,12 @@ module Fees
       result.fees << true_up_fee if true_up_fee
     end
 
-    def apply_aggregation_and_charge_model(properties:, group: nil, charge_filter: nil)
-      aggregation_result = aggregator(group:, charge_filter:).aggregate(options: options(properties))
+    def apply_aggregation_and_charge_model(properties:, charge_filter: nil)
+      aggregation_result = aggregator(charge_filter:).aggregate(options: options(properties))
       return aggregation_result unless aggregation_result.success?
 
       if billable_metric.recurring?
-        persist_recurring_value(
-          aggregation_result.aggregations || [aggregation_result],
-          group,
-          charge_filter,
-        )
+        persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
       end
 
       Charges::ChargeModelFactory.new_instance(charge:, aggregation_result:, properties:).apply
@@ -217,7 +196,7 @@ module Fees
       true
     end
 
-    def aggregator(group:, charge_filter:)
+    def aggregator(charge_filter:)
       BillableMetrics::AggregationFactory.new_instance(
         charge:,
         current_usage: is_current_usage,
@@ -227,11 +206,11 @@ module Fees
           to_datetime: boundaries.charges_to_datetime,
           charges_duration: boundaries.charges_duration,
         },
-        filters: aggregation_filters(group:, charge_filter:),
+        filters: aggregation_filters(charge_filter:),
       )
     end
 
-    def persist_recurring_value(aggregation_results, group, charge_filter)
+    def persist_recurring_value(aggregation_results, charge_filter)
       return if is_current_usage
 
       # NOTE: Only weighted sum aggregation is setting this value
@@ -244,7 +223,6 @@ module Fees
         result.quantified_events << QuantifiedEvent.find_or_initialize_by(
           organization_id: billable_metric.organization_id,
           external_subscription_id: subscription.external_id,
-          group_id: group&.id,
           charge_filter_id: charge_filter&.id,
           billable_metric_id: billable_metric.id,
           added_at: aggregation_result.recurring_updated_at,
@@ -256,8 +234,8 @@ module Fees
       end
     end
 
-    def aggregation_filters(group:, charge_filter: nil)
-      filters = { group: }
+    def aggregation_filters(charge_filter: nil)
+      filters = {}
 
       properties = charge_filter&.properties || charge.properties
       filters[:grouped_by] = properties['grouped_by'] if charge.standard? && properties['grouped_by'].present?

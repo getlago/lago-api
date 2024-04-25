@@ -49,7 +49,7 @@ RSpec.describe Fees::ChargeService do
   end
 
   describe '.create' do
-    context 'without group properties' do
+    context 'without filters' do
       it 'creates a fee' do
         result = charge_subscription_service.create
         expect(result).to be_success
@@ -440,17 +440,38 @@ RSpec.describe Fees::ChargeService do
             end
           end
 
-          context 'with standard charge, all types of aggregation and presence of groups' do
-            let(:europe) do
-              create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+          context 'with standard charge, all types of aggregation and presence of filters' do
+            let(:region) do
+              create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe usa])
             end
 
-            let(:usa) do
-              create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+            let(:country) do
+              create(:billable_metric_filter, billable_metric:, key: 'country', values: %w[france])
             end
 
-            let(:france) do
-              create(:group, billable_metric_id: billable_metric.id, key: 'country', value: 'france')
+            let(:europe_filter) { create(:charge_filter, charge:, properties: { amount: '20' }) }
+            let(:europe_filter_value) do
+              create(
+                :charge_filter_value,
+                charge_filter: europe_filter,
+                billable_metric_filter: region,
+                values: ['europe'],
+              )
+            end
+
+            let(:usa_filter) { create(:charge_filter, charge:, properties: { amount: '50' }) }
+            let(:usa_filter_value) do
+              create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
+            end
+
+            let(:france_filter) { create(:charge_filter, charge:, properties: { amount: '10.12345' }) }
+            let(:france_filter_value) do
+              create(
+                :charge_filter_value,
+                charge_filter: france_filter,
+                billable_metric_filter: country,
+                values: ['france'],
+              )
             end
 
             let(:charge) do
@@ -459,24 +480,6 @@ RSpec.describe Fees::ChargeService do
                 plan: subscription.plan,
                 billable_metric:,
                 properties: { amount: '10.12345' },
-                group_properties: [
-                  build(
-                    :group_property,
-                    group: europe,
-                    values: {
-                      amount: '20',
-                      amount_currency: 'EUR',
-                    },
-                  ),
-                  build(
-                    :group_property,
-                    group: usa,
-                    values: {
-                      amount: '50',
-                      amount_currency: 'EUR',
-                    },
-                  ),
-                ],
               )
             end
 
@@ -486,7 +489,7 @@ RSpec.describe Fees::ChargeService do
                 invoice:,
                 subscription:,
                 charge:,
-                group: usa,
+                charge_filter: usa_filter,
                 properties:,
                 fee_type: :charge,
                 adjusted_units: true,
@@ -496,7 +499,9 @@ RSpec.describe Fees::ChargeService do
             end
 
             before do
-              france
+              europe_filter_value
+              usa_filter_value
+              france_filter_value
 
               create(
                 :event,
@@ -543,7 +548,7 @@ RSpec.describe Fees::ChargeService do
               created_fees = result.fees
 
               aggregate_failures do
-                expect(created_fees.count).to eq(3)
+                expect(created_fees.count).to eq(4)
                 expect(created_fees).to all(
                   have_attributes(
                     invoice_id: invoice.id,
@@ -551,24 +556,28 @@ RSpec.describe Fees::ChargeService do
                     amount_currency: 'EUR',
                   ),
                 )
-                expect(created_fees.first).to have_attributes(
-                  group: europe,
+
+                europe_fee = created_fees.find { |f| f.charge_filter == europe_filter }
+                expect(europe_fee).to have_attributes(
+                  charge_filter: europe_filter,
                   amount_cents: 30_000,
                   units: 15,
                   unit_amount_cents: 2000,
                   precise_unit_amount: 20,
                 )
 
-                expect(created_fees.second).to have_attributes(
-                  group: usa,
+                usa_fee = created_fees.find { |f| f.charge_filter == usa_filter }
+                expect(usa_fee).to have_attributes(
+                  charge_filter: usa_filter,
                   amount_cents: 15_000,
                   units: 3,
                   unit_amount_cents: 5000,
                   precise_unit_amount: 50,
                 )
 
-                expect(created_fees.third).to have_attributes(
-                  group: france,
+                france_fee = created_fees.find { |f| f.charge_filter == france_filter }
+                expect(france_fee).to have_attributes(
+                  charge_filter: france_filter,
                   amount_cents: 5062,
                   units: 5,
                   unit_amount_cents: 1012,
@@ -691,17 +700,28 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context 'with standard charge, all types of aggregation and presence of groups' do
-      let(:europe) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    context 'with standard charge, all types of aggregation and presence of filter' do
+      let(:region) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe usa])
       end
 
-      let(:usa) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+      let(:country) do
+        create(:billable_metric_filter, billable_metric:, key: 'country', values: %w[france])
       end
 
-      let(:france) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'country', value: 'france')
+      let(:europe_filter) { create(:charge_filter, charge:, properties: { amount: '20' }) }
+      let(:europe_filter_value) do
+        create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter: region, values: ['europe'])
+      end
+
+      let(:usa_filter) { create(:charge_filter, charge:, properties: { amount: '50' }) }
+      let(:usa_filter_value) do
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
+      end
+
+      let(:france_filter) { create(:charge_filter, charge:, properties: { amount: '10.12345' }) }
+      let(:france_filter_value) do
+        create(:charge_filter_value, charge_filter: france_filter, billable_metric_filter: country, values: ['france'])
       end
 
       let(:charge) do
@@ -710,29 +730,13 @@ RSpec.describe Fees::ChargeService do
           plan: subscription.plan,
           billable_metric:,
           properties: { amount: '10.12345' },
-          group_properties: [
-            build(
-              :group_property,
-              group: europe,
-              values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-            build(
-              :group_property,
-              group: usa,
-              values: {
-                amount: '50',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
         )
       end
 
       before do
-        france
+        europe_filter_value
+        usa_filter_value
+        france_filter_value
 
         create(
           :event,
@@ -779,7 +783,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(3)
+          expect(created_fees.count).to eq(4)
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -788,7 +792,7 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
-            group: europe,
+            charge_filter: europe_filter,
             amount_cents: 4000,
             units: 2,
             unit_amount_cents: 2000,
@@ -796,7 +800,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.second).to have_attributes(
-            group: usa,
+            charge_filter: usa_filter,
             amount_cents: 5000,
             units: 1,
             unit_amount_cents: 5000,
@@ -804,7 +808,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.third).to have_attributes(
-            group: france,
+            charge_filter: france_filter,
             amount_cents: 1012,
             units: 1,
             unit_amount_cents: 1012,
@@ -820,7 +824,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(3)
+          expect(created_fees.count).to eq(4)
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -829,7 +833,7 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
-            group: europe,
+            charge_filter: europe_filter,
             amount_cents: 30_000,
             units: 15,
             unit_amount_cents: 2000,
@@ -837,7 +841,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.second).to have_attributes(
-            group: usa,
+            charge_filter: usa_filter,
             amount_cents: 60_000,
             units: 12,
             unit_amount_cents: 5000,
@@ -845,7 +849,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.third).to have_attributes(
-            group: france,
+            charge_filter: france_filter,
             amount_cents: 5062,
             units: 5,
             unit_amount_cents: 1012,
@@ -861,7 +865,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(3)
+          expect(created_fees.count).to eq(4)
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -870,7 +874,7 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
-            group: europe,
+            charge_filter: europe_filter,
             amount_cents: 20_000,
             units: 10,
             unit_amount_cents: 2000,
@@ -878,7 +882,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.second).to have_attributes(
-            group: usa,
+            charge_filter: usa_filter,
             amount_cents: 60_000,
             units: 12,
             unit_amount_cents: 5000,
@@ -886,7 +890,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.third).to have_attributes(
-            group: france,
+            charge_filter: france_filter,
             amount_cents: 5062,
             units: 5,
             unit_amount_cents: 1012,
@@ -903,7 +907,7 @@ RSpec.describe Fees::ChargeService do
           created_fees = result.fees
 
           aggregate_failures do
-            expect(created_fees.count).to eq(3)
+            expect(created_fees.count).to eq(4)
             expect(created_fees).to all(
               have_attributes(
                 invoice_id: invoice.id,
@@ -912,19 +916,19 @@ RSpec.describe Fees::ChargeService do
               ),
             )
             expect(created_fees.first).to have_attributes(
-              group: europe,
+              charge_filter: europe_filter,
               amount_cents: 4000,
               units: 2,
             )
 
             expect(created_fees.second).to have_attributes(
-              group: usa,
+              charge_filter: usa_filter,
               amount_cents: 5000,
               units: 1,
             )
 
             expect(created_fees.third).to have_attributes(
-              group: france,
+              charge_filter: france_filter,
               amount_cents: 1012,
               units: 1,
               unit_amount_cents: 1012,
@@ -935,17 +939,68 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context 'with package charge and presence of groups' do
-      let(:europe) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    context 'with package charge and presence of filters' do
+      let(:region) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe usa])
       end
 
-      let(:usa) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+      let(:country) do
+        create(:billable_metric_filter, billable_metric:, key: 'country', values: %w[france])
       end
 
-      let(:france) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'country', value: 'france')
+      let(:europe_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            amount: '100',
+            free_units: 1,
+            package_size: 8,
+          },
+        )
+      end
+      let(:europe_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter: europe_filter,
+          billable_metric_filter: region,
+          values: ['europe'],
+        )
+      end
+
+      let(:usa_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            amount: '50',
+            free_units: 0,
+            package_size: 10,
+          },
+        )
+      end
+      let(:usa_filter_value) do
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
+      end
+
+      let(:france_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            amount: '40',
+            free_units: 1,
+            package_size: 5,
+          },
+        )
+      end
+      let(:france_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter: france_filter,
+          billable_metric_filter: country,
+          values: ['france'],
+        )
       end
 
       let(:charge) do
@@ -953,39 +1008,19 @@ RSpec.describe Fees::ChargeService do
           :package_charge,
           plan: subscription.plan,
           billable_metric:,
-          group_properties: [
-            build(
-              :group_property,
-              group: europe,
-              values: {
-                amount: '100',
-                free_units: 1,
-                package_size: 8,
-              },
-            ),
-            build(
-              :group_property,
-              group: usa,
-              values: {
-                amount: '50',
-                free_units: 0,
-                package_size: 10,
-              },
-            ),
-            build(
-              :group_property,
-              group: france,
-              values: {
-                amount: '40',
-                free_units: 1,
-                package_size: 5,
-              },
-            ),
-          ],
+          properties: {
+            amount: '0',
+            free_units: 0,
+            package_size: 1,
+          },
         )
       end
 
       before do
+        europe_filter_value
+        usa_filter_value
+        france_filter_value
+
         create(
           :event,
           organization: subscription.organization,
@@ -1031,7 +1066,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(3)
+          expect(created_fees.count).to eq(4)
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -1040,7 +1075,7 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
-            group: europe,
+            charge_filter: europe_filter,
             units: 2,
             amount_cents: 10_000,
             unit_amount_cents: 10_000,
@@ -1048,7 +1083,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.second).to have_attributes(
-            group: usa,
+            charge_filter: usa_filter,
             amount_cents: 5000,
             units: 1,
             unit_amount_cents: 5000,
@@ -1056,7 +1091,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.third).to have_attributes(
-            group: france,
+            charge_filter: france_filter,
             amount_cents: 0,
             units: 1,
             unit_amount_cents: 0,
@@ -1066,17 +1101,56 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context 'with percentage charge and presence of groups' do
-      let(:europe) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    context 'with percentage charge and presence of filters' do
+      let(:region) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe usa])
       end
 
-      let(:usa) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+      let(:country) do
+        create(:billable_metric_filter, billable_metric:, key: 'country', values: %w[france])
       end
 
-      let(:france) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'country', value: 'france')
+      let(:europe_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: { rate: '2', fixed_amount: '1' },
+        )
+      end
+      let(:europe_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter: europe_filter,
+          billable_metric_filter: region,
+          values: ['europe'],
+        )
+      end
+
+      let(:usa_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: { rate: '1', fixed_amount: '0' },
+        )
+      end
+      let(:usa_filter_value) do
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
+      end
+
+      let(:france_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: { rate: '5', fixed_amount: '1' },
+        )
+      end
+      let(:france_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter: france_filter,
+          billable_metric_filter: country,
+          values: ['france'],
+        )
       end
 
       let(:charge) do
@@ -1084,27 +1158,15 @@ RSpec.describe Fees::ChargeService do
           :percentage_charge,
           plan: subscription.plan,
           billable_metric:,
-          group_properties: [
-            build(
-              :group_property,
-              group: europe,
-              values: { rate: '2', fixed_amount: '1' },
-            ),
-            build(
-              :group_property,
-              group: usa,
-              values: { rate: '1', fixed_amount: '0' },
-            ),
-            build(
-              :group_property,
-              group: france,
-              values: { rate: '5', fixed_amount: '1' },
-            ),
-          ],
+          properties: { rate: '0', fixed_amount: '0' },
         )
       end
 
       before do
+        europe_filter_value
+        usa_filter_value
+        france_filter_value
+
         create(
           :event,
           organization: subscription.organization,
@@ -1150,7 +1212,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(3)
+          expect(created_fees.count).to eq(4)
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -1159,7 +1221,7 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
-            group: europe,
+            charge_filter: europe_filter,
             amount_cents: 200 + 2 * 2,
             units: 2,
             unit_amount_cents: 102,
@@ -1167,7 +1229,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.second).to have_attributes(
-            group: usa,
+            charge_filter: usa_filter,
             amount_cents: 1 * 1,
             units: 1,
             unit_amount_cents: 1,
@@ -1175,7 +1237,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.third).to have_attributes(
-            group: france,
+            charge_filter: france_filter,
             amount_cents: 100 + 5 * 1,
             units: 1,
             unit_amount_cents: 105,
@@ -1185,13 +1247,54 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context 'with graduated charge and presence of groups' do
-      let(:europe) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    context 'with graduated charge and presence of filters' do
+      let(:region) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe usa])
       end
 
-      let(:usa) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+      let(:europe_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: nil,
+                per_unit_amount: '0.01',
+                flat_amount: '0.01',
+              },
+            ],
+          },
+        )
+      end
+      let(:europe_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter: europe_filter,
+          billable_metric_filter: region,
+          values: ['europe'],
+        )
+      end
+
+      let(:usa_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: nil,
+                per_unit_amount: '0.03',
+                flat_amount: '0.01',
+              },
+            ],
+          },
+        )
+      end
+      let(:usa_filter_value) do
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
       end
 
       let(:charge) do
@@ -1199,40 +1302,23 @@ RSpec.describe Fees::ChargeService do
           :graduated_charge,
           plan: subscription.plan,
           billable_metric:,
-          group_properties: [
-            build(
-              :group_property,
-              group: europe,
-              values: {
-                graduated_ranges: [
-                  {
-                    from_value: 0,
-                    to_value: nil,
-                    per_unit_amount: '0.01',
-                    flat_amount: '0.01',
-                  },
-                ],
+          properties: {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: nil,
+                per_unit_amount: '0',
+                flat_amount: '0',
               },
-            ),
-            build(
-              :group_property,
-              group: usa,
-              values: {
-                graduated_ranges: [
-                  {
-                    from_value: 0,
-                    to_value: nil,
-                    per_unit_amount: '0.03',
-                    flat_amount: '0.01',
-                  },
-                ],
-              },
-            ),
-          ],
+            ],
+          },
         )
       end
 
       before do
+        europe_filter_value
+        usa_filter_value
+
         create(
           :event,
           organization: subscription.organization,
@@ -1269,7 +1355,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(2)
+          expect(created_fees.count).to eq(3)
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -1278,7 +1364,7 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
-            group: europe,
+            charge_filter: europe_filter,
             amount_cents: 3,
             units: 2,
             unit_amount_cents: 1,
@@ -1286,7 +1372,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.second).to have_attributes(
-            group: usa,
+            charge_filter: usa_filter,
             amount_cents: 4,
             units: 1,
             unit_amount_cents: 4,
@@ -1296,13 +1382,44 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context 'with volume charge and presence of groups' do
-      let(:europe) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    context 'with volume charge and presence of filters' do
+      let(:region) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe usa])
       end
 
-      let(:usa) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+      let(:europe_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            volume_ranges: [
+              { from_value: 0, to_value: nil, per_unit_amount: '2', flat_amount: '10' },
+            ],
+          },
+        )
+      end
+      let(:europe_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter: europe_filter,
+          billable_metric_filter: region,
+          values: ['europe'],
+        )
+      end
+
+      let(:usa_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            volume_ranges: [
+              { from_value: 0, to_value: nil, per_unit_amount: '1', flat_amount: '10' },
+            ],
+          },
+        )
+      end
+      let(:usa_filter_value) do
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
       end
 
       let(:charge) do
@@ -1310,30 +1427,18 @@ RSpec.describe Fees::ChargeService do
           :volume_charge,
           plan: subscription.plan,
           billable_metric:,
-          group_properties: [
-            build(
-              :group_property,
-              group: europe,
-              values: {
-                volume_ranges: [
-                  { from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '10' },
-                ],
-              },
-            ),
-            build(
-              :group_property,
-              group: usa,
-              values: {
-                volume_ranges: [
-                  { from_value: 0, to_value: 100, per_unit_amount: '1', flat_amount: '10' },
-                ],
-              },
-            ),
-          ],
+          properties: {
+            volume_ranges: [
+              { from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '0' },
+            ],
+          },
         )
       end
 
       before do
+        europe_filter_value
+        usa_filter_value
+
         create(
           :event,
           organization: subscription.organization,
@@ -1370,7 +1475,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(2)
+          expect(created_fees.count).to eq(3)
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -1379,7 +1484,7 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
-            group: europe,
+            charge_filter: europe_filter,
             amount_cents: 1400,
             units: 2,
             unit_amount_cents: 700,
@@ -1387,7 +1492,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.second).to have_attributes(
-            group: usa,
+            charge_filter: usa_filter,
             amount_cents: 1100,
             units: 1,
             unit_amount_cents: 1100,
@@ -1397,13 +1502,54 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context 'with graduated percentage charge and presence of groups' do
-      let(:europe) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    context 'with graduated percentage charge and presence of filters' do
+      let(:region) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe usa])
       end
 
-      let(:usa) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+      let(:europe_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            graduated_percentage_ranges: [
+              {
+                from_value: 0,
+                to_value: nil,
+                flat_amount: '0.01',
+                rate: '2',
+              },
+            ],
+          },
+        )
+      end
+      let(:europe_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter: europe_filter,
+          billable_metric_filter: region,
+          values: ['europe'],
+        )
+      end
+
+      let(:usa_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {
+            graduated_percentage_ranges: [
+              {
+                from_value: 0,
+                to_value: nil,
+                flat_amount: '0.01',
+                rate: '3',
+              },
+            ],
+          },
+        )
+      end
+      let(:usa_filter_value) do
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
       end
 
       let(:charge) do
@@ -1411,40 +1557,23 @@ RSpec.describe Fees::ChargeService do
           :graduated_percentage_charge,
           plan: subscription.plan,
           billable_metric:,
-          group_properties: [
-            build(
-              :group_property,
-              group: europe,
-              values: {
-                graduated_percentage_ranges: [
-                  {
-                    from_value: 0,
-                    to_value: nil,
-                    flat_amount: '0.01',
-                    rate: '2',
-                  },
-                ],
+          properties: {
+            graduated_percentage_ranges: [
+              {
+                from_value: 0,
+                to_value: nil,
+                flat_amount: '1',
+                rate: '0',
               },
-            ),
-            build(
-              :group_property,
-              group: usa,
-              values: {
-                graduated_percentage_ranges: [
-                  {
-                    from_value: 0,
-                    to_value: nil,
-                    flat_amount: '0.01',
-                    rate: '3',
-                  },
-                ],
-              },
-            ),
-          ],
+            ],
+          },
         )
       end
 
       before do
+        europe_filter_value
+        usa_filter_value
+
         create(
           :event,
           organization: subscription.organization,
@@ -1481,7 +1610,7 @@ RSpec.describe Fees::ChargeService do
         created_fees = result.fees
 
         aggregate_failures do
-          expect(created_fees.count).to eq(2)
+          expect(created_fees.count).to eq(3)
           expect(created_fees).to all(
             have_attributes(
               invoice_id: invoice.id,
@@ -1490,7 +1619,7 @@ RSpec.describe Fees::ChargeService do
             ),
           )
           expect(created_fees.first).to have_attributes(
-            group: europe,
+            charge_filter: europe_filter,
             amount_cents: 5, # 2 × 0.02 + 0.01
             units: 2,
             unit_amount_cents: 2,
@@ -1498,7 +1627,7 @@ RSpec.describe Fees::ChargeService do
           )
 
           expect(created_fees.second).to have_attributes(
-            group: usa,
+            charge_filter: usa_filter,
             amount_cents: 4, # 1 × 0.03 + 0.01
             units: 1,
             unit_amount_cents: 4,
@@ -1508,13 +1637,36 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context 'with true-up fee and presence of groups' do
-      let(:europe) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
+    context 'with true-up fee and presence of filters' do
+      let(:region) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe usa])
       end
 
-      let(:usa) do
-        create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'usa')
+      let(:europe_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: { amount: '20' },
+        )
+      end
+      let(:europe_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter: europe_filter,
+          billable_metric_filter: region,
+          values: ['europe'],
+        )
+      end
+
+      let(:usa_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: { amount: '50' },
+        )
+      end
+      let(:usa_filter_value) do
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
       end
 
       let(:charge) do
@@ -1523,25 +1675,13 @@ RSpec.describe Fees::ChargeService do
           plan: subscription.plan,
           billable_metric:,
           min_amount_cents: 1000,
-          group_properties: [
-            build(
-              :group_property,
-              group: europe,
-              values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-            build(
-              :group_property,
-              group: usa,
-              values: {
-                amount: '50',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
+          properties: { amount: '0' },
         )
+      end
+
+      before do
+        europe_filter_value
+        usa_filter_value
       end
 
       it 'creates three fees' do
@@ -1550,8 +1690,10 @@ RSpec.describe Fees::ChargeService do
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.fees.count).to eq(3)
-            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 0, 548) # 548 is 1000 prorated for 17 days.
+            expect(result.fees.count).to eq(4)
+
+            # 548 is 1000 prorated for 17 days.
+            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 0, 0, 548)
           end
         end
       end
@@ -1581,136 +1723,10 @@ RSpec.describe Fees::ChargeService do
           expect(quantified_event.organization).to eq(organization)
           expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
           expect(quantified_event.external_id).to be_nil
-          expect(quantified_event.group_id).to be_nil
+          expect(quantified_event.charge_filter_id).to be_nil
           expect(quantified_event.billable_metric_id).to eq(billable_metric.id)
           expect(quantified_event.added_at).to eq(boundaries[:from_datetime])
           expect(quantified_event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS]).to eq('0.0')
-        end
-      end
-    end
-
-    context 'with filters' do
-      let(:region) { create(:billable_metric_filter, key: 'region', values: %i[europe usa]) }
-      let(:country) { create(:billable_metric_filter, key: 'country', values: %i[france]) }
-
-      let(:filter1) { create(:charge_filter, charge:, properties: { amount: '20' }) }
-      let(:filter1_values) do
-        [create(:charge_filter_value, values: ['europe'], billable_metric_filter: region, charge_filter: filter1)]
-      end
-
-      let(:filter2) { create(:charge_filter, charge:, properties: { amount: '50' }) }
-      let(:filter2_values) do
-        [create(:charge_filter_value, values: ['usa'], billable_metric_filter: region, charge_filter: filter2)]
-      end
-
-      let(:filter3) { create(:charge_filter, charge:, properties: { amount: '10.12345' }) }
-      let(:filter3_values) do
-        [create(:charge_filter_value, values: ['france'], billable_metric_filter: country, charge_filter: filter3)]
-      end
-
-      let(:charge) do
-        create(
-          :standard_charge,
-          plan: subscription.plan,
-          billable_metric:,
-          properties: { amount: '10' },
-        )
-      end
-
-      before do
-        filter1_values
-        filter2_values
-        filter3_values
-
-        create(
-          :event,
-          organization: subscription.organization,
-          customer: subscription.customer,
-          subscription:,
-          code: charge.billable_metric.code,
-          timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'usa' },
-        )
-        create(
-          :event,
-          organization: subscription.organization,
-          customer: subscription.customer,
-          subscription:,
-          code: charge.billable_metric.code,
-          timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe' },
-        )
-        create(
-          :event,
-          organization: subscription.organization,
-          customer: subscription.customer,
-          subscription:,
-          code: charge.billable_metric.code,
-          timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe' },
-        )
-        create(
-          :event,
-          organization: subscription.organization,
-          customer: subscription.customer,
-          subscription:,
-          code: charge.billable_metric.code,
-          timestamp: DateTime.parse('2022-03-16'),
-          properties: { country: 'france' },
-        )
-        create(
-          :event,
-          organization: subscription.organization,
-          customer: subscription.customer,
-          subscription:,
-          code: charge.billable_metric.code,
-          timestamp: DateTime.parse('2022-03-16'),
-          properties: { country: 'canada' },
-        )
-      end
-
-      it 'creates expected fees' do
-        result = charge_subscription_service.create
-        expect(result).to be_success
-        created_fees = result.fees
-
-        aggregate_failures do
-          expect(created_fees.count).to eq(4) # 3 filters + 1 for default properties
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: 'EUR',
-            ),
-          )
-
-          expect(created_fees.find { |f| f.charge_filter_id == filter1.id }).to have_attributes(
-            amount_cents: 4000,
-            units: 2,
-            unit_amount_cents: 2000,
-            precise_unit_amount: 20,
-          )
-
-          expect(created_fees.find { |f| f.charge_filter_id == filter2.id }).to have_attributes(
-            amount_cents: 5000,
-            units: 1,
-            unit_amount_cents: 5000,
-            precise_unit_amount: 50,
-          )
-
-          expect(created_fees.find { |f| f.charge_filter_id == filter3.id }).to have_attributes(
-            amount_cents: 1012,
-            units: 1,
-            unit_amount_cents: 1012,
-            precise_unit_amount: 10.12345,
-          )
-
-          expect(created_fees.find { |f| f.charge_filter_id.nil? }).to have_attributes(
-            amount_cents: 1000,
-            units: 1,
-            unit_amount_cents: 1000,
-            precise_unit_amount: 10.0,
-          )
         end
       end
     end
