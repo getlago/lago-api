@@ -3,7 +3,6 @@
 module Integrations
   module Aggregator
     class SubsidiariesService < BaseService
-
       def action_path
         "v1/#{provider}/subsidiaries"
       end
