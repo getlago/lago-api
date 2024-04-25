@@ -31,6 +31,7 @@ module Types
     field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
     field :integration, resolver: Resolvers::IntegrationResolver
     field :integration_items, resolver: Resolvers::IntegrationItemsResolver
+    field :integration_subsidiaries, resolver: Resolvers::Integrations::SubsidiariesResolver
     field :integrations, resolver: Resolvers::IntegrationsResolver
     field :invite, resolver: Resolvers::InviteResolver
     field :invites, resolver: Resolvers::InvitesResolver
