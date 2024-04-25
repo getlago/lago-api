@@ -22,7 +22,7 @@ module Fees
 
     attr_reader :adjusted_fee, :boundaries, :properties
 
-    delegate :group, :charge, :charge_filter, :invoice, :subscription, to: :adjusted_fee
+    delegate :charge, :charge_filter, :invoice, :subscription, to: :adjusted_fee
 
     def compute_amount
       adjusted_fee_result = BaseService::Result.new
@@ -70,7 +70,6 @@ module Fees
         total_aggregated_units: units,
         properties: boundaries.to_h,
         events_count: 0,
-        group_id: group&.id,
         payment_status: :pending,
         taxes_amount_cents: 0,
         unit_amount_cents:,

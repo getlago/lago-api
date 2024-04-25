@@ -167,6 +167,14 @@ class Invoice < ApplicationRecord
                 raise(NotImplementedError)
     end
 
+    filters = {}
+    if fee.charge_filter
+      result = ChargeFilters::MatchingAndIgnoredService.call(filter: charge_filter)
+      filters[:charge_filter] = fee.charge_filter if fee.charge_filter
+      filters[:matching_filters] = result.matching_filters
+      filters[:ignored_filters] = result.ignored_filters
+    end
+
     service.new(
       event_store_class: Events::Stores::PostgresStore,
       charge: fee.charge,
@@ -176,7 +184,7 @@ class Invoice < ApplicationRecord
         to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
         charges_duration: fee.properties['charges_duration'],
       },
-      filters: { group: fee.group },
+      filters:,
     ).breakdown.breakdown
   end
 

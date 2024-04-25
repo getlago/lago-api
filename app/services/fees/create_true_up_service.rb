@@ -19,7 +19,7 @@ module Fees
         f.units = 1
         f.total_aggregated_units = 1
         f.events_count = 0
-        f.group_id = nil
+        f.charge_filter_id = nil
         f.true_up_parent_fee = fee
         f.unit_amount_cents = f.amount_cents
         f.precise_unit_amount = f.unit_amount.to_f
