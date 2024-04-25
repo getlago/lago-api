@@ -77,7 +77,8 @@ gem 'slim'
 gem 'slim-rails'
 
 # Kafka
-gem 'karafka'
+gem 'karafka', '~> 2.3.4'
+gem 'karafka-web', '~> 0.8.2', require: false
 
 # Taxes
 gem 'valvat', require: false
