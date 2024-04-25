@@ -52,27 +52,27 @@ credit_notes:
   void: true
 customer_settings:
   view: true
-  edit:
+  update:
     tax_rates: true
     payment_terms: true
     grace_period: true
     lang: true
 developers:
-  view:
+  manage:
   keys:
-    view:
+    manage:
 organization:
   view:
-  edit:
+  update:
   invoices:
     view:
-    edit:
+    update:
   taxes:
     view:
-    edit:
+    update:
   emails:
     view:
-    edit:
+    update:
   integrations:
     view:
     create:
