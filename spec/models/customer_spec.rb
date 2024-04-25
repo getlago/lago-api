@@ -9,6 +9,9 @@ RSpec.describe Customer, type: :model do
 
   it_behaves_like 'paper_trail traceable'
 
+  it { is_expected.to have_many(:integration_customers).dependent(:destroy) }
+  it { is_expected.to have_one(:netsuite_customer) }
+
   describe 'validations' do
     subject(:customer) do
       described_class.new(organization:, external_id:)

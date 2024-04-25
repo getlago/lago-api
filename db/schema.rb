@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_04_24_110420) do
+ActiveRecord::Schema[7.0].define(version: 2024_04_25_082113) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -555,6 +555,20 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_24_110420) do
     t.index ["mapping_type", "integration_id"], name: "index_int_collection_mappings_on_mapping_type_and_int_id", unique: true
   end
 
+  create_table "integration_customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "integration_id", null: false
+    t.uuid "customer_id", null: false
+    t.string "external_customer_id", null: false
+    t.string "type", null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id", "type"], name: "index_integration_customers_on_customer_id_and_type", unique: true
+    t.index ["customer_id"], name: "index_integration_customers_on_customer_id"
+    t.index ["external_customer_id"], name: "index_integration_customers_on_external_customer_id"
+    t.index ["integration_id"], name: "index_integration_customers_on_integration_id"
+  end
+
   create_table "integration_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "integration_id", null: false
     t.integer "item_type", null: false
@@ -1051,6 +1065,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_24_110420) do
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
   add_foreign_key "groups", "groups", column: "parent_group_id"
   add_foreign_key "integration_collection_mappings", "integrations"
+  add_foreign_key "integration_customers", "customers"
+  add_foreign_key "integration_customers", "integrations"
   add_foreign_key "integration_items", "integrations"
   add_foreign_key "integration_mappings", "integrations"
   add_foreign_key "integrations", "organizations"
