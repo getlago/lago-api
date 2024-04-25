@@ -12,8 +12,8 @@ class WalletTransaction < ApplicationRecord
   ].freeze
 
   TRANSACTION_STATUSES = [
-    :paid,
-    :offered,
+    :purchased,
+    :granted,
     :voided,
   ].freeze
 

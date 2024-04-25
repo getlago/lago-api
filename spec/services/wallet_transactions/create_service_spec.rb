@@ -42,11 +42,11 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
 
     it 'sets expected transaction status', :aggregate_failures do
       create_service
-      paid_transaction = WalletTransaction.where(wallet_id: wallet.id).paid.first
-      offered_transaction = WalletTransaction.where(wallet_id: wallet.id).offered.first
+      purchased_transaction = WalletTransaction.where(wallet_id: wallet.id).purchased.first
+      granted_transaction = WalletTransaction.where(wallet_id: wallet.id).granted.first
 
-      expect(paid_transaction.credit_amount).to eq(10)
-      expect(offered_transaction.credit_amount).to eq(15)
+      expect(purchased_transaction.credit_amount).to eq(10)
+      expect(granted_transaction.credit_amount).to eq(15)
     end
 
     it 'sets correct source' do

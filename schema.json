@@ -33809,13 +33809,13 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "paid",
+              "name": "purchased",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "offered",
+              "name": "granted",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
