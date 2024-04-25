@@ -39,6 +39,7 @@ RSpec.describe Types::Customers::Object do
 
   it { is_expected.to have_field(:billing_configuration).of_type('CustomerBillingConfiguration') }
 
+  it { is_expected.to have_field(:integration_customer).of_type('IntegrationCustomer') }
   it { is_expected.to have_field(:provider_customer).of_type('ProviderCustomer') }
   it { is_expected.to have_field(:subscriptions).of_type('[Subscription!]!') }
 

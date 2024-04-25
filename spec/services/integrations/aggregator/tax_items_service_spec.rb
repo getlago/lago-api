@@ -13,7 +13,7 @@ RSpec.describe Integrations::Aggregator::TaxItemsService do
     let(:headers) do
       {
         'Connection-Id' => integration.connection_id,
-        'Authorization' => 'Bearer ',
+        'Authorization' => "Bearer #{ENV['NANGO_SECRET_KEY']}",
         'Provider-Config-Key' => 'netsuite',
       }
     end
