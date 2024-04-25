@@ -312,3 +312,13 @@ GraphQL/ObjectDescription:
 
 GraphQL/ExtractType:
   Enabled: false
+
+GraphQL/ExtractInputType:
+  Exclude:
+    - 'app/graphql/mutations/applied_coupons/create.rb'
+    - 'app/graphql/mutations/credit_notes/create.rb'
+    - 'app/graphql/mutations/invites/accept.rb'
+    - 'app/graphql/mutations/plans/create.rb'
+    - 'app/graphql/mutations/plans/update.rb'
+    - 'app/graphql/mutations/register_user.rb'
+    - 'app/graphql/mutations/wallet_transactions/create.rb'
