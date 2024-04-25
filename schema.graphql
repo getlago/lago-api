@@ -5185,6 +5185,11 @@ type Query {
   integrationItems(integrationId: ID!, itemType: IntegrationItemTypeEnum, limit: Int, page: Int, searchTerm: String): IntegrationItemCollection!
 
   """
+  Query integration subsidiaries
+  """
+  integrationSubsidiaries(integrationId: ID): SubsidiaryCollection
+
+  """
   Query organization's integrations
   """
   integrations(limit: Int, page: Int, type: IntegrationTypeEnum): IntegrationCollection
@@ -5637,6 +5642,16 @@ type Subscription {
 
 type SubscriptionCollection {
   collection: [Subscription!]!
+  metadata: CollectionMetadata!
+}
+
+type Subsidiary {
+  externalId: String!
+  externalName: String
+}
+
+type SubsidiaryCollection {
+  collection: [Subsidiary!]!
   metadata: CollectionMetadata!
 }
 
