@@ -383,11 +383,10 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
       end
     end
 
-    context 'when there is matching group' do
+    context 'when there is matching filter' do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
-      let(:parent_group_id) { nil }
-      let(:group) do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+      let(:billable_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe])
       end
 
       it 'creates a pay_in_advance fee' do
@@ -410,17 +409,10 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           invoiceable: true,
           plan:,
           billable_metric:,
-          group_properties: [
-            build(
-              :group_property,
-              group:,
-              values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
+          properties: { amount: '0' },
         )
+        charge_filter = create(:charge_filter, charge:, properties: { amount: '20' })
+        create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ['europe'])
 
         subscription = customer.subscriptions.first
 
@@ -449,144 +441,21 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           expect(fee.units).to eq(10)
           expect(fee.events_count).to eq(1)
           expect(fee.amount_cents).to eq(20_000)
+          expect(fee.charge_filter_id).to eq(charge_filter.id)
         end
       end
     end
 
-    context 'when there is no matching group' do
+    context 'when there is no matching filter' do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
-      let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
-      let(:group) do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
+      let(:cloud_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: 'cloud', values: %w[AWS])
+      end
+      let(:region_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[europe])
       end
 
       it 'creates a pay_in_advance fee' do
-        ### 24 january: Create subscription.
-        jan24 = DateTime.new(2023, 1, 24)
-
-        travel_to(jan24) do
-          create_subscription(
-            {
-              external_customer_id: customer.external_id,
-              external_id: customer.external_id,
-              plan_code: plan.code,
-            },
-          )
-        end
-
-        create(
-          :standard_charge,
-          :pay_in_advance,
-          invoiceable: true,
-          plan:,
-          billable_metric:,
-          properties: {
-            amount: '10',
-          },
-          group_properties: [
-            build(
-              :group_property,
-              group:,
-              values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
-        )
-
-        subscription = customer.subscriptions.first
-
-        ### 15 february: Send an event.
-        feb15 = DateTime.new(2023, 2, 15)
-
-        travel_to(feb15) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id:,
-              external_customer_id: customer.external_id,
-              properties: { amount: '10', region: 'africa', cloud: 'AWS' },
-            },
-          )
-
-          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to be_nil
-          expect(subscription.reload.fees.count).to eq(0)
-          expect(subscription.invoices.count).to eq(0)
-        end
-      end
-    end
-
-    context 'when there is an invalid group' do
-      let(:transaction_id) { "#{SecureRandom.uuid}test" }
-      let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
-      let(:group) do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
-      end
-
-      it 'does not create a pay_in_advance fee' do
-        ### 24 january: Create subscription.
-        jan24 = DateTime.new(2023, 1, 24)
-
-        travel_to(jan24) do
-          create_subscription(
-            {
-              external_customer_id: customer.external_id,
-              external_id: customer.external_id,
-              plan_code: plan.code,
-            },
-          )
-        end
-
-        create(
-          :standard_charge,
-          :pay_in_advance,
-          invoiceable: true,
-          plan:,
-          billable_metric:,
-          properties: {
-            amount: '10',
-          },
-          group_properties: [
-            build(
-              :group_property,
-              group:,
-              values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
-        )
-
-        subscription = customer.subscriptions.first
-
-        ### 15 february: Send an event.
-        feb15 = DateTime.new(2023, 2, 15)
-
-        travel_to(feb15) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id:,
-              external_customer_id: customer.external_id,
-              properties: { amount: '10', bad: 'fake', cloud: 'AWS' },
-            },
-          )
-
-          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to be_nil
-          expect(subscription.reload.fees.count).to eq(0)
-        end
-      end
-    end
-
-    context 'when there is no group properties' do
-      let(:transaction_id) { "#{SecureRandom.uuid}test" }
-      let(:parent_group_id) { create(:group, billable_metric:, key: 'cloud', value: 'AWS').id }
-
-      it 'creates a pay_in_advance fee' do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
-
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -607,8 +476,10 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           plan:,
           billable_metric:,
           properties: { amount: '10' },
-          group_properties: [],
         )
+        charge_filter = create(:charge_filter, charge:, properties: { amount: '20' })
+        create(:charge_filter_value, charge_filter:, billable_metric_filter: region_metric_filter, values: ['europe'])
+        create(:charge_filter_value, charge_filter:, billable_metric_filter: cloud_metric_filter, values: ['AWS'])
 
         subscription = customer.subscriptions.first
 
@@ -621,82 +492,23 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id:,
               external_customer_id: customer.external_id,
-              properties: { amount: '2', region: 'europe', cloud: 'AWS' },
+              properties: { amount: '10', region: 'africa', cloud: 'AWS' },
             },
           )
 
-          event = Event.find_by(transaction_id:)
-          expect(CachedAggregation.find_by(event_id: event.id).current_aggregation).to eq(2)
+          expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to be_nil
           expect(subscription.reload.fees.count).to eq(1)
-
-          fee = subscription.fees.first
-          expect(fee.invoice_id).not_to be_nil
-          expect(fee.charge_id).to eq(charge.id)
-          expect(fee.pay_in_advance).to eq(true)
-          expect(fee.units).to eq(2)
-          expect(fee.events_count).to eq(1)
-          expect(fee.amount_cents).to eq(2000)
-        end
-      end
-    end
-
-    context 'when there is no matching group but default group properties' do
-      let(:transaction_id) { "#{SecureRandom.uuid}test" }
-
-      it 'creates a pay_in_advance fee' do
-        create(:group, billable_metric:, key: 'country', value: 'france')
-        create(:group, billable_metric:, key: 'country', value: 'italy')
-
-        ### 24 january: Create subscription.
-        jan24 = DateTime.new(2023, 1, 24)
-
-        travel_to(jan24) do
-          create_subscription(
-            {
-              external_customer_id: customer.external_id,
-              external_id: customer.external_id,
-              plan_code: plan.code,
-            },
-          )
-        end
-
-        charge = create(
-          :standard_charge,
-          :pay_in_advance,
-          invoiceable: true,
-          plan:,
-          billable_metric:,
-          properties: { amount: '20' },
-          group_properties: [],
-        )
-
-        subscription = customer.subscriptions.first
-
-        ### 15 february: Send an event.
-        feb15 = DateTime.new(2023, 2, 15)
-
-        travel_to(feb15) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id:,
-              external_customer_id: customer.external_id,
-              properties: { amount: '2', country: 'italy' },
-            },
-          )
-
-          event = Event.find_by(transaction_id:)
-          expect(CachedAggregation.find_by(event_id: event.id).current_aggregation).to eq(2)
-          expect(subscription.reload.fees.count).to eq(1)
+          expect(subscription.invoices.count).to eq(1)
 
           fee = subscription.fees.first
 
           expect(fee.invoice_id).not_to be_nil
           expect(fee.charge_id).to eq(charge.id)
           expect(fee.pay_in_advance).to eq(true)
-          expect(fee.units).to eq(2)
+          expect(fee.units).to eq(10)
           expect(fee.events_count).to eq(1)
-          expect(fee.amount_cents).to eq(4000)
+          expect(fee.amount_cents).to eq(10_000)
+          expect(fee.charge_filter_id).to be_nil
         end
       end
     end

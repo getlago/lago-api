@@ -135,13 +135,9 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'when dimensions' do
-    let(:europe) do
-      create(:group, billable_metric_id: metric.id, key: 'region', value: 'europe')
-    end
-
-    let(:usa) do
-      create(:group, billable_metric_id: metric.id, key: 'region', value: 'usa')
+  context 'when filters' do
+    let(:billable_metric_filter) do
+      create(:billable_metric_filter, billable_metric: metric, key: 'region', values: %w[europe usa])
     end
 
     it 'creates expected credit note and invoice' do
@@ -157,30 +153,19 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           )
         }.to change(Invoice, :count).by(1)
 
-        create(
+        charge = create(
           :standard_charge,
           plan:,
           billable_metric: metric,
-          group_properties: [
-            build(
-              :group_property,
-              group: europe,
-              values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-            build(
-              :group_property,
-              group: usa,
-              values: {
-                amount: '50',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
+          properties: { amount: '0' },
           min_amount_cents: 10_000,
         )
+
+        europe_filter = create(:charge_filter, charge:, properties: { amount: '20' })
+        create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter:, values: ['europe'])
+
+        usa_filter = create(:charge_filter, charge:, properties: { amount: '50' })
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter:, values: ['usa'])
       end
 
       subscription = customer.subscriptions.find_by(external_id: customer.external_id)
@@ -223,11 +208,11 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
         term_invoice = subscription.invoices.order(created_at: :desc).first
         expect(term_invoice).to be_finalized
-        expect(term_invoice.fees.count).to eq(3)
+        expect(term_invoice.fees.count).to eq(4)
 
         usage_fees = term_invoice.fees.where(true_up_parent_fee_id: nil)
-        expect(usage_fees.count).to eq(2)
-        expect(usage_fees.pluck(:amount_cents)).to contain_exactly(2000, 5000)
+        expect(usage_fees.count).to eq(3)
+        expect(usage_fees.pluck(:amount_cents)).to contain_exactly(0, 2000, 5000)
 
         true_up_fee = term_invoice.fees.where.not(true_up_parent_fee_id: nil).first
         # True up fee is pro-rated for 25/28 days.
