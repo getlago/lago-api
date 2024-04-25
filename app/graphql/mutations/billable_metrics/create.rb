@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'billable_metrics:create'
+
       graphql_name 'CreateBillableMetric'
       description 'Creates a new Billable metric'
 

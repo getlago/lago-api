@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'TODO'
+
       graphql_name 'DestroyAdjustedFee'
       description 'Deletes an adjusted fee'
 

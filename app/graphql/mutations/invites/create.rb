@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'organization:members:create'
+
       graphql_name 'CreateInvite'
       description 'Creates a new Invite'
 

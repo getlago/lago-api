@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'invoices:void'
+
       graphql_name 'VoidInvoice'
       description 'Void an invoice'
 

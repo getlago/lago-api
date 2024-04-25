@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'addons:create'
+
       graphql_name 'CreateAddOn'
       description 'Creates a new add-on'
 

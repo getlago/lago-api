@@ -7,6 +7,8 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
+        REQUIRED_PERMISSION = 'organization:integrations:create'
+
         graphql_name 'CreateOktaIntegration'
         description 'Create Okta integration'
 

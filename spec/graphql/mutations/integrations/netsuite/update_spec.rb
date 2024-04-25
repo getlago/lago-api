@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
+  let(:required_permission) { 'organization:integrations:update' }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
@@ -36,10 +37,13 @@ RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
     membership.organization.update!(premium_integrations: ['netsuite'])
   end
 
+  it_behaves_like 'requires permission', 'organization:integrations:update'
+
   it 'updates a netsuite integration' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -82,6 +86,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {

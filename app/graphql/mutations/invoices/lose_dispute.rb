@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'invoices:update'
+
       graphql_name 'LoseInvoiceDispute'
       description 'Mark payment dispute as lost'
 

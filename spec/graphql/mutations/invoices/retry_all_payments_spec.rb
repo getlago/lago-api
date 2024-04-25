@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
+  let(:required_permission) { 'invoices:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:user) { membership.user }
@@ -20,6 +21,8 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
       }
     GQL
   end
+
+  it_behaves_like 'requires permission', 'invoices:update'
 
   context 'with valid preconditions' do
     let(:invoice_first) do
@@ -55,6 +58,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
       result = execute_graphql(
         current_organization: organization,
         current_user: user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {},
@@ -87,6 +91,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {},

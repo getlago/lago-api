@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Invites::Create, type: :graphql do
+  let(:required_permission) { 'organization:members:create' }
   let(:membership) { create(:membership) }
   let(:revoked_membership) do
     create(
@@ -26,10 +27,13 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'organization:members:create'
+
   it 'creates an invite for a new user' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -48,6 +52,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -68,6 +73,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -85,6 +91,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {

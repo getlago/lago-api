@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Customers::Update, type: :graphql do
+  let(:required_permissions) { 'customers:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -46,12 +47,15 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
   end
 
+  it_behaves_like 'requires permission', 'customers:update'
+
   it 'updates a customer' do
     stripe_provider
     external_id = SecureRandom.uuid
 
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permissions,
       query: mutation,
       variables: {
         input: {
@@ -109,6 +113,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     it 'updates a customer' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permissions,
         query: mutation,
         variables: {
           input: {

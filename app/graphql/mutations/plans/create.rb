@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'plans:create'
+
       graphql_name 'CreatePlan'
       description 'Creates a new Plan'
 

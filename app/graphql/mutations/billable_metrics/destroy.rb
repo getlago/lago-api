@@ -5,6 +5,8 @@ module Mutations
     class Destroy < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'billable_metrics:delete'
+
       graphql_name 'DestroyBillableMetric'
       description 'Deletes a Billable metric'
 

@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::AddOns::Create, type: :graphql do
+  let(:required_permission) { 'addons:create' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:) }
@@ -23,11 +24,14 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'addons:create'
+
   it 'creates an add-on' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
       query: mutation,
+      permissions: required_permission,
       variables: {
         input: {
           name: 'Test Add-on',
@@ -60,6 +64,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
       result = execute_graphql(
         current_organization: membership.organization,
         query: mutation,
+        permissions: required_permission,
         variables: {
           input: {
             name: 'Test Add-on',
@@ -79,6 +84,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         query: mutation,
+        permissions: required_permission,
         variables: {
           input: {
             name: 'Test Add-on',

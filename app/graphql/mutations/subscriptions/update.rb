@@ -5,6 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'subscriptions:update'
+
       graphql_name 'UpdateSubscription'
       description 'Update a Subscription'
 

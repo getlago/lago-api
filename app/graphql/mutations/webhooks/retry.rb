@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'developers:view'
+
       graphql_name 'RetryWebhook'
       description 'Retry a Webhook'
 

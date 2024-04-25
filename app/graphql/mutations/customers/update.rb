@@ -5,6 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'customers:update'
+
       graphql_name 'UpdateCustomer'
       description 'Updates an existing Customer'
 

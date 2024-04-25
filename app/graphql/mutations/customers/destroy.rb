@@ -5,6 +5,8 @@ module Mutations
     class Destroy < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'customers:delete'
+
       graphql_name 'DestroyCustomer'
       description 'Delete a Customer'
 

@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
+  let(:required_permission) { 'organization:integrations:delete' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:integration) { create(:netsuite_integration, organization:) }
@@ -22,6 +23,7 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
       execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: integration.id },
@@ -29,6 +31,8 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
       )
     end.to change(::Integrations::BaseIntegration, :count).by(-1)
   end
+
+  it_behaves_like 'requires permission', 'organization:integrations:delete'
 
   context 'without current user' do
     it 'returns an error' do
@@ -48,6 +52,7 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: integration.id },

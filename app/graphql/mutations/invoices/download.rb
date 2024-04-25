@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'invoices:view'
+
       graphql_name 'DownloadInvoice'
       description 'Download an Invoice PDF'
 

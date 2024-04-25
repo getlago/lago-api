@@ -5,6 +5,8 @@ module Mutations
     class Void < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'credit_notes:void'
+
       graphql_name 'VoidCreditNote'
       description 'Voids a Credit Note'
 

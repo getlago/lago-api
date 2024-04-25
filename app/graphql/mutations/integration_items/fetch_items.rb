@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'organization:integrations:update'
+
       graphql_name 'FetchIntegrationItems'
       description 'Fetch integration items'
 

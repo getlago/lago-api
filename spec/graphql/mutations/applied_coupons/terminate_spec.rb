@@ -20,9 +20,12 @@ RSpec.describe Mutations::AppliedCoupons::Terminate, type: :graphql do
 
   before { applied_coupon }
 
+  it_behaves_like 'requires permission', 'coupons:detach'
+
   it 'terminates an applied coupon' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: 'coupons:detach',
       query: mutation,
       variables: {
         input: { id: applied_coupon.id },

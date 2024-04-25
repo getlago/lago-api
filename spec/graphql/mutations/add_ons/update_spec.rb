@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::AddOns::Update, type: :graphql do
+  let(:required_permission) { 'addons:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:) }
@@ -27,9 +28,12 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
 
   before { create(:add_on_applied_tax, add_on:, tax:) }
 
+  it_behaves_like 'requires permission', 'addons:update'
+
   it 'updates an add-on' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {

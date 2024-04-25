@@ -7,6 +7,8 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
+        REQUIRED_PERMISSION = 'organization:integrations:update'
+
         graphql_name 'CreateNetsuiteIntegrationCollectionMapping'
         description 'Create Netsuite integration collection mapping'
 

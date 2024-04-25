@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Invoices::Update, type: :graphql do
+  let(:required_permission) { 'invoices:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:) }
@@ -18,10 +19,13 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'invoices:update'
+
   it 'updates a invoice' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -51,6 +55,7 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {

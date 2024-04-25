@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
+  let(:required_permission) { 'developers:manage' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
@@ -17,11 +18,14 @@ RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
 
   before { webhook_endpoint }
 
+  it_behaves_like 'requires permission', 'developers:manage'
+
   it 'destroys a webhook_endpoint' do
     expect do
       execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: { input: { id: webhook_endpoint.id } },
       )
@@ -32,6 +36,7 @@ RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: { input: { id: webhook_endpoint.id } },
       )

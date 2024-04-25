@@ -5,6 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'credit_notes:update'
+
       graphql_name 'UpdateCreditNote'
       description 'Updates an existing Credit Note'
 

@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
+  let(:required_permission) { 'credit_notes:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -20,9 +21,12 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'credit_notes:update'
+
   it 'updates the credit note' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -44,6 +48,7 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {

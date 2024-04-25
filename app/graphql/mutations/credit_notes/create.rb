@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'credit_notes:create'
+
       graphql_name 'CreateCreditNote'
       description 'Creates a new Credit Note'
 

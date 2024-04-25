@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::IntegrationItems::FetchItems, type: :graphql do
+  let(:required_permission) { 'organization:integrations:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:integration) { create(:netsuite_integration, organization:) }
@@ -32,10 +33,13 @@ RSpec.describe Mutations::IntegrationItems::FetchItems, type: :graphql do
     IntegrationItem.destroy_all
   end
 
+  it_behaves_like 'requires permission', 'organization:integrations:update'
+
   it 'fetches the integration items' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: { integrationId: integration.id },
@@ -67,6 +71,7 @@ RSpec.describe Mutations::IntegrationItems::FetchItems, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { integrationId: integration.id },

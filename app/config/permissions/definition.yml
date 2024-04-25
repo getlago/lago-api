@@ -48,6 +48,7 @@ draft_invoices:
 credit_notes:
   view: true
   create: true
+  update: true
   void: true
 customer_settings:
   view: true

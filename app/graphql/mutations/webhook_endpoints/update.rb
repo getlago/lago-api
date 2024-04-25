@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'developers:manage'
+
       graphql_name 'UpdateWebhookEndpoint'
       description 'Update a new webhook endpoint'
 

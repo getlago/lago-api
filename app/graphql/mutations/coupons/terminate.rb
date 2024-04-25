@@ -5,6 +5,8 @@ module Mutations
     class Terminate < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'coupons:update'
+
       graphql_name 'TerminateCoupon'
       description 'Deletes a coupon'
 

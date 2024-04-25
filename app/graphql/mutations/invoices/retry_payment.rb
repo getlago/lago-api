@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'invoices:update'
+
       graphql_name 'RetryInvoicePayment'
       description 'Retry invoice payment'
 

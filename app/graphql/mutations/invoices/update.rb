@@ -4,6 +4,9 @@ module Mutations
   module Invoices
     class Update < BaseMutation
       include AuthenticableApiUser
+
+      REQUIRED_PERMISSION = 'invoices:update'
+
       description 'Update an existing invoice'
       graphql_name 'UpdateInvoice'
 

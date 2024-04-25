@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
+  let(:required_permission) { 'billable_metrics:update' }
   let(:membership) { create(:membership) }
   let(:billable_metric) { create(:weighted_sum_billable_metric, organization: membership.organization) }
   let(:mutation) do
@@ -22,9 +23,12 @@ RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'billable_metrics:update'
+
   it 'updates a billable metric' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {

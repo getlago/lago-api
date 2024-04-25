@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'wallets:top_up'
+
       graphql_name 'CreateCustomerWalletTransaction'
       description 'Creates a new Customer Wallet Transaction'
 

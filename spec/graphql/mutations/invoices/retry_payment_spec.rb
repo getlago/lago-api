@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
+  let(:required_permission) { 'invoices:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:, payment_provider: 'gocardless') }
@@ -35,11 +36,14 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
     gocardless_customer
   end
 
+  it_behaves_like 'requires permission', 'invoices:update'
+
   context 'with valid preconditions' do
     it 'returns the invoice after payment retry' do
       result = execute_graphql(
         current_organization: organization,
         current_user: user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: invoice.id },
@@ -70,6 +74,7 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: invoice.id },
