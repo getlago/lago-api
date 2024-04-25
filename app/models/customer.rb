@@ -28,6 +28,9 @@ class Customer < ApplicationRecord
            class_name: 'PaymentProviderCustomers::BaseCustomer',
            dependent: :destroy
   has_many :quantified_events
+  has_many :integration_customers,
+           class_name: 'IntegrationCustomers::BaseCustomer',
+           dependent: :destroy
 
   has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
   has_many :taxes, through: :applied_taxes
@@ -35,6 +38,7 @@ class Customer < ApplicationRecord
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
   has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'
   has_one :adyen_customer, class_name: 'PaymentProviderCustomers::AdyenCustomer'
+  has_one :netsuite_customer, class_name: 'IntegrationCustomers::NetsuiteCustomer'
 
   PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
 
