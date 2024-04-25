@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_04_25_082113) do
+ActiveRecord::Schema[7.0].define(version: 2024_04_25_131701) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -159,7 +159,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_25_082113) do
 
   create_table "cached_aggregations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
-    t.uuid "event_id", null: false
+    t.uuid "event_id"
     t.datetime "timestamp", null: false
     t.string "external_subscription_id", null: false
     t.uuid "charge_id", null: false
@@ -171,6 +171,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_25_082113) do
     t.datetime "updated_at", null: false
     t.jsonb "grouped_by", default: {}, null: false
     t.uuid "charge_filter_id"
+    t.decimal "current_amount"
     t.index ["charge_id"], name: "index_cached_aggregations_on_charge_id"
     t.index ["event_id"], name: "index_cached_aggregations_on_event_id"
     t.index ["external_subscription_id"], name: "index_cached_aggregations_on_external_subscription_id"

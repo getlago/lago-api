@@ -6,7 +6,6 @@ class CachedAggregation < ApplicationRecord
   belongs_to :group, optional: true
   belongs_to :charge_filter, optional: true
 
-  validates :event_id, presence: true
   validates :external_subscription_id, presence: true
   validates :timestamp, presence: true
 
