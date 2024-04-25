@@ -7,7 +7,7 @@ module Resolvers
 
     description 'Query the current organization'
 
-    type Types::OrganizationType, null: true
+    type Types::CurrentOrganizationType, null: true
 
     def resolve
       current_organization

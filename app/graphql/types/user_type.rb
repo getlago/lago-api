@@ -9,7 +9,7 @@ module Types
 
     field :memberships, [Types::MembershipType], null: false
     # TODO: keeping organization for backwards compatibility, remove once the frontend is updated
-    field :organizations, [Types::SafeOrganizationType], null: false
+    field :organizations, [Types::OrganizationType], null: false
 
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

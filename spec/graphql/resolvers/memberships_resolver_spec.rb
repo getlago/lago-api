@@ -98,7 +98,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
         expect(other_org_result_data).to be nil
         expect_graphql_error(
           result:,
-          message: "Field 'apiKey' doesn't exist on type 'SafeOrganization'",
+          message: "Field 'apiKey' doesn't exist on type 'Organization'",
         )
       end
     end
