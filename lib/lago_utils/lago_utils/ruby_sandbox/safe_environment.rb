@@ -141,9 +141,7 @@ module LagoUtils
         all_symbols
       ].freeze
 
-      STRING_S_METHODS = %w[
-        new
-      ].freeze
+      STRING_S_METHODS = %w[].freeze
 
       KERNEL_METHODS = %w[
         ==
