@@ -12,7 +12,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
 
-  let(:group) { nil }
   let(:charge_filter) { nil }
 
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
@@ -52,7 +51,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
 
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-        .with(charge:, boundaries: Hash, group:, properties: Hash, event:, charge_filter:)
+        .with(charge:, boundaries: Hash, properties: Hash, event:, charge_filter:)
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
@@ -78,7 +77,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           units: 9,
           properties: Hash,
           events_count: 1,
-          group: nil,
           charge_filter: nil,
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
@@ -129,146 +127,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           expect(result.error).to be_a(BaseService::ServiceFailure)
           expect(result.error.code).to eq('failure')
           expect(result.error.error_message).to eq('Failure')
-        end
-      end
-    end
-
-    context 'when charge has groups' do
-      let(:parent_group_id) { nil }
-      let(:group) do
-        create(:group, billable_metric:, key: 'region', value: 'europe', parent_group_id:)
-      end
-
-      let(:charge) do
-        create(
-          :standard_charge,
-          :pay_in_advance,
-          plan: subscription.plan,
-          billable_metric:,
-          group_properties: [
-            build(
-              :group_property,
-              group:,
-              values: {
-                amount: '20',
-                amount_currency: 'EUR',
-              },
-            ),
-          ],
-        )
-      end
-
-      let(:event) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          external_customer_id: customer.external_id,
-          properties: {
-            region: 'europe',
-          },
-        )
-      end
-
-      it 'creates a fee' do
-        result = fee_service.call
-
-        aggregate_failures do
-          expect(result).to be_success
-
-          expect(result.fees.count).to eq(1)
-          expect(result.fees.first).to have_attributes(
-            subscription:,
-            charge:,
-            amount_cents: 10,
-            amount_currency: 'EUR',
-            fee_type: 'charge',
-            pay_in_advance: true,
-            invoiceable: charge,
-            units: 9,
-            properties: Hash,
-            events_count: 1,
-            group:,
-            pay_in_advance_event_id: event.id,
-            unit_amount_cents: 1,
-            precise_unit_amount: 0.01111111111,
-
-            taxes_rate: 20.0,
-            taxes_amount_cents: 2,
-          )
-          expect(result.fees.first.applied_taxes.count).to eq(1)
-        end
-      end
-
-      context 'when group has a parent' do
-        let(:parent_group_id) do
-          create(:group, billable_metric:, key: 'cloud', value: 'AWS').id
-        end
-
-        let(:event) do
-          create(
-            :event,
-            organization:,
-            external_subscription_id: subscription.external_id,
-            external_customer_id: customer.external_id,
-            properties: {
-              cloud: 'AWS',
-              region: 'europe',
-            },
-          )
-        end
-
-        it 'creates a fee' do
-          result = fee_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-
-            expect(result.fees.count).to eq(1)
-            expect(result.fees.first).to have_attributes(
-              subscription:,
-              charge:,
-              amount_cents: 10,
-              amount_currency: 'EUR',
-              fee_type: 'charge',
-              pay_in_advance: true,
-              invoiceable: charge,
-              units: 9,
-              properties: Hash,
-              events_count: 1,
-              group:,
-              pay_in_advance_event_id: event.id,
-              unit_amount_cents: 1,
-              precise_unit_amount: 0.01111111111,
-
-              taxes_rate: 20.0,
-              taxes_amount_cents: 2,
-            )
-            expect(result.fees.first.applied_taxes.count).to eq(1)
-          end
-        end
-      end
-
-      context 'when event does not match a group' do
-        let(:event) do
-          create(
-            :event,
-            organization:,
-            external_subscription_id: subscription.external_id,
-            external_customer_id: customer.external_id,
-            properties: {
-              region: 'usa',
-            },
-          )
-        end
-
-        it 'does not create fees' do
-          result = fee_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to be_zero
-          end
         end
       end
     end
@@ -327,7 +185,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           units: 9,
           properties: Hash,
           events_count: 1,
-          group: nil,
           charge_filter:,
           pay_in_advance_event_id: event.id,
           unit_amount_cents: 1,
@@ -368,7 +225,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             units: 9,
             properties: Hash,
             events_count: 1,
-            group: nil,
             charge_filter_id: nil,
             pay_in_advance_event_id: event.id,
             unit_amount_cents: 1,
@@ -419,7 +275,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             units: 9,
             properties: Hash,
             events_count: 1,
-            group: nil,
             pay_in_advance_event_id: event.id,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
@@ -455,7 +310,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             units: 9,
             properties: Hash,
             events_count: 1,
-            group: nil,
             pay_in_advance_event_id: event.id,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
@@ -497,7 +351,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           expect(cached_aggregation.timestamp.iso8601(3)).to eq(event.timestamp.iso8601(3))
           expect(cached_aggregation.charge_id).to eq(charge.id)
           expect(cached_aggregation.external_subscription_id).to eq(event.external_subscription_id)
-          expect(cached_aggregation.group_id).to be_nil
           expect(cached_aggregation.charge_filter_id).to be_nil
           expect(cached_aggregation.current_aggregation).to eq(9)
           expect(cached_aggregation.max_aggregation).to eq(9)

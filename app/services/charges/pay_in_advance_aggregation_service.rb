@@ -2,13 +2,12 @@
 
 module Charges
   class PayInAdvanceAggregationService < BaseService
-    def initialize(charge:, boundaries:, properties:, event:, group: nil, charge_filter: nil) # rubocop:disable Metrics/ParameterLists
+    def initialize(charge:, boundaries:, properties:, event:, charge_filter: nil)
       @charge = charge
       @boundaries = boundaries
       @properties = properties
       @event = event
       @charge_filter = charge_filter
-      @group = group
 
       super
     end
@@ -30,7 +29,7 @@ module Charges
 
     private
 
-    attr_reader :charge, :boundaries, :group, :properties, :event, :charge_filter
+    attr_reader :charge, :boundaries, :properties, :event, :charge_filter
 
     delegate :subscription, to: :event
     delegate :billable_metric, to: :charge
@@ -43,10 +42,7 @@ module Charges
     end
 
     def aggregation_filters
-      filters = {
-        group:,
-        event:,
-      }
+      filters = { event: }
 
       properties = charge_filter&.properties || charge.properties
       if charge.standard? && properties['grouped_by'].present?
