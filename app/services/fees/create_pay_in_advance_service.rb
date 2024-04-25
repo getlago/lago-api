@@ -14,12 +14,10 @@ module Fees
       fees = []
 
       ActiveRecord::Base.transaction do
-        if charge.filters.any?
-          fees << create_charge_filter_fee
-        elsif charge.billable_metric.selectable_groups.any?
-          fees += create_group_properties_fees
+        fees << if charge.filters.any?
+          create_charge_filter_fee
         else
-          fees << create_fee(properties: charge.properties)
+          create_fee(properties: charge.properties)
         end
       end
 
@@ -40,11 +38,11 @@ module Fees
     delegate :billable_metric, to: :charge
     delegate :subscription, :customer, to: :event
 
-    def create_fee(properties:, group: nil, charge_filter: nil)
+    def create_fee(properties:, charge_filter: nil)
       ActiveRecord::Base.transaction do
-        aggregation_result = aggregate(properties:, group:, charge_filter:)
+        aggregation_result = aggregate(properties:, charge_filter:)
 
-        cache_aggregation_result(aggregation_result:, group:, charge_filter:)
+        cache_aggregation_result(aggregation_result:, charge_filter:)
 
         result = apply_charge_model(aggregation_result:, properties:)
         unit_amount_cents = result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
@@ -60,7 +58,6 @@ module Fees
           total_aggregated_units: result.units,
           properties: boundaries,
           events_count: result.count,
-          group_id: group&.id,
           charge_filter_id: charge_filter&.id,
           pay_in_advance_event_id: event.id,
           payment_status: :pending,
@@ -78,31 +75,6 @@ module Fees
 
         fee
       end
-    end
-
-    def create_group_properties_fees
-      group_fees = []
-
-      if billable_metric.selectable_groups.any?
-        # NOTE: Create a fee for each groups defined on the charge.
-        charge.group_properties.each do |group_properties|
-          group = billable_metric.selectable_groups.find_by(id: group_properties.group_id)
-          next unless event_linked_to?(group:)
-
-          group_fees << create_fee(properties: group_properties.values, group:)
-        end
-
-        # NOTE: Create a fee for groups not defined (with default properties).
-        billable_metric.selectable_groups.where.not(id: charge.group_properties.pluck(:group_id)).find_each do |group|
-          next unless event_linked_to?(group:)
-
-          group_fees << create_fee(properties: charge.properties, group:)
-        end
-      else
-        group_fees << create_fee(properties: charge.properties)
-      end
-
-      group_fees
     end
 
     def create_charge_filter_fee
@@ -133,9 +105,9 @@ module Fees
       }
     end
 
-    def aggregate(properties:, group:, charge_filter: nil)
+    def aggregate(properties:, charge_filter: nil)
       aggregation_result = Charges::PayInAdvanceAggregationService.call(
-        charge:, boundaries:, group:, properties:, event:, charge_filter:,
+        charge:, boundaries:, properties:, event:, charge_filter:,
       )
       aggregation_result.raise_if_error!
       aggregation_result
@@ -149,25 +121,13 @@ module Fees
       charge_model_result
     end
 
-    def event_linked_to?(group:)
-      return match_group?(group) && match_group?(group.parent) if group.parent
-
-      match_group?(group)
-    end
-
-    def match_group?(group)
-      return false unless event.properties.key?(group.key.to_s)
-
-      event.properties[group.key.to_s] == group.value
-    end
-
     def deliver_webhooks
       return if estimate
 
       result.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
     end
 
-    def cache_aggregation_result(aggregation_result:, group:, charge_filter:)
+    def cache_aggregation_result(aggregation_result:, charge_filter:)
       return unless aggregation_result.current_aggregation.present? ||
                     aggregation_result.max_aggregation.present? ||
                     aggregation_result.max_aggregation_with_proration.present?
@@ -178,7 +138,6 @@ module Fees
         timestamp: event.timestamp,
         external_subscription_id: event.external_subscription_id,
         charge_id: charge.id,
-        group_id: group&.id,
         charge_filter_id: charge_filter&.id,
         current_aggregation: aggregation_result.current_aggregation,
         max_aggregation: aggregation_result.max_aggregation,

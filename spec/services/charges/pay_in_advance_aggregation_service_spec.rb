@@ -4,13 +4,12 @@ require 'rails_helper'
 
 RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
   subject(:agg_service) do
-    described_class.new(charge:, boundaries:, group:, properties:, event:, charge_filter:)
+    described_class.new(charge:, boundaries:, properties:, event:, charge_filter:)
   end
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: 'item_id') }
   let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
-  let(:group) { create(:group) }
   let(:charge_filter) { nil }
   let(:aggregation_type) { 'count_agg' }
   let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
@@ -51,7 +50,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charges_duration: boundaries[:charges_duration],
             },
             filters: {
-              group:,
               event:,
             },
           )
@@ -96,7 +94,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
                 charges_duration: boundaries[:charges_duration],
               },
               filters: {
-                group:,
                 event:,
                 grouped_by_values: { 'operator' => 'foo' },
               },
@@ -139,7 +136,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
                 charges_duration: boundaries[:charges_duration],
               },
               filters: {
-                group:,
                 event:,
                 charge_filter:,
                 matching_filters: charge_filter.to_h,
@@ -177,7 +173,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charges_duration: boundaries[:charges_duration],
             },
             filters: {
-              group:,
               event:,
             },
           )
@@ -210,7 +205,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charges_duration: boundaries[:charges_duration],
             },
             filters: {
-              group:,
               event:,
             },
           )

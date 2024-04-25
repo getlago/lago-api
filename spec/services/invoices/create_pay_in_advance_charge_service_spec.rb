@@ -14,7 +14,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
-  let(:group) { nil }
+  let(:charge_filter) { nil }
 
   let(:invoice) { nil }
 
@@ -51,7 +51,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-        .with(charge:, boundaries: Hash, group:, properties: Hash, event:, charge_filter: nil)
+        .with(charge:, boundaries: Hash, properties: Hash, event:, charge_filter:)
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
@@ -88,7 +88,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           units: 9,
           properties: Hash,
           events_count: 1,
-          group: nil,
+          charge_filter: nil,
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
           unit_amount_cents: 1,
@@ -233,7 +233,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           units: 9,
           properties: Hash,
           events_count: 1,
-          group: nil,
+          charge_filter: nil,
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
           unit_amount_cents: 1,
