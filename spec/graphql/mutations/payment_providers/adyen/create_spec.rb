@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
+  let(:required_permission) { 'organization:integrations:create' }
   let(:membership) { create(:membership) }
   let(:api_key) { 'api_key_123456_abc' }
   let(:hmac_key) { 'hmac_124' }
@@ -29,10 +30,13 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'organization:integrations:create'
+
   it 'creates an adyen provider' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -84,6 +88,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {

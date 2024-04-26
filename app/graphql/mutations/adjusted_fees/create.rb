@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'TODO'
+      REQUIRED_PERMISSION = 'invoices:update'
 
       graphql_name 'CreateAdjustedFee'
       description 'Creates Adjusted Fee'

@@ -4,6 +4,8 @@ module Mutations
   module PaymentProviders
     module Gocardless
       class Create < Base
+        REQUIRED_PERMISSION = 'organization:integrations:create'
+
         graphql_name 'AddGocardlessPaymentProvider'
         description 'Add or update Gocardless payment provider'
 

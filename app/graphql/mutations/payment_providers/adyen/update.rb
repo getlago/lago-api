@@ -4,6 +4,8 @@ module Mutations
   module PaymentProviders
     module Adyen
       class Update < Base
+        REQUIRED_PERMISSION = 'organization:integrations:update'
+
         graphql_name 'UpdateAdyenPaymentProvider'
         description 'Update Adyen payment provider'
 

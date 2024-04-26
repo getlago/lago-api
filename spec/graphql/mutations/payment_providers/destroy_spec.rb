@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
+  let(:required_permission) { 'organization:integrations:delete' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:payment_provider) { create(:stripe_provider, organization:) }
@@ -15,9 +16,12 @@ RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'organization:integrations:delete'
+
   it 'deletes a payment provider' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: { id: payment_provider.id },

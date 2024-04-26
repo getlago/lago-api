@@ -40,6 +40,7 @@ RSpec.describe Mutations::IntegrationMappings::Destroy, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: '123456' },

@@ -3,8 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
-  around { |test| lago_premium!(&test) }
-
+  let(:required_permission) { 'invoices:update' }
   let(:membership) { create(:membership) }
   let(:fee) { create(:charge_fee) }
   let(:input) do
@@ -30,10 +29,15 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
 
   before { fee.invoice.draft! }
 
+  around { |test| lago_premium!(&test) }
+
+  it_behaves_like 'requires permission', 'invoices:update'
+
   it 'creates an adjusted fee' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: { input: },
     )
@@ -48,6 +52,7 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: { input: },
       )
@@ -72,6 +77,7 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: { input: },
       )

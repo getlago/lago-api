@@ -5,6 +5,8 @@ module Mutations
     class Destroy < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'organization:integrations:delete'
+
       graphql_name 'DestroyPaymentProvider'
       description 'Destroy a payment provider'
 

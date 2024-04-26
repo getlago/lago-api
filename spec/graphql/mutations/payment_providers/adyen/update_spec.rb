@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
+  let(:required_permission) { 'organization:integrations:update' }
   let(:membership) { create(:membership) }
   let(:adyen_provider) { create(:adyen_provider, organization: membership.organization) }
   let(:success_redirect_url) { Faker::Internet.url }
@@ -20,10 +21,13 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
 
   before { adyen_provider }
 
+  it_behaves_like 'requires permission', 'organization:integrations:update'
+
   it 'updates an adyen provider' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -43,6 +47,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {
@@ -79,6 +84,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {
