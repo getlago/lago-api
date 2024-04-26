@@ -20,9 +20,37 @@ module BillableMetrics
         result
       end
 
-      def compute_grouped_by_aggregation
-        # TODO(custom_agg): Implement custom aggregation logic
-        result.aggregations = []
+      # NOTE: Apply the grouped_by filter to the aggregation
+      #       Result will have an aggregations attribute
+      #       containing the aggregation result of each group.
+      #
+      #       This logic is only applicable for in arrears aggregation
+      #       (exept for the current_usage update)
+      #       as pay in advance aggregation will be computed on a single group
+      #       with the grouped_by_values filter
+      def compute_grouped_by_aggregation(options: {})
+        counts = event_store.grouped_count
+        return empty_results if counts.blank?
+
+        result.aggregations = counts.map do |aggregation|
+          group_result = BaseService::Result.new
+          group_result.grouped_by = aggregation[:groups]
+          group_result.count = aggregation[:value]
+
+          aggregation_result = perform_custom_aggregation(
+            target_result: group_result,
+            grouped_by_values: aggregation[:groups],
+          )
+
+          group_result.aggregation = aggregation_result[:total_units]
+          group_result.current_usage_units = group_result.aggregation
+          group_result.custom_aggregation = aggregation_result
+          group_result.options = options
+
+          group_result
+        end
+
+        result
       end
 
       def compute_per_event_aggregation
@@ -41,13 +69,26 @@ module BillableMetrics
         INITIAL_STATE
       end
 
-      def perform_custom_aggregation
-        total_batches = (result.count.to_f / BATCH_SIZE).ceil
+      def perform_custom_aggregation(target_result: result, grouped_by_values: nil)
+        total_batches = (target_result.count.to_f / BATCH_SIZE).ceil
         state = current_state
+
+        # NOTE: for grouped_by aggregations we need to initialize
+        #       the event store with the grouped_by values to only fetch the events
+        #       of the group
+        store = event_store
+        if grouped_by_values
+          store = event_store_class.new(
+            code: billable_metric.code,
+            subscription:,
+            boundaries:,
+            filters: filters.merge(grouped_by_values:),
+          )
+        end
 
         # NOTE: Loop over events by batch
         (1..total_batches).each do |batch|
-          events_properties = event_store.events.page(batch).per(BATCH_SIZE)
+          events_properties = store.events.page(batch).per(BATCH_SIZE)
             .map { |event| { timestamp: event.timestamp, properties: event.properties } }
 
           state = sandboxed_aggregation(events_properties, state)

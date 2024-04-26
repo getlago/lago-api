@@ -215,4 +215,50 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       end
     end
   end
+
+  context 'when the charge is a standard with grouped by properties' do
+    let(:grouped_by) { ['agent_name'] }
+    let(:agent_names) { %w[aragorn frodo gimli legolas] }
+
+    let(:event_list) do
+      agent_names.map do |agent_name|
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.zone.now - 2.days,
+          properties: {
+            agent_name:,
+            value: 11,
+            storage_zone: 'storage_eu',
+          },
+        )
+      end + [
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: Time.zone.now - 2.days,
+          properties: { value: 11, storage_zone: 'storage_eu' },
+        ),
+      ]
+    end
+
+    it 'aggregates the events in groups', :aggregate_failures do
+      result = custom_service.aggregate
+
+      expect(result.aggregations.count).to eq(5)
+
+      result.aggregations.sort_by { |a| a.grouped_by['agent_name'] || '' }.each_with_index do |aggregation, _index|
+        expect(aggregation.aggregation).to eq(11)
+        expect(aggregation.count).to eq(1)
+        expect(aggregation.current_usage_units).to eq(11)
+        expect(aggregation.custom_aggregation).to eq({ total_units: 11, amount: 0.1 })
+      end
+    end
+  end
 end
