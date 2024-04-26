@@ -5315,7 +5315,7 @@ type Query {
   """
   Query netsuite integration mappings
   """
-  netsuiteMappings(integrationId: ID, limit: Int, mappableType: NetsuiteMappableTypeEnum, page: Int): NetsuiteMappingCollection
+  netsuiteMappings(integrationId: ID, limit: Int, mappableType: NetsuiteMappableTypeEnum, page: Int, searchTerm: String): NetsuiteMappingCollection
 
   """
   Query the current organization

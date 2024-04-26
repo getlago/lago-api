@@ -28,7 +28,7 @@ gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
 gem 'paper_trail'
 gem 'pg'
-gem 'ransack', '~> 4.0.0'
+gem 'ransack', '~> 4.1.1'
 gem 'scenic'
 gem 'with_advisory_lock'
 

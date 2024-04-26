@@ -3,15 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe IntegrationMappings::NetsuiteMappingsQuery, type: :query do
-  subject(:netsuite_mappings_query) { described_class.new(organization:, pagination:, filters:) }
+  subject(:netsuite_mappings_query) { described_class.new(organization:) }
 
-  let(:pagination) { BaseQuery::Pagination.new }
-  let(:filters) { BaseQuery::Filters.new(query_filters) }
-  let(:query_filters) { {} }
+  let(:filters) { {} }
+  let(:search_term) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
   let(:integration) { create(:netsuite_integration, organization:) }
+  let(:integration_id) { integration.id }
   let(:integration_second) { create(:netsuite_integration, organization:) }
   let(:integration_third) { create(:netsuite_integration) }
 
@@ -31,7 +31,7 @@ RSpec.describe IntegrationMappings::NetsuiteMappingsQuery, type: :query do
 
   context 'when filters are empty' do
     it 'returns all netsuite mappings' do
-      result = netsuite_mappings_query.call
+      result = netsuite_mappings_query.call(search_term:, integration_id: nil, page: 1, limit: 10, filters:)
 
       returned_ids = result.netsuite_mappings.pluck(:id)
 
@@ -46,10 +46,10 @@ RSpec.describe IntegrationMappings::NetsuiteMappingsQuery, type: :query do
   end
 
   context 'when filtering by integration id' do
-    let(:query_filters) { { integration_id: integration.id } }
+    let(:filters) { { integration_id: integration.id } }
 
     it 'returns two netsuite mappings' do
-      result = netsuite_mappings_query.call
+      result = netsuite_mappings_query.call(search_term:, integration_id:, page: 1, limit: 10, filters:)
 
       returned_ids = result.netsuite_mappings.pluck(:id)
 
@@ -64,10 +64,10 @@ RSpec.describe IntegrationMappings::NetsuiteMappingsQuery, type: :query do
   end
 
   context 'when filtering by mappable type' do
-    let(:query_filters) { { mappable_type: 'BillableMetric' } }
+    let(:filters) { { mappable_type: 'BillableMetric' } }
 
     it 'returns one netsuite mappings' do
-      result = netsuite_mappings_query.call
+      result = netsuite_mappings_query.call(search_term:, integration_id:, page: 1, limit: 10, filters:)
 
       returned_ids = result.netsuite_mappings.pluck(:id)
 

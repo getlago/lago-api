@@ -629,7 +629,7 @@ GEM
       zeitwerk (~> 2.5)
     rainbow (3.1.1)
     rake (13.1.0)
-    ransack (4.0.0)
+    ransack (4.1.1)
       activerecord (>= 6.1.5)
       activesupport (>= 6.1.5)
       i18n
@@ -881,7 +881,7 @@ DEPENDENCIES
   puma (~> 6.4)
   rack-cors
   rails (~> 7.0.8)
-  ransack (~> 4.0.0)
+  ransack (~> 4.1.1)
   rspec-graphql_matchers
   rspec-rails
   rubocop-graphql
