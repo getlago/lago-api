@@ -25,6 +25,8 @@ module Types
 
       field :taxes, [Types::Taxes::Object]
 
+      field :integration_mappings, [Types::IntegrationMappings::Netsuite::Object], null: true
+
       def customers_count
         object.applied_add_ons.select(:customer_id).distinct.count
       end
