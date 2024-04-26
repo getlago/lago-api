@@ -286,17 +286,22 @@ GEM
       activerecord
       kaminari-core (= 1.2.2)
     kaminari-core (1.2.2)
-    karafka (2.2.9)
-      karafka-core (>= 2.2.2, < 2.3.0)
-      waterdrop (>= 2.6.10, < 3.0.0)
+    karafka (2.3.4)
+      karafka-core (>= 2.3.0, < 2.4.0)
+      waterdrop (>= 2.6.12, < 3.0.0)
       zeitwerk (~> 2.3)
-    karafka-core (2.2.3)
-      concurrent-ruby (>= 1.1)
-      karafka-rdkafka (>= 0.13.6, < 0.14.0)
-    karafka-rdkafka (0.13.6)
+    karafka-core (2.3.0)
+      karafka-rdkafka (>= 0.14.8, < 0.15.0)
+    karafka-rdkafka (0.14.10)
       ffi (~> 1.15)
       mini_portile2 (~> 2.6)
       rake (> 12)
+    karafka-web (0.8.2)
+      erubi (~> 1.4)
+      karafka (>= 2.3.0, < 2.4.0)
+      karafka-core (>= 2.3.0, < 2.4.0)
+      roda (~> 3.68, >= 3.69)
+      tilt (~> 2.0)
     language_server-protocol (3.17.0.3)
     listen (3.9.0)
       rb-fsevent (~> 0.10, >= 0.10.3)
@@ -319,7 +324,7 @@ GEM
     marcel (1.0.2)
     method_source (1.0.0)
     mini_mime (1.1.5)
-    mini_portile2 (2.8.5)
+    mini_portile2 (2.8.6)
     minitest (5.22.2)
     monetize (1.12.0)
       money (~> 6.12)
@@ -648,6 +653,8 @@ GEM
       rack (>= 1.4)
     retriable (3.1.2)
     rexml (3.2.5)
+    roda (3.79.0)
+      rack
     rspec (3.12.0)
       rspec-core (~> 3.12.0)
       rspec-expectations (~> 3.12.0)
@@ -798,7 +805,7 @@ GEM
     valvat (1.4.0)
       rexml (>= 3.2, < 4.0)
     version_gem (1.1.1)
-    waterdrop (2.6.10)
+    waterdrop (2.6.14)
       karafka-core (>= 2.2.3, < 3.0.0)
       zeitwerk (~> 2.3)
     webmock (3.23.0)
@@ -857,7 +864,8 @@ DEPENDENCIES
   i18n-tasks!
   jwt
   kaminari-activerecord
-  karafka
+  karafka (~> 2.3.4)
+  karafka-web (~> 0.8.2)
   lograge
   logstash-event
   money-rails

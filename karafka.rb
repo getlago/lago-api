@@ -2,7 +2,26 @@
 
 class KarafkaApp < Karafka::App
   setup do |config|
-    config.kafka = { 'bootstrap.servers': ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] }
+    config.kafka = {
+      'bootstrap.servers': ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'],
+    }
+
+    if ENV['LAGO_KAFKA_SECURITY_PROTOCOL'].present?
+      config.kafka = config.kafka.merge({ 'security.protocol': ENV['LAGO_KAFKA_SECURITY_PROTOCOL'] })
+    end
+
+    if ENV['LAGO_KAFKA_SASL_MECHANISMS'].present?
+      config.kafka = config.kafka.merge({ 'sasl.mechanisms': ENV['LAGO_KAFKA_SASL_MECHANISMS'] })
+    end
+
+    if ENV['LAGO_KAFKA_USERNAME'].present?
+      config.kafka = config.kafka.merge({ 'sasl.username': ENV['LAGO_KAFKA_USERNAME'] })
+    end
+
+    if ENV['LAGO_KAFKA_PASSWORD'].present?
+      config.kagka = config.kafka.merge({ 'sasl.password': ENV['LAGO_KAFKA_PASSWORD'] })
+    end
+
     config.client_id = 'Lago'
     # Recreate consumers with each batch. This will allow Rails code reload to work in the
     # development mode. Otherwise Karafka process would not be aware of code changes
