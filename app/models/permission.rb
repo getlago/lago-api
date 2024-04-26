@@ -7,6 +7,8 @@ class Permission
   end
 
   # rubocop:disable Layout/ClassStructure
+  EMPTY_PERMISSIONS_HASH = {}.freeze
+
   DEFAULT_PERMISSIONS_HASH = yaml_to_hash('definition.yml').freeze
 
   ADMIN_PERMISSIONS_HASH = DEFAULT_PERMISSIONS_HASH.transform_values { true }.freeze
