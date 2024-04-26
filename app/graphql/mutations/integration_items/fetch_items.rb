@@ -20,6 +20,8 @@ module Mutations
 
         ::Integrations::Aggregator::SyncService.call(integration:)
 
+        integration.integration_items.where(item_type: :standard).destroy_all
+
         result = ::Integrations::Aggregator::ItemsService.call(integration:)
 
         result.success? ? result.items : result_error(result)
