@@ -52,4 +52,26 @@ RSpec.describe Mutations::Auth::Okta::Authorize, type: %i[graphql with_redis] do
       end
     end
   end
+
+  context 'when invite token is provided' do
+    let(:invite) { create(:invite, email: "foo@#{okta_integration.domain}") }
+
+    it 'returns authorize url' do
+      result = execute_graphql(
+        query: mutation,
+        variables: {
+          input: {
+            email: "foo@#{okta_integration.domain}",
+            inviteToken: invite.token,
+          },
+        },
+      )
+
+      response = result['data']['oktaAuthorize']
+
+      aggregate_failures do
+        expect(response['url']).to include(okta_integration.organization_name.downcase)
+      end
+    end
+  end
 end

@@ -4758,6 +4758,7 @@ input OktaAuthorizeInput {
   """
   clientMutationId: String
   email: String!
+  inviteToken: String
 }
 
 type OktaIntegration {
