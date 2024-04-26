@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Wallets::Create, type: :graphql do
+  let(:required_permission) { 'wallets:create' }
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization, currency: 'EUR') }
   let(:expiration_at) { Time.zone.now + 1.year }
@@ -25,10 +26,13 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires permission', 'wallets:create'
+
   it 'create a wallet' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -69,6 +73,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {
@@ -118,6 +123,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {

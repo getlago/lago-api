@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'coupons:create'
+
       graphql_name 'CreateCoupon'
       description 'Creates a new Coupon'
 

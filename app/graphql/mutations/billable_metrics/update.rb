@@ -5,6 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'billable_metrics:update'
+
       graphql_name 'UpdateBillableMetric'
       description 'Updates an existing Billable metric'
 

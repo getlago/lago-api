@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, type: :graphql do
+  let(:required_permissions) { 'customers:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -22,9 +23,12 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires permission', 'customers:update'
+
   it 'updates a customer' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permissions,
       query: mutation,
       variables: {
         input: {

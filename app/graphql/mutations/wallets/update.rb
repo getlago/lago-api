@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'wallets:update'
+
       graphql_name 'UpdateCustomerWallet'
       description 'Updates a new Customer Wallet'
 

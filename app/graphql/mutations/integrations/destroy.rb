@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'organization:integrations:delete'
+
       graphql_name 'DestroyIntegration'
       description 'Destroy an integration'
 

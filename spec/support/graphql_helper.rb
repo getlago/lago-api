@@ -8,7 +8,16 @@ module GraphQLHelper
   end
 
   def execute_graphql(current_user: nil, query: nil, current_organization: nil, customer_portal_user: nil, request: nil, permissions: nil, **kwargs) # rubocop:disable Metrics/ParameterLists, Layout/LineLength
-    permissions = permissions.index_with { true } if permissions.is_a? Array
+    unless permissions.is_a?(Hash)
+      # we allow passing a single permission string or an array for convenience
+      permissions = Array.wrap(permissions).index_with { true }
+    end
+
+    permissions.keys.each do |permission|
+      next if Permission::DEFAULT_PERMISSIONS_HASH.key?(permission)
+
+      raise "Unknown permission: #{permission}"
+    end
 
     args = kwargs.merge(
       context: {

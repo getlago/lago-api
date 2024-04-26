@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Coupons::Update, type: :graphql do
+  let(:required_permission) { 'coupons:update' }
   let(:membership) { create(:membership) }
   let(:coupon) { create(:coupon, organization: membership.organization) }
   let(:expiration_at) { Time.current + 3.days }
@@ -31,9 +32,12 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'coupons:update'
+
   it 'updates a coupon' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -98,6 +102,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
     it 'updates a coupon' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {

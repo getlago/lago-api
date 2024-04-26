@@ -5,6 +5,8 @@ module Mutations
     class Revoke < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'organization:members:update'
+
       graphql_name 'RevokeMembership'
       description 'Revoke a membership'
 

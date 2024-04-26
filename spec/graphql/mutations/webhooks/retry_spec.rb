@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
+  let(:required_permission) { 'developers:manage' }
   let(:webhook) { create(:webhook, :failed, webhook_endpoint:) }
   let(:webhook_endpoint) { create(:webhook_endpoint) }
   let(:organization) { webhook_endpoint.organization.reload }
@@ -20,10 +21,13 @@ RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
 
   before { webhook }
 
+  it_behaves_like 'requires permission', 'developers:manage'
+
   it 'retries a webhook' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {

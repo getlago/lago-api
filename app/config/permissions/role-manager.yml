@@ -36,21 +36,21 @@ wallets:
 invoices:
   create: true
 developers:
-  view: false
+  manage: false
   keys:
-    view: false
+    manage: false
 organization:
   view: false
-  edit: false
+  update: false
   invoices:
     view: false
-    edit: false
+    update: false
   taxes:
     view: false
-    edit: false
+    update: false
   emails:
     view: false
-    edit: false
+    update: false
   integrations:
     view: false
     create: false

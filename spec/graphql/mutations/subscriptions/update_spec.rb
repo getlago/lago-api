@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
+  let(:required_permission) { 'subscriptions:update' }
   let(:membership) { create(:membership) }
 
   let(:subscription) do
@@ -25,9 +26,12 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'subscriptions:update'
+
   it 'updates an subscription' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {

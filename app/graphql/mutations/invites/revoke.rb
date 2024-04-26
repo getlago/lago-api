@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'organization:members:delete'
+
       graphql_name 'RevokeInvite'
       description 'Revokes a invite'
 

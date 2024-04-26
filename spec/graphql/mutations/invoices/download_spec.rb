@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Invoices::Download, type: :graphql do
+  let(:required_permission) { 'invoices:view' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -35,11 +36,14 @@ RSpec.describe Mutations::Invoices::Download, type: :graphql do
       .and_return(pdf_response)
   end
 
+  it_behaves_like 'requires permission', 'invoices:view'
+
   it 'generates the PDF for the given invoice' do
     freeze_time do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: invoice.id },
@@ -72,6 +76,7 @@ RSpec.describe Mutations::Invoices::Download, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: invoice.id },

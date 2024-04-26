@@ -5,6 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'coupons:update'
+
       graphql_name 'UpdateCoupon'
       description 'Update an existing coupon'
 

@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'customers:create'
+
       graphql_name 'CreateCustomer'
       description 'Creates a new customer'
 

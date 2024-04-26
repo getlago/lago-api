@@ -5,6 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'plans:update'
+
       graphql_name 'UpdatePlan'
       description 'Updates an existing Plan'
 

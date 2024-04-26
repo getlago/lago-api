@@ -5,6 +5,8 @@ module Mutations
     class UpdateInvoiceGracePeriod < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'customers:update'
+
       graphql_name 'UpdateCustomerInvoiceGracePeriod'
       description 'Assign the invoice grace period to Customers'
 

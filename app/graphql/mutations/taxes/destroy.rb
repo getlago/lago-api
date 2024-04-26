@@ -6,6 +6,9 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      # Permissions ??
+      # REQUIRED_PERMISSION = 'taxes:create'
+
       graphql_name 'DestroyTax'
       description 'Deletes a tax'
 

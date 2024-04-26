@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::IntegrationCollectionMappings::Destroy, type: :graphql do
+  let(:required_permission) { 'organization:integrations:update' }
   let(:integration_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
@@ -18,11 +19,14 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Destroy, type: :graphql
 
   before { integration_collection_mapping }
 
+  it_behaves_like 'requires permission', 'organization:integrations:update'
+
   it 'deletes an integration collection mapping' do
     expect do
       execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: integration_collection_mapping.id },
@@ -36,6 +40,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Destroy, type: :graphql
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: '123456' },
@@ -64,6 +69,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Destroy, type: :graphql
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: { id: integration_collection_mapping.id },

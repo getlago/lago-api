@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
+  let(:required_permission) { 'credit_notes:view' }
   let(:credit_note) { create(:credit_note) }
   let(:organization) { credit_note.organization }
   let(:membership) { create(:membership, organization:) }
@@ -27,10 +28,13 @@ RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
       .to_return(body: pdf_response, status: 200)
   end
 
+  it_behaves_like 'requires permission', 'credit_notes:view'
+
   it 'generates the credit note PDF' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {

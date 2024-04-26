@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Usage:
-#  it { is_expected.to have_a_field(:api_key).with_permissions('developers:view') }
+#  it { is_expected.to have_a_field(:api_key).with_permissions('developers:manage') }
 #
 module RSpec
   module GraphqlMatchers

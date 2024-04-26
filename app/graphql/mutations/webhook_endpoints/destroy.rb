@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'developers:manage'
+
       graphql_name 'DestroyWebhookEndpoint'
       description 'Deletes a webhook endpoint'
 

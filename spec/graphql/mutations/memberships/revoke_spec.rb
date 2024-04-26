@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
+  let(:required_permission) { 'organization:members:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -17,11 +18,14 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'organization:members:update'
+
   it 'Revokes a membership' do
     user = create(:user)
 
     result = execute_graphql(
       current_user: user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: { id: membership.id },
@@ -37,6 +41,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
   it 'Cannot Revoke my own membership' do
     result = execute_graphql(
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: { id: membership.id },

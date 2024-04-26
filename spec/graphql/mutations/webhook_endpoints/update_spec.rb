@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
+  let(:required_permission) { 'developers:manage' }
   let(:membership) { create(:membership) }
   let(:webhook_url) { Faker::Internet.url }
   let(:webhook_endpoint) { create(:webhook_endpoint, organization: membership.organization) }
@@ -29,10 +30,13 @@ RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
 
   before { webhook_endpoint }
 
+  it_behaves_like 'requires permission', 'developers:manage'
+
   it 'updates a webhook_endpoint' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: { input: },
     )
@@ -60,6 +64,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: { input: },
       )

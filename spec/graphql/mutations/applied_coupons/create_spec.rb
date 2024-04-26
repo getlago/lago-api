@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
+  let(:required_permission) { 'coupons:attach' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:mutation) do
@@ -26,10 +27,13 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
     create(:subscription, customer:)
   end
 
+  it_behaves_like 'requires permission', 'coupons:attach'
+
   it 'assigns a coupon to the customer' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -76,6 +80,7 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {

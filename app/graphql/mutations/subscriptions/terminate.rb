@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'subscriptions:update'
+
       graphql_name 'TerminateSubscription'
       description 'Terminate a Subscription'
 

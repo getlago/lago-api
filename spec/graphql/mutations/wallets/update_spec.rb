@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Wallets::Update, type: :graphql do
+  let(:required_permission) { 'wallets:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -32,10 +33,13 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires permission', 'wallets:update'
+
   it 'updates a wallet' do
     result = execute_graphql(
       current_organization: organization,
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {

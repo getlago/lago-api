@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Plans::Create, type: :graphql do
+  let(:required_permission) { 'plans:create' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan_tax) { create(:tax, organization:) }
@@ -77,10 +78,13 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires permission', 'plans:create'
+
   it 'creates a plan' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -282,6 +286,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: {
           input: {

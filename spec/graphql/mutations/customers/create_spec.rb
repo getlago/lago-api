@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Customers::Create, type: :graphql do
+  let(:required_permissions) { 'customers:create' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
@@ -45,12 +46,15 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       .to_return(status: 200, body: body.to_json, headers: {})
   end
 
+  it_behaves_like 'requires permission', 'customers:create'
+
   it 'creates a customer' do
     stripe_provider
 
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permissions,
       query: mutation,
       variables: {
         input: {
@@ -112,6 +116,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permissions,
         query: mutation,
         variables: {
           input: {
@@ -160,6 +165,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permissions,
         query: mutation,
         variables: {
           input: {
@@ -178,6 +184,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permissions,
         query: mutation,
         variables: {
           input: {

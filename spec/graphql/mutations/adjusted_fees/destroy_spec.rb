@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
+  let(:required_permission) { 'invoices:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, status: :draft, organization:) }
@@ -19,11 +20,14 @@ RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
 
   before { adjusted_fee }
 
+  it_behaves_like 'requires permission', 'invoices:update'
+
   it 'destroys an adjusted fee' do
     expect do
       execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: required_permission,
         query: mutation,
         variables: { input: { id: fee.id } },
       )
@@ -34,6 +38,7 @@ RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
+        permissions: required_permission,
         query: mutation,
         variables: { input: { id: fee.id } },
       )

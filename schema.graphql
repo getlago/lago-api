@@ -4823,40 +4823,41 @@ type Permissions {
   couponsUpdate: Boolean!
   couponsView: Boolean!
   creditNotesCreate: Boolean!
+  creditNotesUpdate: Boolean!
   creditNotesView: Boolean!
   creditNotesVoid: Boolean!
-  customerSettingsEditGracePeriod: Boolean!
-  customerSettingsEditLang: Boolean!
-  customerSettingsEditPaymentTerms: Boolean!
-  customerSettingsEditTaxRates: Boolean!
+  customerSettingsUpdateGracePeriod: Boolean!
+  customerSettingsUpdateLang: Boolean!
+  customerSettingsUpdatePaymentTerms: Boolean!
+  customerSettingsUpdateTaxRates: Boolean!
   customerSettingsView: Boolean!
   customersCreate: Boolean!
   customersDelete: Boolean!
   customersUpdate: Boolean!
   customersView: Boolean!
-  developersKeysView: Boolean!
-  developersView: Boolean!
+  developersKeysManage: Boolean!
+  developersManage: Boolean!
   draftInvoicesUpdate: Boolean!
   invoicesCreate: Boolean!
   invoicesSend: Boolean!
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
-  organizationEdit: Boolean!
-  organizationEmailsEdit: Boolean!
+  organizationEmailsUpdate: Boolean!
   organizationEmailsView: Boolean!
   organizationIntegrationsCreate: Boolean!
   organizationIntegrationsDelete: Boolean!
   organizationIntegrationsUpdate: Boolean!
   organizationIntegrationsView: Boolean!
-  organizationInvoicesEdit: Boolean!
+  organizationInvoicesUpdate: Boolean!
   organizationInvoicesView: Boolean!
   organizationMembersCreate: Boolean!
   organizationMembersDelete: Boolean!
   organizationMembersUpdate: Boolean!
   organizationMembersView: Boolean!
-  organizationTaxesEdit: Boolean!
+  organizationTaxesUpdate: Boolean!
   organizationTaxesView: Boolean!
+  organizationUpdate: Boolean!
   organizationView: Boolean!
   plansCreate: Boolean!
   plansDelete: Boolean!

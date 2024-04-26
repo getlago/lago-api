@@ -5,6 +5,8 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'addons:update'
+
       graphql_name 'UpdateAddOn'
       description 'Update an existing add-on'
 

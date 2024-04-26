@@ -3,7 +3,8 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Invites::Revoke, type: :graphql do
-  let(:membership) { create(:membership)}
+  let(:required_permission) { 'organization:members:delete' }
+  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:user) { membership.user }
 
@@ -19,6 +20,8 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires permission', 'organization:members:delete'
+
   describe 'Invite revoke mutation' do
     context 'with an existing invite' do
       let(:invite) { create(:invite, organization:) }
@@ -27,6 +30,7 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
         result = execute_graphql(
           current_organization: organization,
           current_user: user,
+          permissions: required_permission,
           query: mutation,
           variables: {
             input: { id: invite.id },
@@ -47,6 +51,7 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
       it 'returns an error' do
         result = execute_graphql(
           current_organization: organization,
+          permissions: required_permission,
           current_user: user,
           query: mutation,
           variables: {

@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::Plans::Update, type: :graphql do
+  let(:required_permission) { 'plans:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
@@ -71,6 +72,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
   let(:graphql) do
     {
       current_user: membership.user,
+      permissions: required_permission,
       query: mutation,
       variables: {
         input: {
@@ -166,6 +168,8 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
   end
 
   before { minimum_commitment }
+
+  it_behaves_like 'requires permission', 'plans:update'
 
   context 'with premium license' do
     around { |test| lago_premium!(&test) }

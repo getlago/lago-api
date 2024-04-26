@@ -22619,6 +22619,24 @@
               ]
             },
             {
+              "name": "creditNotesUpdate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "creditNotesView",
               "description": null,
               "type": {
@@ -22655,7 +22673,7 @@
               ]
             },
             {
-              "name": "customerSettingsEditGracePeriod",
+              "name": "customerSettingsUpdateGracePeriod",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -22673,7 +22691,7 @@
               ]
             },
             {
-              "name": "customerSettingsEditLang",
+              "name": "customerSettingsUpdateLang",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -22691,7 +22709,7 @@
               ]
             },
             {
-              "name": "customerSettingsEditPaymentTerms",
+              "name": "customerSettingsUpdatePaymentTerms",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -22709,7 +22727,7 @@
               ]
             },
             {
-              "name": "customerSettingsEditTaxRates",
+              "name": "customerSettingsUpdateTaxRates",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -22817,7 +22835,7 @@
               ]
             },
             {
-              "name": "developersKeysView",
+              "name": "developersKeysManage",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -22835,7 +22853,7 @@
               ]
             },
             {
-              "name": "developersView",
+              "name": "developersManage",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -22961,25 +22979,7 @@
               ]
             },
             {
-              "name": "organizationEdit",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
-              "name": "organizationEmailsEdit",
+              "name": "organizationEmailsUpdate",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -23087,7 +23087,7 @@
               ]
             },
             {
-              "name": "organizationInvoicesEdit",
+              "name": "organizationInvoicesUpdate",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -23195,7 +23195,7 @@
               ]
             },
             {
-              "name": "organizationTaxesEdit",
+              "name": "organizationTaxesUpdate",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -23214,6 +23214,24 @@
             },
             {
               "name": "organizationTaxesView",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "organizationUpdate",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
