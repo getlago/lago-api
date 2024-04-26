@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class CouponsResolver < GraphQL::Schema::Resolver
+  class CouponsResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 
@@ -15,7 +15,7 @@ module Resolvers
 
     type Types::Coupons::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, status: nil, search_term: nil)      
+    def resolve(ids: nil, page: nil, limit: nil, status: nil, search_term: nil)
       query = CouponsQuery.new(organization: current_organization)
       result = query.call(
         search_term:,

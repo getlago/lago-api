@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class EventsResolver < GraphQL::Schema::Resolver
+  class EventsResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 

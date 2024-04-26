@@ -2,7 +2,7 @@
 
 module Resolvers
   module Analytics
-    class InvoicedUsagesResolver < GraphQL::Schema::Resolver
+    class InvoicedUsagesResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
 

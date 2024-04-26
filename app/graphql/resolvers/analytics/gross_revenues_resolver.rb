@@ -2,7 +2,7 @@
 
 module Resolvers
   module Analytics
-    class GrossRevenuesResolver < GraphQL::Schema::Resolver
+    class GrossRevenuesResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
 
