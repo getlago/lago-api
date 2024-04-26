@@ -64,7 +64,8 @@ module BillableMetrics
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
-      # NOTE: Return cumulative sum of field_name based on the number of free units (per_events or per_total_aggregation).
+      # NOTE: Return cumulative sum of field_name based on the number of free units
+      #       (per_events or per_total_aggregation).
       def running_total(options)
         free_units_per_events = options[:free_units_per_events].to_i
         free_units_per_total_aggregation = BigDecimal(options[:free_units_per_total_aggregation] || 0)
@@ -128,26 +129,6 @@ module BillableMetrics
 
       def compute_per_event_aggregation
         event_store.events_values(force_from: true)
-      end
-
-      # This method fetches the latest cached aggregation in current period. If such a record exists we know that
-      # previous aggregation and previous maximum aggregation are stored there. Fetching these values
-      # would help us in pay in advance value calculation without iterating through all events in current period
-      def find_cached_aggregation(with_from_datetime:, with_to_datetime:, grouped_by: nil)
-        query = CachedAggregation
-          .where(organization_id: billable_metric.organization_id)
-          .where(external_subscription_id: subscription.external_id)
-          .where(charge_id: charge.id)
-          .from_datetime(with_from_datetime)
-          .to_datetime(with_to_datetime)
-          .where(grouped_by: grouped_by.presence || {})
-          .order(timestamp: :desc, created_at: :desc)
-
-        query = query.where.not(event_id: event.id) if event.present?
-        query = query.where(group_id: group.id) if group
-        query = query.where(charge_filter_id: charge_filter.id) if charge_filter
-
-        query.first
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)
