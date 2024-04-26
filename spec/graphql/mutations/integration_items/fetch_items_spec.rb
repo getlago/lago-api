@@ -7,6 +7,7 @@ RSpec.describe Mutations::IntegrationItems::FetchItems, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:integration) { create(:netsuite_integration, organization:) }
+  let(:integration_item) { create(:integration_item, integration:) }
   let(:sync_service) { instance_double(Integrations::Aggregator::SyncService) }
 
   let(:items_response) do
@@ -30,7 +31,7 @@ RSpec.describe Mutations::IntegrationItems::FetchItems, type: :graphql do
     stub_request(:get, 'https://api.nango.dev/v1/netsuite/items?cursor=&limit=300')
       .to_return(status: 200, body: items_response, headers: {})
 
-    IntegrationItem.destroy_all
+    integration_item
   end
 
   it_behaves_like 'requires permission', 'organization:integrations:update'
@@ -50,7 +51,10 @@ RSpec.describe Mutations::IntegrationItems::FetchItems, type: :graphql do
 
     invoice_ids = result_data['collection'].map { |value| value['externalId'] }
 
-    expect(invoice_ids).to eq(%w[755 745 753 484 828])
+    aggregate_failures do
+      expect(invoice_ids).to eq(%w[755 745 753 484 828])
+      expect(integration.integration_items.where(item_type: :standard).count).to eq(5)
+    end
   end
 
   context 'without current user' do
