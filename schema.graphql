@@ -1811,8 +1811,9 @@ input CreateCustomerWalletTransactionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  grantedCredits: String!
-  paidCredits: String!
+  grantedCredits: String
+  paidCredits: String
+  voidedCredits: String
   walletId: ID!
 }
 

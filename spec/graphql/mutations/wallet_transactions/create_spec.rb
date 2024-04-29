@@ -44,11 +44,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
     )
 
     result_data = result['data']['createCustomerWalletTransaction']
-
-    aggregate_failures do
-      expect(result_data['collection'].count).to eq(2)
-      expect(result_data['collection'].first['status']).to eq('pending')
-      expect(result_data['collection'].last['status']).to eq('settled')
-    end
+    expect(result_data['collection'].map { |wt| wt['status'] })
+      .to contain_exactly('pending', 'settled')
   end
 end

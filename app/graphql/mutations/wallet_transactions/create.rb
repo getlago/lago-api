@@ -11,9 +11,11 @@ module Mutations
       graphql_name 'CreateCustomerWalletTransaction'
       description 'Creates a new Customer Wallet Transaction'
 
-      argument :granted_credits, String, required: true
-      argument :paid_credits, String, required: true
       argument :wallet_id, ID, required: true
+
+      argument :granted_credits, String, required: false
+      argument :paid_credits, String, required: false
+      argument :voided_credits, String, required: false
 
       type Types::WalletTransactions::Object.collection_type
 

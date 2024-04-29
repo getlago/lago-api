@@ -37,6 +37,31 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       expect(json[:wallet_transactions].second[:lago_wallet_id]).to eq(wallet.id)
     end
 
+    context 'with voided credits' do
+      let(:wallet) { create(:wallet, customer:, credits_balance: 20, balance_cents: 2000) }
+      let(:params) do
+        {
+          wallet_id:,
+          voided_credits: '10',
+        }
+      end
+
+      it 'creates a wallet transactions' do
+        post_with_token(organization, '/api/v1/wallet_transactions', { wallet_transaction: params })
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:wallet_transactions].count).to eq(1)
+        expect(json[:wallet_transactions].first).to include(
+          lago_id: String,
+          status: 'settled',
+          transaction_status: 'voided',
+          lago_wallet_id: wallet.id,
+        )
+        expect(wallet.reload.credits_balance).to eq(10)
+      end
+    end
+
     context 'when wallet does not exist' do
       let(:wallet_id) { "#{wallet.id}123" }
 
