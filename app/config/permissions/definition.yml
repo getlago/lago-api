@@ -29,6 +29,7 @@ customers:
   update:
   delete:
 subscriptions:
+  view:
   create:
   update:
   delete:

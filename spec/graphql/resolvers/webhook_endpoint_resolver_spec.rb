@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::WebhookEndpointResolver, type: :graphql do
+  let(:required_permission) { 'developers:manage' }
   let(:query) do
     <<-GQL
       query($webhookEndpointId: ID!) {
@@ -25,10 +26,15 @@ RSpec.describe Resolvers::WebhookEndpointResolver, type: :graphql do
     organization.webhook_endpoints << webhook_endpoint
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'developers:manage'
+
   it 'returns a single credit note' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: {
         webhookEndpointId: webhook_endpoint.id,

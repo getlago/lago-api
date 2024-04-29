@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'customers:view'
+
     description "Query customer's credit note"
 
     argument :customer_id, ID, required: true, description: 'Uniq ID of the customer'

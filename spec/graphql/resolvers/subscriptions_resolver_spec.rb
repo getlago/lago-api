@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
+  let(:required_permission) { 'subscriptions:view' }
   let(:query) do
     <<~GQL
       query {
@@ -23,15 +24,20 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
     customer
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'subscriptions:view'
+
   it 'returns a list of subscriptions' do
-    first_subcription = create(:subscription, customer:, plan:)
-    second_subcription = create(:subscription, customer:, plan:)
+    first_subscription = create(:subscription, customer:, plan:)
+    second_subscription = create(:subscription, customer:, plan:)
     create(:subscription, customer:, plan:, status: :terminated)
     create(:subscription, customer:)
 
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
     )
     response = result['data']['subscriptions']
@@ -39,8 +45,8 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
     aggregate_failures do
       expect(response['collection'].count).to eq(2)
       expect(response['collection'].map { |s| s['id'] }).to contain_exactly(
-        first_subcription.id,
-        second_subcription.id,
+        first_subscription.id,
+        second_subscription.id,
       )
       expect(response['collection'].first['plan']).to include(
         'code' => plan.code,
@@ -48,26 +54,6 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
 
       expect(response['metadata']['currentPage']).to eq(1)
       expect(response['metadata']['totalCount']).to eq(2)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(current_user: membership.user, query:)
-
-      expect_graphql_error(result:, message: 'Missing organization id')
-    end
-  end
-
-  context 'when not member of the organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: create(:organization),
-        query:,
-      )
-
-      expect_graphql_error(result:, message: 'Not in organization')
     end
   end
 end

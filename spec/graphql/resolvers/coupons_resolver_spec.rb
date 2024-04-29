@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::CouponsResolver, type: :graphql do
+  let(:required_permission) { 'coupons:view' }
   let(:query) do
     <<~GQL
       query {
@@ -24,10 +25,15 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
     create(:coupon, organization:, status: :terminated)
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'coupons:view'
+
   it 'returns a list of coupons' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
     )
 
@@ -39,32 +45,6 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
 
       expect(coupons_response['metadata']['currentPage']).to eq(1)
       expect(coupons_response['metadata']['totalCount']).to eq(1)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(current_user: membership.user, query:)
-
-      expect_graphql_error(
-        result:,
-        message: 'Missing organization id',
-      )
-    end
-  end
-
-  context 'when not member of the organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: create(:organization),
-        query:,
-      )
-
-      expect_graphql_error(
-        result:,
-        message: 'Not in organization',
-      )
     end
   end
 end

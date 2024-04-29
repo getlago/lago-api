@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'subscriptions:view'
+
     description 'Query a single subscription of an organization'
 
     argument :id, ID, required: true, description: 'Uniq ID of the subscription'

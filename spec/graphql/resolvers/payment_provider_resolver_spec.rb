@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::PaymentProviderResolver, type: :graphql do
+  let(:required_permission) { 'organization:integrations:view' }
   let(:query) do
     <<~GQL
       query($paymentProviderId: ID!) {
@@ -40,10 +41,15 @@ RSpec.describe Resolvers::PaymentProviderResolver, type: :graphql do
     stripe_provider
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'organization:integrations:view'
+
   it 'returns a single payment provider' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: { paymentProviderId: stripe_provider.id },
     )
@@ -54,37 +60,6 @@ RSpec.describe Resolvers::PaymentProviderResolver, type: :graphql do
       expect(payment_provider_response['id']).to eq(stripe_provider.id)
       expect(payment_provider_response['code']).to eq(stripe_provider.code)
       expect(payment_provider_response['name']).to eq(stripe_provider.name)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: { paymentProviderId: stripe_provider.id },
-      )
-
-      expect_graphql_error(
-        result:,
-        message: 'Missing organization id',
-      )
-    end
-  end
-
-  context 'when payment provider is not found' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        query:,
-        variables: { paymentProviderId: 'foo' },
-      )
-
-      expect_graphql_error(
-        result:,
-        message: 'Resource not found',
-      )
     end
   end
 end

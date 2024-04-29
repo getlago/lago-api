@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::CustomerResolver, type: :graphql do
+  let(:required_permission) { 'customers:view' }
   let(:query) do
     <<~GQL
       query($customerId: ID!) {
@@ -72,10 +73,15 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     credit_note_item
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'customers:view'
+
   it 'returns a single customer' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: {
         customerId: customer.id,
@@ -128,6 +134,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: {
           customerId: customer.id,
@@ -143,28 +150,12 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: {
-          customerId: customer.id,
-        },
-      )
-
-      expect_graphql_error(
-        result:,
-        message: 'Missing organization id',
-      )
-    end
-  end
-
   context 'when customer is not found' do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: {
           customerId: 'foo',

@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'addons:view'
+
     description 'Query add-ons of an organization'
 
     argument :ids, [ID], required: false, description: 'List of add-ons IDs to fetch'

@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
+  let(:required_permission) { 'subscriptions:view' }
   let(:query) do
     <<~GQL
       query($subscriptionId: ID!) {
@@ -29,10 +30,15 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
     customer
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'subscriptions:view'
+
   it 'returns a single subscription', :aggregate_failures do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: { subscriptionId: subscription.id },
     )
@@ -51,23 +57,12 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
     )
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: { subscriptionId: subscription.id },
-      )
-
-      expect_graphql_error(result:, message: 'Missing organization id')
-    end
-  end
-
   context 'when subscription is not found' do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: { subscriptionId: 'foo' },
       )

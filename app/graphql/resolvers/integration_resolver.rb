@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'organization:integrations:view'
+
     description 'Query a single integration'
 
     argument :id, ID, required: false, description: 'Uniq ID of the integration'

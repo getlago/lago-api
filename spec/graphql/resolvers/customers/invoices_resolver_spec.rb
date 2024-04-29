@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
+  let(:required_permission) { 'invoices:view' }
   let(:query) do
     <<~GQL
       query($customerId: ID!) {
@@ -27,10 +28,15 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
     finalized_invoice
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'invoices:view'
+
   it 'returns a list of invoices' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: { customerId: customer.id },
     )
@@ -61,6 +67,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: { customerId: customer.id, status: ['draft'] },
       )
@@ -72,21 +79,6 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
         expect(invoices_response['collection'].first['id']).to eq(draft_invoice.id)
         expect(invoices_response['metadata']['totalCount']).to eq(1)
       end
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: { customerId: customer.id },
-      )
-
-      expect_graphql_error(
-        result:,
-        message: 'Missing organization id',
-      )
     end
   end
 
@@ -111,6 +103,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: { customerId: '123456' },
       )

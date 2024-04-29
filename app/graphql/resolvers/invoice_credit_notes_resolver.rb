@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'credit_notes:view'
+
     description "Query invoice's credit note"
 
     argument :invoice_id, ID, required: true, description: 'Uniq ID of the invoice'

@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
+  let(:required_permission) { 'invoices:view' }
   let(:query) do
     <<~GQL
       query($id: ID!) {
@@ -96,10 +97,15 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
 
   before { fee and invoice }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'invoices:view'
+
   it 'returns a single invoice' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: {
         id: invoice.id,
@@ -131,6 +137,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: { id: invoice.id },
     )
@@ -144,6 +151,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: invoice.organization,
+        permissions: required_permission,
         query:,
         variables: {
           id: 'foo',
@@ -179,6 +187,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: {
           id: invoice.id,
@@ -210,6 +219,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: {
           id: invoice.id,
@@ -239,6 +249,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: required_permission,
           query:,
           variables: {
             id: invoice.id,
@@ -271,6 +282,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: {
           id: invoice.id,
