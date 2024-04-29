@@ -35,6 +35,8 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
       .and_return(pdf_response)
   end
 
+  it_behaves_like 'requires a customer portal user'
+
   it 'generates the PDF for the given invoice' do
     freeze_time do
       result = execute_graphql(

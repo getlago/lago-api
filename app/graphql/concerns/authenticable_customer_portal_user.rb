@@ -5,10 +5,10 @@ module AuthenticableCustomerPortalUser
 
   private
 
-  def ready?(*)
-    return true if context[:customer_portal_user]
+  def ready?(**args)
+    raise unauthorized_error unless context[:customer_portal_user]
 
-    raise unauthorized_error
+    super
   end
 
   def unauthorized_error
