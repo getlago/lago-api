@@ -26,6 +26,8 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'wallets:create'
 
   it 'create a wallet' do
@@ -94,51 +96,6 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
         expect(result_data['id']).to be_present
         expect(result_data['name']).to be_nil
       end
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            name: 'First Wallet',
-            rateAmount: '1',
-            paidCredits: '0.00',
-            grantedCredits: '0.00',
-            expirationAt: (Time.zone.now + 1.year).iso8601,
-            currency: 'EUR',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            name: 'First Wallet',
-            rateAmount: '1',
-            paidCredits: '0.00',
-            grantedCredits: '0.00',
-            expirationAt: (Time.zone.now + 1.year).iso8601,
-            currency: 'EUR',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

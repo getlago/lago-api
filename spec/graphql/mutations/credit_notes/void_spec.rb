@@ -22,6 +22,7 @@ RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'credit_notes:void'
 
   it 'voids the credit note' do
@@ -58,21 +59,6 @@ RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
       )
 
       expect_not_found(result)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            id: credit_note.id,
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
     end
   end
 end

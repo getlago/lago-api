@@ -16,6 +16,7 @@ RSpec.describe Mutations::Coupons::Destroy, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'coupons:delete'
 
   it 'deletes a coupon' do
@@ -30,18 +31,5 @@ RSpec.describe Mutations::Coupons::Destroy, type: :graphql do
 
     data = result['data']['destroyCoupon']
     expect(data['id']).to eq(coupon.id)
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: { id: coupon.id },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
   end
 end

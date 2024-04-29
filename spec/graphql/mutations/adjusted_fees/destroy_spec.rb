@@ -20,6 +20,8 @@ RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
 
   before { adjusted_fee }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'invoices:update'
 
   it 'destroys an adjusted fee' do
@@ -32,30 +34,5 @@ RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
         variables: { input: { id: fee.id } },
       )
     end.to change(AdjustedFee, :count).by(-1)
-  end
-
-  context 'without current_organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: { input: { id: fee.id } },
-      )
-
-      expect_forbidden_error(result)
-    end
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: { input: { id: fee.id } },
-      )
-
-      expect_unauthorized_error(result)
-    end
   end
 end

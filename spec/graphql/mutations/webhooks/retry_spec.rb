@@ -21,6 +21,8 @@ RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
 
   before { webhook }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'developers:manage'
 
   it 'retries a webhook' do

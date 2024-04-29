@@ -18,6 +18,8 @@ RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
 
   before { webhook_endpoint }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'developers:manage'
 
   it 'destroys a webhook_endpoint' do
@@ -30,30 +32,5 @@ RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
         variables: { input: { id: webhook_endpoint.id } },
       )
     end.to change(WebhookEndpoint, :count).by(-1)
-  end
-
-  context 'without current_organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: { input: { id: webhook_endpoint.id } },
-      )
-
-      expect_forbidden_error(result)
-    end
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: { input: { id: webhook_endpoint.id } },
-      )
-
-      expect_unauthorized_error(result)
-    end
   end
 end

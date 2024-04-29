@@ -28,6 +28,8 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Create, type: :graphql 
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:update'
 
   it 'creates a netsuite integration mapping' do
@@ -58,49 +60,6 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Create, type: :graphql 
       expect(result_data['externalAccountCode']).to eq(external_account_code)
       expect(result_data['externalId']).to eq(external_id)
       expect(result_data['externalName']).to eq(external_name)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            integrationId: integration.id,
-            mappableId: mappable.id,
-            mappableType: 'AddOn',
-            externalAccountCode: external_account_code,
-            externalId: external_id,
-            externalName: external_name,
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            integrationId: integration.id,
-            mappableId: mappable.id,
-            mappableType: 'AddOn',
-            externalAccountCode: external_account_code,
-            externalId: external_id,
-            externalName: external_name,
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

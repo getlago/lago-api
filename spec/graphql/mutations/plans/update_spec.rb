@@ -169,6 +169,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
 
   before { minimum_commitment }
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'plans:update'
 
   context 'with premium license' do
@@ -302,28 +303,6 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
           'amountCents' => minimum_commitment.amount_cents.to_s,
         )
       end
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            id: plan.id,
-            name: 'Updated plan',
-            code: 'new_plan',
-            interval: 'monthly',
-            payInAdvance: false,
-            amountCents: 200,
-            amountCurrency: 'EUR',
-            charges: [],
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
     end
   end
 end

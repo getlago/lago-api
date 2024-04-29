@@ -18,6 +18,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'organization:members:update'
 
   it 'Revokes a membership' do

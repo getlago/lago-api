@@ -39,28 +39,4 @@ RSpec.describe Mutations::Taxes::Create, type: :graphql do
       'rate' => 15.0,
     )
   end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: { input: },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query: mutation,
-        variables: { input: },
-      )
-
-      expect_forbidden_error(result)
-    end
-  end
 end

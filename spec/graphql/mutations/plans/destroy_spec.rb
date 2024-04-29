@@ -27,6 +27,7 @@ RSpec.describe Mutations::Plans::Destroy, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'plans:delete'
 
   it 'marks plan as pending_deletion' do
@@ -36,16 +37,5 @@ RSpec.describe Mutations::Plans::Destroy, type: :graphql do
   it 'returns the deleted plan' do
     data = graphql_request['data']['destroyPlan']
     expect(data['id']).to eq(plan.id)
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: { input: { id: plan.id } },
-      )
-
-      expect_unauthorized_error(result)
-    end
   end
 end

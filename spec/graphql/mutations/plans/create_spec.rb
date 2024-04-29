@@ -78,6 +78,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'plans:create'
 
   it 'creates a plan' do
@@ -257,51 +259,6 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
         'amountCents' => minimum_commitment_amount_cents.to_s,
       )
       expect(result_data['minimumCommitment']['taxes'].count).to eq(1)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'New Plan',
-            code: 'new_plan',
-            interval: 'monthly',
-            payInAdvance: false,
-            amountCents: 200,
-            amountCurrency: 'EUR',
-            charges: [],
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'New Plan',
-            code: 'new_plan',
-            interval: 'monthly',
-            payInAdvance: false,
-            amountCents: 200,
-            amountCurrency: 'EUR',
-            charges: [],
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

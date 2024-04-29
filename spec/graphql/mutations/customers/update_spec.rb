@@ -47,6 +47,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'customers:update'
 
   it 'updates a customer' do
@@ -132,23 +133,6 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
         expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
         expect(result_data['invoiceGracePeriod']).to eq(2)
       end
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            id: customer.id,
-            name: 'Updated customer',
-            externalId: SecureRandom.uuid,
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
     end
   end
 end

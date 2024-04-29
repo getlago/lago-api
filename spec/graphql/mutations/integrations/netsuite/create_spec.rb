@@ -32,6 +32,8 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
 
   before { membership.organization.update!(premium_integrations: ['netsuite']) }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:create'
 
   it 'creates a netsuite integration' do
@@ -60,49 +62,6 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
       expect(result_data['code']).to eq(code)
       expect(result_data['name']).to eq(name)
       expect(result_data['scriptEndpointUrl']).to eq(script_endpoint_url)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            code:,
-            name:,
-            accountId: '012',
-            clientId: '123',
-            clientSecret: '456',
-            connectionId: 'this-is-random-uuid',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            code:,
-            name:,
-            accountId: '012',
-            clientId: '123',
-            clientSecret: '456',
-            connectionId: 'this-is-random-uuid',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

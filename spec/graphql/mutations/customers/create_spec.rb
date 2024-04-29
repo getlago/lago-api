@@ -46,6 +46,8 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       .to_return(status: 200, body: body.to_json, headers: {})
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'customers:create'
 
   it 'creates a customer' do
@@ -141,41 +143,6 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
         expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
         expect(result_data['invoiceGracePeriod']).to be_nil
       end
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'John Doe',
-            externalId: 'john_doe_2',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permissions,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'John Doe',
-            externalId: 'john_doe_2',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 

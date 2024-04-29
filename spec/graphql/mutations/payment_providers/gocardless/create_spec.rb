@@ -38,6 +38,8 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
       .and_return('access_token_554')
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:create'
 
   it 'creates a gocardless provider' do
@@ -64,43 +66,6 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
       expect(result_data['code']).to eq(code)
       expect(result_data['name']).to eq(name)
       expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            accessCode: access_code,
-            code:,
-            name:,
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            accessCode: access_code,
-            code:,
-            name:,
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

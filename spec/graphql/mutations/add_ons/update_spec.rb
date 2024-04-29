@@ -28,6 +28,7 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
 
   before { create(:add_on_applied_tax, add_on:, tax:) }
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'addons:update'
 
   it 'updates an add-on' do
@@ -59,25 +60,6 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
       expect(result_data['amountCents']).to eq('123')
       expect(result_data['amountCurrency']).to eq('USD')
       expect(result_data['taxes'].map { |t| t['code'] }).to contain_exactly(tax2.code)
-    end
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            id: add_on.id,
-            name: 'New name',
-            code: 'new_code',
-            amountCents: 123,
-            amountCurrency: 'USD',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
     end
   end
 end

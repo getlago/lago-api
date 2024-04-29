@@ -27,6 +27,8 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:members:create'
 
   it 'creates an invite for a new user' do

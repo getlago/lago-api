@@ -26,6 +26,8 @@ RSpec.describe Mutations::WebhookEndpoints::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'developers:manage'
 
   it 'creates a webhook_endpoint' do
@@ -42,30 +44,5 @@ RSpec.describe Mutations::WebhookEndpoints::Create, type: :graphql do
       'webhookUrl' => webhook_url,
       'signatureAlgo' => 'hmac',
     )
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: { input: },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: { input: },
-      )
-
-      expect_forbidden_error(result)
-    end
   end
 end

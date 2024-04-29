@@ -19,6 +19,8 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Destroy, type: :graphql
 
   before { integration_collection_mapping }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:update'
 
   it 'deletes an integration collection mapping' do
@@ -48,35 +50,6 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Destroy, type: :graphql
       )
 
       expect_not_found(result)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: { id: integration_collection_mapping.id },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: { id: integration_collection_mapping.id },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

@@ -31,6 +31,8 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
     membership.organization.update!(premium_integrations: ['okta'])
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:update'
 
   it 'updates an okta integration' do
@@ -53,43 +55,6 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['domain']).to eq('foo.bar')
       expect(result_data['organizationName']).to eq('Footest')
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            id: integration.id,
-            domain: 'foo.bar',
-            organizationName: 'Footest',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            id: integration.id,
-            domain: 'foo.bar',
-            organizationName: 'Footest',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

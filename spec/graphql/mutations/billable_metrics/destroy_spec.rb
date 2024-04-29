@@ -18,6 +18,7 @@ RSpec.describe Mutations::BillableMetrics::Destroy, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'billable_metrics:delete'
 
   it 'deletes a billable metric' do
@@ -30,16 +31,5 @@ RSpec.describe Mutations::BillableMetrics::Destroy, type: :graphql do
 
     data = result['data']['destroyBillableMetric']
     expect(data['id']).to eq(billable_metric.id)
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: { input: { id: billable_metric.id } },
-      )
-
-      expect_unauthorized_error(result)
-    end
   end
 end

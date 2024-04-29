@@ -36,6 +36,8 @@ RSpec.describe Mutations::Invoices::Download, type: :graphql do
       .and_return(pdf_response)
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'invoices:view'
 
   it 'generates the PDF for the given invoice' do
@@ -55,35 +57,6 @@ RSpec.describe Mutations::Invoices::Download, type: :graphql do
       aggregate_failures do
         expect(result_data['id']).to be_present
       end
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: { id: invoice.id },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: { id: invoice.id },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end
