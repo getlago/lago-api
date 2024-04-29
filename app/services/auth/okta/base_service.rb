@@ -45,7 +45,7 @@ module Auth
         }
 
         token_client = LagoHttpClient::Client.new("https://#{result.okta_integration.organization_name.downcase}.okta.com/oauth2/default/v1/token")
-        response = token_client.post(params, {})
+        response = token_client.post_url_encoded(params, {})
         result.okta_access_token = response['access_token']
       end
 

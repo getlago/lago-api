@@ -33,7 +33,7 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql do
     memory_store.write(state, 'foo@bar.com')
 
     allow(LagoHttpClient::Client).to receive(:new).and_return(lago_http_client)
-    allow(lago_http_client).to receive(:post).and_return(okta_token_response)
+    allow(lago_http_client).to receive(:post_url_encoded).and_return(okta_token_response)
     allow(lago_http_client).to receive(:get).and_return(okta_userinfo_response)
   end
 
