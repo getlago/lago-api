@@ -56,6 +56,6 @@ class WebhooksController < ApplicationController
   end
 
   def adyen_params
-    params['notificationItems'].first&.dig('NotificationRequestItem')&.permit!
+    params['notificationItems']&.first&.dig('NotificationRequestItem')&.permit!
   end
 end
