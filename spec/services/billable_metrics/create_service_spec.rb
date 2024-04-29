@@ -132,5 +132,25 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         end
       end
     end
+
+    context 'with custom aggregation' do
+      let(:create_args) do
+        {
+          name: 'New Metric',
+          code: 'new_metric',
+          description: 'New metric description',
+          organization_id: organization.id,
+          aggregation_type: 'custom_agg',
+          recurring: false,
+        }
+      end
+
+      it 'returns a forbidden failure' do
+        result = create_service.create(**create_args)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+    end
   end
 end

@@ -3,9 +3,15 @@
 module BillableMetrics
   class CreateService < BaseService
     def create(args)
+      organization = Organization.find_by(id: args[:organization_id])
+
+      if args[:aggregation_type]&.to_sym == :custom_agg && !organization&.custom_aggregation
+        return result.forbidden_failure!
+      end
+
       ActiveRecord::Base.transaction do
         metric = BillableMetric.create!(
-          organization_id: args[:organization_id],
+          organization_id: organization&.id,
           name: args[:name],
           code: args[:code],
           description: args[:description],
