@@ -21,6 +21,8 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'analytics:view'
 
   it 'returns a list of gross revenues' do
@@ -34,33 +36,6 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
     expect(result['data']['grossRevenues']['collection']).to eq([])
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(current_user: membership.user, permissions: required_permission, query:)
-
-      expect_graphql_error(
-        result:,
-        message: 'Missing organization id',
-      )
-    end
-  end
-
-  context 'when not member of the organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: create(:organization),
-        permissions: Permission::EMPTY_PERMISSIONS_HASH,
-        query:,
-      )
-
-      expect_graphql_error(
-        result:,
-        message: "Required permission: #{required_permission}",
-      )
-    end
-  end
-
   describe '#resolve' do
     subject(:resolve) { resolver.resolve }
 
@@ -70,7 +45,6 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
     before do
       allow(Analytics::GrossRevenue).to receive(:find_all_by).and_return([])
       allow(resolver).to receive(:current_organization).and_return(current_organization)
-      allow(resolver).to receive(:validate_organization!).and_return(true)
 
       resolve
     end
