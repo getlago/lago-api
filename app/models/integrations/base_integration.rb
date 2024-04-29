@@ -10,6 +10,8 @@ module Integrations
 
     belongs_to :organization
 
+    has_many :integration_items, dependent: :destroy, foreign_key: :integration_id
+
     has_many :integration_mappings, class_name: 'IntegrationMappings::BaseMapping', foreign_key: 'integration_id'
     has_many :integration_collection_mappings,
              class_name: 'IntegrationCollectionMappings::BaseCollectionMapping',
