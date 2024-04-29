@@ -105,6 +105,14 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(3)
       end
+
+      context 'when grouped_by_values value is nil' do
+        let(:grouped_by_values) { { 'region' => nil } }
+
+        it 'returns a list of events' do
+          expect(event_store.events.count).to eq(5)
+        end
+      end
     end
 
     context 'with filters' do
