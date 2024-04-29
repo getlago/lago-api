@@ -16,6 +16,7 @@ RSpec.describe Mutations::AddOns::Destroy, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'addons:delete'
 
   it 'deletes an add-on' do
@@ -30,18 +31,5 @@ RSpec.describe Mutations::AddOns::Destroy, type: :graphql do
 
     data = result['data']['destroyAddOn']
     expect(data['id']).to eq(add_on.id)
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: { id: add_on.id },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
   end
 end

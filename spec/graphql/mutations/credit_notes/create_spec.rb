@@ -51,6 +51,8 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'credit_notes:create'
 
   it 'creates a credit note' do
@@ -130,57 +132,6 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
       )
 
       expect_not_found(result)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: organization,
-        query: mutation,
-        variables: {
-          input: {
-            reason: 'duplicated_charge',
-            invoiceId: invoice.id,
-            creditAmountCents: 10,
-            refundAmountCents: 5,
-            items: [
-              {
-                feeId: fee1.id,
-                amountCents: 15,
-              },
-            ],
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            reason: 'duplicated_charge',
-            invoiceId: invoice.id,
-            creditAmountCents: 10,
-            refundAmountCents: 5,
-            items: [
-              {
-                feeId: fee1.id,
-                amountCents: 15,
-              },
-            ],
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

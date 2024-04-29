@@ -18,6 +18,7 @@ RSpec.describe Mutations::Customers::Destroy, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'customers:delete'
 
   it 'deletes a customer' do
@@ -32,18 +33,5 @@ RSpec.describe Mutations::Customers::Destroy, type: :graphql do
 
     data = result['data']['destroyCustomer']
     expect(data['id']).to eq(customer.id)
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: { id: customer.id },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
   end
 end

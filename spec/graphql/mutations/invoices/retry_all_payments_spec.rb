@@ -22,6 +22,8 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'invoices:update'
 
   context 'with valid preconditions' do
@@ -70,35 +72,6 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
 
       expect(invoice_ids).to include(invoice_first.id)
       expect(invoice_ids).to include(invoice_second.id)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: organization,
-        query: mutation,
-        variables: {
-          input: {},
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {},
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

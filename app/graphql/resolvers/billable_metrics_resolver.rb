@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class BillableMetricsResolver < GraphQL::Schema::Resolver
+  class BillableMetricsResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 

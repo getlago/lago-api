@@ -30,6 +30,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:create'
 
   it 'creates an adyen provider' do
@@ -62,45 +64,6 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
       expect(result_data['livePrefix']).to eq(live_prefix)
       expect(result_data['merchantAccount']).to eq(merchant_account)
       expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            apiKey: api_key,
-            code:,
-            name:,
-            merchantAccount: merchant_account,
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            apiKey: api_key,
-            code:,
-            name:,
-            merchantAccount: merchant_account,
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

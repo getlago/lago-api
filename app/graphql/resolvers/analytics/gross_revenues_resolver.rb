@@ -2,9 +2,11 @@
 
 module Resolvers
   module Analytics
-    class GrossRevenuesResolver < GraphQL::Schema::Resolver
+    class GrossRevenuesResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
+
+      REQUIRED_PERMISSION = 'analytics:view'
 
       description 'Query gross revenue of an organization'
 

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class SubscriptionsResolver < GraphQL::Schema::Resolver
+  class SubscriptionsResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 

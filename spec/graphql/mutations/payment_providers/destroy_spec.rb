@@ -16,6 +16,7 @@ RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'organization:integrations:delete'
 
   it 'deletes a payment provider' do

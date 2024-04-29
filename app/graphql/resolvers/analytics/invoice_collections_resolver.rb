@@ -2,9 +2,11 @@
 
 module Resolvers
   module Analytics
-    class InvoiceCollectionsResolver < GraphQL::Schema::Resolver
+    class InvoiceCollectionsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
+
+      REQUIRED_PERMISSION = 'analytics:view'
 
       description 'Query invoice collections of an organization'
 

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class MembershipsResolver < GraphQL::Schema::Resolver
+  class MembershipsResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 

@@ -55,6 +55,9 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
 
   before { credit }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+
   it 'returns the estimate for the credit note creation' do
     result = execute_graphql(
       current_user: membership.user,
@@ -77,36 +80,6 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
       expect(estimate_response['couponsAdjustmentAmountCents']).to eq('50')
       expect(estimate_response['items'].first['amountCents']).to eq('50')
       expect(estimate_response['appliedTaxes']).to be_blank
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query:,
-        variables: {
-          invoiceId: invoice.id,
-          items: fees.map { |f| { feeId: f.id, amountCents: 50 } },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: {
-          invoiceId: invoice.id,
-          items: fees.map { |f| { feeId: f.id, amountCents: 50 } },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 

@@ -27,6 +27,8 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
     create(:subscription, customer:)
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'coupons:attach'
 
   it 'assigns a coupon to the customer' do
@@ -54,45 +56,6 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
       expect(result_data['amountCents']).to eq('123')
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['createdAt']).to be_present
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: organization,
-        query: mutation,
-        variables: {
-          input: {
-            couponId: coupon.id,
-            customerId: customer.id,
-            amountCents: 123,
-            amountCurrency: 'EUR',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            couponId: coupon.id,
-            customerId: customer.id,
-            amountCents: 123,
-            amountCurrency: 'EUR',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

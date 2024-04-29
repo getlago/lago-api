@@ -36,6 +36,9 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+
   it 'updates an organization' do
     result = execute_graphql(
       current_user: membership.user,
@@ -149,38 +152,6 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           expect(result_data['billingConfiguration']['invoiceGracePeriod']).to eq(3)
         end
       end
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            webhookUrl: 'http://foo.bar',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query: mutation,
-        variables: {
-          input: {
-            webhookUrl: 'http://foo.bar',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

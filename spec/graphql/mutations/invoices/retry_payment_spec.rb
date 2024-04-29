@@ -36,6 +36,8 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
     gocardless_customer
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'invoices:update'
 
   context 'with valid preconditions' do
@@ -53,35 +55,6 @@ RSpec.describe Mutations::Invoices::RetryPayment, type: :graphql do
       data = result['data']['retryInvoicePayment']
 
       expect(data['id']).to eq(invoice.id)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: organization,
-        query: mutation,
-        variables: {
-          input: { id: invoice.id },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: { id: invoice.id },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

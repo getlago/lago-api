@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class PlansResolver < GraphQL::Schema::Resolver
+  class PlansResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 

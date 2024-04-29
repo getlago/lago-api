@@ -33,6 +33,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'wallets:update'
 
   it 'updates a wallet' do
@@ -71,22 +73,6 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       expect(result_data['recurringTransactionRules'][0]['interval']).to eq('weekly')
       expect(result_data['recurringTransactionRules'][0]['paidCredits']).to eq('22.2')
       expect(result_data['recurringTransactionRules'][0]['grantedCredits']).to eq('22.2')
-    end
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            id: wallet.id,
-            name: 'New name',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
     end
   end
 end

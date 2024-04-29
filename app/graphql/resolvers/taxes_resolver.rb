@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Resolvers
-  class TaxesResolver < GraphQL::Schema::Resolver
+  class TaxesResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
     include RequiredOrganization
 

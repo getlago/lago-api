@@ -2,9 +2,11 @@
 
 module Resolvers
   module Analytics
-    class InvoicedUsagesResolver < GraphQL::Schema::Resolver
+    class InvoicedUsagesResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
+
+      REQUIRED_PERMISSION = 'analytics:view'
 
       description 'Query invoiced usage of an organization'
 

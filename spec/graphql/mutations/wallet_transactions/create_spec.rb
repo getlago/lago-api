@@ -24,6 +24,8 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
     wallet
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'wallets:top_up'
 
   it 'creates a wallet transaction' do
@@ -47,43 +49,6 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
       expect(result_data['collection'].count).to eq(2)
       expect(result_data['collection'].first['status']).to eq('pending')
       expect(result_data['collection'].last['status']).to eq('settled')
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            walletId: wallet.id,
-            paidCredits: '5.00',
-            grantedCredits: '5.00',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            walletId: wallet.id,
-            paidCredits: '5.00',
-            grantedCredits: '5.00',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver, type: :graphql do
+  let(:required_permission) { 'analytics:view' }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum) {
@@ -20,11 +21,16 @@ RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'analytics:view'
+
   context 'without premium feature' do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
       )
 
@@ -42,36 +48,11 @@ RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
       )
 
       expect(result['data']['invoicedUsages']['collection']).to eq([])
-    end
-
-    context 'without current organization' do
-      it 'returns an error' do
-        result = execute_graphql(current_user: membership.user, query:)
-
-        expect_graphql_error(
-          result:,
-          message: 'Missing organization id',
-        )
-      end
-    end
-
-    context 'when not member of the organization' do
-      it 'returns an error' do
-        result = execute_graphql(
-          current_user: membership.user,
-          current_organization: create(:organization),
-          query:,
-        )
-
-        expect_graphql_error(
-          result:,
-          message: 'Not in organization',
-        )
-      end
     end
 
     describe '#resolve' do
@@ -83,7 +64,6 @@ RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver, type: :graphql do
       before do
         allow(Analytics::InvoicedUsage).to receive(:find_all_by).and_return([])
         allow(resolver).to receive(:current_organization).and_return(current_organization)
-        allow(resolver).to receive(:validate_organization!).and_return(true)
 
         resolve
       end

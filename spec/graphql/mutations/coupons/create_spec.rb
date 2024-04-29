@@ -31,6 +31,8 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'coupons:create'
 
   it 'creates a coupon' do
@@ -174,53 +176,6 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
         expect(result_data['expirationAt']).to eq(expiration_at.iso8601)
         expect(result_data['status']).to eq('active')
       end
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'Super Coupon',
-            code: 'free-beer',
-            couponType: 'fixed_amount',
-            frequency: 'once',
-            amountCents: 5000,
-            amountCurrency: 'EUR',
-            expiration: 'time_limit',
-            expirationAt: (Time.current + 3.days).iso8601,
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'Super Coupon',
-            code: 'free-beer',
-            couponType: 'fixed_amount',
-            frequency: 'once',
-            amountCents: 5000,
-            amountCurrency: 'EUR',
-            expiration: 'time_limit',
-            expirationAt: (Time.current + 3.days).iso8601,
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

@@ -24,6 +24,8 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'addons:create'
 
   it 'creates an add-on' do
@@ -56,46 +58,6 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
       expect(result_data['amountCents']).to eq('5000')
       expect(result_data['amountCurrency']).to eq('EUR')
       expect(result_data['taxes'].map { |t| t['code'] }).to contain_exactly(tax.code)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        permissions: required_permission,
-        variables: {
-          input: {
-            name: 'Test Add-on',
-            code: 'free-beer-for-us',
-            amountCents: 5000,
-            amountCurrency: 'EUR',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query: mutation,
-        permissions: required_permission,
-        variables: {
-          input: {
-            name: 'Test Add-on',
-            code: 'free-beer-for-us',
-            amountCents: 5000,
-            amountCurrency: 'EUR',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

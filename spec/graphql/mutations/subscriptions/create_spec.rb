@@ -36,6 +36,8 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'subscriptions:create'
 
   it 'creates a subscription', :aggregate_failures do
@@ -82,42 +84,5 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
       'id' => String,
       'amountCents' => '100',
     )
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            planId: plan.id,
-            billingTime: 'anniversary',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            planId: plan.id,
-            billingTime: 'anniversary',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
-    end
   end
 end

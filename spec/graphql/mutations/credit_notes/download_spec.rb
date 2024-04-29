@@ -28,6 +28,8 @@ RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
       .to_return(body: pdf_response, status: 200)
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'credit_notes:view'
 
   it 'generates the credit note PDF' do

@@ -19,6 +19,7 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'invoices:update'
 
   it 'updates a invoice' do
@@ -69,23 +70,6 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
         result:,
         message: 'Resource not found',
       )
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        current_organization: organization,
-        variables: {
-          input: {
-            id: invoice.id,
-            paymentStatus: 'succeeded',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
     end
   end
 end

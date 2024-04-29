@@ -25,6 +25,8 @@ RSpec.describe Mutations::Integrations::Okta::Create, type: :graphql do
 
   before { membership.organization.update!(premium_integrations: ['okta']) }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:create'
 
   it 'creates an okta integration' do
@@ -49,45 +51,6 @@ RSpec.describe Mutations::Integrations::Okta::Create, type: :graphql do
       expect(result_data['id']).to be_present
       expect(result_data['code']).to eq('okta')
       expect(result_data['name']).to eq('Okta Integration')
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            clientId: '123',
-            clientSecret: '456',
-            domain: 'foo.bar',
-            organizationName: 'Foobar',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            clientId: '123',
-            clientSecret: '456',
-            domain: 'foo.bar',
-            organizationName: 'Foobar',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

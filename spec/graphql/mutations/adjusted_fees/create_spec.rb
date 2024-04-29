@@ -31,6 +31,8 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'invoices:update'
 
   it 'creates an adjusted fee' do
@@ -52,31 +54,6 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: { input: },
-      )
-
-      expect_forbidden_error(result)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: { input: },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
         permissions: required_permission,
         query: mutation,
         variables: { input: },

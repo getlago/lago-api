@@ -22,6 +22,8 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'billable_metrics:create'
 
   it 'creates a billable metric' do
@@ -58,45 +60,6 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
       expect(result_data['recurring']).to eq(false)
       expect(result_data['weightedInterval']).to be_nil
       expect(result_data['filters'].count).to eq(1)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'New Metric',
-            code: 'new_metric',
-            description: 'New metric description',
-            aggregationType: 'count_agg',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            name: 'New Metric',
-            code: 'new_metric',
-            description: 'New metric description',
-            aggregationType: 'count_agg',
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

@@ -26,6 +26,7 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'subscriptions:update'
 
   it 'updates an subscription' do
@@ -45,22 +46,6 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
 
     aggregate_failures do
       expect(result_data['name']).to eq('New name')
-    end
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            id: subscription.id,
-            name: 'New name',
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
     end
   end
 end

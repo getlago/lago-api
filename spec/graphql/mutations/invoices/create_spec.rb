@@ -47,6 +47,8 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
 
   before { tax }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'invoices:create'
 
   it 'creates one-off invoice' do
@@ -82,43 +84,6 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
         { 'units' => 2.0, 'preciseUnitAmount' => 12.0 },
         { 'units' => 1.0, 'preciseUnitAmount' => 4.0 },
       )
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: organization,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            currency:,
-            fees:,
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            currency:,
-            fees:,
-          },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

@@ -34,6 +34,8 @@ RSpec.describe Mutations::IntegrationItems::FetchTaxItems, type: :graphql do
     integration_item
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:update'
 
   it 'fetches the integration tax items' do
@@ -54,35 +56,6 @@ RSpec.describe Mutations::IntegrationItems::FetchTaxItems, type: :graphql do
     aggregate_failures do
       expect(invoice_ids).to eq(%w[-3557 -3879 -4692 -5307])
       expect(integration.integration_items.where(item_type: :tax).count).to eq(4)
-    end
-  end
-
-  context 'without current user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_organization: membership.organization,
-        query: mutation,
-        variables: {
-          input: { integrationId: integration.id },
-        },
-      )
-
-      expect_unauthorized_error(result)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: { integrationId: integration.id },
-        },
-      )
-
-      expect_forbidden_error(result)
     end
   end
 end

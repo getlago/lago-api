@@ -32,6 +32,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
     GQL
   end
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'coupons:update'
 
   it 'updates a coupon' do
@@ -137,29 +138,6 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
         expect(result_data['limitedBillableMetrics']).to eq(true)
         expect(result_data['billableMetrics'].first['id']).to eq(billable_metric.id)
       end
-    end
-  end
-
-  context 'without current_user' do
-    it 'returns an error' do
-      result = execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            id: coupon.id,
-            name: 'New name',
-            code: 'new_code',
-            couponType: 'fixed_amount',
-            frequency: 'once',
-            amountCents: 123,
-            amountCurrency: 'USD',
-            expiration: 'time_limit',
-            expirationAt: (Time.current + 33.days).iso8601,
-          },
-        },
-      )
-
-      expect_unauthorized_error(result)
     end
   end
 end

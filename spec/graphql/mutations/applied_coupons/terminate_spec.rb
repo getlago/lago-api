@@ -20,6 +20,7 @@ RSpec.describe Mutations::AppliedCoupons::Terminate, type: :graphql do
 
   before { applied_coupon }
 
+  it_behaves_like 'requires current user'
   it_behaves_like 'requires permission', 'coupons:detach'
 
   it 'terminates an applied coupon' do
