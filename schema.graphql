@@ -3364,20 +3364,20 @@ type FeeAmountDetails {
 
 type FeeAmountDetailsGraduatedPercentageRange {
   flatUnitAmount: String
-  fromValue: Int
+  fromValue: BigInt
   perUnitTotalAmount: String
   rate: String
-  toValue: Int
+  toValue: BigInt
   totalWithFlatAmount: String
   units: String
 }
 
 type FeeAmountDetailsGraduatedRange {
   flatUnitAmount: String
-  fromValue: Int
+  fromValue: BigInt
   perUnitAmount: String
   perUnitTotalAmount: String
-  toValue: Int
+  toValue: BigInt
   totalWithFlatAmount: String
   units: String
 }
