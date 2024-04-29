@@ -89,7 +89,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         expect(customer.reload.invoices.count).to eq(0)
 
         plan.update! trial_period: 0 # disable trial to force billing
-        BillSubscriptionJob.perform_now(customer.subscriptions, Time.current)
+        BillSubscriptionJob.perform_now(customer.subscriptions, Time.current, invoicing_reason: :subscription_starting)
 
         expect(customer.reload.invoices.count).to eq(1)
 

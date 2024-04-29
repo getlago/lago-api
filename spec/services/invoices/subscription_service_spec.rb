@@ -7,7 +7,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     described_class.new(
       subscriptions:,
       timestamp: timestamp.to_i,
-      recurring: true,
+      invoicing_reason: :subscription_periodic,
     )
   end
 
@@ -114,7 +114,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end.not_to have_enqueued_job(SendEmailJob)
     end
 
-    context 'when recurring but no active subscriptions' do
+    context 'when periodic but no active subscriptions' do
       it 'does not create any invoices' do
         subscription.terminated!
         expect { invoice_service.call }.not_to change(Invoice, :count)

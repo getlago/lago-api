@@ -40,9 +40,8 @@ RSpec.describe Customers::TerminateRelationsService, type: :service do
     let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
 
     before do
-      invoices.each do |invoice|
-        create(:invoice_subscription, invoice:, subscription:)
-      end
+      create(:invoice_subscription, invoice: invoices.first, subscription:, invoicing_reason: :subscription_starting)
+      create(:invoice_subscription, invoice: invoices.last, subscription:, invoicing_reason: :subscription_periodic)
     end
 
     it 'finalizes draft invoices' do

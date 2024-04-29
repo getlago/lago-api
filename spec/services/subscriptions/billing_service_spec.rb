@@ -69,10 +69,14 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with(contain_exactly(subscription1, subscription2), current_date.to_i, recurring: true)
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic,
+            )
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription3], current_date.to_i, recurring: true)
+            .with([subscription3], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
 
@@ -96,7 +100,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
+            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
 
@@ -126,7 +130,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             billing_service.call
 
             expect(BillSubscriptionJob).not_to have_been_enqueued
-              .with([subscription], billing_date.to_i, recurring: true)
+              .with([subscription], billing_date.to_i, invoicing_reason: :subscription_periodic)
           end
         end
       end
@@ -143,7 +147,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
+            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
 
@@ -154,7 +158,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).not_to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
+            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
     end
@@ -170,7 +174,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
+            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
 
@@ -192,7 +196,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             billing_service.call
 
             expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], current_date.to_i, recurring: true)
+              .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
           end
         end
       end
@@ -211,7 +215,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
+            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
 
@@ -232,7 +236,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
+            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
 
@@ -251,7 +255,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             billing_service.call
 
             expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], current_date.to_i, recurring: true)
+              .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
           end
         end
       end
@@ -267,7 +271,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
+            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
 
@@ -286,7 +290,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             billing_service.call
 
             expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], current_date.to_i, recurring: true)
+              .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
           end
         end
       end
@@ -300,7 +304,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             billing_service.call
 
             expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], current_date.to_i, recurring: true)
+              .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
           end
         end
       end
@@ -317,7 +321,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           billing_service.call
 
           expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, recurring: true)
+            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
         end
       end
 
@@ -336,7 +340,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             billing_service.call
 
             expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], current_date.to_i, recurring: true)
+              .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
           end
         end
       end
@@ -350,7 +354,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             billing_service.call
 
             expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], current_date.next_month.to_i, recurring: true)
+              .with([subscription], current_date.next_month.to_i, invoicing_reason: :subscription_periodic)
           end
         end
 
@@ -363,7 +367,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
               billing_service.call
 
               expect(BillSubscriptionJob).to have_been_enqueued
-                .with([subscription], current_date.to_i, recurring: true)
+                .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
             end
           end
         end
@@ -450,8 +454,9 @@ RSpec.describe Subscriptions::BillingService, type: :service do
         create(
           :invoice_subscription,
           subscription:,
-          recurring: true,
+          invoicing_reason: :subscription_periodic,
           timestamp: subscription_at - 1.hour,
+          recurring: true,
         )
       end
 

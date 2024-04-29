@@ -2,13 +2,11 @@
 
 module Invoices
   class SubscriptionService < BaseService
-    def initialize(subscriptions:, timestamp:, recurring:, invoice: nil, skip_charges: false)
+    def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false)
       @subscriptions = subscriptions
       @timestamp = timestamp
-
-      # NOTE: Billed automatically by the recurring billing process
-      #       It is used to prevent double billing on billing day
-      @recurring = recurring
+      @invoicing_reason = invoicing_reason
+      @recurring = invoicing_reason.to_sym == :subscription_periodic
 
       @customer = subscriptions&.first&.customer
       @currency = subscriptions&.first&.plan&.amount_currency
@@ -61,7 +59,14 @@ module Invoices
 
     private
 
-    attr_accessor :subscriptions, :timestamp, :recurring, :customer, :currency, :invoice, :skip_charges
+    attr_accessor :subscriptions,
+                  :timestamp,
+                  :invoicing_reason,
+                  :recurring,
+                  :customer,
+                  :currency,
+                  :invoice,
+                  :skip_charges
 
     def active_subscriptions
       @active_subscriptions ||= subscriptions.select(&:active?)
@@ -76,7 +81,7 @@ module Invoices
         skip_charges:,
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
-          .call(invoice:, subscriptions:, timestamp:, recurring:)
+          .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
           .raise_if_error!
       end
 

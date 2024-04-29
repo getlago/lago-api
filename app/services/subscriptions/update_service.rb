@@ -57,7 +57,7 @@ module Subscriptions
 
       return unless subscription.plan.pay_in_advance? && subscription.subscription_at.today?
 
-      BillSubscriptionJob.perform_later([subscription], Time.current.to_i)
+      BillSubscriptionJob.perform_later([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
     end
 
     def handle_plan_override

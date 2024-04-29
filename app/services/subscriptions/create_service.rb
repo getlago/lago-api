@@ -117,7 +117,14 @@ module Subscriptions
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
-        after_commit { BillSubscriptionJob.perform_later([new_subscription], Time.zone.now.to_i, skip_charges: true) }
+        after_commit do
+          BillSubscriptionJob.perform_later(
+            [new_subscription],
+            Time.zone.now.to_i,
+            invoicing_reason: :subscription_starting,
+            skip_charges: true,
+          )
+        end
       end
 
       if new_subscription.active?
@@ -162,7 +169,13 @@ module Subscriptions
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job
         #       We do not set offset anymore but instead retry jobs
-        after_commit { BillSubscriptionJob.perform_later(billable_subscriptions, Time.zone.now.to_i + 1.second) }
+        after_commit do
+          BillSubscriptionJob.perform_later(
+            billable_subscriptions,
+            Time.zone.now.to_i + 1.second,
+            invoicing_reason: :upgrading,
+          )
+        end
       end
 
       new_subscription

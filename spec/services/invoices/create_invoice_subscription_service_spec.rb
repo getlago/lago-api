@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::CreateInvoiceSubscriptionService do
-  subject(:create_service) { described_class.new(invoice:, subscriptions:, timestamp:, recurring:) }
+  subject(:create_service) { described_class.new(invoice:, subscriptions:, timestamp:, invoicing_reason:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -11,7 +11,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
   let(:invoice) { create(:invoice, organization:, customer:, status: :generating) }
   let(:subscriptions) { [subscription] }
   let(:timestamp) { Time.zone.parse('2022-03-07T00:00:00') }
-  let(:recurring) { false }
+  let(:invoicing_reason) { :subscription_periodic }
 
   let(:subscription) do
     create(
@@ -54,7 +54,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           to_datetime: match_datetime(Time.zone.parse('2022-03-05 23:59:59')),
           charges_from_datetime: match_datetime(Time.zone.parse('2022-02-06 00:00:00')),
           charges_to_datetime: match_datetime(Time.zone.parse('2022-03-05 23:59:59')),
-          recurring:,
+          recurring: true,
+          invoicing_reason: invoicing_reason.to_s,
         )
       end
     end
@@ -66,6 +67,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       let(:pay_in_advance) { false }
       let(:status) { :terminated }
       let(:terminated_at) { Time.zone.parse('2023-10-01T00:00:00') }
+      let(:invoicing_reason) { :subscription_terminating }
 
       it 'creates invoice subscriptions with termination boundaries' do
         result = create_service.call
@@ -83,7 +85,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
             to_datetime: match_datetime(Time.zone.parse('2023-09-30T23:59:59')),
             charges_from_datetime: match_datetime(Time.zone.parse('2023-09-01T00:00:00')),
             charges_to_datetime: match_datetime(Time.zone.parse('2023-09-30T23:59:59')),
-            recurring:,
+            recurring: false,
+            invoicing_reason: invoicing_reason.to_s,
           )
         end
       end
@@ -99,6 +102,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
             charges_from_datetime: Time.zone.parse('2023-09-01T00:00:00.000Z'),
             charges_to_datetime: Time.zone.parse('2023-09-30T23:59:59.999Z').end_of_day,
             recurring: true,
+            invoicing_reason: 'subscription_periodic',
           )
         end
 
@@ -128,7 +132,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
               to_datetime: match_datetime(Time.zone.parse('2023-10-01T00:00:00')),
               charges_from_datetime: match_datetime(Time.zone.parse('2023-10-01T00:00:00')),
               charges_to_datetime: match_datetime(Time.zone.parse('2023-10-01T00:00:00')),
-              recurring:,
+              recurring: false,
+              invoicing_reason: invoicing_reason.to_s,
             )
           end
         end
@@ -172,7 +177,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
     end
 
     context 'when recurring and subscription is not active' do
-      let(:recurring) { true }
+      let(:invoicing_reason) { :subscription_periodic }
       let(:status) { :terminated }
 
       it 'does not create an invoice subscription' do
@@ -186,7 +191,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
     end
 
     context 'when invoice_subscription already exists' do
-      let(:recurring) { true }
+      let(:invoicing_reason) { :subscription_periodic }
 
       let(:date_service) do
         Subscriptions::DatesService.new_instance(
@@ -200,7 +205,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
         create(
           :invoice_subscription,
           subscription:,
-          recurring:,
+          recurring: true,
+          invoicing_reason: invoicing_reason.to_s,
           timestamp: timestamp.to_i,
           from_datetime: date_service.from_datetime,
           to_datetime: date_service.to_datetime,
