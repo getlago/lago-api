@@ -14,6 +14,7 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
   let(:wallet_id) { wallet.id }
   let(:paid_credits) { '1.00' }
   let(:granted_credits) { '0.00' }
+  let(:voided_credits) { '0.00' }
   let(:args) do
     {
       wallet_id:,
@@ -21,6 +22,7 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
       organization_id: organization.id,
       paid_credits:,
       granted_credits:,
+      voided_credits:,
     }
   end
 
@@ -55,6 +57,24 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid
         expect(result.error.messages[:granted_credits]).to eq(['invalid_granted_credits'])
+      end
+    end
+
+    context 'with invalid voided_credits' do
+      let(:voided_credits) { 'foobar' }
+
+      it 'returns false and result has errors' do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:voided_credits]).to eq(['invalid_voided_credits'])
+      end
+    end
+
+    context 'with valid voided_credits but insufficient credits' do
+      let(:voided_credits) { '1.00' }
+
+      it 'returns false and result has errors' do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:voided_credits]).to eq(['insufficient_credits'])
       end
     end
   end
