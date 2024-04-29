@@ -485,7 +485,11 @@ module Events
 
       def with_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
-          scope = scope.where('events_raw.properties[?] = ?', grouped_by, grouped_by_value)
+          scope = if grouped_by_value.present?
+            scope.where('events_raw.properties[?] = ?', grouped_by, grouped_by_value)
+          else
+            scope.where("COALESCE(events_raw.properties[?], '') = ''", grouped_by)
+          end
         end
 
         scope

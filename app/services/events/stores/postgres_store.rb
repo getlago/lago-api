@@ -355,7 +355,13 @@ module Events
 
       def with_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
-          scope = scope.where('events.properties @> ?', { grouped_by.to_s => grouped_by_value.to_s }.to_json)
+          scope = if grouped_by_value.present?
+            scope.where('events.properties @> ?', { grouped_by.to_s => grouped_by_value.to_s }.to_json)
+          else
+            scope.where(
+              ActiveRecord::Base.sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') = ''", grouped_by]),
+            )
+          end
         end
 
         scope
