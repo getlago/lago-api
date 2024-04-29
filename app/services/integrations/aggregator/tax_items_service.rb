@@ -15,6 +15,8 @@ module Integrations
         @items = []
 
         ActiveRecord::Base.transaction do
+          integration.integration_items.where(item_type: :tax).destroy_all
+
           MAX_SUBSEQUENT_REQUESTS.times do |_i|
             response = http_client.get(headers:, params:)
 

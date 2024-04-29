@@ -20,8 +20,6 @@ module Mutations
 
         ::Integrations::Aggregator::SyncService.call(integration:)
 
-        integration.integration_items.where(item_type: :tax).destroy_all
-
         result = ::Integrations::Aggregator::TaxItemsService.call(integration:)
 
         result.success? ? result.tax_items : result_error(result)
