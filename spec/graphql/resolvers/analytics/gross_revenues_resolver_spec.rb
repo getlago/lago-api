@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
+  let(:required_permission) { 'analytics:view' }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum, $externalCustomerId: String) {
@@ -20,10 +21,13 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
+  it_behaves_like 'requires permission', 'analytics:view'
+
   it 'returns a list of gross revenues' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
     )
 
@@ -32,7 +36,7 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
 
   context 'without current organization' do
     it 'returns an error' do
-      result = execute_graphql(current_user: membership.user, query:)
+      result = execute_graphql(current_user: membership.user, permissions: required_permission, query:)
 
       expect_graphql_error(
         result:,
@@ -46,12 +50,13 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
+        permissions: Permission::EMPTY_PERMISSIONS_HASH,
         query:,
       )
 
       expect_graphql_error(
         result:,
-        message: 'Not in organization',
+        message: "Required permission: #{required_permission}",
       )
     end
   end
