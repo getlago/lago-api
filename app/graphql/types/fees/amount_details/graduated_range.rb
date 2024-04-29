@@ -7,10 +7,10 @@ module Types
         graphql_name 'FeeAmountDetailsGraduatedRange'
 
         field :flat_unit_amount, String, null: true
-        field :from_value, Integer, null: true
+        field :from_value, GraphQL::Types::BigInt, null: true
         field :per_unit_amount, String, null: true
         field :per_unit_total_amount, String, null: true
-        field :to_value, Integer, null: true
+        field :to_value, GraphQL::Types::BigInt, null: true
         field :total_with_flat_amount, String, null: true
         field :units, String, null: true
       end
