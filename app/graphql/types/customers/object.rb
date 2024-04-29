@@ -41,7 +41,7 @@ module Types
       field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
 
-      field :integration_customer, Types::IntegrationCustomers::Object, null: true
+      field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true
 
       field :invoices, [Types::Invoices::Object]
 
@@ -106,13 +106,6 @@ module Types
           object.gocardless_customer
         when :adyen
           object.adyen_customer
-        end
-      end
-
-      def integration_customer
-        case object.integration_customers.pick(:type)
-        when 'IntegrationCustomers::NetsuiteCustomer'
-          object.netsuite_customer
         end
       end
 

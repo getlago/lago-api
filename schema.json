@@ -11041,20 +11041,6 @@
               ]
             },
             {
-              "name": "integrationCustomer",
-              "description": null,
-              "type": {
-                "kind": "UNION",
-                "name": "IntegrationCustomer",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "invoiceGracePeriod",
               "description": null,
               "type": {
@@ -11174,6 +11160,20 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "Int",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "netsuiteCustomer",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "NetsuiteCustomer",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -16024,22 +16024,6 @@
               ]
             }
           ],
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
-          "kind": "UNION",
-          "name": "IntegrationCustomer",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": [
-            {
-              "kind": "OBJECT",
-              "name": "NetsuiteCustomer",
-              "ofType": null
-            }
-          ],
-          "fields": null,
           "inputFields": null,
           "enumValues": null
         },

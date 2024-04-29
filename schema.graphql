@@ -2893,7 +2893,6 @@ type Customer {
   """
   hasCreditNotes: Boolean!
   id: ID!
-  integrationCustomer: IntegrationCustomer
   invoiceGracePeriod: Int
   invoices: [Invoice!]
   legalName: String
@@ -2902,6 +2901,7 @@ type Customer {
   metadata: [CustomerMetadata!]
   name: String
   netPaymentTerm: Int
+  netsuiteCustomer: NetsuiteCustomer
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   phone: String
@@ -3600,8 +3600,6 @@ type IntegrationCollection {
   collection: [Integration!]!
   metadata: CollectionMetadata!
 }
-
-union IntegrationCustomer = NetsuiteCustomer
 
 type IntegrationItem {
   externalAccountCode: String
