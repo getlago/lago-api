@@ -4342,6 +4342,16 @@ type Mutation {
     """
     input: LoseInvoiceDisputeInput!
   ): Invoice
+
+  """
+  Accepts a membership invite with Okta Oauth
+  """
+  oktaAcceptInvite(
+    """
+    Parameters for OktaAcceptInvite
+    """
+    input: OktaAcceptInviteInput!
+  ): LoginUser
   oktaAuthorize(
     """
     Parameters for OktaAuthorize
@@ -4753,6 +4763,19 @@ enum NetsuiteMappingTypeEnum {
   prepaid_credit
   subscription_fee
   tax
+}
+
+"""
+Accept Invite with Okta Oauth input arguments
+"""
+input OktaAcceptInviteInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  inviteToken: String!
+  state: String!
 }
 
 """
