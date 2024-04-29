@@ -51,6 +51,7 @@ module Wallets
 
         return if threshold_rule.nil? || wallet.credits_ongoing_balance > threshold_rule.threshold_credits
         return if usage_amount_cents.positive? && ongoing_usage_balance_cents == usage_amount_cents
+        return if (pending_transactions_amount + credits_ongoing_balance) > threshold_rule.threshold_credits
 
         WalletTransactions::CreateJob.set(wait: 2.seconds).perform_later(
           organization_id: wallet.organization.id,
@@ -77,6 +78,10 @@ module Wallets
 
       def credits_ongoing_balance
         wallet.credits_balance - usage_credits_amount
+      end
+
+      def pending_transactions_amount
+        wallet.wallet_transactions.pending.sum(:amount)
       end
     end
   end
