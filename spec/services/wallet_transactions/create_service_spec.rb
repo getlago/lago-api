@@ -27,60 +27,57 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
   describe '#call' do
     let(:paid_credits) { '10.00' }
     let(:granted_credits) { '15.00' }
+    let(:voided_credits) { '3.00' }
     let(:params) do
       {
         wallet_id: wallet.id,
         paid_credits:,
         granted_credits:,
+        voided_credits:,
         source: :manual,
       }
     end
 
-    it 'creates a wallet transactions' do
-      expect { create_service }.to change(WalletTransaction, :count).by(2)
+    it 'creates wallet transactions' do
+      expect { create_service }.to change(WalletTransaction, :count).by(3)
     end
 
     it 'sets expected transaction status', :aggregate_failures do
       create_service
-      purchased_transaction = WalletTransaction.where(wallet_id: wallet.id).purchased.first
-      granted_transaction = WalletTransaction.where(wallet_id: wallet.id).granted.first
+      transactions = WalletTransaction.where(wallet_id: wallet.id)
 
-      expect(purchased_transaction.credit_amount).to eq(10)
-      expect(granted_transaction.credit_amount).to eq(15)
+      expect(transactions.purchased.first.credit_amount).to eq(10)
+      expect(transactions.granted.first.credit_amount).to eq(15)
+      expect(transactions.voided.first.credit_amount).to eq(3)
     end
 
-    it 'sets correct source' do
+    it 'sets expected source' do
       create_service
-      wallet_transactions = WalletTransaction.where(wallet_id: wallet.id).order(created_at: :desc)
-
-      aggregate_failures do
-        expect(wallet_transactions[0].source.to_s).to eq('manual')
-        expect(wallet_transactions[1].source.to_s).to eq('manual')
-      end
+      expect(WalletTransaction.where(wallet_id: wallet.id).pluck(:source).uniq).to eq(['manual'])
     end
 
     it 'enqueues the BillPaidCreditJob' do
       expect { create_service }.to have_enqueued_job(BillPaidCreditJob)
     end
 
-    it 'updates wallet balance only with granted credits' do
+    it 'updates wallet balance based on granted and voided credits' do
       create_service
 
-      expect(wallet.reload.balance_cents).to eq(2500)
-      expect(wallet.reload.credits_balance).to eq(25.0)
+      expect(wallet.reload.balance_cents).to eq(2200)
+      expect(wallet.reload.credits_balance).to eq(22.0)
     end
 
-    it 'updates wallet ongoing balance only with granted credits' do
+    it 'updates wallet ongoing balance based on granted and voided credits' do
       create_service
 
-      expect(wallet.reload.ongoing_balance_cents).to eq(2500)
-      expect(wallet.reload.credits_ongoing_balance).to eq(25.0)
+      expect(wallet.reload.ongoing_balance_cents).to eq(2200)
+      expect(wallet.reload.credits_ongoing_balance).to eq(22.0)
     end
 
     it 'enqueues a SendWebhookJob for each wallet transaction' do
       expect do
         create_service.call
-      end.to have_enqueued_job(SendWebhookJob).twice.with('wallet_transaction.created', WalletTransaction)
+      end.to have_enqueued_job(SendWebhookJob).thrice.with('wallet_transaction.created', WalletTransaction)
     end
 
     context 'with validation error' do

@@ -29,6 +29,15 @@ module WalletTransactions
         wallet_transactions << transaction
       end
 
+      if params[:voided_credits]
+        void_result = WalletTransactions::VoidService.call(
+          wallet: result.current_wallet,
+          credits: params[:voided_credits],
+          from_source: source,
+        )
+        wallet_transactions << void_result.wallet_transaction
+      end
+
       transactions = wallet_transactions.compact
       if organization.webhook_endpoints.any?
         transactions.each { |wt| SendWebhookJob.perform_later('wallet_transaction.created', wt.reload) }
