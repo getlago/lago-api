@@ -47,6 +47,21 @@ module LagoHttpClient
       response
     end
 
+    def put_with_response(body, headers)
+      req = Net::HTTP::Put.new(uri.request_uri, 'Content-Type' => 'application/json')
+
+      headers.keys.each do |key|
+        req[key] = headers[key]
+      end
+
+      req.body = body.to_json
+      response = http_client.request(req)
+
+      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+
+      response
+    end
+
     def post_multipart_file(file_content, file_type, file_name, options = {})
       params = options.merge(
         {
