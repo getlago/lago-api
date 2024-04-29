@@ -99,7 +99,10 @@ module WalletTransactions
     end
 
     def valid?
-      WalletTransactions::ValidateService.new(result, **params.merge(organization_id: organization.id)).valid?
+      WalletTransactions::ValidateService.new(
+        result,
+        **params.merge(organization_id: organization.id),
+      ).valid?
     end
   end
 end
