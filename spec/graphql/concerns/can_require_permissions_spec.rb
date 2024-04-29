@@ -18,7 +18,7 @@ module CanRequirePermissionsSpec
     type ThingType
 
     def resolve(**args)
-      {name: args[:new_name], count: 1}
+      { name: args[:new_name], count: 1 }
     end
   end
 
