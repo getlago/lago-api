@@ -358,7 +358,7 @@ RSpec.describe Fees::ChargeService do
               aggregation_type:,
               field_name: 'foo_bar',
               weighted_interval: 'seconds',
-              custom_aggregator: 'puts "foo bar"',
+              custom_aggregator: 'def aggregate(event, agg, aggregation_properties); agg; end',
             )
           end
 
@@ -1771,7 +1771,7 @@ RSpec.describe Fees::ChargeService do
             aggregation_type:,
             field_name: 'foo_bar',
             weighted_interval: 'seconds',
-            custom_aggregator: 'puts "foo bar"',
+            custom_aggregator: 'def aggregate(event, agg, aggregation_properties); agg; end',
           )
 
           charge.update!(min_amount_cents: 1000)
