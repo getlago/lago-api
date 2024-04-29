@@ -8,8 +8,14 @@ module Integrations
       retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 3
 
       def perform(integration:)
-        result = Integrations::Aggregator::SyncService.call(integration:)
-        result.raise_if_error!
+        sync_result = Integrations::Aggregator::SyncService.call(integration:)
+        sync_result.raise_if_error!
+
+        items_result = Integrations::Aggregator::ItemsService.call(integration:)
+        items_result.raise_if_error!
+
+        tax_items_result = Integrations::Aggregator::TaxItemsService.call(integration:)
+        tax_items_result.raise_if_error!
       end
     end
   end

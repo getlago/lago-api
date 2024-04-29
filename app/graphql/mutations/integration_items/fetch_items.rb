@@ -18,7 +18,7 @@ module Mutations
       def resolve(**args)
         integration = current_organization.integrations.find_by(id: args[:integration_id])
 
-        ::Integrations::Aggregator::SyncService.call(integration:)
+        ::Integrations::Aggregator::SyncService.call(integration:, options: { only_items: true })
 
         result = ::Integrations::Aggregator::ItemsService.call(integration:)
 
