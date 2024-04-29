@@ -175,6 +175,130 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         expect(custom_usage[:amount_cents]).to eq(30)
       end
     end
+
+    context 'when recurring aggregation' do
+      let(:billable_metric) { create(:custom_billable_metric, organization:, custom_aggregator:, recurring: true) }
+
+      it 'create fees for each charges' do
+        travel_to(DateTime.new(2024, 2, 1)) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+            },
+          )
+        end
+
+        subscription = customer.subscriptions.first
+
+        travel_to(DateTime.new(2024, 2, 6, 1)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              external_subscription_id: subscription.external_id,
+              properties: {
+                value: 1,
+                storage_zone: 'storage_eu',
+              },
+            },
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(200)
+          expect(json[:customer_usage][:charges_usage].count).to eq(2)
+
+          standard_usage = json[:customer_usage][:charges_usage].find do |cu|
+            cu[:charge][:charge_model] == 'standard'
+          end
+          expect(standard_usage[:units]).to eq('1.0')
+          expect(standard_usage[:amount_cents]).to eq(200)
+
+          custom_usage = json[:customer_usage][:charges_usage].find do |cu|
+            cu[:charge][:charge_model] == 'custom'
+          end
+          expect(custom_usage[:units]).to eq('1.0')
+          expect(custom_usage[:amount_cents]).to eq(0)
+        end
+
+        travel_to(DateTime.new(2024, 2, 6, 2)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              external_subscription_id: subscription.external_id,
+              properties: {
+                value: 10,
+                storage_zone: 'storage_asia',
+              },
+            },
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(2_230)
+          expect(json[:customer_usage][:charges_usage].count).to eq(2)
+
+          standard_usage = json[:customer_usage][:charges_usage].find do |cu|
+            cu[:charge][:charge_model] == 'standard'
+          end
+          expect(standard_usage[:units]).to eq('11.0')
+          expect(standard_usage[:amount_cents]).to eq(2_200)
+
+          custom_usage = json[:customer_usage][:charges_usage].find do |cu|
+            cu[:charge][:charge_model] == 'custom'
+          end
+          expect(custom_usage[:units]).to eq('11.0')
+          expect(custom_usage[:amount_cents]).to eq(30)
+        end
+
+        # Bill the subscription on it anniversary date
+        travel_to(DateTime.new(2024, 3, 1)) do
+          perform_billing
+
+          expect(subscription.invoices.count).to eq(1)
+
+          invoice = subscription.invoices.first
+          expect(invoice.total_amount_cents).to eq(2_230)
+          expect(invoice.fees.count).to eq(3)
+        end
+
+        # Send a new event after the billing
+        travel_to(DateTime.new(2024, 3, 2)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_customer_id: customer.external_id,
+              external_subscription_id: subscription.external_id,
+              properties: {
+                value: 10,
+                storage_zone: 'storage_asia',
+              },
+            },
+          )
+
+          fetch_current_usage(customer:)
+
+          expect(json[:customer_usage][:total_amount_cents]).to eq(4_270)
+          expect(json[:customer_usage][:charges_usage].count).to eq(2)
+
+          standard_usage = json[:customer_usage][:charges_usage].find do |cu|
+            cu[:charge][:charge_model] == 'standard'
+          end
+          expect(standard_usage[:units]).to eq('21.0')
+          expect(standard_usage[:amount_cents]).to eq(4_200)
+
+          custom_usage = json[:customer_usage][:charges_usage].find do |cu|
+            cu[:charge][:charge_model] == 'custom'
+          end
+          expect(custom_usage[:units]).to eq('21.0')
+          expect(custom_usage[:amount_cents]).to eq(70)
+        end
+      end
+    end
   end
 
   context 'when in advance aggregation' do

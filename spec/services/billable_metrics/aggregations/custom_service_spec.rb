@@ -261,4 +261,43 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       end
     end
   end
+
+  context 'when the billable metric is recurring' do
+    let(:billable_metric) do
+      create(:custom_billable_metric, :recurring, organization:, custom_aggregator:)
+    end
+
+    it 'aggregates the events' do
+      result = custom_service.aggregate
+
+      expect(result.aggregation).to eq(46)
+      expect(result.count).to eq(3)
+      expect(result.options).to eq({})
+      expect(result.custom_aggregation).to eq({ total_units: 46, amount: 8.1 })
+    end
+
+    context 'with a cached aggregation from a previous period' do
+      before do
+        create(
+          :cached_aggregation,
+          organization:,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime - 1.day,
+          current_aggregation: 11.0,
+          max_aggregation: 11.0,
+          current_amount: 0.1,
+        )
+      end
+
+      it 'aggregates the events with the cached aggregation', :aggregate_failures do
+        result = custom_service.aggregate
+
+        expect(result.aggregation).to eq(57)
+        expect(result.count).to eq(3)
+        expect(result.options).to eq({})
+        expect(result.custom_aggregation).to eq({ total_units: 57.0, amount: 11.5 })
+      end
+    end
+  end
 end

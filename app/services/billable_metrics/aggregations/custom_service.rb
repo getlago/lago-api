@@ -9,14 +9,18 @@ module BillableMetrics
       def compute_aggregation(options: {})
         result.count = event_store.count
 
-        aggregation_result = perform_custom_aggregation
+        aggregation_result = perform_custom_aggregation(grouped_by_values:)
         in_advance_aggregation_result = compute_pay_in_advance_aggregation
 
         result.aggregation = aggregation_result[:total_units]
-        result.current_usage_units = result.aggregation # TODO: Used cached aggregation
+        result.current_usage_units = result.aggregation
         result.custom_aggregation = event ? in_advance_aggregation_result : aggregation_result
         result.options = options
         result.pay_in_advance_aggregation = in_advance_aggregation_result[:total_units]
+
+        # NOTE: Compute refresh time for cached aggregation
+        result.recurring_updated_at = event_store.last_event&.timestamp || from_datetime if billable_metric.recurring?
+
         result
       end
 
@@ -32,6 +36,9 @@ module BillableMetrics
         counts = event_store.grouped_count
         return empty_results if counts.blank?
 
+        last_events = []
+        last_events = event_store.grouped_last_event if billable_metric.recurring?
+
         result.aggregations = counts.map do |aggregation|
           group_result = BaseService::Result.new
           group_result.grouped_by = aggregation[:groups]
@@ -46,6 +53,12 @@ module BillableMetrics
           group_result.current_usage_units = group_result.aggregation
           group_result.custom_aggregation = aggregation_result
           group_result.options = options
+
+          if billable_metric.recurring?
+            last_event = last_events.find { |c| c[:groups] == aggregation[:groups] }
+
+            group_result.recurring_updated_at = last_event&.[](:timestamp) || from_datetime
+          end
 
           group_result
         end
@@ -64,14 +77,39 @@ module BillableMetrics
         charge.properties['custom_properties']
       end
 
-      def current_state
-        # TODO: fecth state from the cached aggregation for recurring and current usage
+      def current_state(grouped_by_values:)
+        return latest_state(grouped_by_values:) if billable_metric.recurring?
+
+        INITIAL_STATE
+      end
+
+      def latest_state(grouped_by_values:)
+        query = CachedAggregation
+          .where(organization_id: billable_metric.organization_id)
+          .where(external_subscription_id: subscription.external_id)
+          .where(charge_id: charge.id)
+          .where('cached_aggregations.timestamp::timestamp(0) < ?', to_datetime)
+          .where(grouped_by: grouped_by_values.presence || {})
+          .order(timestamp: :desc, created_at: :desc)
+
+        query = query.where(charge_filter_id: charge_filter.id) if charge_filter
+        cached_aggregation = query.first
+
+        if cached_aggregation
+          return {
+            total_units: cached_aggregation.current_aggregation,
+            amount: cached_aggregation.current_amount,
+          }
+        end
+
+        # TODO: fetch latest state from the previous subscription
+
         INITIAL_STATE
       end
 
       def perform_custom_aggregation(target_result: result, grouped_by_values: nil)
         total_batches = (target_result.count.to_f / BATCH_SIZE).ceil
-        state = current_state
+        state = current_state(grouped_by_values:)
 
         # NOTE: for grouped_by aggregations we need to initialize
         #       the event store with the grouped_by values to only fetch the events
@@ -155,7 +193,7 @@ module BillableMetrics
         # NOTE: The aggregation was never performed on the period,
         #       we need to perform a full aggregation and cache it
         unless cached_aggregation
-          state = perform_custom_aggregation
+          state = perform_custom_aggregation(grouped_by_values:)
 
           assign_cached_metadata(
             current_aggregation: state[:total_units],
@@ -168,9 +206,9 @@ module BillableMetrics
         end
 
         # NOTE: Retrieve values from the previous aggregation
-        old_aggregation = cached_aggregation.current_aggregation_decimal
-        old_max = cached_aggregation.max_aggregation_decimal
-        old_amount = cached_aggregation.current_amount_decimal
+        old_aggregation = cached_aggregation.current_aggregation
+        old_max = cached_aggregation.max_aggregation
+        old_amount = cached_aggregation.current_amount
 
         # NOTE: compute aggregation for the current event, using the previous state
         event_aggregation = sandboxed_aggregation(
