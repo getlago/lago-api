@@ -35,6 +35,7 @@ module V1
       payload = payload.merge(metadata)
       payload = payload.merge(taxes) if include?(:taxes)
       payload = payload.merge(vies_check) if include?(:vies_check)
+      payload = payload.merge(integration_customers) if include?(:integration_customers)
 
       payload
     end
@@ -88,6 +89,14 @@ module V1
       {
         vies_check: vies_value.is_a?(Hash) ? vies_value : { valid: false },
       }
+    end
+
+    def integration_customers
+      ::CollectionSerializer.new(
+        model.integration_customers,
+        ::V1::IntegrationCustomerSerializer,
+        collection_name: 'integration_customers',
+      ).serialize
     end
   end
 end
