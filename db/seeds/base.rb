@@ -220,7 +220,7 @@ Wallet.create!(
     amount: BigDecimal('10.00'),
     credit_amount: BigDecimal('10.00'),
     settled_at: Time.zone.now,
-    transaction_status: :purchased,
+    transaction_status: :invoiced,
   )
 end
 
