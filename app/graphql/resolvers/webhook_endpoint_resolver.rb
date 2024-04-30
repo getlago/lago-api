@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'developers:manage'
+
     description 'Query a single webhook endpoint'
 
     argument :id, ID, required: true, description: 'Uniq ID of the webhook endpoint'

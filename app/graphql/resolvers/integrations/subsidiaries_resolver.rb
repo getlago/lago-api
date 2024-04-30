@@ -6,6 +6,8 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'organization:integrations:view'
+
       description 'Query integration subsidiaries'
 
       argument :integration_id, ID, required: false

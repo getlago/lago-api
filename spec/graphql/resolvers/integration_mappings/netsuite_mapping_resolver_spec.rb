@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingResolver, type: :graphql do
+  let(:required_permission) { 'organization:integrations:view' }
   let(:query) do
     <<~GQL
       query($netsuiteMappingId: ID!) {
@@ -27,10 +28,15 @@ RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingResolver, type: :g
     netsuite_mapping
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'organization:integrations:view'
+
   it 'returns a single integration mapping' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: { netsuiteMappingId: netsuite_mapping.id },
     )
@@ -48,26 +54,12 @@ RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingResolver, type: :g
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: { netsuiteMappingId: netsuite_mapping.id },
-      )
-
-      expect_graphql_error(
-        result:,
-        message: 'Missing organization id',
-      )
-    end
-  end
-
   context 'when integration mapping is not found' do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: { netsuiteMappingId: '123456' },
       )

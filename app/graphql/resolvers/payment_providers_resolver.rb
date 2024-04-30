@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'organization:integrations:view'
+
     description "Query organization's payment providers"
 
     argument :limit, Integer, required: false

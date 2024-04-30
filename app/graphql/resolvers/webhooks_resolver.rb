@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'developers:manage'
+
     description 'Query Webhooks'
 
     argument :limit, Integer, required: false

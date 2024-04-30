@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'coupons:view'
+
     description 'Query coupons of an organization'
 
     argument :ids, [ID], required: false, description: 'List of coupon IDs to fetch'

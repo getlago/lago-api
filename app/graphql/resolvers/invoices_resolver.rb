@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'invoices:view'
+
     description 'Query invoices'
 
     argument :ids, [ID], required: false, description: 'List of invoice IDs to fetch'

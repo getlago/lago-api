@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'plans:view'
+
     description 'Query plans of an organization'
 
     argument :ids, [String], required: false, description: 'List of plan ID to fetch'

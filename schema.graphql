@@ -4885,6 +4885,7 @@ type Permissions {
   subscriptionsCreate: Boolean!
   subscriptionsDelete: Boolean!
   subscriptionsUpdate: Boolean!
+  subscriptionsView: Boolean!
   walletsCreate: Boolean!
   walletsTerminate: Boolean!
   walletsTopUp: Boolean!

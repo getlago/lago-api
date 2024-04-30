@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'billable_metrics:view'
+
     description 'Query a single billable metric of an organization'
 
     argument :id, ID, required: true, description: 'Uniq ID of the billable metric'

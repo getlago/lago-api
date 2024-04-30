@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'developers:manage'
+
     description 'Query webhook endpoints of an organization'
 
     argument :ids, [ID], required: false, description: 'List of webhook endpoint IDs to fetch'

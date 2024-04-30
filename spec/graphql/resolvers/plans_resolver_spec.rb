@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::PlansResolver, type: :graphql do
+  let(:required_permission) { 'plans:view' }
   let(:query) do
     <<~GQL
       query {
@@ -28,10 +29,15 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     end
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'plans:view'
+
   it 'returns a list of plans' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
     )
 
@@ -44,26 +50,6 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
 
       expect(plans_response['metadata']['currentPage']).to eq(1)
       expect(plans_response['metadata']['totalCount']).to eq(1)
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(current_user: membership.user, query:)
-
-      expect_graphql_error(result:, message: 'Missing organization id')
-    end
-  end
-
-  context 'when not member of the organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: create(:organization),
-        query:,
-      )
-
-      expect_graphql_error(result:, message: 'Not in organization')
     end
   end
 end

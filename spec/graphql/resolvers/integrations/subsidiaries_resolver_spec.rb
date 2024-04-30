@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::Integrations::SubsidiariesResolver, type: :graphql do
+  let(:required_permission) { 'organization:integrations:view' }
   let(:query) do
     <<~GQL
       query($integrationId: ID!) {
@@ -41,10 +42,15 @@ RSpec.describe Resolvers::Integrations::SubsidiariesResolver, type: :graphql do
       .and_return(aggregator_response)
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'organization:integrations:view'
+
   it 'returns a list of subsidiaries' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: { integrationId: integration.id },
     )
@@ -54,21 +60,6 @@ RSpec.describe Resolvers::Integrations::SubsidiariesResolver, type: :graphql do
     aggregate_failures do
       expect(subsidiaries['collection'].count).to eq(4)
       expect(subsidiaries['collection'].first['externalId']).to eq('1')
-    end
-  end
-
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: { integrationId: integration.id },
-      )
-
-      expect_graphql_error(
-        result:,
-        message: 'Missing organization id',
-      )
     end
   end
 end

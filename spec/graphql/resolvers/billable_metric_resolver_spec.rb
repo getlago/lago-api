@@ -7,11 +7,13 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
     execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: { billableMetricId: billable_metric.id },
     )
   end
 
+  let(:required_permission) { 'billable_metrics:view' }
   let(:query) do
     <<~GQL
       query($billableMetricId: ID!) {
@@ -30,6 +32,10 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billable_metric) { create(:billable_metric, organization:) }
+
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'billable_metrics:view'
 
   it 'returns a single billable metric' do
     metric_response = graphql_request['data']['billableMetric']
@@ -72,23 +78,12 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
     expect(metric_response['draftInvoicesCount']).to eq(1)
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: { billableMetricId: billable_metric.id },
-      )
-
-      expect_graphql_error(result:, message: 'Missing organization id')
-    end
-  end
-
   context 'when billable metric is not found' do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: { billableMetricId: 'foo' },
       )

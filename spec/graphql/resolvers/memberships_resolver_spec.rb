@@ -17,6 +17,9 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+
   it 'returns a list of memberships' do
     result = execute_graphql(
       current_user: membership.user,

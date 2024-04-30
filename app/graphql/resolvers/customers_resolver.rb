@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'customers:view'
+
     description 'Query customers of an organization'
 
     argument :ids, [String], required: false, description: 'List of customer Lago ID to fetch'

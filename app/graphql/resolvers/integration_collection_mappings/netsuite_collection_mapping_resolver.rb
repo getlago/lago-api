@@ -6,6 +6,8 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = 'organization:integrations:view'
+
       description 'Query a single integration collection mapping'
 
       argument :id, ID, required: true, description: 'Unique ID of the integration collection mappings'

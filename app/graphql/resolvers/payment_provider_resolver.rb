@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = 'organization:integrations:view'
+
     description 'Query a single payment provider'
 
     argument :code, String, required: false, description: 'Code of the payment provider'

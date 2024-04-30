@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
+  let(:required_permission) { 'credit_notes:view' }
   let(:query) do
     <<~GQL
       query($invoiceId: ID!) {
@@ -27,10 +28,15 @@ RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
     create(:credit_note, :draft, organization:, customer:, invoice:)
   end
 
+  it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
+  it_behaves_like 'requires permission', 'credit_notes:view'
+
   it 'returns a list of finalized credit_notes for an invoice' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: required_permission,
       query:,
       variables: {
         invoiceId: invoice.id,
@@ -48,40 +54,12 @@ RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
     end
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        query:,
-        variables: {
-          invoiceId: invoice.id,
-        },
-      )
-
-      expect_graphql_error(result:, message: 'Missing organization id')
-    end
-  end
-
-  context 'when not member of the organization' do
-    it 'returns an error' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: create(:organization),
-        query:,
-        variables: {
-          invoiceId: invoice.id,
-        },
-      )
-
-      expect_graphql_error(result:, message: 'Not in organization')
-    end
-  end
-
   context 'when invoice does not exists' do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: required_permission,
         query:,
         variables: {
           invoiceId: '123456',

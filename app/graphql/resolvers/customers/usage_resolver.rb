@@ -5,6 +5,8 @@ module Resolvers
     class UsageResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
 
+      REQUIRED_PERMISSION = 'customers:view'
+
       description 'Query the usage of the customer on the current billing period'
 
       argument :customer_id, type: ID, required: false
