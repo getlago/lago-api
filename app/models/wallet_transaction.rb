@@ -15,6 +15,7 @@ class WalletTransaction < ApplicationRecord
     :purchased,
     :granted,
     :voided,
+    :invoiced,
   ].freeze
 
   TRANSACTION_TYPES = [
