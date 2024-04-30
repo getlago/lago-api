@@ -74,6 +74,8 @@ module BillableMetrics
       private
 
       def custom_properties
+        return charge_filter.properties['custom_properties'] if charge_filter.present?
+
         charge.properties['custom_properties']
       end
 
