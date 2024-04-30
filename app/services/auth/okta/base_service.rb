@@ -7,7 +7,7 @@ module Auth
 
       def check_state
         email = Rails.cache.read(state)
-        raise Auth::Okta::ValidationError, 'state_not_found' if email.blank?
+        raise ValidationError, 'state_not_found' if email.blank?
 
         Rails.cache.delete(state)
 
