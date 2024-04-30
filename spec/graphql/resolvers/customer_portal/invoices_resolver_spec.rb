@@ -25,6 +25,8 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
     finalized_invoice
   end
 
+  it_behaves_like 'requires a customer portal user'
+
   it 'returns a list of invoices' do
     result = execute_graphql(
       customer_portal_user: customer,

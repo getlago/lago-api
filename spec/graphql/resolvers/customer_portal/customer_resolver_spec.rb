@@ -21,6 +21,8 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver, type: :graphql do
     create(:customer, organization:, currency: 'EUR')
   end
 
+  it_behaves_like 'requires a customer portal user'
+
   it 'returns a single customer' do
     result = execute_graphql(
       customer_portal_user: customer,

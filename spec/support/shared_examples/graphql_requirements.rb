@@ -17,3 +17,9 @@ RSpec.shared_examples 'requires permission' do |permission|
     expect(described_class::REQUIRED_PERMISSION).to eq(permission)
   end
 end
+
+RSpec.shared_examples 'requires a customer portal user' do
+  it 'requires a customer portal user' do
+    expect(described_class.ancestors).to include(AuthenticableCustomerPortalUser)
+  end
+end
