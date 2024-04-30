@@ -12,6 +12,7 @@ RSpec.describe Invites::ValidateService, type: :service do
     {
       current_organization: organization,
       email: Faker::Internet.email,
+      role: :admin,
     }
   end
 
@@ -27,6 +28,7 @@ RSpec.describe Invites::ValidateService, type: :service do
         {
           current_organization: organization,
           email: user.email,
+          role: :admin,
         }
       end
 
@@ -41,12 +43,28 @@ RSpec.describe Invites::ValidateService, type: :service do
         {
           current_organization: organization,
           email: user.email,
+          role: :admin,
         }
       end
 
       it 'returns false and result has errors' do
         expect(validate_service).not_to be_valid
         expect(result.error.messages[:email]).to eq(['email_already_used'])
+      end
+    end
+
+    context 'when role is invalid' do
+      let(:args) do
+        {
+          current_organization: organization,
+          email: Faker::Internet.email,
+          role: 'super_admin',
+        }
+      end
+
+      it 'returns false and result has errors' do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:role]).to eq(['invalid_role'])
       end
     end
   end

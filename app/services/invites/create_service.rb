@@ -9,6 +9,7 @@ module Invites
         organization_id: args[:current_organization].id,
         email: args[:email],
         token: generate_token,
+        role: args[:role],
       )
 
       result
