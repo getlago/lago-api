@@ -20,7 +20,6 @@ class Organization < ApplicationRecord
   has_many :credit_notes, through: :invoices
   has_many :fees, through: :subscriptions
   has_many :events
-  has_many :quantified_events
   has_many :coupons
   has_many :applied_coupons, through: :coupons
   has_many :add_ons
@@ -32,6 +31,7 @@ class Organization < ApplicationRecord
   has_many :wallet_transactions, through: :wallets
   has_many :webhook_endpoints
   has_many :webhooks, through: :webhook_endpoints
+  has_many :cached_aggregations
 
   has_many :stripe_payment_providers, class_name: 'PaymentProviders::StripeProvider'
   has_many :gocardless_payment_providers, class_name: 'PaymentProviders::GocardlessProvider'

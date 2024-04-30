@@ -77,21 +77,18 @@ module BillableMetrics
       def latest_value
         return @latest_value if @latest_value
 
-        # TODO: Should be moved to CachedAggregation
-        quantified_events = QuantifiedEvent
-          .where(billable_metric_id: billable_metric.id)
+        query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
-          .where(added_at: ...from_datetime)
-          .where(grouped_by: {})
-          .order(added_at: :desc)
+          .where(charge_id: charge.id)
+          .where(timestamp: ...from_datetime)
+          .where(grouped_by: grouped_by.presence || {})
+          .order(timestamp: :desc, created_at: :desc)
 
-        quantified_events = quantified_events.where(charge_filter_id: charge_filter.id) if charge_filter
-        quantified_event = quantified_events.first
+        query = query.where(charge_filter_id: charge_filter.id) if charge_filter
+        cached_aggregation = query.first
 
-        if quantified_event
-          return @latest_value = BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS))
-        end
+        return @latest_value = cached_aggregation.current_aggregation if cached_aggregation
         return @latest_value = BigDecimal(latest_value_from_events) if subscription.previous_subscription_id?
 
         @latest_value = BigDecimal(0)
@@ -117,25 +114,24 @@ module BillableMetrics
       def grouped_latest_values
         return @grouped_latest_values if @grouped_latest_values
 
-        # TODO: Should be moved to CachedAggregation
-        quantified_events = QuantifiedEvent
-          .where(billable_metric_id: billable_metric.id)
+        query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
-          .where(added_at: ...from_datetime)
-          .order(added_at: :desc)
+          .where(charge_id: charge.id)
+          .where(timestamp: ...from_datetime)
+          .order(timestamp: :desc, created_at: :desc)
 
         grouped_by.each do |key|
-          quantified_events = quantified_events.where('grouped_by?:key', key:)
+          query = query.where('grouped_by?:key', key:)
         end
 
-        quantified_events = quantified_events.where(charge_filter_id: charge_filter.id) if charge_filter
+        query = query.where(charge_filter_id: charge_filter.id) if charge_filter
 
-        if quantified_events.all.any?
-          return @grouped_latest_values = quantified_events.map do |quantified_event|
+        if query.all.any?
+          return @grouped_latest_values = query.map do |cached_aggregation|
             {
-              groups: quantified_event.grouped_by,
-              value: BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS))
+              groups: cached_aggregation.grouped_by,
+              value: cached_aggregation.current_aggregation
             }
           end
         end

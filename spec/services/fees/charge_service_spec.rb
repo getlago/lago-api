@@ -234,12 +234,12 @@ RSpec.describe Fees::ChargeService do
           context 'with recurring weighted sum aggregation' do
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
-            it 'creates a fee and a quantified event per group' do
+            it 'creates a fee and a cached aggregation per group' do
               result = charge_subscription_service.create
               expect(result).to be_success
 
               expect(result.fees.count).to eq(2)
-              expect(result.quantified_events.count).to eq(2)
+              expect(result.cached_aggregations.count).to eq(2)
             end
           end
 
@@ -1716,11 +1716,11 @@ RSpec.describe Fees::ChargeService do
     context 'with recurring weighted sum aggregation' do
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
-      it 'creates a fee and a quantified event' do
+      it 'creates a fee and a cached aggregation' do
         result = charge_subscription_service.create
         expect(result).to be_success
         created_fee = result.fees.first
-        quantified_event = result.quantified_events.first
+        cached_aggregation = result.cached_aggregations.first
 
         aggregate_failures do
           expect(created_fee.id).not_to be_nil
@@ -1733,14 +1733,13 @@ RSpec.describe Fees::ChargeService do
           expect(created_fee.events_count).to eq(0)
           expect(created_fee.payment_status).to eq('pending')
 
-          expect(quantified_event.id).not_to be_nil
-          expect(quantified_event.organization).to eq(organization)
-          expect(quantified_event.external_subscription_id).to eq(subscription.external_id)
-          expect(quantified_event.external_id).to be_nil
-          expect(quantified_event.charge_filter_id).to be_nil
-          expect(quantified_event.billable_metric_id).to eq(billable_metric.id)
-          expect(quantified_event.added_at).to eq(boundaries[:from_datetime])
-          expect(quantified_event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS]).to eq('0.0')
+          expect(cached_aggregation.id).not_to be_nil
+          expect(cached_aggregation.organization).to eq(organization)
+          expect(cached_aggregation.external_subscription_id).to eq(subscription.external_id)
+          expect(cached_aggregation.charge_filter_id).to be_nil
+          expect(cached_aggregation.charge_id).to eq(charge.id)
+          expect(cached_aggregation.timestamp).to eq(boundaries[:from_datetime])
+          expect(cached_aggregation.current_aggregation).to eq(0.0)
         end
       end
     end
