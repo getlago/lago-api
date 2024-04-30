@@ -2,9 +2,13 @@
 
 require 'rails_helper'
 
-RSpec.describe Auth::Okta::LoginService do
-  let(:service) { described_class.new(code: 'code', state:) }
-  let(:okta_integration) { create(:okta_integration, domain: 'bar.com', organization_name: 'foo') }
+RSpec.describe Auth::Okta::AcceptInviteService do
+  subject(:service) { described_class.new(invite_token:, code: 'code', state:) }
+
+  let(:organization) { create(:organization) }
+  let(:okta_integration) { create(:okta_integration, domain: 'bar.com', organization_name: 'foo', organization:) }
+  let(:invite) { create(:invite, email: 'foo@bar.com', organization:) }
+  let(:invite_token) { invite.token }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
   let(:okta_token_response) { OpenStruct.new(body: { 'access_token': 'access_token' }) }
   let(:okta_userinfo_response) { OpenStruct.new({ 'email': 'foo@bar.com' }) }
@@ -13,6 +17,7 @@ RSpec.describe Auth::Okta::LoginService do
 
   before do
     okta_integration
+    invite_token
 
     allow(Rails).to receive(:cache).and_return(memory_store)
     memory_store.write(state, 'foo@bar.com')
@@ -23,13 +28,14 @@ RSpec.describe Auth::Okta::LoginService do
   end
 
   describe '#call' do
-    it 'creates user, membership and authenticate user' do
+    it 'creates user, membership, authenticate user and mark invite as accepted' do
       result = service.call
 
       aggregate_failures do
         expect(result).to be_success
         expect(result.user.email).to eq('foo@bar.com')
         expect(result.token).to be_present
+        expect(invite.reload).to be_accepted
       end
     end
 
@@ -61,6 +67,19 @@ RSpec.describe Auth::Okta::LoginService do
       end
     end
 
+    context 'when pending invite does not exists' do
+      let(:invite) { create(:invite, email: 'foo@bar.com', status: :accepted) }
+
+      it 'returns a failure result' do
+        result = service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.messages.values.flatten).to include('invite_not_found')
+        end
+      end
+    end
+
     context 'when okta userinfo email is different from the state one' do
       let(:okta_userinfo_response) { OpenStruct.new({ 'email': 'foo@test.com' }) }
 
@@ -71,27 +90,6 @@ RSpec.describe Auth::Okta::LoginService do
           expect(result).not_to be_success
           expect(result.error.messages.values.flatten).to include('okta_userinfo_error')
         end
-      end
-    end
-
-    context 'when user already exists' do
-      let(:user) { create(:user, email: 'foo@bar.com') }
-
-      before { user }
-
-      it 'does not create a new user' do
-        expect { service.call }.not_to change(User, :count)
-      end
-    end
-
-    context 'when membership already exists' do
-      let(:user) { create(:user, email: 'foo@bar.com') }
-      let(:membership) { create(:membership, user:, organization: okta_integration.organization) }
-
-      before { membership }
-
-      it 'does not create a new membership' do
-        expect { service.call }.not_to change(Membership, :count)
       end
     end
   end

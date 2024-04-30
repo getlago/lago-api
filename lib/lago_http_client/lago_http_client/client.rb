@@ -70,6 +70,21 @@ module LagoHttpClient
       response
     end
 
+    def post_url_encoded(params, headers)
+      encoded_form = URI.encode_www_form(params)
+
+      req = Net::HTTP::Post.new(uri.request_uri, 'Content-Type' => 'application/x-www-form-urlencoded')
+      headers.keys.each do |key|
+        req[key] = headers[key]
+      end
+
+      response = http_client.request(req, encoded_form)
+
+      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+
+      JSON.parse(response.body.presence || '{}')
+    end
+
     def get(headers: {}, params: nil)
       path = params ? "#{uri.path}?#{URI.encode_www_form(params)}" : uri.path
       req = Net::HTTP::Get.new(path)

@@ -58,7 +58,7 @@ RSpec.describe Auth::Okta::AuthorizeService do
 
           aggregate_failures do
             expect(result).not_to be_success
-            expect(result.error.messages.values.flatten).to include('invite_email_mistmatch')
+            expect(result.error.messages.values.flatten).to include('invite_email_mismatch')
           end
         end
       end
