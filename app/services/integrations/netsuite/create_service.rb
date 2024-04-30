@@ -33,9 +33,6 @@ module Integrations
           Integrations::Aggregator::PerformSyncJob.set(wait: 2.seconds).perform_later(integration:)
         end
 
-        Integrations::Aggregator::FetchItemsJob.perform_later(integration:)
-        Integrations::Aggregator::FetchTaxItemsJob.perform_later(integration:)
-
         result.integration = integration
         result
       rescue ActiveRecord::RecordInvalid => e

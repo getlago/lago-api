@@ -7,8 +7,9 @@ module Integrations
     class BaseService < BaseService
       BASE_URL = 'https://api.nango.dev/'
 
-      def initialize(integration:)
+      def initialize(integration:, options: {})
         @integration = integration
+        @options = options
 
         super
       end
@@ -19,7 +20,7 @@ module Integrations
 
       private
 
-      attr_reader :integration
+      attr_reader :integration, :options
 
       # NOTE: Extend it with other providers if needed
       def provider

@@ -37,5 +37,18 @@ RSpec.describe Integrations::Aggregator::SyncService do
         expect(payload[:syncs]).to eq(syncs_list)
       end
     end
+
+    context 'when only items should be synced' do
+      it 'successfully performs sync' do
+        described_class.new(integration:, options: { only_items: true }).call
+
+        expect(LagoHttpClient::Client).to have_received(:new)
+          .with(sync_endpoint)
+        expect(lago_client).to have_received(:post_with_response) do |payload|
+          expect(payload[:provider_config_key]).to eq('netsuite')
+          expect(payload[:syncs]).to eq(%w[netsuite-items-sync])
+        end
+      end
+    end
   end
 end

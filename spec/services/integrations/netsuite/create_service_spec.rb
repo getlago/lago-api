@@ -89,20 +89,6 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
           it 'calls Integrations::Aggregator::PerformSyncJob' do
             expect { service_call }.to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
           end
-
-          it 'calls Integrations::Aggregator::FetchItemsJob' do
-            service_call
-
-            integration = Integrations::NetsuiteIntegration.order(:created_at).last
-            expect(Integrations::Aggregator::FetchItemsJob).to have_received(:perform_later).with(integration:)
-          end
-
-          it 'calls Integrations::Aggregator::FetchTaxItemsJob' do
-            service_call
-
-            integration = Integrations::NetsuiteIntegration.order(:created_at).last
-            expect(Integrations::Aggregator::FetchTaxItemsJob).to have_received(:perform_later).with(integration:)
-          end
         end
 
         context 'with validation error' do

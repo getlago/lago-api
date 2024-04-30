@@ -10,7 +10,7 @@ module Integrations
       def call
         payload = {
           provider_config_key: provider,
-          syncs: sync_items,
+          syncs: sync_list,
         }
 
         response = http_client.post_with_response(payload, headers)
@@ -22,17 +22,22 @@ module Integrations
       private
 
       # NOTE: Extend it with other providers if needed
-      def sync_items
-        case integration.type
-        when 'Integrations::NetsuiteIntegration'
-          %w[
-            netsuite-accounts-sync
-            netsuite-items-sync
-            netsuite-subsidiaries-sync
-            netsuite-contacts-sync
-            netsuite-tax-items-sync
-          ]
+      def sync_list
+        list = case integration.type
+               when 'Integrations::NetsuiteIntegration'
+                 {
+                   accounts: 'netsuite-accounts-sync',
+                   items: 'netsuite-items-sync',
+                   subsidiaries: 'netsuite-subsidiaries-sync',
+                   contacts: 'netsuite-contacts-sync',
+                   tax_items: 'netsuite-tax-items-sync',
+                 }
         end
+
+        return [list[:items]] if options[:only_items]
+        return [list[:tax_items]] if options[:only_tax_items]
+
+        list.values
       end
     end
   end
