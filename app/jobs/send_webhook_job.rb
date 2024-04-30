@@ -34,6 +34,7 @@ class SendWebhookJob < ApplicationJob
     'subscription.trial_ended' => Webhooks::Subscriptions::TrialEndedService,
     'wallet.depleted_ongoing_balance' => Webhooks::Wallets::DepletedOngoingBalanceService,
     'wallet_transaction.created' => Webhooks::WalletTransactions::CreatedService,
+    'wallet_transaction.updated' => Webhooks::WalletTransactions::UpdatedService,
   }.freeze
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)

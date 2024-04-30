@@ -14,5 +14,11 @@ RSpec.describe WalletTransactions::SettleService, type: :service do
       }.to change { wallet_transaction.reload.status }.from('pending').to('settled')
         .and change(wallet_transaction, :settled_at).from(nil)
     end
+
+    it 'enqueues a SendWebhookJob for each wallet transaction' do
+      expect do
+        service.call
+      end.to have_enqueued_job(SendWebhookJob).with('wallet_transaction.updated', WalletTransaction)
+    end
   end
 end
