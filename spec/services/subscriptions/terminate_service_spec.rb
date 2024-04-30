@@ -145,9 +145,11 @@ RSpec.describe Subscriptions::TerminateService do
       end
 
       it 'creates a credit note for the remaining days' do
-        expect do
-          terminate_service.call
-        end.to change(CreditNote, :count)
+        travel_to(Time.current.end_of_month - 4.days) do
+          expect do
+            terminate_service.call
+          end.to change(CreditNote, :count).by(1)
+        end
       end
 
       context 'when invoice subscription is not generated' do
