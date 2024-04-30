@@ -35,7 +35,7 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
       expect(result).to be_success
       expect(result.wallet_transaction).to be_present
       expect(result.wallet_transaction.amount).to eq(1.0)
-      expect(result.wallet_transaction).to be_purchased
+      expect(result.wallet_transaction).to be_invoiced
     end
 
     it 'updates wallet balance' do

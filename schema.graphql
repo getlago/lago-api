@@ -6953,6 +6953,7 @@ enum WalletTransactionStatusEnum {
 
 enum WalletTransactionTransactionStatusEnum {
   granted
+  invoiced
   purchased
   voided
 }
