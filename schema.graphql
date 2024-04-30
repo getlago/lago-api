@@ -1828,6 +1828,7 @@ input CreateInviteInput {
   """
   clientMutationId: String
   email: String!
+  role: MembershipRole!
 }
 
 """
@@ -3634,6 +3635,7 @@ type Invite {
   organization: Organization!
   recipient: Membership!
   revokedAt: ISO8601DateTime!
+  role: MembershipRole!
   status: InviteStatusTypeEnum!
   token: String!
 }
