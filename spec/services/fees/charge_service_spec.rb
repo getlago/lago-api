@@ -242,6 +242,20 @@ RSpec.describe Fees::ChargeService do
               expect(result.quantified_events.count).to eq(2)
             end
           end
+
+          context 'with custom aggregation' do
+            let(:billable_metric) do
+              create(:custom_aggregation_billable_metric, organization:)
+
+              it 'creates a fee and a cached aggregation' do
+                result = charge_subscription_service.create
+                expect(result).to be_success
+
+                expect(result.fees.count).to eq(2)
+                expect(result.cached_aggregation.count).to eq(2)
+              end
+            end
+          end
         end
       end
 

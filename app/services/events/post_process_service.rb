@@ -98,7 +98,10 @@ module Events
       end
 
       # NOTE: ensure event is processable
-      return if !billable_metric.count_agg? && event.properties[billable_metric.field_name].nil?
+      processable_event = billable_metric.count_agg? ||
+                          billable_metric.custom_agg? ||
+                          event.properties[billable_metric.field_name].present?
+      return unless processable_event
 
       charges.where(invoiceable: true).find_each do |charge|
         Invoices::CreatePayInAdvanceChargeJob.perform_later(charge:, event:, timestamp: event.timestamp)
