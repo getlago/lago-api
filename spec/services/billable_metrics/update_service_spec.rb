@@ -129,6 +129,17 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
     end
 
+    context 'with custom aggregation' do
+      let(:params) { { aggregation_type: 'custom_agg' } }
+
+      it 'returns a forbidden failure' do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+    end
+
     context 'when billable metric is linked to plan' do
       let(:plan) { create(:plan, organization:) }
       let(:charge) { create(:standard_charge, billable_metric:, plan:) }

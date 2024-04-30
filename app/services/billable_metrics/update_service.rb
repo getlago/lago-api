@@ -12,6 +12,12 @@ module BillableMetrics
     def call
       return result.not_found_failure!(resource: 'billable_metric') unless billable_metric
 
+      if params.key?(:aggregation_type) &&
+         params[:aggregation_type]&.to_sym == :custom_agg &&
+         !organization&.custom_aggregation
+        return result.forbidden_failure!
+      end
+
       billable_metric.name = params[:name] if params.key?(:name)
       billable_metric.description = params[:description] if params.key?(:description)
 
@@ -52,6 +58,8 @@ module BillableMetrics
     private
 
     attr_reader :billable_metric, :params
+
+    delegate :organization, to: :billable_metric
 
     def update_groups(metric, group_params)
       Groups::CreateOrUpdateBatchService.call(
