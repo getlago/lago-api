@@ -286,20 +286,20 @@ GEM
       activerecord
       kaminari-core (= 1.2.2)
     kaminari-core (1.2.2)
-    karafka (2.3.4)
-      karafka-core (>= 2.3.0, < 2.4.0)
-      waterdrop (>= 2.6.12, < 3.0.0)
+    karafka (2.4.0)
+      karafka-core (>= 2.4.0, < 2.5.0)
+      waterdrop (>= 2.7.0, < 3.0.0)
       zeitwerk (~> 2.3)
-    karafka-core (2.3.0)
-      karafka-rdkafka (>= 0.14.8, < 0.15.0)
-    karafka-rdkafka (0.14.10)
+    karafka-core (2.4.0)
+      karafka-rdkafka (>= 0.15.0, < 0.16.0)
+    karafka-rdkafka (0.15.0)
       ffi (~> 1.15)
       mini_portile2 (~> 2.6)
       rake (> 12)
-    karafka-web (0.8.2)
+    karafka-web (0.9.0)
       erubi (~> 1.4)
-      karafka (>= 2.3.0, < 2.4.0)
-      karafka-core (>= 2.3.0, < 2.4.0)
+      karafka (>= 2.4.0, < 2.5.0)
+      karafka-core (>= 2.4.0, < 2.5.0)
       roda (~> 3.68, >= 3.69)
       tilt (~> 2.0)
     language_server-protocol (3.17.0.3)
@@ -805,8 +805,8 @@ GEM
     valvat (1.4.0)
       rexml (>= 3.2, < 4.0)
     version_gem (1.1.1)
-    waterdrop (2.6.14)
-      karafka-core (>= 2.2.3, < 3.0.0)
+    waterdrop (2.7.0)
+      karafka-core (>= 2.4.0, < 3.0.0)
       zeitwerk (~> 2.3)
     webmock (3.23.0)
       addressable (>= 2.8.0)
@@ -864,8 +864,8 @@ DEPENDENCIES
   i18n-tasks!
   jwt
   kaminari-activerecord
-  karafka (~> 2.3.4)
-  karafka-web (~> 0.8.2)
+  karafka (~> 2.4.0)
+  karafka-web (~> 0.9.0)
   lograge
   logstash-event
   money-rails
