@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 module IntegrationMappings
-  class NetsuiteMappingsQuery < BaseQuery
+  class MappingsQuery < BaseQuery
     def call
-      netsuite_mappings = paginate(base_scope)
-      netsuite_mappings = netsuite_mappings.order(created_at: :desc)
+      integration_mappings = paginate(base_scope)
+      integration_mappings = integration_mappings.order(created_at: :desc)
 
-      netsuite_mappings = with_integration_id(netsuite_mappings) if filters.integration_id
-      netsuite_mappings = with_mappable_type(netsuite_mappings) if filters.mappable_type
+      integration_mappings = with_integration_id(integration_mappings) if filters.integration_id
+      integration_mappings = with_mappable_type(integration_mappings) if filters.mappable_type
 
-      result.netsuite_mappings = netsuite_mappings
+      result.integration_mappings = integration_mappings
       result
     end
 

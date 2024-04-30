@@ -2,7 +2,7 @@
 
 module Resolvers
   module IntegrationMappings
-    class NetsuiteMappingsResolver < Resolvers::BaseResolver
+    class MappingsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
 
@@ -12,19 +12,19 @@ module Resolvers
 
       argument :integration_id, ID, required: false
       argument :limit, Integer, required: false
-      argument :mappable_type, Types::IntegrationMappings::Netsuite::MappableTypeEnum, required: false
+      argument :mappable_type, Types::IntegrationMappings::MappableTypeEnum, required: false
       argument :page, Integer, required: false
 
-      type Types::IntegrationMappings::Netsuite::Object.collection_type, null: true
+      type Types::IntegrationMappings::Object.collection_type, null: true
 
       def resolve(page: nil, limit: nil, integration_id: nil, mappable_type: nil)
-        result = ::IntegrationMappings::NetsuiteMappingsQuery.call(
+        result = ::IntegrationMappings::MappingsQuery.call(
           organization: current_organization,
           pagination: BaseQuery::Pagination.new(page:, limit:),
           filters: BaseQuery::Filters.new({ integration_id:, mappable_type: }),
         )
 
-        result.netsuite_mappings
+        result.integration_mappings
       end
     end
   end

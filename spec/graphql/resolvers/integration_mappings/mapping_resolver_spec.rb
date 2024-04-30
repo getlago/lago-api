@@ -2,12 +2,12 @@
 
 require 'rails_helper'
 
-RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingResolver, type: :graphql do
+RSpec.describe Resolvers::IntegrationMappings::MappingResolver, type: :graphql do
   let(:required_permission) { 'organization:integrations:view' }
   let(:query) do
     <<~GQL
-      query($netsuiteMappingId: ID!) {
-        netsuiteMapping(id: $netsuiteMappingId) {
+      query($integrationMappingId: ID!) {
+        integrationMapping(id: $integrationMappingId) {
           id
           mappableId
           mappableType
@@ -38,10 +38,10 @@ RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingResolver, type: :g
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: { netsuiteMappingId: netsuite_mapping.id },
+      variables: { integrationMappingId: netsuite_mapping.id },
     )
 
-    integration_mapping_response = result['data']['netsuiteMapping']
+    integration_mapping_response = result['data']['integrationMapping']
 
     aggregate_failures do
       expect(integration_mapping_response['id']).to eq(netsuite_mapping.id)
@@ -61,7 +61,7 @@ RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingResolver, type: :g
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: { netsuiteMappingId: '123456' },
+        variables: { integrationMappingId: '123456' },
       )
 
       expect_graphql_error(

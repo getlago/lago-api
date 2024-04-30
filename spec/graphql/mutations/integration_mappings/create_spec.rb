@@ -2,9 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::IntegrationMappings::Netsuite::Update, type: :graphql do
+RSpec.describe Mutations::IntegrationMappings::Create, type: :graphql do
   let(:required_permission) { 'organization:integrations:update' }
-  let(:integration_mapping) { create(:netsuite_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:mappable) { create(:add_on, organization:) }
   let(:organization) { membership.organization }
@@ -15,8 +14,8 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Update, type: :graphql 
 
   let(:mutation) do
     <<-GQL
-      mutation($input: UpdateNetsuiteIntegrationMappingInput!) {
-        updateNetsuiteIntegrationMapping(input: $input) {
+      mutation($input: CreateIntegrationMappingInput!) {
+        createIntegrationMapping(input: $input) {
           id,
           integrationId,
           mappableId,
@@ -33,7 +32,7 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Update, type: :graphql 
   it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:update'
 
-  it 'updates a netsuite integration' do
+  it 'creates an integration mapping' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -41,7 +40,6 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Update, type: :graphql 
       query: mutation,
       variables: {
         input: {
-          id: integration_mapping.id,
           integrationId: integration.id,
           mappableId: mappable.id,
           mappableType: 'AddOn',
@@ -52,9 +50,10 @@ RSpec.describe Mutations::IntegrationMappings::Netsuite::Update, type: :graphql 
       },
     )
 
-    result_data = result['data']['updateNetsuiteIntegrationMapping']
+    result_data = result['data']['createIntegrationMapping']
 
     aggregate_failures do
+      expect(result_data['id']).to be_present
       expect(result_data['integrationId']).to eq(integration.id)
       expect(result_data['mappableId']).to eq(mappable.id)
       expect(result_data['mappableType']).to eq('AddOn')

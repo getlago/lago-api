@@ -56,8 +56,8 @@ module Types
     field :destroy_integration, mutation: Mutations::Integrations::Destroy
     field :update_netsuite_integration, mutation: Mutations::Integrations::Netsuite::Update
 
-    field :create_netsuite_integration_mapping, mutation: Mutations::IntegrationMappings::Netsuite::Create
-    field :update_netsuite_integration_mapping, mutation: Mutations::IntegrationMappings::Netsuite::Update
+    field :create_integration_mapping, mutation: Mutations::IntegrationMappings::Create
+    field :update_integration_mapping, mutation: Mutations::IntegrationMappings::Update
 
     field :create_netsuite_integration_collection_mapping,
           mutation: Mutations::IntegrationCollectionMappings::Netsuite::Create

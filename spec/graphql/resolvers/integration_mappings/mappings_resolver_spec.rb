@@ -2,12 +2,12 @@
 
 require 'rails_helper'
 
-RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingsResolver, type: :graphql do
+RSpec.describe Resolvers::IntegrationMappings::MappingsResolver, type: :graphql do
   let(:required_permission) { 'organization:integrations:view' }
   let(:query) do
     <<~GQL
       query {
-        netsuiteMappings(limit: 5) {
+        integrationMappings(limit: 5) {
           collection { id }
           metadata { currentPage, totalCount }
         }
@@ -26,7 +26,7 @@ RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingsResolver, type: :
   it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:view'
 
-  it 'returns a list of netsuite mappings' do
+  it 'returns a list of mappings' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -34,14 +34,14 @@ RSpec.describe Resolvers::IntegrationMappings::NetsuiteMappingsResolver, type: :
       query:,
     )
 
-    netsuite_mappings_response = result['data']['netsuiteMappings']
+    integration_mappings_response = result['data']['integrationMappings']
 
     aggregate_failures do
-      expect(netsuite_mappings_response['collection'].count).to eq(1)
-      expect(netsuite_mappings_response['collection'].first['id']).to eq(netsuite_mapping.id)
+      expect(integration_mappings_response['collection'].count).to eq(1)
+      expect(integration_mappings_response['collection'].first['id']).to eq(netsuite_mapping.id)
 
-      expect(netsuite_mappings_response['metadata']['currentPage']).to eq(1)
-      expect(netsuite_mappings_response['metadata']['totalCount']).to eq(1)
+      expect(integration_mappings_response['metadata']['currentPage']).to eq(1)
+      expect(integration_mappings_response['metadata']['totalCount']).to eq(1)
     end
   end
 end

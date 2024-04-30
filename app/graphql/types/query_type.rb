@@ -46,8 +46,8 @@ module Types
           resolver: Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingResolver
     field :netsuite_collection_mappings,
           resolver: Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingsResolver
-    field :netsuite_mapping, resolver: Resolvers::IntegrationMappings::NetsuiteMappingResolver
-    field :netsuite_mappings, resolver: Resolvers::IntegrationMappings::NetsuiteMappingsResolver
+    field :integration_mapping, resolver: Resolvers::IntegrationMappings::MappingResolver
+    field :integration_mappings, resolver: Resolvers::IntegrationMappings::MappingsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :payment_provider, resolver: Resolvers::PaymentProviderResolver

@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe IntegrationMappings::Netsuite::UpdateService, type: :service do
+RSpec.describe IntegrationMappings::UpdateService, type: :service do
   let(:integration_mapping) { create(:netsuite_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }

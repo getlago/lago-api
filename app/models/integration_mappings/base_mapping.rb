@@ -11,5 +11,7 @@ module IntegrationMappings
     belongs_to :mappable, polymorphic: true
 
     MAPPABLE_TYPES = %i[AddOn BillableMetric].freeze
+
+    settings_accessors :external_id, :external_account_code, :external_name
   end
 end
