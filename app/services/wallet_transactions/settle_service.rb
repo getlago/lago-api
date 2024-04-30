@@ -10,6 +10,7 @@ module WalletTransactions
 
     def call
       wallet_transaction.update!(status: :settled, settled_at: Time.current)
+      SendWebhookJob.perform_later('wallet_transaction.updated', wallet_transaction)
 
       result.wallet_transaction = wallet_transaction
       result
