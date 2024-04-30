@@ -41,6 +41,8 @@ module Types
       field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
 
+      field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true
+
       field :invoices, [Types::Invoices::Object]
 
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true

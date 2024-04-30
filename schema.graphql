@@ -2901,6 +2901,7 @@ type Customer {
   metadata: [CustomerMetadata!]
   name: String
   netPaymentTerm: Int
+  netsuiteCustomer: NetsuiteCustomer
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   phone: String
@@ -4708,6 +4709,13 @@ type NetsuiteCollectionMapping {
 type NetsuiteCollectionMappingCollection {
   collection: [NetsuiteCollectionMapping!]!
   metadata: CollectionMetadata!
+}
+
+type NetsuiteCustomer {
+  externalCustomerId: String
+  id: ID!
+  subsidiaryId: String
+  syncWithProvider: Boolean
 }
 
 type NetsuiteIntegration {
