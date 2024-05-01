@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
+ActiveRecord::Schema[7.0].define(version: 2024_05_01_090905) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -221,6 +221,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
     t.boolean "prorated", default: false, null: false
     t.string "invoice_display_name"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
+    t.index ["charge_model"], name: "index_charges_on_charge_model"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
@@ -495,9 +496,11 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
+    t.index ["fee_type"], name: "index_fees_on_fee_type"
     t.index ["group_id"], name: "index_fees_on_group_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
+    t.index ["payment_status"], name: "index_fees_on_payment_status"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
     t.index ["true_up_parent_fee_id"], name: "index_fees_on_true_up_parent_fee_id"
   end
@@ -828,6 +831,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
     t.string "invoice_display_name"
     t.index ["created_at"], name: "index_plans_on_created_at"
     t.index ["deleted_at"], name: "index_plans_on_deleted_at"
+    t.index ["interval"], name: "index_plans_on_interval"
     t.index ["organization_id", "code"], name: "index_plans_on_organization_id_and_code", unique: true, where: "((deleted_at IS NULL) AND (parent_id IS NULL))"
     t.index ["organization_id"], name: "index_plans_on_organization_id"
     t.index ["parent_id"], name: "index_plans_on_parent_id"
@@ -911,7 +915,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
     t.datetime "subscription_at"
     t.datetime "ending_at"
     t.datetime "trial_ended_at"
+    t.index ["billing_time"], name: "index_subscriptions_on_billing_time"
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
+    t.index ["ending_at"], name: "index_subscriptions_on_ending_at"
     t.index ["external_id"], name: "index_subscriptions_on_external_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
     t.index ["started_at"], name: "index_subscriptions_on_started_at"
