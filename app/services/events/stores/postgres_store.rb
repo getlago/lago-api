@@ -347,7 +347,7 @@ module Events
             )
           end.join(' AND ')
         end
-        sql = conditions.map { "(#{_1})" }.join(' OR ')
+        sql = conditions.compact_blank.map { "(#{_1})" }.join(' OR ')
         scope = scope.where.not(sql) if sql.present?
 
         scope
