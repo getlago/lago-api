@@ -10,9 +10,7 @@ module IntegrationCollectionMappings
     end
 
     def call
-      unless integration_collection_mapping
-        return result.not_found_failure!(resource: 'integration_collection_mapping')
-      end
+      return result.not_found_failure!(resource: 'integration_collection_mapping') unless integration_collection_mapping
 
       integration_collection_mapping.integration_id = params[:integration_id] if params.key?(:integration_id)
       integration_collection_mapping.mapping_type = params[:mapping_type] if params.key?(:mapping_type)
