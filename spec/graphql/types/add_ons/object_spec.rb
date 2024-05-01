@@ -19,4 +19,5 @@ RSpec.describe Types::AddOns::Object do
   it { is_expected.to have_field(:applied_add_ons_count).of_type('Int!') }
   it { is_expected.to have_field(:customers_count).of_type('Int!') }
   it { is_expected.to have_field(:taxes).of_type('[Tax!]') }
+  it { is_expected.to have_field(:integration_mappings).of_type('[NetsuiteMapping!]') }
 end

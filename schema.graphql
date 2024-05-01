@@ -62,6 +62,7 @@ type AddOn {
   deletedAt: ISO8601DateTime
   description: String
   id: ID!
+  integrationMappings: [NetsuiteMapping!]
   invoiceDisplayName: String
   name: String!
   organization: Organization
@@ -177,6 +178,7 @@ type BillableMetric {
   fieldName: String
   filters: [BillableMetricFilter!]
   id: ID!
+  integrationMappings: [NetsuiteMapping!]
   name: String!
   organization: Organization
   plansCount: Int!
