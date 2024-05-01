@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMappingsQuery, type: :query do
-  subject(:netsuite_collection_mappings_query) { described_class.new(organization:, pagination:, filters:) }
+RSpec.describe IntegrationCollectionMappings::CollectionMappingsQuery, type: :query do
+  subject(:collection_mappings_query) { described_class.new(organization:, pagination:, filters:) }
 
   let(:pagination) { BaseQuery::Pagination.new }
   let(:filters) { BaseQuery::Filters.new(query_filters) }
@@ -37,13 +37,13 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMappingsQuery, t
   end
 
   context 'when filters are empty' do
-    it 'returns all netsuite mappings' do
-      result = netsuite_collection_mappings_query.call
+    it 'returns all mappings' do
+      result = collection_mappings_query.call
 
-      returned_ids = result.netsuite_collection_mappings.pluck(:id)
+      returned_ids = result.integration_collection_mappings.pluck(:id)
 
       aggregate_failures do
-        expect(result.netsuite_collection_mappings.count).to eq(3)
+        expect(result.integration_collection_mappings.count).to eq(3)
         expect(returned_ids).to include(netsuite_collection_mapping_first.id)
         expect(returned_ids).to include(netsuite_collection_mapping_second.id)
         expect(returned_ids).to include(netsuite_collection_mapping_third.id)
@@ -55,13 +55,13 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMappingsQuery, t
   context 'when filtering by integration id' do
     let(:query_filters) { { integration_id: integration.id } }
 
-    it 'returns two netsuite mappings' do
-      result = netsuite_collection_mappings_query.call
+    it 'returns two mappings' do
+      result = collection_mappings_query.call
 
-      returned_ids = result.netsuite_collection_mappings.pluck(:id)
+      returned_ids = result.integration_collection_mappings.pluck(:id)
 
       aggregate_failures do
-        expect(result.netsuite_collection_mappings.count).to eq(2)
+        expect(result.integration_collection_mappings.count).to eq(2)
         expect(returned_ids).to include(netsuite_collection_mapping_first.id)
         expect(returned_ids).to include(netsuite_collection_mapping_second.id)
         expect(returned_ids).not_to include(netsuite_collection_mapping_third.id)
@@ -74,12 +74,12 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMappingsQuery, t
     let(:query_filters) { { mapping_type: 'fallback_item' } }
 
     it 'returns one netsuite mappings' do
-      result = netsuite_collection_mappings_query.call
+      result = collection_mappings_query.call
 
-      returned_ids = result.netsuite_collection_mappings.pluck(:id)
+      returned_ids = result.integration_collection_mappings.pluck(:id)
 
       aggregate_failures do
-        expect(result.netsuite_collection_mappings.count).to eq(1)
+        expect(result.integration_collection_mappings.count).to eq(1)
         expect(returned_ids).to include(netsuite_collection_mapping_first.id)
         expect(returned_ids).not_to include(netsuite_collection_mapping_second.id)
         expect(returned_ids).not_to include(netsuite_collection_mapping_third.id)

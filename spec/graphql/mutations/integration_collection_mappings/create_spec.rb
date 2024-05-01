@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type: :graphql do
+RSpec.describe Mutations::IntegrationCollectionMappings::Create, type: :graphql do
   let(:required_permission) { 'organization:integrations:update' }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }
@@ -14,8 +14,8 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
 
   let(:mutation) do
     <<-GQL
-      mutation($input: CreateNetsuiteIntegrationCollectionMappingInput!) {
-        createNetsuiteIntegrationCollectionMapping(input: $input) {
+      mutation($input: CreateIntegrationCollectionMappingInput!) {
+        createIntegrationCollectionMapping(input: $input) {
           id,
           integrationId,
           mappingType,
@@ -31,7 +31,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
   it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:update'
 
-  it 'creates a netsuite integration collection mapping' do
+  it 'creates an integration collection mapping' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -48,7 +48,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Create, type:
       },
     )
 
-    result_data = result['data']['createNetsuiteIntegrationCollectionMapping']
+    result_data = result['data']['createIntegrationCollectionMapping']
 
     aggregate_failures do
       expect(result_data['id']).to be_present

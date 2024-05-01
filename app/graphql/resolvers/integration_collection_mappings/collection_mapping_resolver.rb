@@ -2,7 +2,7 @@
 
 module Resolvers
   module IntegrationCollectionMappings
-    class NetsuiteCollectionMappingResolver < Resolvers::BaseResolver
+    class CollectionMappingResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
 
@@ -12,10 +12,10 @@ module Resolvers
 
       argument :id, ID, required: true, description: 'Unique ID of the integration collection mappings'
 
-      type Types::IntegrationCollectionMappings::Netsuite::Object, null: true
+      type Types::IntegrationCollectionMappings::Object, null: true
 
       def resolve(id: nil)
-        mapping = ::IntegrationCollectionMappings::NetsuiteCollectionMapping
+        mapping = ::IntegrationCollectionMappings::BaseCollectionMapping
           .joins(:integration)
           .where(id:, integration: { organization: current_organization }).first
 

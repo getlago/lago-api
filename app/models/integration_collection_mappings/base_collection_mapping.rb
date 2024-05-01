@@ -14,5 +14,7 @@ module IntegrationCollectionMappings
     enum mapping_type: MAPPING_TYPES
 
     validates :mapping_type, uniqueness: { scope: :integration_id }
+
+    settings_accessors :external_id, :external_account_code, :external_name
   end
 end

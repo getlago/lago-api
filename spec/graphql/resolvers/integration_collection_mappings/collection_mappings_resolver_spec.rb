@@ -2,12 +2,12 @@
 
 require 'rails_helper'
 
-RSpec.describe Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingsResolver, type: :graphql do
+RSpec.describe Resolvers::IntegrationCollectionMappings::CollectionMappingsResolver, type: :graphql do
   let(:required_permission) { 'organization:integrations:view' }
   let(:query) do
     <<~GQL
       query {
-        netsuiteCollectionMappings(limit: 5) {
+        collectionMappings(limit: 5) {
           collection { id }
           metadata { currentPage, totalCount }
         }
@@ -26,7 +26,7 @@ RSpec.describe Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappi
   it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:view'
 
-  it 'returns a list of netsuite mappings' do
+  it 'returns a list of mappings' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -34,14 +34,14 @@ RSpec.describe Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappi
       query:,
     )
 
-    netsuite_collection_mappings_response = result['data']['netsuiteCollectionMappings']
+    integration_collection_mappings_response = result['data']['collectionMappings']
 
     aggregate_failures do
-      expect(netsuite_collection_mappings_response['collection'].count).to eq(1)
-      expect(netsuite_collection_mappings_response['collection'].first['id']).to eq(netsuite_collection_mapping.id)
+      expect(integration_collection_mappings_response['collection'].count).to eq(1)
+      expect(integration_collection_mappings_response['collection'].first['id']).to eq(netsuite_collection_mapping.id)
 
-      expect(netsuite_collection_mappings_response['metadata']['currentPage']).to eq(1)
-      expect(netsuite_collection_mappings_response['metadata']['totalCount']).to eq(1)
+      expect(integration_collection_mappings_response['metadata']['currentPage']).to eq(1)
+      expect(integration_collection_mappings_response['metadata']['totalCount']).to eq(1)
     end
   end
 end

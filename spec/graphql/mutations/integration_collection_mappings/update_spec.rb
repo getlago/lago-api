@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Update, type: :graphql do
+RSpec.describe Mutations::IntegrationCollectionMappings::Update, type: :graphql do
   let(:required_permission) { 'organization:integrations:update' }
   let(:integration_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
@@ -15,8 +15,8 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Update, type:
 
   let(:mutation) do
     <<-GQL
-      mutation($input: UpdateNetsuiteIntegrationCollectionMappingInput!) {
-        updateNetsuiteIntegrationCollectionMapping(input: $input) {
+      mutation($input: UpdateIntegrationCollectionMappingInput!) {
+        updateIntegrationCollectionMapping(input: $input) {
           id,
           integrationId,
           mappingType,
@@ -50,7 +50,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Netsuite::Update, type:
       },
     )
 
-    result_data = result['data']['updateNetsuiteIntegrationCollectionMapping']
+    result_data = result['data']['updateIntegrationCollectionMapping']
 
     aggregate_failures do
       expect(result_data['integrationId']).to eq(integration.id)

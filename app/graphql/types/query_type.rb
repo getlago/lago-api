@@ -13,6 +13,8 @@ module Types
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
+    field :collection_mapping, resolver: Resolvers::IntegrationCollectionMappings::CollectionMappingResolver
+    field :collection_mappings, resolver: Resolvers::IntegrationCollectionMappings::CollectionMappingsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
     field :credit_note, resolver: Resolvers::CreditNoteResolver
@@ -44,10 +46,6 @@ module Types
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
-    field :netsuite_collection_mapping,
-          resolver: Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingResolver
-    field :netsuite_collection_mappings,
-          resolver: Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :payment_provider, resolver: Resolvers::PaymentProviderResolver

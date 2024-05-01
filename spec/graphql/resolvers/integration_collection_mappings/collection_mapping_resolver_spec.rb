@@ -2,12 +2,12 @@
 
 require 'rails_helper'
 
-RSpec.describe Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingResolver, type: :graphql do
+RSpec.describe Resolvers::IntegrationCollectionMappings::CollectionMappingResolver, type: :graphql do
   let(:required_permission) { 'organization:integrations:view' }
   let(:query) do
     <<~GQL
-      query($netsuiteCollectionMappingId: ID!) {
-        netsuiteCollectionMapping(id: $netsuiteCollectionMappingId) {
+      query($collectionMappingId: ID!) {
+        collectionMapping(id: $collectionMappingId) {
           id
           mappingType
           externalId
@@ -37,10 +37,10 @@ RSpec.describe Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappi
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: { netsuiteCollectionMappingId: netsuite_collection_mapping.id },
+      variables: { collectionMappingId: netsuite_collection_mapping.id },
     )
 
-    integration_mapping_response = result['data']['netsuiteCollectionMapping']
+    integration_mapping_response = result['data']['collectionMapping']
 
     aggregate_failures do
       expect(integration_mapping_response['id']).to eq(netsuite_collection_mapping.id)
@@ -59,7 +59,7 @@ RSpec.describe Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappi
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: { netsuiteCollectionMappingId: '123456' },
+        variables: { collectionMappingId: '123456' },
       )
 
       expect_graphql_error(

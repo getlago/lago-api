@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe IntegrationCollectionMappings::Netsuite::CreateService, type: :service do
+RSpec.describe IntegrationCollectionMappings::CreateService, type: :service do
   let(:service) { described_class.new(membership.user) }
 
   let(:integration) { create(:netsuite_integration, organization:) }
@@ -53,8 +53,8 @@ RSpec.describe IntegrationCollectionMappings::Netsuite::CreateService, type: :se
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:integration]).to eq(['relation_must_exist'])
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq('integration_not_found')
         end
       end
     end
