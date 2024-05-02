@@ -8,7 +8,7 @@ Subscription.all.find_each do |subscription|
     Invoices::SubscriptionService.call(
       subscriptions: [subscription],
       timestamp: Time.current - offset.months + 1.day,
-      recurring: true,
+      invoicing_reason: :subscription_periodic,
     )
   end
 end

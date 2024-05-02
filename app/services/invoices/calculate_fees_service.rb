@@ -101,7 +101,7 @@ module Invoices
       subscription
         .plan
         .charges
-        .includes(:billable_metric)
+        .includes(:billable_metric, filters: { values: :billable_metric_filter })
         .joins(:billable_metric)
         .where(invoiceable: true)
         .where
