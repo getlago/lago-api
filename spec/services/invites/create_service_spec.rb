@@ -13,6 +13,7 @@ RSpec.describe Invites::CreateService, type: :service do
       {
         email: Faker::Internet.email,
         current_organization: organization,
+        role: 'admin',
       }
     end
 
@@ -23,12 +24,24 @@ RSpec.describe Invites::CreateService, type: :service do
 
     context 'with validation error' do
       it 'returns an error' do
-        result = create_service.call(current_organization: organization)
+        result = create_service.call(current_organization: organization, role: 'admin')
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:email]).to eq(['invalid_email_format'])
+        end
+      end
+    end
+
+    context 'with missing role' do
+      it 'returns an error' do
+        result = create_service.call(current_organization: organization, email: Faker::Internet.email)
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:role]).to eq(['invalid_role'])
         end
       end
     end

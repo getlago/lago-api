@@ -14,6 +14,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
   end
   let(:organization) { membership.organization }
   let(:email) { Faker::Internet.email }
+  let(:role) { 'finance' }
 
   let(:mutation) do
     <<~GQL
@@ -22,6 +23,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
           id
           token
           email
+          role
         }
       }
     GQL
@@ -40,6 +42,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       variables: {
         input: {
           email:,
+          role:,
         },
       },
     )
@@ -47,6 +50,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
     data = result['data']['createInvite']
 
     expect(data['email']).to eq(email)
+    expect(data['role']).to eq(role)
     expect(data['token']).to be_present
   end
 
@@ -59,6 +63,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       variables: {
         input: {
           email: revoked_membership.user.email,
+          role:,
         },
       },
     )
@@ -80,6 +85,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       variables: {
         input: {
           email:,
+          role:,
         },
       },
     )
@@ -98,6 +104,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       variables: {
         input: {
           email: membership.user.email,
+          role:,
         },
       },
     )

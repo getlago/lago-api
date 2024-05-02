@@ -12,6 +12,7 @@ module Mutations
       description 'Creates a new Invite'
 
       argument :email, String, required: true
+      argument :role, Types::Memberships::RoleEnum, required: true
 
       type Types::Invites::Object
 

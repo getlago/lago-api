@@ -7,11 +7,7 @@ module Invites
       return result.not_found_failure!(resource: 'invite') unless invite
 
       ActiveRecord::Base.transaction do
-        result = UsersService.new.register_from_invite(
-          args[:email],
-          args[:password],
-          invite.organization_id,
-        )
+        result = UsersService.new.register_from_invite(invite, args[:password])
 
         invite.recipient = result.membership
 

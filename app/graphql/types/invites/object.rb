@@ -11,6 +11,7 @@ module Types
       field :id, ID, null: false
 
       field :email, String, null: false
+      field :role, Types::Memberships::RoleEnum, null: false
       field :status, Types::Invites::StatusTypeEnum, null: false
       field :token, String, null: false
 

@@ -5,6 +5,7 @@ module Invites
     def valid?
       valid_invite?
       valid_user?
+      valid_role?
 
       if errors?
         result.validation_failure!(errors:)
@@ -30,6 +31,12 @@ module Invites
         .exists?
 
       add_error(field: :email, error_code: 'email_already_used')
+    end
+
+    def valid_role?
+      return true if args[:role].present? && Membership::ROLES[args[:role].to_sym].present?
+
+      add_error(field: :role, error_code: 'invalid_role')
     end
   end
 end

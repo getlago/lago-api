@@ -621,6 +621,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_02_075803) do
     t.datetime "revoked_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "role", default: 0, null: false
     t.index ["membership_id"], name: "index_invites_on_membership_id"
     t.index ["organization_id"], name: "index_invites_on_organization_id"
     t.index ["token"], name: "index_invites_on_token", unique: true

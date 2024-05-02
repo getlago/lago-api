@@ -77,12 +77,35 @@ RSpec.describe UsersService, type: :service do
   end
 
   describe 'register_from_invite' do
-    it 'creates an organization, user and membership' do
-      result = user_service.register('email', 'password', 'organization_name')
-      expect(result.user).to be_present
-      expect(result.membership).to be_present
-      expect(result.organization).to be_present
-      expect(result.token).to be_present
+    let(:email) { Faker::Internet.email }
+
+    context 'when user already exists' do
+      it 'creates user and membership if user doesn\'t exist' do
+        create(:user, email:)
+        invite = create(:invite, email:)
+
+        result = user_service.register_from_invite(invite, nil)
+
+        expect(result.user).to be_persisted
+        expect(result.user.email).to eq email
+        expect(result.membership).to be_persisted
+        expect(result.organization).to eq invite.organization
+        expect(result.token).to be_present
+      end
+    end
+
+    context 'when user doesn\'t exist' do
+      it 'creates user and membership if user doesn\'t exist' do
+        invite = create(:invite, email:)
+
+        result = user_service.register_from_invite(invite, 'password')
+
+        expect(result.user).to be_persisted
+        expect(result.user.email).to eq email
+        expect(result.membership).to be_present
+        expect(result.organization).to eq invite.organization
+        expect(result.token).to be_present
+      end
     end
   end
 
