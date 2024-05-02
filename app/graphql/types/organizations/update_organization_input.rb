@@ -10,7 +10,7 @@ module Types
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
       argument :logo, String, required: false
-      argument :tax_identification_number, String, required: false
+      argument :tax_identification_number, String, required: false, permission: 'organization:taxes:view'
 
       argument :address_line1, String, required: false
       argument :address_line2, String, required: false
@@ -20,7 +20,7 @@ module Types
       argument :state, String, required: false
       argument :zipcode, String, required: false
 
-      argument :webhook_url, String, required: false
+      argument :webhook_url, String, required: false, permission: 'developers:manage'
 
       argument :timezone, Types::TimezoneEnum, required: false
 
@@ -29,8 +29,8 @@ module Types
       argument :document_number_prefix, String, required: false
       argument :document_numbering, Types::Organizations::DocumentNumberingEnum, required: false
 
-      argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false
-      argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false
+      argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: 'organization:invoices:view' # rubocop:disable Layout/LineLength
+      argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: 'organization:emails:view' # rubocop:disable Layout/LineLength
     end
   end
 end

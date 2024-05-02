@@ -10,7 +10,9 @@ module Types
       cleaned_kwargs = ruby_kwargs.dup
 
       self.class.arguments(context).each_value do |arg_defn|
-        if arg_defn.permission && !context.dig(:permissions, arg_defn.permission)
+        next if arg_defn.permissions.blank?
+
+        if arg_defn.permissions.none? { |p| context.dig(:permissions, p) }
           cleaned_arguments.delete(arg_defn.keyword)
           cleaned_kwargs.delete(arg_defn.keyword)
         end
