@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
+ActiveRecord::Schema[7.0].define(version: 2024_05_02_075803) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -135,6 +135,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.index ["billable_metric_id"], name: "index_active_metric_filters", where: "(deleted_at IS NULL)"
     t.index ["billable_metric_id"], name: "index_billable_metric_filters_on_billable_metric_id"
     t.index ["deleted_at"], name: "index_billable_metric_filters_on_deleted_at"
   end
@@ -191,6 +192,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
     t.datetime "deleted_at"
     t.string "values", default: [], null: false, array: true
     t.index ["billable_metric_filter_id"], name: "index_charge_filter_values_on_billable_metric_filter_id"
+    t.index ["charge_filter_id"], name: "index_active_charge_filter_values", where: "(deleted_at IS NULL)"
     t.index ["charge_filter_id"], name: "index_charge_filter_values_on_charge_filter_id"
     t.index ["deleted_at"], name: "index_charge_filter_values_on_deleted_at"
   end
@@ -202,6 +204,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_04_30_133150) do
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
     t.string "invoice_display_name"
+    t.index ["charge_id"], name: "index_active_charge_filters", where: "(deleted_at IS NULL)"
     t.index ["charge_id"], name: "index_charge_filters_on_charge_id"
     t.index ["deleted_at"], name: "index_charge_filters_on_deleted_at"
   end
