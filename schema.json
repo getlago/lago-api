@@ -456,7 +456,7 @@
                   "name": null,
                   "ofType": {
                     "kind": "OBJECT",
-                    "name": "NetsuiteMapping",
+                    "name": "Mapping",
                     "ofType": null
                   }
                 }
@@ -1669,7 +1669,7 @@
                   "name": null,
                   "ofType": {
                     "kind": "OBJECT",
-                    "name": "NetsuiteMapping",
+                    "name": "Mapping",
                     "ofType": null
                   }
                 }

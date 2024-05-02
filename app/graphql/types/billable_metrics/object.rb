@@ -30,7 +30,7 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :integration_mappings, [Types::IntegrationMappings::Netsuite::Object], null: true
+      field :integration_mappings, [Types::IntegrationMappings::Object], null: true
 
       def subscriptions_count
         object.plans.joins(:subscriptions).count
