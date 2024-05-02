@@ -15,6 +15,7 @@ module Webhooks
           root_name: object_type,
           provider_error: options[:provider_error],
           provider: options[:provider],
+          provider_code: options[:provider_code],
         )
       end
 

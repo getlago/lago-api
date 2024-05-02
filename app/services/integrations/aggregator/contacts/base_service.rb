@@ -30,6 +30,7 @@ module Integrations
             'customer.accounting_provider_error',
             customer,
             provider:,
+            provider_code: integration.code,
             provider_error: {
               message:,
               error_code: code,

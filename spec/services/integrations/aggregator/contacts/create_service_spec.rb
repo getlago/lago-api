@@ -103,6 +103,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
             'customer.accounting_provider_error',
             customer,
             provider: 'netsuite',
+            provider_code: integration.code,
             provider_error: {
               message: 'submitFields: Missing a required argument: type',
               error_code: 'action_script_runtime_error',
