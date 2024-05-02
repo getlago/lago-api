@@ -30,7 +30,11 @@ module Types
     field :google_auth_url, resolver: Resolvers::Auth::Google::AuthUrlResolver
     field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
     field :integration, resolver: Resolvers::IntegrationResolver
+    field :integration_collection_mapping, resolver: Resolvers::IntegrationCollectionMappingResolver
+    field :integration_collection_mappings, resolver: Resolvers::IntegrationCollectionMappingsResolver
     field :integration_items, resolver: Resolvers::IntegrationItemsResolver
+    field :integration_mapping, resolver: Resolvers::IntegrationMappingResolver
+    field :integration_mappings, resolver: Resolvers::IntegrationMappingsResolver
     field :integration_subsidiaries, resolver: Resolvers::Integrations::SubsidiariesResolver
     field :integrations, resolver: Resolvers::IntegrationsResolver
     field :invite, resolver: Resolvers::InviteResolver
@@ -42,12 +46,6 @@ module Types
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
-    field :netsuite_collection_mapping,
-          resolver: Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingResolver
-    field :netsuite_collection_mappings,
-          resolver: Resolvers::IntegrationCollectionMappings::NetsuiteCollectionMappingsResolver
-    field :netsuite_mapping, resolver: Resolvers::IntegrationMappings::NetsuiteMappingResolver
-    field :netsuite_mappings, resolver: Resolvers::IntegrationMappings::NetsuiteMappingsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :payment_provider, resolver: Resolvers::PaymentProviderResolver
