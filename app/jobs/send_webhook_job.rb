@@ -21,6 +21,8 @@ class SendWebhookJob < ApplicationJob
     'event.error' => Webhooks::Events::ErrorService,
     'events.errors' => Webhooks::Events::ValidationErrorsService,
     'fee.created' => Webhooks::Fees::PayInAdvanceCreatedService,
+    'customer.accounting_provider_created' => Webhooks::Integrations::CustomerCreatedService,
+    'customer.accounting_provider_error' => Webhooks::Integrations::CustomerErrorService,
     'customer.payment_provider_created' => Webhooks::PaymentProviders::CustomerCreatedService,
     'customer.payment_provider_error' => Webhooks::PaymentProviders::CustomerErrorService,
     'customer.checkout_url_generated' => Webhooks::PaymentProviders::CustomerCheckoutService,
