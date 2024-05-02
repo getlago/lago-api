@@ -2,12 +2,12 @@
 
 require 'rails_helper'
 
-RSpec.describe Resolvers::IntegrationCollectionMappings::CollectionMappingsResolver, type: :graphql do
+RSpec.describe Resolvers::IntegrationCollectionMappingsResolver, type: :graphql do
   let(:required_permission) { 'organization:integrations:view' }
   let(:query) do
     <<~GQL
       query {
-        collectionMappings(limit: 5) {
+        integrationCollectionMappings(limit: 5) {
           collection { id }
           metadata { currentPage, totalCount }
         }
@@ -34,7 +34,7 @@ RSpec.describe Resolvers::IntegrationCollectionMappings::CollectionMappingsResol
       query:,
     )
 
-    integration_collection_mappings_response = result['data']['collectionMappings']
+    integration_collection_mappings_response = result['data']['integrationCollectionMappings']
 
     aggregate_failures do
       expect(integration_collection_mappings_response['collection'].count).to eq(1)

@@ -13,8 +13,6 @@ module Types
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
-    field :collection_mapping, resolver: Resolvers::IntegrationCollectionMappings::CollectionMappingResolver
-    field :collection_mappings, resolver: Resolvers::IntegrationCollectionMappings::CollectionMappingsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
     field :credit_note, resolver: Resolvers::CreditNoteResolver
@@ -32,9 +30,11 @@ module Types
     field :google_auth_url, resolver: Resolvers::Auth::Google::AuthUrlResolver
     field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
     field :integration, resolver: Resolvers::IntegrationResolver
+    field :integration_collection_mapping, resolver: Resolvers::IntegrationCollectionMappingResolver
+    field :integration_collection_mappings, resolver: Resolvers::IntegrationCollectionMappingsResolver
     field :integration_items, resolver: Resolvers::IntegrationItemsResolver
-    field :integration_mapping, resolver: Resolvers::IntegrationMappings::MappingResolver
-    field :integration_mappings, resolver: Resolvers::IntegrationMappings::MappingsResolver
+    field :integration_mapping, resolver: Resolvers::IntegrationMappingResolver
+    field :integration_mappings, resolver: Resolvers::IntegrationMappingsResolver
     field :integration_subsidiaries, resolver: Resolvers::Integrations::SubsidiariesResolver
     field :integrations, resolver: Resolvers::IntegrationsResolver
     field :invite, resolver: Resolvers::InviteResolver

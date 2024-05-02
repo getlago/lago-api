@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe IntegrationCollectionMappings::CollectionMappingsQuery, type: :query do
+RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
   subject(:collection_mappings_query) { described_class.new(organization:, pagination:, filters:) }
 
   let(:pagination) { BaseQuery::Pagination.new }

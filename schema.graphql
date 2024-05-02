@@ -5095,21 +5095,6 @@ type Query {
   ): BillableMetricCollection!
 
   """
-  Query a single integration collection mapping
-  """
-  collectionMapping(
-    """
-    Unique ID of the integration collection mappings
-    """
-    id: ID!
-  ): CollectionMapping
-
-  """
-  Query integration collection mappings
-  """
-  collectionMappings(integrationId: ID, limit: Int, mappingType: MappingTypeEnum, page: Int): CollectionMappingCollection
-
-  """
   Query a single coupon of an organization
   """
   coupon(
@@ -5248,6 +5233,21 @@ type Query {
     """
     id: ID
   ): Integration
+
+  """
+  Query a single integration collection mapping
+  """
+  integrationCollectionMapping(
+    """
+    Unique ID of the integration collection mappings
+    """
+    id: ID!
+  ): CollectionMapping
+
+  """
+  Query integration collection mappings
+  """
+  integrationCollectionMappings(integrationId: ID, limit: Int, mappingType: MappingTypeEnum, page: Int): CollectionMappingCollection
 
   """
   Query integration items of an integration
