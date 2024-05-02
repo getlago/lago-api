@@ -2801,7 +2801,7 @@ type CurrentOrganization {
   addressLine1: String
   addressLine2: String
   adyenPaymentProviders: [AdyenProvider!]
-  apiKey: String!
+  apiKey: String
   billingConfiguration: OrganizationBillingConfiguration
   city: String
   country: CountryCode
