@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_05_02_075803) do
+ActiveRecord::Schema[7.0].define(version: 2024_05_02_095122) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -652,6 +652,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_02_075803) do
     t.index ["invoice_id", "subscription_id"], name: "index_invoice_subscriptions_on_invoice_id_and_subscription_id", unique: true, where: "(created_at >= '2023-11-23 00:00:00'::timestamp without time zone)"
     t.index ["invoice_id"], name: "index_invoice_subscriptions_on_invoice_id"
     t.index ["subscription_id", "charges_from_datetime", "charges_to_datetime"], name: "index_invoice_subscriptions_on_charges_from_and_to_datetime", unique: true, where: "((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))"
+    t.index ["subscription_id", "from_datetime", "to_datetime"], name: "index_invoice_subscriptions_boundaries"
     t.index ["subscription_id", "invoicing_reason"], name: "index_unique_starting_subscription_invoice", unique: true, where: "(invoicing_reason = 'subscription_starting'::subscription_invoicing_reason)"
     t.index ["subscription_id", "invoicing_reason"], name: "index_unique_terminating_subscription_invoice", unique: true, where: "(invoicing_reason = 'subscription_terminating'::subscription_invoicing_reason)"
     t.index ["subscription_id"], name: "index_invoice_subscriptions_on_subscription_id"
@@ -918,6 +919,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_02_075803) do
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
     t.index ["external_id"], name: "index_subscriptions_on_external_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
+    t.index ["started_at", "ending_at"], name: "index_subscriptions_on_started_at_and_ending_at"
     t.index ["started_at"], name: "index_subscriptions_on_started_at"
     t.index ["status"], name: "index_subscriptions_on_status"
   end
