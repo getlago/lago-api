@@ -10,7 +10,6 @@ module BillableMetrics
         @subscription = subscription
 
         @filters = filters
-        @group = filters[:group]
         @charge_filter = filters[:charge_filter]
         @event = filters[:event]
         @grouped_by = filters[:grouped_by]
@@ -49,7 +48,6 @@ module BillableMetrics
                     :charge,
                     :subscription,
                     :filters,
-                    :group,
                     :charge_filter,
                     :event,
                     :boundaries,
@@ -125,7 +123,6 @@ module BillableMetrics
           .order(timestamp: :desc, created_at: :desc)
 
         query = query.where.not(event_id: event.id) if event.present?
-        query = query.where(group_id: group.id) if group
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter
 
         query.first

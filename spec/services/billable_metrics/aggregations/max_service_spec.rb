@@ -17,13 +17,14 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { group:, grouped_by: } }
+  let(:filters) { { grouped_by:, matching_filters:, ignored_filters: } }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
-  let(:group) { nil }
   let(:grouped_by) { nil }
+  let(:matching_filters) { {} }
+  let(:ignored_filters) { [] }
 
   let(:billable_metric) do
     create(
@@ -181,10 +182,8 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
     end
   end
 
-  context 'when group_id is given' do
-    let(:group) do
-      create(:group, billable_metric_id: billable_metric.id, key: 'region', value: 'europe')
-    end
+  context 'when filters are given' do
+    let(:matching_filters) { { region: ['europe'] } }
 
     let(:events) do
       [

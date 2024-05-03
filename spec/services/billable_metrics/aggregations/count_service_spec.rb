@@ -17,13 +17,16 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { group:, event: pay_in_advance_event, grouped_by: } }
+  let(:filters) do
+    { event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters: }
+  end
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
-  let(:group) { nil }
   let(:grouped_by) { nil }
+  let(:matching_filters) { {} }
+  let(:ignored_filters) { [] }
 
   let(:billable_metric) do
     create(
@@ -77,20 +80,8 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     end
   end
 
-  context 'when group_id is given' do
-    let(:parent_group) do
-      create(:group, billable_metric_id: billable_metric.id, key: 'cloud', value: 'AWS')
-    end
-
-    let(:group) do
-      create(
-        :group,
-        billable_metric_id: billable_metric.id,
-        key: 'region',
-        value: 'europe',
-        parent_group_id: parent_group.id,
-      )
-    end
+  context 'when filters are given' do
+    let(:matching_filters) { { cloud: ['AWS'], region: ['europe'] } }
 
     let(:event_list) do
       [

@@ -18,13 +18,14 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { group:, grouped_by: } }
+  let(:filters) { { grouped_by:, matching_filters:, ignored_filters: } }
 
   let(:subscription) { create(:subscription, started_at: DateTime.parse('2023-04-01 22:22:22')) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
-  let(:group) { nil }
   let(:grouped_by) { nil }
+  let(:matching_filters) { nil }
+  let(:ignored_filters) { nil }
 
   let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
 
@@ -236,8 +237,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     end
   end
 
-  context 'with group' do
-    let(:group) { create(:group, billable_metric:, key: 'region', value: 'europe') }
+  context 'with filters' do
+    let(:matching_filters) { { region: ['europe'] } }
 
     let(:events_values) do
       [
@@ -491,8 +492,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       end
     end
 
-    context 'with group' do
-      let(:group) { create(:group, billable_metric:, key: 'region', value: 'europe') }
+    context 'with filters' do
+      let(:matching_filters) { { region: ['europe'] } }
 
       let(:events_values) do
         [

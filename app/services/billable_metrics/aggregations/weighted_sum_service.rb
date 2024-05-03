@@ -86,7 +86,6 @@ module BillableMetrics
           .where(grouped_by: {})
           .order(added_at: :desc)
 
-        quantified_events = quantified_events.where(group_id: group.id) if group
         quantified_events = quantified_events.where(charge_filter_id: charge_filter.id) if charge_filter
         quantified_event = quantified_events.first
 
@@ -130,7 +129,6 @@ module BillableMetrics
           quantified_events = quantified_events.where('grouped_by?:key', key:)
         end
 
-        quantified_events = quantified_events.where(group_id: group.id) if group
         quantified_events = quantified_events.where(charge_filter_id: charge_filter.id) if charge_filter
 
         if quantified_events.all.any?

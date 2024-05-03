@@ -9,7 +9,6 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       subscription:,
       boundaries:,
       filters: {
-        group:,
         grouped_by:,
         grouped_by_values:,
         matching_filters:,
@@ -35,7 +34,6 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     }
   end
 
-  let(:group) { nil }
   let(:grouped_by) { nil }
   let(:grouped_by_values) { nil }
   let(:matching_filters) { {} }
@@ -58,7 +56,6 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       )
 
       if i.even?
-        event.properties[group.key] = group.value if group
         matching_filters.each { |key, values| event.properties[key] = values.first }
 
         if grouped_by_values.present?
@@ -89,14 +86,6 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
   describe '#events' do
     it 'returns a list of events' do
       expect(event_store.events.count).to eq(5)
-    end
-
-    context 'with group' do
-      let(:group) { create(:group, billable_metric:) }
-
-      it 'returns a list of events' do
-        expect(event_store.events.count).to eq(3)
-      end
     end
 
     context 'with grouped_by_values' do
@@ -973,7 +962,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
 
     context 'with group' do
-      let(:group) { create(:group, billable_metric:, key: 'region', value: 'europe') }
+      let(:matching_filters) { { region: ['europe'] } }
 
       let(:events_values) do
         [
