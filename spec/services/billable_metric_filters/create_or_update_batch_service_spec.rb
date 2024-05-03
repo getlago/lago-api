@@ -74,12 +74,12 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       [
         {
           key: 'region',
-          values: %w[Europe US Africa],
+          values: %w[Europe US Asia Africa],
         },
       ]
     end
 
-    let(:filter) { create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[Europe US]) }
+    let(:filter) { create(:billable_metric_filter, billable_metric:, key: 'region', values: %w[Europe US Asia]) }
 
     before { filter }
 
@@ -88,7 +88,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
 
       expect(filter.reload).to have_attributes(
         key: 'region',
-        values: %w[Europe US Africa],
+        values: %w[Europe US Asia Africa],
       )
     end
 
