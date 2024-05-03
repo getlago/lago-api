@@ -26,11 +26,15 @@ module BillableMetricFilters
           if filter.persisted?
             deleted_values = filter.values - filter_param[:values]
 
-            filter_values = filter.filter_values
-              .where(billable_metric_filter_id: filter.id)
-              .where(values: deleted_values)
+            if deleted_values.present?
+              filter_values = filter.filter_values
+                .where(
+                  deleted_values.map { '? = ANY(values)' }.join(' OR '),
+                  *deleted_values,
+                )
 
-            filter_values.each { discard_filter_value(_1) }
+              filter_values.each { discard_filter_value(_1) }
+            end
           end
 
           filter.values = (filter_param[:values] || []).uniq
