@@ -13,5 +13,14 @@ module IntegrationCustomers
     validates :customer_id, uniqueness: { scope: :type }
 
     settings_accessors :sync_with_provider
+
+    def self.customer_type(type)
+      case type
+      when 'netsuite'
+        'IntegrationCustomers::NetsuiteCustomer'
+      else
+        raise(NotImplementedError)
+      end
+    end
   end
 end

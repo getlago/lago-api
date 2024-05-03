@@ -22,5 +22,14 @@ module Integrations
 
     validates :code, uniqueness: { scope: :organization_id }
     validates :name, presence: true
+
+    def self.integration_type(type)
+      case type
+      when 'netsuite'
+        'Integrations::NetsuiteIntegration'
+      else
+        raise(NotImplementedError)
+      end
+    end
   end
 end
