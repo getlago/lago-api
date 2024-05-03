@@ -12,6 +12,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
           premium
           memberships {
             role
+            permissions { invoicesView }
             status
             organization {
               name
@@ -36,6 +37,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
       expect(result['data']['currentUser']['id']).to eq(user.id)
       expect(result['data']['currentUser']['premium']).to be_falsey
       expect(result['data']['currentUser']['memberships'][0]['role']).to eq 'admin'
+      expect(result['data']['currentUser']['memberships'][0]['permissions']).to eq({ 'invoicesView' => true })
       expect(result['data']['currentUser']['memberships'][0]['organization']['name']).not_to be_empty
     end
   end
