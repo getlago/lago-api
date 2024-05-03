@@ -68,7 +68,7 @@ module Clockwork
 
   every(1.hour, 'schedule:post_validate_events', at: '*:05') do
     Clock::EventsValidationJob.perform_later
-  rescue StandardError => e
+  rescue => e
     Sentry.capture_exception(e)
   end
 end

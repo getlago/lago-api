@@ -7,7 +7,7 @@ module Clock
     def perform
       Subscription
         .joins(customer: :organization)
-        .joins('left join webhooks on subscriptions.id = webhooks.object_id and '\
+        .joins('left join webhooks on subscriptions.id = webhooks.object_id and ' \
                "webhooks.webhook_type = 'subscription.termination_alert'")
         .active
         .where(

@@ -92,6 +92,6 @@ class InvoiceSubscription < ApplicationRecord
     subscription.plan.amount_currency
   end
 
-  alias charge_amount_currency total_amount_currency
-  alias subscription_amount_currency total_amount_currency
+  alias_method :charge_amount_currency, :total_amount_currency
+  alias_method :subscription_amount_currency, :total_amount_currency
 end

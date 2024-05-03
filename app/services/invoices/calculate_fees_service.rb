@@ -43,7 +43,7 @@ module Invoices
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents) -
-                                                         invoice.coupons_amount_cents
+          invoice.coupons_amount_cents
 
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
         Invoices::ComputeAmountsFromFees.call(invoice:)
@@ -117,8 +117,8 @@ module Invoices
     def should_not_create_charge_fee?(charge, subscription)
       if charge.pay_in_advance?
         condition = charge.billable_metric.recurring? &&
-                    subscription.terminated? &&
-                    (subscription.upgraded? || subscription.next_subscription.nil?)
+          subscription.terminated? &&
+          (subscription.upgraded? || subscription.next_subscription.nil?)
 
         return condition
       end
@@ -204,8 +204,8 @@ module Invoices
 
       # We should take a look at charges if subscription is created in the past and if it is not upgrade
       return true if subscription.plan.pay_in_advance? &&
-                     subscription.started_in_past? &&
-                     subscription.previous_subscription.nil?
+        subscription.started_in_past? &&
+        subscription.previous_subscription.nil?
 
       true
     end

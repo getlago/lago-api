@@ -129,8 +129,8 @@ module Fees
 
     def cache_aggregation_result(aggregation_result:, charge_filter:)
       return unless aggregation_result.current_aggregation.present? ||
-                    aggregation_result.max_aggregation.present? ||
-                    aggregation_result.max_aggregation_with_proration.present?
+        aggregation_result.max_aggregation.present? ||
+        aggregation_result.max_aggregation_with_proration.present?
 
       CachedAggregation.create!(
         organization_id: event.organization_id,

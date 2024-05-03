@@ -4,16 +4,16 @@ module Subscriptions
   class DatesService
     def self.new_instance(subscription, billing_at, current_usage: false)
       klass = case subscription.plan.interval&.to_sym
-              when :weekly
-                Subscriptions::Dates::WeeklyService
-              when :monthly
-                Subscriptions::Dates::MonthlyService
-              when :yearly
-                Subscriptions::Dates::YearlyService
-              when :quarterly
-                Subscriptions::Dates::QuarterlyService
-              else
-                raise(NotImplementedError)
+      when :weekly
+        Subscriptions::Dates::WeeklyService
+      when :monthly
+        Subscriptions::Dates::MonthlyService
+      when :yearly
+        Subscriptions::Dates::YearlyService
+      when :quarterly
+        Subscriptions::Dates::QuarterlyService
+      else
+        raise(NotImplementedError)
       end
 
       klass.new(subscription, billing_at, current_usage)

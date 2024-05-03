@@ -3,7 +3,9 @@
 class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
   # NOTE: redifine models to prevent schema issue in the future
   class Subscription < ApplicationRecord; end
+
   class CouponTarget < ApplicationRecord; end
+
   class Charge < ApplicationRecord; end
 
   class Coupon < ApplicationRecord

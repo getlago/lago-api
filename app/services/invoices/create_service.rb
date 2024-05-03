@@ -39,7 +39,7 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue Sequenced::SequenceError
       raise
-    rescue StandardError => e
+    rescue => e
       result.fail_with_error!(e)
     end
 

@@ -246,12 +246,12 @@ module Customers
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
       provider_class = case billing_configuration[:payment_provider] || customer.payment_provider
-                       when 'stripe'
-                         PaymentProviderCustomers::StripeCustomer
-                       when 'gocardless'
-                         PaymentProviderCustomers::GocardlessCustomer
-                       when 'adyen'
-                         PaymentProviderCustomers::AdyenCustomer
+      when 'stripe'
+        PaymentProviderCustomers::StripeCustomer
+      when 'gocardless'
+        PaymentProviderCustomers::GocardlessCustomer
+      when 'adyen'
+        PaymentProviderCustomers::AdyenCustomer
       end
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(

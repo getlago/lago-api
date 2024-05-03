@@ -58,6 +58,7 @@ module Sequenced
       self.sequenced_lock_key = lock_key
     end
 
+    # rubocop:disable ThreadSafety/InstanceVariableInClassMethod
     def sequenced_options=(options)
       @sequenced_options = options
     end
@@ -73,6 +74,7 @@ module Sequenced
     def sequenced_lock_key
       @sequenced_lock_key
     end
+    # rubocop:enable ThreadSafety/InstanceVariableInClassMethod
   end
 
   class SequenceError < StandardError; end

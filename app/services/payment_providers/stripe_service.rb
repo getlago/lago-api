@@ -149,7 +149,7 @@ module PaymentProviders
         result.raise_if_error! || result
       when 'customer.updated'
         payment_method_id = event.data.object.invoice_settings.default_payment_method ||
-                            event.data.object.default_source
+          event.data.object.default_source
 
         result = PaymentProviderCustomers::StripeService
           .new
@@ -218,7 +218,7 @@ module PaymentProviders
       ::Stripe::WebhookEndpoint.delete(
         stripe_provider.webhook_id, {}, { api_key: }
       )
-    rescue StandardError => e
+    rescue => e
       # NOTE: Since removing the webbook end-point is not critical
       #       we don't want any error with it to break the update of the
       #       payment provider
@@ -232,7 +232,7 @@ module PaymentProviders
       PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
         .where(payment_provider_id: nil, customers: { organization_id: })
-        .update_all(payment_provider_id: stripe_provider.id)
+        .update_all(payment_provider_id: stripe_provider.id) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

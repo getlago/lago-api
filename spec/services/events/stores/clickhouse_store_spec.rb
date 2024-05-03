@@ -224,7 +224,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
           properties: {
             billable_metric.field_name => 2,
-            operation_type: 'remove',
+            :operation_type => 'remove',
           },
         )
 
@@ -255,7 +255,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         timestamp: boundaries[:from_datetime] + 3.days,
         properties: {
           billable_metric.field_name => 2,
-          operation_type: 'remove',
+          :operation_type => 'remove',
         },
       )
 
@@ -288,7 +288,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
         properties: {
           billable_metric.field_name => 2,
-          operation_type: 'remove',
+          :operation_type => 'remove',
         },
       )
 
@@ -313,7 +313,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 1.hour,
           properties: {
             billable_metric.field_name => 2,
-            agent_name: 'frodo',
+            :agent_name => 'frodo',
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -324,7 +324,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            agent_name: 'aragorn',
+            :agent_name => 'aragorn',
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -335,8 +335,8 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 2.days,
           properties: {
             billable_metric.field_name => 2,
-            agent_name: 'aragorn',
-            operation_type: 'remove',
+            :agent_name => 'aragorn',
+            :operation_type => 'remove',
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -390,7 +390,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            agent_name: 'frodo',
+            :agent_name => 'frodo',
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -401,7 +401,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            agent_name: 'aragorn',
+            :agent_name => 'aragorn',
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -412,8 +412,8 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
           properties: {
             billable_metric.field_name => 2,
-            agent_name: 'aragorn',
-            operation_type: 'remove',
+            :agent_name => 'aragorn',
+            :operation_type => 'remove',
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -477,7 +477,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
         properties: {
           billable_metric.field_name => 2,
-          operation_type: 'remove',
+          :operation_type => 'remove',
         },
       )
 

@@ -69,18 +69,18 @@ module Charges
         return unless License.premium?
 
         if properties['per_transaction_min_amount'].present? &&
-           !::Validators::DecimalAmountService.valid_amount?(properties['per_transaction_min_amount'])
+            !::Validators::DecimalAmountService.valid_amount?(properties['per_transaction_min_amount'])
           add_error(field: :per_transaction_min_amount, error_code: 'invalid_amount')
         end
 
         if properties['per_transaction_max_amount'].present? &&
-           !::Validators::DecimalAmountService.valid_amount?(properties['per_transaction_max_amount'])
+            !::Validators::DecimalAmountService.valid_amount?(properties['per_transaction_max_amount'])
           add_error(field: :per_transaction_max_amount, error_code: 'invalid_amount')
         end
 
         return if properties['per_transaction_min_amount'].nil? || properties['per_transaction_max_amount'].nil?
         return if BigDecimal(properties['per_transaction_min_amount']) <=
-                  BigDecimal(properties['per_transaction_max_amount'])
+          BigDecimal(properties['per_transaction_max_amount'])
 
         add_error(field: :per_transaction_max_amount, error_code: 'per_transaction_max_lower_than_per_transaction_min')
       end

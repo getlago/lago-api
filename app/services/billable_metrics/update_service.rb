@@ -13,8 +13,8 @@ module BillableMetrics
       return result.not_found_failure!(resource: 'billable_metric') unless billable_metric
 
       if params.key?(:aggregation_type) &&
-         params[:aggregation_type]&.to_sym == :custom_agg &&
-         !organization&.custom_aggregation
+          params[:aggregation_type]&.to_sym == :custom_agg &&
+          !organization&.custom_aggregation
         return result.forbidden_failure!
       end
 

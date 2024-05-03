@@ -25,7 +25,7 @@ module Groups
           billable_metric.groups.parents.where.not(
             value: group_params[:values].map { |v| v[:name] },
             key: group_params[:key],
-          ).each(&:discard_with_properties!)
+          ).find_each(&:discard_with_properties!)
 
           billable_metric.groups.parents.each { |g| g.properties.discard_all }
 

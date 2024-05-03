@@ -31,7 +31,7 @@ module Wallets
       type = rule[:rule_type]&.to_s
 
       if !::Validators::DecimalAmountService.new(rule[:paid_credits]).valid_amount? ||
-         !::Validators::DecimalAmountService.new(rule[:granted_credits]).valid_amount?
+          !::Validators::DecimalAmountService.new(rule[:granted_credits]).valid_amount?
 
         add_error(field: :recurring_transaction_rules, error_code: 'invalid_recurring_rule')
 

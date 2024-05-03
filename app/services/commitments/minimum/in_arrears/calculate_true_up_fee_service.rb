@@ -68,7 +68,7 @@ module Commitments
 
         def charge_in_advance_recurring_fees
           if !invoice_subscription.previous_invoice_subscription &&
-             (!subscription.plan.yearly? || !subscription.plan.bill_charges_monthly?)
+              (!subscription.plan.yearly? || !subscription.plan.bill_charges_monthly?)
             return Fee.none
           end
 

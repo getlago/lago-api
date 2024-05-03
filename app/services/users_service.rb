@@ -17,7 +17,7 @@ class UsersService < BaseService
   end
 
   def register(email, password, organization_name)
-    if ENV.fetch('LAGO_SIGNUP_DISABLED', 'false') == 'true' # rubocop:disable Style/IfUnlessModifier
+    if ENV.fetch('LAGO_SIGNUP_DISABLED', 'false') == 'true'
       return result.not_allowed_failure!(code: 'signup disabled')
     end
 
@@ -77,7 +77,7 @@ class UsersService < BaseService
 
   def generate_token
     JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
-  rescue StandardError => e
+  rescue => e
     result.service_failure!(code: 'token_encoding_error', message: e.message)
   end
 

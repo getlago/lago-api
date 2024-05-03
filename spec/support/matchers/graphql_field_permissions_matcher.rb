@@ -10,7 +10,7 @@ module RSpec
         @expectations << WithPermissionsMatcher.new(expected_permissions)
         self
       end
-      alias with_permission with_permissions
+      alias_method :with_permission, :with_permissions
     end
 
     class HaveAField < BaseMatcher

@@ -11,8 +11,8 @@ module Subscriptions
     def call
       ending_trial_subscriptions.each do |subscription|
         if subscription.plan_pay_in_advance &&
-           !subscription.was_already_billed_today &&
-           !already_billed_on_day_one?(subscription)
+            !subscription.was_already_billed_today &&
+            !already_billed_on_day_one?(subscription)
           BillSubscriptionJob.perform_later(
             [subscription],
             timestamp,
@@ -40,7 +40,7 @@ module Subscriptions
         invoice_id: subscription.invoice_subscriptions.select('invoices.id').joins(:invoice).where(
           'invoices.invoice_type' => :subscription,
           'invoices.status' => %i[draft finalized],
-          timestamp: subscription.started_at.all_day,
+          :timestamp => subscription.started_at.all_day,
         ),
       ).any?
     end

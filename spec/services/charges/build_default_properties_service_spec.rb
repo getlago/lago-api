@@ -10,7 +10,7 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
       let(:charge_model) { :standard }
 
       it 'returns standard default properties' do
-        expect(service.call).to eq({ 'amount': '0' })
+        expect(service.call).to eq({ amount: '0' })
       end
     end
 
@@ -20,12 +20,12 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
       it 'returns graduated default properties' do
         expect(service.call).to eq(
           {
-            'graduated_ranges': [
+            graduated_ranges: [
               {
-                'from_value': 0,
-                'to_value': nil,
-                'per_unit_amount': '0',
-                'flat_amount': '0',
+                from_value: 0,
+                to_value: nil,
+                per_unit_amount: '0',
+                flat_amount: '0',
               },
             ],
           },
@@ -39,9 +39,9 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
       it 'returns package default properties' do
         expect(service.call).to eq(
           {
-            'package_size': 1,
-            'amount': '0',
-            'free_units': 0,
+            package_size: 1,
+            amount: '0',
+            free_units: 0,
           },
         )
       end
@@ -51,7 +51,7 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
       let(:charge_model) { :percentage }
 
       it 'returns percentage default properties' do
-        expect(service.call).to eq({ 'rate': '0' })
+        expect(service.call).to eq({ rate: '0' })
       end
     end
 
@@ -61,12 +61,12 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
       it 'returns volume default properties' do
         expect(service.call).to eq(
           {
-            'volume_ranges': [
+            volume_ranges: [
               {
-                'from_value': 0,
-                'to_value': nil,
-                'per_unit_amount': '0',
-                'flat_amount': '0',
+                from_value: 0,
+                to_value: nil,
+                per_unit_amount: '0',
+                flat_amount: '0',
               },
             ],
           },
@@ -80,13 +80,13 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
       it 'returns graduated_percentage default properties' do
         expect(service.call).to eq(
           {
-            'graduated_percentage_ranges': [
+            graduated_percentage_ranges: [
               {
-                'from_value': 0,
-                'to_value': nil,
-                'rate': '0',
-                'fixed_amount': '0',
-                'flat_amount': '0',
+                from_value: 0,
+                to_value: nil,
+                rate: '0',
+                fixed_amount: '0',
+                flat_amount: '0',
               },
             ],
           },

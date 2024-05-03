@@ -4,7 +4,7 @@ require 'rails_helper'
 require 'valvat'
 
 RSpec.describe Customers::EuAutoTaxesService, type: :service do
-  subject(:eu_tax_service) { described_class.new(customer:)}
+  subject(:eu_tax_service) { described_class.new(customer:) }
 
   let(:organization) { create(:organization, country: 'FR') }
   let(:customer) { create(:customer, organization:) }

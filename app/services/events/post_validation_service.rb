@@ -17,9 +17,9 @@ module Events
       }
 
       if errors[:invalid_code].present? ||
-         errors[:missing_aggregation_property].present? ||
-         errors[:missing_group_key].present? ||
-         errors[:invalid_filter_values].present?
+          errors[:missing_aggregation_property].present? ||
+          errors[:missing_group_key].present? ||
+          errors[:invalid_filter_values].present?
         deliver_webhook(errors)
       end
 

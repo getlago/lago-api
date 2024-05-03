@@ -9,7 +9,7 @@ module Types
         input_value.to_h.each_with_object({}) do |(key, values), result|
           result[key.to_s] = values&.map(&:to_s) || []
         end
-      rescue StandardError
+      rescue
         raise GraphQL::CoercionError, "#{input_value.inspect} is not a valid hash object"
       end
 

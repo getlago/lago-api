@@ -135,7 +135,7 @@ RSpec.describe Organizations::UpdateService do
 
     context 'with base64 logo' do
       let(:logo) do
-        logo_file = File.open(Rails.root.join('spec/factories/images/logo.png')).read
+        logo_file = File.read(Rails.root.join('spec/factories/images/logo.png'))
         base64_logo = Base64.encode64(logo_file)
 
         "data:image/png;base64,#{base64_logo}"

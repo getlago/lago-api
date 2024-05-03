@@ -31,7 +31,8 @@ RSpec.describe Trackable do
 
   def dummy_class
     Class.new do
-      def self.before_action(*); end
+      def self.before_action(*)
+      end
 
       include Trackable
 

@@ -11,5 +11,5 @@ class SubscriptionLegacyInput < BaseLegacyInput
     args[:plan_overrides] = PlanLegacyInput.new(organization, args[:plan_overrides]).create_input
     args
   end
-  alias update_input create_input
+  alias_method :update_input, :create_input
 end

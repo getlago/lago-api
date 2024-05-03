@@ -82,8 +82,11 @@ module Coupons
       return @plans if defined? @plans
       return [] if plan_identifiers.blank?
 
-      finder = api_context? ? :code : :id
-      @plans = Plan.where(finder => plan_identifiers, organization_id:)
+      @plans = if api_context?
+        Plan.where(code: plan_identifiers, organization_id:)
+      else
+        Plan.where(id: plan_identifiers, organization_id:)
+      end
     end
 
     def billable_metric_identifiers
@@ -95,8 +98,11 @@ module Coupons
       return @billable_metrics if defined? @billable_metrics
       return [] if billable_metric_identifiers.blank?
 
-      finder = api_context? ? :code : :id
-      @billable_metrics = BillableMetric.where(finder => billable_metric_identifiers, organization_id:)
+      @billable_metrics = if api_context?
+        BillableMetric.where(code: billable_metric_identifiers, organization_id:)
+      else
+        BillableMetric.where(id: billable_metric_identifiers, organization_id:)
+      end
     end
 
     def valid?(args)

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class InvoicesQuery < BaseQuery
-  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil) # rubocop:disable Metrics/ParameterLists, Layout/LineLength
+  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil) # rubocop:disable Metrics/ParameterLists
     @search_term = search_term
     @customer_id = customer_id
 

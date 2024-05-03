@@ -2,7 +2,7 @@
 
 class AddInvoiceFieldsToOrganizations < ActiveRecord::Migration[7.0]
   def change
-    change_table :organizations do |t|
+    change_table :organizations, bulk: true do |t|
       t.string :country
       t.string :address_line1
       t.string :address_line2

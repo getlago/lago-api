@@ -21,6 +21,6 @@ class WebhookEndpoint < ApplicationRecord
 
   def max_webhook_endpoints
     errors.add(:base, :exceeded_limit) if organization &&
-                                          organization.webhook_endpoints.reload.count >= LIMIT
+      organization.webhook_endpoints.reload.count >= LIMIT
   end
 end

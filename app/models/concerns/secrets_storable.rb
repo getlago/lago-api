@@ -14,7 +14,7 @@ module SecretsStorable
           get_from_secrets(name.to_s)
         end
 
-        define_method("#{name}=".to_sym) do |value|
+        define_method(:"#{name}=") do |value|
           push_to_secrets(key: name.to_s, value:)
         end
       end
