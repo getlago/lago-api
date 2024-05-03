@@ -426,6 +426,16 @@ RSpec.describe Invoice, type: :model do
     it 'returns the fees of the corresponding invoice_subscription' do
       expect(invoice.recurring_breakdown(fee)).to eq([])
     end
+
+    context 'with charge filter' do
+      let(:charge_filter) { create(:charge_filter, charge:) }
+
+      before { fee.update(charge_filter:) }
+
+      it 'returns the fees of the corresponding invoice_subscription' do
+        expect(invoice.recurring_breakdown(fee)).to eq([])
+      end
+    end
   end
 
   describe '#charge_pay_in_advance_proration_range' do
