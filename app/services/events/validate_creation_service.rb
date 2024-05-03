@@ -31,7 +31,7 @@ module Events
       return missing_subscription_error if subscriptions.empty?
 
       if params[:external_subscription_id] &&
-         subscriptions.pluck(:external_id).exclude?(params[:external_subscription_id])
+          subscriptions.pluck(:external_id).exclude?(params[:external_subscription_id])
         return missing_subscription_error
       end
 

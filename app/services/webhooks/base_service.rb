@@ -16,8 +16,8 @@ module Webhooks
       return if current_organization.webhook_endpoints.none?
 
       payload = {
-        webhook_type:,
-        object_type:,
+        :webhook_type => webhook_type,
+        :object_type => object_type,
         object_type => object_serializer.serialize,
       }
 
@@ -66,15 +66,15 @@ module Webhooks
 
       succeed_webhook(webhook, response)
     rescue LagoHttpClient::HttpError,
-           Net::OpenTimeout,
-           Net::ReadTimeout,
-           Net::HTTPBadResponse,
-           Errno::ECONNRESET,
-           Errno::ECONNREFUSED,
-           Errno::EPIPE,
-           OpenSSL::SSL::SSLError,
-           SocketError,
-           EOFError => e
+      Net::OpenTimeout,
+      Net::ReadTimeout,
+      Net::HTTPBadResponse,
+      Errno::ECONNRESET,
+      Errno::ECONNREFUSED,
+      Errno::EPIPE,
+      OpenSSL::SSL::SSLError,
+      SocketError,
+      EOFError => e
       fail_webhook(webhook, e)
 
       # NOTE: By default, Lago is retrying 3 times a webhook
@@ -86,10 +86,10 @@ module Webhooks
 
     def generate_headers(webhook_id, webhook_endpoint, payload)
       signature = case webhook_endpoint.signature_algo&.to_sym
-                  when :jwt
-                    jwt_signature(payload)
-                  when :hmac
-                    hmac_signature(payload)
+      when :jwt
+        jwt_signature(payload)
+      when :hmac
+        hmac_signature(payload)
       end
 
       {

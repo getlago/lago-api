@@ -69,7 +69,8 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
       .find_each { |fee| link_charge_filter(fee) }
   end
 
-  def down; end
+  def down
+  end
 
   private
 

@@ -71,14 +71,14 @@ module BillableMetrics
           target_result.current_usage_units = aggregation_without_proration.current_usage_units
 
           persisted_units_without_proration = aggregation_without_proration.current_usage_units -
-                                              BigDecimal(cached_aggregation.current_aggregation)
+            BigDecimal(cached_aggregation.current_aggregation)
           target_result.aggregation = (persisted_units_without_proration * persisted_pro_rata).ceil(5) +
-                                      BigDecimal(cached_aggregation.max_aggregation_with_proration)
+            BigDecimal(cached_aggregation.max_aggregation_with_proration)
         elsif cached_aggregation
           target_result.current_usage_units = aggregation_without_proration.current_usage_units
           target_result.aggregation = aggregation_without_proration.current_usage_units -
-                                      BigDecimal(cached_aggregation.current_aggregation) +
-                                      BigDecimal(cached_aggregation.max_aggregation_with_proration)
+            BigDecimal(cached_aggregation.current_aggregation) +
+            BigDecimal(cached_aggregation.max_aggregation_with_proration)
         elsif persisted_pro_rata < 1
           target_result.aggregation = result_with_proration.negative? ? 0 : result_with_proration
           target_result.current_usage_units = aggregation_without_proration.current_usage_units

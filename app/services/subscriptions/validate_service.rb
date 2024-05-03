@@ -47,9 +47,9 @@ module Subscriptions
       return true if args[:ending_at].blank?
 
       if Utils::Datetime.valid_format?(args[:ending_at]) &&
-         Utils::Datetime.valid_format?(args[:subscription_at]) &&
-         ending_at.to_date > Time.current.to_date &&
-         ending_at.to_date > subscription_at.to_date
+          Utils::Datetime.valid_format?(args[:subscription_at]) &&
+          ending_at.to_date > Time.current.to_date &&
+          ending_at.to_date > subscription_at.to_date
         return true
       end
 

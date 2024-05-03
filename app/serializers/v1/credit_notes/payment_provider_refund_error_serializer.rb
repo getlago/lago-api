@@ -3,7 +3,7 @@
 module V1
   module CreditNotes
     class PaymentProviderRefundErrorSerializer < ModelSerializer
-      alias credit_note model
+      alias_method :credit_note, :model
 
       def serialize
         {

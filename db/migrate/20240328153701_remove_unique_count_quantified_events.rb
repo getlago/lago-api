@@ -14,5 +14,6 @@ class RemoveUniqueCountQuantifiedEvents < ActiveRecord::Migration[7.0]
     execute(sql)
   end
 
-  def down; end
+  def down
+  end
 end

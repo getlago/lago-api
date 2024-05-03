@@ -2,7 +2,6 @@
 
 require 'rails_helper'
 
-# rubocop:disable Layout/LineLength
 RSpec.describe Types::Organizations::UpdateOrganizationInput do
   subject { described_class }
 
@@ -31,4 +30,3 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
   it { is_expected.to accept_argument(:billing_configuration).of_type('OrganizationBillingConfigurationInput').with_permission('organization:invoices:view') }
   it { is_expected.to accept_argument(:email_settings).of_type('[EmailSettingsEnum!]').with_permission('organization:emails:view') }
 end
-# rubocop:enable Layout/LineLength

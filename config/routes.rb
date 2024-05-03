@@ -101,8 +101,8 @@ Rails.application.routes.draw do
   end
 
   match '*unmatched' => 'application#not_found',
-        via: %i[get post put delete patch],
-        constraints: lambda { |req|
+        :via => %i[get post put delete patch],
+        :constraints => lambda { |req|
           req.path.exclude?('rails/active_storage')
         }
 end

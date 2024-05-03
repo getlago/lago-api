@@ -1,9 +1,13 @@
 require:
+  - standard
   - rubocop-rspec
   - rubocop-performance
   - rubocop-rails
   - rubocop-thread_safety
   - rubocop-graphql
+
+inherit_gem:
+  standard: config/base.yml
 
 AllCops:
   NewCops: disable
@@ -13,133 +17,29 @@ AllCops:
     - 'db/schema.rb'
     - 'db/*_schema.rb'
 
-Layout/BlockAlignment:
-  Description: 'Align block ends correctly.'
-  Enabled: true
-  # The value `start_of_block` means that the `end` should be aligned with line
-  # where the `do` keyword appears.
-  EnforcedStyleAlignWith: start_of_block
-
-Layout/ClassStructure:
-  Description: 'Enforces a configured order of definitions within a class body.'
-  Enabled: true
-  Categories:
-    module_inclusion:
-      - include
-      - prepend
-      - extend
-  ExpectedOrder:
-      - module_inclusion
-      - constants
-      - public_class_methods
-      - initializer
-      - public_methods
-      - protected_methods
-      - private_methods
-
-Layout/EndAlignment:
-  Description: 'Align ends correctly.'
-  Enabled: true
-  # The value `variable` means that in assignments, `end` should be aligned
-  # with the start of the variable on the left hand side of `=`. In all other
-  EnforcedStyleAlignWith: variable
-
-Layout/FirstArrayElementLineBreak:
-  Description: 'Checks for a line break before the first element in a multi-line array.'
-  Enabled: true
-
-Layout/FirstHashElementLineBreak:
-  Description: 'Checks for a line break before the first element in a multi-line hash.'
-  Enabled: true
-
-Layout/FirstMethodArgumentLineBreak:
-  Description: 'Checks for a line break before the first argument in a multi-line method call.'
-  Enabled: true
-
-Layout/FirstMethodParameterLineBreak:
-  Description: 'Checks for a line break before the first parameter in a multi-line method parameter definition.'
-  Enabled: true
-
-Layout/FirstArgumentIndentation:
-  Description: 'Checks the indentation of the first argument in a method call.'
-  Enabled: true
-  # The first parameter should always be indented one level relative to the
-  # parent that is receiving the parameter
-  EnforcedStyle: consistent
-
-Layout/FirstArrayElementIndentation:
-  Description: 'Checks the indentation of the first element in an array literal.'
-  Enabled: true
-  # The value `consistent` means that the indentation of the first element shall
-  # always be relative to the first position of the line where the opening
-  # bracket is.
-  EnforcedStyle: consistent
-
-Layout/FirstHashElementIndentation:
-  Description: 'Checks the indentation of the first key in a hash literal.'
-  Enabled: true
-  # The value `consistent` means that the indentation of the first key shall
-  # always be relative to the first position of the line where the opening
-  # brace is.
-  EnforcedStyle: consistent
-
-Layout/LineLength:
-  Description: 'Limit lines to 120 characters.'
-  Enabled: true
-  Max: 120
-
-Layout/MultilineArrayLineBreaks:
-  Description: 'Checks that each item in a multi-line array literal starts on a separate line.'
-  Enabled: true
-
-Layout/MultilineAssignmentLayout:
-  Description: 'Check for a newline after the assignment operator in multi-line assignments.'
-  Enabled: true
-  # Ensures that the assignment operator and the rhs are on the same line for
-  # the set of supported types.
-  EnforcedStyle: same_line
-
-Layout/MultilineHashKeyLineBreaks:
-  Description: 'Checks that each item in a multi-line hash literal starts on a separate line.'
-  Enabled: true
-
-Layout/MultilineMethodArgumentLineBreaks:
-  Description: 'Checks that each argument in a multi-line method call starts on a separate line.'
-  Enabled: true
-
-Layout/MultilineMethodCallIndentation:
-  Description: 'Checks indentation of method calls with the dot operator that span more than one line.'
-  Enabled: true
-  EnforcedStyle: indented
-
-Lint/AmbiguousBlockAssociation:
-  Description: 'Checks for ambiguous block association with method when param passed without parentheses.'
-  Enabled: true
-  Exclude:
-    - 'spec/**/*'
-
-Metrics/AbcSize:
+# TODO: Enable when we have time to fix all the offenses
+Style/StringLiterals:
   Enabled: false
 
-Metrics/BlockLength:
+Style/TrailingCommaInArguments:
   Enabled: false
 
-Metrics/ClassLength:
+Style/TrailingCommaInArrayLiteral:
   Enabled: false
 
-Metrics/CyclomaticComplexity:
+Style/TrailingCommaInBlockArgs:
   Enabled: false
 
-Metrics/MethodLength:
+Style/TrailingCommaInHashLiteral:
   Enabled: false
 
-Metrics/ModuleLength:
+Layout/SpaceInsideHashLiteralBraces:
   Enabled: false
 
-Metrics/PerceivedComplexity:
+Style/StringLiteralsInInterpolation:
   Enabled: false
 
-Naming/PredicateName:
+Layout/ArgumentAlignment:
   Enabled: false
 
 Performance/CaseWhenSplat:
@@ -174,132 +74,7 @@ RSpec/NestedGroups:
 RSpec/NamedSubject:
   Enabled: false
 
-Style/BlockDelimiters:
-  Description: >-
-                Avoid using {...} for multi-line blocks (multiline chaining is always ugly).
-                Prefer {...} over do...end for single-line blocks.
-  Enabled: true
-  EnforcedStyle: line_count_based
-  AllowedMethods:
-    - lambda
-    - proc
-    - it
-    - expect
-    - change
-
-Style/CommentAnnotation:
-  Description: 'Checks formatting of special comments (TODO, FIXME, OPTIMIZE, HACK, REVIEW, NOTE, INFO).'
-  Enabled: true
-  Keywords:
-    - TODO
-    - FIXME
-    - OPTIMIZE
-    - HACK
-    - REVIEW
-    - NOTE
-    - INFO
-
-Style/Documentation:
-  Enabled: false
-
-Style/MethodCallWithArgsParentheses:
-  Description: 'Use parentheses for method calls with arguments.'
-  Enabled: true
-  IgnoreMacros: true
-  AllowedMethods:
-    - require_relative
-    - require
-    - load
-    - raise
-    - desc
-    - yield
-    - puts
-  AllowParenthesesInMultilineCall: false
-  AllowParenthesesInChaining: false
-  AllowParenthesesInCamelCaseMethod: false
-  EnforcedStyle: require_parentheses
-  Exclude:
-    - 'lib/tasks/**/*'
-    - 'db/**/*'
-    - 'spec/**/*'
-    - 'config.ru'
-    - 'Gemfile'
-    - '**/rspec/**/*.rb'
-
-Style/NestedParenthesizedCalls:
-  Description: >-
-                 Parenthesize method calls which are nested inside the
-                 argument list of another parenthesized method call.
-  Enabled: true
-  AllowedMethods: []
-
-Style/OneLineConditional:
-  Description: 'Favor the ternary operator(?:) over if/then/else/end constructs.'
-  Enabled: false
-
-Style/Send:
-  Description: >-
-                 Prefer `Object#__send__` or `Object#public_send` to `send`,
-                 as `send` may overlap with existing methods.
-  Enabled: true
-
-Style/SymbolArray:
-  Description: 'Use %i or %I for arrays of symbols.'
-  Enabled: false
-
-Style/TrailingCommaInArguments:
-  Description: 'Checks for trailing comma in argument lists.'
-  StyleGuide: '#no-trailing-params-comma'
-  Enabled: true
-  VersionAdded: '0.36'
-  # If `comma`, the cop requires a comma after the last argument, but only for
-  # parenthesized method calls where each argument is on its own line.
-  # If `consistent_comma`, the cop requires a comma after the last argument,
-  # for all parenthesized method calls with arguments.
-  EnforcedStyleForMultiline: comma
-  SupportedStylesForMultiline:
-    - comma
-    - consistent_comma
-    - no_comma
-
-Style/TrailingCommaInArrayLiteral:
-  EnforcedStyleForMultiline: comma
-
-Style/TrailingCommaInHashLiteral:
-  EnforcedStyleForMultiline: comma
-
-Style/TernaryParentheses:
-  Description: 'Checks for use of parentheses around ternary conditions.'
-  Enabled: true
-  EnforcedStyle: require_parentheses_when_complex
-
-Style/GlobalVars:
-  Description: 'Do not introduce global variables.'
-  StyleGuide: '#instance-vars'
-  Reference: 'https://www.zenspider.com/ruby/quickref.html'
-  Enabled: true
-  VersionAdded: '0.13'
-  # Built-in global variables are allowed by default.
-  AllowedVariables: ['$segment_client', '$json_web_token']
-
-Style/ClassAndModuleChildren:
-  Exclude:
-    - 'test/**/*'
-
-Lint/RaiseException:
-  Enabled: false
-
-Lint/StructNewOverride:
-  Enabled: false
-
-Style/HashEachMethods:
-  Enabled: false
-
-Style/HashTransformKeys:
-  Enabled: false
-
-Style/HashTransformValues:
-  Enabled: false
+# GraphQL
 
 GraphQL/ArgumentDescription:
   Enabled: false

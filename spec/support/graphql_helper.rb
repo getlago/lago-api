@@ -7,7 +7,7 @@ module GraphQLHelper
     end
   end
 
-  def execute_graphql(current_user: nil, query: nil, current_organization: nil, customer_portal_user: nil, request: nil, permissions: nil, **kwargs) # rubocop:disable Metrics/ParameterLists, Layout/LineLength
+  def execute_graphql(current_user: nil, query: nil, current_organization: nil, customer_portal_user: nil, request: nil, permissions: nil, **kwargs) # rubocop:disable Metrics/ParameterLists
     unless permissions.is_a?(Hash)
       # we allow passing a single permission string or an array for convenience
       permissions = Array.wrap(permissions).index_with { true }

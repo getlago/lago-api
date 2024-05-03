@@ -7,8 +7,8 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql do
   let(:invite) { create(:invite, email: 'foo@bar.com', organization:) }
   let(:okta_integration) { create(:okta_integration, domain: 'bar.com', organization_name: 'foo', organization:) }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
-  let(:okta_token_response) { OpenStruct.new(body: { 'access_token': 'access_token' }) }
-  let(:okta_userinfo_response) { OpenStruct.new({ 'email': 'foo@bar.com' }) }
+  let(:okta_token_response) { OpenStruct.new(body: { access_token: 'access_token' }) }
+  let(:okta_userinfo_response) { OpenStruct.new({ email: 'foo@bar.com' }) }
   let(:state) { SecureRandom.uuid }
   let(:memory_store) { ActiveSupport::Cache.lookup_store(:memory_store) }
 

@@ -28,13 +28,13 @@ class GraphqlController < ApplicationController
       request:,
       permissions:
         current_user&.memberships&.find_by(organization: current_organization)&.permissions_hash ||
-        Permission::EMPTY_PERMISSIONS_HASH,
+          Permission::EMPTY_PERMISSIONS_HASH,
     }
     result = LagoApiSchema.execute(query, variables:, context:, operation_name:)
     render(json: result)
   rescue JWT::ExpiredSignature
     render_graphql_error(code: 'expired_jwt_token', status: 401)
-  rescue StandardError => e
+  rescue => e
     raise e unless Rails.env.development?
 
     handle_error_in_development(e)

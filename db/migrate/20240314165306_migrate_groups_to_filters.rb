@@ -61,7 +61,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
 
       filter.values.uniq!
       filter.save!
-    rescue StandardError => e
+    rescue => e
       puts "#group_id: #{group.id} #{e.message}" # rubocop:disable Rails/Output
     end
 
@@ -160,10 +160,11 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
           deleted_at: group.parent.deleted_at,
         )
       end
-    rescue StandardError => e
+    rescue => e
       puts "#charge_id: #{charge.id} #{e.message}" # rubocop:disable Rails/Output
     end
   end
 
-  def down; end
+  def down
+  end
 end

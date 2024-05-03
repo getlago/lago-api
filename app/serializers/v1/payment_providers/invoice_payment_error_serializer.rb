@@ -3,7 +3,7 @@
 module V1
   module PaymentProviders
     class InvoicePaymentErrorSerializer < ModelSerializer
-      alias invoice model
+      alias_method :invoice, :model
 
       def serialize
         {

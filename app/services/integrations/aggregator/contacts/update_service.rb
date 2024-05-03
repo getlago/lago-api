@@ -46,7 +46,7 @@ module Integrations
               'email' => customer.email,
               'phone' => customer.phone,
             },
-            'options': {
+            :options => {
               'isDynamic' => false,
             },
           }

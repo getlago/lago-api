@@ -124,7 +124,7 @@ class Fee < ApplicationRecord
   def total_amount_cents
     amount_cents + taxes_amount_cents
   end
-  alias total_amount_currency currency
+  alias_method :total_amount_currency, :currency
 
   def creditable_amount_cents
     amount_cents - credit_note_items.sum(:amount_cents)

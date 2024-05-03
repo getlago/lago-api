@@ -19,7 +19,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   let(:pay_in_advance) { false }
 
   let(:subscription_at) { DateTime.parse('02 Feb 2021') }
-  let(:billing_date) { Time.parse('2022-03-07 04:20:46.011') }
+  let(:billing_date) { Time.zone.parse('2022-03-07 04:20:46.011') }
   let(:started_at) { subscription_at }
   let(:interval) { :monthly }
 

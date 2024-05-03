@@ -3,11 +3,17 @@
 class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7.0]
   # NOTE: redefine models to prevent schema issue in the future
   class BillableMetric < ApplicationRecord; end
+
   class Charge < ApplicationRecord; end
+
   class Customer < ApplicationRecord; end
+
   class Event < ApplicationRecord; end
+
   class Plan < ApplicationRecord; end
+
   class Subscription < ApplicationRecord; end
+
   class QuantifiedEvent < ApplicationRecord; end
 
   def change

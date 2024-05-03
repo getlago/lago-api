@@ -35,20 +35,20 @@ module Charges
 
     def charge_model
       @charge_model ||= case charge.charge_model.to_sym
-                        when :standard
-                          Charges::ChargeModels::StandardService
-                        when :graduated
-                          Charges::ChargeModels::GraduatedService
-                        when :graduated_percentage
-                          Charges::ChargeModels::GraduatedPercentageService
-                        when :package
-                          Charges::ChargeModels::PackageService
-                        when :percentage
-                          Charges::ChargeModels::PercentageService
-                        when :custom
-                          Charges::ChargeModels::CustomService
-                        else
-                          raise(NotImplementedError)
+      when :standard
+        Charges::ChargeModels::StandardService
+      when :graduated
+        Charges::ChargeModels::GraduatedService
+      when :graduated_percentage
+        Charges::ChargeModels::GraduatedPercentageService
+      when :package
+        Charges::ChargeModels::PackageService
+      when :percentage
+        Charges::ChargeModels::PercentageService
+      when :custom
+        Charges::ChargeModels::CustomService
+      else
+        raise(NotImplementedError)
       end
     end
 

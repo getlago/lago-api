@@ -3,13 +3,17 @@
 class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
   # NOTE: redifine models to prevent schema issue in the future
   class Organization < ApplicationRecord; end
+
   class Tax < ApplicationRecord; end
 
   class Customer < ApplicationRecord; end
+
   class CustomersTax < ApplicationRecord; end
 
   class FeesTax < ApplicationRecord; end
+
   class InvoicesTax < ApplicationRecord; end
+
   class CreditNotesTax < ApplicationRecord; end
 
   def change

@@ -125,7 +125,7 @@ module PaymentProviders
     def reattach_provider_customers(organization_id:, adyen_provider:)
       PaymentProviderCustomers::AdyenCustomer
         .joins(:customer)
-        .where(payment_provider_id: nil, customers: { organization_id: }).each do |c|
+        .where(payment_provider_id: nil, customers: { organization_id: }).find_each do |c|
           c.update(payment_provider_id: adyen_provider.id)
         end
     end

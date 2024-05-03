@@ -84,8 +84,8 @@ module BillableMetrics
 
         if cached_aggregation
           aggregation = total_aggregation -
-                        BigDecimal(cached_aggregation.current_aggregation) +
-                        BigDecimal(cached_aggregation.max_aggregation)
+            BigDecimal(cached_aggregation.current_aggregation) +
+            BigDecimal(cached_aggregation.max_aggregation)
 
           target_result.aggregation = aggregation
         else

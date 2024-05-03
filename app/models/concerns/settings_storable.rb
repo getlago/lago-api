@@ -10,7 +10,7 @@ module SettingsStorable
           get_from_settings(name.to_s)
         end
 
-        define_method("#{name}=".to_sym) do |value|
+        define_method(:"#{name}=") do |value|
           push_to_settings(key: name.to_s, value:)
         end
       end

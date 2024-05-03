@@ -6,7 +6,6 @@ RSpec.describe Types::CurrentOrganizationType do
 
   it { is_expected.to have_field(:id).of_type('ID!') }
 
-  # rubocop:disable Layout/LineLength
   it { is_expected.to have_field(:default_currency).of_type('CurrencyEnum!') }
   it { is_expected.to have_field(:email).of_type('String') }
   it { is_expected.to have_field(:legal_name).of_type('String') }
@@ -38,5 +37,4 @@ RSpec.describe Types::CurrentOrganizationType do
   it { is_expected.to have_field(:adyen_payment_providers).of_type('[AdyenProvider!]').with_permission('organization:integrations:view') }
   it { is_expected.to have_field(:gocardless_payment_providers).of_type('[GocardlessProvider!]').with_permission('organization:integrations:view') }
   it { is_expected.to have_field(:stripe_payment_providers).of_type('[StripeProvider!]').with_permission('organization:integrations:view') }
-  # rubocop:enable Layout/LineLength
 end

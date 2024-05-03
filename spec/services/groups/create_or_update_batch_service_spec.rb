@@ -82,7 +82,7 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
 
   context 'with one dimension' do
     let(:group_params) do
-      { "key": 'region', "values": %w[usa europe usa] }
+      { key: 'region', values: %w[usa europe usa] }
     end
     let(:group1) { create(:group, billable_metric:, key: 'region', value: 'europe', deleted_at: Time.current) }
     let(:group2) { create(:group, billable_metric:, key: 'region', value: 'africa') }
@@ -109,18 +109,18 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
   context 'with two dimensions' do
     let(:group_params) do
       {
-        "key": 'cloud',
-        "values": [
+        key: 'cloud',
+        values: [
           {
-            "name": 'AWS',
-            "invoice_display_name": "AWS Invoice name",
-            "key": 'region',
-            "values": %w[usa europe],
+            name: 'AWS',
+            invoice_display_name: "AWS Invoice name",
+            key: 'region',
+            values: %w[usa europe],
           },
           {
-            "name": 'Google',
-            "key": 'region',
-            "values": %w[usa usa],
+            name: 'Google',
+            key: 'region',
+            values: %w[usa usa],
           },
         ],
       }

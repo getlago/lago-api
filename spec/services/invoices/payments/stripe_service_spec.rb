@@ -165,7 +165,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
               {
                 id: 'pm_123456',
                 object: 'payment_method',
-                card: { 'brand': 'visa' },
+                card: { brand: 'visa' },
                 created: 1_656_422_973,
                 customer: 'cus_123456',
                 livemode: false,

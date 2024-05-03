@@ -24,14 +24,14 @@ module Integrations
       # NOTE: Extend it with other providers if needed
       def sync_list
         list = case integration.type
-               when 'Integrations::NetsuiteIntegration'
-                 {
-                   accounts: 'netsuite-accounts-sync',
-                   items: 'netsuite-items-sync',
-                   subsidiaries: 'netsuite-subsidiaries-sync',
-                   contacts: 'netsuite-contacts-sync',
-                   tax_items: 'netsuite-tax-items-sync',
-                 }
+        when 'Integrations::NetsuiteIntegration'
+          {
+            accounts: 'netsuite-accounts-sync',
+            items: 'netsuite-items-sync',
+            subsidiaries: 'netsuite-subsidiaries-sync',
+            contacts: 'netsuite-contacts-sync',
+            tax_items: 'netsuite-tax-items-sync',
+          }
         end
 
         return [list[:items]] if options[:only_items]

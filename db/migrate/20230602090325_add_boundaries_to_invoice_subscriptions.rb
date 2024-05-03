@@ -12,6 +12,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
 
     reversible do |dir|
       dir.up do
+        # rubocop:disable Style/RedundantStringEscape
         execute <<-SQL
           /* Unify fees->timestamp to be a required timestamp */
           UPDATE fees
@@ -120,6 +121,7 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
               LIMIT 1)::timestamp
             END
         SQL
+        # rubocop:enable Style/RedundantStringEscape
       end
     end
   end

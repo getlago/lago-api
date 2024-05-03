@@ -159,12 +159,12 @@ class Invoice < ApplicationRecord
 
   def recurring_breakdown(fee)
     service = case fee.charge.billable_metric.aggregation_type.to_sym
-              when :sum_agg
-                BillableMetrics::Breakdown::SumService
-              when :unique_count_agg
-                BillableMetrics::Breakdown::UniqueCountService
-              else
-                raise(NotImplementedError)
+    when :sum_agg
+      BillableMetrics::Breakdown::SumService
+    when :unique_count_agg
+      BillableMetrics::Breakdown::UniqueCountService
+    else
+      raise(NotImplementedError)
     end
 
     filters = {}
@@ -252,8 +252,8 @@ class Invoice < ApplicationRecord
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !succeeded?
 
     amount = creditable_amount_cents -
-             credits.where(before_taxes: false).sum(:amount_cents) -
-             prepaid_credit_amount_cents
+      credits.where(before_taxes: false).sum(:amount_cents) -
+      prepaid_credit_amount_cents
     amount.negative? ? 0 : amount
   end
 

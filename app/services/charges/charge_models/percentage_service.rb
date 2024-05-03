@@ -16,7 +16,7 @@ module Charges
       def amount_details
         paid_units = units - free_units_value
         paid_units = 0 if paid_units.negative?
-        per_unit_amount = paid_units.zero? ? BigDecimal(0) : compute_percentage_amount.fdiv(paid_units)
+        paid_units.zero? ? BigDecimal(0) : compute_percentage_amount.fdiv(paid_units)
         free_events = if aggregation_result.count >= free_units_count
           free_units_count
         else

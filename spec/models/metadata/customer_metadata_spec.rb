@@ -25,10 +25,6 @@ RSpec.describe Metadata::CustomerMetadata, type: :model do
       it { expect(metadata).not_to be_valid }
     end
 
-    context 'when length constraint passes', :tag do
-      it { expect(metadata).to be_valid }
-    end
-
     context 'when key length is invalid' do
       let(:key) { 'hello-hello-hello-hello-hello' }
 

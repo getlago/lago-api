@@ -71,7 +71,7 @@ module Subscriptions
         WEEK_DURATION
       end
 
-      alias compute_charges_duration compute_duration
+      alias_method :compute_charges_duration, :compute_duration
     end
   end
 end

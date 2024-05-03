@@ -29,8 +29,8 @@ module Types
       argument :document_number_prefix, String, required: false
       argument :document_numbering, Types::Organizations::DocumentNumberingEnum, required: false
 
-      argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: 'organization:invoices:view' # rubocop:disable Layout/LineLength
-      argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: 'organization:emails:view' # rubocop:disable Layout/LineLength
+      argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: 'organization:invoices:view'
+      argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: 'organization:emails:view'
     end
   end
 end

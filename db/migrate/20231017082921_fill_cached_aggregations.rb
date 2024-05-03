@@ -2,7 +2,9 @@
 
 class FillCachedAggregations < ActiveRecord::Migration[7.0]
   class Subscription < ApplicationRecord; end
+
   class Event < ApplicationRecord; end
+
   class CachedAggregation < ApplicationRecord; end
 
   class Group < ApplicationRecord
