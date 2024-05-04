@@ -43,6 +43,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: Permission::ADMIN_PERMISSIONS_HASH,
       query: mutation,
       variables: {
         input: {
@@ -95,6 +96,32 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     end
   end
 
+  context 'without necessary permissions' do
+    it 'ignores permissions-protected field and updates the rest' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: %w[],
+        query: mutation,
+        variables: {
+          input: {
+            email: 'foo@bar2.com',
+            taxIdentificationNumber: 'tax007',
+            emailSettings: ['invoice_finalized'],
+          },
+        },
+      )
+
+      result_data = result['data']['updateOrganization']
+
+      aggregate_failures do
+        expect(result_data['email']).to eq 'foo@bar2.com'
+        expect(result_data['taxIdentificationNumber']).to be_nil
+        expect(result_data['emailSettings']).to be_nil
+      end
+    end
+  end
+
   context 'with premium features' do
     around { |test| lago_premium!(&test) }
 
@@ -104,6 +131,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
+        permissions: %w[organization:emails:view organization:invoices:view],
         query: mutation,
         variables: {
           input: {
@@ -133,6 +161,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: membership.organization,
+          permissions: 'organization:invoices:view',
           query: mutation,
           variables: {
             input: {

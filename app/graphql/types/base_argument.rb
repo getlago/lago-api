@@ -2,10 +2,10 @@
 
 module Types
   class BaseArgument < GraphQL::Schema::Argument
-    attr_reader :permission
+    attr_reader :permissions
 
     def initialize(*args, permission: nil, **kwargs, &block)
-      @permission = permission
+      @permissions = [permission].compact
       super(*args, **kwargs, &block)
     end
   end

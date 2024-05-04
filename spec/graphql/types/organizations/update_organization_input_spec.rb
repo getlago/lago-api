@@ -2,6 +2,7 @@
 
 require 'rails_helper'
 
+# rubocop:disable Layout/LineLength
 RSpec.describe Types::Organizations::UpdateOrganizationInput do
   subject { described_class }
 
@@ -10,7 +11,7 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
   it { is_expected.to accept_argument(:legal_name).of_type('String') }
   it { is_expected.to accept_argument(:legal_number).of_type('String') }
   it { is_expected.to accept_argument(:logo).of_type('String') }
-  it { is_expected.to accept_argument(:tax_identification_number).of_type('String') }
+  it { is_expected.to accept_argument(:tax_identification_number).of_type('String').with_permission('organization:taxes:view') }
 
   it { is_expected.to accept_argument(:address_line1).of_type('String') }
   it { is_expected.to accept_argument(:address_line2).of_type('String') }
@@ -23,10 +24,11 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
   it { is_expected.to accept_argument(:document_numbering).of_type('DocumentNumberingEnum') }
   it { is_expected.to accept_argument(:document_number_prefix).of_type('String') }
 
-  it { is_expected.to accept_argument(:webhook_url).of_type('String') }
+  it { is_expected.to accept_argument(:webhook_url).of_type('String').with_permission('developers:manage') }
 
   it { is_expected.to accept_argument(:timezone).of_type('TimezoneEnum') }
 
-  it { is_expected.to accept_argument(:billing_configuration).of_type('OrganizationBillingConfigurationInput') }
-  it { is_expected.to accept_argument(:email_settings).of_type('[EmailSettingsEnum!]') }
+  it { is_expected.to accept_argument(:billing_configuration).of_type('OrganizationBillingConfigurationInput').with_permission('organization:invoices:view') }
+  it { is_expected.to accept_argument(:email_settings).of_type('[EmailSettingsEnum!]').with_permission('organization:emails:view') }
 end
+# rubocop:enable Layout/LineLength
