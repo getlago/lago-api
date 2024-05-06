@@ -99,7 +99,7 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
 
       before { integration_customer }
 
-      it 'calls create job' do
+      it 'calls update job' do
         expect { service_call }.to have_enqueued_job(IntegrationCustomers::UpdateJob)
       end
     end
