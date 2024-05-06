@@ -11,10 +11,10 @@ module IntegrationCustomers
       result = super
       return result if result.error
 
-      res = if sync_with_provider
-        sync_customer!
-      elsif external_customer_id.present?
+      res = if external_customer_id.present?
         link_customer!
+      elsif sync_with_provider
+        sync_customer!
       end
       return res if res&.error
 
