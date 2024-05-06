@@ -3,8 +3,8 @@
 module Integrations
   module Aggregator
     class TaxItemsService < BaseService
-      LIMIT = 300
-      MAX_SUBSEQUENT_REQUESTS = 10
+      LIMIT = 450
+      MAX_SUBSEQUENT_REQUESTS = 15
 
       def action_path
         "v1/#{provider}/taxitems"

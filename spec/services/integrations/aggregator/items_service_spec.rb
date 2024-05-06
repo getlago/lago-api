@@ -19,7 +19,7 @@ RSpec.describe Integrations::Aggregator::ItemsService do
     end
     let(:params) do
       {
-        limit: 300,
+        limit: 450,
         cursor: '',
       }
     end
