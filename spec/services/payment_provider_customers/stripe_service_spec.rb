@@ -124,6 +124,22 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           )
       end
     end
+
+    context 'with idempotency issue' do
+      before do
+        allow(Stripe::Customer).to receive(:create)
+          .and_raise(Stripe::IdempotencyError.new('idempotency'))
+
+        allow(Stripe::Customer).to receive(:list)
+          .and_return([Stripe::Customer.new(id: 'cus_123456')])
+      end
+
+      it 'fetches the stripe customer from the API' do
+        result = stripe_service.create
+
+        expect(result.stripe_customer.provider_customer_id).to eq('cus_123456')
+      end
+    end
   end
 
   describe '#update' do

@@ -182,6 +182,13 @@ module PaymentProviderCustomers
 
       message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
       result.unauthorized_failure!(message:)
+    rescue Stripe::IdempotencyError
+      stripe_customers = Stripe::Customer.list({ email: customer.email }, { api_key: })
+      return stripe_customers.first if stripe_customers.count == 1
+
+      # NOTE: Multiple stripe customers with the same email,
+      #       re-raise to fix the issue
+      raise
     end
 
     def stripe_create_payload
