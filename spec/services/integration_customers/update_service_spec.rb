@@ -82,16 +82,11 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
             result = service_call
 
             aggregate_failures do
-              expect(aggregator_contacts_update_service).to have_received(:call)
+              expect(aggregator_contacts_update_service).not_to have_received(:call)
               expect(result).to be_success
               expect(result.integration_customer).to eq(integration_customer)
+              expect(result.integration_customer.external_customer_id).to eq(external_customer_id)
             end
-          end
-
-          it 'updates integration customer' do
-            result = service_call
-
-            expect(result.integration_customer.subsidiary_id).to eq(subsidiary_id)
           end
         end
 
