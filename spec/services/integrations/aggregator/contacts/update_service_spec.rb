@@ -31,7 +31,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         'email' => customer.email,
         'phone' => customer.phone,
       },
-      :options => {
+      'options' => {
         'isDynamic' => false,
       },
     }

@@ -111,6 +111,13 @@ module Api
           :timezone,
           :net_payment_term,
           :external_salesforce_id,
+          integration_customer: [
+            :external_customer_id,
+            :integration,
+            :integration_code,
+            :subsidiary_id,
+            :sync_with_provider,
+          ],
           billing_configuration: [
             :invoice_grace_period,
             :payment_provider,

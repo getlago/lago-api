@@ -31,9 +31,7 @@ module Integrations
 
         attr_reader :integration_customer, :subsidiary_id
 
-        def customer
-          integration_customer.customer
-        end
+        delegate :customer, to: :integration_customer
 
         def params
           {
@@ -46,7 +44,7 @@ module Integrations
               'email' => customer.email,
               'phone' => customer.phone,
             },
-            :options => {
+            'options' => {
               'isDynamic' => false,
             },
           }
