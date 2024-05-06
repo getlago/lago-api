@@ -28,7 +28,7 @@ module IntegrationCustomers
 
     private
 
-    attr_reader :integration_customer_params, :customer, :new_customer, :integration_customer, :integration
+    attr_reader :integration_customer_params, :customer, :new_customer
 
     def create_integration_customer?
       (new_customer && integration_customer_params[:sync_with_provider]) ||
