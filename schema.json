@@ -6732,6 +6732,18 @@
               "deprecationReason": null
             },
             {
+              "name": "integrationCustomer",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "IntegrationCustomerInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "billingConfiguration",
               "description": null,
               "type": {
@@ -16255,6 +16267,77 @@
             }
           ],
           "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "IntegrationCustomerInput",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "externalCustomerId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationTypeEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integrationCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subsidiaryId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "syncWithProvider",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
           "enumValues": null
         },
         {
@@ -31571,6 +31654,18 @@
               "type": {
                 "kind": "INPUT_OBJECT",
                 "name": "ProviderCustomerInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integrationCustomer",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "IntegrationCustomerInput",
                 "ofType": null
               },
               "defaultValue": null,

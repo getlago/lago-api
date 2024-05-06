@@ -1782,6 +1782,7 @@ input CreateCustomerInput {
   email: String
   externalId: String!
   externalSalesforceId: String
+  integrationCustomer: IntegrationCustomerInput
   invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
@@ -3617,6 +3618,14 @@ union Integration = NetsuiteIntegration
 type IntegrationCollection {
   collection: [Integration!]!
   metadata: CollectionMetadata!
+}
+
+input IntegrationCustomerInput {
+  externalCustomerId: String
+  integration: IntegrationTypeEnum
+  integrationCode: String
+  subsidiaryId: String
+  syncWithProvider: Boolean
 }
 
 type IntegrationItem {
@@ -6611,6 +6620,7 @@ input UpdateCustomerInput {
   externalId: String!
   externalSalesforceId: String
   id: ID!
+  integrationCustomer: IntegrationCustomerInput
   invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
