@@ -51,6 +51,11 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::ServiceFailure => e
+      raise unless e.code.to_s == 'duplicated_invoices'
+      raise unless invoicing_reason.to_sym == :subscription_periodic
+
+      result
     rescue Sequenced::SequenceError
       raise
     rescue => e
