@@ -28,7 +28,7 @@ RSpec.describe Mutations::IntegrationItems::FetchTaxItems, type: :graphql do
     allow(Integrations::Aggregator::SyncService).to receive(:new).and_return(sync_service)
     allow(sync_service).to receive(:call).and_return(true)
 
-    stub_request(:get, 'https://api.nango.dev/v1/netsuite/taxitems?cursor=&limit=300')
+    stub_request(:get, 'https://api.nango.dev/v1/netsuite/taxitems?cursor=&limit=450')
       .to_return(status: 200, body: items_response, headers: {})
 
     integration_item
