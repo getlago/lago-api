@@ -7,13 +7,15 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     described_class.new(
       subscriptions:,
       timestamp: timestamp.to_i,
-      invoicing_reason: :subscription_periodic,
+      invoicing_reason:
     )
   end
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
+
+  let(:invoicing_reason) { :subscription_periodic }
 
   describe 'call' do
     let(:subscription) do
@@ -189,6 +191,42 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect do
           invoice_service.call
         end.to have_enqueued_job(SendWebhookJob).with('invoice.drafted', Invoice)
+      end
+    end
+
+    context 'when invoice already exists' do
+      let(:timestamp) { Time.zone.parse('2023-10-01T00:00:00.000Z') }
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          invoice: old_invoice,
+          subscription:,
+          from_datetime: Time.zone.parse('2023-09-01T00:00:00.000Z'),
+          to_datetime: Time.zone.parse('2023-09-30T23:59:59.999Z').end_of_day,
+          charges_from_datetime: Time.zone.parse('2023-09-01T00:00:00.000Z'),
+          charges_to_datetime: Time.zone.parse('2023-09-30T23:59:59.999Z').end_of_day,
+          recurring: invoicing_reason.to_sym == :subscription_periodic,
+          invoicing_reason:
+        )
+      end
+
+      let(:old_invoice) do
+        create(
+          :invoice,
+          created_at: timestamp + 1.second,
+          customer: subscription.customer,
+          organization: plan.organization,
+        )
+      end
+
+      before { invoice_subscription }
+
+      it 'does not raise an error' do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to be_nil
       end
     end
   end
