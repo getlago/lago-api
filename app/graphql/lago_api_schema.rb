@@ -7,7 +7,7 @@ class LagoApiSchema < GraphQL::Schema
   # For batch-loading (see https://graphql-ruby.org/dataloader/overview.html)
   use GraphQL::Dataloader
 
-  max_depth 13
+  max_depth 15
   max_complexity 350
 
   # GraphQL-Ruby calls this when something goes wrong while running a query:
