@@ -96,10 +96,10 @@ module Events
           with events as (#{cte_sql.to_sql})
 
           select
-            #{group_names.join(', ')},
+            #{group_names.join(", ")},
             toDecimal128(count(), #{DECIMAL_SCALE})
           from events
-          group by #{group_names.join(',')}
+          group by #{group_names.join(",")}
         SQL
 
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)

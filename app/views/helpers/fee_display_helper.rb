@@ -6,6 +6,6 @@ class FeeDisplayHelper
     return '' if fee.charge.properties['grouped_by'].blank?
     return '' if fee.grouped_by.values.compact.blank?
 
-    " • #{fee.grouped_by.values.compact.join(' • ')}"
+    " • #{fee.grouped_by.values.compact.join(" • ")}"
   end
 end

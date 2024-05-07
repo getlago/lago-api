@@ -141,7 +141,7 @@ RSpec.describe Invoice, type: :model do
         invoice.finalized!
         organization_id_substring = organization.id.last(4).upcase
 
-        expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-001")
+        expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-001")
       end
 
       context 'with existing invoices in current month' do
@@ -158,7 +158,7 @@ RSpec.describe Invoice, type: :model do
 
           organization_id_substring = organization.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
       end
 
@@ -176,7 +176,7 @@ RSpec.describe Invoice, type: :model do
 
           organization_id_substring = organization.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
       end
 
@@ -192,7 +192,7 @@ RSpec.describe Invoice, type: :model do
             organization_sequential_id: 14,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-014",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014",
           )
         end
         let(:invoice2) do
@@ -203,7 +203,7 @@ RSpec.describe Invoice, type: :model do
             sequential_id: 5,
             organization_sequential_id: 15,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-015",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-015",
           )
         end
 
@@ -218,17 +218,17 @@ RSpec.describe Invoice, type: :model do
 
           organization_id_substring = organization.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
 
           invoice1.update!(payment_due_date: invoice1.payment_due_date + 1.day)
           invoice2.update!(payment_due_date: invoice2.payment_due_date + 1.day)
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-014")
-          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-015")
+          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
+          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-015")
 
           invoice1.finalized!
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-014")
+          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
         end
       end
 
@@ -255,7 +255,7 @@ RSpec.describe Invoice, type: :model do
             sequential_id: 4,
             organization_sequential_id: 14,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime('%Y%m')}-014",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014",
           )
         end
 
@@ -270,17 +270,17 @@ RSpec.describe Invoice, type: :model do
 
           organization_id_substring = organization.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-015")
+          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-015")
 
           invoice1.update!(payment_due_date: invoice1.payment_due_date + 1.day)
           invoice2.update!(payment_due_date: invoice2.payment_due_date + 1.day)
 
           expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-DRAFT")
-          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-014")
+          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
 
           invoice1.finalized!
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime('%Y%m')}-016")
+          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
       end
     end

@@ -49,7 +49,7 @@ class BaseService
     private
 
     def format_messages
-      "Validation errors: #{[messages].flatten.join(', ')}"
+      "Validation errors: #{[messages].flatten.join(", ")}"
     end
   end
 

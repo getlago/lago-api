@@ -188,7 +188,7 @@ module Events
                 operation_type
               FROM event_values
             ) prorated_breakdown
-            #{'WHERE prorated_value != 0' unless with_remove}
+            #{"WHERE prorated_value != 0" unless with_remove}
             ORDER BY timestamp ASC
           SQL
         end
@@ -222,7 +222,7 @@ module Events
             WITH events_data AS (#{
               events
                 .select(
-                  "#{groups.join(', ')}, \
+                  "#{groups.join(", ")}, \
                   timestamp, \
                   #{sanitized_property_name} AS property, \
                   COALESCE(events.properties->>'operation_type', 'add') AS operation_type",

@@ -298,7 +298,7 @@ class Invoice < ApplicationRecord
 
     if organization.per_customer?
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
-      customer_slug = "#{organization.document_number_prefix}-#{format('%03d', customer.sequential_id)}"
+      customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
       formatted_sequential_id = format('%03d', sequential_id)
 
       self.number = "#{customer_slug}-#{formatted_sequential_id}"
