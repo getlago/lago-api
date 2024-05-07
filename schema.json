@@ -21881,6 +21881,34 @@
               ]
             },
             {
+              "name": "integration",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationTypeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "integrationCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "subsidiaryId",
               "description": null,
               "type": {
@@ -31661,7 +31689,7 @@
               "deprecationReason": null
             },
             {
-              "name": "integrationCustomer",
+              "name": "netsuiteCustomer",
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",

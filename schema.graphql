@@ -4767,6 +4767,8 @@ type Mutation {
 type NetsuiteCustomer {
   externalCustomerId: String
   id: ID!
+  integration: IntegrationTypeEnum
+  integrationCode: String
   subsidiaryId: String
   syncWithProvider: Boolean
 }
@@ -6620,7 +6622,6 @@ input UpdateCustomerInput {
   externalId: String!
   externalSalesforceId: String
   id: ID!
-  integrationCustomer: IntegrationCustomerInput
   invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
@@ -6628,6 +6629,7 @@ input UpdateCustomerInput {
   metadata: [CustomerMetadataInput!]
   name: String!
   netPaymentTerm: Int
+  netsuiteCustomer: IntegrationCustomerInput
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   phone: String
