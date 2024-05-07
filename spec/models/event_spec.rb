@@ -88,6 +88,16 @@ RSpec.describe Event, type: :model do
         expect(event.subscription).to eq(subscription)
       end
 
+      context 'when subscription is terminated just after the ingestion' do
+        before do
+          subscription.update!(terminated_at: timestamp + 0.2.seconds)
+        end
+
+        it 'returns the subscription' do
+          expect(event.subscription).to eq(subscription)
+        end
+      end
+
       context 'when a new active subscription exists' do
         let(:started_at) { 1.month.ago }
         let(:timestamp) { 1.week.ago }
