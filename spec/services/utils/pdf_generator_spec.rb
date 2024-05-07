@@ -11,7 +11,7 @@ RSpec.describe Utils::PdfGenerator, type: :service do
   end
 
   before do
-    stub_request(:post, "#{ENV['LAGO_PDF_URL']}/forms/chromium/convert/html")
+    stub_request(:post, "#{ENV["LAGO_PDF_URL"]}/forms/chromium/convert/html")
       .to_return(body: pdf_response, status: 200)
   end
 

@@ -77,7 +77,7 @@ module PaymentProviders
       unless WEBHOOKS_EVENTS.include?(event['eventCode'])
         return result.service_failure!(
           code: 'webhook_error',
-          message: "Invalid adyen event code: #{event['eventCode']}",
+          message: "Invalid adyen event code: #{event["eventCode"]}",
         )
       end
 

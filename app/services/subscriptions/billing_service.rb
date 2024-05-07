@@ -94,7 +94,7 @@ module Subscriptions
         WHERE subscriptions.status = #{Subscription.statuses[:active]}
           AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
           AND plans.interval = #{Plan.intervals[interval]}
-          AND #{conditions.join(' AND ')}
+          AND #{conditions.join(" AND ")}
         GROUP BY subscriptions.id
       SQL
     end
@@ -302,8 +302,8 @@ module Subscriptions
         WHERE invoice_subscriptions.recurring = 't'
           AND invoice_subscriptions.timestamp IS NOT NULL
           AND DATE(
-            (invoice_subscriptions.timestamp)#{at_time_zone(customer: 'cus', organization: 'org')}
-          ) = DATE(:today#{at_time_zone(customer: 'cus', organization: 'org')})
+            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", organization: "org")}
+          ) = DATE(:today#{at_time_zone(customer: "cus", organization: "org")})
         GROUP BY invoice_subscriptions.subscription_id
       SQL
     end

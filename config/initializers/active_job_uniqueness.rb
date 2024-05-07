@@ -8,6 +8,6 @@ ActiveJob::Uniqueness.configure do |config|
     host = [uri.host, uri.path].join('')
     host = [host, uri.query].join('?')
 
-    config.redlock_servers = ["redis://:#{ENV['REDIS_PASSWORD']}@#{host}:#{uri.port}"]
+    config.redlock_servers = ["redis://:#{ENV["REDIS_PASSWORD"]}@#{host}:#{uri.port}"]
   end
 end

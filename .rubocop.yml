@@ -36,9 +36,6 @@ Style/TrailingCommaInHashLiteral:
 Layout/SpaceInsideHashLiteralBraces:
   Enabled: false
 
-Style/StringLiteralsInInterpolation:
-  Enabled: false
-
 Performance/CaseWhenSplat:
   Enabled: true
 

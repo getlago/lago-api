@@ -22,7 +22,7 @@ module Auth
           response_type: 'code',
           response_mode: 'query',
           scope: 'openid profile email',
-          redirect_uri: "#{ENV['LAGO_FRONT_URL']}/auth/okta/callback",
+          redirect_uri: "#{ENV["LAGO_FRONT_URL"]}/auth/okta/callback",
           state:,
         }
         result.url = URI::HTTPS.build(

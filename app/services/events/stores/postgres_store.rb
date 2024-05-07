@@ -42,7 +42,7 @@ module Events
           .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
           .select(
             [
-              "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}",
+              "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}",
               'events.timestamp',
               "(#{sanitized_property_name})::numeric AS value",
             ].join(', '),
@@ -181,7 +181,7 @@ module Events
         sql = events
           .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
           .select(
-            "DISTINCT ON (#{groups.join(', ')}) #{groups.join(', ')}, (#{sanitized_property_name})::numeric AS value",
+            "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}, (#{sanitized_property_name})::numeric AS value",
           )
           .to_sql
 
@@ -230,7 +230,7 @@ module Events
         end
 
         sum_sql = <<-SQL
-          #{sanitized_grouped_by.join(', ')},
+          #{sanitized_grouped_by.join(", ")},
           SUM(
             (#{sanitized_property_name})::numeric * (#{ratio})::numeric
           ) AS sum_result

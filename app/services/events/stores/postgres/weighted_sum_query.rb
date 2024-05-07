@@ -123,7 +123,7 @@ module Events
               UNION
               (#{
                 events
-                  .select("#{groups.join(', ')}, timestamp, (#{sanitized_property_name})::numeric AS difference, events.created_at")
+                  .select("#{groups.join(", ")}, timestamp, (#{sanitized_property_name})::numeric AS difference, events.created_at")
                   .to_sql
               })
               UNION
@@ -153,7 +153,7 @@ module Events
           <<-SQL
             SELECT *
             FROM (
-                VALUES #{values.map { "(#{_1})" }.join(', ')}
+                VALUES #{values.map { "(#{_1})" }.join(", ")}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
         end
@@ -179,7 +179,7 @@ module Events
           <<-SQL
             SELECT *
             FROM (
-              VALUES #{values.map { "(#{_1})" }.join(', ')}
+              VALUES #{values.map { "(#{_1})" }.join(", ")}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
         end

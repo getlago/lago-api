@@ -36,7 +36,7 @@ class AddCreditAmountToInvoices < ActiveRecord::Migration[7.0]
               INNER JOIN wallets ON wallet_transactions.wallet_id = wallets.id
               INNER JOIN (
                 SELECT *
-                FROM (VALUES #{currency_sql.join(', ')}) AS t(currency, exponent, subunit_to_unit)
+                FROM (VALUES #{currency_sql.join(", ")}) AS t(currency, exponent, subunit_to_unit)
               ) currencies ON currencies.currency = wallets.currency
             GROUP BY wallet_transactions.invoice_id, currencies.currency, currencies.exponent, currencies.subunit_to_unit
           ) AS prepaid_amounts ON prepaid_amounts.invoice_id = invoices.id

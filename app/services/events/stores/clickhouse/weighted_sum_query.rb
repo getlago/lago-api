@@ -125,7 +125,7 @@ module Events
               UNION ALL
               (#{
                 events
-                  .select("#{groups.join(', ')}, timestamp, #{sanitized_numeric_property} AS difference")
+                  .select("#{groups.join(", ")}, timestamp, #{sanitized_numeric_property} AS difference")
                   .group(Events::Stores::ClickhouseStore::DEDUPLICATION_GROUP)
                   .to_sql
               })
@@ -150,10 +150,10 @@ module Events
 
           <<-SQL
             SELECT
-              #{store.grouped_by.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(', ')},
+              #{store.grouped_by.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
               tuple.#{store.grouped_by.count + 1} AS timestamp,
               tuple.#{store.grouped_by.count + 2} AS difference
-            FROM ( SELECT arrayJoin([#{values.map { "tuple(#{_1})" }.join(', ')}]) AS tuple )
+            FROM ( SELECT arrayJoin([#{values.map { "tuple(#{_1})" }.join(", ")}]) AS tuple )
           SQL
         end
 
@@ -172,10 +172,10 @@ module Events
 
           <<-SQL
             SELECT
-              #{store.grouped_by.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(', ')},
+              #{store.grouped_by.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
               tuple.#{store.grouped_by.count + 1} AS timestamp,
               tuple.#{store.grouped_by.count + 2} AS difference
-            FROM ( SELECT arrayJoin([#{values.map { "tuple(#{_1})" }.join(', ')}]) AS tuple )
+            FROM ( SELECT arrayJoin([#{values.map { "tuple(#{_1})" }.join(", ")}]) AS tuple )
           SQL
         end
 

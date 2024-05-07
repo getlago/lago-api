@@ -22,7 +22,7 @@ module Types
       # NOTE: Client secret is a sensitive information. It should not be sent back to the
       #       front end application. Instead we send an obfuscated value
       def client_secret
-        "#{'•' * 8}…#{object.client_secret[-3..]}"
+        "#{"•" * 8}…#{object.client_secret[-3..]}"
       end
 
       def has_mappings_configured

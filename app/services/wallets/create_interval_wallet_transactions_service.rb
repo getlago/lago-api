@@ -69,7 +69,7 @@ module Wallets
         WHERE wallets.status = #{Wallet.statuses[:active]}
           AND recurring_transaction_rules.rule_type = #{RecurringTransactionRule.rule_types[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}
-          AND #{conditions.join(' AND ')}
+          AND #{conditions.join(" AND ")}
         GROUP BY recurring_transaction_rules.id
       SQL
     end
@@ -189,8 +189,8 @@ module Wallets
         WHERE wallet_transactions.source = #{WalletTransaction.sources[:interval]}
           AND wallet_transactions.transaction_type = #{WalletTransaction.transaction_types[:inbound]}
           AND DATE(
-            (wallet_transactions.created_at)#{at_time_zone(customer: 'cus', organization: 'org')}
-          ) = DATE(:today#{at_time_zone(customer: 'cus', organization: 'org')})
+            (wallet_transactions.created_at)#{at_time_zone(customer: "cus", organization: "org")}
+          ) = DATE(:today#{at_time_zone(customer: "cus", organization: "org")})
         GROUP BY wallet_transactions.wallet_id
       SQL
     end

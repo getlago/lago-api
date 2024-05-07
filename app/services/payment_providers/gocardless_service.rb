@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class GocardlessService < BaseService
-    REDIRECT_URI = "#{ENV['LAGO_OAUTH_PROXY_URL']}/gocardless/callback".freeze
+    REDIRECT_URI = "#{ENV["LAGO_OAUTH_PROXY_URL"]}/gocardless/callback".freeze
     PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
     REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
 
