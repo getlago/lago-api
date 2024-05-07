@@ -16290,11 +16290,11 @@
               "deprecationReason": null
             },
             {
-              "name": "integrationType",
+              "name": "integrationCode",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "IntegrationTypeEnum",
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -16302,11 +16302,11 @@
               "deprecationReason": null
             },
             {
-              "name": "integrationCode",
+              "name": "integrationType",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "IntegrationTypeEnum",
                 "ofType": null
               },
               "defaultValue": null,
