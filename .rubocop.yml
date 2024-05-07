@@ -39,9 +39,6 @@ Layout/SpaceInsideHashLiteralBraces:
 Style/StringLiteralsInInterpolation:
   Enabled: false
 
-Layout/ArgumentAlignment:
-  Enabled: false
-
 Performance/CaseWhenSplat:
   Enabled: true
 

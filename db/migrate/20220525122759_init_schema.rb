@@ -27,9 +27,9 @@ class InitSchema < ActiveRecord::Migration[7.0]
       t.datetime 'updated_at', null: false
       t.datetime 'terminated_at', precision: nil
       t.index %w[coupon_id customer_id],
-              name: 'index_applied_coupons_on_coupon_id_and_customer_id',
-              unique: true,
-              where: '(status = 0)'
+        name: 'index_applied_coupons_on_coupon_id_and_customer_id',
+        unique: true,
+        where: '(status = 0)'
       t.index ['coupon_id'], name: 'index_applied_coupons_on_coupon_id'
       t.index ['customer_id'], name: 'index_applied_coupons_on_customer_id'
     end
@@ -73,9 +73,9 @@ class InitSchema < ActiveRecord::Migration[7.0]
       t.datetime 'created_at', null: false
       t.datetime 'updated_at', null: false
       t.index %w[organization_id code],
-              name: 'index_coupons_on_organization_id_and_code',
-              unique: true,
-              where: '(code IS NOT NULL)'
+        name: 'index_coupons_on_organization_id_and_code',
+        unique: true,
+        where: '(code IS NOT NULL)'
       t.index ['organization_id'], name: 'index_coupons_on_organization_id'
     end
 
@@ -125,8 +125,8 @@ class InitSchema < ActiveRecord::Migration[7.0]
       t.index ['customer_id'], name: 'index_events_on_customer_id'
       t.index %w[organization_id code], name: 'index_events_on_organization_id_and_code'
       t.index %w[organization_id transaction_id],
-              name: 'index_events_on_organization_id_and_transaction_id',
-              unique: true
+        name: 'index_events_on_organization_id_and_transaction_id',
+        unique: true
       t.index ['organization_id'], name: 'index_events_on_organization_id'
     end
 

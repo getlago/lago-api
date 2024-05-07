@@ -6,7 +6,7 @@ class AddBillableMetricIdToPersistedEvents < ActiveRecord::Migration[7.0]
 
     remove_index :persisted_events, name: :index_search_persisted_events # rubocop:disable Rails/ReversibleMigration
     add_index :persisted_events,
-              [:customer_id, :external_subscription_id, :billable_metric_id],
-              name: :index_search_persisted_events
+      [:customer_id, :external_subscription_id, :billable_metric_id],
+      name: :index_search_persisted_events
   end
 end

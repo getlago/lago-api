@@ -31,21 +31,21 @@ class Invoice < ApplicationRecord
   has_one_attached :file
 
   monetize :coupons_amount_cents,
-           :credit_notes_amount_cents,
-           :fees_amount_cents,
-           :prepaid_credit_amount_cents,
-           :sub_total_excluding_taxes_amount_cents,
-           :sub_total_including_taxes_amount_cents,
-           :total_amount_cents,
-           :taxes_amount_cents,
-           with_model_currency: :currency
+    :credit_notes_amount_cents,
+    :fees_amount_cents,
+    :prepaid_credit_amount_cents,
+    :sub_total_excluding_taxes_amount_cents,
+    :sub_total_including_taxes_amount_cents,
+    :total_amount_cents,
+    :taxes_amount_cents,
+    with_model_currency: :currency
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents,
-           :subscription_amount_cents,
-           disable_validation: true,
-           allow_nil: true,
-           with_model_currency: :currency
+    :subscription_amount_cents,
+    disable_validation: true,
+    allow_nil: true,
+    with_model_currency: :currency
 
   INVOICE_TYPES = %i[subscription add_on credit one_off].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
@@ -71,27 +71,27 @@ class Invoice < ApplicationRecord
   end
 
   sequenced scope: ->(invoice) { invoice.customer.invoices },
-            lock_key: ->(invoice) { invoice.customer_id }
+    lock_key: ->(invoice) { invoice.customer_id }
 
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
   scope :ready_to_be_finalized,
-        lambda {
-          date = <<-SQL
+    lambda {
+      date = <<-SQL
             (
               invoices.created_at +
               COALESCE(customers.invoice_grace_period, organizations.invoice_grace_period) * INTERVAL '1 DAY'
             )
-          SQL
+      SQL
 
-          draft.joins(:customer, :organization).where("#{Arel.sql(date)} < ?", Time.current)
-        }
+      draft.joins(:customer, :organization).where("#{Arel.sql(date)} < ?", Time.current)
+    }
 
   scope :created_before,
-        lambda { |invoice|
-          where.not(id: invoice.id)
-            .where('invoices.created_at < ?', invoice.created_at)
-        }
+    lambda { |invoice|
+      where.not(id: invoice.id)
+        .where('invoices.created_at < ?', invoice.created_at)
+    }
 
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true

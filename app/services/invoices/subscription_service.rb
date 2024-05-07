@@ -65,13 +65,13 @@ module Invoices
     private
 
     attr_accessor :subscriptions,
-                  :timestamp,
-                  :invoicing_reason,
-                  :recurring,
-                  :customer,
-                  :currency,
-                  :invoice,
-                  :skip_charges
+      :timestamp,
+      :invoicing_reason,
+      :recurring,
+      :customer,
+      :currency,
+      :invoice,
+      :skip_charges
 
     def active_subscriptions
       @active_subscriptions ||= subscriptions.select(&:active?)

@@ -52,11 +52,11 @@ class Fee < ApplicationRecord
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
   scope :from_organization,
-        lambda { |organization|
-          left_joins(:invoice)
-            .left_joins(subscription: :customer)
-            .where('COALESCE(invoices.organization_id, customers.organization_id) = ?', organization.id)
-        }
+    lambda { |organization|
+      left_joins(:invoice)
+        .left_joins(subscription: :customer)
+        .where('COALESCE(invoices.organization_id, customers.organization_id) = ?', organization.id)
+    }
 
   def item_id
     return billable_metric.id if charge?

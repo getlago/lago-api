@@ -61,8 +61,8 @@ class Organization < ApplicationRecord
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
   validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }
   validates :logo,
-            image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes },
-            if: :logo?
+    image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes },
+    if: :logo?
   validates :name, presence: true
   validates :timezone, timezone: true
   validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }

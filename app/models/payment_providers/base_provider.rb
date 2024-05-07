@@ -11,9 +11,9 @@ module PaymentProviders
     belongs_to :organization
 
     has_many :payment_provider_customers,
-             dependent: :nullify,
-             class_name: 'PaymentProviderCustomers::BaseCustomer',
-             foreign_key: :payment_provider_id
+      dependent: :nullify,
+      class_name: 'PaymentProviderCustomers::BaseCustomer',
+      foreign_key: :payment_provider_id
 
     has_many :payments, dependent: :nullify, foreign_key: :payment_provider_id
     has_many :refunds, dependent: :nullify, foreign_key: :payment_provider_id

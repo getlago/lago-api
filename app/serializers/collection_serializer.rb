@@ -2,8 +2,8 @@
 
 class CollectionSerializer
   attr_reader :collection,
-              :model_serializer,
-              :options
+    :model_serializer,
+    :options
 
   def initialize(collection, model_serializer, options = {})
     @collection = collection

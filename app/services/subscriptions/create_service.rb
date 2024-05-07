@@ -56,14 +56,14 @@ module Subscriptions
     private
 
     attr_reader :customer,
-                :plan,
-                :params,
-                :name,
-                :subscription_at,
-                :billing_time,
-                :external_id,
-                :current_subscription,
-                :plan_overrides
+      :plan,
+      :params,
+      :name,
+      :subscription_at,
+      :billing_time,
+      :external_id,
+      :current_subscription,
+      :plan_overrides
 
     def valid?(args)
       Subscriptions::ValidateService.new(result, **args).valid?

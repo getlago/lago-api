@@ -55,17 +55,17 @@ class Coupon < ApplicationRecord
 
   default_scope -> { kept }
   scope :order_by_status_and_expiration,
-        lambda {
-          order(
-            Arel.sql(
-              [
-                'coupons.status ASC',
-                'coupons.expiration ASC',
-                'coupons.expiration_at ASC',
-              ].join(', '),
-            ),
-          )
-        }
+    lambda {
+      order(
+        Arel.sql(
+          [
+            'coupons.status ASC',
+            'coupons.expiration ASC',
+            'coupons.expiration_at ASC',
+          ].join(', '),
+        ),
+      )
+    }
 
   scope :expired, -> { where('coupons.expiration_at::timestamp(0) < ?', Time.current) }
 
