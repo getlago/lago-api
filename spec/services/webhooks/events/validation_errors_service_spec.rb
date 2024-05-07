@@ -18,29 +18,10 @@ RSpec.describe Webhooks::Events::ValidationErrorsService do
   end
 
   describe '.call' do
-    let(:lago_client) { instance_double(LagoHttpClient::Client) }
-
-    before do
-      allow(LagoHttpClient::Client).to receive(:new)
-        .with(organization.webhook_endpoints.first.webhook_url)
-        .and_return(lago_client)
-      allow(lago_client).to receive(:post_with_response)
-    end
-
-    it 'builds payload with events.errors webhook type' do
-      webhook_service.call
-
-      expect(LagoHttpClient::Client).to have_received(:new)
-        .with(organization.webhook_endpoints.first.webhook_url)
-      expect(lago_client).to have_received(:post_with_response) do |payload|
-        expect(payload[:webhook_type]).to eq('events.errors')
-        expect(payload[:object_type]).to eq('events_errors')
-        expect(payload['events_errors']).to include(
-          invalid_code: Array,
-          missing_aggregation_property: Array,
-          missing_group_key: Array,
-        )
-      end
-    end
+    it_behaves_like 'creates webhook', 'events.errors', 'events_errors', {
+      'invalid_code' => Array,
+      'missing_aggregation_property' => Array,
+      'missing_group_key' => Array,
+    }
   end
 end

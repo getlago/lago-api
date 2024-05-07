@@ -16,6 +16,11 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
 
     it 'marks the webhook as succeeded' do
       service.call
+
+      expect(WebMock).to have_requested(:post, 'https://wh.test.com').with(
+        body: webhook.payload.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
       expect(webhook.status).to eq 'succeeded'
       expect(webhook.http_status).to eq 200
       expect(webhook.response).to eq 'ok'
@@ -34,7 +39,7 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
       allow(lago_client).to receive(:post_with_response).and_raise(
         LagoHttpClient::HttpError.new(403, error_body.to_json, ''),
       )
-      allow(SendHttpWebhookJob).to receive(:set).and_return(double(perform_later: nil))
+      allow(SendHttpWebhookJob).to receive(:set).and_return(class_double(SendHttpWebhookJob, perform_later: nil))
     end
 
     it 'creates a failed webhook' do
