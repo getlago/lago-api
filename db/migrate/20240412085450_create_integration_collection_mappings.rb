@@ -12,8 +12,8 @@ class CreateIntegrationCollectionMappings < ActiveRecord::Migration[7.0]
     end
 
     add_index :integration_collection_mappings,
-              %i[mapping_type integration_id],
-              name: 'index_int_collection_mappings_on_mapping_type_and_int_id',
-              unique: true
+      %i[mapping_type integration_id],
+      name: 'index_int_collection_mappings_on_mapping_type_and_int_id',
+      unique: true
   end
 end

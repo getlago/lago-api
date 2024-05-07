@@ -25,12 +25,12 @@ class Customer < ApplicationRecord
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
   has_many :payment_provider_customers,
-           class_name: 'PaymentProviderCustomers::BaseCustomer',
-           dependent: :destroy
+    class_name: 'PaymentProviderCustomers::BaseCustomer',
+    dependent: :destroy
   has_many :quantified_events
   has_many :integration_customers,
-           class_name: 'IntegrationCustomers::BaseCustomer',
-           dependent: :destroy
+    class_name: 'IntegrationCustomers::BaseCustomer',
+    dependent: :destroy
 
   has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
   has_many :taxes, through: :applied_taxes
@@ -44,15 +44,15 @@ class Customer < ApplicationRecord
 
   default_scope -> { kept }
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
-            lock_key: ->(customer) { customer.organization_id }
+    lock_key: ->(customer) { customer.organization_id }
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
   validates :currency, inclusion: { in: currency_list }, allow_nil: true
   validates :external_id,
-            presence: true,
-            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id },
-            unless: :deleted_at
+    presence: true,
+    uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id },
+    unless: :deleted_at
   validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true

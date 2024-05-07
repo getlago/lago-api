@@ -6,8 +6,8 @@ module Types
       graphql_name 'PaymentProvider'
 
       possible_types Types::PaymentProviders::Adyen,
-                     Types::PaymentProviders::Gocardless,
-                     Types::PaymentProviders::Stripe
+        Types::PaymentProviders::Gocardless,
+        Types::PaymentProviders::Stripe
 
       def self.resolve_type(object, _context)
         case object.class.to_s

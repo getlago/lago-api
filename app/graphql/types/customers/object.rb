@@ -56,17 +56,17 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :active_subscriptions_count,
-            Integer,
-            null: false,
-            description: 'Number of active subscriptions per customer'
+        Integer,
+        null: false,
+        description: 'Number of active subscriptions per customer'
       field :credit_notes_balance_amount_cents,
-            GraphQL::Types::BigInt,
-            null: false,
-            description: 'Credit notes credits balance available per customer'
+        GraphQL::Types::BigInt,
+        null: false,
+        description: 'Credit notes credits balance available per customer'
       field :credit_notes_credits_available_count,
-            Integer,
-            null: false,
-            description: 'Number of available credits from credit notes per customer'
+        Integer,
+        null: false,
+        description: 'Number of available credits from credit notes per customer'
       field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
       field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'
 

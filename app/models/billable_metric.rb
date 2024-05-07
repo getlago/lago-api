@@ -38,11 +38,11 @@ class BillableMetric < ApplicationRecord
   validates :field_name, presence: true, if: :should_have_field_name?
   validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.keys.map(&:to_s) }
   validates :code,
-            presence: true,
-            uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+    presence: true,
+    uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
   validates :weighted_interval,
-            inclusion: { in: WEIGHTED_INTERVAL.values },
-            if: :weighted_sum_agg?
+    inclusion: { in: WEIGHTED_INTERVAL.values },
+    if: :weighted_sum_agg?
   validates :custom_aggregator, presence: true, if: :custom_agg?
 
   default_scope -> { kept }

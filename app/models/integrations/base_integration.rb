@@ -12,13 +12,13 @@ module Integrations
 
     has_many :integration_items, dependent: :destroy, foreign_key: :integration_id
     has_many :integration_mappings,
-             class_name: 'IntegrationMappings::BaseMapping',
-             foreign_key: :integration_id,
-             dependent: :destroy
+      class_name: 'IntegrationMappings::BaseMapping',
+      foreign_key: :integration_id,
+      dependent: :destroy
     has_many :integration_collection_mappings,
-             class_name: 'IntegrationCollectionMappings::BaseCollectionMapping',
-             foreign_key: :integration_id,
-             dependent: :destroy
+      class_name: 'IntegrationCollectionMappings::BaseCollectionMapping',
+      foreign_key: :integration_id,
+      dependent: :destroy
 
     validates :code, uniqueness: { scope: :organization_id }
     validates :name, presence: true

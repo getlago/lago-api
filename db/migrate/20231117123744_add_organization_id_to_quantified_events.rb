@@ -14,8 +14,8 @@ class AddOrganizationIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
     change_column_null :quantified_events, :organization_id, false
     remove_column :quantified_events, :customer_id
     add_index :quantified_events,
-              %i[organization_id external_subscription_id billable_metric_id],
-              name: 'index_search_quantified_events'
+      %i[organization_id external_subscription_id billable_metric_id],
+      name: 'index_search_quantified_events'
   end
 
   def down

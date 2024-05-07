@@ -23,13 +23,13 @@ class InvoiceSubscription < ApplicationRecord
   enum invoicing_reason: INVOICING_REASONS
 
   scope :order_by_charges_to_datetime,
-        lambda {
-          condition = <<-SQL
+    lambda {
+      condition = <<-SQL
             COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.created_at) DESC
-          SQL
+      SQL
 
-          order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))
-        }
+      order(Arel.sql(ActiveRecord::Base.sanitize_sql_for_conditions(condition)))
+    }
 
   # NOTE: Billed automatically by the recurring billing process
   #       It is used to prevent double billing on billing day

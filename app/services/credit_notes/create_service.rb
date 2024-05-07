@@ -74,12 +74,12 @@ module CreditNotes
     private
 
     attr_accessor :invoice,
-                  :items_attr,
-                  :reason,
-                  :description,
-                  :credit_amount_cents,
-                  :refund_amount_cents,
-                  :automatic
+      :items_attr,
+      :reason,
+      :description,
+      :credit_amount_cents,
+      :refund_amount_cents,
+      :automatic
 
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice

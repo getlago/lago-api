@@ -45,14 +45,14 @@ module BillableMetrics
       protected
 
       attr_accessor :event_store_class,
-                    :charge,
-                    :subscription,
-                    :filters,
-                    :charge_filter,
-                    :event,
-                    :boundaries,
-                    :grouped_by,
-                    :grouped_by_values
+        :charge,
+        :subscription,
+        :filters,
+        :charge_filter,
+        :event,
+        :boundaries,
+        :grouped_by,
+        :grouped_by_values
 
       delegate :billable_metric, to: :charge
 
