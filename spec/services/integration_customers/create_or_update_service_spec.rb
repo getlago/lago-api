@@ -10,7 +10,7 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
   let(:subsidiary_id) { '1' }
   let(:integration_customer_params) do
     {
-      integration: 'netsuite',
+      integration_type: 'netsuite',
       integration_code:,
       sync_with_provider:,
       external_customer_id:,

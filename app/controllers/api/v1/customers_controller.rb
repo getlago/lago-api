@@ -113,7 +113,7 @@ module Api
           :external_salesforce_id,
           integration_customer: [
             :external_customer_id,
-            :integration,
+            :integration_type,
             :integration_code,
             :subsidiary_id,
             :sync_with_provider,
