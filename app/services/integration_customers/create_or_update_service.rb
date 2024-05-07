@@ -55,9 +55,9 @@ module IntegrationCustomers
 
     def integration
       return @integration if defined? @integration
-      return nil unless integration_customer_params[:integration] && integration_customer_params[:integration_code]
+      return nil unless integration_customer_params[:integration_type] && integration_customer_params[:integration_code]
 
-      type = Integrations::BaseIntegration.integration_type(integration_customer_params[:integration])
+      type = Integrations::BaseIntegration.integration_type(integration_customer_params[:integration_type])
       code = integration_customer_params[:integration_code]
 
       @integration = Integrations::BaseIntegration.find_by(type:, code:)
