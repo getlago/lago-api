@@ -7,7 +7,7 @@ RSpec.describe Types::IntegrationCustomers::Netsuite do
 
   it { is_expected.to have_field(:external_customer_id).of_type('String') }
   it { is_expected.to have_field(:id).of_type('ID!') }
-  it { is_expected.to have_field(:integration).of_type('IntegrationTypeEnum') }
+  it { is_expected.to have_field(:integration_type).of_type('IntegrationTypeEnum') }
   it { is_expected.to have_field(:integration_code).of_type('String') }
   it { is_expected.to have_field(:subsidiary_id).of_type('String') }
   it { is_expected.to have_field(:sync_with_provider).of_type('Boolean') }
