@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class PolicyController < ApplicationController
   # GET /users or /users.json
   def index
