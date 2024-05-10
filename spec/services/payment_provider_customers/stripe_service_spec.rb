@@ -677,6 +677,17 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           .with('customer.checkout_url_generated', customer, checkout_url: 'https://example.com')
       end
     end
+
+    context 'without any customer' do
+      let(:customer) { create(:customer, :deleted, organization:) }
+
+      it "does not deliver a webhook" do
+        described_class.new(stripe_customer.reload).generate_checkout_url
+
+        expect(SendWebhookJob).not_to have_been_enqueued
+          .with('customer.checkout_url_generated', customer, checkout_url: 'https://example.com')
+      end
+    end
   end
 
   describe '#success_redirect_url' do
