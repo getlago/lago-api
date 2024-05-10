@@ -113,6 +113,7 @@ module PaymentProviderCustomers
     end
 
     def generate_checkout_url(send_webhook: true)
+      return result unless customer # NOTE: Customer is nil when deleted.
       return result unless customer.organization.webhook_endpoints.any? || !send_webhook || !payment_provider(customer)
 
       res = Stripe::Checkout::Session.create(
