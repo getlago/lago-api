@@ -124,3 +124,6 @@ group :development do
 
   gem 'ruby-lsp-rails', require: false
 end
+
+gem "packs-rails"
+gem "packwerk", "~> 3.2"

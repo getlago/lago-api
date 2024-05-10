@@ -4,18 +4,26 @@ default: &default
 development:
   primary:
     <<: *default
-    host: db
+    host: localhost
     username: lago
     password: changeme
     database: lago
     port: 5432
   events:
     <<: *default
-    host: db
+    host: localhost
     username: lago
     password: changeme
     database: lago
     port: 5432
+  publisher_portal:
+    <<: *default
+    database: publisher_portal_development
+    host: localhost
+    port: 5432
+    username: postgres
+    password: 123
+    migrations_paths: db/publisher_portal_migrate
   clickhouse:
     adapter: clickhouse
     database: default
