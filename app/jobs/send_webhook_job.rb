@@ -30,6 +30,7 @@ class SendWebhookJob < ApplicationJob
     'credit_note.created' => Webhooks::CreditNotes::CreatedService,
     'credit_note.generated' => Webhooks::CreditNotes::GeneratedService,
     'credit_note.provider_refund_failure' => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
+    'payment_provider.error' => Webhooks::PaymentProviders::ErrorService,
     'subscription.terminated' => Webhooks::Subscriptions::TerminatedService,
     'subscription.started' => Webhooks::Subscriptions::StartedService,
     'subscription.termination_alert' => Webhooks::Subscriptions::TerminationAlertService,
