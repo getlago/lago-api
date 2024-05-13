@@ -19,7 +19,7 @@ class KarafkaApp < Karafka::App
     end
 
     if ENV['LAGO_KAFKA_PASSWORD'].present?
-      config.kagka = config.kafka.merge({'sasl.password': ENV['LAGO_KAFKA_PASSWORD']})
+      config.kafka = config.kafka.merge({'sasl.password': ENV['LAGO_KAFKA_PASSWORD']})
     end
 
     config.client_id = 'Lago'
