@@ -16,6 +16,8 @@ module Customers
       end
 
       old_payment_provider = customer.payment_provider
+      # TODO:
+      # old_provider_customer = customer.provider_customer
       ActiveRecord::Base.transaction do
         billing_configuration = args[:billing_configuration]&.to_h || {}
         if args.key?(:currency)
@@ -75,7 +77,14 @@ module Customers
       customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
 
       ActiveRecord::Base.transaction do
+        # TODO:
+        # if old_provider_customer && args[:payment_provider].nil? && args[:payment_provider_code].present?
+        #   old_provider_customer.destroy!
+        #   customer.payment_provider_code = nil
+        # end
+
         customer.save!
+        customer = customer.reload
 
         if customer.organization.eu_tax_management
           eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
@@ -103,6 +112,14 @@ module Customers
       end
 
       result.customer = customer
+
+      # TODO:
+      # IntegrationCustomers::CreateOrUpdateService.call(
+      #   integration_customer_params: args[:integration_customer]&.to_h,
+      #   customer: result.customer,
+      #   new_customer: false,
+      # )
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
