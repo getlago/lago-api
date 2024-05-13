@@ -17,7 +17,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
 
     it 'returns a success' do
-      post_with_token(organization, '/api/v1/customers', { customer: create_params })
+      post_with_token(organization, '/api/v1/customers', {customer: create_params})
 
       expect(response).to have_http_status(:success)
 
@@ -43,7 +43,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/customers', { customer: create_params })
+        post_with_token(organization, '/api/v1/customers', {customer: create_params})
 
         expect(response).to have_http_status(:success)
 
@@ -77,9 +77,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           .to_return(status: 200, body: body.to_json, headers: {})
 
         allow(Stripe::Checkout::Session).to receive(:create)
-          .and_return({ 'url' => 'https://example.com' })
+          .and_return({'url' => 'https://example.com'})
 
-        post_with_token(organization, '/api/v1/customers', { customer: create_params })
+        post_with_token(organization, '/api/v1/customers', {customer: create_params})
       end
 
       context 'when provider payment methods are not present' do
@@ -191,7 +191,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/customers', { customer: create_params })
+        post_with_token(organization, '/api/v1/customers', {customer: create_params})
 
         expect(response).to have_http_status(:success)
 
@@ -210,11 +210,11 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
     context 'with invalid params' do
       let(:create_params) do
-        { name: 'Foo Bar', currency: 'invalid' }
+        {name: 'Foo Bar', currency: 'invalid'}
       end
 
       it 'returns an unprocessable_entity' do
-        post_with_token(organization, '/api/v1/customers', { customer: create_params })
+        post_with_token(organization, '/api/v1/customers', {customer: create_params})
 
         expect(response).to have_http_status(:unprocessable_entity)
       end
@@ -360,7 +360,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       customer.update(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)
 
       allow(Stripe::Checkout::Session).to receive(:create)
-        .and_return({ 'url' => 'https://example.com' })
+        .and_return({'url' => 'https://example.com'})
     end
 
     it 'returns the new generated checkout url' do

@@ -55,7 +55,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
           )
 
         expect(count_service).to have_received(:aggregate).with(
-          options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
+          options: {free_units_per_events: 0, free_units_per_total_aggregation: 0},
         )
       end
 
@@ -65,7 +65,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             :standard_charge,
             billable_metric:,
             pay_in_advance: true,
-            properties: { 'grouped_by' => ['operator'], 'amount' => '100' },
+            properties: {'grouped_by' => ['operator'], 'amount' => '100'},
           )
         end
 
@@ -74,7 +74,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             :event,
             organization:,
             external_subscription_id: subscription.external_id,
-            properties: { 'operator' => 'foo' },
+            properties: {'operator' => 'foo'},
           )
         end
 
@@ -95,12 +95,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               },
               filters: {
                 event:,
-                grouped_by_values: { 'operator' => 'foo' },
+                grouped_by_values: {'operator' => 'foo'},
               },
             )
 
           expect(count_service).to have_received(:aggregate).with(
-            options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
+            options: {free_units_per_events: 0, free_units_per_total_aggregation: 0},
           )
         end
       end
@@ -144,7 +144,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             )
 
           expect(count_service).to have_received(:aggregate).with(
-            options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
+            options: {free_units_per_events: 0, free_units_per_total_aggregation: 0},
           )
         end
       end
@@ -154,7 +154,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
       let(:aggregation_type) { 'sum_agg' }
       let(:sum_service) { instance_double(BillableMetrics::Aggregations::SumService, aggregate: agg_result) }
       let(:properties) do
-        { 'free_units_per_events' => '3', 'free_units_per_total_aggregation' => '50' }
+        {'free_units_per_events' => '3', 'free_units_per_total_aggregation' => '50'}
       end
 
       it 'delegates to the sum aggregation service' do
@@ -178,7 +178,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
           )
 
         expect(sum_service).to have_received(:aggregate).with(
-          options: { free_units_per_events: 3, free_units_per_total_aggregation: 50 },
+          options: {free_units_per_events: 3, free_units_per_total_aggregation: 50},
         )
       end
     end
@@ -210,7 +210,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
           )
 
         expect(unique_count_service).to have_received(:aggregate).with(
-          options: { free_units_per_events: 0, free_units_per_total_aggregation: 0 },
+          options: {free_units_per_events: 0, free_units_per_total_aggregation: 0},
         )
       end
     end

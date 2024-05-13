@@ -34,7 +34,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
       :standard_charge,
       plan:,
       billable_metric:,
-      properties: { amount: '12.66' },
+      properties: {amount: '12.66'},
     )
   end
 

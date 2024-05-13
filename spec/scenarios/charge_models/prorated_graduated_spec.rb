@@ -71,7 +71,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2' },
+              properties: {amount: '2'},
             },
           )
 
@@ -87,7 +87,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '5' },
+              properties: {amount: '5'},
             },
           )
 
@@ -103,7 +103,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '-6' },
+              properties: {amount: '-6'},
             },
           )
 
@@ -119,7 +119,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
 
@@ -135,7 +135,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4' },
+              properties: {amount: '4'},
             },
           )
 
@@ -151,7 +151,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '60' },
+              properties: {amount: '60'},
             },
           )
 
@@ -188,7 +188,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '20' },
+              properties: {amount: '20'},
             },
           )
 
@@ -246,7 +246,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 transaction_id: SecureRandom.uuid,
                 timestamp: 1_699_336_493, ## November 2023
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '5' },
+                properties: {amount: '5'},
               },
             )
 
@@ -256,7 +256,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 transaction_id: SecureRandom.uuid,
                 timestamp: 1_699_336_493, ## November 2023
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '5' },
+                properties: {amount: '5'},
               },
             )
 
@@ -293,7 +293,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '2' },
+                properties: {amount: '2'},
               },
             )
 
@@ -351,7 +351,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '4' },
+                properties: {amount: '4'},
               },
             )
 
@@ -360,7 +360,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '3' },
+                properties: {amount: '3'},
               },
             )
           end
@@ -371,7 +371,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '-1' },
+                properties: {amount: '-1'},
               },
             )
           end
@@ -387,7 +387,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '1' },
+                properties: {amount: '1'},
               },
             )
 
@@ -462,7 +462,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '2' },
+                properties: {amount: '2'},
               },
             )
           end
@@ -473,7 +473,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '5' },
+                properties: {amount: '5'},
               },
             )
           end
@@ -484,7 +484,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '-6' },
+                properties: {amount: '-6'},
               },
             )
           end
@@ -495,7 +495,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '10' },
+                properties: {amount: '10'},
               },
             )
           end
@@ -506,7 +506,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '4' },
+                properties: {amount: '4'},
               },
             )
           end
@@ -517,7 +517,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '60' },
+                properties: {amount: '60'},
               },
             )
 
@@ -554,7 +554,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
-                properties: { amount: '20' },
+                properties: {amount: '20'},
               },
             )
 
@@ -688,7 +688,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1111', operation_type: 'add' },
+              properties: {amount: '1111', operation_type: 'add'},
             },
           )
 
@@ -704,7 +704,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1111', operation_type: 'remove' },
+              properties: {amount: '1111', operation_type: 'remove'},
             },
           )
 
@@ -720,7 +720,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1111', operation_type: 'add' },
+              properties: {amount: '1111', operation_type: 'add'},
             },
           )
 
@@ -736,7 +736,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2222', operation_type: 'add' },
+              properties: {amount: '2222', operation_type: 'add'},
             },
           )
 
@@ -752,7 +752,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2222', operation_type: 'add' },
+              properties: {amount: '2222', operation_type: 'add'},
             },
           )
 
@@ -768,7 +768,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '3333', operation_type: 'add' },
+              properties: {amount: '3333', operation_type: 'add'},
             },
           )
 
@@ -805,7 +805,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4444', operation_type: 'add' },
+              properties: {amount: '4444', operation_type: 'add'},
             },
           )
 
@@ -861,7 +861,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1111', operation_type: 'add' },
+              properties: {amount: '1111', operation_type: 'add'},
             },
           )
 
@@ -877,7 +877,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '2222', operation_type: 'add' },
+              properties: {amount: '2222', operation_type: 'add'},
             },
           )
 
@@ -893,7 +893,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '3333', operation_type: 'add' },
+              properties: {amount: '3333', operation_type: 'add'},
             },
           )
 
@@ -909,7 +909,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4444', operation_type: 'add' },
+              properties: {amount: '4444', operation_type: 'add'},
             },
           )
 
@@ -925,7 +925,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '5555', operation_type: 'add' },
+              properties: {amount: '5555', operation_type: 'add'},
             },
           )
 
@@ -941,7 +941,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '6666', operation_type: 'add' },
+              properties: {amount: '6666', operation_type: 'add'},
             },
           )
 
@@ -1019,7 +1019,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '1111', operation_type: 'add' },
+                properties: {amount: '1111', operation_type: 'add'},
               },
             )
           end
@@ -1035,7 +1035,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: { amount: '2222', operation_type: 'add' },
+                properties: {amount: '2222', operation_type: 'add'},
               },
             )
 

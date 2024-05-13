@@ -87,7 +87,7 @@ module Fees
         .charges
         .pay_in_advance
         .joins(:billable_metric)
-        .where(billable_metric: { code: event.code })
+        .where(billable_metric: {code: event.code})
     end
 
     def estimated_charge_fees(charge)

@@ -27,7 +27,7 @@ class BillableMetric < ApplicationRecord
     custom_agg: 7,
   }.freeze
 
-  WEIGHTED_INTERVAL = { seconds: 'seconds' }.freeze
+  WEIGHTED_INTERVAL = {seconds: 'seconds'}.freeze
 
   enum aggregation_type: AGGREGATION_TYPES
   enum weighted_interval: WEIGHTED_INTERVAL
@@ -36,12 +36,12 @@ class BillableMetric < ApplicationRecord
 
   validates :name, presence: true
   validates :field_name, presence: true, if: :should_have_field_name?
-  validates :aggregation_type, inclusion: { in: AGGREGATION_TYPES.keys.map(&:to_s) }
+  validates :aggregation_type, inclusion: {in: AGGREGATION_TYPES.keys.map(&:to_s)}
   validates :code,
     presence: true,
-    uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
   validates :weighted_interval,
-    inclusion: { in: WEIGHTED_INTERVAL.values },
+    inclusion: {in: WEIGHTED_INTERVAL.values},
     if: :weighted_sum_agg?
   validates :custom_aggregator, presence: true, if: :custom_agg?
 

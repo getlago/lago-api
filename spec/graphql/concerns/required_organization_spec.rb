@@ -16,7 +16,7 @@ module RequiredOrganizationSpec
     type ThingType
 
     def resolve(**args)
-      { name: args[:new_name], count: 1 }
+      {name: args[:new_name], count: 1}
     end
   end
 
@@ -46,8 +46,8 @@ RSpec.describe RequiredOrganization, type: :graphql do
 
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
-        variables: { input: { newName: 'new name' } },
-        context: { current_user: membership.user, current_organization: membership.organization },
+        variables: {input: {newName: 'new name'}},
+        context: {current_user: membership.user, current_organization: membership.organization},
       )
 
       expect(result['data']['renameThing']['name']).to eq 'new name'
@@ -58,13 +58,13 @@ RSpec.describe RequiredOrganization, type: :graphql do
     it 'returns an error' do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
-        variables: { input: { newName: 'new name' } },
-        context: { current_user: create(:user), permissions: Permission::ADMIN_PERMISSIONS_HASH },
+        variables: {input: {newName: 'new name'}},
+        context: {current_user: create(:user), permissions: Permission::ADMIN_PERMISSIONS_HASH},
       )
 
       partial_error = {
         'message' => 'Missing organization id',
-        'extensions' => { 'status' => :forbidden, 'code' => 'forbidden' },
+        'extensions' => {'status' => :forbidden, 'code' => 'forbidden'},
       }
 
       expect(result['errors']).to include hash_including(partial_error)
@@ -75,13 +75,13 @@ RSpec.describe RequiredOrganization, type: :graphql do
     it 'returns an error' do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
-        variables: { input: { newName: 'new name' } },
-        context: { current_user: create(:user), current_organization: create(:organization) },
+        variables: {input: {newName: 'new name'}},
+        context: {current_user: create(:user), current_organization: create(:organization)},
       )
 
       partial_error = {
         'message' => 'Not in organization',
-        'extensions' => { 'status' => :forbidden, 'code' => 'forbidden' },
+        'extensions' => {'status' => :forbidden, 'code' => 'forbidden'},
       }
 
       expect(result['errors']).to include hash_including(partial_error)

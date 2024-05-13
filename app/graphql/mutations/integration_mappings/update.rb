@@ -18,7 +18,7 @@ module Mutations
       def resolve(**args)
         integration_mapping = ::IntegrationMappings::BaseMapping
           .joins(:integration)
-          .where(id: args[:id], integration: { organization: current_organization }).first
+          .where(id: args[:id], integration: {organization: current_organization}).first
 
         result = ::IntegrationMappings::UpdateService.call(integration_mapping:, params: args)
 

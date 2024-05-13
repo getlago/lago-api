@@ -50,7 +50,7 @@ RSpec.describe IntegrationItemsQuery, type: :query do
   end
 
   context 'when filtering by item type' do
-    let(:filters) { { item_type: 'tax' } }
+    let(:filters) { {item_type: 'tax'} }
 
     it 'returns one integration item' do
       result = service_call

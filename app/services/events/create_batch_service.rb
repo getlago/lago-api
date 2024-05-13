@@ -47,7 +47,7 @@ module Events
         event.timestamp = Time.zone.at(event_params[:timestamp] ? event_params[:timestamp].to_f : timestamp)
 
         result.events.push(event)
-        result.errors = result.errors.merge({ index => event.errors.messages }) unless event.valid?
+        result.errors = result.errors.merge({index => event.errors.messages}) unless event.valid?
       end
     end
 

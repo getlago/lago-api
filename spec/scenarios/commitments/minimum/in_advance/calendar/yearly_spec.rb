@@ -79,7 +79,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_advance_metered,
       invoiceable: true,
       plan:,
-      properties: { amount: '1' },
+      properties: {amount: '1'},
     )
 
     create(
@@ -87,7 +87,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_metered,
       invoiceable: true,
       plan:,
-      properties: { amount: '1' },
+      properties: {amount: '1'},
     )
 
     create(
@@ -96,7 +96,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_recurring_advance,
       invoiceable: true,
       plan:,
-      properties: { amount: '1' },
+      properties: {amount: '1'},
     )
 
     # Create the subscription
@@ -117,7 +117,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_advance_metered.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { total: '2' },
+          properties: {total: '2'},
         },
       )
 
@@ -126,7 +126,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_metered.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { total: '1' },
+          properties: {total: '1'},
         },
       )
 
@@ -135,7 +135,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_advance_metered.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { total: '30' },
+          properties: {total: '30'},
         },
       )
 
@@ -163,7 +163,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               code: billable_metric_advance_metered.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { total: '55' },
+              properties: {total: '55'},
             },
           )
         end
@@ -174,7 +174,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               code: billable_metric_metered.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { total: '1' },
+              properties: {total: '1'},
             },
           )
         end

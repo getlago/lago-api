@@ -19,7 +19,7 @@ RSpec.describe Charges::Validators::StandardService, type: :service do
     end
 
     context 'when amount is not an integer' do
-      let(:properties) { { amount: 'Foo' } }
+      let(:properties) { {amount: 'Foo'} }
 
       it 'is invalid' do
         aggregate_failures do
@@ -32,7 +32,7 @@ RSpec.describe Charges::Validators::StandardService, type: :service do
     end
 
     context 'when amount is negative' do
-      let(:properties) { { amount: '-12' } }
+      let(:properties) { {amount: '-12'} }
 
       it 'is invalid' do
         aggregate_failures do
@@ -45,13 +45,13 @@ RSpec.describe Charges::Validators::StandardService, type: :service do
     end
 
     context 'with an applicable amount' do
-      let(:properties) { { amount: '12' } }
+      let(:properties) { {amount: '12'} }
 
       it { expect(standard_service).to be_valid }
     end
 
     describe 'grouped_by' do
-      let(:properties) { { 'amount' => '12', 'grouped_by' => grouped_by } }
+      let(:properties) { {'amount' => '12', 'grouped_by' => grouped_by} }
       let(:grouped_by) { [] }
 
       it { expect(standard_service).to be_valid }

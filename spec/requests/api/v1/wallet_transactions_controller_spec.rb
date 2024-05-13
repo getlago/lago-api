@@ -24,7 +24,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     it 'creates a wallet transactions' do
-      post_with_token(organization, '/api/v1/wallet_transactions', { wallet_transaction: params })
+      post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
 
       expect(response).to have_http_status(:success)
 
@@ -47,7 +47,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
 
       it 'creates a wallet transactions' do
-        post_with_token(organization, '/api/v1/wallet_transactions', { wallet_transaction: params })
+        post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
 
         expect(response).to have_http_status(:success)
 
@@ -66,7 +66,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       let(:wallet_id) { "#{wallet.id}123" }
 
       it 'returns unprocessable_entity error' do
-        post_with_token(organization, '/api/v1/wallet_transactions', { wallet_transaction: params })
+        post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
 
         expect(response).to have_http_status(:unprocessable_entity)
       end

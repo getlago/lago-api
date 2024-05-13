@@ -13,7 +13,7 @@ module PaymentProviderCustomers
     has_many :payments
     has_many :refunds, foreign_key: :payment_provider_customer_id
 
-    validates :customer_id, uniqueness: { scope: :type }
+    validates :customer_id, uniqueness: {scope: :type}
 
     settings_accessors :provider_mandate_id, :sync_with_provider
 

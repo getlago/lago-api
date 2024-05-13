@@ -390,7 +390,7 @@ RSpec.describe Customers::CreateService, type: :service do
         let(:create_args) do
           {
             external_id:,
-            billing_configuration: { invoice_grace_period: 2 },
+            billing_configuration: {invoice_grace_period: 2},
           }
         end
 
@@ -436,7 +436,7 @@ RSpec.describe Customers::CreateService, type: :service do
       end
 
       context 'when payment provider does not exist' do
-        let(:error_messages) { { base: ['payment_provider_not_found'] } }
+        let(:error_messages) { {base: ['payment_provider_not_found']} }
 
         it 'fails to create customer' do
           result = customers_service.create_from_api(
@@ -590,7 +590,7 @@ RSpec.describe Customers::CreateService, type: :service do
       end
 
       context 'when payment provider does not exist' do
-        let(:error_messages) { { base: ['payment_provider_not_found'] } }
+        let(:error_messages) { {base: ['payment_provider_not_found']} }
 
         it 'fails to create customer' do
           result = customers_service.create_from_api(
@@ -976,7 +976,7 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'stripe',
-            provider_customer: { provider_customer_id: 'cus_12345' },
+            provider_customer: {provider_customer_id: 'cus_12345'},
           }
         end
 
@@ -1011,7 +1011,7 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'gocardless',
-            provider_customer: { provider_customer_id: 'cus_12345' },
+            provider_customer: {provider_customer_id: 'cus_12345'},
           }
         end
 
@@ -1037,7 +1037,7 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'gocardless',
-            provider_customer: { sync_with_provider: true },
+            provider_customer: {sync_with_provider: true},
           }
         end
 

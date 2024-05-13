@@ -9,6 +9,6 @@ class AppliedAddOn < ApplicationRecord
 
   monetize :amount_cents
 
-  validates :amount_cents, numericality: { greater_than: 0 }
-  validates :amount_currency, inclusion: { in: currency_list }
+  validates :amount_cents, numericality: {greater_than: 0}
+  validates :amount_currency, inclusion: {in: currency_list}
 end

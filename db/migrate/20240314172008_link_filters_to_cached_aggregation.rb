@@ -75,7 +75,7 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
   private
 
   def link_charge_filter(object)
-    object_hash = { object.group.key => [object.group.value] }
+    object_hash = {object.group.key => [object.group.value]}
     object_hash[object.group.parent.key] = [object.group.parent.value] if object.group.parent
 
     # First look for an active filter

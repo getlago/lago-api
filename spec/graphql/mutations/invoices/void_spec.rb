@@ -32,7 +32,7 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: { id: invoice.id },
+          input: {id: invoice.id},
         },
       )
 

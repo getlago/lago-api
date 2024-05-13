@@ -29,7 +29,7 @@ RSpec.describe Mutations::CustomerPortal::GenerateUrl, type: :graphql do
         current_user: user,
         query: mutation,
         variables: {
-          input: { id: customer.id },
+          input: {id: customer.id},
         },
       )
 

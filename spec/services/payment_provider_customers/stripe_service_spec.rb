@@ -666,7 +666,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
   describe '#generate_checkout_url' do
     before do
       allow(Stripe::Checkout::Session).to receive(:create)
-        .and_return({ 'url' => 'https://example.com' })
+        .and_return({'url' => 'https://example.com'})
     end
 
     it 'delivers a webhook with checkout url' do

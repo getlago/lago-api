@@ -9,7 +9,7 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: { billableMetricId: billable_metric.id },
+      variables: {billableMetricId: billable_metric.id},
     )
   end
 
@@ -85,7 +85,7 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: { billableMetricId: 'foo' },
+        variables: {billableMetricId: 'foo'},
       )
 
       expect_graphql_error(result:, message: 'Resource not found')

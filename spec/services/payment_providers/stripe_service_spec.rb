@@ -46,7 +46,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         stripe_provider
 
         allow(::Stripe::WebhookEndpoint).to receive(:delete)
-          .with('we_123456', {}, { api_key: 'secret' })
+          .with('we_123456', {}, {api_key: 'secret'})
       end
 
       it 'updates the existing provider' do
@@ -134,7 +134,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
     before do
       allow(::Stripe::WebhookEndpoint).to receive(:delete)
-        .with('we_123456', {}, { api_key: 'secret' })
+        .with('we_123456', {}, {api_key: 'secret'})
 
       allow(::Stripe::WebhookEndpoint)
         .to receive(:create)
@@ -411,7 +411,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           id: 'foo',
           type: 'invalid',
           data: {
-            object: { id: 'foo' },
+            object: {id: 'foo'},
           },
         }
       end

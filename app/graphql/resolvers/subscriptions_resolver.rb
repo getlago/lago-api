@@ -20,7 +20,7 @@ module Resolvers
       result = SubscriptionsQuery.call(
         organization: current_organization,
         pagination: BaseQuery::Pagination.new(page:, limit:),
-        filters: BaseQuery::Filters.new({ plan_code:, status: }),
+        filters: BaseQuery::Filters.new({plan_code:, status:}),
       )
 
       result.subscriptions

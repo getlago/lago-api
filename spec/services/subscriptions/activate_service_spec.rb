@@ -27,7 +27,7 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
         create(
           :subscription,
           :pending,
-          { subscription_at: timestamp, customer: create(:customer, timezone: 'America/Bogota') },
+          {subscription_at: timestamp, customer: create(:customer, timezone: 'America/Bogota')},
         )
       end
 

@@ -8,7 +8,7 @@ FactoryBot.define do
     external_customer_id { SecureRandom.uuid }
 
     settings do
-      { sync_with_provider: true, subsidiary_id: Faker::Number.number(digits: 3) }
+      {sync_with_provider: true, subsidiary_id: Faker::Number.number(digits: 3)}
     end
   end
 end

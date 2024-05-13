@@ -20,7 +20,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     it 'creates a add-on' do
-      post_with_token(organization, '/api/v1/add_ons', { add_on: create_params })
+      post_with_token(organization, '/api/v1/add_ons', {add_on: create_params})
 
       expect(response).to have_http_status(:success)
 
@@ -56,7 +56,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       put_with_token(
         organization,
         "/api/v1/add_ons/#{add_on.code}",
-        { add_on: update_params },
+        {add_on: update_params},
       )
 
       expect(response).to have_http_status(:success)
@@ -68,7 +68,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
 
     context 'when add-on does not exist' do
       it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/add_ons/invalid', { add_on: update_params })
+        put_with_token(organization, '/api/v1/add_ons/invalid', {add_on: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -84,7 +84,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/add_ons/#{add_on.code}",
-          { add_on: update_params },
+          {add_on: update_params},
         )
 
         expect(response).to have_http_status(:unprocessable_entity)

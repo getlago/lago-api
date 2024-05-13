@@ -101,11 +101,11 @@ module Invoices
       subscription
         .plan
         .charges
-        .includes(:billable_metric, filters: { values: :billable_metric_filter })
+        .includes(:billable_metric, filters: {values: :billable_metric_filter})
         .joins(:billable_metric)
         .where(invoiceable: true)
         .where
-        .not(pay_in_advance: true, billable_metric: { recurring: false })
+        .not(pay_in_advance: true, billable_metric: {recurring: false})
         .find_each do |charge|
           next if should_not_create_charge_fee?(charge, subscription)
 

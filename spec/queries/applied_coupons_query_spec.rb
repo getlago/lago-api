@@ -57,7 +57,7 @@ RSpec.describe AppliedCouponsQuery, type: :query do
     end
 
     context 'with customer filter' do
-      let(:query_filters) { { external_customer_id: customer.external_id } }
+      let(:query_filters) { {external_customer_id: customer.external_id} }
 
       it 'applies the filter' do
         result = applied_coupons_query.call
@@ -70,7 +70,7 @@ RSpec.describe AppliedCouponsQuery, type: :query do
     end
 
     context 'with status filter' do
-      let(:query_filters) { { status: 'terminated' } }
+      let(:query_filters) { {status: 'terminated'} }
 
       it 'applies the filter' do
         result = applied_coupons_query.call

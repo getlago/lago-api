@@ -109,7 +109,7 @@ module Api
           :weighted_interval,
           :recurring,
           :field_name,
-          filters: [:key, { values: [] }],
+          filters: [:key, {values: []}],
           group: {},
         )
       end

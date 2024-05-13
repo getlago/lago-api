@@ -81,8 +81,8 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
       )
       expect(result_data['appliedTaxes'].map { |t| t['taxCode'] }).to contain_exactly(tax.code)
       expect(result_data['fees']).to contain_exactly(
-        { 'units' => 2.0, 'preciseUnitAmount' => 12.0 },
-        { 'units' => 1.0, 'preciseUnitAmount' => 4.0 },
+        {'units' => 2.0, 'preciseUnitAmount' => 12.0},
+        {'units' => 1.0, 'preciseUnitAmount' => 4.0},
       )
     end
   end

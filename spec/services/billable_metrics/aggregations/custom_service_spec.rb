@@ -17,7 +17,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { grouped_by:, matching_filters:, ignored_filters:, event: } }
+  let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
@@ -83,9 +83,9 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       amount: '10',
       custom_properties: {
         ranges: [
-          { from: 0, to: 10, storage_eu: '0', storage_us: '0', storage_asia: '0' },
-          { from: 10, to: 20, storage_eu: '0.10', storage_us: '0.20', storage_asia: '0.30' },
-          { from: 20, to: nil, storage_eu: '0.20', storage_us: '0.30', storage_asia: '0.40' },
+          {from: 0, to: 10, storage_eu: '0', storage_us: '0', storage_asia: '0'},
+          {from: 10, to: 20, storage_eu: '0.10', storage_us: '0.20', storage_asia: '0.30'},
+          {from: 20, to: nil, storage_eu: '0.20', storage_us: '0.30', storage_asia: '0.40'},
         ],
       },
     }
@@ -103,7 +103,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 4.days,
-        properties: { value: 1, storage_zone: 'storage_eu' },
+        properties: {value: 1, storage_zone: 'storage_eu'},
       ),
       create(
         :event,
@@ -112,7 +112,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 3.days,
-        properties: { value: 10, storage_zone: 'storage_asia' },
+        properties: {value: 10, storage_zone: 'storage_asia'},
       ),
       create(
         :event,
@@ -121,7 +121,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 2.days,
-        properties: { value: 35, storage_zone: 'storage_us' },
+        properties: {value: 35, storage_zone: 'storage_us'},
       ),
     ]
   end
@@ -136,7 +136,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
     expect(result.aggregation).to eq(46)
     expect(result.count).to eq(3)
     expect(result.options).to eq({})
-    expect(result.custom_aggregation).to eq({ total_units: 46, amount: 8.1 })
+    expect(result.custom_aggregation).to eq({total_units: 46, amount: 8.1})
   end
 
   context 'when there are no events' do
@@ -148,7 +148,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
       expect(result.options).to eq({})
-      expect(result.custom_aggregation).to eq({ total_units: 0, amount: 0 })
+      expect(result.custom_aggregation).to eq({total_units: 0, amount: 0})
     end
   end
 
@@ -164,7 +164,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           subscription:,
           customer:,
           timestamp: Time.zone.now - 4.days,
-          properties: { value: 11, storage_zone: 'storage_eu' },
+          properties: {value: 11, storage_zone: 'storage_eu'},
         ),
       ]
     end
@@ -176,7 +176,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       expect(result.aggregation).to eq(11)
       expect(result.count).to eq(1)
       expect(result.options).to eq({})
-      expect(result.custom_aggregation).to eq({ total_units: 11.0, amount: 0.1 })
+      expect(result.custom_aggregation).to eq({total_units: 11.0, amount: 0.1})
 
       expect(result.pay_in_advance_aggregation).to eq(11)
       expect(result.current_aggregation).to eq(11.0)
@@ -205,7 +205,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         expect(result.aggregation).to eq(11)
         expect(result.count).to eq(1)
         expect(result.options).to eq({})
-        expect(result.custom_aggregation).to eq({ total_units: 11.0, amount: 0.4 })
+        expect(result.custom_aggregation).to eq({total_units: 11.0, amount: 0.4})
 
         expect(result.pay_in_advance_aggregation).to eq(11)
         expect(result.current_aggregation).to eq(22.0)
@@ -243,7 +243,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           customer:,
           subscription:,
           timestamp: Time.zone.now - 2.days,
-          properties: { value: 11, storage_zone: 'storage_eu' },
+          properties: {value: 11, storage_zone: 'storage_eu'},
         ),
       ]
     end
@@ -257,7 +257,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         expect(aggregation.aggregation).to eq(11)
         expect(aggregation.count).to eq(1)
         expect(aggregation.current_usage_units).to eq(11)
-        expect(aggregation.custom_aggregation).to eq({ total_units: 11, amount: 0.1 })
+        expect(aggregation.custom_aggregation).to eq({total_units: 11, amount: 0.1})
       end
     end
   end
@@ -273,7 +273,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       expect(result.aggregation).to eq(46)
       expect(result.count).to eq(3)
       expect(result.options).to eq({})
-      expect(result.custom_aggregation).to eq({ total_units: 46, amount: 8.1 })
+      expect(result.custom_aggregation).to eq({total_units: 46, amount: 8.1})
     end
 
     context 'with a cached aggregation from a previous period' do
@@ -296,7 +296,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         expect(result.aggregation).to eq(57)
         expect(result.count).to eq(3)
         expect(result.options).to eq({})
-        expect(result.custom_aggregation).to eq({ total_units: 57.0, amount: 11.5 })
+        expect(result.custom_aggregation).to eq({total_units: 57.0, amount: 11.5})
       end
     end
   end

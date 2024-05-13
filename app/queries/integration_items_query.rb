@@ -19,7 +19,7 @@ class IntegrationItemsQuery < BaseQuery
   attr_reader :search_term
 
   def base_scope
-    IntegrationItem.joins(:integration).where(integration: { organization_id: organization.id }).ransack(search_params)
+    IntegrationItem.joins(:integration).where(integration: {organization_id: organization.id}).ransack(search_params)
   end
 
   def search_params

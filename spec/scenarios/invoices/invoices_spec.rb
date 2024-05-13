@@ -218,7 +218,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           },
         )
 
-        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '3' })
+        create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '3'})
       end
 
       subscription = customer.subscriptions.first
@@ -261,7 +261,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: false,
-          properties: { amount: '3' },
+          properties: {amount: '3'},
         )
 
         create_subscription(
@@ -308,7 +308,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '3' },
+          properties: {amount: '3'},
         )
 
         create_subscription(
@@ -391,7 +391,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: false,
-          properties: { amount: '3' },
+          properties: {amount: '3'},
         )
 
         create_subscription(
@@ -445,7 +445,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: false,
-          properties: { amount: '3' },
+          properties: {amount: '3'},
         )
 
         create_subscription(
@@ -469,7 +469,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: false,
-          properties: { amount: '3' },
+          properties: {amount: '3'},
         )
 
         expect {
@@ -507,7 +507,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: true,
           prorated: true,
-          properties: { amount: '3' },
+          properties: {amount: '3'},
         )
 
         create_subscription(
@@ -553,7 +553,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create(
@@ -562,7 +562,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create_subscription(
@@ -584,7 +584,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: { amount: '5' },
+            properties: {amount: '5'},
           },
         )
       end
@@ -643,7 +643,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create(
@@ -652,7 +652,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create_subscription(
@@ -674,7 +674,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: { amount: '5' },
+            properties: {amount: '5'},
           },
         )
       end
@@ -731,7 +731,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: false,
-          properties: { amount: '0' },
+          properties: {amount: '0'},
         )
 
         create(
@@ -740,7 +740,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: false,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create_subscription(
@@ -762,7 +762,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: { amount: '10' },
+            properties: {amount: '10'},
           },
         )
 
@@ -806,7 +806,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: active_subscription.external_id,
-            properties: { amount: '10000' },
+            properties: {amount: '10000'},
           },
         )
 
@@ -860,7 +860,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create(
@@ -869,7 +869,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create_subscription(
@@ -891,7 +891,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: { amount: '5' },
+            properties: {amount: '5'},
           },
         )
       end
@@ -958,7 +958,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
     context 'with usage events' do
       it 'bills the usage correctly' do
-        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '12' })
+        create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '12'})
 
         travel_to(DateTime.parse('2024-02-01 03:00:00')) do
           create_subscription(
@@ -1026,7 +1026,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create_subscription(
@@ -1051,7 +1051,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: { amount: '5' },
+            properties: {amount: '5'},
           },
         )
       end
@@ -1122,7 +1122,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             billable_metric: metric,
             pay_in_advance: false,
             prorated: true,
-            properties: { amount: '1' },
+            properties: {amount: '1'},
           )
 
           create_subscription(
@@ -1203,7 +1203,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             billable_metric: metric,
             pay_in_advance: false,
             prorated: true,
-            properties: { amount: '1' },
+            properties: {amount: '1'},
           )
 
           create_subscription(
@@ -1286,7 +1286,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create(
@@ -1295,7 +1295,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           billable_metric: metric,
           pay_in_advance: false,
           prorated: true,
-          properties: { amount: '1' },
+          properties: {amount: '1'},
         )
 
         create_subscription(
@@ -1317,7 +1317,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: { amount: '5' },
+            properties: {amount: '5'},
           },
         )
       end
@@ -1354,7 +1354,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           },
         )
 
-        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '3' })
+        create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '3'})
       end
 
       subscription_invoice = Invoice.draft.first
@@ -1449,7 +1449,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           },
         )
 
-        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
+        create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '1'})
       end
 
       subscription_invoice = Invoice.draft.first
@@ -1527,7 +1527,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       dec15 = DateTime.new(2022, 12, 15)
 
       travel_to(dec15) do
-        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
+        create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '1'})
         create_subscription(
           {
             external_customer_id: customer.external_id,
@@ -1632,7 +1632,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           },
         )
 
-        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
+        create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '1'})
 
         # Upgrade to pay in advance plan
         create_subscription(
@@ -1680,13 +1680,13 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           },
         )
 
-        create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '1' })
+        create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '1'})
 
         invoice = Invoice.draft.first
 
         params = {
           external_id: customer.external_id,
-          billing_configuration: { invoice_grace_period: 0 },
+          billing_configuration: {invoice_grace_period: 0},
         }
 
         expect {

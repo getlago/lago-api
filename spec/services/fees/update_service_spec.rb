@@ -8,7 +8,7 @@ RSpec.describe Fees::UpdateService, type: :service do
   let(:charge) { create(:standard_charge, invoiceable: false) }
   let(:fee) { create(:charge_fee, fee_type: 'charge', pay_in_advance: true, invoice: nil, charge:) }
 
-  let(:params) { { payment_status: } }
+  let(:params) { {payment_status:} }
   let(:payment_status) { 'succeeded' }
 
   describe 'call' do

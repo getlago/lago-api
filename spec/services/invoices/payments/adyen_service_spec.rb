@@ -353,7 +353,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         result = adyen_service.update_payment_status(
           provider_payment_id: 'ch_123456',
           status: 'succeeded',
-          metadata: { lago_invoice_id: invoice.id, payment_type: 'one-time' },
+          metadata: {lago_invoice_id: invoice.id, payment_type: 'one-time'},
         )
 
         aggregate_failures do

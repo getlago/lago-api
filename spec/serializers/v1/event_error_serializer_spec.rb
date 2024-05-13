@@ -7,7 +7,7 @@ RSpec.describe ::V1::EventErrorSerializer do
 
   let(:event_error) do
     OpenStruct.new(
-      error: { transaction_id: ['value_already_exist'] },
+      error: {transaction_id: ['value_already_exist']},
       event: create(:received_event),
     )
   end

@@ -223,7 +223,7 @@ RSpec.describe Customers::UpdateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'stripe',
-            provider_customer: { provider_customer_id: 'cus_12345' },
+            provider_customer: {provider_customer_id: 'cus_12345'},
           }
         end
 
@@ -254,7 +254,7 @@ RSpec.describe Customers::UpdateService, type: :service do
               name: 'Foo Bar',
               organization_id: organization.id,
               payment_provider: nil,
-              provider_customer: { provider_customer_id: nil },
+              provider_customer: {provider_customer_id: nil},
             }
           end
 

@@ -7,7 +7,7 @@ RSpec.describe ::V1::PaymentProviders::CustomerCheckoutSerializer do
 
   let(:customer) { create(:customer) }
   let(:options) do
-    { 'checkout_url' => 'https://example.com' }.with_indifferent_access
+    {'checkout_url' => 'https://example.com'}.with_indifferent_access
   end
 
   it 'serializes the object' do

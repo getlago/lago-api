@@ -35,7 +35,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       :standard_charge,
       plan: first_subscription.plan,
       billable_metric:,
-      properties: { amount: '3' },
+      properties: {amount: '3'},
     )
   end
   let(:second_charge) do
@@ -43,7 +43,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       :standard_charge,
       plan: second_subscription.plan,
       billable_metric:,
-      properties: { amount: '5' },
+      properties: {amount: '5'},
     )
   end
 

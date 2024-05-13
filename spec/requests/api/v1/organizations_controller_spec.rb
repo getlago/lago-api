@@ -36,7 +36,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
       put_with_token(
         organization,
         '/api/v1/organizations',
-        { organization: update_params },
+        {organization: update_params},
       )
 
       expect(response).to have_http_status(:success)
@@ -68,7 +68,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         put_with_token(
           organization,
           '/api/v1/organizations',
-          { organization: update_params },
+          {organization: update_params},
         )
 
         expect(response).to have_http_status(:success)

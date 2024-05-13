@@ -23,7 +23,7 @@ module Charges
     attr_reader :charge_model
 
     def default_standard_properties
-      { amount: '0' }
+      {amount: '0'}
     end
 
     def default_graduated_properties
@@ -48,7 +48,7 @@ module Charges
     end
 
     def default_percentage_properties
-      { rate: '0' }
+      {rate: '0'}
     end
 
     def default_volume_properties

@@ -5,12 +5,12 @@ require 'rails_helper'
 RSpec.describe Integrations::BaseIntegration, type: :model do
   subject(:integration) { described_class.new(attributes) }
 
-  let(:secrets) { { 'api_key' => api_key, 'api_secret' => api_secret } }
+  let(:secrets) { {'api_key' => api_key, 'api_secret' => api_secret} }
   let(:api_key) { SecureRandom.uuid }
   let(:api_secret) { SecureRandom.uuid }
 
   let(:attributes) do
-    { secrets: secrets.to_json }
+    {secrets: secrets.to_json}
   end
 
   it { is_expected.to have_many(:integration_mappings).dependent(:destroy) }

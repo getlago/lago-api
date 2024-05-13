@@ -57,7 +57,7 @@ module PaymentProviderCustomers
 
       @adyen_customer = PaymentProviderCustomers::AdyenCustomer
         .joins(:customer)
-        .where(customers: { external_id: shopper_reference, organization_id: organization.id })
+        .where(customers: {external_id: shopper_reference, organization_id: organization.id})
         .first
 
       return handle_missing_customer(shopper_reference) unless adyen_customer

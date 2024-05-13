@@ -10,7 +10,7 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
       let(:charge_model) { :standard }
 
       it 'returns standard default properties' do
-        expect(service.call).to eq({ amount: '0' })
+        expect(service.call).to eq({amount: '0'})
       end
     end
 
@@ -51,7 +51,7 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
       let(:charge_model) { :percentage }
 
       it 'returns percentage default properties' do
-        expect(service.call).to eq({ rate: '0' })
+        expect(service.call).to eq({rate: '0'})
       end
     end
 

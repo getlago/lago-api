@@ -214,7 +214,7 @@ module Plans
 
     def discard_charge!(charge)
       draft_invoice_ids = Invoice.draft.joins(plans: [:charges])
-        .where(charges: { id: charge.id }).distinct.pluck(:id)
+        .where(charges: {id: charge.id}).distinct.pluck(:id)
 
       charge.discard!
       charge.group_properties.discard_all

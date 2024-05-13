@@ -13,8 +13,8 @@ class Commitment < ApplicationRecord
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 
-  validates :amount_cents, numericality: { greater_than: 0 }, allow_nil: false
-  validates :commitment_type, uniqueness: { scope: :plan_id }
+  validates :amount_cents, numericality: {greater_than: 0}, allow_nil: false
+  validates :commitment_type, uniqueness: {scope: :plan_id}
 
   def invoice_name
     invoice_display_name.presence || I18n.t('commitment.minimum.name')

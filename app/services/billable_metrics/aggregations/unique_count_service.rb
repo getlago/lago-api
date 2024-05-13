@@ -20,7 +20,7 @@ module BillableMetrics
         end
 
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
-        result.options = { running_total: running_total(options) }
+        result.options = {running_total: running_total(options)}
         result.count = result.aggregation
         result
       end
@@ -120,10 +120,10 @@ module BillableMetrics
       end
 
       def count_unique_group_scope(events)
-        events = events.where('quantified_events.properties @> ?', { group.key.to_s => group.value }.to_json)
+        events = events.where('quantified_events.properties @> ?', {group.key.to_s => group.value}.to_json)
         return events unless group.parent
 
-        events.where('quantified_events.properties @> ?', { group.parent.key.to_s => group.parent.value }.to_json)
+        events.where('quantified_events.properties @> ?', {group.parent.key.to_s => group.parent.value}.to_json)
       end
 
       protected

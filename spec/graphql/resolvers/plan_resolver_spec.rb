@@ -67,7 +67,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: { planId: plan.id },
+      variables: {planId: plan.id},
     )
 
     plan_response = result['data']['plan']
@@ -92,7 +92,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: { planId: 'foo' },
+        variables: {planId: 'foo'},
       )
 
       expect_graphql_error(

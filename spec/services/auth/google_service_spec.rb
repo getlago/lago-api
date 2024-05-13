@@ -44,7 +44,7 @@ RSpec.describe Auth::GoogleService do
     let(:oidc_verifier) { instance_double(Google::Auth::IDTokens) }
     let(:authorizer_response) { instance_double(Google::Auth::UserRefreshCredentials, id_token: 'id_token') }
     let(:oidc_response) do
-      { 'email' => 'foo@bar.com' }
+      {'email' => 'foo@bar.com'}
     end
 
     before do
@@ -118,7 +118,7 @@ RSpec.describe Auth::GoogleService do
     let(:oidc_verifier) { instance_double(Google::Auth::IDTokens) }
     let(:authorizer_response) { instance_double(Google::Auth::UserRefreshCredentials, id_token: 'id_token') }
     let(:oidc_response) do
-      { 'email' => 'foo@bar.com' }
+      {'email' => 'foo@bar.com'}
     end
 
     before do
@@ -173,7 +173,7 @@ RSpec.describe Auth::GoogleService do
     let(:oidc_verifier) { instance_double(Google::Auth::IDTokens) }
     let(:authorizer_response) { instance_double(Google::Auth::UserRefreshCredentials, id_token: 'id_token') }
     let(:oidc_response) do
-      { 'email' => invite.email }
+      {'email' => invite.email}
     end
 
     before do
@@ -207,7 +207,7 @@ RSpec.describe Auth::GoogleService do
 
     context 'when invite email is different from google email' do
       let(:oidc_response) do
-        { 'email' => 'foo@bar.com' }
+        {'email' => 'foo@bar.com'}
       end
 
       it 'returns a validation failure' do

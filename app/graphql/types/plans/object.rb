@@ -34,7 +34,7 @@ module Types
       field :subscriptions_count, Integer, null: false
 
       def charges
-        object.charges.includes(filters: { values: :billable_metric_filter }).order(created_at: :asc)
+        object.charges.includes(filters: {values: :billable_metric_filter}).order(created_at: :asc)
       end
 
       def charges_count

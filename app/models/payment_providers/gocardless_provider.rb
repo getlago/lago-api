@@ -5,7 +5,7 @@ module PaymentProviders
     SUCCESS_REDIRECT_URL = 'https://gocardless.com/'
 
     validates :access_token, presence: true
-    validates :success_redirect_url, url: true, allow_nil: true, length: { maximum: 1024 }
+    validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 
     secrets_accessors :access_token
 

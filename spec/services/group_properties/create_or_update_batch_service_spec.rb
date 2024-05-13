@@ -23,7 +23,7 @@ RSpec.describe GroupProperties::CreateOrUpdateBatchService, type: :service do
     let(:group_property1) { create(:group_property, group: group1, charge:) }
     let(:group_property2) { create(:group_property, group: group2, charge:) }
     let(:properties_params) do
-      [{ group_id: group1.id, invoice_display_name: 'Invoice Name', values: { amount: '1' } }]
+      [{group_id: group1.id, invoice_display_name: 'Invoice Name', values: {amount: '1'}}]
     end
 
     before { group_property1 && group_property2 }
@@ -32,7 +32,7 @@ RSpec.describe GroupProperties::CreateOrUpdateBatchService, type: :service do
       aggregate_failures do
         expect { service }.to change(GroupProperty, :count).by(-1)
         expect(group_property2.reload).to be_discarded
-        expect(group_property1.reload.values).to eq({ 'amount' => '1' })
+        expect(group_property1.reload.values).to eq({'amount' => '1'})
         expect(group_property1.reload.invoice_display_name).to eq('Invoice Name')
         expect(charge.reload.group_properties).to eq([group_property1])
       end

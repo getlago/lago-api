@@ -17,7 +17,7 @@ module RequiredOrganization
   end
 
   def organization_error(message)
-    GraphQL::ExecutionError.new(message, extensions: { status: :forbidden, code: 'forbidden' })
+    GraphQL::ExecutionError.new(message, extensions: {status: :forbidden, code: 'forbidden'})
   end
 
   def organization_member?

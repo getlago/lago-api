@@ -38,7 +38,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       :event,
       organization:,
       code: billable_metric.code,
-      properties: { billable_metric.field_name => -12 },
+      properties: {billable_metric.field_name => -12},
       created_at: Time.current.beginning_of_hour - 25.minutes,
     )
   end
@@ -85,7 +85,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       :event,
       organization:,
       code: billable_metric_with_group.code,
-      properties: { billable_metric_with_group.field_name => 12 },
+      properties: {billable_metric_with_group.field_name => 12},
       created_at: Time.current.beginning_of_hour - 25.minutes,
     )
   end
@@ -108,7 +108,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       :event,
       organization:,
       code: billable_metric_with_filter.code,
-      properties: { billable_metric_filter.key => 'us-west-4' },
+      properties: {billable_metric_filter.key => 'us-west-4'},
       created_at: Time.current.beginning_of_hour - 25.minutes,
     )
   end

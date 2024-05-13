@@ -56,14 +56,14 @@ RSpec.describe Plans::CreateService, type: :service do
           group_properties: [
             {
               group_id: group.id,
-              values: { amount: '100' },
+              values: {amount: '100'},
             },
           ],
           filters: [
             {
-              values: { billable_metric_filter.key => ['card'] },
+              values: {billable_metric_filter.key => ['card']},
               invoice_display_name: 'Card filter',
-              properties: { amount: '90' },
+              properties: {amount: '90'},
             },
           ],
         },
@@ -127,18 +127,18 @@ RSpec.describe Plans::CreateService, type: :service do
         prorated: false,
         min_amount_cents: 0,
         invoiceable: true,
-        properties: { 'amount' => '0' },
+        properties: {'amount' => '0'},
       )
       expect(standard_charge.taxes.pluck(:code)).to eq([charge_tax.code])
       expect(standard_charge.group_properties.first).to have_attributes(
         {
           group_id: group.id,
-          values: { 'amount' => '100' },
+          values: {'amount' => '100'},
         },
       )
       expect(standard_charge.filters.first).to have_attributes(
         invoice_display_name: 'Card filter',
-        properties: { 'amount' => '90' },
+        properties: {'amount' => '90'},
       )
       expect(standard_charge.filters.first.values.first).to have_attributes(
         billable_metric_filter_id: billable_metric_filter.id,
@@ -187,7 +187,7 @@ RSpec.describe Plans::CreateService, type: :service do
             group_properties: [
               {
                 group_id: group.id,
-                values: { amount: '100' },
+                values: {amount: '100'},
               },
             ],
           },

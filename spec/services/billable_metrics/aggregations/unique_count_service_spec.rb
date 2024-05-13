@@ -18,7 +18,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:filters) do
-    { event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
+    {event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters:}
   end
 
   let(:subscription) do
@@ -69,7 +69,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       external_customer_id: customer.external_id,
       external_subscription_id: subscription.external_id,
       timestamp: added_at,
-      properties: { unique_id: SecureRandom.uuid },
+      properties: {unique_id: SecureRandom.uuid},
     )
   end
 
@@ -87,7 +87,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          properties: { unique_id: SecureRandom.uuid },
+          properties: {unique_id: SecureRandom.uuid},
         )
       end
 
@@ -116,7 +116,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          properties: { unique_id: SecureRandom.uuid },
+          properties: {unique_id: SecureRandom.uuid},
         )
       end
 
@@ -296,7 +296,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
 
     context 'when current usage context and charge is pay in advance' do
       let(:options) do
-        { is_pay_in_advance: true, is_current_usage: true }
+        {is_pay_in_advance: true, is_current_usage: true}
       end
       let(:previous_event) do
         create(
@@ -306,7 +306,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 5.days,
-          properties: { unique_id: '000' },
+          properties: {unique_id: '000'},
         )
       end
 
@@ -346,7 +346,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
     end
 
     context 'when event is given' do
-      let(:properties) { { unique_id: unique_count_event.properties['unique_id'] } }
+      let(:properties) { {unique_id: unique_count_event.properties['unique_id']} }
       let(:pay_in_advance_event) do
         create(
           :event,
@@ -368,7 +368,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
 
       context 'when charge filter is used' do
-        let(:properties) { { unique_id: '111', region: 'europe' } }
+        let(:properties) { {unique_id: '111', region: 'europe'} }
 
         let(:filter) do
           create(
@@ -378,7 +378,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             values: ['north america', 'europe', 'africa'],
           )
         end
-        let(:matching_filters) { { 'region' => ['europe'] } }
+        let(:matching_filters) { {'region' => ['europe']} }
         let(:ignored_filters) { [] }
         let(:charge_filter) { create(:charge_filter, charge:) }
         let(:filter_value) do
@@ -410,7 +410,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       end
 
       context 'when current period aggregation is greater than period maximum' do
-        let(:properties) { { unique_id: '003' } }
+        let(:properties) { {unique_id: '003'} }
 
         let(:previous_event) do
           create(
@@ -420,7 +420,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: { unique_id: '001' },
+            properties: {unique_id: '001'},
           )
         end
 
@@ -455,7 +455,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: { unique_id: '000' },
+            properties: {unique_id: '000'},
           )
         end
 
@@ -612,13 +612,13 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+        expect(aggregation.grouped_by).to eq({'agent_name' => nil})
       end
     end
 
     context 'when current usage context and charge is pay in advance' do
       let(:options) do
-        { is_pay_in_advance: true, is_current_usage: true }
+        {is_pay_in_advance: true, is_current_usage: true}
       end
 
       let(:unique_count_event) { nil }
@@ -668,7 +668,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: previous_events[index].timestamp,
             current_aggregation: '1',
             max_aggregation: '3',
-            grouped_by: { 'agent_name' => agent_name },
+            grouped_by: {'agent_name' => agent_name},
           )
         end
       end
@@ -704,7 +704,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           aggregation = result.aggregations.first
           expect(aggregation.aggregation).to eq(0)
           expect(aggregation.count).to eq(0)
-          expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+          expect(aggregation.grouped_by).to eq({'agent_name' => nil})
         end
       end
     end

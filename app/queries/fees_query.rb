@@ -26,7 +26,7 @@ class FeesQuery < BaseQuery
   end
 
   def with_external_subscription(scope)
-    scope.joins(:subscription).where(subscription: { external_id: filters.external_subscription_id })
+    scope.joins(:subscription).where(subscription: {external_id: filters.external_subscription_id})
   end
 
   def with_external_customer(scope)
@@ -41,7 +41,7 @@ class FeesQuery < BaseQuery
 
   def with_billable_metric_code(scope)
     scope.joins(:billable_metric)
-      .where(billable_metric: { code: filters.billable_metric_code })
+      .where(billable_metric: {code: filters.billable_metric_code})
   end
 
   def with_fee_type(scope)

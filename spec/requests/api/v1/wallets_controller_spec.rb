@@ -24,7 +24,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     it 'creates a wallet' do
-      post_with_token(organization, '/api/v1/wallets', { wallet: create_params })
+      post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -43,7 +43,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
 
       it 'creates a wallet' do
-        post_with_token(organization, '/api/v1/wallets', { wallet: create_params })
+        post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -78,7 +78,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/wallets', { wallet: create_params })
+        post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
 
         recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -111,7 +111,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       put_with_token(
         organization,
         "/api/v1/wallets/#{wallet.id}",
-        { wallet: update_params },
+        {wallet: update_params},
       )
 
       aggregate_failures do
@@ -133,7 +133,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/wallets/#{wallet.id}",
-          { wallet: update_params },
+          {wallet: update_params},
         )
 
         aggregate_failures do
@@ -148,7 +148,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
     context 'when wallet does not exist' do
       it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/wallets/invalid', { wallet: update_params })
+        put_with_token(organization, '/api/v1/wallets/invalid', {wallet: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -179,7 +179,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/wallets/#{wallet.id}",
-          { wallet: update_params },
+          {wallet: update_params},
         )
 
         recurring_rules = json[:wallet][:recurring_transaction_rules]

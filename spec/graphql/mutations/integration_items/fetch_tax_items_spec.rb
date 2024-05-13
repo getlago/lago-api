@@ -45,7 +45,7 @@ RSpec.describe Mutations::IntegrationItems::FetchTaxItems, type: :graphql do
       permissions: required_permission,
       query: mutation,
       variables: {
-        input: { integrationId: integration.id },
+        input: {integrationId: integration.id},
       },
     )
 

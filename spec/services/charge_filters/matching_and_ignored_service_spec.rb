@@ -90,7 +90,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     let(:current_filter) { f1 }
 
     it 'returns a formatted hash', :aggregate_failures do
-      expect(service_result.matching_filters).to eq({ 'size' => %w[512], 'steps' => %w[25], 'model' => %w[llama-2] })
+      expect(service_result.matching_filters).to eq({'size' => %w[512], 'steps' => %w[25], 'model' => %w[llama-2]})
       expect(service_result.ignored_filters).to eq([])
     end
   end
@@ -99,11 +99,11 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     let(:current_filter) { f2 }
 
     it 'returns a formatted hash', :aggregate_failures do
-      expect(service_result.matching_filters).to eq({ 'size' => %w[512], 'steps' => %w[25] })
+      expect(service_result.matching_filters).to eq({'size' => %w[512], 'steps' => %w[25]})
       expect(service_result.ignored_filters).to eq(
         [
-          { 'model' => %w[llama-2], 'size' => %w[512], 'steps' => %w[25] },
-          { 'size' => ['1024'], 'steps' => %w[50 75 100] },
+          {'model' => %w[llama-2], 'size' => %w[512], 'steps' => %w[25]},
+          {'size' => ['1024'], 'steps' => %w[50 75 100]},
         ],
       )
     end
@@ -113,11 +113,11 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     let(:current_filter) { f3 }
 
     it 'returns a formatted hash', :aggregate_failures do
-      expect(service_result.matching_filters).to eq({ 'size' => %w[512 1024], 'steps' => %w[25 50 75 100] })
+      expect(service_result.matching_filters).to eq({'size' => %w[512 1024], 'steps' => %w[25 50 75 100]})
       expect(service_result.ignored_filters).to eq(
         [
-          { 'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25'] },
-          { 'size' => ['512'], 'steps' => ['25'] },
+          {'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25']},
+          {'size' => ['512'], 'steps' => ['25']},
         ],
       )
     end
@@ -127,13 +127,13 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     let(:current_filter) { f4 }
 
     it 'returns a formatted hash', :aggregate_failures do
-      expect(service_result.matching_filters).to eq({ 'size' => %w[512 1024] })
+      expect(service_result.matching_filters).to eq({'size' => %w[512 1024]})
       expect(service_result.ignored_filters).to eq(
         [
-          { 'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25'] },
-          { 'size' => ['512'], 'steps' => ['25'] },
-          { 'size' => %w[512 1024], 'steps' => %w[25 50 75 100] },
-          { 'size' => ['512'] },
+          {'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25']},
+          {'size' => ['512'], 'steps' => ['25']},
+          {'size' => %w[512 1024], 'steps' => %w[25 50 75 100]},
+          {'size' => ['512']},
         ],
       )
     end
@@ -143,13 +143,13 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     let(:current_filter) { f5 }
 
     it 'returns a formatted hash', :aggregate_failures do
-      expect(service_result.matching_filters).to eq({ 'size' => %w[512] })
+      expect(service_result.matching_filters).to eq({'size' => %w[512]})
       expect(service_result.ignored_filters).to eq(
         [
-          { 'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25'] },
-          { 'size' => ['512'], 'steps' => ['25'] },
-          { 'size' => %w[512 1024], 'steps' => %w[25 50 75 100] },
-          { 'size' => ['1024'] },
+          {'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25']},
+          {'size' => ['512'], 'steps' => ['25']},
+          {'size' => %w[512 1024], 'steps' => %w[25 50 75 100]},
+          {'size' => ['1024']},
         ],
       )
     end

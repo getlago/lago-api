@@ -22,7 +22,7 @@ module BillableMetrics
 
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = event_store.count
-        result.options = { running_total: running_total(options) }
+        result.options = {running_total: running_total(options)}
         result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)

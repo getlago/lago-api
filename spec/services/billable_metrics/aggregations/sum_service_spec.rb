@@ -18,7 +18,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:filters) do
-    { event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters: }
+    {event: pay_in_advance_event, grouped_by:, charge_filter:, matching_filters:, ignored_filters:}
   end
 
   let(:subscription) { create(:subscription, started_at: Time.current.beginning_of_month - 6.months) }
@@ -49,7 +49,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
   let(:to_datetime) { subscription.started_at + 6.months }
   let(:pay_in_advance_event) { nil }
   let(:options) do
-    { free_units_per_events: 2, free_units_per_total_aggregation: 30 }
+    {free_units_per_events: 2, free_units_per_total_aggregation: 30}
   end
 
   let(:old_events) do
@@ -92,7 +92,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     expect(result.aggregation).to eq(48)
     expect(result.pay_in_advance_aggregation).to be_zero
     expect(result.count).to eq(4)
-    expect(result.options).to eq({ running_total: [12, 24] })
+    expect(result.options).to eq({running_total: [12, 24]})
   end
 
   context 'when billable metric is recurring' do
@@ -104,7 +104,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       expect(result.aggregation).to eq(53)
       expect(result.pay_in_advance_aggregation).to be_zero
       expect(result.count).to eq(6)
-      expect(result.options).to eq({ running_total: [2.5, 5] })
+      expect(result.options).to eq({running_total: [2.5, 5]})
     end
   end
 
@@ -113,40 +113,40 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
     it 'returns an empty running total array' do
       result = sum_service.aggregate(options:)
-      expect(result.options).to eq({ running_total: [] })
+      expect(result.options).to eq({running_total: []})
     end
   end
 
   context 'when option values are nil' do
     let(:options) do
-      { free_units_per_events: nil, free_units_per_total_aggregation: nil }
+      {free_units_per_events: nil, free_units_per_total_aggregation: nil}
     end
 
     it 'returns an empty running total array' do
       result = sum_service.aggregate(options:)
-      expect(result.options).to eq({ running_total: [] })
+      expect(result.options).to eq({running_total: []})
     end
   end
 
   context 'when free_units_per_events is nil' do
     let(:options) do
-      { free_units_per_events: nil, free_units_per_total_aggregation: 30 }
+      {free_units_per_events: nil, free_units_per_total_aggregation: 30}
     end
 
     it 'returns running total based on per total aggregation' do
       result = sum_service.aggregate(options:)
-      expect(result.options).to eq({ running_total: [12, 24, 36] })
+      expect(result.options).to eq({running_total: [12, 24, 36]})
     end
   end
 
   context 'when free_units_per_total_aggregation is nil' do
     let(:options) do
-      { free_units_per_events: 2, free_units_per_total_aggregation: nil }
+      {free_units_per_events: 2, free_units_per_total_aggregation: nil}
     end
 
     it 'returns running total based on per events' do
       result = sum_service.aggregate(options:)
-      expect(result.options).to eq({ running_total: [12, 24] })
+      expect(result.options).to eq({running_total: [12, 24]})
     end
   end
 
@@ -171,7 +171,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
-      expect(result.options).to eq({ running_total: [] })
+      expect(result.options).to eq({running_total: []})
     end
   end
 
@@ -185,7 +185,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
       expect(result.aggregation).to eq(0)
       expect(result.count).to eq(0)
-      expect(result.options).to eq({ running_total: [] })
+      expect(result.options).to eq({running_total: []})
     end
   end
 
@@ -239,7 +239,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
   context 'when current usage context and charge is pay in advance' do
     let(:options) do
-      { is_pay_in_advance: true, is_current_usage: true }
+      {is_pay_in_advance: true, is_current_usage: true}
     end
 
     let(:latest_events) do
@@ -295,7 +295,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
   end
 
   context 'when filters are given' do
-    let(:matching_filters) { { region: ['europe'] } }
+    let(:matching_filters) { {region: ['europe']} }
 
     before do
       create(
@@ -343,7 +343,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
       expect(result.aggregation).to eq(20)
       expect(result.count).to eq(2)
-      expect(result.options).to eq({ running_total: [12, 20] })
+      expect(result.options).to eq({running_total: [12, 20]})
     end
   end
 
@@ -351,7 +351,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     let(:filter) do
       create(:billable_metric_filter, billable_metric:, key: 'region', values: ['north america', 'europe', 'africa'])
     end
-    let(:matching_filters) { { 'region' => ['europe'] } }
+    let(:matching_filters) { {'region' => ['europe']} }
     let(:ignored_filters) { [] }
     let(:charge_filter) { create(:charge_filter, charge:) }
     let(:filter_value) do
@@ -411,7 +411,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
       expect(result.aggregation).to eq(20)
       expect(result.count).to eq(2)
-      expect(result.options).to eq({ running_total: [12, 20] })
+      expect(result.options).to eq({running_total: [12, 20]})
     end
   end
 
@@ -467,7 +467,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       )
     end
 
-    let(:properties) { { total_count: 10 } }
+    let(:properties) { {total_count: 10} }
 
     it 'assigns a pay_in_advance aggregation' do
       result = sum_service.aggregate
@@ -512,7 +512,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
 
     context 'when current period aggregation is less than period maximum' do
-      let(:properties) { { total_count: -2 } }
+      let(:properties) { {total_count: -2} }
       let(:latest_events) do
         create(
           :event,
@@ -550,7 +550,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
 
     context 'when properties is a float' do
-      let(:properties) { { total_count: 12.4 } }
+      let(:properties) { {total_count: 12.4} }
 
       it 'assigns a pay_in_advance aggregation' do
         result = sum_service.aggregate
@@ -560,7 +560,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
 
     context 'when event property does not match metric field name' do
-      let(:properties) { { final_count: 10 } }
+      let(:properties) { {final_count: 10} }
 
       it 'assigns 0 as pay_in_advance aggregation' do
         result = sum_service.aggregate
@@ -635,13 +635,13 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+        expect(aggregation.grouped_by).to eq({'agent_name' => nil})
       end
     end
 
     context 'when current usage context and charge is pay in advance' do
       let(:options) do
-        { is_pay_in_advance: true, is_current_usage: true }
+        {is_pay_in_advance: true, is_current_usage: true}
       end
 
       let(:cached_aggregation) do
@@ -688,7 +688,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           expect(aggregation.aggregation).to eq(0)
           expect(aggregation.count).to eq(0)
           expect(aggregation.current_usage_units).to eq(0)
-          expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+          expect(aggregation.grouped_by).to eq({'agent_name' => nil})
         end
       end
     end

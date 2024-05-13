@@ -146,13 +146,13 @@ module Api
           :name,
           :invoice_display_name,
           :trial_period,
-          { tax_codes: [] },
+          {tax_codes: []},
           {
             minimum_commitment: [
               :id,
               :invoice_display_name,
               :amount_cents,
-              { tax_codes: [] },
+              {tax_codes: []},
             ],
             charges: [
               :id,
@@ -160,7 +160,7 @@ module Api
               :min_amount_cents,
               :invoice_display_name,
               :charge_model,
-              { properties: {} },
+              {properties: {}},
               {
                 filters: [
                   :invoice_display_name,
@@ -173,11 +173,11 @@ module Api
               {
                 group_properties: [
                   :group_id,
-                  { values: {} },
+                  {values: {}},
                   :invoice_display_name,
                 ],
               },
-              { tax_codes: [] },
+              {tax_codes: []},
             ],
           },
         ]

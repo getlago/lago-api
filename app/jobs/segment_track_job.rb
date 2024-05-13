@@ -16,10 +16,10 @@ class SegmentTrackJob < ApplicationJob
   private
 
   def hosting_type
-    { hosting_type: (ENV['LAGO_CLOUD'] == 'true') ? 'cloud' : 'self' }
+    {hosting_type: (ENV['LAGO_CLOUD'] == 'true') ? 'cloud' : 'self'}
   end
 
   def version
-    { version: Utils::VersionService.new.version.version.number }
+    {version: Utils::VersionService.new.version.version.number}
   end
 end

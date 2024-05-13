@@ -19,7 +19,7 @@ RSpec.describe ChargeFilter, type: :model do
     end
 
     context 'when charge model is standard' do
-      let(:charge_properties) { [{ 'foo' => 'bar' }] }
+      let(:charge_properties) { [{'foo' => 'bar'}] }
       let(:validation_service) { instance_double(Charges::Validators::StandardService) }
 
       let(:service_response) do
@@ -52,7 +52,7 @@ RSpec.describe ChargeFilter, type: :model do
 
     context 'when charge model is graduated' do
       let(:charge) { build(:graduated_charge) }
-      let(:charge_properties) { { graduated_ranges: [{ 'foo' => 'bar' }] } }
+      let(:charge_properties) { {graduated_ranges: [{'foo' => 'bar'}]} }
 
       let(:validation_service) { instance_double(Charges::Validators::GraduatedService) }
 
@@ -92,7 +92,7 @@ RSpec.describe ChargeFilter, type: :model do
         build(:package_charge, properties: charge_properties)
       end
 
-      let(:charge_properties) { [{ 'foo' => 'bar' }] }
+      let(:charge_properties) { [{'foo' => 'bar'}] }
       let(:validation_service) { instance_double(Charges::Validators::PackageService) }
 
       let(:service_response) do
@@ -149,7 +149,7 @@ RSpec.describe ChargeFilter, type: :model do
     context 'when charge model is percentage' do
       let(:charge) { build(:percentage_charge, properties: charge_properties) }
 
-      let(:charge_properties) { [{ 'foo' => 'bar' }] }
+      let(:charge_properties) { [{'foo' => 'bar'}] }
       let(:validation_service) { instance_double(Charges::Validators::PercentageService) }
 
       let(:service_response) do
@@ -209,7 +209,7 @@ RSpec.describe ChargeFilter, type: :model do
         build(:volume_charge, properties: charge_properties)
       end
 
-      let(:charge_properties) { { volume_ranges: [{ 'foo' => 'bar' }] } }
+      let(:charge_properties) { {volume_ranges: [{'foo' => 'bar'}]} }
       let(:validation_service) { instance_double(Charges::Validators::VolumeService) }
 
       let(:service_response) do
@@ -267,7 +267,7 @@ RSpec.describe ChargeFilter, type: :model do
       end
 
       let(:charge_properties) do
-        { graduated_percentage_ranges: [{ 'foo' => 'bar' }] }
+        {graduated_percentage_ranges: [{'foo' => 'bar'}]}
       end
       let(:validation_service) { instance_double(Charges::Validators::GraduatedPercentageService) }
 

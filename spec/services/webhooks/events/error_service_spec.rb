@@ -7,7 +7,7 @@ RSpec.describe Webhooks::Events::ErrorService do
 
   let(:organization) { create(:organization) }
   let(:event) { create(:received_event, organization_id: organization.id) }
-  let(:options) { { error: { transaction_id: ['value_already_exist'] } } }
+  let(:options) { {error: {transaction_id: ['value_already_exist']}} }
 
   describe '.call' do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }

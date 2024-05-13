@@ -16,7 +16,7 @@ class PlanLegacyInput < BaseLegacyInput
         group = billable_metric.groups.find_by(id: properties[:group_id])
         next unless group
 
-        values = { group.key => [group.value] }
+        values = {group.key => [group.value]}
         values[group.parent.key] = [group.parent.value] if group.parent
 
         {
@@ -32,7 +32,7 @@ class PlanLegacyInput < BaseLegacyInput
       billable_metric.groups.where.not(id: group_ids).includes(:children).find_each do |group|
         next if group.children.any?
 
-        values = { group.key => [group.value] }
+        values = {group.key => [group.value]}
         values[group.parent.key] = [group.parent.value] if group.parent
 
         charge[:filters] << {

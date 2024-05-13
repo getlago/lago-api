@@ -48,7 +48,7 @@ module Subscriptions
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
-      result.validation_failure!(errors: { billing_time: ['value_is_invalid'] })
+      result.validation_failure!(errors: {billing_time: ['value_is_invalid']})
     rescue BaseService::FailedResult => e
       e.result
     end

@@ -42,7 +42,7 @@ module Charges
     end
 
     def aggregation_filters
-      filters = { event: }
+      filters = {event:}
 
       properties = charge_filter&.properties || charge.properties
       if charge.standard? && properties['grouped_by'].present?

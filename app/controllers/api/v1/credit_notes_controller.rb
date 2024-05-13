@@ -96,7 +96,7 @@ module Api
         credit_notes = current_organization.credit_notes.finalized
 
         if params[:external_customer_id]
-          credit_notes = credit_notes.joins(:customer).where(customers: { external_id: params[:external_customer_id] })
+          credit_notes = credit_notes.joins(:customer).where(customers: {external_id: params[:external_customer_id]})
         end
 
         credit_notes = credit_notes.order(created_at: :desc)

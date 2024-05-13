@@ -4,7 +4,7 @@ RSpec.configure do |config|
   config.before(:each, type: :admin) do
     allow(Google::Auth::IDTokens)
       .to receive(:verify_oidc)
-      .and_return({ email: 'test@getlago.com' })
+      .and_return({email: 'test@getlago.com'})
   end
 end
 

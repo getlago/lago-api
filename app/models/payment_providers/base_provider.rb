@@ -18,7 +18,7 @@ module PaymentProviders
     has_many :payments, dependent: :nullify, foreign_key: :payment_provider_id
     has_many :refunds, dependent: :nullify, foreign_key: :payment_provider_id
 
-    validates :code, uniqueness: { scope: :organization_id }
+    validates :code, uniqueness: {scope: :organization_id}
     validates :name, presence: true
 
     settings_accessors :webhook_secret, :success_redirect_url

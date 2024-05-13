@@ -13,8 +13,8 @@ RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
     {
       amount: 100,
       grouped_by: %w[location],
-      graduated_ranges: [{ from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1' }],
-      graduated_percentage_ranges: [{ from_value: 0, to_value: 100, percentage: '2' }],
+      graduated_ranges: [{from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1'}],
+      graduated_percentage_ranges: [{from_value: 0, to_value: 100, percentage: '2'}],
       free_units: 10,
       package_size: 10,
       rate: '0.0555',
@@ -23,8 +23,8 @@ RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
       free_units_per_total_aggregation: 10,
       per_transaction_max_amount: 100,
       per_transaction_min_amount: 10,
-      volume_ranges: [{ from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1' }],
-      custom_properties: { rate: '20' },
+      volume_ranges: [{from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1'}],
+      custom_properties: {rate: '20'},
     }
   end
 
@@ -41,7 +41,7 @@ RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
       it { expect(filter_service.call.properties.keys).to include('amount', 'grouped_by') }
 
       context 'when grouped_by contains empty string' do
-        let(:properties) { { amount: 100, grouped_by: ['', ''] } }
+        let(:properties) { {amount: 100, grouped_by: ['', '']} }
 
         it { expect(filter_service.call.properties[:grouped_by]).to be_empty }
       end

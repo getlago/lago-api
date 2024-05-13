@@ -125,7 +125,7 @@ module PaymentProviders
     def reattach_provider_customers(organization_id:, adyen_provider:)
       PaymentProviderCustomers::AdyenCustomer
         .joins(:customer)
-        .where(payment_provider_id: nil, customers: { organization_id: }).find_each do |c|
+        .where(payment_provider_id: nil, customers: {organization_id:}).find_each do |c|
           c.update(payment_provider_id: adyen_provider.id)
         end
     end
@@ -135,7 +135,7 @@ module PaymentProviders
     def update_payment_status(event, payment_type)
       provider_payment_id = event['pspReference']
       status = (event['success'] == 'true') ? 'succeeded' : 'failed'
-      metadata = { payment_type:, lago_invoice_id: event.dig('additionalData', 'metadata.lago_invoice_id') }
+      metadata = {payment_type:, lago_invoice_id: event.dig('additionalData', 'metadata.lago_invoice_id')}
 
       Invoices::Payments::AdyenService.new.update_payment_status(provider_payment_id:, status:, metadata:)
     end

@@ -197,7 +197,7 @@ RSpec.describe SendWebhookJob, type: :job do
 
     before do
       allow(Webhooks::PaymentProviders::CustomerCheckoutService).to receive(:new)
-        .with(object: customer, options: { checkout_url: 'https://example.com' }, webhook_id: nil)
+        .with(object: customer, options: {checkout_url: 'https://example.com'}, webhook_id: nil)
         .and_return(webhook_service)
       allow(webhook_service).to receive(:call)
     end

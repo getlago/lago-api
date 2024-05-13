@@ -37,7 +37,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
   let(:body) do
     {
       object: 'event',
-      data: { url: 'test.url' },
+      data: {url: 'test.url'},
     }
   end
 

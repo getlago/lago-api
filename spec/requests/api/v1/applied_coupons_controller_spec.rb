@@ -23,7 +23,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       post_with_token(
         organization,
         '/api/v1/applied_coupons',
-        { applied_coupon: params },
+        {applied_coupon: params},
       )
 
       expect(response).to have_http_status(:success)
@@ -43,11 +43,11 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
 
     context 'with invalid params' do
       let(:params) do
-        { name: 'Foo Bar' }
+        {name: 'Foo Bar'}
       end
 
       it 'returns an unprocessable_entity' do
-        post_with_token(organization, '/api/v1/applied_coupons', { applied_coupon: params })
+        post_with_token(organization, '/api/v1/applied_coupons', {applied_coupon: params})
 
         expect(response).to have_http_status(:not_found)
       end

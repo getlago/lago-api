@@ -7,7 +7,7 @@ RSpec.describe ::V1::PaymentProviders::InvoicePaymentSerializer do
 
   let(:invoice) { create(:invoice) }
   let(:options) do
-    { 'payment_url' => 'https://example.com' }.with_indifferent_access
+    {'payment_url' => 'https://example.com'}.with_indifferent_access
   end
 
   it 'serializes the object' do

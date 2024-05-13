@@ -19,7 +19,7 @@ module Plans
       plan.subscriptions.pending.find_each(&:mark_as_canceled!)
 
       # NOTE: Finalize all draft invoices.
-      invoices = Invoice.draft.joins(:plans).where(plans: { id: plan.id }).distinct
+      invoices = Invoice.draft.joins(:plans).where(plans: {id: plan.id}).distinct
       invoices.find_each { |invoice| Invoices::FinalizeService.call(invoice:) }
 
       plan.pending_deletion = false

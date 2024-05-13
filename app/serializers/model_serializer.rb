@@ -9,7 +9,7 @@ class ModelSerializer
   end
 
   def serialize
-    { id: model.id }
+    {id: model.id}
   end
 
   def to_json(options = {})

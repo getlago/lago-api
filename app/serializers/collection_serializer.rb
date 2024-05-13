@@ -12,7 +12,7 @@ class CollectionSerializer
   end
 
   def serialize
-    hash = { collection_name => serialize_models }
+    hash = {collection_name => serialize_models}
     hash[:meta] = meta if meta?
     hash
   end

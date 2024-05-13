@@ -16,7 +16,7 @@ class IntegrationCollectionMappingsQuery < BaseQuery
 
   def base_scope
     ::IntegrationCollectionMappings::BaseCollectionMapping
-      .joins(:integration).where(integration: { organization: })
+      .joins(:integration).where(integration: {organization:})
   end
 
   def with_integration_id(scope)

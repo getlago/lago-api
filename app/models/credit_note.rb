@@ -54,10 +54,10 @@ class CreditNote < ApplicationRecord
   sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) },
     lock_key: ->(credit_note) { credit_note.invoice_id }
 
-  validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
-  validates :credit_amount_cents, numericality: { greater_than_or_equal_to: 0 }
-  validates :refund_amount_cents, numericality: { greater_than_or_equal_to: 0 }
-  validates :balance_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :credit_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :refund_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :balance_amount_cents, numericality: {greater_than_or_equal_to: 0}
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[number id]
@@ -88,13 +88,13 @@ class CreditNote < ApplicationRecord
   def subscription_item(subscription_id)
     items.joins(:fee)
       .merge(Fee.subscription)
-      .find_by(fees: { subscription_id: }) || Fee.new(amount_cents: 0, amount_currency: currency)
+      .find_by(fees: {subscription_id:}) || Fee.new(amount_cents: 0, amount_currency: currency)
   end
 
   def subscription_charge_items(subscription_id)
     items.joins(:fee)
       .merge(Fee.charge)
-      .where(fees: { subscription_id: })
+      .where(fees: {subscription_id:})
       .includes(:fee)
   end
 

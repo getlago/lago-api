@@ -53,7 +53,7 @@ RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
   end
 
   context 'when filtering by integration id' do
-    let(:query_filters) { { integration_id: integration.id } }
+    let(:query_filters) { {integration_id: integration.id} }
 
     it 'returns two mappings' do
       result = collection_mappings_query.call
@@ -71,7 +71,7 @@ RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
   end
 
   context 'when filtering by mapping type' do
-    let(:query_filters) { { mapping_type: 'fallback_item' } }
+    let(:query_filters) { {mapping_type: 'fallback_item'} }
 
     it 'returns one netsuite mappings' do
       result = collection_mappings_query.call

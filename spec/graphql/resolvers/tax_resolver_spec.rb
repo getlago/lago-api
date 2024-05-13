@@ -26,7 +26,7 @@ RSpec.describe Resolvers::TaxResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: { taxId: tax.id },
+      variables: {taxId: tax.id},
     )
 
     expect(result['data']['tax']).to include(
@@ -44,7 +44,7 @@ RSpec.describe Resolvers::TaxResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         query:,
-        variables: { taxId: tax.id },
+        variables: {taxId: tax.id},
       )
 
       expect_graphql_error(result:, message: 'Missing organization id')
@@ -57,7 +57,7 @@ RSpec.describe Resolvers::TaxResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: { taxId: 'unknown' },
+        variables: {taxId: 'unknown'},
       )
 
       expect_graphql_error(result:, message: 'Resource not found')

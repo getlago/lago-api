@@ -62,7 +62,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       let(:plan) { create(:plan, organization:) }
       let(:plan_second) { create(:plan, organization:) }
       let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
-      let(:applies_to) { { plan_ids: [plan.id, plan_second.id] } }
+      let(:applies_to) { {plan_ids: [plan.id, plan_second.id]} }
 
       before do
         CurrentContext.source = 'graphql'
@@ -78,7 +78,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       context 'with API context' do
         before { CurrentContext.source = 'api' }
 
-        let(:applies_to) { { plan_codes: [plan.code, plan_second.code] } }
+        let(:applies_to) { {plan_codes: [plan.code, plan_second.code]} }
 
         it 'creates new coupon target using plan code' do
           expect { update_service.call }.to change(CouponTarget, :count).by(1)
@@ -89,7 +89,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
     context 'with coupon plans to delete' do
       let(:plan) { create(:plan, organization:) }
       let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
-      let(:applies_to) { { plan_ids: [] } }
+      let(:applies_to) { {plan_ids: []} }
 
       before do
         CurrentContext.source = 'graphql'
@@ -106,7 +106,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       let(:billable_metric) { create(:billable_metric, organization:) }
       let(:billable_metric_second) { create(:billable_metric, organization:) }
       let(:coupon_billable_metric) { create(:coupon_billable_metric, coupon:, billable_metric:) }
-      let(:applies_to) { { billable_metric_ids: [billable_metric.id, billable_metric_second.id] } }
+      let(:applies_to) { {billable_metric_ids: [billable_metric.id, billable_metric_second.id]} }
 
       before do
         CurrentContext.source = 'graphql'
@@ -122,7 +122,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       context 'with API context' do
         before { CurrentContext.source = 'api' }
 
-        let(:applies_to) { { billable_metric_codes: [billable_metric.code, billable_metric_second.code] } }
+        let(:applies_to) { {billable_metric_codes: [billable_metric.code, billable_metric_second.code]} }
 
         it 'creates new coupon target using billable metric code' do
           expect { update_service.call }.to change(CouponTarget, :count).by(1)
@@ -171,7 +171,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
     context 'with coupon billable metrics to delete' do
       let(:billable_metric) { create(:billable_metric, organization:) }
       let(:coupon_billable_metric) { create(:coupon_billable_metric, coupon:, billable_metric:) }
-      let(:applies_to) { { plan_ids: [] } }
+      let(:applies_to) { {plan_ids: []} }
 
       before do
         CurrentContext.source = 'graphql'

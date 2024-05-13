@@ -20,10 +20,10 @@ class AddOn < ApplicationRecord
 
   validates :name, presence: true
   validates :code,
-    uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id }
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
 
-  validates :amount_cents, numericality: { greater_than: 0 }
-  validates :amount_currency, inclusion: { in: currency_list }
+  validates :amount_cents, numericality: {greater_than: 0}
+  validates :amount_currency, inclusion: {in: currency_list}
 
   default_scope -> { kept }
 

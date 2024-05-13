@@ -68,10 +68,10 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           amount: '2',
           custom_properties: {
             ranges: [
-              { from: 0, to: 1_000, third_party: '0.15', first_party: '0.12' },
-              { from: 1_001, to: 20_000, third_party: '0.12', first_party: '0.10' },
-              { from: 20_001, to: 50_000, third_party: '0.10', first_party: '0.08' },
-              { from: 50_001, to: nil, third_party: '0.08', first_party: '0.06' }
+              {from: 0, to: 1_000, third_party: '0.15', first_party: '0.12'},
+              {from: 1_001, to: 20_000, third_party: '0.12', first_party: '0.10'},
+              {from: 20_001, to: 50_000, third_party: '0.10', first_party: '0.08'},
+              {from: 50_001, to: nil, third_party: '0.08', first_party: '0.06'}
             ],
           },
         },
@@ -87,10 +87,10 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         properties: {
           custom_properties: {
             ranges: [
-              { from: 0, to: 1_000, third_party: '0.15', first_party: '0.12' },
-              { from: 1_001, to: 20_000, third_party: '0.12', first_party: '0.10' },
-              { from: 20_001, to: 50_000, third_party: '0.10', first_party: '0.08' },
-              { from: 50_001, to: nil, third_party: '0.08', first_party: '0.06' }
+              {from: 0, to: 1_000, third_party: '0.15', first_party: '0.12'},
+              {from: 1_001, to: 20_000, third_party: '0.12', first_party: '0.10'},
+              {from: 20_001, to: 50_000, third_party: '0.10', first_party: '0.08'},
+              {from: 50_001, to: nil, third_party: '0.08', first_party: '0.06'}
             ],
           },
         },
@@ -652,7 +652,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         billable_metric:,
         plan:,
         pay_in_advance:,
-        properties: { custom_properties: {} },
+        properties: {custom_properties: {}},
       )
     end
 
@@ -660,7 +660,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: { custom_properties: { amount: '1' } },
+        properties: {custom_properties: {amount: '1'}},
       )
     end
 
@@ -668,7 +668,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: { custom_properties: { amount: '15' } },
+        properties: {custom_properties: {amount: '15'}},
       )
     end
 
@@ -676,7 +676,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: { custom_properties: { amount: '25' } },
+        properties: {custom_properties: {amount: '25'}},
       )
     end
 
@@ -687,10 +687,10 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         properties: {
           custom_properties: {
             ranges: [
-              { from: 0, to: 10_000, rate: '0.4' },
-              { from: 10_001, to: 15_000, rate: '0.3' },
-              { from: 15_001, to: 22_000, rate: '0.25' },
-              { from: 22_001, to: nil, rate: '0.2' },
+              {from: 0, to: 10_000, rate: '0.4'},
+              {from: 10_001, to: 15_000, rate: '0.3'},
+              {from: 15_001, to: 22_000, rate: '0.25'},
+              {from: 22_001, to: nil, rate: '0.2'},
             ],
           },
         },
@@ -701,7 +701,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: { custom_properties: { amount: '25' } },
+        properties: {custom_properties: {amount: '25'}},
       )
     end
 
@@ -709,7 +709,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: { custom_properties: { rate: '0.2', min_amount: '25' } },
+        properties: {custom_properties: {rate: '0.2', min_amount: '25'}},
       )
     end
 
@@ -720,10 +720,10 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         properties: {
           custom_properties: {
             ranges: [
-              { from: 0, to: 10_000, amount: '0.6' },
-              { from: 10_001, to: 15_000, amount: '0.5' },
-              { from: 15_001, to: 22_000, amount: '0.45' },
-              { from: 22_001, to: nil, amount: '0.4' },
+              {from: 0, to: 10_000, amount: '0.6'},
+              {from: 10_001, to: 15_000, amount: '0.5'},
+              {from: 15_001, to: 22_000, amount: '0.45'},
+              {from: 22_001, to: nil, amount: '0.4'},
             ],
           },
         },
@@ -735,7 +735,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter,
         charge:,
         properties: {
-          custom_properties: { amount: '25' },
+          custom_properties: {amount: '25'},
         },
       )
     end

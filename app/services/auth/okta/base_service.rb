@@ -51,7 +51,7 @@ module Auth
 
       def check_userinfo(email)
         userinfo_client = LagoHttpClient::Client.new("https://#{result.okta_integration.organization_name.downcase}.okta.com/oauth2/default/v1/userinfo")
-        userinfo_headers = { 'Authorization' => "Bearer #{result.okta_access_token}" }
+        userinfo_headers = {'Authorization' => "Bearer #{result.okta_access_token}"}
         response = userinfo_client.get(headers: userinfo_headers)
 
         raise ValidationError, 'okta_userinfo_error' if response['email'] != email

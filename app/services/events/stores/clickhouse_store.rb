@@ -125,7 +125,7 @@ module Events
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
             query.query,
-            { decimal_scale: DECIMAL_SCALE },
+            {decimal_scale: DECIMAL_SCALE},
           ],
         )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
@@ -140,7 +140,7 @@ module Events
           ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               query.breakdown_query,
-              { decimal_scale: DECIMAL_SCALE },
+              {decimal_scale: DECIMAL_SCALE},
             ],
           ),
         ).rows
@@ -381,7 +381,7 @@ module Events
         SQL
 
         ::Clickhouse::EventsRaw.connection.select_all(Arel.sql(sql)).rows.map do |row|
-          { date: row.first.to_date, value: row.last }
+          {date: row.first.to_date, value: row.last}
         end
       end
 
@@ -413,7 +413,7 @@ module Events
           value = 0
           previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
           value = previous_group[:value] if previous_group
-          { groups: group[:groups], value: }
+          {groups: group[:groups], value:}
         end
 
         # NOTE: add the initial values for groups that are not in the events
@@ -517,7 +517,7 @@ module Events
         end
 
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          [sql, { date:, timezone: customer.applicable_timezone }],
+          [sql, {date:, timezone: customer.applicable_timezone}],
         )
       end
 

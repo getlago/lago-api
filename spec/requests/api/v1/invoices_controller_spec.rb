@@ -36,7 +36,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     it 'creates an invoice' do
-      post_with_token(organization, '/api/v1/invoices', { invoice: create_params })
+      post_with_token(organization, '/api/v1/invoices', {invoice: create_params})
 
       expect(response).to have_http_status(:success)
       expect(json[:invoice]).to include(
@@ -59,7 +59,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       let(:customer_external_id) { 'invalid' }
 
       it 'returns a not found error' do
-        post_with_token(organization, '/api/v1/invoices', { invoice: create_params })
+        post_with_token(organization, '/api/v1/invoices', {invoice: create_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -85,7 +85,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
 
       it 'returns a not found error' do
-        post_with_token(organization, '/api/v1/invoices', { invoice: create_params })
+        post_with_token(organization, '/api/v1/invoices', {invoice: create_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -94,11 +94,11 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
   describe 'PUT /invoices/:id' do
     let(:update_params) do
-      { payment_status: 'succeeded' }
+      {payment_status: 'succeeded'}
     end
 
     it 'updates an invoice' do
-      put_with_token(organization, "/api/v1/invoices/#{invoice.id}", { invoice: update_params })
+      put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: update_params})
 
       expect(response).to have_http_status(:success)
       expect(json[:invoice][:lago_id]).to eq(invoice.id)
@@ -107,7 +107,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     context 'when invoice does not exist' do
       it 'returns a not found error' do
-        put_with_token(organization, '/api/v1/invoices/555', { invoice: update_params })
+        put_with_token(organization, '/api/v1/invoices/555', {invoice: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -126,7 +126,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
 
       it 'returns a success' do
-        put_with_token(organization, "/api/v1/invoices/#{invoice.id}", { invoice: update_params })
+        put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: update_params})
 
         metadata = json[:invoice][:metadata]
         aggregate_failures do
@@ -186,7 +186,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       let(:billable_metric) { create(:billable_metric, :deleted) }
       let(:billable_metric_filter) { create(:billable_metric_filter, :deleted, billable_metric:) }
       let(:charge_filter) do
-        create(:charge_filter, :deleted, charge:, properties: { amount: '10' })
+        create(:charge_filter, :deleted, charge:, properties: {amount: '10'})
       end
       let(:charge_filter_value) do
         create(
@@ -615,7 +615,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       customer.update(payment_provider: 'stripe')
 
       allow(Stripe::Checkout::Session).to receive(:create)
-        .and_return({ 'url' => 'https://example.com' })
+        .and_return({'url' => 'https://example.com'})
     end
 
     it 'returns the generated payment url' do

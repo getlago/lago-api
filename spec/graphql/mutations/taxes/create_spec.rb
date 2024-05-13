@@ -28,7 +28,7 @@ RSpec.describe Mutations::Taxes::Create, type: :graphql do
       current_user: membership.user,
       current_organization: membership.organization,
       query: mutation,
-      variables: { input: },
+      variables: {input:},
     )
 
     expect(result['data']['createTax']).to include(

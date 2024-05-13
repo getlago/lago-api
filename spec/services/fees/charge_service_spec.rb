@@ -100,7 +100,7 @@ RSpec.describe Fees::ChargeService do
               units: 0,
               unit_amount_cents: 0,
               precise_unit_amount: 0,
-              grouped_by: { 'cloud' => nil },
+              grouped_by: {'cloud' => nil},
             )
           end
         end
@@ -114,7 +114,7 @@ RSpec.describe Fees::ChargeService do
               subscription:,
               code: charge.billable_metric.code,
               timestamp: DateTime.parse('2022-03-16'),
-              properties: { cloud: 'aws', value: 10 },
+              properties: {cloud: 'aws', value: 10},
             )
 
             create(
@@ -124,7 +124,7 @@ RSpec.describe Fees::ChargeService do
               subscription:,
               code: charge.billable_metric.code,
               timestamp: DateTime.parse('2022-03-16'),
-              properties: { cloud: 'aws', value: 5 },
+              properties: {cloud: 'aws', value: 5},
             )
 
             create(
@@ -134,7 +134,7 @@ RSpec.describe Fees::ChargeService do
               subscription:,
               code: charge.billable_metric.code,
               timestamp: DateTime.parse('2022-03-16'),
-              properties: { cloud: 'gcp', value: 10 },
+              properties: {cloud: 'gcp', value: 10},
             )
           end
 
@@ -153,7 +153,7 @@ RSpec.describe Fees::ChargeService do
               units: 15,
               unit_amount_cents: 2000,
               precise_unit_amount: 20,
-              grouped_by: { 'cloud' => 'aws' },
+              grouped_by: {'cloud' => 'aws'},
             )
 
             fee2 = result.fees.find { |f| f.grouped_by['cloud'] == 'gcp' }
@@ -166,7 +166,7 @@ RSpec.describe Fees::ChargeService do
               units: 10,
               unit_amount_cents: 2000,
               precise_unit_amount: 20,
-              grouped_by: { 'cloud' => 'gcp' },
+              grouped_by: {'cloud' => 'gcp'},
             )
           end
 
@@ -182,7 +182,7 @@ RSpec.describe Fees::ChargeService do
                 adjusted_units: true,
                 adjusted_amount: false,
                 units: 3,
-                grouped_by: { 'cloud' => 'aws' },
+                grouped_by: {'cloud' => 'aws'},
               )
             end
 
@@ -213,7 +213,7 @@ RSpec.describe Fees::ChargeService do
                 units: 3,
                 unit_amount_cents: 2000,
                 precise_unit_amount: 20,
-                grouped_by: { 'cloud' => 'aws' },
+                grouped_by: {'cloud' => 'aws'},
               )
 
               fee2 = result.fees.find { |f| f.grouped_by['cloud'] == 'gcp' }
@@ -226,7 +226,7 @@ RSpec.describe Fees::ChargeService do
                 units: 10,
                 unit_amount_cents: 2000,
                 precise_unit_amount: 20,
-                grouped_by: { 'cloud' => 'gcp' },
+                grouped_by: {'cloud' => 'gcp'},
               )
             end
           end
@@ -463,7 +463,7 @@ RSpec.describe Fees::ChargeService do
               create(:billable_metric_filter, billable_metric:, key: 'country', values: %w[france])
             end
 
-            let(:europe_filter) { create(:charge_filter, charge:, properties: { amount: '20' }) }
+            let(:europe_filter) { create(:charge_filter, charge:, properties: {amount: '20'}) }
             let(:europe_filter_value) do
               create(
                 :charge_filter_value,
@@ -473,12 +473,12 @@ RSpec.describe Fees::ChargeService do
               )
             end
 
-            let(:usa_filter) { create(:charge_filter, charge:, properties: { amount: '50' }) }
+            let(:usa_filter) { create(:charge_filter, charge:, properties: {amount: '50'}) }
             let(:usa_filter_value) do
               create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
             end
 
-            let(:france_filter) { create(:charge_filter, charge:, properties: { amount: '10.12345' }) }
+            let(:france_filter) { create(:charge_filter, charge:, properties: {amount: '10.12345'}) }
             let(:france_filter_value) do
               create(
                 :charge_filter_value,
@@ -493,7 +493,7 @@ RSpec.describe Fees::ChargeService do
                 :standard_charge,
                 plan: subscription.plan,
                 billable_metric:,
-                properties: { amount: '10.12345' },
+                properties: {amount: '10.12345'},
               )
             end
 
@@ -524,7 +524,7 @@ RSpec.describe Fees::ChargeService do
                 subscription:,
                 code: charge.billable_metric.code,
                 timestamp: DateTime.parse('2022-03-16'),
-                properties: { region: 'usa', foo_bar: 12 },
+                properties: {region: 'usa', foo_bar: 12},
               )
               create(
                 :event,
@@ -533,7 +533,7 @@ RSpec.describe Fees::ChargeService do
                 subscription:,
                 code: charge.billable_metric.code,
                 timestamp: DateTime.parse('2022-03-16'),
-                properties: { region: 'europe', foo_bar: 10 },
+                properties: {region: 'europe', foo_bar: 10},
               )
               create(
                 :event,
@@ -542,7 +542,7 @@ RSpec.describe Fees::ChargeService do
                 subscription:,
                 code: charge.billable_metric.code,
                 timestamp: DateTime.parse('2022-03-16'),
-                properties: { region: 'europe', foo_bar: 5 },
+                properties: {region: 'europe', foo_bar: 5},
               )
               create(
                 :event,
@@ -551,7 +551,7 @@ RSpec.describe Fees::ChargeService do
                 subscription:,
                 code: charge.billable_metric.code,
                 timestamp: DateTime.parse('2022-03-16'),
-                properties: { country: 'france', foo_bar: 5 },
+                properties: {country: 'france', foo_bar: 5},
               )
             end
 
@@ -723,17 +723,17 @@ RSpec.describe Fees::ChargeService do
         create(:billable_metric_filter, billable_metric:, key: 'country', values: %w[france])
       end
 
-      let(:europe_filter) { create(:charge_filter, charge:, properties: { amount: '20' }) }
+      let(:europe_filter) { create(:charge_filter, charge:, properties: {amount: '20'}) }
       let(:europe_filter_value) do
         create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter: region, values: ['europe'])
       end
 
-      let(:usa_filter) { create(:charge_filter, charge:, properties: { amount: '50' }) }
+      let(:usa_filter) { create(:charge_filter, charge:, properties: {amount: '50'}) }
       let(:usa_filter_value) do
         create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter: region, values: ['usa'])
       end
 
-      let(:france_filter) { create(:charge_filter, charge:, properties: { amount: '10.12345' }) }
+      let(:france_filter) { create(:charge_filter, charge:, properties: {amount: '10.12345'}) }
       let(:france_filter_value) do
         create(:charge_filter_value, charge_filter: france_filter, billable_metric_filter: country, values: ['france'])
       end
@@ -743,7 +743,7 @@ RSpec.describe Fees::ChargeService do
           :standard_charge,
           plan: subscription.plan,
           billable_metric:,
-          properties: { amount: '10.12345' },
+          properties: {amount: '10.12345'},
         )
       end
 
@@ -759,7 +759,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'usa', foo_bar: 12 },
+          properties: {region: 'usa', foo_bar: 12},
         )
         create(
           :event,
@@ -768,7 +768,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 10 },
+          properties: {region: 'europe', foo_bar: 10},
         )
         create(
           :event,
@@ -777,7 +777,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 5 },
+          properties: {region: 'europe', foo_bar: 5},
         )
         create(
           :event,
@@ -786,7 +786,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { country: 'france', foo_bar: 5 },
+          properties: {country: 'france', foo_bar: 5},
         )
       end
 
@@ -1042,7 +1042,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'usa', foo_bar: 12 },
+          properties: {region: 'usa', foo_bar: 12},
         )
         create(
           :event,
@@ -1051,7 +1051,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 10 },
+          properties: {region: 'europe', foo_bar: 10},
         )
         create(
           :event,
@@ -1060,7 +1060,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 5 },
+          properties: {region: 'europe', foo_bar: 5},
         )
         create(
           :event,
@@ -1069,7 +1069,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { country: 'france', foo_bar: 5 },
+          properties: {country: 'france', foo_bar: 5},
         )
       end
 
@@ -1128,7 +1128,7 @@ RSpec.describe Fees::ChargeService do
         create(
           :charge_filter,
           charge:,
-          properties: { rate: '2', fixed_amount: '1' },
+          properties: {rate: '2', fixed_amount: '1'},
         )
       end
       let(:europe_filter_value) do
@@ -1144,7 +1144,7 @@ RSpec.describe Fees::ChargeService do
         create(
           :charge_filter,
           charge:,
-          properties: { rate: '1', fixed_amount: '0' },
+          properties: {rate: '1', fixed_amount: '0'},
         )
       end
       let(:usa_filter_value) do
@@ -1155,7 +1155,7 @@ RSpec.describe Fees::ChargeService do
         create(
           :charge_filter,
           charge:,
-          properties: { rate: '5', fixed_amount: '1' },
+          properties: {rate: '5', fixed_amount: '1'},
         )
       end
       let(:france_filter_value) do
@@ -1172,7 +1172,7 @@ RSpec.describe Fees::ChargeService do
           :percentage_charge,
           plan: subscription.plan,
           billable_metric:,
-          properties: { rate: '0', fixed_amount: '0' },
+          properties: {rate: '0', fixed_amount: '0'},
         )
       end
 
@@ -1188,7 +1188,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'usa', foo_bar: 12 },
+          properties: {region: 'usa', foo_bar: 12},
         )
         create(
           :event,
@@ -1197,7 +1197,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 10 },
+          properties: {region: 'europe', foo_bar: 10},
         )
         create(
           :event,
@@ -1206,7 +1206,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 5 },
+          properties: {region: 'europe', foo_bar: 5},
         )
         create(
           :event,
@@ -1215,7 +1215,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { country: 'france', foo_bar: 5 },
+          properties: {country: 'france', foo_bar: 5},
         )
       end
 
@@ -1340,7 +1340,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'usa', foo_bar: 12 },
+          properties: {region: 'usa', foo_bar: 12},
         )
         create(
           :event,
@@ -1349,7 +1349,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 10 },
+          properties: {region: 'europe', foo_bar: 10},
         )
         create(
           :event,
@@ -1358,7 +1358,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 5 },
+          properties: {region: 'europe', foo_bar: 5},
         )
       end
 
@@ -1407,7 +1407,7 @@ RSpec.describe Fees::ChargeService do
           charge:,
           properties: {
             volume_ranges: [
-              { from_value: 0, to_value: nil, per_unit_amount: '2', flat_amount: '10' },
+              {from_value: 0, to_value: nil, per_unit_amount: '2', flat_amount: '10'},
             ],
           },
         )
@@ -1427,7 +1427,7 @@ RSpec.describe Fees::ChargeService do
           charge:,
           properties: {
             volume_ranges: [
-              { from_value: 0, to_value: nil, per_unit_amount: '1', flat_amount: '10' },
+              {from_value: 0, to_value: nil, per_unit_amount: '1', flat_amount: '10'},
             ],
           },
         )
@@ -1443,7 +1443,7 @@ RSpec.describe Fees::ChargeService do
           billable_metric:,
           properties: {
             volume_ranges: [
-              { from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '0' },
+              {from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '0'},
             ],
           },
         )
@@ -1460,7 +1460,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'usa', foo_bar: 12 },
+          properties: {region: 'usa', foo_bar: 12},
         )
         create(
           :event,
@@ -1469,7 +1469,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 10 },
+          properties: {region: 'europe', foo_bar: 10},
         )
         create(
           :event,
@@ -1478,7 +1478,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 5 },
+          properties: {region: 'europe', foo_bar: 5},
         )
       end
 
@@ -1595,7 +1595,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'usa', foo_bar: 12 },
+          properties: {region: 'usa', foo_bar: 12},
         )
         create(
           :event,
@@ -1604,7 +1604,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 10 },
+          properties: {region: 'europe', foo_bar: 10},
         )
         create(
           :event,
@@ -1613,7 +1613,7 @@ RSpec.describe Fees::ChargeService do
           subscription:,
           code: charge.billable_metric.code,
           timestamp: DateTime.parse('2022-03-16'),
-          properties: { region: 'europe', foo_bar: 5 },
+          properties: {region: 'europe', foo_bar: 5},
         )
       end
 
@@ -1660,7 +1660,7 @@ RSpec.describe Fees::ChargeService do
         create(
           :charge_filter,
           charge:,
-          properties: { amount: '20' },
+          properties: {amount: '20'},
         )
       end
       let(:europe_filter_value) do
@@ -1676,7 +1676,7 @@ RSpec.describe Fees::ChargeService do
         create(
           :charge_filter,
           charge:,
-          properties: { amount: '50' },
+          properties: {amount: '50'},
         )
       end
       let(:usa_filter_value) do
@@ -1689,7 +1689,7 @@ RSpec.describe Fees::ChargeService do
           plan: subscription.plan,
           billable_metric:,
           min_amount_cents: 1000,
-          properties: { amount: '0' },
+          properties: {amount: '0'},
         )
       end
 

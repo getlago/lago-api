@@ -15,7 +15,7 @@ class IntegrationMappingsQuery < BaseQuery
   private
 
   def base_scope
-    ::IntegrationMappings::NetsuiteMapping.joins(:integration).where(integration: { organization: })
+    ::IntegrationMappings::NetsuiteMapping.joins(:integration).where(integration: {organization:})
   end
 
   def with_integration_id(scope)

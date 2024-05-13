@@ -25,7 +25,7 @@ namespace :charges do
 
     # Update graduated charges from array `[]` to hash `graduated_ranges: []`
     Charge.unscoped.graduated.find_each do |charge|
-      charge.properties = { graduated_ranges: charge.properties }
+      charge.properties = {graduated_ranges: charge.properties}
       charge.save!
     end
   end

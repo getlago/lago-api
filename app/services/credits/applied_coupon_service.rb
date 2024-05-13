@@ -125,14 +125,14 @@ module Credits
       invoice
         .fees
         .joins(subscription: :plan)
-        .where(plan: { id: applied_coupon.coupon.parent_and_overriden_plans.map(&:id) })
+        .where(plan: {id: applied_coupon.coupon.parent_and_overriden_plans.map(&:id)})
     end
 
     def billable_metric_related_fees
       invoice
         .fees
         .joins(charge: :billable_metric)
-        .where(billable_metric: { id: applied_coupon.coupon.coupon_targets.select(:billable_metric_id) })
+        .where(billable_metric: {id: applied_coupon.coupon.coupon_targets.select(:billable_metric_id)})
     end
   end
 end

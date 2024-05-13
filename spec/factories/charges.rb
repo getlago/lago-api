@@ -9,14 +9,14 @@ FactoryBot.define do
     factory :standard_charge do
       charge_model { 'standard' }
       properties do
-        { amount: Faker::Number.between(from: 100, to: 500).to_s }
+        {amount: Faker::Number.between(from: 100, to: 500).to_s}
       end
     end
 
     factory :graduated_charge do
       charge_model { 'graduated' }
       properties do
-        { graduated_ranges: [] }
+        {graduated_ranges: []}
       end
     end
 
@@ -46,8 +46,8 @@ FactoryBot.define do
       properties do
         {
           volume_ranges: [
-            { from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1' },
-            { from_value: 101, to_value: nil, per_unit_amount: '1', flat_amount: '0' },
+            {from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1'},
+            {from_value: 101, to_value: nil, per_unit_amount: '1', flat_amount: '0'},
           ],
         }
       end
@@ -78,7 +78,7 @@ FactoryBot.define do
     factory :custom_charge do
       charge_model { 'custom' }
       properties do
-        { custom_properties: { rate: '20' } }
+        {custom_properties: {rate: '20'}}
       end
     end
 

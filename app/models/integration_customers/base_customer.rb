@@ -10,7 +10,7 @@ module IntegrationCustomers
     belongs_to :customer
     belongs_to :integration, class_name: 'Integrations::BaseIntegration'
 
-    validates :customer_id, uniqueness: { scope: :type }
+    validates :customer_id, uniqueness: {scope: :type}
 
     settings_accessors :sync_with_provider
 

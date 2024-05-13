@@ -69,7 +69,7 @@ module PaymentProviders
           ),
           enabled_events: WEBHOOKS_EVENTS,
         },
-        { api_key: stripe_provider.secret_key },
+        {api_key: stripe_provider.secret_key},
       )
 
       stripe_provider.update!(
@@ -216,7 +216,7 @@ module PaymentProviders
       return if stripe_provider.webhook_id.blank?
 
       ::Stripe::WebhookEndpoint.delete(
-        stripe_provider.webhook_id, {}, { api_key: }
+        stripe_provider.webhook_id, {}, {api_key:}
       )
     rescue => e
       # NOTE: Since removing the webbook end-point is not critical
@@ -231,7 +231,7 @@ module PaymentProviders
     def reattach_provider_customers(organization_id:, stripe_provider:)
       PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(payment_provider_id: nil, customers: { organization_id: })
+        .where(payment_provider_id: nil, customers: {organization_id:})
         .update_all(payment_provider_id: stripe_provider.id) # rubocop:disable Rails/SkipsModelValidations
     end
   end

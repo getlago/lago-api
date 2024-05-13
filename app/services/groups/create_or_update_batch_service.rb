@@ -15,7 +15,7 @@ module Groups
         return result
       end
 
-      return result.validation_failure!(errors: { group: %w[value_is_invalid] }) unless valid_format?
+      return result.validation_failure!(errors: {group: %w[value_is_invalid]}) unless valid_format?
 
       ActiveRecord::Base.transaction do
         if one_dimension?
@@ -37,7 +37,7 @@ module Groups
       end
 
       draft_invoices = Invoice.draft.joins(plans: [:billable_metrics])
-        .where(billable_metrics: { id: billable_metric.id })
+        .where(billable_metrics: {id: billable_metric.id})
         .distinct
       draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 

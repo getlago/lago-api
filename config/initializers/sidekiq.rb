@@ -9,7 +9,7 @@ redis_config = {
 }
 
 if ENV['REDIS_PASSWORD'].present? && !ENV['REDIS_PASSWORD'].empty?
-  redis_config = redis_config.merge({ password: ENV['REDIS_PASSWORD'] })
+  redis_config = redis_config.merge({password: ENV['REDIS_PASSWORD']})
 end
 
 if ENV['LAGO_SIDEKIQ_WEB'] == 'true'

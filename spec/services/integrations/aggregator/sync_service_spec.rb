@@ -40,7 +40,7 @@ RSpec.describe Integrations::Aggregator::SyncService do
 
     context 'when only items should be synced' do
       it 'successfully performs sync' do
-        described_class.new(integration:, options: { only_items: true }).call
+        described_class.new(integration:, options: {only_items: true}).call
 
         expect(LagoHttpClient::Client).to have_received(:new)
           .with(sync_endpoint)

@@ -6,7 +6,7 @@ class CreditNoteItem < ApplicationRecord
 
   monetize :amount_cents
 
-  validates :amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
 
   def applied_taxes
     credit_note.applied_taxes.where(tax_id: fee.applied_taxes.select('fees_taxes.tax_id'))

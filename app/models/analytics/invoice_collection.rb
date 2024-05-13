@@ -12,7 +12,7 @@ module Analytics
           and_months_sql = sanitize_sql(
             [
               "AND am.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL ':months months')",
-              { months: months_interval },
+              {months: months_interval},
             ],
           )
         end
@@ -67,7 +67,7 @@ module Analytics
           ORDER BY am.month, payment_status, currency;
         SQL
 
-        sanitize_sql([sql, { organization_id: }.merge(args)])
+        sanitize_sql([sql, {organization_id:}.merge(args)])
       end
 
       def cache_key(organization_id, **args)

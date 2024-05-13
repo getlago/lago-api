@@ -41,7 +41,7 @@ RSpec.describe Taxes::UpdateService, type: :service do
 
     context 'when applied_to_organization is updated to false' do
       let(:params) do
-        { applied_to_organization: false }
+        {applied_to_organization: false}
       end
 
       it 'marks invoices as ready to be refreshed' do
@@ -54,7 +54,7 @@ RSpec.describe Taxes::UpdateService, type: :service do
     context 'when applied_to_organization is updated to true' do
       let(:tax) { create(:tax, organization:, applied_to_organization: false) }
       let(:params) do
-        { applied_to_organization: true }
+        {applied_to_organization: true}
       end
 
       it 'marks invoices as ready to be refreshed' do

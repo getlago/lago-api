@@ -48,16 +48,16 @@ class Customer < ApplicationRecord
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
-  validates :currency, inclusion: { in: currency_list }, allow_nil: true
+  validates :currency, inclusion: {in: currency_list}, allow_nil: true
   validates :external_id,
     presence: true,
-    uniqueness: { conditions: -> { where(deleted_at: nil) }, scope: :organization_id },
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},
     unless: :deleted_at
-  validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
-  validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
-  validates :payment_provider, inclusion: { in: PAYMENT_PROVIDERS }, allow_nil: true
+  validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+  validates :payment_provider, inclusion: {in: PAYMENT_PROVIDERS}, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
-  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :vat_rate, numericality: {less_than_or_equal_to: 100, greater_than_or_equal_to: 0}, allow_nil: true
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name external_id email]

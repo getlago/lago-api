@@ -8,7 +8,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:params) do
-    { code: billable_metric.code, transaction_id: SecureRandom.uuid }
+    {code: billable_metric.code, transaction_id: SecureRandom.uuid}
   end
 
   before { subscription }

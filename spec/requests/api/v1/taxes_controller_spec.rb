@@ -17,7 +17,7 @@ RSpec.describe Api::V1::TaxesController, type: :request do
     end
 
     it 'creates a tax' do
-      expect { post_with_token(organization, '/api/v1/taxes', { tax: create_params }) }
+      expect { post_with_token(organization, '/api/v1/taxes', {tax: create_params}) }
         .to change(Tax, :count).by(1)
 
       aggregate_failures do
@@ -41,14 +41,14 @@ RSpec.describe Api::V1::TaxesController, type: :request do
     let(:applied_to_organization) { false }
 
     let(:update_params) do
-      { code:, name:, rate:, applied_to_organization: }
+      {code:, name:, rate:, applied_to_organization:}
     end
 
     it 'updates a tax' do
       put_with_token(
         organization,
         "/api/v1/taxes/#{tax.code}",
-        { tax: update_params },
+        {tax: update_params},
       )
 
       aggregate_failures do
@@ -63,7 +63,7 @@ RSpec.describe Api::V1::TaxesController, type: :request do
 
     context 'when tax does not exist' do
       it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/taxes/unknown', { tax: update_params })
+        put_with_token(organization, '/api/v1/taxes/unknown', {tax: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -76,7 +76,7 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       before { tax2 }
 
       it 'returns unprocessable_entity error' do
-        put_with_token(organization, "/api/v1/taxes/#{tax.code}", { tax: update_params })
+        put_with_token(organization, "/api/v1/taxes/#{tax.code}", {tax: update_params})
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end

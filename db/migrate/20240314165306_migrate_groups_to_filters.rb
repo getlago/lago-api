@@ -69,7 +69,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
     bm_ids = Group.select(:billable_metric_id).distinct
 
     # NOTE: For each charge, we create charge filters with the same values
-    Charge.joins(:billable_metric).where(billable_metrics: { id: bm_ids }).find_each do |charge|
+    Charge.joins(:billable_metric).where(billable_metrics: {id: bm_ids}).find_each do |charge|
       migrated_groups = []
 
       charge.group_properties.each do |property|

@@ -110,7 +110,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
 
     context 'when rate is zero' do
       let(:percentage_properties) do
-        { rate: '0.00', fixed_amount: '2' }
+        {rate: '0.00', fixed_amount: '2'}
       end
 
       it { expect(percentage_service).to be_valid }

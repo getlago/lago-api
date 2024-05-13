@@ -118,7 +118,7 @@ class BaseService
     end
 
     def single_validation_failure!(error_code:, field: :base)
-      validation_failure!(errors: { field.to_sym => [error_code] })
+      validation_failure!(errors: {field.to_sym => [error_code]})
     end
 
     def service_failure!(code:, message:)

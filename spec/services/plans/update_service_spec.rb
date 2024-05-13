@@ -52,7 +52,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         group_properties: [
           {
             group_id: group.id,
-            values: { amount: '100' },
+            values: {amount: '100'},
           },
         ],
         tax_codes: [tax1.code],
@@ -327,7 +327,7 @@ RSpec.describe Plans::UpdateService, type: :service do
 
     context 'when plan has no minimum commitment' do
       context 'when minimum commitment arguments are present' do
-        before { update_args.merge!({ minimum_commitment: minimum_commitment_args }) }
+        before { update_args.merge!({minimum_commitment: minimum_commitment_args}) }
 
         context 'when license is premium' do
           around { |test| lago_premium!(&test) }
@@ -373,7 +373,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
 
       context 'when minimum commitment arguments is an empty hash' do
-        before { update_args.merge!({ minimum_commitment: {} }) }
+        before { update_args.merge!({minimum_commitment: {}}) }
 
         context 'when license is premium' do
           around { |test| lago_premium!(&test) }
@@ -401,7 +401,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       before { minimum_commitment }
 
       context 'when minimum commitment arguments are present' do
-        before { update_args.merge!({ minimum_commitment: minimum_commitment_args }) }
+        before { update_args.merge!({minimum_commitment: minimum_commitment_args}) }
 
         context 'when license is premium' do
           around { |test| lago_premium!(&test) }
@@ -424,10 +424,10 @@ RSpec.describe Plans::UpdateService, type: :service do
 
       context 'when only some minimum commitment arguments are present' do
         let(:minimum_commitment_args) do
-          { invoice_display_name: minimum_commitment_invoice_display_name }
+          {invoice_display_name: minimum_commitment_invoice_display_name}
         end
 
-        before { update_args.merge!({ minimum_commitment: minimum_commitment_args }) }
+        before { update_args.merge!({minimum_commitment: minimum_commitment_args}) }
 
         context 'when license is premium' do
           around { |test| lago_premium!(&test) }
@@ -473,7 +473,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
 
       context 'when minimum commitment arguments is an empty hash' do
-        before { update_args.merge!({ minimum_commitment: {} }) }
+        before { update_args.merge!({minimum_commitment: {}}) }
 
         context 'when license is premium' do
           around { |test| lago_premium!(&test) }
@@ -537,14 +537,14 @@ RSpec.describe Plans::UpdateService, type: :service do
               group_properties: [
                 {
                   group_id: group.id,
-                  values: { amount: '100' },
+                  values: {amount: '100'},
                 },
               ],
               filters: [
                 {
                   invoice_display_name: 'Card filter',
-                  properties: { amount: '90' },
-                  values: { billable_metric_filter.key => ['card'] },
+                  properties: {amount: '90'},
+                  values: {billable_metric_filter.key => ['card']},
                 },
               ],
             },
@@ -574,16 +574,16 @@ RSpec.describe Plans::UpdateService, type: :service do
 
         expect(existing_charge.reload).to have_attributes(
           prorated: true,
-          properties: { 'amount' => '0' },
+          properties: {'amount' => '0'},
         )
         expect(existing_charge.group_properties.first).to have_attributes(
           group_id: group.id,
-          values: { 'amount' => '100' },
+          values: {'amount' => '100'},
         )
 
         expect(existing_charge.filters.first).to have_attributes(
           invoice_display_name: 'Card filter',
-          properties: { 'amount' => '90' },
+          properties: {'amount' => '90'},
         )
         expect(existing_charge.filters.first.values.first).to have_attributes(
           billable_metric_filter_id: billable_metric_filter.id,
@@ -659,7 +659,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metric.id,
-          properties: { amount: '300' },
+          properties: {amount: '300'},
         )
       end
 

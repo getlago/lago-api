@@ -40,7 +40,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: 'foo')
 
       freeze_time do
-        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+        post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
         expect(response).to have_http_status(:ok)
         expect(json[:subscription]).to include(
           lago_id: String,
@@ -81,7 +81,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+        post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
 
         expect(response).to have_http_status(:ok)
         expect(json[:subscription]).to include(
@@ -97,7 +97,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       let(:plan_code) { "#{plan.code}-invalid" }
 
       it 'returns a not_found error' do
-        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+        post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -107,7 +107,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       let(:subscription_at) { 'hello' }
 
       it 'returns an unprocessable_entity error' do
-        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+        post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
 
         expect(response).to have_http_status(:unprocessable_entity)
       end
@@ -126,7 +126,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+        post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
 
         expect(response).to have_http_status(:ok)
 
@@ -190,7 +190,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     before { subscription }
 
     it 'updates a subscription', :aggregate_failures do
-      put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}", { subscription: update_params })
+      put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}", {subscription: update_params})
 
       expect(response).to have_http_status(:success)
       expect(json[:subscription][:lago_id]).to eq(subscription.id)
@@ -209,7 +209,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
     context 'with not existing subscription' do
       it 'returns an not found error' do
-        put_with_token(organization, '/api/v1/subscriptions/invalid', { subscription: update_params })
+        put_with_token(organization, '/api/v1/subscriptions/invalid', {subscription: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -227,7 +227,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/subscriptions/#{subscription.external_id}",
-          { subscription: update_params },
+          {subscription: update_params},
         )
 
         expect(response).to have_http_status(:success)
@@ -244,7 +244,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           put_with_token(
             organization,
             "/api/v1/subscriptions/#{subscription.external_id}",
-            { subscription: update_params, status: 'pending' },
+            {subscription: update_params, status: 'pending'},
           )
 
           expect(response).to have_http_status(:success)

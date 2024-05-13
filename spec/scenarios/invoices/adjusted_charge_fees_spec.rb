@@ -38,7 +38,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
           :standard_charge,
           plan: monthly_plan,
           billable_metric:,
-          properties: { amount: '5' },
+          properties: {amount: '5'},
         )
 
         create_subscription(
@@ -99,7 +99,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
           :standard_charge,
           plan: monthly_plan,
           billable_metric:,
-          properties: { amount: '10' },
+          properties: {amount: '10'},
         )
 
         create_subscription(

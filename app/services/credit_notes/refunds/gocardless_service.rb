@@ -94,7 +94,7 @@ module CreditNotes
           params: {
             amount: credit_note.refund_amount_cents,
             total_amount_confirmation: credit_note.refund_amount_cents,
-            links: { payment: payment.provider_payment_id },
+            links: {payment: payment.provider_payment_id},
             metadata: {
               lago_customer_id: customer.id,
               lago_credit_note_id: credit_note.id,

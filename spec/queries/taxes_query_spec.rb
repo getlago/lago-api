@@ -60,7 +60,7 @@ RSpec.describe TaxesQuery, type: :query do
         search_term: 'de',
         page: 1,
         limit: 10,
-        filters: { ids: [tax_second.id] },
+        filters: {ids: [tax_second.id]},
       )
 
       expect(result.taxes).to eq([tax_second])
@@ -73,7 +73,7 @@ RSpec.describe TaxesQuery, type: :query do
         search_term: '',
         page: 1,
         limit: 10,
-        filters: { applied_to_organization: false },
+        filters: {applied_to_organization: false},
       )
 
       expect(result.taxes).to eq([tax_third])
@@ -86,7 +86,7 @@ RSpec.describe TaxesQuery, type: :query do
         search_term: '',
         page: 1,
         limit: 10,
-        filters: { auto_generated: true },
+        filters: {auto_generated: true},
       )
 
       expect(result.taxes).to eq([auto_generated_tax])

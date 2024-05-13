@@ -19,28 +19,28 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
 
   context 'when format is not valid' do
     it 'returns an error' do
-      result = create_groups({ key: 0, values: 1 })
+      result = create_groups({key: 0, values: 1})
       expect(result.error.messages[:group]).to eq(['value_is_invalid'])
 
-      result = create_groups({ key: 'foo' })
+      result = create_groups({key: 'foo'})
       expect(result.error.messages[:group]).to eq(['value_is_invalid'])
 
-      result = create_groups({ invalid: 'foo', values: ['bar'] })
+      result = create_groups({invalid: 'foo', values: ['bar']})
       expect(result.error.messages[:group]).to eq(['value_is_invalid'])
 
-      result = create_groups({ key: 'foo', values: 'bar' })
+      result = create_groups({key: 'foo', values: 'bar'})
       expect(result.error.messages[:group]).to eq(['value_is_invalid'])
 
-      result = create_groups({ key: 'foo', values: [1, 2] })
+      result = create_groups({key: 'foo', values: [1, 2]})
       expect(result.error.messages[:group]).to eq(['value_is_invalid'])
 
-      result = create_groups({ key: 'foo', values: [{ name: 1 }] })
+      result = create_groups({key: 'foo', values: [{name: 1}]})
       expect(result.error.messages[:group]).to eq(['value_is_invalid'])
 
-      result = create_groups({ key: 'foo', values: [{ name: 'bar', key: 1, values: ['baz'] }] })
+      result = create_groups({key: 'foo', values: [{name: 'bar', key: 1, values: ['baz']}]})
       expect(result.error.messages[:group]).to eq(['value_is_invalid'])
 
-      result = create_groups({ key: 'foo', values: [{ name: 'bar', key: 'baz', values: [1] }] })
+      result = create_groups({key: 'foo', values: [{name: 'bar', key: 'baz', values: [1]}]})
       expect(result.error.messages[:group]).to eq(['value_is_invalid'])
     end
 
@@ -82,7 +82,7 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
 
   context 'with one dimension' do
     let(:group_params) do
-      { key: 'region', values: %w[usa europe usa] }
+      {key: 'region', values: %w[usa europe usa]}
     end
     let(:group1) { create(:group, billable_metric:, key: 'region', value: 'europe', deleted_at: Time.current) }
     let(:group2) { create(:group, billable_metric:, key: 'region', value: 'africa') }

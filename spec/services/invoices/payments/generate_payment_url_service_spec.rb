@@ -25,7 +25,7 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService, type: :service do
         customer.update(payment_provider: 'stripe')
 
         allow(Stripe::Checkout::Session).to receive(:create)
-          .and_return({ 'url' => 'https://example55.com' })
+          .and_return({'url' => 'https://example55.com'})
       end
 
       it 'returns the generated payment url' do

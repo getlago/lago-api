@@ -54,7 +54,7 @@ module Sequenced
 
   class_methods do
     def sequenced(scope:, lock_key: nil)
-      self.sequenced_options = { scope: }
+      self.sequenced_options = {scope:}
       self.sequenced_lock_key = lock_key
     end
 

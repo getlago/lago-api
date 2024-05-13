@@ -12,10 +12,10 @@ module AdjustedFees
 
     def call
       return result.forbidden_failure! if !License.premium? || !fee.invoice.draft?
-      return result.validation_failure!(errors: { adjusted_fee: ['already_exists'] }) if fee.adjusted_fee
+      return result.validation_failure!(errors: {adjusted_fee: ['already_exists']}) if fee.adjusted_fee
 
       charge = fee.charge
-      return result.validation_failure!(errors: { charge: ['invalid_charge_model'] }) if disabled_charge_model?(charge)
+      return result.validation_failure!(errors: {charge: ['invalid_charge_model']}) if disabled_charge_model?(charge)
 
       adjusted_fee = AdjustedFee.new(
         fee:,
