@@ -21,7 +21,7 @@ RSpec.describe Analytics::InvoicedUsage, type: :model do
     end
 
     context 'with currency and months' do
-      let(:args) { { currency:, months: } }
+      let(:args) { {currency:, months:} }
 
       let(:cache_key) do
         "invoiced-usage/#{date}/#{organization_id}/#{currency}/#{months}"
@@ -33,7 +33,7 @@ RSpec.describe Analytics::InvoicedUsage, type: :model do
     end
 
     context 'with months' do
-      let(:args) { { months: } }
+      let(:args) { {months:} }
 
       let(:cache_key) do
         "invoiced-usage/#{date}/#{organization_id}//#{months}"
@@ -45,7 +45,7 @@ RSpec.describe Analytics::InvoicedUsage, type: :model do
     end
 
     context 'with currency' do
-      let(:args) { { currency: } }
+      let(:args) { {currency:} }
       let(:cache_key) { "invoiced-usage/#{date}/#{organization_id}/#{currency}/" }
 
       it 'returns the cache key' do

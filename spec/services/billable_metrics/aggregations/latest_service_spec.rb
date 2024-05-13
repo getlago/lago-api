@@ -17,7 +17,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { grouped_by:, matching_filters:, ignored_filters: } }
+  let(:filters) { {grouped_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
@@ -178,7 +178,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
   end
 
   context 'when filters are given' do
-    let(:matching_filters) { { region: ['europe'] } }
+    let(:matching_filters) { {region: ['europe']} }
 
     let(:events) do
       [
@@ -288,7 +288,7 @@ RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+        expect(aggregation.grouped_by).to eq({'agent_name' => nil})
       end
     end
   end

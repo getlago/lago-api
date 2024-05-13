@@ -87,7 +87,7 @@ module V1
       vies_value = options.fetch(:vies_check)
 
       {
-        vies_check: vies_value.is_a?(Hash) ? vies_value : { valid: false },
+        vies_check: vies_value.is_a?(Hash) ? vies_value : {valid: false},
       }
     end
 

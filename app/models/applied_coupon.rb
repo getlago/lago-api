@@ -25,8 +25,8 @@ class AppliedCoupon < ApplicationRecord
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 
-  validates :amount_cents, numericality: { greater_than: 0 }, allow_nil: true
-  validates :amount_currency, inclusion: { in: currency_list }, allow_nil: true
+  validates :amount_cents, numericality: {greater_than: 0}, allow_nil: true
+  validates :amount_currency, inclusion: {in: currency_list}, allow_nil: true
 
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp

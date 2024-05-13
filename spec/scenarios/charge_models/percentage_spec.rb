@@ -32,7 +32,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
           :percentage_charge,
           plan:,
           billable_metric:,
-          properties: { rate: '1', fixed_amount: '5', free_units_per_events: 3 },
+          properties: {rate: '1', fixed_amount: '5', free_units_per_events: 3},
         )
 
         travel_to(DateTime.new(2023, 3, 6)) do
@@ -41,7 +41,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
 
@@ -54,7 +54,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
           fetch_current_usage(customer:)
@@ -66,7 +66,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
           fetch_current_usage(customer:)
@@ -78,7 +78,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
           fetch_current_usage(customer:)
@@ -105,7 +105,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
           :percentage_charge,
           plan:,
           billable_metric:,
-          properties: { rate: '1', fixed_amount: '5', free_units_per_total_aggregation: '15.0' },
+          properties: {rate: '1', fixed_amount: '5', free_units_per_total_aggregation: '15.0'},
         )
 
         travel_to(DateTime.new(2023, 3, 6, 0, 1)) do
@@ -114,7 +114,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4' },
+              properties: {amount: '4'},
             },
           )
 
@@ -129,7 +129,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4' },
+              properties: {amount: '4'},
             },
           )
           fetch_current_usage(customer:)
@@ -143,7 +143,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4' },
+              properties: {amount: '4'},
             },
           )
           fetch_current_usage(customer:)
@@ -157,7 +157,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '4' },
+              properties: {amount: '4'},
             },
           )
           fetch_current_usage(customer:)
@@ -172,7 +172,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
           fetch_current_usage(customer:)
@@ -213,7 +213,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1' },
+              properties: {amount: '1'},
             },
           )
 
@@ -226,7 +226,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1' },
+              properties: {amount: '1'},
             },
           )
           fetch_current_usage(customer:)
@@ -238,7 +238,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1' },
+              properties: {amount: '1'},
             },
           )
           fetch_current_usage(customer:)
@@ -250,7 +250,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1' },
+              properties: {amount: '1'},
             },
           )
           fetch_current_usage(customer:)
@@ -291,7 +291,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
 
@@ -304,7 +304,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
           fetch_current_usage(customer:)
@@ -317,7 +317,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10' },
+              properties: {amount: '10'},
             },
           )
           fetch_current_usage(customer:)
@@ -360,7 +360,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '100' },
+              properties: {amount: '100'},
             },
           )
 
@@ -374,7 +374,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '1000' },
+              properties: {amount: '1000'},
             },
           )
 
@@ -388,7 +388,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
-              properties: { amount: '10000' },
+              properties: {amount: '10000'},
             },
           )
 

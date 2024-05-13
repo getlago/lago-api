@@ -20,7 +20,7 @@ module Integrations
       foreign_key: :integration_id,
       dependent: :destroy
 
-    validates :code, uniqueness: { scope: :organization_id }
+    validates :code, uniqueness: {scope: :organization_id}
     validates :name, presence: true
 
     def self.integration_type(type)

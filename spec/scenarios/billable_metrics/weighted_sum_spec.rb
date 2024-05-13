@@ -8,7 +8,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
 
   let(:plan) { create(:plan, organization:, amount_cents: 0) }
   let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
-  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: { amount: '1' }) }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: '1'}) }
 
   before { charge }
 
@@ -31,7 +31,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { value: '2500' },
+          properties: {value: '2500'},
         },
       )
 
@@ -65,7 +65,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { value: '-2000' },
+          properties: {value: '-2000'},
         },
       )
     end
@@ -76,7 +76,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { value: '-200' },
+          properties: {value: '-200'},
         },
       )
 

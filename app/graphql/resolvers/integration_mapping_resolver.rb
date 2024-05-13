@@ -16,7 +16,7 @@ module Resolvers
     def resolve(id: nil)
       mapping = ::IntegrationMappings::BaseMapping
         .joins(:integration)
-        .where(id:, integration: { organization: current_organization }).first
+        .where(id:, integration: {organization: current_organization}).first
 
       return not_found_error(resource: 'integration_mapping') unless mapping
 

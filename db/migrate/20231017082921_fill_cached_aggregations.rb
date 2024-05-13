@@ -26,7 +26,7 @@ class FillCachedAggregations < ActiveRecord::Migration[7.0]
           billable_metric_ids = BillableMetric.where(organization_id:)
             .where('billable_metrics.aggregation_type IN (0, 1, 3, 4)')
             .joins(:charges)
-            .where(charges: { pay_in_advance: true })
+            .where(charges: {pay_in_advance: true})
             .pluck('billable_metrics.id')
             .uniq
 

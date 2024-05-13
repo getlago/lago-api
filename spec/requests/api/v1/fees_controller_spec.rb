@@ -85,7 +85,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
   describe 'PUT /fees/:id' do
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
-    let(:update_params) { { payment_status: 'succeeded' } }
+    let(:update_params) { {payment_status: 'succeeded'} }
     let(:fee) do
       create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice: nil)
     end
@@ -155,7 +155,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to eq({ fee_type: %w[value_is_invalid] })
+          expect(json[:error_details]).to eq({fee_type: %w[value_is_invalid]})
         end
       end
     end

@@ -26,7 +26,7 @@ class FillSubscriptionsTrialEndedAt < ActiveRecord::Migration[7.0]
     Subscription
       .joins(:plan)
       .where(trial_ended_at: nil)
-      .where.not(plans: { trial_period: nil })
+      .where.not(plans: {trial_period: nil})
       .includes(:plan, customer: :subscriptions)
       .find_each do |subscription|
         trial_ended_at = subscription.initial_started_at + subscription.plan.trial_period.days

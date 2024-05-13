@@ -102,12 +102,12 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :standard_charge,
           plan: subscription.plan,
           billable_metric: metric,
-          properties: { amount: '0' },
+          properties: {amount: '0'},
         )
       end
 
-      let(:charge_filter_aws) { create(:charge_filter, charge:, properties: { amount: '10' }) }
-      let(:charge_filter_gcp) { create(:charge_filter, charge:, properties: { amount: '20' }) }
+      let(:charge_filter_aws) { create(:charge_filter, charge:, properties: {amount: '10'}) }
+      let(:charge_filter_gcp) { create(:charge_filter, charge:, properties: {amount: '20'}) }
 
       let(:charge_filter_value_aws) do
         create(:charge_filter_value, charge_filter: charge_filter_aws, billable_metric_filter:, values: ['aws'])
@@ -129,7 +129,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'aws' },
+          properties: {cloud: 'aws'},
         )
 
         create(
@@ -139,7 +139,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'google' },
+          properties: {cloud: 'google'},
         )
       end
 
@@ -182,9 +182,9 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         create(:billable_metric_filter, billable_metric: metric, key: 'region', values: %w[usa france])
       end
 
-      let(:charge_filter_aws_usa) { create(:charge_filter, charge:, properties: { amount: '10' }) }
-      let(:charge_filter_aws_france) { create(:charge_filter, charge:, properties: { amount: '20' }) }
-      let(:charge_filter_google_usa) { create(:charge_filter, charge:, properties: { amount: '30' }) }
+      let(:charge_filter_aws_usa) { create(:charge_filter, charge:, properties: {amount: '10'}) }
+      let(:charge_filter_aws_france) { create(:charge_filter, charge:, properties: {amount: '20'}) }
+      let(:charge_filter_google_usa) { create(:charge_filter, charge:, properties: {amount: '30'}) }
 
       let(:charge_filter_value11) do
         create(
@@ -242,7 +242,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :standard_charge,
           plan: subscription.plan,
           billable_metric: metric,
-          properties: { amount: '0' },
+          properties: {amount: '0'},
         )
       end
 
@@ -262,7 +262,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'aws', region: 'usa' },
+          properties: {cloud: 'aws', region: 'usa'},
         )
 
         create(
@@ -272,7 +272,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'aws', region: 'france' },
+          properties: {cloud: 'aws', region: 'france'},
         )
 
         create(
@@ -282,7 +282,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: { cloud: 'google', region: 'usa' },
+          properties: {cloud: 'google', region: 'usa'},
         )
       end
 

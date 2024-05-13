@@ -27,7 +27,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     end
 
     it 'creates a coupon' do
-      post_with_token(organization, '/api/v1/coupons', { coupon: create_params })
+      post_with_token(organization, '/api/v1/coupons', {coupon: create_params})
 
       expect(response).to have_http_status(:success)
       expect(json[:coupon][:lago_id]).to be_present
@@ -47,7 +47,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       end
 
       it 'creates a coupon' do
-        post_with_token(organization, '/api/v1/coupons', { coupon: create_params })
+        post_with_token(organization, '/api/v1/coupons', {coupon: create_params})
 
         expect(response).to have_http_status(:success)
         expect(json[:coupon][:lago_id]).to be_present
@@ -79,7 +79,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       put_with_token(
         organization,
         "/api/v1/coupons/#{coupon.code}",
-        { coupon: update_params },
+        {coupon: update_params},
       )
 
       expect(response).to have_http_status(:success)
@@ -98,7 +98,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/coupons/#{coupon.code}",
-          { coupon: update_params },
+          {coupon: update_params},
         )
 
         expect(response).to have_http_status(:success)
@@ -110,7 +110,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
 
     context 'when coupon does not exist' do
       it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/coupons/invalid', { coupon: update_params })
+        put_with_token(organization, '/api/v1/coupons/invalid', {coupon: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -126,7 +126,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/coupons/#{coupon.code}",
-          { coupon: update_params },
+          {coupon: update_params},
         )
 
         expect(response).to have_http_status(:unprocessable_entity)

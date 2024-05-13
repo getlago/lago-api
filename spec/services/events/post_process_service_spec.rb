@@ -102,7 +102,7 @@ RSpec.describe Events::PostProcessService, type: :service do
         create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id')
       end
 
-      let(:event_properties) { { billable_metric.field_name => '12' } }
+      let(:event_properties) { {billable_metric.field_name => '12'} }
 
       before { charge }
 
@@ -133,7 +133,7 @@ RSpec.describe Events::PostProcessService, type: :service do
         create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id')
       end
 
-      let(:event_properties) { { billable_metric.field_name => '12' } }
+      let(:event_properties) { {billable_metric.field_name => '12'} }
 
       before { charge }
 
@@ -160,7 +160,7 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
 
       context 'when value for sum_agg is negative' do
-        let(:event_properties) { { billable_metric.field_name => '-5' } }
+        let(:event_properties) { {billable_metric.field_name => '-5'} }
 
         it 'enqueues a job' do
           expect { process_service.call }
@@ -169,7 +169,7 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
 
       context 'when event field name does not batch the BM one' do
-        let(:event_properties) { { 'wrong_field_name' => '-5' } }
+        let(:event_properties) { {'wrong_field_name' => '-5'} }
 
         it 'does not enqueue a job' do
           expect { process_service.call }

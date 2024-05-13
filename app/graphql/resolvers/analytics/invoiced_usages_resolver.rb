@@ -17,7 +17,7 @@ module Resolvers
       def resolve(**args)
         raise unauthorized_error unless License.premium?
 
-        ::Analytics::InvoicedUsage.find_all_by(current_organization.id, **args.merge({ months: 12 }))
+        ::Analytics::InvoicedUsage.find_all_by(current_organization.id, **args.merge({months: 12}))
       end
     end
   end

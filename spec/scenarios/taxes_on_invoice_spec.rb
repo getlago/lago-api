@@ -45,14 +45,14 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
               {
                 billable_metric_id: fx_transfers.id,
                 charge_model: 'standard',
-                properties: { amount: '1' },
+                properties: {amount: '1'},
                 tax_codes: [organization.taxes.find_by(code: 'sales_tax_fr').code],
               },
               {
                 billable_metric_id: cards.id,
                 charge_model: 'standard',
                 min_amount_cents: 5000,
-                properties: { amount: '30' },
+                properties: {amount: '30'},
                 tax_codes: [organization.taxes.find_by(code: 'sales_tax').code],
               },
             ],
@@ -81,14 +81,14 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             reusable: false,
           },
         )
-        apply_coupon({ external_customer_id: 'customer-1', coupon_code: 'coupon1_code' })
+        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
 
         create_event(
           {
             code: fx_transfers.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: 'sub_external_id',
-            properties: { total: 50 },
+            properties: {total: 50},
           },
         )
 
@@ -209,7 +209,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             reusable: false,
           },
         )
-        apply_coupon({ external_customer_id: 'customer-1', coupon_code: 'coupon1_code' })
+        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
 
         create_coupon(
           {
@@ -224,7 +224,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             reusable: false,
           },
         )
-        apply_coupon({ external_customer_id: 'customer-1', coupon_code: 'coupon2_code' })
+        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon2_code'})
       end
 
       travel_to(DateTime.new(2023, 2, 1)) do
@@ -312,7 +312,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             reusable: false,
           },
         )
-        apply_coupon({ external_customer_id: 'customer-1', coupon_code: 'coupon1_code' })
+        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
 
         create_coupon(
           {
@@ -327,7 +327,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             reusable: false,
           },
         )
-        apply_coupon({ external_customer_id: 'customer-1', coupon_code: 'coupon2_code' })
+        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon2_code'})
       end
 
       travel_to(DateTime.new(2023, 2, 1)) do

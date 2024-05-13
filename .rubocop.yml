@@ -33,9 +33,6 @@ Style/TrailingCommaInBlockArgs:
 Style/TrailingCommaInHashLiteral:
   Enabled: false
 
-Layout/SpaceInsideHashLiteralBraces:
-  Enabled: false
-
 Performance/CaseWhenSplat:
   Enabled: true
 

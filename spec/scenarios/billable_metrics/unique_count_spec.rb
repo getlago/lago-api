@@ -9,7 +9,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
   let(:plan) { create(:plan, organization:, amount_cents: 0) }
   let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:) }
   let(:charge) do
-    create(:standard_charge, plan:, billable_metric:, properties: { amount: '1', grouped_by: %w[key_1 key_2 key_3] })
+    create(:standard_charge, plan:, billable_metric:, properties: {amount: '1', grouped_by: %w[key_1 key_2 key_3]})
   end
 
   before { charge }
@@ -199,7 +199,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
         billable_metric:,
         prorated: true,
         pay_in_advance: true,
-        properties: { amount: '1' },
+        properties: {amount: '1'},
       )
     end
 
@@ -223,7 +223,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
-            properties: { 'item_id' => 'seat_1' },
+            properties: {'item_id' => 'seat_1'},
           },
         )
 
@@ -241,7 +241,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
-            properties: { 'item_id' => 'seat_1', 'operation_type' => 'remove' },
+            properties: {'item_id' => 'seat_1', 'operation_type' => 'remove'},
           },
         )
 
@@ -260,7 +260,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
-            properties: { 'item_id' => 'seat_1', 'operation_type' => 'remove' },
+            properties: {'item_id' => 'seat_1', 'operation_type' => 'remove'},
           },
         )
 
@@ -282,7 +282,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
         billable_metric:,
         prorated: false,
         pay_in_advance: true,
-        properties: { amount: '1' },
+        properties: {amount: '1'},
       )
     end
 
@@ -307,7 +307,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
-            properties: { 'item_id' => 'seat_1' },
+            properties: {'item_id' => 'seat_1'},
           },
         )
 
@@ -326,7 +326,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
             timestamp: Time.zone.parse('2024-02-26T01:01:00').to_i,
-            properties: { 'item_id' => 'seat_1', 'operation_type' => 'remove' },
+            properties: {'item_id' => 'seat_1', 'operation_type' => 'remove'},
           },
         )
 
@@ -345,7 +345,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
             timestamp: Time.zone.parse('2024-02-26T01:01:00').to_i,
-            properties: { 'item_id' => 'seat_2' },
+            properties: {'item_id' => 'seat_2'},
           },
         )
 

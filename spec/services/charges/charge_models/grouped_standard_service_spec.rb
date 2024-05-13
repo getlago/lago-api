@@ -24,12 +24,12 @@ RSpec.describe Charges::ChargeModels::GroupedStandardService do
   let(:group_results) do
     [
       {
-        grouped_by: { 'cloud' => 'aws' },
+        grouped_by: {'cloud' => 'aws'},
         aggregation: 10,
         count: 2,
       },
       {
-        grouped_by: { 'cloud' => 'gcp' },
+        grouped_by: {'cloud' => 'gcp'},
         aggregation: 20,
         count: 7,
       },

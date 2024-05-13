@@ -116,7 +116,7 @@ module BillableMetrics
         event_store = event_store_class.new(
           code: billable_metric.code,
           subscription:,
-          boundaries: { to_datetime: from_datetime },
+          boundaries: {to_datetime: from_datetime},
           filters:,
         )
 

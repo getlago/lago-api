@@ -8,11 +8,11 @@ FactoryBot.define do
     name { 'Accounting integration 1' }
 
     secrets do
-      { connection_id: SecureRandom.uuid, client_secret: SecureRandom.uuid }.to_json
+      {connection_id: SecureRandom.uuid, client_secret: SecureRandom.uuid}.to_json
     end
 
     settings do
-      { account_id: 'acc_12345', client_id: 'cli_12345', script_endpoint_url: Faker::Internet.url }
+      {account_id: 'acc_12345', client_id: 'cli_12345', script_endpoint_url: Faker::Internet.url}
     end
   end
 
@@ -23,11 +23,11 @@ FactoryBot.define do
     name { 'Okta Integration' }
 
     settings do
-      { client_id: SecureRandom.uuid, domain: 'foo.test', organization_name: 'Foobar' }
+      {client_id: SecureRandom.uuid, domain: 'foo.test', organization_name: 'Foobar'}
     end
 
     secrets do
-      { client_secret: SecureRandom.uuid }.to_json
+      {client_secret: SecureRandom.uuid}.to_json
     end
   end
 end

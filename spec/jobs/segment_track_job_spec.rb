@@ -9,7 +9,7 @@ describe SegmentTrackJob, job: true do
     let(:membership_id) { "membership/#{SecureRandom.uuid}" }
     let(:event) { 'event' }
     let(:properties) do
-      { method: 1 }
+      {method: 1}
     end
 
     before do

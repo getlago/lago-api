@@ -37,21 +37,21 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
           {
             billable_metric_id: billable_metric.id,
             charge_model: 'standard',
-            properties: { amount: '0' },
+            properties: {amount: '0'},
             filters: [
               {
                 invoice_display_name: 'f1',
-                properties: { amount: '10' },
-                values: { image_size: ['512x152'], steps: ['0-25'], model_name: ['llama-2'] },
+                properties: {amount: '10'},
+                values: {image_size: ['512x152'], steps: ['0-25'], model_name: ['llama-2']},
               },
               {
                 invoice_display_name: 'f2',
-                properties: { amount: '5' },
-                values: { image_size: ['512x152'], steps: ['0-25'] },
+                properties: {amount: '5'},
+                values: {image_size: ['512x152'], steps: ['0-25']},
               },
               {
                 invoice_display_name: 'f3',
-                properties: { amount: '5' },
+                properties: {amount: '5'},
                 values: {
                   image_size: [ChargeFilterValue::ALL_FILTER_VALUES],
                   steps: [ChargeFilterValue::ALL_FILTER_VALUES],
@@ -59,7 +59,7 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
               },
               {
                 invoice_display_name: 'f4',
-                properties: { amount: '2.5' },
+                properties: {amount: '2.5'},
                 values: {
                   image_size: [ChargeFilterValue::ALL_FILTER_VALUES],
                 },
@@ -81,9 +81,9 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
       update_metric(
         billable_metric,
         filters: [
-          { key: 'image_size', values: %w[1024x1024 512x512] },
-          { key: 'steps', values: %w[0-25 26-50 51-100] },
-          { key: 'model_name', values: %w[llama-1 llama-2 llama-3] },
+          {key: 'image_size', values: %w[1024x1024 512x512]},
+          {key: 'steps', values: %w[0-25 26-50 51-100]},
+          {key: 'model_name', values: %w[llama-1 llama-2 llama-3]},
         ],
       )
     end
@@ -116,16 +116,16 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
             billable_metric_id: billable_metric.id,
             id: charge.id,
             charge_model: 'standard',
-            properties: { amount: '0' },
+            properties: {amount: '0'},
             filters: [
               {
                 invoice_display_name: 'f2',
-                properties: { amount: '5' },
-                values: { image_size: ['512x512'], steps: ['0-25'] },
+                properties: {amount: '5'},
+                values: {image_size: ['512x512'], steps: ['0-25']},
               },
               {
                 invoice_display_name: 'f3',
-                properties: { amount: '5' },
+                properties: {amount: '5'},
                 values: {
                   image_size: [ChargeFilterValue::ALL_FILTER_VALUES],
                   steps: [ChargeFilterValue::ALL_FILTER_VALUES],
@@ -133,20 +133,20 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
               },
               {
                 invoice_display_name: 'f4',
-                properties: { amount: '2.5' },
+                properties: {amount: '2.5'},
                 values: {
                   image_size: [ChargeFilterValue::ALL_FILTER_VALUES],
                 },
               },
               {
                 invoice_display_name: 'f1',
-                properties: { amount: '10' },
-                values: { image_size: ['512x512'], steps: ['0-25'], model_name: ['llama-2'] },
+                properties: {amount: '10'},
+                values: {image_size: ['512x512'], steps: ['0-25'], model_name: ['llama-2']},
               },
               {
                 invoice_display_name: 'f5',
-                properties: { amount: '1' },
-                values: { image_size: ['1024x1024'] },
+                properties: {amount: '1'},
+                values: {image_size: ['1024x1024']},
               },
             ],
           },

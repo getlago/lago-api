@@ -56,7 +56,7 @@ module Wallets
         GROUP BY recurring_transaction_rules.id
       SQL
 
-      RecurringTransactionRule.find_by_sql([sql, { today: }])
+      RecurringTransactionRule.find_by_sql([sql, {today:}])
     end
 
     def base_recurring_transaction_rule_scope(interval: nil, conditions: nil)

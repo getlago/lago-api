@@ -12,7 +12,7 @@ RSpec.describe Charge, type: :model do
   describe '#properties' do
     context 'with group properties' do
       it 'returns the group properties' do
-        property = create(:group_property, charge:, values: { foo: 'bar' })
+        property = create(:group_property, charge:, values: {foo: 'bar'})
         expect(charge.properties(group_id: property.group_id)).to eq(property.values)
       end
     end
@@ -30,7 +30,7 @@ RSpec.describe Charge, type: :model do
     end
 
     let(:charge_properties) do
-      { graduated_ranges: [{ 'foo' => 'bar' }] }
+      {graduated_ranges: [{'foo' => 'bar'}]}
     end
     let(:validation_service) { instance_double(Charges::Validators::GraduatedService) }
 
@@ -88,7 +88,7 @@ RSpec.describe Charge, type: :model do
       build(:standard_charge, properties: charge_properties)
     end
 
-    let(:charge_properties) { [{ 'foo' => 'bar' }] }
+    let(:charge_properties) { [{'foo' => 'bar'}] }
     let(:validation_service) { instance_double(Charges::Validators::StandardService) }
 
     let(:service_response) do
@@ -143,7 +143,7 @@ RSpec.describe Charge, type: :model do
       build(:package_charge, properties: charge_properties)
     end
 
-    let(:charge_properties) { [{ 'foo' => 'bar' }] }
+    let(:charge_properties) { [{'foo' => 'bar'}] }
     let(:validation_service) { instance_double(Charges::Validators::PackageService) }
 
     let(:service_response) do
@@ -200,7 +200,7 @@ RSpec.describe Charge, type: :model do
   describe '#validate_percentage' do
     subject(:charge) { build(:percentage_charge, properties: charge_properties) }
 
-    let(:charge_properties) { [{ 'foo' => 'bar' }] }
+    let(:charge_properties) { [{'foo' => 'bar'}] }
     let(:validation_service) { instance_double(Charges::Validators::PercentageService) }
 
     let(:service_response) do
@@ -260,7 +260,7 @@ RSpec.describe Charge, type: :model do
       build(:volume_charge, properties: charge_properties)
     end
 
-    let(:charge_properties) { { volume_ranges: [{ 'foo' => 'bar' }] } }
+    let(:charge_properties) { {volume_ranges: [{'foo' => 'bar'}]} }
     let(:validation_service) { instance_double(Charges::Validators::VolumeService) }
 
     let(:service_response) do
@@ -318,7 +318,7 @@ RSpec.describe Charge, type: :model do
     end
 
     let(:charge_properties) do
-      { graduated_percentage_ranges: [{ 'foo' => 'bar' }] }
+      {graduated_percentage_ranges: [{'foo' => 'bar'}]}
     end
     let(:validation_service) { instance_double(Charges::Validators::GraduatedPercentageService) }
 

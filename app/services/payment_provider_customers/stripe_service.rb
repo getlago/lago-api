@@ -31,7 +31,7 @@ module PaymentProviderCustomers
     def update
       return result unless stripe_payment_provider
 
-      Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, { api_key: })
+      Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, {api_key:})
       result
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
       deliver_error_webhook(e)
@@ -47,7 +47,7 @@ module PaymentProviderCustomers
     def update_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(customers: { organization_id: })
+        .where(customers: {organization_id:})
         .find_by(provider_customer_id: stripe_customer_id)
       return handle_missing_customer(organization_id, metadata) unless stripe_customer
 
@@ -67,14 +67,14 @@ module PaymentProviderCustomers
 
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(customers: { organization_id: })
+        .where(customers: {organization_id:})
         .find_by(provider_customer_id: stripe_customer_id)
       return handle_missing_customer(organization_id, metadata) unless stripe_customer
 
       Stripe::Customer.update(
         stripe_customer_id,
-        { invoice_settings: { default_payment_method: payment_method_id } },
-        { api_key: },
+        {invoice_settings: {default_payment_method: payment_method_id}},
+        {api_key:},
       )
 
       result.payment_method = payment_method_id
@@ -86,7 +86,7 @@ module PaymentProviderCustomers
     def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
       @stripe_customer = PaymentProviderCustomers::StripeCustomer
         .joins(:customer)
-        .where(customers: { organization_id: })
+        .where(customers: {organization_id:})
         .find_by(provider_customer_id: stripe_customer_id)
       return handle_missing_customer(organization_id, metadata) unless stripe_customer
 
@@ -101,7 +101,7 @@ module PaymentProviderCustomers
 
     def check_payment_method(payment_method_id)
       payment_method = Stripe::Customer.new(id: stripe_customer.provider_customer_id)
-        .retrieve_payment_method(payment_method_id, {}, { api_key: })
+        .retrieve_payment_method(payment_method_id, {}, {api_key:})
 
       result.payment_method = payment_method
       result
@@ -184,7 +184,7 @@ module PaymentProviderCustomers
       message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
       result.unauthorized_failure!(message:)
     rescue Stripe::IdempotencyError
-      stripe_customers = Stripe::Customer.list({ email: customer.email }, { api_key: })
+      stripe_customers = Stripe::Customer.list({email: customer.email}, {api_key:})
       return stripe_customers.first if stripe_customers.count == 1
 
       # NOTE: Multiple stripe customers with the same email,

@@ -8,7 +8,7 @@ module BillableMetrics
         result.current_usage_units = result.aggregation
         result.count = result.aggregation
         result.pay_in_advance_aggregation = BigDecimal(1)
-        result.options = { running_total: running_total(options) }
+        result.options = {running_total: running_total(options)}
         result
       end
 

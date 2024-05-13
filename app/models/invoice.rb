@@ -95,7 +95,7 @@ class Invoice < ApplicationRecord
 
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
-  validates :total_amount_cents, numericality: { greater_than_or_equal_to: 0 }
+  validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
 
   def self.ransackable_attributes(_ = nil)
@@ -145,16 +145,16 @@ class Invoice < ApplicationRecord
       .positive_units
       .where(true_up_parent_fee: nil)
       .joins(:charge)
-      .where(charge: { pay_in_advance: charge_in_advance })
+      .where(charge: {pay_in_advance: charge_in_advance})
       .any?
   end
 
   def recurring_fees(subscription_id)
     subscription_fees(subscription_id)
       .joins(charge: :billable_metric)
-      .where(billable_metric: { recurring: true })
-      .where(billable_metric: { aggregation_type: %i[sum_agg unique_count_agg] })
-      .where(charge: { pay_in_advance: false })
+      .where(billable_metric: {recurring: true})
+      .where(billable_metric: {aggregation_type: %i[sum_agg unique_count_agg]})
+      .where(charge: {pay_in_advance: false})
   end
 
   def recurring_breakdown(fee)

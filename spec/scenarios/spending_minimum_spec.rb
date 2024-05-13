@@ -41,7 +41,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           :standard_charge,
           plan:,
           billable_metric: metric,
-          properties: { amount: '8' },
+          properties: {amount: '8'},
           min_amount_cents: 1000,
         )
       end
@@ -157,14 +157,14 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           :standard_charge,
           plan:,
           billable_metric: metric,
-          properties: { amount: '0' },
+          properties: {amount: '0'},
           min_amount_cents: 10_000,
         )
 
-        europe_filter = create(:charge_filter, charge:, properties: { amount: '20' })
+        europe_filter = create(:charge_filter, charge:, properties: {amount: '20'})
         create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter:, values: ['europe'])
 
-        usa_filter = create(:charge_filter, charge:, properties: { amount: '50' })
+        usa_filter = create(:charge_filter, charge:, properties: {amount: '50'})
         create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter:, values: ['usa'])
       end
 

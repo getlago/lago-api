@@ -69,7 +69,7 @@ module Subscriptions
           AND #{trial_end_date + at_time_zone} <= '#{timestamp}'#{at_time_zone}
       SQL
 
-      Subscription.find_by_sql([sql, { timestamp: }])
+      Subscription.find_by_sql([sql, {timestamp:}])
     end
 
     def initial_started_at

@@ -22,7 +22,7 @@ module Charges
 
       def amount_details
         if units.zero?
-          return { free_units: '0.0', paid_units: '0.0', per_package_size: 0, per_package_unit_amount: '0.0' }
+          return {free_units: '0.0', paid_units: '0.0', per_package_size: 0, per_package_unit_amount: '0.0'}
         end
 
         if paid_units.negative?

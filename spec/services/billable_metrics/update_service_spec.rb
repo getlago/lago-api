@@ -44,8 +44,8 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         {
           key: 'cloud',
           values: [
-            { name: 'AWS', key: 'region', values: %w[usa europe] },
-            { name: 'Google', key: 'region', values: ['usa'] },
+            {name: 'AWS', key: 'region', values: %w[usa europe]},
+            {name: 'Google', key: 'region', values: ['usa']},
           ],
         }
       end
@@ -65,7 +65,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       context 'with invalid group' do
-        let(:group) { { key: 1 } }
+        let(:group) { {key: 1} }
 
         it 'returns an error if group is invalid' do
           result = update_service.call
@@ -130,7 +130,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
     end
 
     context 'with custom aggregation' do
-      let(:params) { { aggregation_type: 'custom_agg' } }
+      let(:params) { {aggregation_type: 'custom_agg'} }
 
       it 'returns a forbidden failure' do
         result = update_service.call

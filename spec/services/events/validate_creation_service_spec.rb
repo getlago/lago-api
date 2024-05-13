@@ -20,7 +20,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:transaction_id) { SecureRandom.uuid }
   let(:params) do
-    { external_customer_id: customer.external_id, code: billable_metric.code, transaction_id: }
+    {external_customer_id: customer.external_id, code: billable_metric.code, transaction_id:}
   end
 
   describe '.call' do
@@ -33,7 +33,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
     context 'when customer has only one active subscription and customer is not given' do
       let(:params) do
-        { code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id: }
+        {code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id:}
       end
 
       it 'does not return any validation errors' do
@@ -46,7 +46,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       before { create(:subscription, customer:, organization:) }
 
       let(:params) do
-        { code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id: }
+        {code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id:}
       end
 
       it 'does not return any validation errors' do
@@ -57,7 +57,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
     context 'when customer is not given but subscription is present' do
       let(:params) do
-        { code: billable_metric.code, transaction_id: }
+        {code: billable_metric.code, transaction_id:}
       end
 
       let(:validate_event) do
@@ -181,7 +181,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
     context 'when code does not exist' do
       let(:params) do
-        { external_customer_id: customer.external_id, code: 'event_code', transaction_id: }
+        {external_customer_id: customer.external_id, code: 'event_code', transaction_id:}
       end
 
       it 'returns an event_not_found error' do

@@ -14,7 +14,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
   before do
     aggregation_result.aggregation = aggregation
     aggregation_result.count = 4
-    aggregation_result.options = { running_total: }
+    aggregation_result.options = {running_total:}
   end
 
   let(:running_total) { [50, 150, 400] }

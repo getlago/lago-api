@@ -81,7 +81,7 @@ module Subscriptions
         GROUP BY subscriptions.id
       SQL
 
-      Subscription.find_by_sql([sql, { today: }])
+      Subscription.find_by_sql([sql, {today:}])
     end
 
     def base_subscription_scope(billing_time: nil, interval: nil, conditions: nil)

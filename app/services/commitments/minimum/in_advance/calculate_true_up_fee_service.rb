@@ -31,7 +31,7 @@ module Commitments
             )
             .where(
               subscription_id: subscription.id,
-              plan: { pay_in_advance: true },
+              plan: {pay_in_advance: true},
             )
         end
 
@@ -44,7 +44,7 @@ module Commitments
             .where(
               subscription_id: subscription.id,
               invoice_id: invoices_result.invoices.ids,
-              charge: { pay_in_advance: false },
+              charge: {pay_in_advance: false},
             )
         end
 
@@ -59,7 +59,7 @@ module Commitments
             .joins(:charge)
             .where(
               subscription_id: subscription.id,
-              charge: { pay_in_advance: true },
+              charge: {pay_in_advance: true},
               pay_in_advance: true,
             )
             .where(
@@ -84,10 +84,10 @@ module Commitments
             .charge_kind
             .joins(:charge)
             .joins(charge: :billable_metric)
-            .where(billable_metric: { recurring: true })
+            .where(billable_metric: {recurring: true})
             .where(
               subscription_id: subscription.id,
-              charge: { pay_in_advance: true },
+              charge: {pay_in_advance: true},
               pay_in_advance: false,
             )
             .where(

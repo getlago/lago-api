@@ -3,7 +3,7 @@
 module BillableMetrics
   module Aggregations
     class CustomService < BillableMetrics::Aggregations::BaseService
-      INITIAL_STATE = { total_units: BigDecimal('0'), amount: BigDecimal('0') }.freeze
+      INITIAL_STATE = {total_units: BigDecimal('0'), amount: BigDecimal('0')}.freeze
       BATCH_SIZE = 1000
 
       def compute_aggregation(options: {})
@@ -129,7 +129,7 @@ module BillableMetrics
         # NOTE: Loop over events by batch
         (1..total_batches).each do |batch|
           events_properties = store.events.page(batch).per(BATCH_SIZE)
-            .map { |event| { timestamp: event.timestamp, properties: event.properties } }
+            .map { |event| {timestamp: event.timestamp, properties: event.properties} }
 
           state = sandboxed_aggregation(events_properties, state)
         end
@@ -214,8 +214,8 @@ module BillableMetrics
 
         # NOTE: compute aggregation for the current event, using the previous state
         event_aggregation = sandboxed_aggregation(
-          [{ timestamp: event.timestamp, properties: event.properties }],
-          { total_units: old_aggregation, amount: old_amount },
+          [{timestamp: event.timestamp, properties: event.properties}],
+          {total_units: old_aggregation, amount: old_amount},
         )
 
         units_applied = event_aggregation[:total_units] - old_aggregation

@@ -23,7 +23,7 @@ Rspec.describe Charges::ChargeModels::CustomService, type: :service do
     aggregation_result.aggregation = aggregation
     aggregation_result.total_aggregated_units = total_aggregated_units if total_aggregated_units
     aggregation_result.full_units_number = full_units_number if full_units_number
-    aggregation_result.custom_aggregation = { amount: 20, units: BigDecimal('10.0') }
+    aggregation_result.custom_aggregation = {amount: 20, units: BigDecimal('10.0')}
   end
 
   it 'applies the charge model to the value' do

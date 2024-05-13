@@ -13,7 +13,7 @@ module AuthenticableCustomerPortalUserSpec
     type ThingType, null: false
 
     def resolve(**_args)
-      { name: 'something', count: 1 }
+      {name: 'something', count: 1}
     end
   end
 
@@ -41,7 +41,7 @@ RSpec.describe AuthenticableCustomerPortalUser, type: :graphql do
     it 'resolvers the thing' do
       result = AuthenticableCustomerPortalUserSpec::TestApiSchema.execute(
         resolver,
-        context: { customer_portal_user: create(:user) },
+        context: {customer_portal_user: create(:user)},
       )
 
       expect(result['data']['thing']).to eq 'name' => 'something'
@@ -52,12 +52,12 @@ RSpec.describe AuthenticableCustomerPortalUser, type: :graphql do
     it 'returns an error' do
       result = AuthenticableCustomerPortalUserSpec::TestApiSchema.execute(
         resolver,
-        context: { permissions: Permission::ADMIN_PERMISSIONS_HASH },
+        context: {permissions: Permission::ADMIN_PERMISSIONS_HASH},
       )
 
       partial_error = {
         'message' => 'unauthorized',
-        'extensions' => { 'status' => :unauthorized, 'code' => 'unauthorized' },
+        'extensions' => {'status' => :unauthorized, 'code' => 'unauthorized'},
       }
 
       expect(result['errors']).to include hash_including(partial_error)

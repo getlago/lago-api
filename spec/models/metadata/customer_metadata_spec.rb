@@ -9,7 +9,7 @@ RSpec.describe Metadata::CustomerMetadata, type: :model do
   let(:key) { 'hello' }
   let(:value) { 'abcdef' }
   let(:attributes) do
-    { key:, value:, customer:, display_in_invoice: true }
+    {key:, value:, customer:, display_in_invoice: true}
   end
 
   describe 'key validations' do

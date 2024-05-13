@@ -66,7 +66,7 @@ class GraphqlController < ApplicationController
     logger.error(error.message)
     logger.error(error.backtrace.join("\n"))
 
-    render(json: { errors: [{ message: error.message, backtrace: error.backtrace }], data: {} }, status: 500)
+    render(json: {errors: [{message: error.message, backtrace: error.backtrace}], data: {}}, status: 500)
   end
 
   def render_graphql_error(code:, status:, message: nil)
@@ -76,7 +76,7 @@ class GraphqlController < ApplicationController
         errors: [
           {
             message: message || code,
-            extensions: { status:, code: },
+            extensions: {status:, code:},
           },
         ],
       },

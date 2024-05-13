@@ -4,7 +4,7 @@ module V1
   module Invoices
     class PaymentDisputeLostSerializer < ModelSerializer
       def serialize
-        result = { invoice: }
+        result = {invoice:}
         result[:provider_error] = options[:provider_error] if options[:provider_error].present?
         result
       end

@@ -229,7 +229,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
           result = stripe_service.update_status(
             provider_refund_id: 'foo',
             status: 'succeeded',
-            metadata: { lago_invoice_id: SecureRandom.uuid },
+            metadata: {lago_invoice_id: SecureRandom.uuid},
           )
 
           aggregate_failures do
@@ -245,7 +245,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
             result = stripe_service.update_status(
               provider_refund_id: 're_123456',
               status: 'succeeded',
-              metadata: { lago_invoice_id: invoice.id },
+              metadata: {lago_invoice_id: invoice.id},
             )
 
             aggregate_failures do

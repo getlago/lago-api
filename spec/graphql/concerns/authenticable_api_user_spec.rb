@@ -16,7 +16,7 @@ module AuthenticableApiUserSpec
     type ThingType
 
     def resolve(**args)
-      { name: args[:new_name], count: 1 }
+      {name: args[:new_name], count: 1}
     end
   end
 
@@ -46,8 +46,8 @@ RSpec.describe AuthenticableApiUser, type: :graphql do
 
       result = AuthenticableApiUserSpec::TestApiSchema.execute(
         mutation,
-        variables: { input: { newName: 'new name' } },
-        context: { current_user: membership.user },
+        variables: {input: {newName: 'new name'}},
+        context: {current_user: membership.user},
       )
 
       expect(result['data']['renameThing']['name']).to eq 'new name'
@@ -58,13 +58,13 @@ RSpec.describe AuthenticableApiUser, type: :graphql do
     it 'returns an error' do
       result = AuthenticableApiUserSpec::TestApiSchema.execute(
         mutation,
-        variables: { input: { newName: 'new name' } },
-        context: { current_user: nil },
+        variables: {input: {newName: 'new name'}},
+        context: {current_user: nil},
       )
 
       partial_error = {
         'message' => 'unauthorized',
-        'extensions' => { 'status' => :unauthorized, 'code' => 'unauthorized' },
+        'extensions' => {'status' => :unauthorized, 'code' => 'unauthorized'},
       }
 
       expect(result['errors']).to include hash_including(partial_error)

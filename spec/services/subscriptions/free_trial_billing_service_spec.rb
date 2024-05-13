@@ -41,7 +41,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
     context 'with trial ended due to previous subscription with the same external_id' do
       it 'sets trial_ended_at' do
         customer = create(:customer)
-        attr = { customer:, plan:, external_id: 'abc123' }
+        attr = {customer:, plan:, external_id: 'abc123'}
         started_at = timestamp - 10.days - 1.hour
         create(:subscription, started_at:, terminated_at: 6.days.ago, status: :terminated, **attr)
         sub = create(:subscription, started_at: 6.days.ago, **attr)

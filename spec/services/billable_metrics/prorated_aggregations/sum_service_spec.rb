@@ -17,7 +17,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters: } }
+  let(:filters) { {event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) { create(:subscription, started_at: Time.zone.parse('2022-12-01 00:00:00')) }
   let(:organization) { subscription.organization }
@@ -92,7 +92,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
 
   context 'when aggregation is performed on billing date for pay in advance case' do
     let(:options) do
-      { is_pay_in_advance: true, is_current_usage: false }
+      {is_pay_in_advance: true, is_current_usage: false}
     end
 
     it 'aggregates the events without proration' do
@@ -190,7 +190,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
 
   context 'when current usage context and charge is pay in arrear' do
     let(:options) do
-      { is_pay_in_advance: false, is_current_usage: true }
+      {is_pay_in_advance: false, is_current_usage: true}
     end
 
     it 'returns period maximum as aggregation' do
@@ -203,7 +203,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
 
   context 'when current usage context and charge is pay in advance' do
     let(:options) do
-      { is_pay_in_advance: true, is_current_usage: true }
+      {is_pay_in_advance: true, is_current_usage: true}
     end
 
     let(:latest_events) do
@@ -259,7 +259,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
   context 'when current usage context and charge is pay in advance and just upgraded' do
     let(:from_datetime) { Time.zone.parse('2023-05-15 00:00:00') }
     let(:options) do
-      { is_pay_in_advance: true, is_current_usage: true }
+      {is_pay_in_advance: true, is_current_usage: true}
     end
     let(:latest_events) { nil }
 
@@ -274,7 +274,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
   context 'when current usage context and charge is pay in advance and just upgraded and new event in period' do
     let(:from_datetime) { Time.zone.parse('2023-05-15 00:00:00') }
     let(:options) do
-      { is_pay_in_advance: true, is_current_usage: true }
+      {is_pay_in_advance: true, is_current_usage: true}
     end
 
     let(:latest_events) do
@@ -316,7 +316,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
   end
 
   context 'when filters are given' do
-    let(:matching_filters) { { region: ['europe'] } }
+    let(:matching_filters) { {region: ['europe']} }
 
     before do
       create(
@@ -418,7 +418,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       )
     end
 
-    let(:properties) { { total_count: 10 } }
+    let(:properties) { {total_count: 10} }
 
     it 'assigns a pay_in_advance aggregation' do
       result = sum_service.aggregate
@@ -465,7 +465,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     context 'when current period aggregation is less than period maximum' do
-      let(:properties) { { total_count: -2 } }
+      let(:properties) { {total_count: -2} }
       let(:latest_events) do
         create(
           :event,
@@ -505,7 +505,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     context 'when properties is a float' do
-      let(:properties) { { total_count: 12.4 } }
+      let(:properties) { {total_count: 12.4} }
 
       it 'assigns a pay_in_advance aggregation' do
         result = sum_service.aggregate
@@ -515,7 +515,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     context 'when event property does not match metric field name' do
-      let(:properties) { { final_count: 10 } }
+      let(:properties) { {final_count: 10} }
 
       it 'assigns 0 as pay_in_advance aggregation' do
         result = sum_service.aggregate
@@ -599,7 +599,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
     end
 
     context 'when current usage' do
-      let(:options) { { is_pay_in_advance:, is_current_usage: true } }
+      let(:options) { {is_pay_in_advance:, is_current_usage: true} }
       let(:is_pay_in_advance) { false }
       let(:grouped_by) { ['agent_name'] }
       let(:agent_names) { %w[aragorn] }
@@ -686,7 +686,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
             current_aggregation: '4',
             max_aggregation: '6',
             max_aggregation_with_proration: '3.8',
-            grouped_by: { 'agent_name' => agent_names.first },
+            grouped_by: {'agent_name' => agent_names.first},
           )
         end
 
@@ -772,7 +772,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
             current_aggregation: '4',
             max_aggregation: '6',
             max_aggregation_with_proration: '3.8',
-            grouped_by: { 'agent_name' => agent_names.first },
+            grouped_by: {'agent_name' => agent_names.first},
           )
         end
 

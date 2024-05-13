@@ -22,7 +22,7 @@ RSpec.describe Analytics::GrossRevenue, type: :model do
     end
 
     context 'with customer external id, currency and months' do
-      let(:args) { { external_customer_id:, currency:, months: } }
+      let(:args) { {external_customer_id:, currency:, months:} }
 
       let(:cache_key) do
         "gross-revenue/#{date}/#{organization_id}/#{external_customer_id}/#{currency}/#{months}"
@@ -34,7 +34,7 @@ RSpec.describe Analytics::GrossRevenue, type: :model do
     end
 
     context 'with customer external id' do
-      let(:args) { { external_customer_id: } }
+      let(:args) { {external_customer_id:} }
 
       let(:cache_key) do
         "gross-revenue/#{date}/#{organization_id}/#{external_customer_id}//"
@@ -46,7 +46,7 @@ RSpec.describe Analytics::GrossRevenue, type: :model do
     end
 
     context 'with currency' do
-      let(:args) { { currency: } }
+      let(:args) { {currency:} }
       let(:cache_key) { "gross-revenue/#{date}/#{organization_id}//#{currency}/" }
 
       it 'returns the cache key' do

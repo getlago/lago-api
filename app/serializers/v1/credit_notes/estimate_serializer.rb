@@ -26,7 +26,7 @@ module V1
 
       def items
         {
-          'items' => model.items.map { |i| { lago_fee_id: i.fee_id, amount_cents: i.amount_cents } },
+          'items' => model.items.map { |i| {lago_fee_id: i.fee_id, amount_cents: i.amount_cents} },
         }
       end
 

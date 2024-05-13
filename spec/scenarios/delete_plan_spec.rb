@@ -21,7 +21,7 @@ describe 'Delete Plan Scenarios', :scenarios, type: :request do
         },
       )
 
-      create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '3' })
+      create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '3'})
       create(:plan, pay_in_advance: true, organization:, amount_cents: 1000, parent_id: plan.id)
     end
 

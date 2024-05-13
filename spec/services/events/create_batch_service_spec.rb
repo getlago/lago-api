@@ -26,14 +26,14 @@ RSpec.describe Events::CreateBatchService, type: :service do
         external_subscription_id: SecureRandom.uuid,
         code:,
         transaction_id: SecureRandom.uuid,
-        properties: { foo: 'bar' },
+        properties: {foo: 'bar'},
         timestamp:,
       }
 
       events << event
     end
 
-    { events: }
+    {events:}
   end
 
   describe '.call' do
@@ -59,7 +59,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
             external_subscription_id: SecureRandom.uuid,
             code:,
             transaction_id: SecureRandom.uuid,
-            properties: { foo: 'bar' },
+            properties: {foo: 'bar'},
             timestamp:,
           },
         )
@@ -98,7 +98,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
                 external_subscription_id: '123456',
                 code:,
                 transaction_id: '123456',
-                properties: { foo: 'bar' },
+                properties: {foo: 'bar'},
                 timestamp:,
               },
             ],
@@ -133,7 +133,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               external_subscription_id: SecureRandom.uuid,
               code:,
               transaction_id: SecureRandom.uuid,
-              properties: { foo: 'bar' },
+              properties: {foo: 'bar'},
               timestamp:,
             },
           ],
@@ -159,7 +159,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               external_subscription_id: SecureRandom.uuid,
               code:,
               transaction_id: SecureRandom.uuid,
-              properties: { foo: 'bar' },
+              properties: {foo: 'bar'},
               timestamp:,
             },
           ],
@@ -185,7 +185,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               external_subscription_id: SecureRandom.uuid,
               code:,
               transaction_id: SecureRandom.uuid,
-              properties: { foo: 'bar' },
+              properties: {foo: 'bar'},
               timestamp:,
             },
           ],

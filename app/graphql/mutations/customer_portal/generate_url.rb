@@ -18,7 +18,7 @@ module Mutations
         result = ::CustomerPortal::GenerateUrlService.call(customer:)
 
         if result.success?
-          { url: result.url }
+          {url: result.url}
         else
           result_error(result)
         end

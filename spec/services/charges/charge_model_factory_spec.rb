@@ -16,7 +16,7 @@ RSpec.describe Charges::ChargeModelFactory, type: :service do
       it { expect(result).to be_a(Charges::ChargeModels::StandardService) }
 
       context 'when charge is grouped' do
-        let(:charge) { build(:standard_charge, properties: { grouped_by: ['cloud'] }) }
+        let(:charge) { build(:standard_charge, properties: {grouped_by: ['cloud']}) }
         let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregations = [BaseService::Result.new] } }
 
         it { expect(result).to be_a(Charges::ChargeModels::GroupedStandardService) }

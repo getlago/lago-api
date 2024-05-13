@@ -40,7 +40,7 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: { subscriptionId: subscription.id },
+      variables: {subscriptionId: subscription.id},
     )
 
     subscription_response = result['data']['subscription']
@@ -64,7 +64,7 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: { subscriptionId: 'foo' },
+        variables: {subscriptionId: 'foo'},
       )
 
       expect_graphql_error(result:, message: 'Resource not found')

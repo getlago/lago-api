@@ -18,7 +18,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
 
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:filters) do
-    { event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters: }
+    {event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters:}
   end
 
   let(:subscription) { create(:subscription) }
@@ -81,7 +81,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
   end
 
   context 'when filters are given' do
-    let(:matching_filters) { { cloud: ['AWS'], region: ['europe'] } }
+    let(:matching_filters) { {cloud: ['AWS'], region: ['europe']} }
 
     let(:event_list) do
       [
@@ -209,7 +209,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({ 'agent_name' => nil })
+        expect(aggregation.grouped_by).to eq({'agent_name' => nil})
       end
     end
   end

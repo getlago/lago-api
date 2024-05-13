@@ -65,7 +65,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
     context 'when failing to create the customer' do
       it 'delivers an error webhook' do
         allow(GoCardlessPro::Client).to receive(:new)
-          .and_raise(GoCardlessPro::ApiError.new({ 'message' => 'error' }))
+          .and_raise(GoCardlessPro::ApiError.new({'message' => 'error'}))
 
         expect { gocardless_service.create }
           .to raise_error(GoCardlessPro::ApiError)

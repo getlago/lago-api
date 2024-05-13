@@ -18,7 +18,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
   end
 
   def create_customer_subscription!
-    create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
+    create(:standard_charge, plan:, billable_metric:, properties: {amount: '10'})
     create_subscription(
       {
         external_customer_id: customer.external_id,
@@ -30,7 +30,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
   def create_usage_event!
     create_event(
-      { code: billable_metric.code, transaction_id: SecureRandom.uuid, external_customer_id: customer.external_id },
+      {code: billable_metric.code, transaction_id: SecureRandom.uuid, external_customer_id: customer.external_id},
     )
   end
 
@@ -131,7 +131,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       # It create an invoice with the old plan because there was some usage
       travel_to(Time.zone.parse('2024-03-10T12:12:00')) do
         upgrade_plan = create(:plan, organization:, trial_period: 13, amount_cents: 10_000_000, pay_in_advance: true)
-        create(:standard_charge, plan: upgrade_plan, billable_metric:, properties: { amount: '12' })
+        create(:standard_charge, plan: upgrade_plan, billable_metric:, properties: {amount: '12'})
         create_subscription(
           {
             external_customer_id: customer.external_id,
@@ -188,7 +188,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         # It create an invoice with the old plan because there was some usage
         travel_to(Time.zone.parse('2024-03-05T13:15:00')) do
           upgrade_plan = create(:plan, organization:, trial_period: 13, amount_cents: 10_000_000, pay_in_advance: true)
-          create(:standard_charge, plan: upgrade_plan, billable_metric:, properties: { amount: '12' })
+          create(:standard_charge, plan: upgrade_plan, billable_metric:, properties: {amount: '12'})
           create_subscription(
             {
               external_customer_id: customer.external_id,
@@ -242,7 +242,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         # It create an invoice with the old plan because there was some usage
         travel_to(Time.zone.parse('2024-03-05T13:15:00')) do
           upgrade_plan = create(:plan, organization:, trial_period: 13, amount_cents: 10_000_000, pay_in_advance: true)
-          create(:standard_charge, plan: upgrade_plan, billable_metric:, properties: { amount: '12' })
+          create(:standard_charge, plan: upgrade_plan, billable_metric:, properties: {amount: '12'})
           create_subscription(
             {
               external_customer_id: customer.external_id,

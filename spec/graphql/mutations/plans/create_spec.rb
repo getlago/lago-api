@@ -107,13 +107,13 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
             {
               billableMetricId: billable_metrics[0].id,
               chargeModel: 'standard',
-              properties: { amount: '100.00' },
+              properties: {amount: '100.00'},
               taxCodes: [charge_tax.code],
               filters: [
                 {
                   invoiceDisplayName: 'Payment Method',
-                  properties: { amount: '100.00' },
-                  values: { billable_metric_filter.key => %w[card sepa] },
+                  properties: {amount: '100.00'},
+                  values: {billable_metric_filter.key => %w[card sepa]},
                 },
               ],
             },

@@ -92,7 +92,7 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
 
     context 'when external customer is not found' do
       let(:params) do
-        { code:, external_customer_id: 'unknown' }
+        {code:, external_customer_id: 'unknown'}
       end
 
       it 'fails with a not found error' do

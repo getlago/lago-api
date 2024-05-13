@@ -35,7 +35,7 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
           permissions: required_permission,
           query: mutation,
           variables: {
-            input: { id: invite.id },
+            input: {id: invite.id},
           },
         )
 
@@ -57,7 +57,7 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
           current_user: user,
           query: mutation,
           variables: {
-            input: { id: invite.id },
+            input: {id: invite.id},
           },
         )
 

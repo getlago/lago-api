@@ -40,7 +40,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
       current_organization: membership.organization,
       permissions: required_permission,
       query: mutation,
-      variables: { input: },
+      variables: {input:},
     )
 
     expect(result['data']['updateWebhookEndpoint']).to include(

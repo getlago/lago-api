@@ -19,7 +19,7 @@ module Mutations
         integration_collection_mapping = ::IntegrationCollectionMappings::BaseCollectionMapping
           .joins(:integration)
           .where(id:)
-          .where(integration: { organization: current_organization }).first
+          .where(integration: {organization: current_organization}).first
 
         result = ::IntegrationCollectionMappings::DestroyService.call(integration_collection_mapping:)
 

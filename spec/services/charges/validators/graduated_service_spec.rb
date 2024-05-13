@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Charges::Validators::GraduatedService, type: :service do
   subject(:graduated_service) { described_class.new(charge:) }
 
-  let(:charge) { build(:graduated_charge, properties: { graduated_ranges: ranges }) }
+  let(:charge) { build(:graduated_charge, properties: {graduated_ranges: ranges}) }
 
   let(:ranges) do
     []
@@ -23,7 +23,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'when ranges does not starts at 0' do
       let(:ranges) do
-        [{ from_value: -1, to_value: 100 }]
+        [{from_value: -1, to_value: 100}]
       end
 
       it 'is invalid' do
@@ -38,7 +38,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'when ranges does not ends at infinity' do
       let(:ranges) do
-        [{ from_value: 0, to_value: 100 }]
+        [{from_value: 0, to_value: 100}]
       end
 
       it 'is invalid' do
@@ -54,8 +54,8 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
     context 'when ranges have holes' do
       let(:ranges) do
         [
-          { from_value: 0, to_value: 100 },
-          { from_value: 120, to_value: 100 },
+          {from_value: 0, to_value: 100},
+          {from_value: 120, to_value: 100},
         ]
       end
 
@@ -72,8 +72,8 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
     context 'when ranges are overlapping' do
       let(:ranges) do
         [
-          { from_value: 0, to_value: 100 },
-          { from_value: 90, to_value: 100 },
+          {from_value: 0, to_value: 100},
+          {from_value: 90, to_value: 100},
         ]
       end
 
@@ -89,7 +89,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with no range per unit amount' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount: nil, flat_amount: '0' }]
+        [{from_value: 0, to_value: nil, per_unit_amount: nil, flat_amount: '0'}]
       end
 
       it 'is invalid' do
@@ -104,7 +104,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with invalid range per unit amount' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount: 'foo', flat_amount: '0' }]
+        [{from_value: 0, to_value: nil, per_unit_amount: 'foo', flat_amount: '0'}]
       end
 
       it 'is invalid' do
@@ -119,7 +119,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with negative range per unit amount' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount: '-2', flat_amount: 0 }]
+        [{from_value: 0, to_value: nil, per_unit_amount: '-2', flat_amount: 0}]
       end
 
       it 'is invalid' do
@@ -134,7 +134,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with no range flat amount' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: nil }]
+        [{from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: nil}]
       end
 
       it 'is invalid' do
@@ -149,7 +149,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with invalid range flat amount' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: 'foo' }]
+        [{from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: 'foo'}]
       end
 
       it 'is invalid' do
@@ -164,7 +164,7 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
 
     context 'with negative range flat amount' do
       let(:ranges) do
-        [{ from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '-2' }]
+        [{from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '-2'}]
       end
 
       it 'is invalid' do

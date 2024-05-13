@@ -54,7 +54,7 @@ RSpec.describe PastUsageQuery, type: :query do
     end
 
     context 'when external_customer_id is missing' do
-      let(:query_filters) { { external_subscription_id: subscription.external_id } }
+      let(:query_filters) { {external_subscription_id: subscription.external_id} }
 
       it 'returns a validation failure' do
         result = usage_query.call
@@ -69,7 +69,7 @@ RSpec.describe PastUsageQuery, type: :query do
     end
 
     context 'when external_subscription_id is missing' do
-      let(:query_filters) { { external_customer_id: customer.external_id } }
+      let(:query_filters) { {external_customer_id: customer.external_id} }
 
       it 'returns a validation failure' do
         result = usage_query.call

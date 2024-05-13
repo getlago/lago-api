@@ -244,7 +244,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           :standard_charge,
           billable_metric:,
           pay_in_advance: true,
-          properties: { 'grouped_by' => ['operator'], 'amount' => '100' },
+          properties: {'grouped_by' => ['operator'], 'amount' => '100'},
         )
       end
 
@@ -253,7 +253,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           :event,
           organization:,
           external_subscription_id: subscription.external_id,
-          properties: { 'operator' => 'foo' },
+          properties: {'operator' => 'foo'},
         )
       end
 
@@ -278,7 +278,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             pay_in_advance_event_id: event.id,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
-            grouped_by: { 'operator' => 'foo' },
+            grouped_by: {'operator' => 'foo'},
 
             taxes_rate: 20.0,
             taxes_amount_cents: 2,

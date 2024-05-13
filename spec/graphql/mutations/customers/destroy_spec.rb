@@ -27,7 +27,7 @@ RSpec.describe Mutations::Customers::Destroy, type: :graphql do
       permissions: required_permissions,
       query: mutation,
       variables: {
-        input: { id: customer.id },
+        input: {id: customer.id},
       },
     )
 

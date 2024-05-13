@@ -89,14 +89,14 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
 
     context 'with grouped_by_values' do
-      let(:grouped_by_values) { { 'region' => 'europe' } }
+      let(:grouped_by_values) { {'region' => 'europe'} }
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(3)
       end
 
       context 'when grouped_by_values value is nil' do
-        let(:grouped_by_values) { { 'region' => nil } }
+        let(:grouped_by_values) { {'region' => nil} }
 
         it 'returns a list of events' do
           expect(event_store.events.count).to eq(5)
@@ -105,8 +105,8 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
 
     context 'with filters' do
-      let(:matching_filters) { { 'region' => ['europe'], 'country' => %w[france germany] } }
-      let(:ignored_filters) { [{ 'city' => ['paris'] }, { 'city' => ['londons'], 'country' => ['united kingdom'] }] }
+      let(:matching_filters) { {'region' => ['europe'], 'country' => %w[france germany]} }
+      let(:ignored_filters) { [{'city' => ['paris']}, {'city' => ['londons'], 'country' => ['united kingdom']}] }
 
       it 'returns a list of events' do
         expect(event_store.events.count).to eq(2) # 1st event is ignored
@@ -271,7 +271,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         external_customer_id: customer.external_id,
         code:,
         timestamp: boundaries[:from_datetime] + 1.day,
-        properties: { billable_metric.field_name => 2 },
+        properties: {billable_metric.field_name => 2},
       )
 
       create(
@@ -344,7 +344,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           external_customer_id: customer.external_id,
           code:,
           timestamp: boundaries[:from_datetime] + 2.days,
-          properties: { billable_metric.field_name => 2 },
+          properties: {billable_metric.field_name => 2},
         ),
       ]
     end
@@ -426,7 +426,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           external_customer_id: customer.external_id,
           code:,
           timestamp: boundaries[:from_datetime] + 2.days,
-          properties: { billable_metric.field_name => 2 },
+          properties: {billable_metric.field_name => 2},
         ),
       ]
     end
@@ -870,13 +870,13 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
     let(:events_values) do
       [
-        { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2 },
-        { timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3 },
-        { timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1 },
-        { timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4 },
-        { timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2 },
-        { timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10 },
-        { timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10 },
+        {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2},
+        {timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3},
+        {timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1},
+        {timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4},
+        {timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2},
+        {timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10},
+        {timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10},
       ]
     end
 
@@ -884,7 +884,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       events = []
 
       events_values.each do |values|
-        properties = { value: values[:value] }
+        properties = {value: values[:value]}
         properties[:region] = values[:region] if values[:region]
 
         event = create(
@@ -915,7 +915,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     context 'with a single event' do
       let(:events_values) do
         [
-          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000 },
+          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000},
         ]
       end
 
@@ -935,8 +935,8 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     context 'with events with the same timestamp' do
       let(:events_values) do
         [
-          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3 },
-          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3 },
+          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3},
+          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3},
         ]
       end
 
@@ -962,11 +962,11 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
 
     context 'with group' do
-      let(:matching_filters) { { region: ['europe'] } }
+      let(:matching_filters) { {region: ['europe']} }
 
       let(:events_values) do
         [
-          { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000, region: 'europe' },
+          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000, region: 'europe'},
         ]
       end
 
@@ -983,29 +983,29 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
     let(:events_values) do
       [
-        { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2, agent_name: 'frodo' },
-        { timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3, agent_name: 'frodo' },
-        { timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1, agent_name: 'frodo' },
-        { timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4, agent_name: 'frodo' },
-        { timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2, agent_name: 'frodo' },
-        { timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10, agent_name: 'frodo' },
-        { timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10, agent_name: 'frodo' },
+        {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2, agent_name: 'frodo'},
+        {timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3, agent_name: 'frodo'},
+        {timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1, agent_name: 'frodo'},
+        {timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4, agent_name: 'frodo'},
+        {timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2, agent_name: 'frodo'},
+        {timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10, agent_name: 'frodo'},
+        {timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10, agent_name: 'frodo'},
 
-        { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2, agent_name: 'aragorn' },
-        { timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3, agent_name: 'aragorn' },
-        { timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1, agent_name: 'aragorn' },
-        { timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4, agent_name: 'aragorn' },
-        { timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2, agent_name: 'aragorn' },
-        { timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10, agent_name: 'aragorn' },
-        { timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10, agent_name: 'aragorn' },
+        {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2, agent_name: 'aragorn'},
+        {timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3, agent_name: 'aragorn'},
+        {timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1, agent_name: 'aragorn'},
+        {timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4, agent_name: 'aragorn'},
+        {timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2, agent_name: 'aragorn'},
+        {timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10, agent_name: 'aragorn'},
+        {timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10, agent_name: 'aragorn'},
 
-        { timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2 },
-        { timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3 },
-        { timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1 },
-        { timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4 },
-        { timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2 },
-        { timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10 },
-        { timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10 },
+        {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 2},
+        {timestamp: Time.zone.parse('2023-03-01 01:00:00'), value: 3},
+        {timestamp: Time.zone.parse('2023-03-01 01:30:00'), value: 1},
+        {timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4},
+        {timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2},
+        {timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10},
+        {timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10},
       ]
     end
 
@@ -1013,7 +1013,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
       events = []
 
       events_values.each do |values|
-        properties = { value: values[:value] }
+        properties = {value: values[:value]}
         properties[:region] = values[:region] if values[:region]
         properties[:agent_name] = values[:agent_name] if values[:agent_name]
 
@@ -1068,9 +1068,9 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     context 'with initial values' do
       let(:initial_values) do
         [
-          { groups: { 'agent_name' => 'frodo', 'other' => nil }, value: 1000 },
-          { groups: { 'agent_name' => 'aragorn', 'other' => nil }, value: 1000 },
-          { groups: { 'agent_name' => nil, 'other' => nil }, value: 1000 },
+          {groups: {'agent_name' => 'frodo', 'other' => nil}, value: 1000},
+          {groups: {'agent_name' => 'aragorn', 'other' => nil}, value: 1000},
+          {groups: {'agent_name' => nil, 'other' => nil}, value: 1000},
         ]
       end
 

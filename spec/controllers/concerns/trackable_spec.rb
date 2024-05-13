@@ -49,7 +49,7 @@ RSpec.describe Trackable do
   end
 
   def build_dummy(attrs = {})
-    base_attrs = { current_organization: membership.organization }
+    base_attrs = {current_organization: membership.organization}
     stub_const('DummyClass', dummy_class)
     DummyClass.new(base_attrs.merge(attrs))
   end

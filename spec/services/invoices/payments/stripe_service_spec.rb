@@ -165,7 +165,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
               {
                 id: 'pm_123456',
                 object: 'payment_method',
-                card: { brand: 'visa' },
+                card: {brand: 'visa'},
                 created: 1_656_422_973,
                 customer: 'cus_123456',
                 livemode: false,
@@ -287,7 +287,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       stripe_customer
 
       allow(Stripe::Checkout::Session).to receive(:create)
-        .and_return({ 'url' => 'https://example.com' })
+        .and_return({'url' => 'https://example.com'})
     end
 
     it 'generates payment url' do
@@ -409,7 +409,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           organization_id: organization.id,
           provider_payment_id: 'ch_123456',
           status: 'succeeded',
-          metadata: { lago_invoice_id: invoice.id, payment_type: 'one-time' },
+          metadata: {lago_invoice_id: invoice.id, payment_type: 'one-time'},
         )
 
         aggregate_failures do
@@ -445,7 +445,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             organization_id: organization.id,
             provider_payment_id: 'ch_123456',
             status: 'succeeded',
-            metadata: { lago_invoice_id: SecureRandom.uuid },
+            metadata: {lago_invoice_id: SecureRandom.uuid},
           )
 
           aggregate_failures do
@@ -460,7 +460,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
               organization_id: organization.id,
               provider_payment_id: 'ch_123456',
               status: 'succeeded',
-              metadata: { lago_invoice_id: invoice.id },
+              metadata: {lago_invoice_id: invoice.id},
             )
 
             aggregate_failures do

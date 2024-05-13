@@ -61,7 +61,7 @@ module V1
             :charge,
             :group,
             :billable_metric,
-            { charge_filter: { values: :billable_metric_filter } },
+            {charge_filter: {values: :billable_metric_filter}},
           ],
         ),
         ::V1::FeeSerializer,

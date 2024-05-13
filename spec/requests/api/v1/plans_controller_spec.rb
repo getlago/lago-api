@@ -39,7 +39,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     let(:tax_codes) { [tax.code] }
 
     it 'creates a plan' do
-      post_with_token(organization, '/api/v1/plans', { plan: create_params })
+      post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
       expect(response).to have_http_status(:success)
 
@@ -56,7 +56,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         around { |test| lago_premium!(&test) }
 
         it 'creates a plan with minimum commitment' do
-          post_with_token(organization, '/api/v1/plans', { plan: create_params })
+          post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
           expect(response).to have_http_status(:success)
           expect(json[:plan][:minimum_commitment][:lago_id]).to be_present
@@ -65,7 +65,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
       context 'when license is not premium' do
         it 'does not create minimum commitment' do
-          post_with_token(organization, '/api/v1/plans', { plan: create_params })
+          post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
           expect(response).to have_http_status(:success)
           expect(json[:plan][:minimum_commitment]).not_to be_present
@@ -110,7 +110,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
 
       it 'creates a plan' do
-        post_with_token(organization, '/api/v1/plans', { plan: create_params })
+        post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
         expect(response).to have_http_status(:success)
 
@@ -145,7 +145,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
                 {
                   group_id: group.id,
                   invoice_display_name: 'Europe',
-                  values: { amount: '0.22' },
+                  values: {amount: '0.22'},
                 },
               ],
             },
@@ -156,7 +156,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       before { billable_metric_filter }
 
       it 'creates a plan' do
-        post_with_token(organization, '/api/v1/plans', { plan: create_params })
+        post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
         expect(response).to have_http_status(:success)
 
@@ -167,7 +167,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             {
               group_id: group.id,
               invoice_display_name: 'Europe',
-              values: { amount: '0.22' },
+              values: {amount: '0.22'},
             },
           ],
         )
@@ -176,8 +176,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
           [
             {
               invoice_display_name: 'Europe',
-              properties: { amount: '0.22' },
-              values: { group.key.to_sym => [group.value] },
+              properties: {amount: '0.22'},
+              values: {group.key.to_sym => [group.value]},
             },
           ],
         )
@@ -199,7 +199,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
 
       it 'creates a plan' do
-        post_with_token(organization, '/api/v1/plans', { plan: create_params })
+        post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
         expect(response).to have_http_status(:success)
 
@@ -215,7 +215,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       let(:tax_codes) { ['unknown'] }
 
       it 'returns a 404 response' do
-        post_with_token(organization, '/api/v1/plans', { plan: create_params })
+        post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
         aggregate_failures do
           expect(response).to have_http_status(:not_found)
@@ -268,7 +268,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       put_with_token(
         organization,
         "/api/v1/plans/#{plan.code}",
-        { plan: update_params },
+        {plan: update_params},
       )
 
       expect(response).to have_http_status(:success)
@@ -278,7 +278,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
     context 'when plan does not exist' do
       it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/plans/invalid', { plan: update_params })
+        put_with_token(organization, '/api/v1/plans/invalid', {plan: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -294,7 +294,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         put_with_token(
           organization,
           "/api/v1/plans/#{plan.code}",
-          { plan: update_params },
+          {plan: update_params},
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -309,7 +309,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           around { |test| lago_premium!(&test) }
 
           it 'creates minimum commitment' do
-            put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+            put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
             expect(response).to have_http_status(:success)
             expect(json[:plan][:minimum_commitment][:amount_cents])
@@ -319,7 +319,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
         context 'when license is not premium' do
           it 'does not create minimum commitment' do
-            put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+            put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
             expect(response).to have_http_status(:success)
             expect(json[:plan][:minimum_commitment]).to be_nil
@@ -332,7 +332,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           around { |test| lago_premium!(&test) }
 
           it 'does not create minimum commitment' do
-            put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+            put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
             expect(response).to have_http_status(:success)
             expect(json[:plan][:minimum_commitment]).to be_nil
@@ -341,7 +341,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
         context 'when license is not premium' do
           it 'does not create minimum commitment' do
-            put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+            put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
             expect(response).to have_http_status(:success)
             expect(json[:plan][:minimum_commitment]).to be_nil
@@ -357,13 +357,13 @@ RSpec.describe Api::V1::PlansController, type: :request do
         before { update_params.merge!(minimum_commitment_params) }
 
         context 'when minimum commitment params are an empty hash' do
-          let(:minimum_commitment_params) { { minimum_commitment: {} } }
+          let(:minimum_commitment_params) { {minimum_commitment: {}} }
 
           context 'when license is premium' do
             around { |test| lago_premium!(&test) }
 
             it 'deletes minimum commitment' do
-              put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+              put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
               expect(response).to have_http_status(:success)
               expect(json[:plan][:minimum_commitment]).to be_nil
@@ -372,7 +372,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
           context 'when license is not premium' do
             it 'does not delete the minimum commitment' do
-              put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+              put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
               expect(response).to have_http_status(:success)
               expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
@@ -385,7 +385,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             around { |test| lago_premium!(&test) }
 
             it 'updates minimum commitment' do
-              put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+              put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
               expect(response).to have_http_status(:success)
               expect(json[:plan][:minimum_commitment][:amount_cents])
@@ -395,7 +395,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
           context 'when license is not premium' do
             it 'does not update minimum commitment' do
-              put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+              put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
               expect(response).to have_http_status(:success)
               expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
@@ -409,7 +409,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           around { |test| lago_premium!(&test) }
 
           it 'does not update minimum commitment' do
-            put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+            put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
             expect(response).to have_http_status(:success)
             expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
@@ -418,7 +418,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
         context 'when license is not premium' do
           it 'does not update minimum commitment' do
-            put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+            put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
             expect(response).to have_http_status(:success)
             expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
@@ -450,7 +450,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
                 {
                   group_id: group.id,
                   invoice_display_name: 'Europe',
-                  values: { amount: '0.22' },
+                  values: {amount: '0.22'},
                 },
               ],
             },
@@ -461,7 +461,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       before { billable_metric_filter }
 
       it 'creates a plan' do
-        put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: update_params })
+        put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
 
         expect(response).to have_http_status(:success)
 
@@ -472,7 +472,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             {
               group_id: group.id,
               invoice_display_name: 'Europe',
-              values: { amount: '0.22' },
+              values: {amount: '0.22'},
             },
           ],
         )
@@ -481,8 +481,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
           [
             {
               invoice_display_name: 'Europe',
-              properties: { amount: '0.22' },
-              values: { group.key.to_sym => [group.value] },
+              properties: {amount: '0.22'},
+              values: {group.key.to_sym => [group.value]},
             },
           ],
         )

@@ -18,7 +18,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
-  let(:filters) { { event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters: } }
+  let(:filters) { {event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters:} }
 
   let(:subscription) do
     create(
@@ -68,7 +68,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       code: billable_metric.code,
       external_subscription_id: subscription.external_id,
       timestamp: added_at,
-      properties: { unique_id: SecureRandom.uuid },
+      properties: {unique_id: SecureRandom.uuid},
     )
   end
 
@@ -90,7 +90,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 10.days,
-            properties: { unique_id: SecureRandom.uuid },
+            properties: {unique_id: SecureRandom.uuid},
           )
         end
 
@@ -164,11 +164,11 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: added_at,
-            properties: { unique_id: '111', region: 'europe' },
+            properties: {unique_id: '111', region: 'europe'},
           )
         end
 
-        let(:matching_filters) { { region: ['europe'] } }
+        let(:matching_filters) { {region: ['europe']} }
 
         it 'returns the number of persisted metric' do
           expect(result.aggregation).to eq(1)
@@ -194,7 +194,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 15.days,
-          properties: { unique_id: SecureRandom.uuid },
+          properties: {unique_id: SecureRandom.uuid},
         )
       end
 
@@ -210,7 +210,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime,
-            properties: { unique_id: SecureRandom.uuid },
+            properties: {unique_id: SecureRandom.uuid},
           )
         end
 
@@ -298,7 +298,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'when current usage context and charge is pay in arrear' do
       let(:options) do
-        { is_pay_in_advance: false, is_current_usage: true }
+        {is_pay_in_advance: false, is_current_usage: true}
       end
 
       it 'returns correct result' do
@@ -308,7 +308,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          properties: { unique_id: SecureRandom.uuid },
+          properties: {unique_id: SecureRandom.uuid},
         )
 
         expect(result.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
@@ -318,7 +318,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'when current usage context and charge is pay in advance' do
       let(:options) do
-        { is_pay_in_advance: true, is_current_usage: true }
+        {is_pay_in_advance: true, is_current_usage: true}
       end
 
       let(:previous_event) do
@@ -328,7 +328,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 5.days,
-          properties: { unique_id: '000' },
+          properties: {unique_id: '000'},
         )
       end
 
@@ -364,7 +364,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
     end
 
     context 'when event is given' do
-      let(:properties) { { unique_id: SecureRandom.uuid } }
+      let(:properties) { {unique_id: SecureRandom.uuid} }
       let(:pay_in_advance_event) do
         create(
           :event,
@@ -398,7 +398,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: { unique_id: '000' },
+            properties: {unique_id: '000'},
           )
         end
 
@@ -417,7 +417,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 5.days,
-            properties: { unique_id: '000' },
+            properties: {unique_id: '000'},
           )
         end
 
@@ -459,7 +459,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
           timestamp: added_at,
-          properties: { unique_id: '000', agent_name: },
+          properties: {unique_id: '000', agent_name:},
         )
       end
     end
@@ -488,7 +488,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
               code: billable_metric.code,
               external_subscription_id: subscription.external_id,
               timestamp: from_datetime + 10.days,
-              properties: { unique_id: SecureRandom.uuid, agent_name: },
+              properties: {unique_id: SecureRandom.uuid, agent_name:},
             )
           end
         end
@@ -516,12 +516,12 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
               code: billable_metric.code,
               external_subscription_id: subscription.external_id,
               timestamp: added_at,
-              properties: { unique_id: '111', region: 'europe', agent_name: },
+              properties: {unique_id: '111', region: 'europe', agent_name:},
             )
           end
         end
 
-        let(:matching_filters) { { region: ['europe'] } }
+        let(:matching_filters) { {region: ['europe']} }
 
         it 'returns the number of persisted metric' do
           expect(result.aggregations.count).to eq(2)
@@ -575,7 +575,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: to_datetime - 15.days,
-            properties: { unique_id: '000', region: 'europe', agent_name:, operation_type: 'remove' },
+            properties: {unique_id: '000', region: 'europe', agent_name:, operation_type: 'remove'},
           )
         end
 
@@ -597,7 +597,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
               code: billable_metric.code,
               external_subscription_id: subscription.external_id,
               timestamp: to_datetime,
-              properties: { unique_id: '111', region: 'europe', agent_name:, operation_type: 'remove' },
+              properties: {unique_id: '111', region: 'europe', agent_name:, operation_type: 'remove'},
             )
           end
 
@@ -623,7 +623,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: to_datetime - 1.day,
-            properties: { unique_id: '000', agent_name:, operation_type: 'remove' },
+            properties: {unique_id: '000', agent_name:, operation_type: 'remove'},
           )
         end
 
@@ -647,7 +647,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
               code: billable_metric.code,
               external_subscription_id: subscription.external_id,
               timestamp: added_at.end_of_day,
-              properties: { unique_id: '000', agent_name:, operation_type: 'remove' },
+              properties: {unique_id: '000', agent_name:, operation_type: 'remove'},
             )
           end
 
@@ -664,7 +664,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'when current usage context and charge is pay in arrear' do
       let(:options) do
-        { is_pay_in_advance: false, is_current_usage: true }
+        {is_pay_in_advance: false, is_current_usage: true}
       end
       let(:new_events) do
         agent_names.map do |agent_name|
@@ -674,7 +674,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 10.days,
-            properties: { unique_id: SecureRandom.uuid, agent_name: },
+            properties: {unique_id: SecureRandom.uuid, agent_name:},
           )
         end
       end
@@ -695,7 +695,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
     context 'when current usage context and charge is pay in advance' do
       let(:options) do
-        { is_pay_in_advance: true, is_current_usage: true }
+        {is_pay_in_advance: true, is_current_usage: true}
       end
 
       let(:previous_events) do
@@ -726,7 +726,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             current_aggregation: '1',
             max_aggregation: '1',
             max_aggregation_with_proration: '0.8',
-            grouped_by: { agent_name: },
+            grouped_by: {agent_name:},
           )
         end
       end
@@ -874,7 +874,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          properties: { unique_id: SecureRandom.uuid },
+          properties: {unique_id: SecureRandom.uuid},
         )
 
         create(
@@ -883,7 +883,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 20.days,
-          properties: { unique_id: '111' },
+          properties: {unique_id: '111'},
         )
 
         create(
@@ -918,7 +918,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 10.days,
-          properties: { unique_id: SecureRandom.uuid },
+          properties: {unique_id: SecureRandom.uuid},
         )
 
         create(
@@ -927,7 +927,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           code: billable_metric.code,
           external_subscription_id: subscription.external_id,
           timestamp: from_datetime + 20.days,
-          properties: { unique_id: '111' },
+          properties: {unique_id: '111'},
         )
 
         create(

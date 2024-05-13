@@ -75,7 +75,7 @@ module Events
     end
 
     def transaction_id_error
-      result.validation_failure!(errors: { transaction_id: ['value_is_missing_or_already_exists'] })
+      result.validation_failure!(errors: {transaction_id: ['value_is_missing_or_already_exists']})
     end
 
     def invalid_code_error
@@ -83,7 +83,7 @@ module Events
     end
 
     def invalid_properties_error
-      result.validation_failure!(errors: { properties: ['value_is_not_valid_number'] })
+      result.validation_failure!(errors: {properties: ['value_is_not_valid_number']})
     end
 
     def invalid_customer_error

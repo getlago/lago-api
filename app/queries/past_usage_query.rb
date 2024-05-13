@@ -28,8 +28,8 @@ class PastUsageQuery < BaseQuery
   def query
     base_query = InvoiceSubscription.joins(subscription: :customer)
       .where.not(charges_from_datetime: nil)
-      .where(customers: { external_id: filters.external_customer_id, organization_id: organization.id })
-      .where(subscriptions: { external_id: filters.external_subscription_id })
+      .where(customers: {external_id: filters.external_customer_id, organization_id: organization.id})
+      .where(subscriptions: {external_id: filters.external_subscription_id})
       .order(charges_from_datetime: :desc)
       .includes(:invoice)
 
@@ -42,7 +42,7 @@ class PastUsageQuery < BaseQuery
     query = invoice.fees.charge.includes(:charge_filter, :group)
     return query unless filters.billable_metric_code
 
-    query.joins(:charge).where(charges: { billable_metric_id: billable_metric.id })
+    query.joins(:charge).where(charges: {billable_metric_id: billable_metric.id})
   end
 
   def validate_filters

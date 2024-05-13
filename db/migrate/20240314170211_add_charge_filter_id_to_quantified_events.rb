@@ -32,7 +32,7 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
     QuantifiedEvent.where.associated(:group).find_each do |event|
       filters = ChargeFilter.where(charge_id: event.billable_metric.charges.pluck(:id))
 
-      object_hash = { event.group.key => [event.group.value] }
+      object_hash = {event.group.key => [event.group.value]}
       object_hash[event.group.parent.key] = [event.group.parent.value] if event.group.parent
 
       filter = filters.find do |f|

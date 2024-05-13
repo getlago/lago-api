@@ -44,7 +44,7 @@ RSpec.describe IntegrationCollectionMappings::UpdateService, type: :service do
 
     context 'with validation error' do
       let(:update_args) do
-        { integration_id: nil }
+        {integration_id: nil}
       end
 
       it 'returns an error' do

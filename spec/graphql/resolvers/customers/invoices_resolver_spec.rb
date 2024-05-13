@@ -38,7 +38,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: { customerId: customer.id },
+      variables: {customerId: customer.id},
     )
 
     invoices_response = result['data']['customerInvoices']
@@ -69,7 +69,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: { customerId: customer.id, status: ['draft'] },
+        variables: {customerId: customer.id, status: ['draft']},
       )
 
       invoices_response = result['data']['customerInvoices']
@@ -88,7 +88,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: create(:organization),
         query:,
-        variables: { customerId: customer.id },
+        variables: {customerId: customer.id},
       )
 
       expect_graphql_error(
@@ -105,7 +105,7 @@ RSpec.describe Resolvers::Customers::InvoicesResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: { customerId: '123456' },
+        variables: {customerId: '123456'},
       )
 
       invoices_response = result['data']['customerInvoices']

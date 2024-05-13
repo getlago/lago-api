@@ -9,7 +9,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
   let(:stripe_provider) { create(:stripe_provider, organization: customer.organization) }
 
   let(:create_params) do
-    { provider_customer_id: 'id', sync_with_provider: true, provider_payment_methods: }
+    {provider_customer_id: 'id', sync_with_provider: true, provider_payment_methods:}
   end
 
   let(:provider_payment_methods) { %w[card] }
@@ -92,7 +92,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
 
     context 'when no provider customer id and should create on service' do
       let(:create_params) do
-        { provider_customer_id: nil, sync_with_provider: true, provider_payment_methods: %w[card] }
+        {provider_customer_id: nil, sync_with_provider: true, provider_payment_methods: %w[card]}
       end
 
       it 'enqueues a job to create the customer on the provider' do
@@ -108,7 +108,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
 
     context 'when no gocardless provider customer id and should create on service' do
       let(:create_params) do
-        { provider_customer_id: nil, sync_with_provider: true }
+        {provider_customer_id: nil, sync_with_provider: true}
       end
 
       let(:gocardless_provider) do
@@ -131,7 +131,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
 
     context 'when removing the provider customer id and should create on service' do
       let(:create_params) do
-        { provider_customer_id: nil, sync_with_provider: true }
+        {provider_customer_id: nil, sync_with_provider: true}
       end
 
       let(:stripe_customer) do
@@ -171,7 +171,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
       end
 
       let(:create_params) do
-        { provider_customer_id: 'id', sync_with_provider:, provider_payment_methods: %w[card] }
+        {provider_customer_id: 'id', sync_with_provider:, provider_payment_methods: %w[card]}
       end
 
       before do

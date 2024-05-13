@@ -59,7 +59,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         customer_portal_user: customer,
         query:,
-        variables: { status: ['draft'] },
+        variables: {status: ['draft']},
       )
 
       invoices_response = result['data']['customerPortalInvoices']

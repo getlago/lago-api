@@ -26,7 +26,7 @@ class Tax < ApplicationRecord
   belongs_to :organization
 
   validates :name, :rate, presence: true
-  validates :code, presence: true, uniqueness: { scope: :organization_id }
+  validates :code, presence: true, uniqueness: {scope: :organization_id}
 
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
 

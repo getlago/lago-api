@@ -8,7 +8,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
   let(:charge) do
     build(
       :graduated_percentage_charge,
-      properties: { graduated_percentage_ranges: ranges },
+      properties: {graduated_percentage_ranges: ranges},
     )
   end
 
@@ -46,7 +46,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
       end
 
       context 'when ranges does not starts at 0' do
-        let(:ranges) { [{ from_value: -1, to_value: 100 }] }
+        let(:ranges) { [{from_value: -1, to_value: 100}] }
 
         it 'is invalid' do
           aggregate_failures do
@@ -60,7 +60,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
       end
 
       context 'when ranges does not ends at infinity' do
-        let(:ranges) { [{ from_value: 0, to_value: 100 }] }
+        let(:ranges) { [{from_value: 0, to_value: 100}] }
 
         it 'is invalid' do
           aggregate_failures do
@@ -76,8 +76,8 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
       context 'when ranges have holes' do
         let(:ranges) do
           [
-            { from_value: 0, to_value: 100 },
-            { from_value: 120, to_value: 1000 },
+            {from_value: 0, to_value: 100},
+            {from_value: 120, to_value: 1000},
           ]
         end
 
@@ -95,8 +95,8 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
       context 'when ranges are overlapping' do
         let(:ranges) do
           [
-            { from_value: 0, to_value: 100 },
-            { from_value: 90, to_value: 1000 },
+            {from_value: 0, to_value: 100},
+            {from_value: 90, to_value: 1000},
           ]
         end
 
@@ -113,7 +113,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
     end
 
     context 'with rate validation' do
-      let(:ranges) { [{ from_value: 0, to_value: nil, rate:, flat_amount: '0' }] }
+      let(:ranges) { [{from_value: 0, to_value: nil, rate:, flat_amount: '0'}] }
 
       context 'with no range rate' do
         let(:rate) { nil }
@@ -156,7 +156,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
     end
 
     context 'with flat amount validation' do
-      let(:ranges) { [{ from_value: 0, to_value: nil, rate: 2, flat_amount: }] }
+      let(:ranges) { [{from_value: 0, to_value: nil, rate: 2, flat_amount:}] }
 
       context 'with no range flat amount' do
         let(:flat_amount) { nil }

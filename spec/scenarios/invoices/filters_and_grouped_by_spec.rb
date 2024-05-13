@@ -17,10 +17,10 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
 
   let(:plan) { create(:plan, organization:, amount_cents: 0, interval: 'monthly', pay_in_advance: false) }
   let(:charge) do
-    create(:standard_charge, plan:, billable_metric:, properties: { amount: '10' })
+    create(:standard_charge, plan:, billable_metric:, properties: {amount: '10'})
   end
 
-  let(:charge_filter) { create(:charge_filter, charge:, properties: { amount: '12', grouped_by: %w[country] }) }
+  let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: '12', grouped_by: %w[country]}) }
   let(:charge_filter_value1) do
     create(:charge_filter_value, charge_filter:, billable_metric_filter: billable_metric_filter1, values: %w[aws])
   end
@@ -60,7 +60,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: { cloud: 'aws', region: 'us', country: 'us', value: 10 },
+          properties: {cloud: 'aws', region: 'us', country: 'us', value: 10},
         },
       )
     end
@@ -71,7 +71,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: { cloud: 'aws', region: 'europe', country: 'france', value: 10 },
+          properties: {cloud: 'aws', region: 'europe', country: 'france', value: 10},
         },
       )
     end
@@ -82,7 +82,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: { cloud: 'aws', region: 'asia', value: 10 },
+          properties: {cloud: 'aws', region: 'asia', value: 10},
         },
       )
     end
@@ -93,7 +93,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: { cloud: 'gcp', region: 'asia', country: 'china', value: 10 },
+          properties: {cloud: 'gcp', region: 'asia', country: 'china', value: 10},
         },
       )
     end
@@ -137,7 +137,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
       expect(empty_group[:filters].count).to eq(1)
 
       aws_filter = empty_group[:filters].find do |filter|
-        filter[:values] == { cloud: ['aws'], region: [ChargeFilterValue::ALL_FILTER_VALUES] }
+        filter[:values] == {cloud: ['aws'], region: [ChargeFilterValue::ALL_FILTER_VALUES]}
       end
       expect(aws_filter[:units]).to eq('10.0')
       expect(aws_filter[:values]).to eq(cloud: %w[aws], region: [ChargeFilterValue::ALL_FILTER_VALUES])

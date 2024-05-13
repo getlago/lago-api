@@ -4,17 +4,17 @@ module ScenariosHelper
   ### Billable metrics
 
   def create_metric(params)
-    post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: params })
+    post_with_token(organization, '/api/v1/billable_metrics', {billable_metric: params})
   end
 
   def update_metric(metric, params)
-    put_with_token(organization, "/api/v1/billable_metrics/#{metric.code}", { billable_metric: params })
+    put_with_token(organization, "/api/v1/billable_metrics/#{metric.code}", {billable_metric: params})
   end
 
   ### Customers
 
   def create_or_update_customer(params)
-    post_with_token(organization, '/api/v1/customers', { customer: params })
+    post_with_token(organization, '/api/v1/customers', {customer: params})
     perform_all_enqueued_jobs
   end
 
@@ -32,11 +32,11 @@ module ScenariosHelper
   ### Plans
 
   def create_plan(params)
-    post_with_token(organization, '/api/v1/plans', { plan: params })
+    post_with_token(organization, '/api/v1/plans', {plan: params})
   end
 
   def update_plan(plan, params)
-    put_with_token(organization, "/api/v1/plans/#{plan.code}", { plan: params })
+    put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: params})
   end
 
   def delete_plan(plan)
@@ -46,7 +46,7 @@ module ScenariosHelper
   ### Subscriptions
 
   def create_subscription(params)
-    post_with_token(organization, '/api/v1/subscriptions', { subscription: params })
+    post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
     perform_all_enqueued_jobs
   end
 
@@ -66,35 +66,35 @@ module ScenariosHelper
   end
 
   def update_invoice(invoice, params)
-    put_with_token(organization, "/api/v1/invoices/#{invoice.id}", { invoice: params })
+    put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: params})
   end
 
   ### Coupons
 
   def create_coupon(params)
-    post_with_token(organization, '/api/v1/coupons', { coupon: params })
+    post_with_token(organization, '/api/v1/coupons', {coupon: params})
   end
 
   def apply_coupon(params)
-    post_with_token(organization, '/api/v1/applied_coupons', { applied_coupon: params })
+    post_with_token(organization, '/api/v1/applied_coupons', {applied_coupon: params})
   end
 
   ### Taxes
 
   def create_tax(params)
-    post_with_token(organization, '/api/v1/taxes', { tax: params })
+    post_with_token(organization, '/api/v1/taxes', {tax: params})
   end
 
   ### Wallets
 
   def create_wallet(params)
-    post_with_token(organization, '/api/v1/wallets', { wallet: params })
+    post_with_token(organization, '/api/v1/wallets', {wallet: params})
   end
 
   ### Events
 
   def create_event(params)
-    post_with_token(organization, '/api/v1/events', { event: params })
+    post_with_token(organization, '/api/v1/events', {event: params})
     perform_all_enqueued_jobs
     JSON.parse(response.body) unless response.body.empty?
   end
@@ -102,11 +102,11 @@ module ScenariosHelper
   ### Credit notes
 
   def create_credit_note(params)
-    post_with_token(organization, '/api/v1/credit_notes', { credit_note: params })
+    post_with_token(organization, '/api/v1/credit_notes', {credit_note: params})
   end
 
   def estimate_credit_note(params)
-    post_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: params })
+    post_with_token(organization, '/api/v1/credit_notes/estimate', {credit_note: params})
   end
 
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.

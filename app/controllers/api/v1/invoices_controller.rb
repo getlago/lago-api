@@ -45,7 +45,7 @@ module Api
       def index
         invoices = current_organization.invoices.not_generating
         if params[:external_customer_id]
-          invoices = invoices.joins(:customer).where(customers: { external_id: params[:external_customer_id] })
+          invoices = invoices.joins(:customer).where(customers: {external_id: params[:external_customer_id]})
         end
 
         if valid_payment_status?(params[:payment_status])
@@ -180,7 +180,7 @@ module Api
                 :unit_amount_cents,
                 :units,
                 :description,
-                { tax_codes: [] },
+                {tax_codes: []},
               ],
             ).to_h.deep_symbolize_keys
       end
@@ -207,11 +207,11 @@ module Api
       end
 
       def date_from_criteria
-        { issuing_date: Date.strptime(params[:issuing_date_from]).. }
+        {issuing_date: Date.strptime(params[:issuing_date_from])..}
       end
 
       def date_to_criteria
-        { issuing_date: ..Date.strptime(params[:issuing_date_to]) }
+        {issuing_date: ..Date.strptime(params[:issuing_date_to])}
       end
 
       def valid_payment_status?(status)

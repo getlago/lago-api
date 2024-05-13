@@ -65,7 +65,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
       query:,
       variables: {
         invoiceId: invoice.id,
-        items: fees.map { |f| { feeId: f.id, amountCents: 50 } },
+        items: fees.map { |f| {feeId: f.id, amountCents: 50} },
       },
     )
 
@@ -91,7 +91,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
         query:,
         variables: {
           invoiceId: create(:invoice).id,
-          items: fees.map { |f| { feeId: f.id, amountCents: 50 } },
+          items: fees.map { |f| {feeId: f.id, amountCents: 50} },
         },
       )
 

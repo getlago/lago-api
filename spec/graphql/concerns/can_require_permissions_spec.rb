@@ -18,7 +18,7 @@ module CanRequirePermissionsSpec
     type ThingType
 
     def resolve(**args)
-      { name: args[:new_name], count: 1 }
+      {name: args[:new_name], count: 1}
     end
   end
 
@@ -46,8 +46,8 @@ RSpec.describe CanRequirePermissions, type: :graphql do
     it 'renames the thing' do
       result = CanRequirePermissionsSpec::TestApiSchema.execute(
         mutation,
-        variables: { input: { newName: 'new name' } },
-        context: { permissions: { 'things:rename' => true } },
+        variables: {input: {newName: 'new name'}},
+        context: {permissions: {'things:rename' => true}},
       )
 
       expect(result['data']['renameThing']['name']).to eq 'new name'
@@ -58,13 +58,13 @@ RSpec.describe CanRequirePermissions, type: :graphql do
     it 'returns an error' do
       result = CanRequirePermissionsSpec::TestApiSchema.execute(
         mutation,
-        variables: { input: { newName: 'new name' } },
-        context: { permissions: Permission::EMPTY_PERMISSIONS_HASH },
+        variables: {input: {newName: 'new name'}},
+        context: {permissions: Permission::EMPTY_PERMISSIONS_HASH},
       )
 
       partial_error = {
         'message' => 'Missing permissions',
-        'extensions' => { 'status' => :forbidden, 'code' => 'forbidden', 'required_permissions' => ['things:rename'] },
+        'extensions' => {'status' => :forbidden, 'code' => 'forbidden', 'required_permissions' => ['things:rename']},
       }
 
       expect(result['errors']).to include hash_including(partial_error)

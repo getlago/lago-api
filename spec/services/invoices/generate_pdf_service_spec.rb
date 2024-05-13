@@ -90,7 +90,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
       let(:charge) { create(:standard_charge, :deleted, billable_metric:) }
       let(:billable_metric_filter) { create(:billable_metric_filter, :deleted, billable_metric:) }
       let(:charge_filter) do
-        create(:charge_filter, :deleted, charge_id: charge.id, properties: { amount: '10' })
+        create(:charge_filter, :deleted, charge_id: charge.id, properties: {amount: '10'})
       end
       let(:charge_filter_value) do
         create(

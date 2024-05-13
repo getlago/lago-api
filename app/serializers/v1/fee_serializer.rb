@@ -90,7 +90,7 @@ module V1
         id: model.pay_in_advance_event_id,
       )
 
-      { event_transaction_id: event&.transaction_id }
+      {event_transaction_id: event&.transaction_id}
     end
 
     def applied_taxes

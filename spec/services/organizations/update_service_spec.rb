@@ -253,7 +253,7 @@ RSpec.describe Organizations::UpdateService do
 
     context 'with eu tax management' do
       context 'with org within the EU' do
-        let(:params) { { eu_tax_management: true, country: 'fr' } }
+        let(:params) { {eu_tax_management: true, country: 'fr'} }
         let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
         before do
@@ -272,7 +272,7 @@ RSpec.describe Organizations::UpdateService do
       end
 
       context 'with org outside the EU' do
-        let(:params) { { eu_tax_management: true, country: 'us' } }
+        let(:params) { {eu_tax_management: true, country: 'us'} }
         let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
         before do
@@ -286,14 +286,14 @@ RSpec.describe Organizations::UpdateService do
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages).to eq({ eu_tax_management: ['org_must_be_in_eu'] })
+            expect(result.error.messages).to eq({eu_tax_management: ['org_must_be_in_eu']})
             expect(tax_auto_generate_service).not_to have_received(:call)
           end
         end
       end
 
       context 'with org is outside the EU but feature is already enabled' do
-        let(:params) { { eu_tax_management: false } }
+        let(:params) { {eu_tax_management: false} }
         let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
         before do

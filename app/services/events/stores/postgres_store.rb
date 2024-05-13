@@ -72,7 +72,7 @@ module Events
       #       unique property
       def active_unique_property?(event)
         previous_event = events.where.not(id: event.id)
-          .where('events.properties @> ?', { aggregation_property => event.properties[aggregation_property] }.to_json)
+          .where('events.properties @> ?', {aggregation_property => event.properties[aggregation_property]}.to_json)
           .where('events.timestamp < ?', event.timestamp)
           .reorder(timestamp: :desc)
           .first
@@ -251,7 +251,7 @@ module Events
           .reorder(Arel.sql("DATE(#{date_field}) ASC"))
           .pluck(Arel.sql("DATE(#{date_field}) AS date, SUM((#{sanitized_property_name})::numeric)"))
           .map do |row|
-            { date: row.first.to_date, value: row.last }
+            {date: row.first.to_date, value: row.last}
           end
       end
 
@@ -282,7 +282,7 @@ module Events
           value = 0
           previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
           value = previous_group[:value] if previous_group
-          { groups: group[:groups], value: }
+          {groups: group[:groups], value:}
         end
 
         # NOTE: add the initial values for groups that are not in the events
@@ -348,7 +348,7 @@ module Events
       def with_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           scope = if grouped_by_value.present?
-            scope.where('events.properties @> ?', { grouped_by.to_s => grouped_by_value.to_s }.to_json)
+            scope.where('events.properties @> ?', {grouped_by.to_s => grouped_by_value.to_s}.to_json)
           else
             scope.where(
               ActiveRecord::Base.sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') = ''", grouped_by]),

@@ -8,11 +8,11 @@ FactoryBot.define do
     name { 'Stripe Account 1' }
 
     secrets do
-      { secret_key: SecureRandom.uuid }.to_json
+      {secret_key: SecureRandom.uuid}.to_json
     end
 
     settings do
-      { success_redirect_url: }
+      {success_redirect_url:}
     end
 
     transient do
@@ -27,11 +27,11 @@ FactoryBot.define do
     name { 'GoCardless Account 1' }
 
     secrets do
-      { access_token: SecureRandom.uuid }.to_json
+      {access_token: SecureRandom.uuid}.to_json
     end
 
     settings do
-      { success_redirect_url: }
+      {success_redirect_url:}
     end
 
     transient do
@@ -46,11 +46,11 @@ FactoryBot.define do
     name { 'Adyen Account 1' }
 
     secrets do
-      { api_key:, hmac_key: }.to_json
+      {api_key:, hmac_key:}.to_json
     end
 
     settings do
-      { live_prefix:, merchant_account:, success_redirect_url: }
+      {live_prefix:, merchant_account:, success_redirect_url:}
     end
 
     transient do

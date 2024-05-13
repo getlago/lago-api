@@ -10,8 +10,8 @@ RSpec.describe Auth::Okta::AcceptInviteService do
   let(:invite) { create(:invite, email: 'foo@bar.com', organization:) }
   let(:invite_token) { invite.token }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
-  let(:okta_token_response) { OpenStruct.new(body: { access_token: 'access_token' }) }
-  let(:okta_userinfo_response) { OpenStruct.new({ email: 'foo@bar.com' }) }
+  let(:okta_token_response) { OpenStruct.new(body: {access_token: 'access_token'}) }
+  let(:okta_userinfo_response) { OpenStruct.new({email: 'foo@bar.com'}) }
   let(:memory_store) { ActiveSupport::Cache.lookup_store(:memory_store) }
   let(:state) { SecureRandom.uuid }
 
@@ -81,7 +81,7 @@ RSpec.describe Auth::Okta::AcceptInviteService do
     end
 
     context 'when okta userinfo email is different from the state one' do
-      let(:okta_userinfo_response) { OpenStruct.new({ email: 'foo@test.com' }) }
+      let(:okta_userinfo_response) { OpenStruct.new({email: 'foo@test.com'}) }
 
       it 'returns error' do
         result = service.call

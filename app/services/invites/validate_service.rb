@@ -26,7 +26,7 @@ module Invites
     def valid_user?
       return true unless Membership.joins(:user)
         .where(organization_id: args[:current_organization].id)
-        .where(users: { email: args[:email] })
+        .where(users: {email: args[:email]})
         .active
         .exists?
 

@@ -77,7 +77,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       timestamp: added_at,
       external_subscription_id: subscription.external_id,
       code: billable_metric.code,
-      properties: { unique_id: '111' },
+      properties: {unique_id: '111'},
     )
   end
 
@@ -90,7 +90,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       timestamp: removed_at,
       external_subscription_id: subscription.external_id,
       code: billable_metric.code,
-      properties: { unique_id: '111', operation_type: 'remove' },
+      properties: {unique_id: '111', operation_type: 'remove'},
     )
   end
 

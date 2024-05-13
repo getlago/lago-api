@@ -19,12 +19,12 @@ RSpec.describe Plans::OverrideService, type: :service do
         :standard_charge,
         plan: parent_plan,
         billable_metric:,
-        properties: { amount: '300' },
+        properties: {amount: '300'},
         group_properties: [
           build(
             :group_property,
             group:,
-            values: { amount: '10', amount_currency: 'EUR' },
+            values: {amount: '10', amount_currency: 'EUR'},
           ),
         ],
       )

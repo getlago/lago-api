@@ -9,8 +9,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     {
       key: 'cloud',
       values: [
-        { name: 'AWS', key: 'region', values: %w[usa europe] },
-        { name: 'Google', key: 'region', values: ['usa'] },
+        {name: 'AWS', key: 'region', values: %w[usa europe]},
+        {name: 'Google', key: 'region', values: ['usa']},
       ],
     }
   end
@@ -28,7 +28,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     it 'creates a billable_metric' do
-      post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: create_params })
+      post_with_token(organization, '/api/v1/billable_metrics', {billable_metric: create_params})
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to be_present
@@ -45,7 +45,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         post_with_token(
           organization,
           '/api/v1/billable_metrics',
-          { billable_metric: create_params.merge(group:) },
+          {billable_metric: create_params.merge(group:)},
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
@@ -58,12 +58,12 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         post_with_token(
           organization,
           '/api/v1/billable_metrics',
-          { billable_metric: create_params.merge(group: { foo: 'bar' }) },
+          {billable_metric: create_params.merge(group: {foo: 'bar'})},
         )
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to eq({ group: %w[value_is_invalid] })
+          expect(json[:error_details]).to eq({group: %w[value_is_invalid]})
         end
       end
     end
@@ -82,7 +82,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       end
 
       it 'creates a billable_metric' do
-        post_with_token(organization, '/api/v1/billable_metrics', { billable_metric: create_params })
+        post_with_token(organization, '/api/v1/billable_metrics', {billable_metric: create_params})
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metric][:lago_id]).to be_present
@@ -113,7 +113,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       put_with_token(
         organization,
         "/api/v1/billable_metrics/#{billable_metric.code}",
-        { billable_metric: update_params },
+        {billable_metric: update_params},
       )
 
       expect(response).to have_http_status(:success)
@@ -129,7 +129,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params.merge(group:) },
+          {billable_metric: update_params.merge(group:)},
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
@@ -142,19 +142,19 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params.merge(group: { foo: 'bar' }) },
+          {billable_metric: update_params.merge(group: {foo: 'bar'})},
         )
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to eq({ group: %w[value_is_invalid] })
+          expect(json[:error_details]).to eq({group: %w[value_is_invalid]})
         end
       end
     end
 
     context 'when billable metric does not exist' do
       it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/billable_metrics/invalid', { billable_metric: update_params })
+        put_with_token(organization, '/api/v1/billable_metrics/invalid', {billable_metric: update_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -170,7 +170,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params },
+          {billable_metric: update_params},
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -194,7 +194,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          { billable_metric: update_params },
+          {billable_metric: update_params},
         )
 
         expect(response).to have_http_status(:success)

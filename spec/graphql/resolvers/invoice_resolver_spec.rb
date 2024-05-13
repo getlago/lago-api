@@ -139,7 +139,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: { id: invoice.id },
+      variables: {id: invoice.id},
     )
 
     fee = result['data']['invoice']['invoiceSubscriptions'][0]['fees'][0]
@@ -166,7 +166,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
     let(:billable_metric) { create(:billable_metric, :deleted) }
     let(:billable_metric_filter) { create(:billable_metric_filter, :deleted, billable_metric:) }
     let(:charge_filter) do
-      create(:charge_filter, :deleted, charge:, properties: { amount: '10' })
+      create(:charge_filter, :deleted, charge:, properties: {amount: '10'})
     end
     let(:charge_filter_value) do
       create(

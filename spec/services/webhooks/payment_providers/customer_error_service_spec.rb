@@ -7,7 +7,7 @@ RSpec.describe Webhooks::PaymentProviders::CustomerErrorService do
 
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
-  let(:webhook_options) { { provider_error: { message: 'message', error_code: 'code' } } }
+  let(:webhook_options) { {provider_error: {message: 'message', error_code: 'code'}} }
 
   describe '.call' do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }

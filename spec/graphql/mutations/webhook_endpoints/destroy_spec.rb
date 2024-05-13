@@ -29,7 +29,7 @@ RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
         current_organization: membership.organization,
         permissions: required_permission,
         query: mutation,
-        variables: { input: { id: webhook_endpoint.id } },
+        variables: {input: {id: webhook_endpoint.id}},
       )
     end.to change(WebhookEndpoint, :count).by(-1)
   end

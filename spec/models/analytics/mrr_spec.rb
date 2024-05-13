@@ -21,7 +21,7 @@ RSpec.describe Analytics::Mrr, type: :model do
     end
 
     context 'with currency and months' do
-      let(:args) { { currency:, months: } }
+      let(:args) { {currency:, months:} }
 
       let(:cache_key) do
         "mrr/#{date}/#{organization_id}/#{currency}/#{months}"
@@ -33,7 +33,7 @@ RSpec.describe Analytics::Mrr, type: :model do
     end
 
     context 'with months' do
-      let(:args) { { months: } }
+      let(:args) { {months:} }
       let(:cache_key) { "mrr/#{date}/#{organization_id}//#{months}" }
 
       it 'returns the cache key' do
@@ -42,7 +42,7 @@ RSpec.describe Analytics::Mrr, type: :model do
     end
 
     context 'with currency' do
-      let(:args) { { currency: } }
+      let(:args) { {currency:} }
       let(:cache_key) { "mrr/#{date}/#{organization_id}/#{currency}/" }
 
       it 'returns the cache key' do

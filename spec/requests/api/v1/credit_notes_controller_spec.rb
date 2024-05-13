@@ -96,7 +96,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
   end
 
   describe 'PUT /credit_notes/:id' do
-    let(:update_params) { { refund_status: 'succeeded' } }
+    let(:update_params) { {refund_status: 'succeeded'} }
 
     it 'updates the credit note' do
       put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}", credit_note: update_params)
@@ -118,7 +118,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     context 'when provided refund status is invalid' do
-      let(:update_params) { { refund_status: 'foo_bar' } }
+      let(:update_params) { {refund_status: 'foo_bar'} }
 
       it 'returns an unprocessable entity error' do
         put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}", credit_note: update_params)
@@ -266,7 +266,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     around { |test| lago_premium!(&test) }
 
     it 'creates a credit note' do
-      post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
+      post_with_token(organization, '/api/v1/credit_notes', {credit_note: create_params})
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -303,7 +303,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:invoice_id) { 'foo_id' }
 
       it 'returns not found' do
-        post_with_token(organization, '/api/v1/credit_notes', { credit_note: create_params })
+        post_with_token(organization, '/api/v1/credit_notes', {credit_note: create_params})
 
         expect(response).to have_http_status(:not_found)
       end
@@ -350,14 +350,14 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     let(:estimate_params) do
       {
         invoice_id:,
-        items: fees.map { |f| { fee_id: f.id, amount_cents: 50 } },
+        items: fees.map { |f| {fee_id: f.id, amount_cents: 50} },
       }
     end
 
     around { |test| lago_premium!(&test) }
 
     it 'returns the computed amounts for credit note creation' do
-      post_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
+      post_with_token(organization, '/api/v1/credit_notes/estimate', {credit_note: estimate_params})
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -380,7 +380,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:invoice) { create(:invoice) }
 
       it 'returns not found' do
-        post_with_token(organization, '/api/v1/credit_notes/estimate', { credit_note: estimate_params })
+        post_with_token(organization, '/api/v1/credit_notes/estimate', {credit_note: estimate_params})
 
         expect(response).to have_http_status(:not_found)
       end

@@ -53,19 +53,19 @@ class Organization < ApplicationRecord
   before_create :generate_api_key
 
   validates :country, country_code: true, unless: -> { country.nil? }
-  validates :default_currency, inclusion: { in: currency_list }
+  validates :default_currency, inclusion: {in: currency_list}
   validates :document_locale, language_code: true
   validates :email, email: true, if: :email?
-  validates :invoice_footer, length: { maximum: 600 }
-  validates :document_number_prefix, length: { minimum: 1, maximum: 10 }, on: :update
-  validates :invoice_grace_period, numericality: { greater_than_or_equal_to: 0 }
-  validates :net_payment_term, numericality: { greater_than_or_equal_to: 0 }
+  validates :invoice_footer, length: {maximum: 600}
+  validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
+  validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
+  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
   validates :logo,
-    image: { authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes },
+    image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
     if: :logo?
   validates :name, presence: true
   validates :timezone, timezone: true
-  validates :vat_rate, numericality: { less_than_or_equal_to: 100, greater_than_or_equal_to: 0 }
+  validates :vat_rate, numericality: {less_than_or_equal_to: 100, greater_than_or_equal_to: 0}
   validates :webhook_url, url: true, allow_nil: true
 
   validate :validate_email_settings

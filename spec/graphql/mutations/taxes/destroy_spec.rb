@@ -23,7 +23,7 @@ RSpec.describe Mutations::Taxes::Destroy, type: :graphql do
         current_user: membership.user,
         current_organization: membership.organization,
         query: mutation,
-        variables: { input: { id: tax.id } },
+        variables: {input: {id: tax.id}},
       )
     end.to change(Tax, :count).by(-1)
   end

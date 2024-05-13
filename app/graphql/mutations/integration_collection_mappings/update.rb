@@ -18,7 +18,7 @@ module Mutations
       def resolve(**args)
         integration_collection_mapping = ::IntegrationCollectionMappings::BaseCollectionMapping
           .joins(:integration)
-          .where(id: args[:id], integration: { organization: current_organization }).first
+          .where(id: args[:id], integration: {organization: current_organization}).first
 
         result = ::IntegrationCollectionMappings::UpdateService.call(
           integration_collection_mapping:,

@@ -168,7 +168,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       expect(grouped_usage['amountCents']).to eq('400')
       expect(grouped_usage['units']).to eq(4.0)
       expect(grouped_usage['eventsCount']).to eq(4)
-      expect(grouped_usage['groupedBy']).to eq({ 'agent_name' => 'frodo' })
+      expect(grouped_usage['groupedBy']).to eq({'agent_name' => 'frodo'})
     end
   end
 
@@ -178,14 +178,14 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
     end
 
     let(:aws_filter) do
-      create(:charge_filter, charge:, properties: { amount: '10' })
+      create(:charge_filter, charge:, properties: {amount: '10'})
     end
     let(:aws_filter_value) do
       create(:charge_filter_value, charge_filter: aws_filter, billable_metric_filter: cloud_bm_filter, values: ['aws'])
     end
 
     let(:google_filter) do
-      create(:charge_filter, charge:, properties: { amount: '20' })
+      create(:charge_filter, charge:, properties: {amount: '20'})
     end
     let(:google_filter_value) do
       create(
@@ -201,7 +201,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         :standard_charge,
         plan: subscription.plan,
         billable_metric: metric,
-        properties: { amount: '0' },
+        properties: {amount: '0'},
       )
     end
 
@@ -217,7 +217,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
-        properties: { cloud: 'aws' },
+        properties: {cloud: 'aws'},
       )
 
       create(
@@ -227,7 +227,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
-        properties: { cloud: 'google' },
+        properties: {cloud: 'google'},
       )
     end
 

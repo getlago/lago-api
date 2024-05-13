@@ -81,7 +81,7 @@ module BillableMetricFilters
 
     def refresh_draft_invoices
       draft_invoices = Invoice.draft.joins(plans: [:billable_metrics])
-        .where(billable_metrics: { id: billable_metric.id })
+        .where(billable_metrics: {id: billable_metric.id})
         .distinct
 
       draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
@@ -112,7 +112,7 @@ module BillableMetricFilters
     end
 
     def group_values(group)
-      values = { group.key => [group.value] }
+      values = {group.key => [group.value]}
       values[group.parent.key] = [group.parent.value] if group.parent
       values
     end

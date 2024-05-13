@@ -43,7 +43,7 @@ RSpec.describe FeesQuery, type: :query do
     end
 
     context 'with subscription filter' do
-      let(:query_filters) { { external_subscription_id: subscription.external_id } }
+      let(:query_filters) { {external_subscription_id: subscription.external_id} }
 
       it 'applies the filter' do
         result = fees_query.call
@@ -56,7 +56,7 @@ RSpec.describe FeesQuery, type: :query do
     end
 
     context 'with customer filter' do
-      let(:query_filters) { { external_customer_id: customer.external_id } }
+      let(:query_filters) { {external_customer_id: customer.external_id} }
 
       it 'applies the filter' do
         result = fees_query.call
@@ -73,7 +73,7 @@ RSpec.describe FeesQuery, type: :query do
         let(:invoice) { create(:invoice, organization:, customer:) }
         let(:fee) { create(:add_on_fee, applied_add_on:, invoice:) }
 
-        let(:query_filters) { { external_customer_id: customer.external_id } }
+        let(:query_filters) { {external_customer_id: customer.external_id} }
 
         it 'applies the filter' do
           result = fees_query.call
@@ -87,7 +87,7 @@ RSpec.describe FeesQuery, type: :query do
     end
 
     context 'with currency filter' do
-      let(:query_filters) { { currency: fee.amount_currency } }
+      let(:query_filters) { {currency: fee.amount_currency} }
 
       it 'applies the filter' do
         result = fees_query.call
@@ -106,7 +106,7 @@ RSpec.describe FeesQuery, type: :query do
 
       let(:fee) { create(:charge_fee, charge:, subscription:, invoice: nil) }
 
-      let(:query_filters) { { billable_metric_code: billable_metric.code } }
+      let(:query_filters) { {billable_metric_code: billable_metric.code} }
 
       it 'applies the filter' do
         result = fees_query.call
@@ -119,7 +119,7 @@ RSpec.describe FeesQuery, type: :query do
     end
 
     context 'with fee_type filter' do
-      let(:query_filters) { { fee_type: fee.fee_type } }
+      let(:query_filters) { {fee_type: fee.fee_type} }
 
       it 'applies the filter' do
         result = fees_query.call
@@ -131,7 +131,7 @@ RSpec.describe FeesQuery, type: :query do
       end
 
       context 'when fee_type is invalid' do
-        let(:query_filters) { { fee_type: 'foo_bar' } }
+        let(:query_filters) { {fee_type: 'foo_bar'} }
 
         it 'returns a failed result' do
           result = fees_query.call
@@ -146,7 +146,7 @@ RSpec.describe FeesQuery, type: :query do
     end
 
     context 'with payment_status filter' do
-      let(:query_filters) { { payment_status: fee.payment_status } }
+      let(:query_filters) { {payment_status: fee.payment_status} }
 
       it 'applies the filter' do
         result = fees_query.call
@@ -158,7 +158,7 @@ RSpec.describe FeesQuery, type: :query do
       end
 
       context 'when payment_status is invalid' do
-        let(:query_filters) { { payment_status: 'foo_bar' } }
+        let(:query_filters) { {payment_status: 'foo_bar'} }
 
         it 'returns a failed result' do
           result = fees_query.call
@@ -208,7 +208,7 @@ RSpec.describe FeesQuery, type: :query do
       end
 
       context 'with invalid date' do
-        let(:query_filters) { { created_at_from: 'invalid_date_value' } }
+        let(:query_filters) { {created_at_from: 'invalid_date_value'} }
 
         it 'returns a failed result' do
           result = fees_query.call
@@ -260,7 +260,7 @@ RSpec.describe FeesQuery, type: :query do
       end
 
       context 'with invalid date' do
-        let(:query_filters) { { succeeded_at_from: 'invalid_date_value' } }
+        let(:query_filters) { {succeeded_at_from: 'invalid_date_value'} }
 
         it 'returns a failed result' do
           result = fees_query.call
@@ -312,7 +312,7 @@ RSpec.describe FeesQuery, type: :query do
       end
 
       context 'with invalid date' do
-        let(:query_filters) { { failed_at_from: 'invalid_date_value' } }
+        let(:query_filters) { {failed_at_from: 'invalid_date_value'} }
 
         it 'returns a failed result' do
           result = fees_query.call
@@ -364,7 +364,7 @@ RSpec.describe FeesQuery, type: :query do
       end
 
       context 'with invalid date' do
-        let(:query_filters) { { refunded_at_from: 'invalid_date_value' } }
+        let(:query_filters) { {refunded_at_from: 'invalid_date_value'} }
 
         it 'returns a failed result' do
           result = fees_query.call

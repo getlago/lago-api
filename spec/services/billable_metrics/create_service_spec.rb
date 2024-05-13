@@ -47,8 +47,8 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         {
           key: 'cloud',
           values: [
-            { name: 'AWS', key: 'region', values: %w[usa europe] },
-            { name: 'Google', key: 'region', values: ['usa'] },
+            {name: 'AWS', key: 'region', values: %w[usa europe]},
+            {name: 'Google', key: 'region', values: ['usa']},
           ],
         }
       end
@@ -60,7 +60,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
       end
 
       it 'returns an error if group is invalid' do
-        result = create_service.create(**create_args.merge(group: { key: 'foo' }))
+        result = create_service.create(**create_args.merge(group: {key: 'foo'}))
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -86,7 +86,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
       end
 
       it 'returns an error if a filter is invalid' do
-        result = create_service.create(**create_args.merge(filters: [{ key: 'foo' }]))
+        result = create_service.create(**create_args.merge(filters: [{key: 'foo'}]))
 
         aggregate_failures do
           expect(result).not_to be_success

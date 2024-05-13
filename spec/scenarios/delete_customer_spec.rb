@@ -21,7 +21,7 @@ describe 'Delete Customer Scenarios', :scenarios, type: :request do
         },
       )
 
-      create(:standard_charge, plan:, billable_metric: metric, properties: { amount: '3' })
+      create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '3'})
     end
 
     subscription = customer.subscriptions.find_by(external_id: customer.external_id)

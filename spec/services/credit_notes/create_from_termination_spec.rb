@@ -370,7 +370,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_id: subscription.id,
           taxes_rate: 0,
           created_at: Time.zone.parse('2023-02-28 10:00'),
-          amount_details: { 'plan_amount_cents' => 999 },
+          amount_details: {'plan_amount_cents' => 999},
         )
       end
 
@@ -426,7 +426,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_id: subscription.id,
           taxes_rate: 20,
           precise_coupons_amount_cents: 10,
-          amount_details: { 'plan_amount_cents' => plan.amount_cents },
+          amount_details: {'plan_amount_cents' => plan.amount_cents},
         )
       end
 

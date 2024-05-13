@@ -22,7 +22,7 @@ module V1
     end
 
     def event
-      { event: ::V1::EventSerializer.new(model.event).serialize }
+      {event: ::V1::EventSerializer.new(model.event).serialize}
     end
   end
 end

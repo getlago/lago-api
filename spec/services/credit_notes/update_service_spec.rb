@@ -8,7 +8,7 @@ RSpec.describe CreditNotes::UpdateService, type: :service do
   let(:credit_note) { create(:credit_note) }
 
   let(:params) do
-    { refund_status: 'succeeded' }
+    {refund_status: 'succeeded'}
   end
 
   it 'updates the credit note status' do
@@ -39,7 +39,7 @@ RSpec.describe CreditNotes::UpdateService, type: :service do
 
   context 'with invalid refund status' do
     let(:params) do
-      { refund_status: 'foo_bar' }
+      {refund_status: 'foo_bar'}
     end
 
     it 'returns an error' do
