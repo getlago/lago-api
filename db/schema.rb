@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_05_02_095122) do
+ActiveRecord::Schema[7.0].define(version: 2024_05_14_072741) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -873,13 +873,14 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_02_095122) do
 
   create_table "recurring_transaction_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "wallet_id", null: false
-    t.integer "rule_type", default: 0, null: false
+    t.integer "trigger", default: 0, null: false
     t.decimal "paid_credits", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "granted_credits", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "threshold_credits", precision: 30, scale: 5, default: "0.0"
     t.integer "interval", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "method", default: 0, null: false
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
   end
 
