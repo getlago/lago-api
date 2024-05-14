@@ -5,7 +5,7 @@ class RecurringTransactionRule < ApplicationRecord
 
   belongs_to :wallet
 
-  RULE_TYPES = [
+  TRIGGERS = [
     :interval,
     :threshold,
   ].freeze
@@ -17,6 +17,6 @@ class RecurringTransactionRule < ApplicationRecord
     :yearly,
   ].freeze
 
-  enum rule_type: RULE_TYPES
+  enum trigger: TRIGGERS
   enum interval: INTERVALS
 end

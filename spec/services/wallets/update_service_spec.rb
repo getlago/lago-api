@@ -96,7 +96,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       let(:rules) do
         [
           {
-            rule_type: 'interval',
+            trigger: 'interval',
             interval: 'weekly',
             paid_credits: '105',
             granted_credits: '105',
@@ -124,7 +124,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
           expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
           expect(rule.id).not_to eq(recurring_transaction_rule.id)
-          expect(rule.rule_type).to eq('interval')
+          expect(rule.trigger).to eq('interval')
           expect(rule.interval).to eq('weekly')
           expect(rule.threshold_credits).to eq(0.0)
           expect(rule.paid_credits).to eq(105.0)
@@ -137,7 +137,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
           [
             {
               lago_id: recurring_transaction_rule.id,
-              rule_type: 'interval',
+              trigger: 'interval',
               interval: 'weekly',
               paid_credits: '105',
               granted_credits: '105',
@@ -155,7 +155,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
             expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
             expect(rule.id).to eq(recurring_transaction_rule.id)
-            expect(rule.rule_type).to eq('interval')
+            expect(rule.trigger).to eq('interval')
             expect(rule.interval).to eq('weekly')
             expect(rule.threshold_credits).to eq(0.0)
             expect(rule.paid_credits).to eq(105.0)
@@ -169,7 +169,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
           [
             {
               lago_id: recurring_transaction_rule.id,
-              rule_type: 'threshold',
+              trigger: 'threshold',
               threshold_credits: '205',
               paid_credits: '105',
               granted_credits: '105',
@@ -187,7 +187,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
           aggregate_failures do
             expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
             expect(rule.id).to eq(recurring_transaction_rule.id)
-            expect(rule.rule_type).to eq('threshold')
+            expect(rule.trigger).to eq('threshold')
             expect(rule.threshold_credits).to eq(205.0)
             expect(rule.paid_credits).to eq(105.0)
             expect(rule.granted_credits).to eq(105.0)
@@ -214,13 +214,13 @@ RSpec.describe Wallets::UpdateService, type: :service do
         let(:rules) do
           [
             {
-              rule_type: 'interval',
+              trigger: 'interval',
               interval: 'monthly',
               paid_credits: '105',
               granted_credits: '105',
             },
             {
-              rule_type: 'threshold',
+              trigger: 'threshold',
               threshold_credits: '1.0',
               paid_credits: '105',
               granted_credits: '105',
@@ -241,7 +241,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         let(:rules) do
           [
             {
-              rule_type: 'invalid',
+              trigger: 'invalid',
               interval: 'monthly',
               paid_credits: '105',
               granted_credits: '105',
@@ -261,7 +261,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         let(:rules) do
           [
             {
-              rule_type: 'threshold',
+              trigger: 'threshold',
               threshold_credits: 'abc',
               paid_credits: '105',
               granted_credits: '105',

@@ -59,7 +59,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
 
     context 'with recurring transaction threshold rule' do
       let(:recurring_transaction_rule) do
-        create(:recurring_transaction_rule, wallet:, rule_type: 'threshold', threshold_credits: '6.0')
+        create(:recurring_transaction_rule, wallet:, trigger: 'threshold', threshold_credits: '6.0')
       end
 
       before { recurring_transaction_rule }
@@ -70,7 +70,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
 
       context 'when border has NOT been crossed' do
         let(:recurring_transaction_rule) do
-          create(:recurring_transaction_rule, wallet:, rule_type: 'threshold', threshold_credits: '2.0')
+          create(:recurring_transaction_rule, wallet:, trigger: 'threshold', threshold_credits: '2.0')
         end
 
         it 'does not call wallet transaction create job' do

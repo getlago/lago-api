@@ -67,7 +67,7 @@ module Wallets
           INNER JOIN customers ON customers.id = wallets.customer_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
         WHERE wallets.status = #{Wallet.statuses[:active]}
-          AND recurring_transaction_rules.rule_type = #{RecurringTransactionRule.rule_types[:interval]}
+          AND recurring_transaction_rules.trigger = #{RecurringTransactionRule.triggers[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}
           AND #{conditions.join(" AND ")}
         GROUP BY recurring_transaction_rules.id

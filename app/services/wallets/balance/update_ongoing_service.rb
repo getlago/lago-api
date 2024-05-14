@@ -47,7 +47,7 @@ module Wallets
       end
 
       def handle_threshold_top_up(ongoing_usage_balance_cents)
-        threshold_rule = wallet.recurring_transaction_rules.where(rule_type: :threshold).first
+        threshold_rule = wallet.recurring_transaction_rules.where(trigger: :threshold).first
 
         return if threshold_rule.nil? || wallet.credits_ongoing_balance > threshold_rule.threshold_credits
         return if usage_amount_cents.positive? && ongoing_usage_balance_cents == usage_amount_cents

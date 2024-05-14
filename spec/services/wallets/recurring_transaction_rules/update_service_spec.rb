@@ -11,7 +11,7 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
     [
       {
         lago_id: recurring_transaction_rule.id,
-        rule_type: 'interval',
+        trigger: 'interval',
         interval: 'weekly',
         paid_credits: '105',
         granted_credits: '105',
@@ -30,7 +30,7 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
       aggregate_failures do
         expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
         expect(rule.id).to eq(recurring_transaction_rule.id)
-        expect(rule.rule_type).to eq('interval')
+        expect(rule.trigger).to eq('interval')
         expect(rule.interval).to eq('weekly')
         expect(rule.threshold_credits).to eq(0.0)
         expect(rule.paid_credits).to eq(105.0)
@@ -42,7 +42,7 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
       let(:params) do
         [
           {
-            rule_type: 'interval',
+            trigger: 'interval',
             interval: 'weekly',
             paid_credits: '105',
             granted_credits: '105',
@@ -58,11 +58,34 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         aggregate_failures do
           expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
           expect(rule.id).not_to eq(recurring_transaction_rule.id)
-          expect(rule.rule_type).to eq('interval')
+          expect(rule.trigger).to eq('interval')
           expect(rule.interval).to eq('weekly')
           expect(rule.threshold_credits).to eq(0.0)
           expect(rule.paid_credits).to eq(105.0)
           expect(rule.granted_credits).to eq(105.0)
+        end
+      end
+    end
+
+    context 'with legacy rule_type' do
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            rule_type: 'interval'
+          },
+        ]
+      end
+
+      it 'updates existing recurring transaction rule' do
+        result = update_service.call
+
+        rule = result.wallet.reload.recurring_transaction_rules.first
+
+        aggregate_failures do
+          expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+          expect(rule.id).to eq(recurring_transaction_rule.id)
+          expect(rule.trigger).to eq('interval')
         end
       end
     end

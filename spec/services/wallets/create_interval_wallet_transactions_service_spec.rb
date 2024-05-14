@@ -13,7 +13,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
     let(:recurring_transaction_rule) do
       create(
         :recurring_transaction_rule,
-        rule_type: :interval,
+        trigger: :interval,
         wallet:,
         interval:,
         created_at: created_at + 1.second,

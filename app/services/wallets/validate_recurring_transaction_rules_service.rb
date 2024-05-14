@@ -29,6 +29,7 @@ module Wallets
 
       rule = args[:recurring_transaction_rules].first
       type = rule[:rule_type]&.to_s
+      trigger = rule[:trigger]&.to_s
 
       if !::Validators::DecimalAmountService.new(rule[:paid_credits]).valid_amount? ||
           !::Validators::DecimalAmountService.new(rule[:granted_credits]).valid_amount?
@@ -38,9 +39,9 @@ module Wallets
         return
       end
 
-      return true if type == 'interval' && RecurringTransactionRule.intervals.key?(rule[:interval])
+      return true if (type == 'interval' || trigger == 'interval') && RecurringTransactionRule.intervals.key?(rule[:interval])
 
-      if type == 'threshold' && ::Validators::DecimalAmountService.new(rule[:threshold_credits]).valid_decimal?
+      if (type == 'threshold'|| trigger == 'threshold') && ::Validators::DecimalAmountService.new(rule[:threshold_credits]).valid_decimal?
         return true
       end
 

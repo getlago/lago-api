@@ -29,13 +29,13 @@ RSpec.describe Wallets::ValidateRecurringTransactionRulesService, type: :service
       let(:rules) do
         [
           {
-            rule_type: 'interval',
+            trigger: 'interval',
             interval: 'monthly',
             paid_credits: '105',
             granted_credits: '105',
           },
           {
-            rule_type: 'threshold',
+            trigger: 'threshold',
             threshold_credits: '1.0',
             paid_credits: '105',
             granted_credits: '105',
@@ -53,7 +53,7 @@ RSpec.describe Wallets::ValidateRecurringTransactionRulesService, type: :service
       let(:rules) do
         [
           {
-            rule_type: 'interval',
+            trigger: 'interval',
             interval: 'invalid',
             paid_credits: '105',
             granted_credits: '105',
@@ -71,7 +71,7 @@ RSpec.describe Wallets::ValidateRecurringTransactionRulesService, type: :service
       let(:rules) do
         [
           {
-            rule_type: 'threshold',
+            trigger: 'threshold',
             threshold_credits: 'invalid',
             paid_credits: '105',
             granted_credits: '105',

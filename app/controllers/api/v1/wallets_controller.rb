@@ -88,12 +88,12 @@ module Api
           :paid_credits,
           :granted_credits,
           :expiration_at,
-          # NOTE: Legacy field
-          :expiration_date,
+          :expiration_date, # NOTE: Legacy field
           recurring_transaction_rules: [
-            :rule_type,
+            :rule_type, # NOTE: Legacy field
             :interval,
             :threshold_credits,
+            :trigger,
           ],
         )
       end
@@ -106,13 +106,13 @@ module Api
         params.require(:wallet).permit(
           :name,
           :expiration_at,
-          # NOTE: Legacy field
-          :expiration_date,
+          :expiration_date, # NOTE: Legacy field
           recurring_transaction_rules: [
             :lago_id,
-            :rule_type,
+            :rule_type, # NOTE: Legacy field
             :interval,
             :threshold_credits,
+            :trigger,
             :paid_credits,
             :granted_credits,
           ],
