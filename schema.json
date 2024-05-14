@@ -7926,28 +7926,28 @@
               "deprecationReason": null
             },
             {
-              "name": "ruleType",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "RecurringTransactionRuleTypeEnum",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "thresholdCredits",
               "description": null,
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "trigger",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "RecurringTransactionTriggerEnum",
+                  "ofType": null
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -28024,16 +28024,12 @@
               ]
             },
             {
-              "name": "ruleType",
+              "name": "thresholdCredits",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "RecurringTransactionRuleTypeEnum",
-                  "ofType": null
-                }
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -28042,12 +28038,16 @@
               ]
             },
             {
-              "name": "thresholdCredits",
+              "name": "trigger",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "RecurringTransactionTriggerEnum",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -28061,7 +28061,7 @@
         },
         {
           "kind": "ENUM",
-          "name": "RecurringTransactionRuleTypeEnum",
+          "name": "RecurringTransactionTriggerEnum",
           "description": null,
           "interfaces": null,
           "possibleTypes": null,
@@ -33046,11 +33046,11 @@
               "deprecationReason": null
             },
             {
-              "name": "ruleType",
+              "name": "thresholdCredits",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "RecurringTransactionRuleTypeEnum",
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,
@@ -33058,11 +33058,11 @@
               "deprecationReason": null
             },
             {
-              "name": "thresholdCredits",
+              "name": "trigger",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "ENUM",
+                "name": "RecurringTransactionTriggerEnum",
                 "ofType": null
               },
               "defaultValue": null,

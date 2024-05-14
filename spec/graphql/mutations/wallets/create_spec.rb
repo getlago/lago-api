@@ -18,7 +18,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           status
           currency
           expirationAt
-          recurringTransactionRules { lagoId, ruleType, interval, thresholdCredits, paidCredits, grantedCredits }
+          recurringTransactionRules { lagoId, trigger, interval, thresholdCredits, paidCredits, grantedCredits }
         }
       }
     GQL
@@ -47,7 +47,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           currency: 'EUR',
           recurringTransactionRules: [
             {
-              ruleType: 'interval',
+              trigger: 'interval',
               interval: 'monthly',
             },
           ],
@@ -63,7 +63,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data['expirationAt']).to eq(expiration_at.iso8601)
       expect(result_data['recurringTransactionRules'].count).to eq(1)
       expect(result_data['recurringTransactionRules'][0]['lagoId']).to be_present
-      expect(result_data['recurringTransactionRules'][0]['ruleType']).to eq('interval')
+      expect(result_data['recurringTransactionRules'][0]['trigger']).to eq('interval')
       expect(result_data['recurringTransactionRules'][0]['interval']).to eq('monthly')
       expect(result_data['recurringTransactionRules'][0]['paidCredits']).to eq('0.0')
       expect(result_data['recurringTransactionRules'][0]['grantedCredits']).to eq('0.0')
