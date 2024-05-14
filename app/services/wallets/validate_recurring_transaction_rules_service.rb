@@ -40,7 +40,7 @@ module Wallets
 
       return true if type == 'interval' && RecurringTransactionRule.intervals.key?(rule[:interval])
 
-      if type == 'threshold' && ::Validators::DecimalAmountService.new(rule[:threshold_credits]).valid_amount?
+      if type == 'threshold' && ::Validators::DecimalAmountService.new(rule[:threshold_credits]).valid_decimal?
         return true
       end
 

@@ -112,7 +112,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
           },
           {
             rule_type: 'threshold',
-            threshold_credits: '1.0',
+            threshold_credits: '-1.0',
           },
         ]
       end

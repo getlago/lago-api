@@ -26,10 +26,6 @@ module Validators
       BigDecimal(amount).positive?
     end
 
-    private
-
-    attr_reader :amount, :decimal_amount
-
     def valid_decimal?
       # NOTE: as we want to be the more precise with decimals, we only
       # accept amount that are in string to avoid float bad parsing
@@ -46,5 +42,9 @@ module Validators
     rescue ArgumentError, TypeError
       false
     end
+
+    private
+
+    attr_reader :amount, :decimal_amount
   end
 end
