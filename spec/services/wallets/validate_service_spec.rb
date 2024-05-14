@@ -107,11 +107,11 @@ RSpec.describe Wallets::ValidateService, type: :service do
       let(:rules) do
         [
           {
-            rule_type: 'interval',
+            trigger: 'interval',
             interval: 'monthly',
           },
           {
-            rule_type: 'threshold',
+            trigger: 'threshold',
             threshold_credits: '-1.0',
           },
         ]
@@ -135,7 +135,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
         let(:rules) do
           [
             {
-              rule_type: 'interval',
+              trigger: 'interval',
               interval: 'invalid',
             },
           ]
@@ -151,7 +151,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
         let(:rules) do
           [
             {
-              rule_type: 'threshold',
+              trigger: 'threshold',
               threshold_credits: 'invalid',
             },
           ]

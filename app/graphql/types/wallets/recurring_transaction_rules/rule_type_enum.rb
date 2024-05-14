@@ -6,7 +6,7 @@ module Types
       class RuleTypeEnum < Types::BaseEnum
         graphql_name 'RecurringTransactionRuleTypeEnum'
 
-        RecurringTransactionRule::RULE_TYPES.each do |type|
+        RecurringTransactionRule::TRIGGERS.each do |type|
           value type
         end
       end

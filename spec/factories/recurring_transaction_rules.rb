@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :recurring_transaction_rule do
     wallet
-    rule_type { 'interval' }
+    trigger { 'interval' }
     paid_credits { '10.00' }
     granted_credits { '10.00' }
     interval { 'monthly' }
