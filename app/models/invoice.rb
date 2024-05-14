@@ -11,6 +11,10 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
   before_save :ensure_number
+  after_create :trigger_invoice_sync, if: :finalized?
+  after_update :trigger_invoice_sync, if: -> { status_updated_to_finalized? }
+  after_create :trigger_sales_order_sync, if: :finalized?
+  after_update :trigger_sales_order_sync, if: -> { status_updated_to_finalized? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -294,6 +298,18 @@ class Invoice < ApplicationRecord
 
   def should_assign_sequential_id?
     status_changed_to_finalized?
+  end
+
+  def trigger_invoice_sync
+    return if customer.integration_customers.none? { |c| c.integration.sync_invoices }
+
+    Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: self)
+  end
+
+  def trigger_sales_order_sync
+    return if customer.integration_customers.none? { |c| c.integration.sync_sales_orders }
+
+    Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice: self)
   end
 
   def void_invoice!
