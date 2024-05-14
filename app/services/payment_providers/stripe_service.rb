@@ -2,18 +2,6 @@
 
 module PaymentProviders
   class StripeService < BaseService
-    # NOTE: find the complete list of event types at https://stripe.com/docs/api/events/types
-    WEBHOOKS_EVENTS = [
-      'setup_intent.succeeded',
-      'payment_intent.payment_failed',
-      'payment_intent.succeeded',
-      'payment_method.detached',
-      'charge.refund.updated',
-      'customer.updated',
-      'charge.succeeded',
-      'charge.dispute.closed',
-    ].freeze
-
     def create_or_update(**args)
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization_id],
@@ -58,34 +46,9 @@ module PaymentProviders
       result.record_validation_failure!(record: e.record)
     end
 
-    def register_webhook(stripe_provider)
-      organization_id = stripe_provider.organization_id
-
-      stripe_webhook = ::Stripe::WebhookEndpoint.create(
-        {
-          url: URI.join(
-            ENV['LAGO_API_URL'],
-            "webhooks/stripe/#{organization_id}?code=#{URI.encode_www_form_component(stripe_provider.code)}",
-          ),
-          enabled_events: WEBHOOKS_EVENTS,
-        },
-        {api_key: stripe_provider.secret_key},
-      )
-
-      stripe_provider.update!(
-        webhook_id: stripe_webhook.id,
-        webhook_secret: stripe_webhook.secret,
-      )
-
-      result.stripe_provider = stripe_provider
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
-    end
-
     def refresh_webhook(stripe_provider:)
       unregister_webhook(stripe_provider, stripe_provider.secret_key)
-      register_webhook(stripe_provider)
+      PaymentProviders::Stripe::RegisterWebhookService.call(stripe_provider)
     end
 
     def handle_incoming_webhook(organization_id:, params:, signature:, code: nil)
@@ -120,7 +83,7 @@ module PaymentProviders
 
     def handle_event(organization:, event_json:)
       event = ::Stripe::Event.construct_from(JSON.parse(event_json))
-      unless WEBHOOKS_EVENTS.include?(event.type)
+      unless PaymentProviders::StripeProvider::WEBHOOKS_EVENTS.include?(event.type)
         Rails.logger.warn("Unexpected stripe event type: #{event.type}")
         return result
       end

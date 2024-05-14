@@ -90,36 +90,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     end
   end
 
-  describe '.register_webhook' do
-    let(:stripe_provider) do
-      create(:stripe_provider, organization:)
-    end
-
-    let(:stripe_webhook) do
-      ::Stripe::WebhookEndpoint.construct_from(
-        id: 'we_123456',
-        secret: 'whsec_123456',
-      )
-    end
-
-    before do
-      allow(::Stripe::WebhookEndpoint)
-        .to receive(:create)
-        .and_return(stripe_webhook)
-    end
-
-    it 'registers a webhook on stripe' do
-      result = stripe_service.register_webhook(stripe_provider)
-
-      expect(result).to be_success
-
-      aggregate_failures do
-        expect(result.stripe_provider.webhook_id).to eq('we_123456')
-        expect(result.stripe_provider.webhook_secret).to eq('whsec_123456')
-      end
-    end
-  end
-
   describe '.refresh_webhook' do
     let(:stripe_provider) do
       create(:stripe_provider, organization:)
@@ -147,8 +117,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       expect(result).to be_success
 
       aggregate_failures do
-        expect(result.stripe_provider.webhook_id).to eq('we_123456')
-        expect(result.stripe_provider.webhook_secret).to eq('whsec_123456')
+        expect(result.payment_provider.webhook_id).to eq('we_123456')
+        expect(result.payment_provider.webhook_secret).to eq('whsec_123456')
       end
     end
   end
