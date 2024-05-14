@@ -10,8 +10,8 @@ module Types
         argument :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, required: false
         argument :lago_id, ID, required: false
         argument :paid_credits, String, required: false
-        argument :rule_type, Types::Wallets::RecurringTransactionRules::RuleTypeEnum, required: false
         argument :threshold_credits, String, required: false
+        argument :trigger, Types::Wallets::RecurringTransactionRules::TriggerEnum, required: false
       end
     end
   end

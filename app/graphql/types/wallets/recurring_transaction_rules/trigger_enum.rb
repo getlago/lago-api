@@ -3,8 +3,8 @@
 module Types
   module Wallets
     module RecurringTransactionRules
-      class RuleTypeEnum < Types::BaseEnum
-        graphql_name 'RecurringTransactionRuleTypeEnum'
+      class TriggerEnum < Types::BaseEnum
+        graphql_name 'RecurringTransactionTriggerEnum'
 
         RecurringTransactionRule::TRIGGERS.each do |type|
           value type
