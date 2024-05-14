@@ -9,6 +9,8 @@ RSpec.describe Invoice, type: :model do
 
   it_behaves_like 'paper_trail traceable'
 
+  it { is_expected.to have_many(:integration_resources) }
+
   describe 'validation' do
     describe 'of payment dispute lost absence' do
       context 'when invoice is not voided' do
@@ -114,6 +116,344 @@ RSpec.describe Invoice, type: :model do
           expect(invoice).to be_valid
           expect(invoice.sequential_id).to eq(6)
           expect(invoice.organization_sequential_id).to eq(16)
+        end
+      end
+    end
+  end
+
+  describe '#save' do
+    context 'with a new record' do
+      subject { invoice.save! }
+
+      let(:invoice) { build(:invoice, customer:, organization:, status:) }
+
+      context 'when invoice is finalized' do
+        let(:status) { :finalized }
+
+        context 'without integration customer' do
+          let(:customer) { create(:customer, organization:) }
+
+          it 'does not enqueue invoice create job' do
+            expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+          end
+
+          it 'does not enqueue sales order create job' do
+            expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+          end
+        end
+
+        context 'with integration customer' do
+          let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+          let(:integration) { create(:netsuite_integration, organization:, sync_invoices:, sync_sales_orders:) }
+          let(:customer) { create(:customer, organization:) }
+
+          before { integration_customer }
+
+          context 'when sync invoices is true' do
+            let(:sync_invoices) { true }
+
+            context 'when sync sales orders is true' do
+              let(:sync_sales_orders) { true }
+
+              it 'enqueues invoice create job' do
+                expect { subject }.to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob).with(invoice:)
+              end
+
+              it 'enqueues sales order create job' do
+                expect { subject }.to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob).with(invoice:)
+              end
+            end
+
+            context 'when sync sales orders is false' do
+              let(:sync_sales_orders) { false }
+
+              it 'enqueues invoice create job' do
+                expect { subject }.to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob).with(invoice:)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+          end
+
+          context 'when sync invoices is false' do
+            let(:sync_invoices) { false }
+
+            context 'when sync sales orders is true' do
+              let(:sync_sales_orders) { true }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'enqueues sales order create job' do
+                expect { subject }.to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob).with(invoice:)
+              end
+            end
+
+            context 'when sync sales orders is false' do
+              let(:sync_sales_orders) { false }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+          end
+        end
+      end
+
+      context 'when invoice is not finalized' do
+        let(:status) { %i[draft voided generating].sample }
+
+        context 'without integration customer' do
+          let(:customer) { create(:customer, organization:) }
+
+          it 'does not enqueue invoice create job' do
+            expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+          end
+
+          it 'does not enqueue sales order create job' do
+            expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+          end
+        end
+
+        context 'with integration customer' do
+          let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+          let(:integration) { create(:netsuite_integration, organization:, sync_invoices:, sync_sales_orders:) }
+          let(:customer) { create(:customer, organization:) }
+
+          before { integration_customer }
+
+          context 'when sync invoices is true' do
+            let(:sync_invoices) { true }
+
+            context 'when sync sales orders is true' do
+              let(:sync_sales_orders) { true }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+
+            context 'when sync sales orders is false' do
+              let(:sync_sales_orders) { false }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+          end
+
+          context 'when sync invoices is false' do
+            let(:sync_invoices) { false }
+
+            context 'when sync sales orders is true' do
+              let(:sync_sales_orders) { true }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+
+            context 'when sync sales orders is false' do
+              let(:sync_sales_orders) { false }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+          end
+        end
+      end
+    end
+
+    context 'with an existing record' do
+      subject { invoice.update!(status: new_status) }
+
+      let(:invoice) { create(:invoice, customer:, organization:, status:) }
+
+      before { invoice }
+
+      context 'when status changed to finalized' do
+        let(:status) { %i[draft generating].sample }
+        let(:new_status) { :finalized }
+
+        context 'without integration customer' do
+          let(:customer) { create(:customer, organization:) }
+
+          it 'does not enqueue invoice create job' do
+            expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+          end
+
+          it 'does not enqueue sales order create job' do
+            expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+          end
+        end
+
+        context 'with integration customer' do
+          let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+          let(:integration) { create(:netsuite_integration, organization:, sync_invoices:, sync_sales_orders:) }
+          let(:customer) { create(:customer, organization:) }
+
+          before { integration_customer }
+
+          context 'when sync invoices is true' do
+            let(:sync_invoices) { true }
+
+            context 'when sync sales orders is true' do
+              let(:sync_sales_orders) { true }
+
+              it 'enqueues invoice create job' do
+                expect { subject }.to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob).with(invoice:)
+              end
+
+              it 'enqueues sales order create job' do
+                expect { subject }.to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob).with(invoice:)
+              end
+            end
+
+            context 'when sync sales orders is false' do
+              let(:sync_sales_orders) { false }
+
+              it 'enqueues invoice create job' do
+                expect { subject }.to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob).with(invoice:)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+          end
+
+          context 'when sync invoices is false' do
+            let(:sync_invoices) { false }
+
+            context 'when sync sales orders is true' do
+              let(:sync_sales_orders) { true }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'enqueues sales order create job' do
+                expect { subject }.to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob).with(invoice:)
+              end
+            end
+
+            context 'when sync sales orders is false' do
+              let(:sync_sales_orders) { false }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+          end
+        end
+      end
+
+      context 'when status did not change to finalized' do
+        let(:status) { :finalized }
+        let(:new_status) { %i[draft finalized voided].sample }
+
+        context 'without integration customer' do
+          let(:customer) { create(:customer, organization:) }
+
+          it 'does not enqueue invoice create job' do
+            expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+          end
+
+          it 'does not enqueue sales order create job' do
+            expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+          end
+        end
+
+        context 'with integration customer' do
+          let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+          let(:integration) { create(:netsuite_integration, organization:, sync_invoices:, sync_sales_orders:) }
+          let(:customer) { create(:customer, organization:) }
+
+          before { integration_customer }
+
+          context 'when sync invoices is true' do
+            let(:sync_invoices) { true }
+
+            context 'when sync sales orders is true' do
+              let(:sync_sales_orders) { true }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+
+            context 'when sync sales orders is false' do
+              let(:sync_sales_orders) { false }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+          end
+
+          context 'when sync invoices is false' do
+            let(:sync_invoices) { false }
+
+            context 'when sync sales orders is true' do
+              let(:sync_sales_orders) { true }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+
+            context 'when sync sales orders is false' do
+              let(:sync_sales_orders) { false }
+
+              it 'does not enqueue invoice create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+              end
+
+              it 'does not enqueue sales order create job' do
+                expect { subject }.not_to have_enqueued_job(Integrations::Aggregator::SalesOrders::CreateJob)
+              end
+            end
+          end
         end
       end
     end

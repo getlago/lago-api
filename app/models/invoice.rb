@@ -11,6 +11,10 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
   before_save :ensure_number
+  after_create :trigger_invoice_sync, if: :finalized?
+  after_update :trigger_invoice_sync, if: -> { status_updated_to_finalized? }
+  after_create :trigger_sales_order_sync, if: :finalized?
+  after_update :trigger_sales_order_sync, if: -> { status_updated_to_finalized? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -27,6 +31,7 @@ class Invoice < ApplicationRecord
 
   has_many :applied_taxes, class_name: 'Invoice::AppliedTax', dependent: :destroy
   has_many :taxes, through: :applied_taxes
+  has_many :integration_resources, as: :syncable
 
   has_one_attached :file
 
@@ -287,6 +292,18 @@ class Invoice < ApplicationRecord
     status_changed_to_finalized?
   end
 
+  def trigger_invoice_sync
+    return if customer.integration_customers.none? { |c| c.integration.sync_invoices }
+
+    Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: self)
+  end
+
+  def trigger_sales_order_sync
+    return if customer.integration_customers.none? { |c| c.integration.sync_sales_orders }
+
+    Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice: self)
+  end
+
   def void_invoice!
     update!(ready_for_payment_processing: false)
   end
@@ -366,5 +383,12 @@ class Invoice < ApplicationRecord
 
   def status_changed_to_finalized?
     status_changed?(from: 'draft', to: 'finalized') || status_changed?(from: 'generating', to: 'finalized')
+  end
+
+  def status_updated_to_finalized?
+    saved_change_to_status&.first.present? &&
+      saved_change_to_status&.first != 'finalized' &&
+      saved_change_to_status&.last.present? &&
+      finalized?
   end
 end
