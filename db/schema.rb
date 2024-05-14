@@ -598,6 +598,15 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_14_072741) do
     t.index ["mappable_type", "mappable_id"], name: "index_integration_mappings_on_mappable"
   end
 
+  create_table "integration_resources", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "syncable_type", null: false
+    t.uuid "syncable_id", null: false
+    t.string "external_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["syncable_type", "syncable_id"], name: "index_integration_resources_on_syncable"
+  end
+
   create_table "integrations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.string "name", null: false
