@@ -21,8 +21,8 @@ development:
     database: publisher_portal_development
     host: localhost
     port: 5432
-    username: postgres
-    password: 123
+    username: lago
+    password: changeme
     migrations_paths: db/publisher_portal_migrate
   clickhouse:
     adapter: clickhouse
