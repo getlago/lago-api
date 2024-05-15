@@ -28,7 +28,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
   let(:previous_subscription) { nil }
 
-  describe 'from_datetime' do
+  describe '#from_datetime' do
     let(:result) { date_service.from_datetime.to_s }
 
     context 'when billing_time is calendar' do
@@ -174,7 +174,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'to_datetime' do
+  describe '#to_datetime' do
     let(:result) { date_service.to_datetime.to_s }
 
     context 'when billing_time is calendar' do
@@ -292,7 +292,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'charges_from_datetime' do
+  describe '#charges_from_datetime' do
     let(:result) { date_service.charges_from_datetime.to_s }
 
     context 'when billing_time is calendar' do
@@ -405,7 +405,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'charges_to_datetime' do
+  describe '#charges_to_datetime' do
     let(:result) { date_service.charges_to_datetime.to_s }
 
     context 'when billing_time is calendar' do
@@ -497,7 +497,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'next_end_of_period' do
+  describe '#next_end_of_period' do
     let(:result) { date_service.next_end_of_period.to_s }
 
     context 'when billing_time is calendar' do
@@ -547,7 +547,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'previous_beginning_of_period' do
+  describe '#previous_beginning_of_period' do
     let(:result) { date_service.previous_beginning_of_period(current_period:).to_s }
 
     let(:current_period) { false }
@@ -601,7 +601,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'single_day_price' do
+  describe '#single_day_price' do
     let(:result) { date_service.single_day_price }
 
     context 'when billing_time is calendar' do
@@ -647,7 +647,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'charges_duration_in_days' do
+  describe '#charges_duration_in_days' do
     let(:result) { date_service.charges_duration_in_days }
 
     context 'when billing_time is calendar' do
