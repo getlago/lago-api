@@ -50,9 +50,9 @@ class Event < EventsRecord
     end
 
     scope
-      .where("date_trunc('second', started_at::timestamp) <= ?::timestamp", timestamp)
+      .where("date_trunc('millisecond', started_at::timestamp) <= ?::timestamp", timestamp)
       .where(
-        "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
+        "terminated_at IS NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?",
         timestamp,
       )
       .order('terminated_at DESC NULLS FIRST, started_at DESC')
