@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  draw :entitlement
   draw :publisher_portal
 
   mount Sidekiq::Web, at: '/sidekiq' if defined? Sidekiq::Web
