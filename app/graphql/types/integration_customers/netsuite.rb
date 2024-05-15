@@ -12,8 +12,6 @@ module Types
       field :subsidiary_id, String, null: true
       field :sync_with_provider, Boolean, null: true
 
-      private
-
       def integration_type
         object.integration&.type
         case object.integration&.type

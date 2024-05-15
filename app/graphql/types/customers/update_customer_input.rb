@@ -35,7 +35,7 @@ module Types
       argument :payment_provider_code, String, required: false
       argument :provider_customer, Types::PaymentProviderCustomers::ProviderInput, required: false
 
-      argument :netsuite_customer, Types::IntegrationCustomers::Input, required: false
+      argument :integration_customer, Types::IntegrationCustomers::Input, required: false
 
       argument :billing_configuration, Types::Customers::BillingConfigurationInput, required: false
     end

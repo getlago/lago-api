@@ -6732,7 +6732,7 @@
               "deprecationReason": null
             },
             {
-              "name": "netsuiteCustomer",
+              "name": "integrationCustomer",
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",
@@ -31689,7 +31689,7 @@
               "deprecationReason": null
             },
             {
-              "name": "netsuiteCustomer",
+              "name": "integrationCustomer",
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",

@@ -1782,6 +1782,7 @@ input CreateCustomerInput {
   email: String
   externalId: String!
   externalSalesforceId: String
+  integrationCustomer: IntegrationCustomerInput
   invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
@@ -1789,7 +1790,6 @@ input CreateCustomerInput {
   metadata: [CustomerMetadataInput!]
   name: String!
   netPaymentTerm: Int
-  netsuiteCustomer: IntegrationCustomerInput
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   phone: String
@@ -6622,6 +6622,7 @@ input UpdateCustomerInput {
   externalId: String!
   externalSalesforceId: String
   id: ID!
+  integrationCustomer: IntegrationCustomerInput
   invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
@@ -6629,7 +6630,6 @@ input UpdateCustomerInput {
   metadata: [CustomerMetadataInput!]
   name: String!
   netPaymentTerm: Int
-  netsuiteCustomer: IntegrationCustomerInput
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   phone: String
