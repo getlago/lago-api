@@ -3622,6 +3622,7 @@ type IntegrationCollection {
 
 input IntegrationCustomerInput {
   externalCustomerId: String
+  id: ID
   integrationCode: String
   integrationType: IntegrationTypeEnum
   subsidiaryId: String
