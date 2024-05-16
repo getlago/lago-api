@@ -125,5 +125,9 @@ group :development do
   gem 'ruby-lsp-rails', require: false
 end
 
+gem "packs-rails"
+gem "packwerk", "~> 3.2"
+
+# gRPC
 gem "grpc", "~> 1.63"
 gem "grpc-tools", "~> 1.63"
