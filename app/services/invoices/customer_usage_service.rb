@@ -33,6 +33,7 @@ module Invoices
     attr_reader :invoice, :subscription
 
     delegate :plan, to: :subscription
+    delegate :organization, to: :subscription
 
     # NOTE: Since computing customer usage could take some time as it as to
     #       loop over a lot of records in database, the result is stored in a cache store.
