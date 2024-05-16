@@ -17,6 +17,10 @@ module LagoApi
       #{config.root}/app/views/helpers
       #{config.root}/app/support
     ]
+
+    # Ignoring the gRPC generated directory in Zeitwerk
+    Rails.autoloaders.main.ignore(Rails.root.join('lib/publisher_revenue/client'))
+
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
 
