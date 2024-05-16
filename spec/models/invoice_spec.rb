@@ -187,6 +187,9 @@ RSpec.describe Invoice, type: :model do
             expect(method_call).to eq(true)
           end
         end
+      end
+    end
+  end
 
         context 'when sync invoices is false' do
           let(:sync_invoices) { false }
