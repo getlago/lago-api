@@ -11,6 +11,10 @@ class Invoice < ApplicationRecord
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
   before_save :ensure_number
+  after_create :trigger_invoice_sync, if: :finalized?
+  after_update :trigger_invoice_sync, if: -> { status_updated_to_finalized? }
+  after_create :trigger_sales_order_sync, if: :finalized?
+  after_update :trigger_sales_order_sync, if: -> { status_updated_to_finalized? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
