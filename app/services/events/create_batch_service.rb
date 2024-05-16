@@ -76,6 +76,7 @@ module Events
           timestamp: event.timestamp.to_f,
           code: event.code,
           properties: event.properties,
+          ingested_at: Time.zone.now.iso8601[...-1],
         }.to_json,
       )
     end
