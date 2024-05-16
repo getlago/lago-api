@@ -16,7 +16,7 @@ module Integrations
 
           deliver_success_webhook(customer:)
 
-          result.contact_id = response.body
+          result.contact_id = JSON.parse(response.body)
           result
         rescue LagoHttpClient::HttpError => e
           error = e.json_message
