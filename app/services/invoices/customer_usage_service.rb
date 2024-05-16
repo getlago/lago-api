@@ -33,6 +33,7 @@ module Invoices
     attr_reader :invoice, :subscription
 
     delegate :plan, to: :subscription
+    delegate :organization, to: :subscription
 
     # NOTE: Since computing customer usage could take some time as it as to
     #       loop over a lot of records in database, the result is stored in a cache store.
@@ -68,6 +69,8 @@ module Invoices
     end
 
     def charge_usage(charge)
+      return charge_usage_without_cache(charge) if organization.clickhouse_aggregation?
+
       json = Rails.cache.fetch(charge_cache_key(charge), expires_in: charge_cache_expiration) do
         fees_result = Fees::ChargeService.new(
           invoice:, charge:, subscription:, boundaries:,
@@ -79,6 +82,16 @@ module Invoices
       end
 
       JSON.parse(json).map { |j| Fee.new(j) }
+    end
+
+    def charge_usage_without_cache(charge)
+      fees_result = Fees::ChargeService.new(
+        invoice:, charge:, subscription:, boundaries:,
+      ).current_usage
+
+      fees_result.raise_if_error!
+
+      fees_result.fees
     end
 
     def boundaries
