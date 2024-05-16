@@ -90,7 +90,6 @@ module Api
           :expiration_at,
           :expiration_date, # NOTE: Legacy field
           recurring_transaction_rules: [
-            :rule_type, # NOTE: Legacy field
             :interval,
             :threshold_credits,
             :trigger,
@@ -109,7 +108,6 @@ module Api
           :expiration_date, # NOTE: Legacy field
           recurring_transaction_rules: [
             :lago_id,
-            :rule_type, # NOTE: Legacy field
             :interval,
             :threshold_credits,
             :trigger,

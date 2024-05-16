@@ -65,7 +65,7 @@ module Wallets
         granted_credits:,
         threshold_credits: recurring_rule[:threshold_credits] || '0.0',
         interval: recurring_rule[:interval],
-        trigger: (recurring_rule[:trigger] || recurring_rule[:rule_type]).to_s
+        trigger: recurring_rule[:trigger].to_s
       )
     end
   end
