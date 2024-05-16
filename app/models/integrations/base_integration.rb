@@ -19,6 +19,10 @@ module Integrations
       class_name: 'IntegrationCollectionMappings::BaseCollectionMapping',
       foreign_key: :integration_id,
       dependent: :destroy
+    has_many :integration_customers,
+      class_name: 'IntegrationCustomers::BaseCustomer',
+      foreign_key: :integration_id,
+      dependent: :destroy
 
     validates :code, uniqueness: {scope: :organization_id}
     validates :name, presence: true
