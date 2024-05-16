@@ -6,7 +6,7 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping, type: :
   subject(:mapping) { build(:netsuite_collection_mapping) }
 
   let(:mapping_types) do
-    %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit]
+    %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note]
   end
 
   it { is_expected.to define_enum_for(:mapping_type).with_values(mapping_types) }
