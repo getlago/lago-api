@@ -17,7 +17,7 @@ module Utils
     end
 
     def render_html
-      Slim::Template.new { template_file }.render(context)
+      Slim::Template.new(template_file).render(context)
     end
 
     private
@@ -25,7 +25,7 @@ module Utils
     attr_reader :template, :context
 
     def template_file
-      File.read(Rails.root.join("app/views/templates/#{template}.slim"), encoding: 'UTF-8')
+      Rails.root.join("app/views/templates/#{template}.slim")
     end
 
     def pdf_url
@@ -36,9 +36,8 @@ module Utils
       http_client = LagoHttpClient::Client.new(pdf_url)
 
       response = http_client.post_multipart_file(
-        render_html,
-        'text/html',
-        'index.html',
+        file1: prepare_http_files(render_html, 'text/html', 'index.html'),
+        file2: prepare_http_files(File.read(Rails.root.join('public/assets/images/lago-logo-invoice.png')), 'image/png', 'lago-logo-invoice.png'),
         scale: '1.28',
         marginTop: '0.42',
         marginBottom: '0.42',
@@ -47,6 +46,10 @@ module Utils
       )
 
       response.body.force_encoding('UTF-8')
+    end
+
+    def prepare_http_files(content, type, name)
+      UploadIO.new(StringIO.new(content), type, name)
     end
   end
 end

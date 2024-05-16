@@ -62,17 +62,7 @@ module LagoHttpClient
       response
     end
 
-    def post_multipart_file(file_content, file_type, file_name, options = {})
-      params = options.merge(
-        {
-          'file1' => UploadIO.new(
-            StringIO.new(file_content),
-            file_type,
-            file_name,
-          )
-        },
-      )
-
+    def post_multipart_file(params = {})
       req = Net::HTTP::Post::Multipart.new(
         uri.path,
         params,
