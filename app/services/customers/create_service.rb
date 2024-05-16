@@ -74,12 +74,11 @@ module Customers
 
       result.customer = customer.reload
 
-      # TODO:
-      # IntegrationCustomers::CreateOrUpdateService.call(
-      #   integration_customer_params: params[:integration_customer],
-      #   customer: result.customer,
-      #   new_customer:,
-      # )
+      IntegrationCustomers::CreateOrUpdateService.call(
+        integration_customer_params: params[:integration_customer],
+        customer: result.customer,
+        new_customer:,
+      )
 
       track_customer_created(customer)
       result
@@ -156,12 +155,11 @@ module Customers
 
       result.customer = customer
 
-      # TODO:
-      # IntegrationCustomers::CreateOrUpdateService.call(
-      #   integration_customer_params: args[:integration_customer]&.to_h,
-      #   customer: result.customer,
-      #   new_customer: true,
-      # )
+      IntegrationCustomers::CreateOrUpdateService.call(
+        integration_customer_params: args[:integration_customer]&.to_h,
+        customer: result.customer,
+        new_customer: true,
+      )
 
       track_customer_created(customer)
       result
