@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  draw :publisher_portal
+
   mount Sidekiq::Web, at: '/sidekiq' if defined? Sidekiq::Web
   mount Karafka::Web::App, at: '/karafka' if defined? Karafka::Web::App
 
