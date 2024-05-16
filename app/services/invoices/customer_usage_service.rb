@@ -85,8 +85,8 @@ module Invoices
 
     def charge_usage_without_cache(charge)
       fees_result = Fees::ChargeService.new(
-          invoice:, charge:, subscription:, boundaries:,
-        ).current_usage
+        invoice:, charge:, subscription:, boundaries:,
+      ).current_usage
 
       fees_result.raise_if_error!
 
