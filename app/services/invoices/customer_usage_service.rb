@@ -68,6 +68,8 @@ module Invoices
     end
 
     def charge_usage(charge)
+      return charge_usage_without_cache(charge) if organization.clickhouse_aggregation?
+
       json = Rails.cache.fetch(charge_cache_key(charge), expires_in: charge_cache_expiration) do
         fees_result = Fees::ChargeService.new(
           invoice:, charge:, subscription:, boundaries:,
@@ -79,6 +81,16 @@ module Invoices
       end
 
       JSON.parse(json).map { |j| Fee.new(j) }
+    end
+
+    def charge_usage_without_cache(charge)
+      fees_result = Fees::ChargeService.new(
+          invoice:, charge:, subscription:, boundaries:,
+        ).current_usage
+
+      fees_result.raise_if_error!
+
+      fees_result.fees
     end
 
     def boundaries
