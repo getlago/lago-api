@@ -20,10 +20,6 @@ module Wallets
           recurring_rule = wallet.recurring_transaction_rules.find_by(id: lago_id)
 
           if recurring_rule
-            # NOTE: Handle legacy field rule_type
-            rule_type = rule.delete(:rule_type)
-            rule[:trigger] = rule_type if rule_type && rule[:trigger].nil?
-
             recurring_rule.update!(rule)
 
             next

@@ -67,29 +67,6 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
       end
     end
 
-    context 'with legacy rule_type' do
-      let(:params) do
-        [
-          {
-            lago_id: recurring_transaction_rule.id,
-            rule_type: 'interval'
-          },
-        ]
-      end
-
-      it 'updates existing recurring transaction rule' do
-        result = update_service.call
-
-        rule = result.wallet.reload.recurring_transaction_rules.first
-
-        aggregate_failures do
-          expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
-          expect(rule.id).to eq(recurring_transaction_rule.id)
-          expect(rule.trigger).to eq('interval')
-        end
-      end
-    end
-
     context 'when empty array is sent as argument' do
       let(:params) do
         []

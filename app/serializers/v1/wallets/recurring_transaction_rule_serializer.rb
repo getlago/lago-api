@@ -6,7 +6,6 @@ module V1
       def serialize
         {
           lago_id: model.id,
-          rule_type: model.trigger, # NOTE: Legacy field
           paid_credits: model.paid_credits,
           granted_credits: model.granted_credits,
           interval: model.interval,

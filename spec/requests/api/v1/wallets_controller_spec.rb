@@ -70,7 +70,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expiration_at:,
           recurring_transaction_rules: [
             {
-              rule_type: 'interval',
+              trigger: 'interval',
               interval: 'monthly',
             },
           ],
@@ -86,7 +86,6 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(response).to have_http_status(:success)
 
           expect(recurring_rules).to be_present
-          expect(recurring_rules.first[:rule_type]).to eq('interval')
           expect(recurring_rules.first[:interval]).to eq('monthly')
           expect(recurring_rules.first[:paid_credits]).to eq('10.0')
           expect(recurring_rules.first[:granted_credits]).to eq('10.0')
@@ -190,7 +189,6 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
           expect(recurring_rules).to be_present
           expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
-          expect(recurring_rules.first[:rule_type]).to eq('interval')
           expect(recurring_rules.first[:interval]).to eq('weekly')
           expect(recurring_rules.first[:paid_credits]).to eq('105.0')
           expect(recurring_rules.first[:granted_credits]).to eq('105.0')
