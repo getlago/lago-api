@@ -1,0 +1,33 @@
+// This is a simple example of a proto file that defines a service for a book store.
+// Remove this file when integrating with Publisher Revenue.
+
+syntax = "proto3";
+
+package books;
+
+service BookService {
+  rpc GetBooks (EmptyParams) returns (Books) {}
+  rpc GetBook (BookID) returns (Book) {}
+}
+
+message Book {
+  int32 id = 1;
+  string title = 2;
+  string description = 3;
+  repeated string tags = 4;
+  float price = 5;
+}
+
+message Books {
+  repeated Book books = 1;
+}
+
+message EmptyParams {}
+
+message BookID {
+  int32 id = 1;
+}
+
+message BookNotFound {
+  string message = 1;
+}
