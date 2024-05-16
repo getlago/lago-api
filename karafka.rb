@@ -46,11 +46,11 @@ class KarafkaApp < Karafka::App
       log_messages: false,
     ),
   )
-
-  Karafka::Web.setup do |config|
-    # Set this to false in all apps except one
-    config.processing.active = false
-  end
 end
 
-Karafka::Process.tags.add(:application_name, 'Lago-API')
+Karafka::Web.setup do |config|
+  # Set this to false in all apps except one
+  config.processing.active = false
+end
+
+Karafka::Process.tags.add(:application_name, 'lago-api')
