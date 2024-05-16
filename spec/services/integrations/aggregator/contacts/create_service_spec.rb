@@ -49,7 +49,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
 
       let(:body) do
         path = Rails.root.join('spec/fixtures/integration_aggregator/contacts/success_response.json')
-        File.read(path).to_i.to_s
+        File.read(path)
       end
 
       before do
