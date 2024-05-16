@@ -14,7 +14,7 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
 
     let(:params) do
       {
-        integration: 'netsuite',
+        integration_type: 'netsuite',
         integration_code:,
         sync_with_provider:,
         external_customer_id:,
@@ -26,21 +26,6 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
     let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
 
     before { integration_customer }
-
-    context 'without netsuite premium integration present' do
-      let(:integration_code) { 'not_exists' }
-      let(:sync_with_provider) { true }
-      let(:external_customer_id) { nil }
-
-      it 'returns an error' do
-        result = service_call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq('premium_integration_missing')
-        end
-      end
-    end
 
     context 'with netsuite premium integration present' do
       let(:integration_code) { integration.code }

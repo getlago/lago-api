@@ -40,6 +40,7 @@ module Integrations
               'companyname' => customer.name,
               'subsidiary' => subsidiary_id,
               'custentity_lago_id' => customer.id,
+              'custentity_lago_sf_id' => customer.external_salesforce_id,
               'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
               'email' => customer.email,
               'phone' => customer.phone,
