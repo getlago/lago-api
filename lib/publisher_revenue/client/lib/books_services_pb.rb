@@ -7,7 +7,6 @@ require 'books_pb'
 module Books
   module BookService
     class Service
-
       include ::GRPC::GenericService
 
       self.marshal_class_method = :encode
