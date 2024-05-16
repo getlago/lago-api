@@ -296,18 +296,6 @@ class Invoice < ApplicationRecord
     status_changed_to_finalized?
   end
 
-  def trigger_invoice_sync
-    return if customer.integration_customers.none? { |c| c.integration.sync_invoices }
-
-    Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: self)
-  end
-
-  def trigger_sales_order_sync
-    return if customer.integration_customers.none? { |c| c.integration.sync_sales_orders }
-
-    Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice: self)
-  end
-
   def void_invoice!
     update!(ready_for_payment_processing: false)
   end
