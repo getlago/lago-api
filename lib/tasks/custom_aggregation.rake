@@ -6,13 +6,13 @@ namespace :custom_aggregation do
     # Custom aggregator
     def aggregate(event, previous_state, aggregation_properties)
       # TODO: change me
-      { total_units: BigDecimal('0'), amount: BigDecimal('0') }
+      {total_units: BigDecimal('0'), amount: BigDecimal('0')}
     end
 
     # Aggregation properties - TODO: change me
     aggregation_properties = {}
     # Intial state
-    previous_state = { total_units: BigDecimal('0'), amount: BigDecimal('0')}
+    previous_state = {total_units: BigDecimal('0'), amount: BigDecimal('0')}
     # Event list - TODO: change me
     events = [OpenStruct.new(properties: {})]
 
