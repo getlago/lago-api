@@ -27,6 +27,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
       'values' => {
         'companyname' => customer.name,
         'subsidiary' => integration_customer.subsidiary_id,
+        'custentity_lago_sf_id' => customer.external_salesforce_id,
         'custentity_form_activeprospect_customer' => customer.name,
         'email' => customer.email,
         'phone' => customer.phone,
