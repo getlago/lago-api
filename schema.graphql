@@ -3875,6 +3875,7 @@ type MappingCollection {
 
 enum MappingTypeEnum {
   coupon
+  credit_note
   fallback_item
   minimum_commitment
   prepaid_credit
