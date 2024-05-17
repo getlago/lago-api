@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Types
-  class CurrentOrganizationType < Types::BaseObject
+  class CurrentOrganizationType < Types::BaseOrganizationType
     description 'Current Organization Type'
 
     field :id, ID, null: false
@@ -46,17 +46,6 @@ module Types
     field :adyen_payment_providers, [Types::PaymentProviders::Adyen], permission: 'organization:integrations:view'
     field :gocardless_payment_providers, [Types::PaymentProviders::Gocardless], permission: 'organization:integrations:view'
     field :stripe_payment_providers, [Types::PaymentProviders::Stripe], permission: 'organization:integrations:view'
-
-    def billing_configuration
-      {
-        id: "#{object&.id}-c0nf", # Each nested object needs ID so that appollo cache system can work properly
-        vat_rate: object&.vat_rate,
-        invoice_footer: object&.invoice_footer,
-        invoice_grace_period: object&.invoice_grace_period,
-        document_locale: object&.document_locale,
-        eu_tax_management: object&.eu_tax_management,
-      }
-    end
 
     def webhook_url
       object.webhook_endpoints.map(&:webhook_url).first
