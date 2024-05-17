@@ -91,7 +91,7 @@ module Integrations
               'item' => coupon_item.external_id,
               'account' => coupon_item.external_account_code,
               'quantity' => 1,
-              'rate' => -(amount(invoice.coupons_amount_cents)),
+              'rate' => -amount(invoice.coupons_amount_cents),
             }
           end
 
@@ -100,7 +100,7 @@ module Integrations
               'item' => credit_item.external_id,
               'account' => credit_item.external_account_code,
               'quantity' => 1,
-              'rate' => -(amount(invoice.prepaid_credit_amount_cents)),
+              'rate' => -amount(invoice.prepaid_credit_amount_cents),
             }
           end
 
@@ -109,7 +109,7 @@ module Integrations
               'item' => credit_note_item.external_id,
               'account' => credit_note_item.external_account_code,
               'quantity' => 1,
-              'rate' => -(amount(invoice.credit_notes_amount_cents)),
+              'rate' => -amount(invoice.credit_notes_amount_cents),
             }
           end
 

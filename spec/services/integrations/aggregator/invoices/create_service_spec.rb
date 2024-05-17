@@ -20,7 +20,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :fallback_item,
-      settings: { external_id: '1', external_account_code: '11', external_name: '' }
+      settings: {external_id: '1', external_account_code: '11', external_name: ''}
     )
   end
   let(:integration_collection_mapping2) do
@@ -28,7 +28,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :coupon,
-      settings: { external_id: '2', external_account_code: '22', external_name: '' }
+      settings: {external_id: '2', external_account_code: '22', external_name: ''}
     )
   end
   let(:integration_collection_mapping3) do
@@ -36,7 +36,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :subscription_fee,
-      settings: { external_id: '3', external_account_code: '33', external_name: '' }
+      settings: {external_id: '3', external_account_code: '33', external_name: ''}
     )
   end
   let(:integration_collection_mapping4) do
@@ -44,7 +44,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :minimum_commitment,
-      settings: { external_id: '4', external_account_code: '44', external_name: '' }
+      settings: {external_id: '4', external_account_code: '44', external_name: ''}
     )
   end
   let(:integration_collection_mapping5) do
@@ -52,7 +52,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :tax,
-      settings: { external_id: '5', external_account_code: '55', external_name: '' }
+      settings: {external_id: '5', external_account_code: '55', external_name: ''}
     )
   end
   let(:integration_collection_mapping6) do
@@ -60,7 +60,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :prepaid_credit,
-      settings: { external_id: '6', external_account_code: '66', external_name: '' }
+      settings: {external_id: '6', external_account_code: '66', external_name: ''}
     )
   end
   let(:integration_mapping_add_on) do
@@ -69,7 +69,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       integration:,
       mappable_type: 'AddOn',
       mappable_id: add_on.id,
-      settings: { external_id: 'm1', external_account_code: 'm11', external_name: '' }
+      settings: {external_id: 'm1', external_account_code: 'm11', external_name: ''}
     )
   end
   let(:integration_mapping_bm) do
@@ -78,7 +78,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       integration:,
       mappable_type: 'BillableMetric',
       mappable_id: billable_metric.id,
-      settings: { external_id: 'm2', external_account_code: 'm22', external_name: '' }
+      settings: {external_id: 'm2', external_account_code: 'm22', external_name: ''}
     )
   end
 
