@@ -42,8 +42,8 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       variables: {
         input: {
           email:,
-          role:,
-        },
+          role:
+        }
       },
     )
 
@@ -63,8 +63,8 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       variables: {
         input: {
           email: revoked_membership.user.email,
-          role:,
-        },
+          role:
+        }
       },
     )
 
@@ -85,8 +85,8 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       variables: {
         input: {
           email:,
-          role:,
-        },
+          role:
+        }
       },
     )
 
@@ -104,8 +104,8 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
       variables: {
         input: {
           email: membership.user.email,
-          role:,
-        },
+          role:
+        }
       },
     )
 

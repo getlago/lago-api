@@ -253,13 +253,13 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         items: [
           {
             fee_id: fee1.id,
-            amount_cents: 10,
+            amount_cents: 10
           },
           {
             fee_id: fee2.id,
-            amount_cents: 5,
+            amount_cents: 5
           },
-        ],
+        ]
       }
     end
 
@@ -350,7 +350,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     let(:estimate_params) do
       {
         invoice_id:,
-        items: fees.map { |f| {fee_id: f.id, amount_cents: 50} },
+        items: fees.map { |f| {fee_id: f.id, amount_cents: 50} }
       }
     end
 

@@ -31,8 +31,8 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
         input: {
           email: 'foo@bar.com',
           password: 'ILoveLago',
-          organizationName: 'FooBar',
-        },
+          organizationName: 'FooBar'
+        }
       },
     )
 
@@ -54,8 +54,8 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
           input: {
             email: user.email,
             password: 'ILoveLago',
-            organizationName: 'FooBar',
-          },
+            organizationName: 'FooBar'
+          }
         },
       )
 

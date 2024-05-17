@@ -21,7 +21,7 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
       context 'with same country as the organization' do
         let(:vies_response) do
           {
-            country_code: 'FR',
+            country_code: 'FR'
           }
         end
 
@@ -42,7 +42,7 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
       context 'with a different country from the organization one' do
         let(:vies_response) do
           {
-            country_code: 'DE',
+            country_code: 'DE'
           }
         end
 

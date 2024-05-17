@@ -112,7 +112,7 @@ module Api
       def event_metadata
         {
           user_agent: request.user_agent,
-          ip_address: request.remote_ip,
+          ip_address: request.remote_ip
         }
       end
     end

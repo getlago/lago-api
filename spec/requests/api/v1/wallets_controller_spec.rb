@@ -19,7 +19,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         currency: 'EUR',
         paid_credits: '10',
         granted_credits: '10',
-        expiration_at:,
+        expiration_at:
       }
     end
 
@@ -71,9 +71,9 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           recurring_transaction_rules: [
             {
               trigger: 'interval',
-              interval: 'monthly',
+              interval: 'monthly'
             },
-          ],
+          ]
         }
       end
 
@@ -101,7 +101,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     let(:update_params) do
       {
         name: 'wallet1',
-        expiration_at:,
+        expiration_at:
       }
     end
 
@@ -167,9 +167,9 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               trigger: 'interval',
               interval: 'weekly',
               paid_credits: '105',
-              granted_credits: '105',
+              granted_credits: '105'
             },
-          ],
+          ]
         }
       end
 

@@ -28,7 +28,7 @@ describe SegmentTrackJob, job: true do
           properties: {
             method: 1,
             hosting_type: 'self',
-            version: Utils::VersionService.new.version.version.number,
+            version: Utils::VersionService.new.version.version.number
           },
         )
     end

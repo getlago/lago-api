@@ -28,7 +28,7 @@ RSpec.describe Fees::ChargeService do
       timestamp: subscription.started_at.end_of_month.end_of_day + 1.second,
       charges_duration: (
         subscription.started_at.end_of_month.end_of_day - subscription.started_at.beginning_of_month
-      ).fdiv(1.day).ceil,
+      ).fdiv(1.day).ceil
     }
   end
 
@@ -43,7 +43,7 @@ RSpec.describe Fees::ChargeService do
       plan: subscription.plan,
       billable_metric:,
       properties: {
-        amount: '20',
+        amount: '20'
       },
     )
   end
@@ -75,7 +75,7 @@ RSpec.describe Fees::ChargeService do
             billable_metric:,
             properties: {
               amount: '20',
-              grouped_by: ['cloud'],
+              grouped_by: ['cloud']
             },
           )
         end
@@ -189,7 +189,7 @@ RSpec.describe Fees::ChargeService do
             let(:properties) do
               {
                 charges_from_datetime: boundaries[:charges_from_datetime],
-                charges_to_datetime: boundaries[:charges_to_datetime],
+                charges_to_datetime: boundaries[:charges_to_datetime]
               }
             end
 
@@ -272,9 +272,9 @@ RSpec.describe Fees::ChargeService do
                   from_value: 0,
                   to_value: nil,
                   per_unit_amount: '0.01',
-                  flat_amount: '0.01',
+                  flat_amount: '0.01'
                 },
-              ],
+              ]
             },
           )
         end
@@ -342,7 +342,7 @@ RSpec.describe Fees::ChargeService do
             charges_from_datetime: subscription.started_at,
             charges_to_datetime: Time.zone.parse('30 Apr 2022 00:01:00'),
             charges_duration: 30,
-            timestamp: Time.zone.parse('2022-05-01T00:01:00'),
+            timestamp: Time.zone.parse('2022-05-01T00:01:00')
           }
         end
 
@@ -410,7 +410,7 @@ RSpec.describe Fees::ChargeService do
         let(:properties) do
           {
             charges_from_datetime: boundaries[:charges_from_datetime],
-            charges_to_datetime: boundaries[:charges_to_datetime],
+            charges_to_datetime: boundaries[:charges_to_datetime]
           }
         end
 
@@ -969,7 +969,7 @@ RSpec.describe Fees::ChargeService do
           properties: {
             amount: '100',
             free_units: 1,
-            package_size: 8,
+            package_size: 8
           },
         )
       end
@@ -989,7 +989,7 @@ RSpec.describe Fees::ChargeService do
           properties: {
             amount: '50',
             free_units: 0,
-            package_size: 10,
+            package_size: 10
           },
         )
       end
@@ -1004,7 +1004,7 @@ RSpec.describe Fees::ChargeService do
           properties: {
             amount: '40',
             free_units: 1,
-            package_size: 5,
+            package_size: 5
           },
         )
       end
@@ -1025,7 +1025,7 @@ RSpec.describe Fees::ChargeService do
           properties: {
             amount: '0',
             free_units: 0,
-            package_size: 1,
+            package_size: 1
           },
         )
       end
@@ -1276,9 +1276,9 @@ RSpec.describe Fees::ChargeService do
                 from_value: 0,
                 to_value: nil,
                 per_unit_amount: '0.01',
-                flat_amount: '0.01',
+                flat_amount: '0.01'
               },
-            ],
+            ]
           },
         )
       end
@@ -1301,9 +1301,9 @@ RSpec.describe Fees::ChargeService do
                 from_value: 0,
                 to_value: nil,
                 per_unit_amount: '0.03',
-                flat_amount: '0.01',
+                flat_amount: '0.01'
               },
-            ],
+            ]
           },
         )
       end
@@ -1322,9 +1322,9 @@ RSpec.describe Fees::ChargeService do
                 from_value: 0,
                 to_value: nil,
                 per_unit_amount: '0',
-                flat_amount: '0',
+                flat_amount: '0'
               },
-            ],
+            ]
           },
         )
       end
@@ -1408,7 +1408,7 @@ RSpec.describe Fees::ChargeService do
           properties: {
             volume_ranges: [
               {from_value: 0, to_value: nil, per_unit_amount: '2', flat_amount: '10'},
-            ],
+            ]
           },
         )
       end
@@ -1428,7 +1428,7 @@ RSpec.describe Fees::ChargeService do
           properties: {
             volume_ranges: [
               {from_value: 0, to_value: nil, per_unit_amount: '1', flat_amount: '10'},
-            ],
+            ]
           },
         )
       end
@@ -1444,7 +1444,7 @@ RSpec.describe Fees::ChargeService do
           properties: {
             volume_ranges: [
               {from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '0'},
-            ],
+            ]
           },
         )
       end
@@ -1531,9 +1531,9 @@ RSpec.describe Fees::ChargeService do
                 from_value: 0,
                 to_value: nil,
                 flat_amount: '0.01',
-                rate: '2',
+                rate: '2'
               },
-            ],
+            ]
           },
         )
       end
@@ -1556,9 +1556,9 @@ RSpec.describe Fees::ChargeService do
                 from_value: 0,
                 to_value: nil,
                 flat_amount: '0.01',
-                rate: '3',
+                rate: '3'
               },
-            ],
+            ]
           },
         )
       end
@@ -1577,9 +1577,9 @@ RSpec.describe Fees::ChargeService do
                 from_value: 0,
                 to_value: nil,
                 flat_amount: '1',
-                rate: '0',
+                rate: '0'
               },
-            ],
+            ]
           },
         )
       end
@@ -1824,9 +1824,9 @@ RSpec.describe Fees::ChargeService do
                 from_value: 0,
                 to_value: nil,
                 per_unit_amount: '0.01',
-                flat_amount: '0.01',
+                flat_amount: '0.01'
               },
-            ],
+            ]
           },
         )
       end

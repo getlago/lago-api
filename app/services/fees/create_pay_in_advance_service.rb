@@ -101,7 +101,7 @@ module Fees
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         charges_duration: date_service.charges_duration_in_days,
-        timestamp: Time.current,
+        timestamp: Time.current
       }
     end
 

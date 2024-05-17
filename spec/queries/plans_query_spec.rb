@@ -62,7 +62,7 @@ RSpec.describe PlansQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [plan_second.id],
+          ids: [plan_second.id]
         },
       )
 

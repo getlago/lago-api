@@ -32,7 +32,7 @@ module Resolvers
         filters: {
           ids:,
           status:,
-          transaction_type:,
+          transaction_type:
         },
       )
 

@@ -68,7 +68,7 @@ module Coupons
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,
-          organization_id:,
+          organization_id:
         },
       )
     end

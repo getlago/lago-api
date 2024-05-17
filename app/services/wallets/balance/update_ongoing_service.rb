@@ -34,7 +34,7 @@ module Wallets
           ongoing_usage_balance_cents: usage_amount_cents,
           credits_ongoing_usage_balance: usage_credits_amount,
           ongoing_balance_cents:,
-          credits_ongoing_balance:,
+          credits_ongoing_balance:
         }
 
         if !wallet.depleted_ongoing_balance? && ongoing_balance_cents <= 0
@@ -59,7 +59,7 @@ module Wallets
             wallet_id: wallet.id,
             paid_credits: threshold_rule.paid_credits.to_s,
             granted_credits: threshold_rule.granted_credits.to_s,
-            source: :threshold,
+            source: :threshold
           },
         )
       end

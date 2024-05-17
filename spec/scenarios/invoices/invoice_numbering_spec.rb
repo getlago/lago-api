@@ -51,7 +51,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           external_id: customer_first.external_id,
           plan_code: monthly_plan.code,
           billing_time: 'anniversary',
-          subscription_at: subscription_at.iso8601,
+          subscription_at: subscription_at.iso8601
         },
       )
       create_subscription(
@@ -60,7 +60,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           external_id: customer_second.external_id,
           plan_code: monthly_plan.code,
           billing_time: 'anniversary',
-          subscription_at: subscription_at.iso8601,
+          subscription_at: subscription_at.iso8601
         },
       )
       create_subscription(
@@ -69,7 +69,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           external_id: customer_third.external_id,
           plan_code: monthly_plan.code,
           billing_time: 'anniversary',
-          subscription_at: subscription_at.iso8601,
+          subscription_at: subscription_at.iso8601
         },
       )
 
@@ -156,7 +156,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           external_id: 'new_external_id',
           plan_code: yearly_plan.code,
           billing_time: 'anniversary',
-          subscription_at: time.iso8601,
+          subscription_at: time.iso8601
         },
       )
 
@@ -230,7 +230,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_first.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'calendar',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
         create_subscription(
@@ -239,7 +239,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_second.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'calendar',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
         create_subscription(
@@ -248,7 +248,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_third.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'calendar',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
 
@@ -328,7 +328,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_first.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
         create_subscription(
@@ -337,7 +337,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_second.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
         create_subscription(
@@ -346,7 +346,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_third.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
 
@@ -369,7 +369,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: 'new_external_id',
             plan_code: yearly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: time.iso8601,
+            subscription_at: time.iso8601
           },
         )
 
@@ -397,7 +397,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: 'new_external_id_2',
             plan_code: yearly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: time.iso8601,
+            subscription_at: time.iso8601
           },
         )
 
@@ -536,7 +536,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_first.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
         create_subscription(
@@ -545,7 +545,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_second.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
         create_subscription(
@@ -554,7 +554,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: customer_third.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
 
@@ -577,7 +577,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: 'new_external_id',
             plan_code: yearly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: time.iso8601,
+            subscription_at: time.iso8601
           },
         )
 
@@ -605,7 +605,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             external_id: 'new_external_id_2',
             plan_code: yearly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: time.iso8601,
+            subscription_at: time.iso8601
           },
         )
 

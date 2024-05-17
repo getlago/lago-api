@@ -99,11 +99,11 @@ module CreditNotes
               lago_customer_id: customer.id,
               lago_credit_note_id: credit_note.id,
               lago_invoice_id: invoice.id,
-              reason: credit_note.reason.to_s,
-            },
+              reason: credit_note.reason.to_s
+            }
           },
           headers: {
-            'Idempotency-Key' => credit_note.id,
+            'Idempotency-Key' => credit_note.id
           },
         )
       rescue GoCardlessPro::Error => e
@@ -122,7 +122,7 @@ module CreditNotes
           provider_customer_id: customer.gocardless_customer.provider_customer_id,
           provider_error: {
             message:,
-            error_code: code,
+            error_code: code
           },
         )
       end
@@ -149,7 +149,7 @@ module CreditNotes
           properties: {
             organization_id: organization.id,
             credit_note_id: credit_note.id,
-            refund_status: status,
+            refund_status: status
           },
         )
       end

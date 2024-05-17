@@ -176,7 +176,7 @@ RSpec.describe FeesQuery, type: :query do
       let(:query_filters) do
         {
           created_at_from: (fee.created_at - 1.minute).iso8601,
-          created_at_to: (fee.created_at + 1.minute).iso8601,
+          created_at_to: (fee.created_at + 1.minute).iso8601
         }
       end
 
@@ -193,7 +193,7 @@ RSpec.describe FeesQuery, type: :query do
         let(:query_filters) do
           {
             created_at_from: (fee.created_at - 2.minutes).iso8601,
-            created_at_to: (fee.created_at - 2.minutes).iso8601,
+            created_at_to: (fee.created_at - 2.minutes).iso8601
           }
         end
 
@@ -226,7 +226,7 @@ RSpec.describe FeesQuery, type: :query do
       let(:query_filters) do
         {
           succeeded_at_from: (fee.succeeded_at - 1.minute).iso8601,
-          succeeded_at_to: (fee.succeeded_at + 1.minute).iso8601,
+          succeeded_at_to: (fee.succeeded_at + 1.minute).iso8601
         }
       end
 
@@ -245,7 +245,7 @@ RSpec.describe FeesQuery, type: :query do
         let(:query_filters) do
           {
             succeeded_at_from: (fee.succeeded_at - 2.minutes).iso8601,
-            succeeded_at_to: (fee.succeeded_at - 2.minutes).iso8601,
+            succeeded_at_to: (fee.succeeded_at - 2.minutes).iso8601
           }
         end
 
@@ -278,7 +278,7 @@ RSpec.describe FeesQuery, type: :query do
       let(:query_filters) do
         {
           failed_at_from: (fee.failed_at - 1.minute).iso8601,
-          failed_at_to: (fee.failed_at + 1.minute).iso8601,
+          failed_at_to: (fee.failed_at + 1.minute).iso8601
         }
       end
 
@@ -297,7 +297,7 @@ RSpec.describe FeesQuery, type: :query do
         let(:query_filters) do
           {
             failed_at_from: (fee.failed_at - 2.minutes).iso8601,
-            failed_at_to: (fee.failed_at - 2.minutes).iso8601,
+            failed_at_to: (fee.failed_at - 2.minutes).iso8601
           }
         end
 
@@ -330,7 +330,7 @@ RSpec.describe FeesQuery, type: :query do
       let(:query_filters) do
         {
           refunded_at_from: (fee.refunded_at - 1.minute).iso8601,
-          refunded_at_to: (fee.refunded_at + 1.minute).iso8601,
+          refunded_at_to: (fee.refunded_at + 1.minute).iso8601
         }
       end
 
@@ -349,7 +349,7 @@ RSpec.describe FeesQuery, type: :query do
         let(:query_filters) do
           {
             refunded_at_from: (fee.refunded_at - 2.minutes).iso8601,
-            refunded_at_to: (fee.refunded_at - 2.minutes).iso8601,
+            refunded_at_to: (fee.refunded_at - 2.minutes).iso8601
           }
         end
 

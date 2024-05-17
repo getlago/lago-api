@@ -12,7 +12,7 @@ module ApiResponses
       json: {
         status: 404,
         error: 'Not Found',
-        code: "#{resource}_not_found",
+        code: "#{resource}_not_found"
       },
       status: :not_found,
     )

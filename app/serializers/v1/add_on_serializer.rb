@@ -11,7 +11,7 @@ module V1
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         created_at: model.created_at.iso8601,
-        description: model.description,
+        description: model.description
       }
 
       payload.merge!(taxes) if include?(:taxes)

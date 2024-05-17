@@ -25,7 +25,7 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
     {
       code:,
       external_customer_id:,
-      external_subscription_id:,
+      external_subscription_id:
     }
   end
 

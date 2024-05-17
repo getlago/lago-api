@@ -17,7 +17,7 @@ module Charges
           per_unit_amount:,
           units: BigDecimal(units).to_s,
           per_unit_total_amount:,
-          total_with_flat_amount:,
+          total_with_flat_amount:
         }
       end
 

@@ -10,7 +10,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:,
+        to_datetime:
       },
       filters:,
     )
@@ -95,7 +95,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
           properties: {
             total_count: 12,
             cloud: 'AWS',
-            region: 'europe',
+            region: 'europe'
           },
         ),
 
@@ -109,7 +109,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
           properties: {
             total_count: 8,
             cloud: 'AWS',
-            region: 'europe',
+            region: 'europe'
           },
         ),
 
@@ -123,7 +123,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
           properties: {
             total_count: 12,
             cloud: 'AWS',
-            region: 'africa',
+            region: 'africa'
           },
         ),
       ]
@@ -168,7 +168,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
           subscription:,
           timestamp: Time.zone.now - 1.day,
           properties: {
-            agent_name:,
+            agent_name:
           },
         )
       end + [

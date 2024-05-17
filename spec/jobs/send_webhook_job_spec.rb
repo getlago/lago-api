@@ -69,10 +69,10 @@ RSpec.describe SendWebhookJob, type: :job do
         input_params: {
           customer_id: 'customer',
           transaction_id: SecureRandom.uuid,
-          code: 'code',
+          code: 'code'
         },
         error: 'Code does not exist',
-        organization_id: organization.id,
+        organization_id: organization.id
       }
     end
 
@@ -100,7 +100,7 @@ RSpec.describe SendWebhookJob, type: :job do
           invalid_code: [SecureRandom.uuid],
           missing_aggregation_property: [SecureRandom.uuid],
           missing_group_key: [SecureRandom.uuid],
-        ],
+        ]
       }
     end
 
@@ -145,8 +145,8 @@ RSpec.describe SendWebhookJob, type: :job do
       {
         provider_error: {
           message: 'message',
-          error_code: 'code',
-        },
+          error_code: 'code'
+        }
       }
     end
 
@@ -222,8 +222,8 @@ RSpec.describe SendWebhookJob, type: :job do
       {
         provider_error: {
           message: 'message',
-          error_code: 'code',
-        },
+          error_code: 'code'
+        }
       }
     end
 
@@ -298,8 +298,8 @@ RSpec.describe SendWebhookJob, type: :job do
       {
         provider_error: {
           message: 'message',
-          error_code: 'code',
-        },
+          error_code: 'code'
+        }
       }
     end
 

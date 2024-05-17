@@ -14,7 +14,7 @@ module Pagination
         'next_page' => records.next_page,
         'prev_page' => records.prev_page,
         'total_pages' => records.total_pages,
-        'total_count' => records.total_count,
+        'total_count' => records.total_count
       }
     else
       {
@@ -22,7 +22,7 @@ module Pagination
         'next_page' => nil,
         'prev_page' => nil,
         'total_pages' => 0,
-        'total_count' => 0,
+        'total_count' => 0
       }
     end
   end

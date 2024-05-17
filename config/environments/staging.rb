@@ -60,7 +60,7 @@ Rails.application.configure do
           Rails.logger.error(exception.backtrace.join("\n"))
 
           Sentry.capture_exception(exception)
-        },
+        }
       }
   end
 
@@ -70,7 +70,7 @@ Rails.application.configure do
     config.action_mailer.delivery_method = :smtp
     config.action_mailer.smtp_settings = {
       address: ENV['LAGO_SMTP_ADDRESS'],
-      port: ENV['LAGO_SMTP_PORT'],
+      port: ENV['LAGO_SMTP_PORT']
     }
   end
 

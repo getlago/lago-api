@@ -13,12 +13,12 @@ RSpec.describe Lago::Adyen::Params do
         applicationInfo: {
           externalPlatform: {
             name: 'Lago',
-            integrator: 'Lago',
+            integrator: 'Lago'
           },
           merchantApplication: {
-            name: 'Lago',
-          },
-        },
+            name: 'Lago'
+          }
+        }
       }
     end
 
@@ -42,7 +42,7 @@ RSpec.describe Lago::Adyen::Params do
       let(:params) do
         {
           merchantAccount: 'Lago Account',
-          shopperReference: 'Lago123',
+          shopperReference: 'Lago123'
         }
       end
 

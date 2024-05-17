@@ -31,7 +31,7 @@ module Invoices
             charges_from_datetime: invoice_subscription.charges_from_datetime,
             charges_to_datetime: invoice_subscription.charges_to_datetime,
             timestamp: invoice_subscription.timestamp,
-            charges_duration: date_service.charges_duration_in_days,
+            charges_duration: date_service.charges_duration_in_days
           }
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)

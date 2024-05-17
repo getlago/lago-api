@@ -52,14 +52,14 @@ Rails.application.configure do
     cache_store_config = {
       url: ENV['LAGO_REDIS_CACHE_URL'],
       ssl_params: {
-        verify_mode: OpenSSL::SSL::VERIFY_NONE,
+        verify_mode: OpenSSL::SSL::VERIFY_NONE
       },
       error_handler: lambda { |method:, returning:, exception:|
         Rails.logger.error(exception.message)
         Rails.logger.error(exception.backtrace.join("\n"))
 
         Sentry.capture_exception(exception)
-      },
+      }
     }
 
     if ENV['LAGO_REDIS_CACHE_PASSWORD'].present? && !ENV['LAGO_REDIS_CACHE_PASSWORD'].empty?
@@ -84,7 +84,7 @@ Rails.application.configure do
       user_name: ENV['LAGO_SMTP_USERNAME'],
       password: ENV['LAGO_SMTP_PASSWORD'],
       authentication: 'login',
-      enable_starttls_auto: true,
+      enable_starttls_auto: true
     }
   end
 

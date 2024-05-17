@@ -24,7 +24,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         rate_amount: '1.00',
         expiration_at:,
         paid_credits:,
-        granted_credits:,
+        granted_credits:
       }
     end
 
@@ -77,7 +77,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         [
           {
             trigger: 'interval',
-            interval: 'monthly',
+            interval: 'monthly'
           },
         ]
       end
@@ -91,7 +91,7 @@ RSpec.describe Wallets::CreateService, type: :service do
           expiration_at:,
           paid_credits:,
           granted_credits:,
-          recurring_transaction_rules: rules,
+          recurring_transaction_rules: rules
         }
       end
 
@@ -120,11 +120,11 @@ RSpec.describe Wallets::CreateService, type: :service do
           [
             {
               trigger: 'interval',
-              interval: 'monthly',
+              interval: 'monthly'
             },
             {
               trigger: 'threshold',
-              threshold_credits: '1.0',
+              threshold_credits: '1.0'
             },
           ]
         end
@@ -141,7 +141,7 @@ RSpec.describe Wallets::CreateService, type: :service do
           [
             {
               trigger: 'invalid',
-              interval: 'monthly',
+              interval: 'monthly'
             },
           ]
         end
@@ -157,7 +157,7 @@ RSpec.describe Wallets::CreateService, type: :service do
           [
             {
               trigger: 'threshold',
-              threshold_credits: 'abc',
+              threshold_credits: 'abc'
             },
           ]
         end

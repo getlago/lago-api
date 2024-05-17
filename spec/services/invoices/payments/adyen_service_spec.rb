@@ -148,7 +148,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
             provider_customer_id: adyen_customer.provider_customer_id,
             provider_error: {
               message: 'There are no payment methods available for the given parameters.',
-              error_code: 'validation',
+              error_code: 'validation'
             },
           ).on_queue(:webhook)
       end
@@ -183,7 +183,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
               provider_customer_id: adyen_customer.provider_customer_id,
               provider_error: {
                 message: 'Invalid card number',
-                error_code: nil,
+                error_code: nil
               },
             ).on_queue(:webhook)
         end
@@ -203,7 +203,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
               provider_customer_id: adyen_customer.provider_customer_id,
               provider_error: {
                 message: 'Invalid card number',
-                error_code: nil,
+                error_code: nil
               },
             ).on_queue(:webhook)
         end
@@ -239,7 +239,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
             provider_customer_id: adyen_customer.provider_customer_id,
             provider_error: {
               message: 'error',
-              error_code: 'code',
+              error_code: 'code'
             },
           )
       end
@@ -252,7 +252,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     let(:params) do
       {
         merchantAccount: adyen_payment_provider.merchant_account,
-        shopperReference: adyen_customer.provider_customer_id,
+        shopperReference: adyen_customer.provider_customer_id
       }
     end
 

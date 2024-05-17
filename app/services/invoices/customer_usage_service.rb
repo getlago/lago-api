@@ -109,7 +109,7 @@ module Invoices
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         issuing_date: date_service.next_end_of_period,
-        charges_duration: date_service.charges_duration_in_days,
+        charges_duration: date_service.charges_duration_in_days
       }
     end
 

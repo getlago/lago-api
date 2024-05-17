@@ -43,11 +43,11 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       [
         {
           key: 'region',
-          values: %w[Europe US],
+          values: %w[Europe US]
         },
         {
           key: 'cloud',
-          values: %w[aws gcp],
+          values: %w[aws gcp]
         },
       ]
     end
@@ -74,7 +74,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       [
         {
           key: 'region',
-          values: %w[Europe US Asia Africa],
+          values: %w[Europe US Asia Africa]
         },
       ]
     end
@@ -97,7 +97,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         [
           {
             key: 'region',
-            values: %w[Europe],
+            values: %w[Europe]
           },
         ]
       end
@@ -127,7 +127,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         [
           {
             key: 'country',
-            values: %w[USA France Germany],
+            values: %w[USA France Germany]
           },
         ]
       end

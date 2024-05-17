@@ -9,7 +9,7 @@ module V1
           external_customer_id: model.external_id,
           accounting_provider: options[:provider],
           accounting_provider_code: options[:provider_code],
-          provider_error: options[:provider_error],
+          provider_error: options[:provider_error]
         }
       end
     end

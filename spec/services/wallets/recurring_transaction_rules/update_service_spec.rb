@@ -14,7 +14,7 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         trigger: 'interval',
         interval: 'weekly',
         paid_credits: '105',
-        granted_credits: '105',
+        granted_credits: '105'
       },
     ]
   end
@@ -45,7 +45,7 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
             trigger: 'interval',
             interval: 'weekly',
             paid_credits: '105',
-            granted_credits: '105',
+            granted_credits: '105'
           },
         ]
       end

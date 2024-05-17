@@ -25,7 +25,7 @@ RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
       permissions: required_permission,
       query: mutation,
       variables: {
-        input: {id: payment_provider.id},
+        input: {id: payment_provider.id}
       },
     )
 

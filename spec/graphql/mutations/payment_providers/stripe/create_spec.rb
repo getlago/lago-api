@@ -40,8 +40,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
           secretKey: secret_key,
           code:,
           name:,
-          successRedirectUrl: success_redirect_url,
-        },
+          successRedirectUrl: success_redirect_url
+        }
       },
     )
 

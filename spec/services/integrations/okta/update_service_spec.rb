@@ -17,7 +17,7 @@ RSpec.describe Integrations::Okta::UpdateService, type: :service do
     let(:update_args) do
       {
         domain:,
-        organization_name:,
+        organization_name:
       }
     end
 

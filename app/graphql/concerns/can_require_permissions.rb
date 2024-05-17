@@ -18,7 +18,7 @@ module CanRequirePermissions
     extensions = {
       status: :forbidden,
       code: 'forbidden',
-      required_permissions: Array.wrap(self.class::REQUIRED_PERMISSION),
+      required_permissions: Array.wrap(self.class::REQUIRED_PERMISSION)
     }
 
     GraphQL::ExecutionError.new('Missing permissions', extensions:)

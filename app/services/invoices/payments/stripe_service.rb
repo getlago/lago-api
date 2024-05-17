@@ -81,7 +81,7 @@ module Invoices
         res = Stripe::Checkout::Session.create(
           payment_url_payload,
           {
-            api_key: stripe_api_key,
+            api_key: stripe_api_key
           },
         )
 
@@ -144,10 +144,10 @@ module Invoices
         # NOTE: Retrieve list of existing payment_methods
         payment_method = Stripe::PaymentMethod.list(
           {
-            customer: customer.stripe_customer.provider_customer_id,
+            customer: customer.stripe_customer.provider_customer_id
           },
           {
-            api_key: stripe_api_key,
+            api_key: stripe_api_key
           },
         ).first
         customer.stripe_customer.payment_method_id = payment_method&.id
@@ -160,7 +160,7 @@ module Invoices
         result = Stripe::Customer.retrieve(
           customer.stripe_customer.provider_customer_id,
           {
-            api_key: stripe_api_key,
+            api_key: stripe_api_key
           },
         )
         # TODO: stripe customer should be updated/deleted
@@ -181,7 +181,7 @@ module Invoices
           stripe_payment_payload,
           {
             api_key: stripe_api_key,
-            idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}",
+            idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}"
           },
         )
       rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
@@ -209,8 +209,8 @@ module Invoices
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,
             invoice_issuing_date: invoice.issuing_date.iso8601,
-            invoice_type: invoice.invoice_type,
-          },
+            invoice_type: invoice.invoice_type
+          }
         }
       end
 
@@ -223,9 +223,9 @@ module Invoices
                 currency: invoice.currency.downcase,
                 unit_amount: invoice.total_amount_cents,
                 product_data: {
-                  name: invoice.number,
-                },
-              },
+                  name: invoice.number
+                }
+              }
             },
           ],
           mode: 'payment',
@@ -238,9 +238,9 @@ module Invoices
               lago_invoice_id: invoice.id,
               invoice_issuing_date: invoice.issuing_date.iso8601,
               invoice_type: invoice.invoice_type,
-              payment_type: 'one-time',
-            },
-          },
+              payment_type: 'one-time'
+            }
+          }
         }
       end
 
@@ -258,7 +258,7 @@ module Invoices
           params: {
             payment_status:,
             # NOTE: A proper `processing` payment status should be introduced for invoices
-            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded,
+            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
           },
           webhook_notification: deliver_webhook,
         )
@@ -278,7 +278,7 @@ module Invoices
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {
             message: stripe_error.message,
-            error_code: stripe_error.code,
+            error_code: stripe_error.code
           },
         )
       end

@@ -84,7 +84,7 @@ class UsersService < BaseService
   def payload
     {
       sub: result.user.id,
-      exp: Time.now.to_i + 8640, # 6 hours expiration
+      exp: Time.now.to_i + 8640 # 6 hours expiration
     }
   end
 
@@ -94,7 +94,7 @@ class UsersService < BaseService
       event: 'organization_registered',
       properties: {
         organization_name: organization.name,
-        organization_id: organization.id,
+        organization_id: organization.id
       },
     )
   end

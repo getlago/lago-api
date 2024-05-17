@@ -64,9 +64,9 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           documentNumberPrefix: 'ORG-2',
           billingConfiguration: {
             invoiceFooter: 'invoice footer',
-            documentLocale: 'fr',
-          },
-        },
+            documentLocale: 'fr'
+          }
+        }
       },
     )
 
@@ -107,8 +107,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           input: {
             email: 'foo@bar2.com',
             taxIdentificationNumber: 'tax007',
-            emailSettings: ['invoice_finalized'],
-          },
+            emailSettings: ['invoice_finalized']
+          }
         },
       )
 
@@ -138,10 +138,10 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
             email: 'foo@bar.com',
             timezone:,
             billingConfiguration: {
-              invoiceGracePeriod: 3,
+              invoiceGracePeriod: 3
             },
-            emailSettings: ['invoice_finalized'],
-          },
+            emailSettings: ['invoice_finalized']
+          }
         },
       )
 
@@ -168,9 +168,9 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
               email: 'foo@bar.com',
               timezone:,
               billingConfiguration: {
-                invoiceGracePeriod: 3,
-              },
-            },
+                invoiceGracePeriod: 3
+              }
+            }
           },
         )
 

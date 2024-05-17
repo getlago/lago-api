@@ -165,7 +165,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
             provider_customer_id: gocardless_customer.provider_customer_id,
             provider_error: {
               message: 'error',
-              error_code: 'code',
+              error_code: 'code'
             },
           )
       end

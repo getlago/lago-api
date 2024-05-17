@@ -38,8 +38,8 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
         input: {
           walletId: wallet.id,
           paidCredits: '5.00',
-          grantedCredits: '5.00',
-        },
+          grantedCredits: '5.00'
+        }
       },
     )
 

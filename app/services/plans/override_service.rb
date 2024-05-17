@@ -79,7 +79,7 @@ module Plans
           nb_graduated_charges: count_by_charge_model['graduated'] || 0,
           nb_package_charges: count_by_charge_model['package'] || 0,
           organization_id: plan.organization_id,
-          parent_id: plan.parent_id,
+          parent_id: plan.parent_id
         },
       )
     end

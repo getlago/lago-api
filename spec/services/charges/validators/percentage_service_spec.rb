@@ -10,7 +10,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
   let(:percentage_properties) do
     {
       rate: '0.25',
-      fixed_amount: '2',
+      fixed_amount: '2'
     }
   end
 
@@ -23,7 +23,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
       let(:percentage_properties) do
         {
           rate: 0.25,
-          fixed_amount: '2',
+          fixed_amount: '2'
         }
       end
 
@@ -40,7 +40,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
     context 'without rate' do
       let(:percentage_properties) do
         {
-          fixed_amount: '2',
+          fixed_amount: '2'
         }
       end
 
@@ -58,7 +58,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
       let(:percentage_properties) do
         {
           rate: 0.25,
-          fixed_amount: '2',
+          fixed_amount: '2'
         }
       end
 
@@ -76,7 +76,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
       let(:percentage_properties) do
         {
           rate: 'bla',
-          fixed_amount: '2',
+          fixed_amount: '2'
         }
       end
 
@@ -94,7 +94,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
       let(:percentage_properties) do
         {
           rate: '-0.50',
-          fixed_amount: '2',
+          fixed_amount: '2'
         }
       end
 
@@ -120,7 +120,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
       let(:percentage_properties) do
         {
           rate: '0.25',
-          free_units_per_events: 'foo',
+          free_units_per_events: 'foo'
         }
       end
 
@@ -139,7 +139,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
       let(:percentage_properties) do
         {
           rate: '0.25',
-          free_units_per_events: -1,
+          free_units_per_events: -1
         }
       end
 
@@ -159,7 +159,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
         {
           rate: '0.25',
           fixed_amount: 'bla',
-          free_units_per_total_aggregation: 'bla',
+          free_units_per_total_aggregation: 'bla'
         }
       end
 
@@ -186,7 +186,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
         {
           rate: '0.25',
           fixed_amount: 2,
-          free_units_per_total_aggregation: 1,
+          free_units_per_total_aggregation: 1
         }
       end
 
@@ -212,7 +212,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
       let(:percentage_properties) do
         {
           rate: '0.25',
-          fixed_amount: 2,
+          fixed_amount: 2
         }
       end
 
@@ -232,7 +232,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
           rate: '0.25',
           fixed_amount: '-2',
           free_units_per_events: '-1',
-          free_units_per_total_aggregation: '-1',
+          free_units_per_total_aggregation: '-1'
         }
       end
 
@@ -260,7 +260,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
     context 'without fixed_amount, free_units_per_events and free_units_per_total_aggregation' do
       let(:percentage_properties) do
         {
-          rate: '0.25',
+          rate: '0.25'
         }
       end
 
@@ -274,7 +274,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
         {
           rate: '0.25',
           fixed_amount: '2',
-          per_transaction_min_amount:,
+          per_transaction_min_amount:
         }
       end
 
@@ -314,7 +314,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
         {
           rate: '0.25',
           fixed_amount: '2',
-          per_transaction_max_amount:,
+          per_transaction_max_amount:
         }
       end
 
@@ -355,7 +355,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
           rate: '0.25',
           fixed_amount: '2',
           per_transaction_min_amount: '3',
-          per_transaction_max_amount: '2',
+          per_transaction_max_amount: '2'
         }
       end
 

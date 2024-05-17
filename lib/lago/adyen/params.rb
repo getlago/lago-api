@@ -20,12 +20,12 @@ module Lago
           applicationInfo: {
             externalPlatform: {
               name: 'Lago',
-              integrator: 'Lago',
+              integrator: 'Lago'
             },
             merchantApplication: {
-              name: 'Lago',
-            },
-          },
+              name: 'Lago'
+            }
+          }
         }
       end
     end

@@ -12,13 +12,13 @@ RSpec.describe FeeDisplayHelper do
       {
         'key_1' => 'mercredi',
         'key_2' => 'week_01',
-        'key_3' => '2024',
+        'key_3' => '2024'
       }
     end
     let(:properties) do
       {
         'amount' => '5',
-        'grouped_by' => %w[key_1 key_2 key_3],
+        'grouped_by' => %w[key_1 key_2 key_3]
       }
     end
 
@@ -31,7 +31,7 @@ RSpec.describe FeeDisplayHelper do
     context 'when missing grouped_by property' do
       let(:properties) do
         {
-          'amount' => '5',
+          'amount' => '5'
         }
       end
 
@@ -45,7 +45,7 @@ RSpec.describe FeeDisplayHelper do
         {
           'key_1' => nil,
           'key_2' => 'week_01',
-          'key_3' => '2024',
+          'key_3' => '2024'
         }
       end
 

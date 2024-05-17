@@ -20,10 +20,10 @@ RSpec.describe Invoices::CreateService, type: :service do
         add_on_code: add_on_first.code,
         unit_amount_cents: 1200,
         units: 2,
-        description: 'desc-123',
+        description: 'desc-123'
       },
       {
-        add_on_code: add_on_second.code,
+        add_on_code: add_on_second.code
       },
     ]
   end
@@ -70,7 +70,7 @@ RSpec.describe Invoices::CreateService, type: :service do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type,
+          invoice_type: invoice.invoice_type
         },
       )
     end
@@ -107,7 +107,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             add_on_code: add_on_first.code,
             unit_amount_cents: 0,
             units: 2,
-            description: 'desc-123',
+            description: 'desc-123'
           },
         ]
       end
@@ -244,10 +244,10 @@ RSpec.describe Invoices::CreateService, type: :service do
             add_on_code: add_on_first.code,
             unit_amount_cents: 1200,
             units: 2,
-            description: 'desc-123',
+            description: 'desc-123'
           },
           {
-            add_on_code: 'invalid',
+            add_on_code: 'invalid'
           },
         ]
       end

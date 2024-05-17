@@ -12,7 +12,7 @@ RSpec.describe Invites::ValidateService, type: :service do
     {
       current_organization: organization,
       email: Faker::Internet.email,
-      role: :admin,
+      role: :admin
     }
   end
 
@@ -28,7 +28,7 @@ RSpec.describe Invites::ValidateService, type: :service do
         {
           current_organization: organization,
           email: user.email,
-          role: :admin,
+          role: :admin
         }
       end
 
@@ -43,7 +43,7 @@ RSpec.describe Invites::ValidateService, type: :service do
         {
           current_organization: organization,
           email: user.email,
-          role: :admin,
+          role: :admin
         }
       end
 
@@ -58,7 +58,7 @@ RSpec.describe Invites::ValidateService, type: :service do
         {
           current_organization: organization,
           email: Faker::Internet.email,
-          role: 'super_admin',
+          role: 'super_admin'
         }
       end
 

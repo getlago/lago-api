@@ -13,7 +13,7 @@ RSpec.describe IntegrationMappings::BaseMapping, type: :model do
 
       expect(mapping.settings).to eq(
         {
-          'key1' => 'val1',
+          'key1' => 'val1'
         },
       )
     end

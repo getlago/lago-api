@@ -20,7 +20,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
       organization_id: organization.id,
       paid_credits:,
       granted_credits:,
-      expiration_at:,
+      expiration_at:
     }
   end
 
@@ -37,7 +37,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
           customer: nil,
           organization_id: organization.id,
           paid_credits:,
-          granted_credits:,
+          granted_credits:
         }
       end
 
@@ -108,11 +108,11 @@ RSpec.describe Wallets::ValidateService, type: :service do
         [
           {
             trigger: 'interval',
-            interval: 'monthly',
+            interval: 'monthly'
           },
           {
             trigger: 'threshold',
-            threshold_credits: '-1.0',
+            threshold_credits: '-1.0'
           },
         ]
       end
@@ -122,7 +122,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
           organization_id: organization.id,
           paid_credits:,
           granted_credits:,
-          recurring_transaction_rules: rules,
+          recurring_transaction_rules: rules
         }
       end
 
@@ -136,7 +136,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
           [
             {
               trigger: 'interval',
-              interval: 'invalid',
+              interval: 'invalid'
             },
           ]
         end
@@ -152,7 +152,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
           [
             {
               trigger: 'threshold',
-              threshold_credits: 'invalid',
+              threshold_credits: 'invalid'
             },
           ]
         end

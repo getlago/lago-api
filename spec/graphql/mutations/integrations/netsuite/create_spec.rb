@@ -50,8 +50,8 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
           accountId: '012',
           clientId: '123',
           clientSecret: '456',
-          connectionId: 'this-is-random-uuid',
-        },
+          connectionId: 'this-is-random-uuid'
+        }
       },
     )
 

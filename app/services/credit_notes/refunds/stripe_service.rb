@@ -83,7 +83,7 @@ module CreditNotes
           stripe_refund_payload,
           {
             api_key: stripe_api_key,
-            idempotency_key: credit_note.id,
+            idempotency_key: credit_note.id
           },
         )
       rescue Stripe::InvalidRequestError => e
@@ -101,8 +101,8 @@ module CreditNotes
           metadata: {
             lago_customer_id: customer.id,
             lago_credit_note_id: credit_note.id,
-            lago_invoice_id: invoice.id,
-          },
+            lago_invoice_id: invoice.id
+          }
         }
       end
 
@@ -126,7 +126,7 @@ module CreditNotes
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {
             message:,
-            error_code: code,
+            error_code: code
           },
         )
       end
@@ -144,7 +144,7 @@ module CreditNotes
           properties: {
             organization_id: organization.id,
             credit_note_id: credit_note.id,
-            refund_status: status,
+            refund_status: status
           },
         )
       end

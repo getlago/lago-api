@@ -10,7 +10,7 @@ RSpec.describe WebhookEndpoints::UpdateService, type: :service do
   let(:update_params) do
     {
       webhook_url: 'http://foo.bar',
-      signature_algo: 'hmac',
+      signature_algo: 'hmac'
     }
   end
 
@@ -41,7 +41,7 @@ RSpec.describe WebhookEndpoints::UpdateService, type: :service do
     context 'when webhook url is invalid' do
       let(:update_params) do
         {
-          webhook_url: 'foobar',
+          webhook_url: 'foobar'
         }
       end
 

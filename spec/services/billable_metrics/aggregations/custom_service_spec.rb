@@ -10,7 +10,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:,
+        to_datetime:
       },
       filters:,
     )
@@ -86,8 +86,8 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           {from: 0, to: 10, storage_eu: '0', storage_us: '0', storage_asia: '0'},
           {from: 10, to: 20, storage_eu: '0.10', storage_us: '0.20', storage_asia: '0.30'},
           {from: 20, to: nil, storage_eu: '0.20', storage_us: '0.30', storage_asia: '0.40'},
-        ],
-      },
+        ]
+      }
     }
   end
 
@@ -232,7 +232,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           properties: {
             agent_name:,
             value: 11,
-            storage_zone: 'storage_eu',
+            storage_zone: 'storage_eu'
           },
         )
       end + [

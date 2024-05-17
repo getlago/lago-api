@@ -114,7 +114,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
     context 'when client returns an error' do
       let(:error_body) do
         {
-          message: 'forbidden',
+          message: 'forbidden'
         }
       end
 
@@ -239,7 +239,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
         {
           algorithm: 'RS256',
           iss: ENV['LAGO_API_URL'],
-          verify_iss: true,
+          verify_iss: true
         },
       ).first
 

@@ -31,7 +31,7 @@ class WebhooksQuery < BaseQuery
     {
       m: 'or',
       id_cont: search_term,
-      webhook_type_cont: search_term,
+      webhook_type_cont: search_term
     }
   end
 end

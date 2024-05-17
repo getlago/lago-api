@@ -30,7 +30,7 @@ module Api
           limit: params[:per_page] || PER_PAGE,
           filters: {
             status: params[:status],
-            transaction_type: params[:transaction_type],
+            transaction_type: params[:transaction_type]
           },
         )
 

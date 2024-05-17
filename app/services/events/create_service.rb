@@ -53,7 +53,7 @@ module Events
           timestamp: event.timestamp.iso8601[...-1], # NOTE: Removes trailing 'Z' to allow clickhouse parsing
           code: event.code,
           properties: event.properties,
-          ingested_at: Time.zone.now.iso8601[...-1],
+          ingested_at: Time.zone.now.iso8601[...-1]
         }.to_json,
       )
     end

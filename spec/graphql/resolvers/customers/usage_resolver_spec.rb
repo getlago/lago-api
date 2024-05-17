@@ -63,9 +63,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             from_value: 0,
             to_value: nil,
             per_unit_amount: '0.01',
-            flat_amount: '0.01',
+            flat_amount: '0.01'
           },
-        ],
+        ]
       },
     )
   end
@@ -76,7 +76,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       billable_metric: sum_metric,
       properties: {
         amount: 1.to_s,
-        grouped_by: ['agent_name'],
+        grouped_by: ['agent_name']
       },
     )
   end
@@ -117,7 +117,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       properties: {
         agent_name: 'frodo',
         cloud: 'aws',
-        item_id: 1,
+        item_id: 1
       },
     )
   end
@@ -133,7 +133,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       query:,
       variables: {
         customerId: customer.id,
-        subscriptionId: subscription.id,
+        subscriptionId: subscription.id
       },
     )
 
@@ -239,7 +239,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         query:,
         variables: {
           customerId: customer.id,
-          subscriptionId: subscription.id,
+          subscriptionId: subscription.id
         },
       )
 
@@ -256,7 +256,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             'amountCents' => '0',
             'invoiceDisplayName' => nil,
             'values' => {},
-            'eventsCount' => 4,
+            'eventsCount' => 4
           },
           {
             'id' => aws_filter.id,
@@ -264,9 +264,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             'amountCents' => '3000',
             'invoiceDisplayName' => nil,
             'values' => {
-              'cloud' => ['aws'],
+              'cloud' => ['aws']
             },
-            'eventsCount' => 3,
+            'eventsCount' => 3
           },
           {
             'id' => google_filter.id,
@@ -274,9 +274,9 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             'amountCents' => '2000',
             'invoiceDisplayName' => nil,
             'values' => {
-              'cloud' => ['google'],
+              'cloud' => ['google']
             },
-            'eventsCount' => 1,
+            'eventsCount' => 1
           },
         )
       end

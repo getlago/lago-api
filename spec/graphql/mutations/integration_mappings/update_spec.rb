@@ -47,8 +47,8 @@ RSpec.describe Mutations::IntegrationMappings::Update, type: :graphql do
           mappableType: 'AddOn',
           externalAccountCode: external_account_code,
           externalId: external_id,
-          externalName: external_name,
-        },
+          externalName: external_name
+        }
       },
     )
 

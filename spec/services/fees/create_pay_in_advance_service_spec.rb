@@ -137,7 +137,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           payment_method: 'card',
           card_location: 'domestic',
           scheme: 'visa',
-          card_type: 'credit',
+          card_type: 'credit'
         }
       end
 
@@ -204,7 +204,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             payment_method: 'card',
             card_location: 'international',
             scheme: 'visa',
-            card_type: 'credit',
+            card_type: 'credit'
           }
         end
 

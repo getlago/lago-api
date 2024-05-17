@@ -16,7 +16,7 @@ RSpec.describe PastUsageQuery, type: :query do
   let(:query_filters) do
     {
       external_customer_id: customer.external_id,
-      external_subscription_id: subscription.external_id,
+      external_subscription_id: subscription.external_id
     }
   end
 
@@ -99,7 +99,7 @@ RSpec.describe PastUsageQuery, type: :query do
         {
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
-          billable_metric_code:,
+          billable_metric_code:
         }
       end
 
@@ -139,7 +139,7 @@ RSpec.describe PastUsageQuery, type: :query do
         {
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
-          periods_count:,
+          periods_count:
         }
       end
 

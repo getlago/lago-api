@@ -34,8 +34,8 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, type: :graphql do
       variables: {
         input: {
           id: customer.id,
-          invoiceGracePeriod: 12,
-        },
+          invoiceGracePeriod: 12
+        }
       },
     )
 

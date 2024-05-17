@@ -32,7 +32,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
+              plan_code: plan.code
             },
           )
         }.to change(Invoice, :count).by(1)
@@ -63,7 +63,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
+            external_customer_id: customer.external_id
           },
         )
 
@@ -148,7 +148,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
+              plan_code: plan.code
             },
           )
         }.to change(Invoice, :count).by(1)
@@ -185,8 +185,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             properties: {
-              region: 'usa',
-            },
+              region: 'usa'
+            }
           },
         )
 
@@ -196,8 +196,8 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             properties: {
-              region: 'europe',
-            },
+              region: 'europe'
+            }
           },
         )
 

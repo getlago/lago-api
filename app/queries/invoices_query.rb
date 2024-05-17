@@ -31,7 +31,7 @@ class InvoicesQuery < BaseQuery
     terms = {
       m: 'or',
       id_cont: search_term,
-      number_cont: search_term,
+      number_cont: search_term
     }
     return terms if @customer_id.present?
 

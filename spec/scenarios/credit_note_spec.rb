@@ -111,11 +111,11 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         items: [
           {
             fee_id: fee1.id,
-            amount_cents: fee1.amount_cents,
+            amount_cents: fee1.amount_cents
           },
           {
             fee_id: fee2.id,
-            amount_cents: fee2.amount_cents,
+            amount_cents: fee2.amount_cents
           },
         ],
       )
@@ -133,7 +133,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         items: [
           {
             fee_id: fee2.id,
-            amount_cents: 26_260,
+            amount_cents: 26_260
           },
         ],
       )
@@ -156,7 +156,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         items: [
           {
             fee_id: fee2.id,
-            amount_cents: 26_260,
+            amount_cents: 26_260
           },
         ],
       )
@@ -305,23 +305,23 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
           items: [
             {
               fee_id: fee6.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
             {
               fee_id: fee2.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
             {
               fee_id: fee3.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
             {
               fee_id: fee4.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
             {
               fee_id: fee5.id,
-              amount_cents: 100,
+              amount_cents: 100
             },
           ],
         )

@@ -26,12 +26,12 @@ RSpec.describe Charges::ChargeModels::GroupedStandardService do
       {
         grouped_by: {'cloud' => 'aws'},
         aggregation: 10,
-        count: 2,
+        count: 2
       },
       {
         grouped_by: {'cloud' => 'gcp'},
         aggregation: 20,
-        count: 7,
+        count: 7
       },
     ]
   end
@@ -41,7 +41,7 @@ RSpec.describe Charges::ChargeModels::GroupedStandardService do
       :standard_charge,
       charge_model: 'standard',
       properties: {
-        amount: '5.12345',
+        amount: '5.12345'
       },
     )
   end

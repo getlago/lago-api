@@ -40,7 +40,7 @@ describe 'Subscription Downgrade Scenario', :scenarios, type: :request, transact
           external_id: customer.external_id,
           plan_code: monthly_plan.code,
           billing_time: 'anniversary',
-          subscription_at: subscription_at.iso8601,
+          subscription_at: subscription_at.iso8601
         },
       )
 
@@ -106,7 +106,7 @@ describe 'Subscription Downgrade Scenario', :scenarios, type: :request, transact
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: yearly_plan.code,
-          billing_time: 'anniversary',
+          billing_time: 'anniversary'
         },
       )
 

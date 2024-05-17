@@ -28,7 +28,7 @@ class GraphqlController < ApplicationController
       request:,
       permissions:
         current_user&.memberships&.find_by(organization: current_organization)&.permissions_hash ||
-          Permission::EMPTY_PERMISSIONS_HASH,
+          Permission::EMPTY_PERMISSIONS_HASH
     }
     result = LagoApiSchema.execute(query, variables:, context:, operation_name:)
     render(json: result)
@@ -76,9 +76,9 @@ class GraphqlController < ApplicationController
         errors: [
           {
             message: message || code,
-            extensions: {status:, code:},
+            extensions: {status:, code:}
           },
-        ],
+        ]
       },
     )
   end

@@ -7,7 +7,7 @@ module V1
         lago_id: model.id,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
-        fee:,
+        fee:
       }
     end
 

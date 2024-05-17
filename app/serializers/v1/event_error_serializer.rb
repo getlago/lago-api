@@ -6,7 +6,7 @@ module V1
       payload = {
         status: 422,
         error: 'Unprocessable entity',
-        message: model.error.to_json,
+        message: model.error.to_json
       }
 
       payload.merge!(event)

@@ -25,7 +25,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       external_id:,
       billing_time:,
       subscription_at:,
-      subscription_id:,
+      subscription_id:
     }
   end
 
@@ -65,7 +65,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           plan_name: subscription.plan.name,
           subscription_type: 'create',
           organization_id: subscription.organization.id,
-          billing_time: 'anniversary',
+          billing_time: 'anniversary'
         },
       )
     end
@@ -80,7 +80,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           billing_time:,
           subscription_at:,
           subscription_id:,
-          ending_at: Time.current.beginning_of_day + 3.months,
+          ending_at: Time.current.beginning_of_day + 3.months
         }
       end
 
@@ -150,8 +150,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           subscription_at:,
           subscription_id:,
           plan_overrides: {
-            amount_cents: 0,
-          },
+            amount_cents: 0
+          }
         }
       end
 
@@ -597,7 +597,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 billing_time:,
                 subscription_at:,
                 subscription_id:,
-                ending_at: Time.current.beginning_of_day + 3.months,
+                ending_at: Time.current.beginning_of_day + 3.months
               }
             end
 

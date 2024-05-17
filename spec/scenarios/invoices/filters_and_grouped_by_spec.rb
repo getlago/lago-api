@@ -46,7 +46,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code,
-          billing_time: 'anniversary',
+          billing_time: 'anniversary'
         },
       )
     end
@@ -60,7 +60,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: {cloud: 'aws', region: 'us', country: 'us', value: 10},
+          properties: {cloud: 'aws', region: 'us', country: 'us', value: 10}
         },
       )
     end
@@ -71,7 +71,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: {cloud: 'aws', region: 'europe', country: 'france', value: 10},
+          properties: {cloud: 'aws', region: 'europe', country: 'france', value: 10}
         },
       )
     end
@@ -82,7 +82,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: {cloud: 'aws', region: 'asia', value: 10},
+          properties: {cloud: 'aws', region: 'asia', value: 10}
         },
       )
     end
@@ -93,7 +93,7 @@ RSpec.describe 'Invoices for charges with filters and grouped by', :scenarios, t
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: {cloud: 'gcp', region: 'asia', country: 'china', value: 10},
+          properties: {cloud: 'gcp', region: 'asia', country: 'china', value: 10}
         },
       )
     end

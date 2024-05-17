@@ -10,8 +10,8 @@ FactoryBot.define do
         'status' => 'received',
         'amount' => {
           'currency' => 'CHF',
-          'value' => 134,
-        },
+          'value' => 134
+        }
       },
     )
   end

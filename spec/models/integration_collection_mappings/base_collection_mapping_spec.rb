@@ -45,7 +45,7 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping, type: :mode
 
       expect(mapping.settings).to eq(
         {
-          'key1' => 'val1',
+          'key1' => 'val1'
         },
       )
     end

@@ -11,7 +11,7 @@ module V1
             amount_currency: model.currency,
             total_amount_currency: model.currency,
             vat_amount_currency: model.currency,
-            vat_amount_cents: model.taxes_amount_cents,
+            vat_amount_cents: model.taxes_amount_cents
           }
         end
       end

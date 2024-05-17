@@ -30,9 +30,9 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           name: 'overridden name',
           minimum_commitment: {
             invoice_display_name: commitment_invoice_display_name,
-            amount_cents: commitment_amount_cents,
-          },
-        },
+            amount_cents: commitment_amount_cents
+          }
+        }
       }
     end
 
@@ -76,7 +76,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           external_customer_id: 123,
           plan_code:,
           name: 456,
-          external_id: 789,
+          external_id: 789
         }
       end
 
@@ -121,7 +121,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           name: 'subscription name',
           external_id: SecureRandom.uuid,
           billing_time: 'anniversary',
-          subscription_date: subscription_at.to_date,
+          subscription_date: subscription_at.to_date
         }
       end
 
@@ -181,9 +181,9 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           name: 'plan new name',
           minimum_commitment: {
             invoice_display_name: commitment_invoice_display_name,
-            amount_cents: 1234,
-          },
-        },
+            amount_cents: 1234
+          }
+        }
       }
     end
 

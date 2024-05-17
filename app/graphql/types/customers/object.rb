@@ -120,7 +120,7 @@ module Types
       def billing_configuration
         {
           id: "#{object&.id}-c0nf",
-          document_locale: object&.document_locale,
+          document_locale: object&.document_locale
         }
       end
     end

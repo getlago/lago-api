@@ -43,7 +43,7 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
         customer_portal_user: customer,
         query: mutation,
         variables: {
-          input: {id: invoice.id},
+          input: {id: invoice.id}
         },
       )
 
@@ -60,7 +60,7 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
       result = execute_graphql(
         query: mutation,
         variables: {
-          input: {id: invoice.id},
+          input: {id: invoice.id}
         },
       )
 

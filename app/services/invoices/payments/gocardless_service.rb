@@ -93,7 +93,7 @@ module Invoices
         result = client.mandates.list(
           params: {
             customer: customer.gocardless_customer.provider_customer_id,
-            status: %w[pending_customer_approval pending_submission submitted active],
+            status: %w[pending_customer_approval pending_submission submitted active]
           },
         )
 
@@ -114,14 +114,14 @@ module Invoices
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
-              invoice_issuing_date: invoice.issuing_date.iso8601,
+              invoice_issuing_date: invoice.issuing_date.iso8601
             },
             links: {
-              mandate: mandate_id,
-            },
+              mandate: mandate_id
+            }
           },
           headers: {
-            'Idempotency-Key' => "#{invoice.id}/#{invoice.payment_attempts}",
+            'Idempotency-Key' => "#{invoice.id}/#{invoice.payment_attempts}"
           },
         )
       rescue GoCardlessPro::Error => e
@@ -144,7 +144,7 @@ module Invoices
           invoice: result.invoice,
           params: {
             payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded,
+            ready_for_payment_processing: payment_status.to_sym != :succeeded
           },
           webhook_notification: deliver_webhook,
         )
@@ -164,7 +164,7 @@ module Invoices
           provider_customer_id: customer.gocardless_customer.provider_customer_id,
           provider_error: {
             message: gocardless_error.message,
-            error_code: gocardless_error.code,
+            error_code: gocardless_error.code
           },
         )
       end

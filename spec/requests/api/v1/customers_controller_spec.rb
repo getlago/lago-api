@@ -12,7 +12,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         name: 'Foo Bar',
         currency: 'EUR',
         timezone: 'America/New_York',
-        external_salesforce_id: 'foobar',
+        external_salesforce_id: 'foobar'
       }
     end
 
@@ -38,7 +38,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         {
           external_id: SecureRandom.uuid,
           name: 'Foo Bar',
-          timezone: 'America/New_York',
+          timezone: 'America/New_York'
         }
       end
 
@@ -67,8 +67,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             provider_customer_id: 'stripe_id',
             vat_rate: 20,
             document_locale: 'fr',
-            provider_payment_methods:,
-          },
+            provider_payment_methods:
+          }
         }
       end
 
@@ -184,9 +184,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             {
               key: 'Hello',
               value: 'Hi',
-              display_in_invoice: true,
+              display_in_invoice: true
             },
-          ],
+          ]
         }
       end
 

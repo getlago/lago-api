@@ -84,7 +84,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       permissions: required_permission,
       query:,
       variables: {
-        customerId: customer.id,
+        customerId: customer.id
       },
     )
 
@@ -137,7 +137,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
         permissions: required_permission,
         query:,
         variables: {
-          customerId: customer.id,
+          customerId: customer.id
         },
       )
 
@@ -158,7 +158,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
         permissions: required_permission,
         query:,
         variables: {
-          customerId: 'foo',
+          customerId: 'foo'
         },
       )
 

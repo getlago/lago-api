@@ -25,7 +25,7 @@ RSpec.describe Mutations::AddOns::Destroy, type: :graphql do
       permissions: required_permission,
       query: mutation,
       variables: {
-        input: {id: add_on.id},
+        input: {id: add_on.id}
       },
     )
 

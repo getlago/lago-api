@@ -19,7 +19,7 @@ RSpec.describe Integrations::Netsuite::UpdateService, type: :service do
       {
         name:,
         code: 'netsuite1',
-        script_endpoint_url:,
+        script_endpoint_url:
       }
     end
 

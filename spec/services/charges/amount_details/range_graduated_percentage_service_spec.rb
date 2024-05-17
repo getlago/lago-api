@@ -11,7 +11,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedPercentageService, type: :s
       from_value: 0,
       to_value: 10,
       rate: '2',
-      flat_amount: '2',
+      flat_amount: '2'
     }
   end
 
@@ -24,7 +24,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedPercentageService, type: :s
         rate: 2,
         units: '10.0',
         per_unit_total_amount: '0.2',
-        total_with_flat_amount: 2.2,
+        total_with_flat_amount: 2.2
       },
     )
   end
@@ -35,7 +35,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedPercentageService, type: :s
         from_value: 11,
         to_value: 20,
         rate: '1',
-        flat_amount: '1',
+        flat_amount: '1'
       }
     end
 
@@ -48,7 +48,7 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedPercentageService, type: :s
           rate: 1,
           units: '5.0',
           per_unit_total_amount: '0.05',
-          total_with_flat_amount: 1.05,
+          total_with_flat_amount: 1.05
         },
       )
     end

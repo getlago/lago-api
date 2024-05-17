@@ -14,7 +14,7 @@ module V1
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,
-        properties: model.properties,
+        properties: model.properties
       }.merge(legacy_values)
 
       payload.merge!(charge_filters)

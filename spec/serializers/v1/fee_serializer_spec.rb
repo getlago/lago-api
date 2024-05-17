@@ -10,7 +10,7 @@ RSpec.describe ::V1::FeeSerializer do
       :fee,
       properties: {
         from_datetime: Time.current,
-        to_datetime: Time.current,
+        to_datetime: Time.current
       },
     )
   end
@@ -79,7 +79,7 @@ RSpec.describe ::V1::FeeSerializer do
         charge_filter:,
         properties: {
           charges_from_datetime: Time.current,
-          charges_to_datetime: Time.current,
+          charges_to_datetime: Time.current
         },
       )
     end
@@ -106,7 +106,7 @@ RSpec.describe ::V1::FeeSerializer do
           charge:,
           properties: {
             charges_from_datetime: (timestamp - 1.month).beginning_of_day,
-            charges_to_datetime: (timestamp - 1.day).end_of_day,
+            charges_to_datetime: (timestamp - 1.day).end_of_day
           },
         )
       end

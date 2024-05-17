@@ -71,7 +71,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
             customer,
             provider_error: {
               message: 'There are no payment methods available for the given parameters.',
-              error_code: 'validation',
+              error_code: 'validation'
             },
           ).on_queue(:webhook)
       end
@@ -93,7 +93,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
             customer,
             provider_error: {
               message: 'error',
-              error_code: nil,
+              error_code: nil
             },
           )
       end

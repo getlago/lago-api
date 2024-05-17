@@ -33,7 +33,7 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
       current_organization: organization,
       query:,
       variables: {
-        customerId: customer.id,
+        customerId: customer.id
       },
     )
 
@@ -54,7 +54,7 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
         current_user: membership.user,
         query:,
         variables: {
-          customerId: customer.id,
+          customerId: customer.id
         },
       )
 
@@ -72,7 +72,7 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
         current_organization: create(:organization),
         query:,
         variables: {
-          customerId: customer.id,
+          customerId: customer.id
         },
       )
 
@@ -90,7 +90,7 @@ RSpec.describe Resolvers::WalletsResolver, type: :graphql do
         current_organization: organization,
         query:,
         variables: {
-          customerId: '123456',
+          customerId: '123456'
         },
       )
 

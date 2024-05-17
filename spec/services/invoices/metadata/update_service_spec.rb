@@ -13,11 +13,11 @@ RSpec.describe Invoices::Metadata::UpdateService do
       {
         id: invoice_metadata.id,
         key: 'new key',
-        value: 'new value',
+        value: 'new value'
       },
       {
         key: 'Added key',
-        value: 'Added value',
+        value: 'Added value'
       },
     ]
   end

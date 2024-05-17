@@ -12,7 +12,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         grouped_by:,
         grouped_by_values:,
         matching_filters:,
-        ignored_filters:,
+        ignored_filters:
       },
     )
   end
@@ -30,7 +30,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     {
       from_datetime: started_at.beginning_of_day,
       to_datetime: started_at.end_of_month.end_of_day,
-      charges_duration: 31,
+      charges_duration: 31
     }
   end
 
@@ -51,7 +51,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         code:,
         timestamp: boundaries[:from_datetime] + (i + 1).days,
         properties: {
-          billable_metric.field_name => i + 1,
+          billable_metric.field_name => i + 1
         },
       )
 
@@ -172,7 +172,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         code:,
         timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
         properties: {
-          billable_metric.field_name => SecureRandom.uuid,
+          billable_metric.field_name => SecureRandom.uuid
         },
       )
 
@@ -189,7 +189,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           code:,
           timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
           properties: {
-            billable_metric.field_name => 2,
+            billable_metric.field_name => 2
           },
         )
 
@@ -201,7 +201,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           code:,
           timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
           properties: {
-            billable_metric.field_name => 2,
+            billable_metric.field_name => 2
           },
         )
 
@@ -220,7 +220,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
           properties: {
             billable_metric.field_name => 2,
-            :operation_type => 'remove',
+            :operation_type => 'remove'
           },
         )
 
@@ -232,7 +232,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           code:,
           timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
           properties: {
-            billable_metric.field_name => 2,
+            billable_metric.field_name => 2
           },
         )
 
@@ -252,7 +252,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
         properties: {
           billable_metric.field_name => 2,
-          :operation_type => 'remove',
+          :operation_type => 'remove'
         },
       )
 
@@ -283,7 +283,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         timestamp: boundaries[:from_datetime] + 2.days - 1.second,
         properties: {
           billable_metric.field_name => 2,
-          :operation_type => 'remove',
+          :operation_type => 'remove'
         },
       )
 
@@ -309,7 +309,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           timestamp: boundaries[:from_datetime] + 1.hour,
           properties: {
             billable_metric.field_name => 2,
-            :agent_name => 'frodo',
+            :agent_name => 'frodo'
           },
         ),
         create(
@@ -321,7 +321,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            :agent_name => 'aragorn',
+            :agent_name => 'aragorn'
           },
         ),
         create(
@@ -334,7 +334,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           properties: {
             billable_metric.field_name => 2,
             :agent_name => 'aragorn',
-            :operation_type => 'remove',
+            :operation_type => 'remove'
           },
         ),
         create(
@@ -391,7 +391,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            :agent_name => 'frodo',
+            :agent_name => 'frodo'
           },
         ),
         create(
@@ -403,7 +403,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            :agent_name => 'aragorn',
+            :agent_name => 'aragorn'
           },
         ),
         create(
@@ -416,7 +416,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           properties: {
             billable_metric.field_name => 2,
             :agent_name => 'aragorn',
-            :operation_type => 'remove',
+            :operation_type => 'remove'
           },
         ),
         create(
@@ -469,7 +469,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         code:,
         timestamp: boundaries[:from_datetime] + 1.day,
         properties: {
-          billable_metric.field_name => 2,
+          billable_metric.field_name => 2
         },
       )
 
@@ -482,7 +482,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
         properties: {
           billable_metric.field_name => 2,
-          :operation_type => 'remove',
+          :operation_type => 'remove'
         },
       )
 
@@ -858,7 +858,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         events.map do |e|
           {
             date: e.timestamp.to_date,
-            value: e.properties[billable_metric.field_name],
+            value: e.properties[billable_metric.field_name]
           }
         end,
       )

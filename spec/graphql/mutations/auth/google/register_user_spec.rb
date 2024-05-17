@@ -39,8 +39,8 @@ RSpec.describe Mutations::Auth::Google::RegisterUser, type: :graphql do
       variables: {
         input: {
           code: 'code',
-          organizationName: 'FooBar',
-        },
+          organizationName: 'FooBar'
+        }
       },
     )
 
@@ -69,8 +69,8 @@ RSpec.describe Mutations::Auth::Google::RegisterUser, type: :graphql do
         variables: {
           input: {
             code: 'code',
-            organizationName: 'FooBar',
-          },
+            organizationName: 'FooBar'
+          }
         },
       )
 

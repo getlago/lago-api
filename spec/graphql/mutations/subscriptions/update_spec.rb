@@ -37,8 +37,8 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
       variables: {
         input: {
           id: subscription.id,
-          name: 'New name',
-        },
+          name: 'New name'
+        }
       },
     )
 

@@ -104,8 +104,8 @@ module CreditNotes
           merchantAccount: payment.payment_provider.merchant_account,
           amount: {
             value: credit_note.refund_amount_cents,
-            currency: credit_note.credit_amount_currency.upcase,
-          },
+            currency: credit_note.credit_amount_currency.upcase
+          }
         }
       end
 
@@ -118,7 +118,7 @@ module CreditNotes
           provider_customer_id: customer.adyen_customer.provider_customer_id,
           provider_error: {
             message:,
-            error_code: code,
+            error_code: code
           },
         )
       end
@@ -136,7 +136,7 @@ module CreditNotes
           properties: {
             organization_id: organization.id,
             credit_note_id: credit_note.id,
-            refund_status: status,
+            refund_status: status
           },
         )
       end

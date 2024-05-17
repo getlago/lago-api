@@ -11,7 +11,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
       boundaries: {
         from_datetime:,
         to_datetime:,
-        charges_duration: 31,
+        charges_duration: 31
       },
       filters:,
     )
@@ -230,7 +230,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           timestamp: to_datetime - 15.days,
           properties: {
             unique_id: event.properties['unique_id'],
-            operation_type: 'remove',
+            operation_type: 'remove'
           },
         )
 
@@ -247,7 +247,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             timestamp: to_datetime,
             properties: {
               unique_id: event.properties['unique_id'],
-              operation_type: 'remove',
+              operation_type: 'remove'
             },
           )
 
@@ -268,7 +268,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           timestamp: to_datetime - 1.day,
           properties: {
             unique_id: event.properties['unique_id'],
-            operation_type: 'remove',
+            operation_type: 'remove'
           },
         )
 
@@ -287,7 +287,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             timestamp: added_at.end_of_day,
             properties: {
               unique_id: event.properties['unique_id'],
-              operation_type: 'remove',
+              operation_type: 'remove'
             },
           )
 
@@ -708,7 +708,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             timestamp: from_datetime + 5.days,
             properties: {
               unique_id: '111',
-              agent_name:,
+              agent_name:
             },
           )
         end
@@ -786,7 +786,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           timestamp: to_datetime - 15.days,
           properties: {
             unique_id: event.properties['unique_id'],
-            operation_type: 'remove',
+            operation_type: 'remove'
           },
         )
 
@@ -806,7 +806,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             timestamp: to_datetime,
             properties: {
               unique_id: event.properties['unique_id'],
-              operation_type: 'remove',
+              operation_type: 'remove'
             },
           )
 
@@ -830,7 +830,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           timestamp: to_datetime - 1.day,
           properties: {
             unique_id: event.properties['unique_id'],
-            operation_type: 'remove',
+            operation_type: 'remove'
           },
         )
 
@@ -852,7 +852,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             timestamp: added_at.end_of_day,
             properties: {
               unique_id: event.properties['unique_id'],
-              operation_type: 'remove',
+              operation_type: 'remove'
             },
           )
 
@@ -894,7 +894,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           timestamp: (from_datetime + 20.days).end_of_day,
           properties: {
             unique_id: '111',
-            operation_type: 'remove',
+            operation_type: 'remove'
           },
         )
       end
@@ -938,7 +938,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           timestamp: (from_datetime + 20.days).end_of_day,
           properties: {
             unique_id: '111',
-            operation_type: 'remove',
+            operation_type: 'remove'
           },
         )
       end

@@ -34,7 +34,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             plan_code: plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601,
-            ending_at: ending_at.iso8601,
+            ending_at: ending_at.iso8601
           },
         )
 
@@ -76,7 +76,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             plan_code: plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601,
-            ending_at: ending_at.iso8601,
+            ending_at: ending_at.iso8601
           },
         )
 
@@ -115,7 +115,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             plan_code: plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601,
-            ending_at: ending_at.iso8601,
+            ending_at: ending_at.iso8601
           },
         )
 
@@ -154,7 +154,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             plan_code: plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601,
-            ending_at: ending_at.iso8601,
+            ending_at: ending_at.iso8601
           },
         )
 
@@ -200,7 +200,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               plan_code: plan.code,
               billing_time: 'anniversary',
               subscription_at: subscription_at.iso8601,
-              ending_at: ending_at.iso8601,
+              ending_at: ending_at.iso8601
             },
           )
 
@@ -238,7 +238,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               plan_code: plan.code,
               billing_time: 'anniversary',
               subscription_at: subscription_at.iso8601,
-              ending_at: nil,
+              ending_at: nil
             },
           )
 
@@ -280,7 +280,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               plan_code: plan.code,
               billing_time: 'anniversary',
               subscription_at: subscription_at.iso8601,
-              ending_at: ending_at.iso8601,
+              ending_at: ending_at.iso8601
             },
           )
 
@@ -319,7 +319,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               plan_code: plan.code,
               billing_time: 'anniversary',
               subscription_at: subscription_at.iso8601,
-              ending_at: ending_at.iso8601,
+              ending_at: ending_at.iso8601
             },
           )
 
@@ -360,7 +360,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               plan_code: plan.code,
               billing_time: 'calendar',
               subscription_at: subscription_at.iso8601,
-              ending_at: ending_at.iso8601,
+              ending_at: ending_at.iso8601
             },
           )
 
@@ -406,7 +406,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 plan_code: plan.code,
                 billing_time: 'calendar',
                 subscription_at: subscription_at.iso8601,
-                ending_at: ending_at.iso8601,
+                ending_at: ending_at.iso8601
               },
             )
 
@@ -449,7 +449,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 plan_code: plan.code,
                 billing_time: 'calendar',
                 subscription_at: subscription_at.iso8601,
-                ending_at: ending_at.iso8601,
+                ending_at: ending_at.iso8601
               },
             )
 
@@ -500,7 +500,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 plan_code: plan.code,
                 billing_time: 'calendar',
                 subscription_at: subscription_at.iso8601,
-                ending_at: nil,
+                ending_at: nil
               },
             )
 

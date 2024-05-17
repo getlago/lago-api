@@ -37,7 +37,7 @@ RSpec.describe Customers::DestroyService, type: :service do
         properties: {
           customer_id: customer.id,
           deleted_at: customer.deleted_at,
-          organization_id: customer.organization_id,
+          organization_id: customer.organization_id
         },
       )
     end

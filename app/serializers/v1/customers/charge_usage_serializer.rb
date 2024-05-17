@@ -15,17 +15,17 @@ module V1
             charge: {
               lago_id: charge_id,
               charge_model: fee.charge.charge_model,
-              invoice_display_name: fee.charge.invoice_display_name,
+              invoice_display_name: fee.charge.invoice_display_name
             },
             billable_metric: {
               lago_id: fee.billable_metric.id,
               name: fee.billable_metric.name,
               code: fee.billable_metric.code,
-              aggregation_type: fee.billable_metric.aggregation_type,
+              aggregation_type: fee.billable_metric.aggregation_type
             },
             filters: filters(fees),
             groups: groups(fees),
-            grouped_usage: grouped_usage(fees),
+            grouped_usage: grouped_usage(fees)
           }
         end
       end
@@ -45,7 +45,7 @@ module V1
             value: values.values.flatten.join(', '),
             units: f.units,
             amount_cents: f.amount_cents,
-            events_count: f.events_count,
+            events_count: f.events_count
           }
         end.compact
       end
@@ -59,7 +59,7 @@ module V1
             amount_cents: f.amount_cents,
             events_count: f.events_count,
             invoice_display_name: f.charge_filter&.invoice_display_name,
-            values: f.charge_filter&.to_h,
+            values: f.charge_filter&.to_h
           }
         end.compact
       end
@@ -74,7 +74,7 @@ module V1
             units: grouped_fees.map { |f| BigDecimal(f.units) }.sum.to_s,
             grouped_by: grouped_fees.first.grouped_by,
             filters: filters(grouped_fees),
-            groups: groups(grouped_fees),
+            groups: groups(grouped_fees)
           }
         end
       end

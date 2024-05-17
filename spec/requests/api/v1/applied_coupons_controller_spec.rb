@@ -15,7 +15,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
     let(:params) do
       {
         external_customer_id: customer.external_id,
-        coupon_code: coupon.code,
+        coupon_code: coupon.code
       }
     end
 

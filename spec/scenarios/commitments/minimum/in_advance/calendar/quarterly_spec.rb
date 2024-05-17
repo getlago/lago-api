@@ -105,7 +105,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code,
-          billing_time:,
+          billing_time:
         },
       )
 
@@ -114,7 +114,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_recurring_advance.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: {total: '15'},
+          properties: {total: '15'}
         },
       )
 
@@ -123,7 +123,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_metered.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: {total: '25'},
+          properties: {total: '25'}
         },
       )
 
@@ -132,7 +132,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_metered_advance.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: {total: '30'},
+          properties: {total: '30'}
         },
       )
 

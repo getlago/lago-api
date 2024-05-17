@@ -12,8 +12,8 @@ RSpec.describe ::V1::PaymentProviders::ErrorSerializer do
         'source' => 'stripe',
         'action' => 'payment_provider.register_webhook',
         'error_message' => 'message',
-        'error_code' => nil,
-      },
+        'error_code' => nil
+      }
     }.with_indifferent_access
   end
 

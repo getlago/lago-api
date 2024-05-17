@@ -71,14 +71,14 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
           items: [
             {
               feeId: fee1.id,
-              amountCents: 10,
+              amountCents: 10
             },
             {
               feeId: fee2.id,
-              amountCents: 5,
+              amountCents: 5
             },
-          ],
-        },
+          ]
+        }
       },
     )
 
@@ -124,10 +124,10 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
             items: [
               {
                 feeId: fee1.id,
-                amountCents: 15,
+                amountCents: 15
               },
-            ],
-          },
+            ]
+          }
         },
       )
 

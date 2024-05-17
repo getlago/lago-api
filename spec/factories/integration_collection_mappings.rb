@@ -9,7 +9,7 @@ FactoryBot.define do
       {
         external_id: 'netsuite-123',
         external_account_code: 'netsuite-code-1',
-        external_name: 'Credits and Discounts',
+        external_name: 'Credits and Discounts'
       }
     end
   end

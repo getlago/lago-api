@@ -12,7 +12,7 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
       payment_method: 'card',
       card_location: 'domestic',
       scheme: 'visa',
-      card_type: 'credit',
+      card_type: 'credit'
     }
   end
 

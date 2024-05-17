@@ -4,7 +4,7 @@ require 'current_context'
 
 ActiveJob::Traceable.tracing_info_getter = lambda do
   {
-    membership: CurrentContext.membership,
+    membership: CurrentContext.membership
   }
 end
 

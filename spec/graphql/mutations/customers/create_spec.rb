@@ -37,7 +37,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
   let(:body) do
     {
       object: 'event',
-      data: {url: 'test.url'},
+      data: {url: 'test.url'}
     }
   end
 
@@ -70,20 +70,20 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           netPaymentTerm: 30,
           providerCustomer: {
             providerCustomerId: 'cu_12345',
-            providerPaymentMethods: ['card'],
+            providerPaymentMethods: ['card']
           },
           billingConfiguration: {
-            documentLocale: 'fr',
+            documentLocale: 'fr'
           },
           metadata: [
             {
               key: 'manager',
               value: 'John Doe',
-              displayInInvoice: true,
+              displayInInvoice: true
             },
           ],
-          taxCodes: [tax.code],
-        },
+          taxCodes: [tax.code]
+        }
       },
     )
 
@@ -131,9 +131,9 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
             timezone: 'TZ_EUROPE_PARIS',
             providerCustomer: {
               providerCustomerId: 'cu_12345',
-              providerPaymentMethods: ['card'],
-            },
-          },
+              providerPaymentMethods: ['card']
+            }
+          }
         },
       )
 
@@ -158,8 +158,8 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
             name: 'John Doe',
             externalId: 'john_doe_2',
             city: 'London',
-            country: 0,
-          },
+            country: 0
+          }
         },
       )
 

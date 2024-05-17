@@ -30,7 +30,7 @@ module Charges
             free_units: BigDecimal(free_units).to_s,
             paid_units: '0.0',
             per_package_size:,
-            per_package_unit_amount:,
+            per_package_unit_amount:
           }
         end
 
@@ -38,7 +38,7 @@ module Charges
           free_units: BigDecimal(free_units).to_s,
           paid_units: BigDecimal(paid_units).to_s,
           per_package_size:,
-          per_package_unit_amount:,
+          per_package_unit_amount:
         }
       end
 

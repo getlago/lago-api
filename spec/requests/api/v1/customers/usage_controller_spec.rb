@@ -33,9 +33,9 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               from_value: 0,
               to_value: nil,
               per_unit_amount: '0.01',
-              flat_amount: '0.01',
+              flat_amount: '0.01'
             },
-          ],
+          ]
         },
       )
     end
@@ -159,7 +159,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               value: 'aws',
               units: '3.0',
               amount_cents: 3000,
-              events_count: 3,
+              events_count: 3
             },
             {
               lago_id: "charge-filter-#{charge_filter_gcp.id}",
@@ -167,7 +167,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               value: 'google',
               units: '1.0',
               amount_cents: 2000,
-              events_count: 1,
+              events_count: 1
             },
           )
         end
@@ -302,7 +302,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               value: 'aws, usa',
               units: '2.0',
               amount_cents: 2000,
-              events_count: 2,
+              events_count: 2
             },
             {
               lago_id: "charge-filter-#{charge_filter_aws_france.id}",
@@ -310,7 +310,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               value: 'aws, france',
               units: '1.0',
               amount_cents: 2000,
-              events_count: 1,
+              events_count: 1
             },
             {
               lago_id: "charge-filter-#{charge_filter_google_usa.id}",
@@ -318,7 +318,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               value: 'google, usa',
               units: '1.0',
               amount_cents: 3000,
-              events_count: 1,
+              events_count: 1
             },
           )
         end

@@ -23,7 +23,7 @@ RSpec.describe Coupons::CreateService, type: :service do
         amount_currency: 'EUR',
         expiration: 'time_limit',
         reusable: false,
-        expiration_at:,
+        expiration_at:
       }
     end
 
@@ -45,7 +45,7 @@ RSpec.describe Coupons::CreateService, type: :service do
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,
-          organization_id: coupon.organization_id,
+          organization_id: coupon.organization_id
         },
       )
     end
@@ -72,7 +72,7 @@ RSpec.describe Coupons::CreateService, type: :service do
           frequency: 'once',
           percentage_rate: 20.00,
           expiration: 'time_limit',
-          expiration_date: (Time.current + 3.days).to_date,
+          expiration_date: (Time.current + 3.days).to_date
         }
       end
 
@@ -127,8 +127,8 @@ RSpec.describe Coupons::CreateService, type: :service do
           reusable: false,
           expiration_at:,
           applies_to: {
-            plan_ids: [plan.id],
-          },
+            plan_ids: [plan.id]
+          }
         }
       end
 
@@ -160,8 +160,8 @@ RSpec.describe Coupons::CreateService, type: :service do
           reusable: false,
           expiration_at:,
           applies_to: {
-            plan_codes: [plan.code],
-          },
+            plan_codes: [plan.code]
+          }
         }
       end
 
@@ -193,8 +193,8 @@ RSpec.describe Coupons::CreateService, type: :service do
           reusable: false,
           expiration_at:,
           applies_to: {
-            billable_metric_ids: [billable_metric.id],
-          },
+            billable_metric_ids: [billable_metric.id]
+          }
         }
       end
 
@@ -226,8 +226,8 @@ RSpec.describe Coupons::CreateService, type: :service do
             expiration_at:,
             applies_to: {
               billable_metric_ids: [billable_metric.id],
-              plan_ids: [plan.id],
-            },
+              plan_ids: [plan.id]
+            }
           }
         end
 
@@ -256,8 +256,8 @@ RSpec.describe Coupons::CreateService, type: :service do
             reusable: false,
             expiration_at:,
             applies_to: {
-              billable_metric_ids: [billable_metric.id, 'invalid'],
-            },
+              billable_metric_ids: [billable_metric.id, 'invalid']
+            }
           }
         end
 
@@ -288,8 +288,8 @@ RSpec.describe Coupons::CreateService, type: :service do
           reusable: false,
           expiration_at:,
           applies_to: {
-            billable_metric_codes: [billable_metric.code],
-          },
+            billable_metric_codes: [billable_metric.code]
+          }
         }
       end
 

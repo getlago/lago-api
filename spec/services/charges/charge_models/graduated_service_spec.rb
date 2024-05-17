@@ -26,21 +26,21 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
             from_value: 0,
             to_value: 10,
             per_unit_amount: '10',
-            flat_amount: '2',
+            flat_amount: '2'
           },
           {
             from_value: 11,
             to_value: 20,
             per_unit_amount: '5',
-            flat_amount: '3',
+            flat_amount: '3'
           },
           {
             from_value: 21,
             to_value: nil,
             per_unit_amount: '5',
-            flat_amount: '3',
+            flat_amount: '3'
           },
-        ],
+        ]
       },
     )
   end
@@ -61,9 +61,9 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 0,
               total_with_flat_amount: 0,
               per_unit_amount: 0,
-              units: '0.0',
+              units: '0.0'
             },
-          ],
+          ]
         },
       )
     end
@@ -85,9 +85,9 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 10,
               total_with_flat_amount: 12,
               per_unit_amount: 10,
-              units: '1.0',
+              units: '1.0'
             },
-          ],
+          ]
         },
       )
     end
@@ -109,9 +109,9 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 100,
               total_with_flat_amount: 102,
               per_unit_amount: 10,
-              units: '10.0',
+              units: '10.0'
             },
-          ],
+          ]
         },
       )
     end
@@ -133,7 +133,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 100,
               total_with_flat_amount: 102,
               per_unit_amount: 10,
-              units: '10.0',
+              units: '10.0'
             },
             {
               flat_unit_amount: 3,
@@ -142,9 +142,9 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 5,
               total_with_flat_amount: 8,
               per_unit_amount: 5,
-              units: '1.0',
+              units: '1.0'
             },
-          ],
+          ]
         },
       )
     end
@@ -166,7 +166,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 100,
               total_with_flat_amount: 102,
               per_unit_amount: 10,
-              units: '10.0',
+              units: '10.0'
             },
             {
               flat_unit_amount: 3,
@@ -175,9 +175,9 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 10,
               total_with_flat_amount: 13,
               per_unit_amount: 5,
-              units: '2.0',
+              units: '2.0'
             },
-          ],
+          ]
         },
       )
     end
@@ -199,7 +199,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 100,
               total_with_flat_amount: 102,
               per_unit_amount: 10,
-              units: '10.0',
+              units: '10.0'
             },
             {
               flat_unit_amount: 3,
@@ -208,7 +208,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 50,
               total_with_flat_amount: 53,
               per_unit_amount: 5,
-              units: '10.0',
+              units: '10.0'
             },
             {
               flat_unit_amount: 3,
@@ -217,9 +217,9 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               per_unit_total_amount: 5,
               total_with_flat_amount: 8,
               per_unit_amount: 5,
-              units: '1.0',
+              units: '1.0'
             },
-          ],
+          ]
         },
       )
     end

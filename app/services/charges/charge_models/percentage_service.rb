@@ -34,7 +34,7 @@ module Charges
           paid_events:,
           fixed_fee_unit_amount: paid_events.positive? ? fixed_amount : BigDecimal(0),
           fixed_fee_total_amount: compute_fixed_amount.to_s,
-          min_max_adjustment_total_amount: min_max_adjustment_total_amount.to_s,
+          min_max_adjustment_total_amount: min_max_adjustment_total_amount.to_s
         }
       end
 

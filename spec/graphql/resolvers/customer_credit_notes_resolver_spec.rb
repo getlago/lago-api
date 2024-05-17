@@ -38,7 +38,7 @@ RSpec.describe Resolvers::CustomerCreditNotesResolver, type: :graphql do
       permissions: required_permission,
       query:,
       variables: {
-        customerId: customer.id,
+        customerId: customer.id
       },
     )
 
@@ -61,7 +61,7 @@ RSpec.describe Resolvers::CustomerCreditNotesResolver, type: :graphql do
         permissions: required_permission,
         query:,
         variables: {
-          customerId: '123456',
+          customerId: '123456'
         },
       )
 

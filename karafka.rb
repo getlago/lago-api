@@ -3,7 +3,7 @@
 class KarafkaApp < Karafka::App
   setup do |config|
     config.kafka = {
-      'bootstrap.servers': ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'],
+      'bootstrap.servers': ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS']
     }
 
     if ENV['LAGO_KAFKA_SECURITY_PROTOCOL'].present?

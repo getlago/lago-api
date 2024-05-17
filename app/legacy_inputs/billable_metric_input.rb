@@ -9,14 +9,14 @@ class BillableMetricInput < BaseLegacyInput
         args[:filters] = [
           {
             key: group_args[:key],
-            values: group_args[:values],
+            values: group_args[:values]
           },
         ]
       else
         args[:filters] = [
           {
             key: group_args[:key],
-            values: group_args[:values].map { |v| v[:name] },
+            values: group_args[:values].map { |v| v[:name] }
           },
         ]
 
@@ -28,7 +28,7 @@ class BillableMetricInput < BaseLegacyInput
           else
             args[:filters] << {
               key: group[:key],
-              values: group[:values],
+              values: group[:values]
             }
           end
         end

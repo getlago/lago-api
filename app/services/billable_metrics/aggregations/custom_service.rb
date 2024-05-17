@@ -100,7 +100,7 @@ module BillableMetrics
         if cached_aggregation
           return {
             total_units: cached_aggregation.current_aggregation,
-            amount: cached_aggregation.current_amount,
+            amount: cached_aggregation.current_amount
           }
         end
 
@@ -142,7 +142,7 @@ module BillableMetrics
 
         {
           total_units: BigDecimal(sandboxed_result['total_units'].to_s),
-          amount: BigDecimal(sandboxed_result['amount'].to_s),
+          amount: BigDecimal(sandboxed_result['amount'].to_s)
         }
       end
 
@@ -236,7 +236,7 @@ module BillableMetrics
         # NOTE: Return the amount and units to be charged for the current event
         {
           total_units: units_applied,
-          amount: event_aggregation[:amount] - old_amount,
+          amount: event_aggregation[:amount] - old_amount
         }
       end
 

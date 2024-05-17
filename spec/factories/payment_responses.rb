@@ -6,11 +6,11 @@ FactoryBot.define do
       status: 200,
       response: {
         'additionalData' => {
-          'recurringProcessingModel' => 'UnscheduledCardOnFile',
+          'recurringProcessingModel' => 'UnscheduledCardOnFile'
         },
         'pspReference' => SecureRandom.uuid,
         'resultCode' => 'Authorised',
-        'merchantReference' => SecureRandom.uuid,
+        'merchantReference' => SecureRandom.uuid
       },
     )
   end
@@ -20,7 +20,7 @@ FactoryBot.define do
       status: 422,
       response: {
         'errorType' => 'validation',
-        'message' => 'There are no payment methods available for the given parameters.',
+        'message' => 'There are no payment methods available for the given parameters.'
       },
     )
   end
@@ -31,7 +31,7 @@ FactoryBot.define do
       response: {
         'amount' => {
           'currency' => 'EUR',
-          'value' => 0,
+          'value' => 0
         },
         'expiresAt' => '2023-05-19T10:00:19+02:00',
         'merchantAccount' => SecureRandom.uuid,
@@ -42,7 +42,7 @@ FactoryBot.define do
         'storePaymentMethodMode' => 'enabled',
         'id' => SecureRandom.uuid,
         'status' => 'active',
-        'url' => 'https://test.adyen.link/test',
+        'url' => 'https://test.adyen.link/test'
       },
     )
   end
@@ -52,7 +52,7 @@ FactoryBot.define do
       status: 422,
       response: {
         'errorType' => 'validation',
-        'message' => 'There are no payment methods available for the given parameters.',
+        'message' => 'There are no payment methods available for the given parameters.'
       },
     )
   end
@@ -65,7 +65,7 @@ FactoryBot.define do
           {
             'brands' => %w[amex bcmc cartebancaire mc visa visadankort],
             'name' => 'Credit Card',
-            'type' => 'scheme',
+            'type' => 'scheme'
           },
         ],
         'storedPaymentMethods' => [
@@ -80,9 +80,9 @@ FactoryBot.define do
             'networkTxReference' => SecureRandom.uuid,
             'supportedRecurringProcessingModels' => %w[CardOnFile Subscription UnscheduledCardOnFile],
             'supportedShopperInteractions' => %w[Ecommerce ContAuth],
-            'type' => 'scheme',
+            'type' => 'scheme'
           },
-        ],
+        ]
       },
     )
   end

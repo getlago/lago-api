@@ -26,8 +26,8 @@ module Api
           render(
             json: {
               customer: {
-                portal_url: result.url,
-              },
+                portal_url: result.url
+              }
             },
           )
         else

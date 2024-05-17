@@ -80,7 +80,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
-          refund_status: 'succeeded',
+          refund_status: 'succeeded'
         },
       )
     end
@@ -102,7 +102,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
             provider_customer_id: stripe_customer.provider_customer_id,
             provider_error: {
               message: 'error',
-              error_code: nil,
+              error_code: nil
             },
           )
       end
@@ -204,7 +204,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
-          refund_status: 'succeeded',
+          refund_status: 'succeeded'
         },
       )
     end
@@ -297,7 +297,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
               provider_customer_id: stripe_customer.provider_customer_id,
               provider_error: {
                 message: 'Payment refund failed',
-                error_code: nil,
+                error_code: nil
               },
             )
         end

@@ -9,7 +9,7 @@ RSpec.describe PasswordResets::CreateService, type: :service do
     let(:user) { create(:user) }
     let(:create_args) do
       {
-        user:,
+        user:
       }
     end
 

@@ -43,8 +43,8 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create, type: :graphql 
           mappingType: mapping_type,
           externalAccountCode: external_account_code,
           externalId: external_id,
-          externalName: external_name,
-        },
+          externalName: external_name
+        }
       },
     )
 

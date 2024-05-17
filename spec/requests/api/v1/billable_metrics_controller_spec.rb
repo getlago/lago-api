@@ -11,7 +11,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       values: [
         {name: 'AWS', key: 'region', values: %w[usa europe]},
         {name: 'Google', key: 'region', values: ['usa']},
-      ],
+      ]
     }
   end
 
@@ -23,7 +23,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         description: 'description',
         aggregation_type: 'sum_agg',
         field_name: 'amount_sum',
-        recurring: true,
+        recurring: true
       }
     end
 
@@ -77,7 +77,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
           aggregation_type: 'weighted_sum_agg',
           field_name: 'amount_sum',
           recurring: true,
-          weighted_interval: 'seconds',
+          weighted_interval: 'seconds'
         }
       end
 
@@ -105,7 +105,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         code:,
         description: 'description',
         aggregation_type: 'sum_agg',
-        field_name: 'amount_sum',
+        field_name: 'amount_sum'
       }
     end
 
@@ -186,7 +186,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
           aggregation_type: 'weighted_sum_agg',
           field_name: 'amount_sum',
           recurring: true,
-          weighted_interval: 'seconds',
+          weighted_interval: 'seconds'
         }
       end
 

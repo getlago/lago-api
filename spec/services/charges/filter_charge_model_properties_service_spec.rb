@@ -24,7 +24,7 @@ RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
       per_transaction_max_amount: 100,
       per_transaction_min_amount: 10,
       volume_ranges: [{from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1'}],
-      custom_properties: {rate: '20'},
+      custom_properties: {rate: '20'}
     }
   end
 

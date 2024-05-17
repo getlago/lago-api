@@ -10,8 +10,8 @@ RSpec.describe ::V1::PaymentProviders::CustomerErrorSerializer do
     {
       'provider_error' => {
         'error_message' => 'message',
-        'error_code' => 'code',
-      },
+        'error_code' => 'code'
+      }
     }.with_indifferent_access
   end
 

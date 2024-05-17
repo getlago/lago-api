@@ -67,19 +67,19 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
         {
           values: {
             card_location_filter.key => ['domestic'],
-            scheme_filter.key => ['visa'],
+            scheme_filter.key => ['visa']
           },
           invoice_display_name: 'Visa domestic card payment',
-          properties: {amount: '10'},
+          properties: {amount: '10'}
         },
         {
           values: {
             card_location_filter.key => ['domestic'],
             scheme_filter.key => ['visa'],
-            card_type_filter.key => ['debit'],
+            card_type_filter.key => ['debit']
           },
           invoice_display_name: 'Visa debit domestic card payment',
-          properties: {amount: '20'},
+          properties: {amount: '20'}
         },
       ]
     end
@@ -129,10 +129,10 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
         {
           values: {
             card_location_filter.key => ['domestic'],
-            scheme_filter.key => ['visa'],
+            scheme_filter.key => ['visa']
           },
           invoice_display_name: 'New display name',
-          properties: {amount: '20'},
+          properties: {amount: '20'}
         },
       ]
     end
@@ -155,10 +155,10 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           {
             values: {
               card_location_filter.key => ['international'],
-              scheme_filter.key => ['mastercard'],
+              scheme_filter.key => ['mastercard']
             },
             invoice_display_name: 'New display name',
-            properties: {amount: '20'},
+            properties: {amount: '20'}
           },
         ]
       end
@@ -181,10 +181,10 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           {
             values: {
               card_location_filter.key => ['domestic'],
-              scheme_filter.key => %w[visa mastercard],
+              scheme_filter.key => %w[visa mastercard]
             },
             invoice_display_name: 'New display name',
-            properties: {amount: '20'},
+            properties: {amount: '20'}
           },
         ]
       end

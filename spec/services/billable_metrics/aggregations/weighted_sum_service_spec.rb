@@ -11,7 +11,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       boundaries: {
         from_datetime:,
         to_datetime:,
-        charges_duration:,
+        charges_duration:
       },
       filters:,
     )
@@ -501,7 +501,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
             timestamp: DateTime.parse('2023-08-01 00:00:00.000'),
             value: 1000,
             region: 'europe',
-            agent_name: 'aragorn',
+            agent_name: 'aragorn'
           },
           {timestamp: DateTime.parse('2023-08-01 00:00:00.000'), value: 1000, region: 'europe', agent_name: 'frodo'},
         ]

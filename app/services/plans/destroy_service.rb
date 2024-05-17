@@ -53,7 +53,7 @@ module Plans
           nb_percentage_charges: count_by_charge_model['percentage'] || 0,
           nb_graduated_charges: count_by_charge_model['graduated'] || 0,
           nb_package_charges: count_by_charge_model['package'] || 0,
-          organization_id: plan.organization_id,
+          organization_id: plan.organization_id
         },
       )
     end

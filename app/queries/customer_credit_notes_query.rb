@@ -26,7 +26,7 @@ class CustomerCreditNotesQuery < BaseQuery
     {
       m: 'or',
       number_cont: search_term,
-      id_cont: search_term,
+      id_cont: search_term
     }
   end
 end

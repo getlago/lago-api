@@ -7,7 +7,7 @@ module V1
         {
           group_id: model.group_id,
           values: model.values,
-          invoice_display_name: model.invoice_display_name,
+          invoice_display_name: model.invoice_display_name
         }
       end
     end

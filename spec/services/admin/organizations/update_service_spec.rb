@@ -9,7 +9,7 @@ RSpec.describe Admin::Organizations::UpdateService do
 
   let(:params) do
     {
-      name: 'FooBar',
+      name: 'FooBar'
     }
   end
 

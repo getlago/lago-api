@@ -9,7 +9,7 @@ module V1
           key: model.key,
           value: model.value,
           display_in_invoice: model.display_in_invoice,
-          created_at: model.created_at.iso8601,
+          created_at: model.created_at.iso8601
         }
       end
     end

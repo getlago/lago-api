@@ -25,7 +25,7 @@ module Resolvers
         limit:,
         status:,
         filters: {
-          ids:,
+          ids:
         },
       )
 

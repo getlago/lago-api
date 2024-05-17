@@ -20,7 +20,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       expiration: 'time_limit',
       reusable: false,
       expiration_at:,
-      applies_to:,
+      applies_to:
     }
   end
 
@@ -134,7 +134,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
         let(:applies_to) do
           {
             billable_metric_ids: [billable_metric.id, billable_metric_second.id],
-            plan_ids: [plan.id],
+            plan_ids: [plan.id]
           }
         end
 
@@ -152,7 +152,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
       context 'with invalid billable metric' do
         let(:applies_to) do
           {
-            billable_metric_ids: [billable_metric.id, billable_metric_second.id, 'invalid'],
+            billable_metric_ids: [billable_metric.id, billable_metric_second.id, 'invalid']
           }
         end
 

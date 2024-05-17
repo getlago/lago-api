@@ -10,7 +10,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:,
+        to_datetime:
       },
       filters:,
     )
@@ -225,7 +225,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           timestamp: to_datetime - 15.days,
           properties: {
             unique_id: unique_count_event.properties['unique_id'],
-            operation_type: 'remove',
+            operation_type: 'remove'
           },
         )
 
@@ -243,7 +243,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: to_datetime,
             properties: {
               unique_id: unique_count_event.properties['unique_id'],
-              operation_type: 'remove',
+              operation_type: 'remove'
             },
           )
 
@@ -265,7 +265,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
           timestamp: to_datetime - 1.day,
           properties: {
             unique_id: unique_count_event.properties['unique_id'],
-            operation_type: 'remove',
+            operation_type: 'remove'
           },
         )
 
@@ -285,7 +285,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: added_at.end_of_day,
             properties: {
               unique_id: unique_count_event.properties['unique_id'],
-              operation_type: 'remove',
+              operation_type: 'remove'
             },
           )
 
@@ -500,7 +500,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: added_at,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
+              agent_name:
             },
           )
         end
@@ -517,7 +517,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: from_datetime + 10.days,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
+              agent_name:
             },
           )
         end
@@ -579,7 +579,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: added_at,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
+              agent_name:
             },
           )
         end
@@ -634,7 +634,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: added_at,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
+              agent_name:
             },
           )
         end
@@ -651,7 +651,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
             timestamp: from_datetime + 5.days,
             properties: {
               unique_id: SecureRandom.uuid,
-              agent_name:,
+              agent_name:
             },
           )
         end

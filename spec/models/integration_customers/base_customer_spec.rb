@@ -19,7 +19,7 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
 
       expect(integration_customer.settings).to eq(
         {
-          'key1' => 'val1',
+          'key1' => 'val1'
         },
       )
     end

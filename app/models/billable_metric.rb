@@ -24,7 +24,7 @@ class BillableMetric < ApplicationRecord
     # NOTE: deleted aggregation type, recurring_count_agg: 4,
     weighted_sum_agg: 5,
     latest_agg: 6,
-    custom_agg: 7,
+    custom_agg: 7
   }.freeze
 
   WEIGHTED_INTERVAL = {seconds: 'seconds'}.freeze
@@ -77,7 +77,7 @@ class BillableMetric < ApplicationRecord
     unless active_groups.children.exists?
       return {
         key: active_groups.pluck(:key).uniq.first,
-        values: active_groups.pluck(:value),
+        values: active_groups.pluck(:value)
       }
     end
 
@@ -87,9 +87,9 @@ class BillableMetric < ApplicationRecord
         {
           name: p.value,
           key: p.children.first.key,
-          values: p.children.pluck(:value),
+          values: p.children.pluck(:value)
         }
-      end,
+      end
     }
   end
 

@@ -13,7 +13,7 @@ RSpec.describe Invoices::UpdateService do
 
   let(:update_args) do
     {
-      payment_status: 'succeeded',
+      payment_status: 'succeeded'
     }
   end
 
@@ -42,7 +42,7 @@ RSpec.describe Invoices::UpdateService do
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          payment_status: invoice.payment_status,
+          payment_status: invoice.payment_status
         },
       )
     end
@@ -90,13 +90,13 @@ RSpec.describe Invoices::UpdateService do
             {
               id: invoice_metadata.id,
               key: 'new key',
-              value: 'new value',
+              value: 'new value'
             },
             {
               key: 'Added key',
-              value: 'Added value',
+              value: 'Added value'
             },
-          ],
+          ]
         }
       end
 
@@ -134,29 +134,29 @@ RSpec.describe Invoices::UpdateService do
               {
                 id: invoice_metadata.id,
                 key: 'new key',
-                value: 'new value',
+                value: 'new value'
               },
               {
                 key: 'Added key1',
-                value: 'Added value1',
+                value: 'Added value1'
               },
               {
                 key: 'Added key2',
-                value: 'Added value2',
+                value: 'Added value2'
               },
               {
                 key: 'Added key3',
-                value: 'Added value3',
+                value: 'Added value3'
               },
               {
                 key: 'Added key4',
-                value: 'Added value4',
+                value: 'Added value4'
               },
               {
                 key: 'Added key5',
-                value: 'Added value5',
+                value: 'Added value5'
               },
-            ],
+            ]
           }
         end
 
@@ -238,7 +238,7 @@ RSpec.describe Invoices::UpdateService do
     context 'when invoice payment_status is invalid' do
       let(:update_args) do
         {
-          payment_status: 'Foo Bar',
+          payment_status: 'Foo Bar'
         }
       end
 

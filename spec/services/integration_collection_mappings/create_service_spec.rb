@@ -16,7 +16,7 @@ RSpec.describe IntegrationCollectionMappings::CreateService, type: :service do
     let(:create_args) do
       {
         mapping_type: :fallback_item,
-        integration_id: integration.id,
+        integration_id: integration.id
       }
     end
 
@@ -44,7 +44,7 @@ RSpec.describe IntegrationCollectionMappings::CreateService, type: :service do
       let(:create_args) do
         {
           mappable_type: 'AddOn',
-          mappable_id: add_on.id,
+          mappable_id: add_on.id
         }
       end
 

@@ -39,15 +39,15 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
             from_value: 0,
             to_value: 5,
             per_unit_amount: '10',
-            flat_amount: '100',
+            flat_amount: '100'
           },
           {
             from_value: 6,
             to_value: nil,
             per_unit_amount: '5',
-            flat_amount: '50',
+            flat_amount: '50'
           },
-        ],
+        ]
       },
     )
   end
@@ -253,15 +253,15 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
                 from_value: 0,
                 to_value: 1,
                 per_unit_amount: '10',
-                flat_amount: '100',
+                flat_amount: '100'
               },
               {
                 from_value: 2,
                 to_value: nil,
                 per_unit_amount: '5',
-                flat_amount: '50',
+                flat_amount: '50'
               },
-            ],
+            ]
           },
         )
       end
@@ -290,21 +290,21 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
               from_value: 0,
               to_value: 5,
               per_unit_amount: '10',
-              flat_amount: '100',
+              flat_amount: '100'
             },
             {
               from_value: 6,
               to_value: 15,
               per_unit_amount: '5',
-              flat_amount: '50',
+              flat_amount: '50'
             },
             {
               from_value: 16,
               to_value: nil,
               per_unit_amount: '2',
-              flat_amount: '0',
+              flat_amount: '0'
             },
-          ],
+          ]
         },
       )
     end

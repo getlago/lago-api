@@ -142,7 +142,7 @@ module Currencies
     XPF: 'Cfp Franc',
     YER: 'Yemeni Rial',
     ZAR: 'South African Rand',
-    ZMW: 'Zambian Kwacha',
+    ZMW: 'Zambian Kwacha'
   }.freeze
 
   included do

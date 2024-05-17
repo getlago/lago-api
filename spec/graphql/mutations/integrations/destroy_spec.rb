@@ -30,7 +30,7 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {id: integration.id},
+          input: {id: integration.id}
         },
       )
     end.to change(::Integrations::BaseIntegration, :count).by(-1)

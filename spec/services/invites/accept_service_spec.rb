@@ -12,7 +12,7 @@ RSpec.describe Invites::AcceptService, type: :service do
   let(:accept_args) do
     {
       token: invite.token,
-      password: 'ILoveLago!',
+      password: 'ILoveLago!'
     }
   end
 

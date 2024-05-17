@@ -15,7 +15,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
         amount_cents: 123,
         amount_currency: 'EUR',
         description: 'description',
-        tax_codes: [tax.code],
+        tax_codes: [tax.code]
       }
     end
 
@@ -46,7 +46,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
         amount_cents: 123,
         amount_currency: 'EUR',
         description: 'description',
-        tax_codes: [tax2.code],
+        tax_codes: [tax2.code]
       }
     end
 

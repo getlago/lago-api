@@ -14,7 +14,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
     {
       units: 5,
       unit_amount_cents: 1200,
-      invoice_display_name: 'new-dis-name',
+      invoice_display_name: 'new-dis-name'
     }
   end
 
@@ -79,7 +79,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         let(:percentage_charge) { create(:percentage_charge) }
         let(:params) do
           {
-            invoice_display_name: 'new-dis-name',
+            invoice_display_name: 'new-dis-name'
           }
         end
 
@@ -97,7 +97,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         let(:params) do
           {
             units: 5,
-            invoice_display_name: 'new-dis-name',
+            invoice_display_name: 'new-dis-name'
           }
         end
 

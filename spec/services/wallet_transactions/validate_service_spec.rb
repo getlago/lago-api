@@ -22,7 +22,7 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
       organization_id: organization.id,
       paid_credits:,
       granted_credits:,
-      voided_credits:,
+      voided_credits:
     }
   end
 

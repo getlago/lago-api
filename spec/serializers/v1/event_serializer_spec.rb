@@ -11,7 +11,7 @@ RSpec.describe ::V1::EventSerializer do
       customer_id: nil,
       subscription_id: nil,
       properties: {
-        item_value: '12',
+        item_value: '12'
       },
     )
   end

@@ -10,11 +10,11 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:,
+        to_datetime:
       },
       filters: {
         matching_filters:,
-        ignored_filters:,
+        ignored_filters:
       },
     )
   end
@@ -67,7 +67,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       subscription:,
       timestamp: subscription.started_at + 3.months,
       properties: {
-        total_count: 2.5,
+        total_count: 2.5
       },
     )
   end
@@ -80,7 +80,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       subscription:,
       timestamp: from_datetime + 25.days,
       properties: {
-        total_count: 12,
+        total_count: 12
       },
     )
   end

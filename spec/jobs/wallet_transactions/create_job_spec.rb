@@ -17,7 +17,7 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
         wallet_id: '123456',
         paid_credits: '1.00',
         granted_credits: '1.00',
-        source: 'manual',
+        source: 'manual'
       },
     )
 
@@ -27,7 +27,7 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
         wallet_id: '123456',
         paid_credits: '1.00',
         granted_credits: '1.00',
-        source: 'manual',
+        source: 'manual'
       },
     )
   end

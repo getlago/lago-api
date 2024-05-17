@@ -12,7 +12,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         grouped_by:,
         grouped_by_values:,
         matching_filters:,
-        ignored_filters:,
+        ignored_filters:
       },
     )
   end
@@ -30,7 +30,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     {
       from_datetime: subscription.started_at.beginning_of_day,
       to_datetime: subscription.started_at.end_of_month.end_of_day,
-      charges_duration: 31,
+      charges_duration: 31
     }
   end
 
@@ -179,7 +179,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         code:,
         timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
         properties: {
-          billable_metric.field_name => SecureRandom.uuid,
+          billable_metric.field_name => SecureRandom.uuid
         },
       )
 
@@ -195,7 +195,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           code:,
           timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
           properties: {
-            billable_metric.field_name => 2,
+            billable_metric.field_name => 2
           },
         )
 
@@ -206,7 +206,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           code:,
           timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
           properties: {
-            billable_metric.field_name => 2,
+            billable_metric.field_name => 2
           },
         )
 
@@ -224,7 +224,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
           properties: {
             billable_metric.field_name => 2,
-            :operation_type => 'remove',
+            :operation_type => 'remove'
           },
         )
 
@@ -235,7 +235,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           code:,
           timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
           properties: {
-            billable_metric.field_name => 2,
+            billable_metric.field_name => 2
           },
         )
 
@@ -255,7 +255,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         timestamp: boundaries[:from_datetime] + 3.days,
         properties: {
           billable_metric.field_name => 2,
-          :operation_type => 'remove',
+          :operation_type => 'remove'
         },
       )
 
@@ -275,7 +275,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         code:,
         timestamp: boundaries[:from_datetime] + 1.day,
         properties: {
-          billable_metric.field_name => 2,
+          billable_metric.field_name => 2
         },
       )
 
@@ -288,7 +288,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
         properties: {
           billable_metric.field_name => 2,
-          :operation_type => 'remove',
+          :operation_type => 'remove'
         },
       )
 
@@ -313,7 +313,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 1.hour,
           properties: {
             billable_metric.field_name => 2,
-            :agent_name => 'frodo',
+            :agent_name => 'frodo'
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -324,7 +324,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            :agent_name => 'aragorn',
+            :agent_name => 'aragorn'
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -336,7 +336,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           properties: {
             billable_metric.field_name => 2,
             :agent_name => 'aragorn',
-            :operation_type => 'remove',
+            :operation_type => 'remove'
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -390,7 +390,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            :agent_name => 'frodo',
+            :agent_name => 'frodo'
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -401,7 +401,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
-            :agent_name => 'aragorn',
+            :agent_name => 'aragorn'
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -413,7 +413,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           properties: {
             billable_metric.field_name => 2,
             :agent_name => 'aragorn',
-            :operation_type => 'remove',
+            :operation_type => 'remove'
           },
         ),
         Clickhouse::EventsRaw.create!(
@@ -464,7 +464,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         code:,
         timestamp: boundaries[:from_datetime] + 1.day,
         properties: {
-          billable_metric.field_name => 2,
+          billable_metric.field_name => 2
         },
       )
 
@@ -477,7 +477,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
         properties: {
           billable_metric.field_name => 2,
-          :operation_type => 'remove',
+          :operation_type => 'remove'
         },
       )
 
@@ -859,7 +859,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         events.map do |e|
           {
             date: e.timestamp.to_date,
-            value: e.properties[billable_metric.field_name].to_f,
+            value: e.properties[billable_metric.field_name].to_f
           }
         end,
       )

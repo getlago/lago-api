@@ -226,7 +226,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
             provider_payment_id: 'pi_1JKS2Y2VYugoKSBzNHPFBNj9',
             status: 'succeeded',
             metadata: {
-              lago_invoice_id: 'a587e552-36bc-4334-81f2-abcbf034ad3f',
+              lago_invoice_id: 'a587e552-36bc-4334-81f2-abcbf034ad3f'
             },
           )
       end
@@ -312,7 +312,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           .with(
             metadata: {
               customer_id: 'test_5',
-              lago_customer_id: '123456-1234-1234-1234-1234567890',
+              lago_customer_id: '123456-1234-1234-1234-1234567890'
             },
             organization_id: organization.id,
             stripe_customer_id: 'cus_123456789',
@@ -381,8 +381,8 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           id: 'foo',
           type: 'invalid',
           data: {
-            object: {id: 'foo'},
-          },
+            object: {id: 'foo'}
+          }
         }
       end
 

@@ -39,7 +39,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code,
-          billing_time:,
+          billing_time:
         },
       )
 

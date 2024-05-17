@@ -184,7 +184,7 @@ module Fees
         free_units_per_events: properties['free_units_per_events'].to_i,
         free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0),
         is_current_usage:,
-        is_pay_in_advance: charge.pay_in_advance?,
+        is_pay_in_advance: charge.pay_in_advance?
       }
     end
 
@@ -204,7 +204,7 @@ module Fees
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,
-          charges_duration: boundaries.charges_duration,
+          charges_duration: boundaries.charges_duration
         },
         filters: aggregation_filters(charge_filter:),
       )

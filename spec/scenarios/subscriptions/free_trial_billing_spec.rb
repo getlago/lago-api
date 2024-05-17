@@ -23,7 +23,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       {
         external_customer_id: customer.external_id,
         external_id: customer.external_id,
-        plan_code: plan.code,
+        plan_code: plan.code
       },
     )
   end
@@ -136,7 +136,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: upgrade_plan.code,
+            plan_code: upgrade_plan.code
           },
         )
         perform_billing
@@ -193,7 +193,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: upgrade_plan.code,
+              plan_code: upgrade_plan.code
             },
           )
           perform_billing
@@ -247,7 +247,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: upgrade_plan.code,
+              plan_code: upgrade_plan.code
             },
           )
           perform_billing

@@ -12,7 +12,7 @@ RSpec.describe LagoHttpClient::Client do
       let(:response) do
         {
           'status' => 200,
-          'message' => 'Success',
+          'message' => 'Success'
         }.to_json
       end
 
@@ -54,7 +54,7 @@ RSpec.describe LagoHttpClient::Client do
         {
           'status' => 422,
           'error' => 'Unprocessable Entity',
-          'message' => 'Validation error on the record',
+          'message' => 'Validation error on the record'
         }.to_json
       end
 
@@ -74,7 +74,7 @@ RSpec.describe LagoHttpClient::Client do
       let(:response) do
         {
           'status' => 200,
-          'message' => 'Success',
+          'message' => 'Success'
         }.to_json
       end
 
@@ -97,7 +97,7 @@ RSpec.describe LagoHttpClient::Client do
       let(:response) do
         {
           'status' => 200,
-          'message' => 'Success',
+          'message' => 'Success'
         }.to_json
       end
 

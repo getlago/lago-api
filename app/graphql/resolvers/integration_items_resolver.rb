@@ -29,7 +29,7 @@ module Resolvers
         page:,
         limit:,
         filters: {
-          item_type:,
+          item_type:
         },
       )
 

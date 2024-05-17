@@ -235,7 +235,7 @@ module Subscriptions
           plan_name: subscription.plan.name,
           subscription_type:,
           organization_id: subscription.organization.id,
-          billing_time: subscription.billing_time,
+          billing_time: subscription.billing_time
         },
       )
     end

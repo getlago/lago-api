@@ -14,7 +14,7 @@ RSpec.describe Invites::RevokeService, type: :service do
       let(:revoke_args) do
         {
           id: nil,
-          current_organization: organization,
+          current_organization: organization
         }
       end
 
@@ -31,7 +31,7 @@ RSpec.describe Invites::RevokeService, type: :service do
       let(:revoke_args) do
         {
           id: revoked_invite.id,
-          current_organization: organization,
+          current_organization: organization
         }
       end
 
@@ -48,7 +48,7 @@ RSpec.describe Invites::RevokeService, type: :service do
       let(:revoke_args) do
         {
           id: accepted_invite.id,
-          current_organization: organization,
+          current_organization: organization
         }
       end
 
@@ -64,7 +64,7 @@ RSpec.describe Invites::RevokeService, type: :service do
       let(:revoke_args) do
         {
           id: invite.id,
-          current_organization: organization,
+          current_organization: organization
         }
       end
 

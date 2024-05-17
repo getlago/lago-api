@@ -107,7 +107,7 @@ module AppliedCoupons
           customer_id: applied_coupon.customer.id,
           coupon_code: applied_coupon.coupon.code,
           coupon_name: applied_coupon.coupon.name,
-          organization_id: applied_coupon.coupon.organization_id,
+          organization_id: applied_coupon.coupon.organization_id
         },
       )
     end

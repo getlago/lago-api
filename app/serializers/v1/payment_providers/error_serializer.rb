@@ -10,7 +10,7 @@ module V1
           payment_provider_name: model.name,
           source: options[:provider_error][:source],
           action: options[:provider_error][:action],
-          provider_error: options[:provider_error].except(:source, :action),
+          provider_error: options[:provider_error].except(:source, :action)
         }
       end
     end

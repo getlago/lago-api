@@ -30,8 +30,8 @@ RSpec.describe Mutations::Subscriptions::Terminate, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          id: subscription.id,
-        },
+          id: subscription.id
+        }
       },
     )
 

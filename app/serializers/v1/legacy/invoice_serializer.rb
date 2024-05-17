@@ -14,7 +14,7 @@ module V1
           credit_amount_cents: model.credits.sum(:amount_cents),
           vat_amount_cents: model.taxes_amount_cents,
           sub_total_vat_excluded_amount_cents: model.sub_total_excluding_taxes_amount_cents,
-          sub_total_vat_included_amount_cents: model.sub_total_including_taxes_amount_cents,
+          sub_total_vat_included_amount_cents: model.sub_total_including_taxes_amount_cents
         }
       end
 

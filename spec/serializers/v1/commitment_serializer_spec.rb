@@ -20,7 +20,7 @@ RSpec.describe ::V1::CommitmentSerializer do
       'amount_cents' => commitment.amount_cents,
       'interval' => commitment.plan.interval,
       'created_at' => commitment.created_at.iso8601,
-      'updated_at' => commitment.updated_at.iso8601,
+      'updated_at' => commitment.updated_at.iso8601
     }
   end
 
@@ -32,7 +32,7 @@ RSpec.describe ::V1::CommitmentSerializer do
       'rate' => tax.rate,
       'description' => tax.description,
       'applied_to_organization' => tax.applied_to_organization,
-      'commitments_count' => 1,
+      'commitments_count' => 1
     }
   end
 

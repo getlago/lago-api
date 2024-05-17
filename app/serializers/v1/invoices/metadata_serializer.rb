@@ -8,7 +8,7 @@ module V1
           lago_id: model.id,
           key: model.key,
           value: model.value,
-          created_at: model.created_at.iso8601,
+          created_at: model.created_at.iso8601
         }
       end
     end

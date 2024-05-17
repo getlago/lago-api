@@ -30,9 +30,6 @@ Style/TrailingCommaInArrayLiteral:
 Style/TrailingCommaInBlockArgs:
   Enabled: false
 
-Style/TrailingCommaInHashLiteral:
-  Enabled: false
-
 Performance/CaseWhenSplat:
   Enabled: true
 

@@ -8,7 +8,7 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
   describe 'PUT /admin/organizations/:id' do
     let(:update_params) do
       {
-        name: 'FooBar',
+        name: 'FooBar'
       }
     end
 

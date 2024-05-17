@@ -64,7 +64,7 @@ RSpec.describe CanRequirePermissions, type: :graphql do
 
       partial_error = {
         'message' => 'Missing permissions',
-        'extensions' => {'status' => :forbidden, 'code' => 'forbidden', 'required_permissions' => ['things:rename']},
+        'extensions' => {'status' => :forbidden, 'code' => 'forbidden', 'required_permissions' => ['things:rename']}
       }
 
       expect(result['errors']).to include hash_including(partial_error)

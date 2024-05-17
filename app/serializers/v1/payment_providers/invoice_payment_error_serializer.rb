@@ -13,7 +13,7 @@ module V1
           provider_customer_id: options[:provider_customer_id],
           payment_provider: invoice.customer.payment_provider,
           payment_provider_code: invoice.customer.payment_provider_code,
-          provider_error: options[:provider_error],
+          provider_error: options[:provider_error]
         }
       end
     end

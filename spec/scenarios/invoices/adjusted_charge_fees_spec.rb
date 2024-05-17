@@ -14,7 +14,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
     {
       invoice_display_name: 'test-name-25',
       unit_amount_cents:,
-      units: 3,
+      units: 3
     }
   end
 
@@ -47,7 +47,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
             external_id: customer.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
       end
@@ -108,7 +108,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
             external_id: customer.external_id,
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
-            subscription_at: subscription_at.iso8601,
+            subscription_at: subscription_at.iso8601
           },
         )
       end

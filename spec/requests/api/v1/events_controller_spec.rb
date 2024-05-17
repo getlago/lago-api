@@ -23,8 +23,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
             external_customer_id: customer.external_id,
             timestamp: Time.current.to_i,
             properties: {
-              foo: 'bar',
-            },
+              foo: 'bar'
+            }
           },
         )
       end.to change(Event, :count).by(1)
@@ -50,8 +50,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
               external_subscription_id: subscription.external_id,
               timestamp: Time.current.to_i,
               properties: {
-                foo: 'bar',
-              },
+                foo: 'bar'
+              }
             },
           )
         end.not_to change(Event, :count)
@@ -74,8 +74,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
               external_customer_id: customer.external_id,
               timestamp: Time.current.to_i,
               properties: {
-                foo: 'bar',
-              },
+                foo: 'bar'
+              }
             },
           ],
         )
@@ -138,8 +138,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
           external_customer_id: customer.external_id,
           transaction_id: SecureRandom.uuid,
           properties: {
-            foo: 'bar',
-          },
+            foo: 'bar'
+          }
         },
       )
 
@@ -173,8 +173,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
             code: metric.code,
             external_customer_id: nil,
             properties: {
-              foo: 'bar',
-            },
+              foo: 'bar'
+            }
           },
         )
 
@@ -195,8 +195,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
             code: metric.code,
             external_customer_id: customer.external_id,
             properties: {
-              foo: 'bar',
-            },
+              foo: 'bar'
+            }
           },
         )
 

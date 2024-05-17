@@ -17,7 +17,7 @@ describe 'Delete Plan Scenarios', :scenarios, type: :request do
         {
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
-          plan_code: plan.code,
+          plan_code: plan.code
         },
       )
 

@@ -54,9 +54,9 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
           expirationAt: expiration_at.iso8601,
           reusable: false,
           appliesTo: {
-            planIds: [plan.id],
-          },
-        },
+            planIds: [plan.id]
+          }
+        }
       },
     )
 
@@ -119,9 +119,9 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
             expirationAt: expiration_at.iso8601,
             reusable: false,
             appliesTo: {
-              billableMetricIds: [billable_metric.id],
-            },
-          },
+              billableMetricIds: [billable_metric.id]
+            }
+          }
         },
       )
 
@@ -159,8 +159,8 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
             amountCents: 5000,
             amountCurrency: 'EUR',
             expiration: 'time_limit',
-            expirationAt: expiration_at.iso8601,
-          },
+            expirationAt: expiration_at.iso8601
+          }
         },
       )
 

@@ -83,7 +83,7 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
           description: billable_metric.description,
           aggregation_type: billable_metric.aggregation_type,
           aggregation_property: billable_metric.field_name,
-          organization_id: billable_metric.organization_id,
+          organization_id: billable_metric.organization_id
         },
       )
     end

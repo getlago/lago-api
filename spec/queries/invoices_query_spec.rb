@@ -112,7 +112,7 @@ RSpec.describe InvoicesQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [invoice_second.id, invoice_fifth.id],
+          ids: [invoice_second.id, invoice_fifth.id]
         },
       )
 

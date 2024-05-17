@@ -40,8 +40,8 @@ RSpec.describe Mutations::Integrations::Okta::Create, type: :graphql do
           clientId: '123',
           clientSecret: '456',
           domain: 'foo.bar',
-          organizationName: 'Foobar',
-        },
+          organizationName: 'Foobar'
+        }
       },
     )
 

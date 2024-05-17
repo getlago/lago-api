@@ -18,7 +18,7 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
         integration_code:,
         sync_with_provider:,
         external_customer_id:,
-        subsidiary_id:,
+        subsidiary_id:
       }
     end
 

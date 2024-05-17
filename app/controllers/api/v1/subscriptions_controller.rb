@@ -166,19 +166,19 @@ module Api
                   :invoice_display_name,
                   {
                     properties: {},
-                    values: {},
+                    values: {}
                   },
-                ],
+                ]
               },
               {
                 group_properties: [
                   :group_id,
                   {values: {}},
                   :invoice_display_name,
-                ],
+                ]
               },
               {tax_codes: []},
-            ],
+            ]
           },
         ]
       end

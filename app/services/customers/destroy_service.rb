@@ -31,7 +31,7 @@ module Customers
         properties: {
           customer_id: customer.id,
           organization_id: customer.organization_id,
-          deleted_at: customer.deleted_at,
+          deleted_at: customer.deleted_at
         },
       )
     end

@@ -7,7 +7,7 @@ module Invoices
         'subscription' => 'invoice.created',
         'credit' => 'invoice.paid_credit_added',
         'add_on' => 'invoice.add_on_added',
-        'one_off' => 'invoice.one_off_created',
+        'one_off' => 'invoice.one_off_created'
       }.freeze
 
       def initialize(invoice:)

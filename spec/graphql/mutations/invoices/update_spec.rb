@@ -35,10 +35,10 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
           metadata: [
             {
               key: 'test-key',
-              value: 'value',
+              value: 'value'
             },
-          ],
-        },
+          ]
+        }
       },
     )
 
@@ -61,8 +61,8 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
         variables: {
           input: {
             id: '1234',
-            paymentStatus: 'succeeded',
-          },
+            paymentStatus: 'succeeded'
+          }
         },
       )
 

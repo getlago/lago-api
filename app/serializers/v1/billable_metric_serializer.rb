@@ -15,7 +15,7 @@ module V1
         field_name: model.field_name,
         active_subscriptions_count:,
         draft_invoices_count:,
-        plans_count:,
+        plans_count:
       }.merge(legacy_values)
 
       payload.merge!(filters)

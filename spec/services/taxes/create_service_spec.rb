@@ -13,7 +13,7 @@ RSpec.describe Taxes::CreateService, type: :service do
       name: 'Tax',
       code:,
       rate: 15.0,
-      description: 'Tax Description',
+      description: 'Tax Description'
     }
   end
 

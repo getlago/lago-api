@@ -38,7 +38,7 @@ RSpec.describe Charge, type: :model do
       BaseService::Result.new.validation_failure!(
         errors: {
           amount: ['invalid_amount'],
-          ranges: ['invalid_graduated_ranges'],
+          ranges: ['invalid_graduated_ranges']
         },
       )
     end
@@ -94,7 +94,7 @@ RSpec.describe Charge, type: :model do
     let(:service_response) do
       BaseService::Result.new.validation_failure!(
         errors: {
-          amount: ['invalid_amount'],
+          amount: ['invalid_amount']
         },
       )
     end
@@ -151,7 +151,7 @@ RSpec.describe Charge, type: :model do
         errors: {
           amount: ['invalid_amount'],
           free_units: ['invalid_free_units'],
-          package_size: ['invalid_package_size'],
+          package_size: ['invalid_package_size']
         },
       )
     end
@@ -209,7 +209,7 @@ RSpec.describe Charge, type: :model do
           amount: ['invalid_fixed_amount'],
           free_units_per_events: ['invalid_free_units_per_events'],
           free_units_per_total_aggregation: ['invalid_free_units_per_total_aggregation'],
-          rate: ['invalid_rate'],
+          rate: ['invalid_rate']
         },
       )
     end
@@ -267,7 +267,7 @@ RSpec.describe Charge, type: :model do
       BaseService::Result.new.validation_failure!(
         errors: {
           amount: ['invalid_amount'],
-          volume_ranges: ['invalid_volume_ranges'],
+          volume_ranges: ['invalid_volume_ranges']
         },
       )
     end
@@ -326,7 +326,7 @@ RSpec.describe Charge, type: :model do
       BaseService::Result.new.validation_failure!(
         errors: {
           rate: ['invalid_rate'],
-          ranges: ['invalid_graduated_percentage_ranges'],
+          ranges: ['invalid_graduated_percentage_ranges']
         },
       )
     end

@@ -30,7 +30,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time:,
+            billing_time:
           },
         )
       end
@@ -74,7 +74,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time:,
+            billing_time:
           },
         )
       end

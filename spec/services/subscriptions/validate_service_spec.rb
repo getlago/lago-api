@@ -18,7 +18,7 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
       customer:,
       plan:,
       subscription_at:,
-      ending_at:,
+      ending_at:
     }
   end
 

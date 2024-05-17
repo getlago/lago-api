@@ -72,8 +72,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 1_001, to: 20_000, third_party: '0.12', first_party: '0.10'},
               {from: 20_001, to: 50_000, third_party: '0.10', first_party: '0.08'},
               {from: 50_001, to: nil, third_party: '0.08', first_party: '0.06'}
-            ],
-          },
+            ]
+          }
         },
       )
     end
@@ -91,8 +91,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 1_001, to: 20_000, third_party: '0.12', first_party: '0.10'},
               {from: 20_001, to: 50_000, third_party: '0.10', first_party: '0.08'},
               {from: 50_001, to: nil, third_party: '0.08', first_party: '0.06'}
-            ],
-          },
+            ]
+          }
         },
       )
     end
@@ -109,7 +109,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
+              plan_code: plan.code
             },
           )
         end
@@ -125,8 +125,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'first_party',
-              },
+                certif: 'first_party'
+              }
             },
           )
 
@@ -156,8 +156,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 999,
-                certif: 'first_party',
-              },
+                certif: 'first_party'
+              }
             },
           )
 
@@ -187,8 +187,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'third_party',
-              },
+                certif: 'third_party'
+              }
             },
           )
 
@@ -218,8 +218,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'first_party',
-              },
+                certif: 'first_party'
+              }
             },
           )
 
@@ -249,8 +249,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 18998,
-                certif: 'first_party',
-              },
+                certif: 'first_party'
+              }
             },
           )
 
@@ -280,8 +280,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'first_party',
-              },
+                certif: 'first_party'
+              }
             },
           )
 
@@ -311,8 +311,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 30_002,
-                certif: 'first_party',
-              },
+                certif: 'first_party'
+              }
             },
           )
 
@@ -343,7 +343,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
-                plan_code: plan.code,
+                plan_code: plan.code
               },
             )
           end
@@ -359,8 +359,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 external_subscription_id: subscription.external_id,
                 properties: {
                   value: 1,
-                  certif: 'first_party',
-                },
+                  certif: 'first_party'
+                }
               },
             )
 
@@ -390,8 +390,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 external_subscription_id: subscription.external_id,
                 properties: {
                   value: 10,
-                  certif: 'first_party',
-                },
+                  certif: 'first_party'
+                }
               },
             )
 
@@ -433,8 +433,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 external_subscription_id: subscription.external_id,
                 properties: {
                   value: 1000,
-                  certif: 'first_party',
-                },
+                  certif: 'first_party'
+                }
               },
             )
 
@@ -468,7 +468,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan.code,
+              plan_code: plan.code
             },
           )
         end
@@ -484,8 +484,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'first_party',
-              },
+                certif: 'first_party'
+              }
             },
           )
 
@@ -514,8 +514,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 10,
-                certif: 'first_party',
-              },
+                certif: 'first_party'
+              }
             },
           )
 
@@ -542,8 +542,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1000,
-                certif: 'third_party',
-              },
+                certif: 'third_party'
+              }
             },
           )
 
@@ -691,8 +691,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 10_001, to: 15_000, rate: '0.3'},
               {from: 15_001, to: 22_000, rate: '0.25'},
               {from: 22_001, to: nil, rate: '0.2'},
-            ],
-          },
+            ]
+          }
         },
       )
     end
@@ -724,8 +724,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 10_001, to: 15_000, amount: '0.5'},
               {from: 15_001, to: 22_000, amount: '0.45'},
               {from: 22_001, to: nil, amount: '0.4'},
-            ],
-          },
+            ]
+          }
         },
       )
     end
@@ -735,7 +735,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter,
         charge:,
         properties: {
-          custom_properties: {amount: '25'},
+          custom_properties: {amount: '25'}
         },
       )
     end
@@ -878,7 +878,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -897,8 +897,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               value: 10_000,
               direction: 'inbound',
               scheme: 'fps',
-              currency: 'gbp',
-            },
+              currency: 'gbp'
+            }
           },
         )
 
@@ -936,8 +936,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               value: 10_000,
               direction: 'outbound',
               scheme: 'fps',
-              currency: 'gbp',
-            },
+              currency: 'gbp'
+            }
           },
         )
 
@@ -964,8 +964,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               value: 2_000_000,
               direction: 'intbound',
               scheme: 'bacs',
-              currency: 'gbp',
-            },
+              currency: 'gbp'
+            }
           },
         )
 
@@ -992,8 +992,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               value: 10_000,
               direction: 'outbound',
               scheme: 'swift',
-              currency: 'gbp',
-            },
+              currency: 'gbp'
+            }
           },
         )
 
@@ -1019,8 +1019,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               value: 100_000,
               direction: 'outbound',
               scheme: 'swift',
-              currency: 'gbp',
-            },
+              currency: 'gbp'
+            }
           },
         )
 
@@ -1047,8 +1047,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               value: 10_000,
               direction: 'outbound',
               scheme: 'sepa',
-              currency: 'eur',
-            },
+              currency: 'eur'
+            }
           },
         )
 
@@ -1075,8 +1075,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               value: 100_000,
               direction: 'outbound',
               scheme: 'sic',
-              currency: 'chf',
-            },
+              currency: 'chf'
+            }
           },
         )
 
@@ -1114,8 +1114,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               value: 1000,
               direction: 'outbound',
               scheme: 'sic',
-              currency: 'chf',
-            },
+              currency: 'chf'
+            }
           },
         )
 

@@ -183,7 +183,7 @@ class Invoice < ApplicationRecord
       boundaries: {
         from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
         to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
-        charges_duration: fee.properties['charges_duration'],
+        charges_duration: fee.properties['charges_duration']
       },
       filters:,
     ).breakdown.breakdown
@@ -208,7 +208,7 @@ class Invoice < ApplicationRecord
 
     {
       number_of_days:,
-      period_duration: date_service.charges_duration_in_days,
+      period_duration: date_service.charges_duration_in_days
     }
   end
 
@@ -221,7 +221,7 @@ class Invoice < ApplicationRecord
 
     {
       charges_from_date: date_service.charges_from_datetime&.to_date,
-      charges_to_date: date_service.charges_to_datetime&.to_date,
+      charges_to_date: date_service.charges_to_datetime&.to_date
     }
   end
 

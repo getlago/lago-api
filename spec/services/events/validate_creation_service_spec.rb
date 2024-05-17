@@ -106,7 +106,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           code: billable_metric.code,
           external_subscription_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          transaction_id:,
+          transaction_id:
         }
       end
 
@@ -143,7 +143,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           code: billable_metric.code,
           external_subscription_id: external_id,
           external_customer_id: customer.external_id,
-          transaction_id:,
+          transaction_id:
         }
       end
 
@@ -202,9 +202,9 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           code: billable_metric.code,
           external_customer_id: customer.external_id,
           properties: {
-            item_id: 'test',
+            item_id: 'test'
           },
-          transaction_id:,
+          transaction_id:
         }
       end
 
@@ -225,9 +225,9 @@ RSpec.describe Events::ValidateCreationService, type: :service do
             code: billable_metric.code,
             external_customer_id: customer.external_id,
             properties: {
-              invalid_key: 'test',
+              invalid_key: 'test'
             },
-            transaction_id:,
+            transaction_id:
           }
         end
 
@@ -243,7 +243,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           {
             code: billable_metric.code,
             external_customer_id: customer.external_id,
-            transaction_id:,
+            transaction_id:
           }
         end
 
