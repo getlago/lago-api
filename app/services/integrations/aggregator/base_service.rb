@@ -46,27 +46,33 @@ module Integrations
       end
 
       def tax_item
-        @tax_item ||= integration.integration_collection_mappings.where(mapping_type: :tax)&.first
+        @tax_item ||=
+          integration.integration_collection_mappings.where(mapping_type: :tax)&.first || fallback_item
       end
 
       def commitment_item
-        @tax_item ||= integration.integration_collection_mappings.where(mapping_type: :minimum_commitment)&.first
+        @commitment_item ||=
+          integration.integration_collection_mappings.where(mapping_type: :minimum_commitment)&.first || fallback_item
       end
 
       def subscription_item
-        @tax_item ||= integration.integration_collection_mappings.where(mapping_type: :subscription_fee)&.first
+        @subscription_item ||=
+          integration.integration_collection_mappings.where(mapping_type: :subscription_fee)&.first || fallback_item
       end
 
       def coupon_item
-        @tax_item ||= integration.integration_collection_mappings.where(mapping_type: :coupon)&.first
+        @coupon_item ||=
+          integration.integration_collection_mappings.where(mapping_type: :coupon)&.first || fallback_item
       end
 
       def credit_item
-        @tax_item ||= integration.integration_collection_mappings.where(mapping_type: :prepaid_credit)&.first
+        @credit_item ||=
+          integration.integration_collection_mappings.where(mapping_type: :prepaid_credit)&.first || fallback_item
       end
 
       def credit_note_item
-        @tax_item ||= integration.integration_collection_mappings.where(mapping_type: :credit_note)&.first
+        @credit_note_item ||=
+          integration.integration_collection_mappings.where(mapping_type: :credit_note)&.first || fallback_item
       end
 
       def fallback_item

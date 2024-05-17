@@ -77,7 +77,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
 
     context 'when service call is not successful' do
       let(:body) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/contacts/error_response.json')
+        path = Rails.root.join('spec/fixtures/integration_aggregator/error_response.json')
         File.read(path)
       end
 

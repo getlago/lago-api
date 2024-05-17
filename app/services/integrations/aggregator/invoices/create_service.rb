@@ -16,8 +16,8 @@ module Integrations
 
         def call
           return unless integration
-          return unless invoice.finalized?
           return unless integration.sync_invoices
+          return unless invoice.finalized?
           return unless fallback_item
 
           response = http_client.post_with_response(payload, headers)
@@ -51,17 +51,15 @@ module Integrations
         end
 
         def billable_metric_item(fee)
-          @tax_item ||=
-            integration
-              .integration_mappings
-              .find_by(mappable_type: 'BillableMetric', mappable_id: fee.billable_metric.id)
+          integration
+            .integration_mappings
+            .find_by(mappable_type: 'BillableMetric', mappable_id: fee.billable_metric.id)
         end
 
         def add_on_item(fee)
-          @tax_item ||=
-            integration
-              .integration_mappings
-              .find_by(mappable_type: 'AddOn', mappable_id: fee.add_on.id)
+          integration
+            .integration_mappings
+            .find_by(mappable_type: 'AddOn', mappable_id: fee.add_on.id)
         end
 
         def item(fee)
@@ -126,7 +124,7 @@ module Integrations
               'tranid' => invoice.id,
               'entity' => integration_customer.external_customer_id,
               'istaxable' => true,
-              'taxitem' => tax_item.external_id || fallback_item.external_id,
+              'taxitem' => tax_item.external_id,
               'taxamountoverride' => amount(invoice.taxes_amount_cents),
               'otherrefnum' => invoice.number,
               'custbody_lago_id' => invoice.id,
@@ -138,6 +136,9 @@ module Integrations
                 'lineItems' => invoice.fees.map { |fee| item(fee) } + discounts
               },
             ],
+            'options' => {
+              'ignoreMandatoryFields' => false,
+            },
           }
         end
       end
