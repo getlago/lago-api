@@ -60,7 +60,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          recurring: true,
+          recurring: true
         },
       )
 
@@ -84,7 +84,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          aggregation_types: ['count_agg'],
+          aggregation_types: ['count_agg']
         },
       )
 
@@ -107,7 +107,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          aggregation_types: ['max_agg'],
+          aggregation_types: ['max_agg']
         },
       )
 
@@ -149,7 +149,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [billable_metric_second.id],
+          ids: [billable_metric_second.id]
         },
       )
 

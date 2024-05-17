@@ -46,16 +46,16 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
                 billable_metric_id: fx_transfers.id,
                 charge_model: 'standard',
                 properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'sales_tax_fr').code],
+                tax_codes: [organization.taxes.find_by(code: 'sales_tax_fr').code]
               },
               {
                 billable_metric_id: cards.id,
                 charge_model: 'standard',
                 min_amount_cents: 5000,
                 properties: {amount: '30'},
-                tax_codes: [organization.taxes.find_by(code: 'sales_tax').code],
+                tax_codes: [organization.taxes.find_by(code: 'sales_tax').code]
               },
-            ],
+            ]
           },
         )
         plan = organization.plans.find_by(code: 'plan_code')
@@ -64,7 +64,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
           {
             external_customer_id: 'customer-1',
             external_id: 'sub_external_id',
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -78,7 +78,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_currency: 'EUR',
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
-            reusable: false,
+            reusable: false
           },
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
@@ -88,7 +88,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             code: fx_transfers.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: 'sub_external_id',
-            properties: {total: 50},
+            properties: {total: 50}
           },
         )
 
@@ -96,7 +96,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
           {
             code: cards.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id',
+            external_subscription_id: 'sub_external_id'
           },
         )
       end
@@ -183,7 +183,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_currency: 'EUR',
             pay_in_advance: false,
             tax_codes: ['banking_rates'],
-            charges: [],
+            charges: []
           },
         )
         plan = organization.plans.find_by(code: 'plan_code')
@@ -192,7 +192,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
           {
             external_customer_id: 'customer-1',
             external_id: 'sub_external_id',
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -206,7 +206,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_currency: 'EUR',
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
-            reusable: false,
+            reusable: false
           },
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
@@ -221,7 +221,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_currency: 'EUR',
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
-            reusable: false,
+            reusable: false
           },
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon2_code'})
@@ -264,7 +264,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_currency: 'EUR',
             pay_in_advance: false,
             tax_codes: ['banking_rates'],
-            charges: [],
+            charges: []
           },
         )
         plan = organization.plans.find_by(code: 'plan_code')
@@ -273,7 +273,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
           {
             external_customer_id: 'customer-1',
             external_id: 'sub_external_id',
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -286,7 +286,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_currency: 'EUR',
             pay_in_advance: false,
             tax_codes: ['banking_rates'],
-            charges: [],
+            charges: []
           },
         )
         plan2 = organization.plans.find_by(code: 'plan_code2')
@@ -295,7 +295,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
           {
             external_customer_id: 'customer-1',
             external_id: 'sub_external_id2',
-            plan_code: plan2.code,
+            plan_code: plan2.code
           },
         )
 
@@ -309,7 +309,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_currency: 'EUR',
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
-            reusable: false,
+            reusable: false
           },
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
@@ -324,7 +324,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             amount_currency: 'EUR',
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
-            reusable: false,
+            reusable: false
           },
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon2_code'})

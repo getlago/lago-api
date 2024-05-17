@@ -26,7 +26,7 @@ describe SegmentIdentifyJob, job: true do
             hosting_type: 'self',
             version: Utils::VersionService.new.version.version.number,
             organization_name: membership.organization.name,
-            email: membership.user.email,
+            email: membership.user.email
           },
         )
     end

@@ -41,11 +41,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     [
       {
         fee_id: fee1.id,
-        amount_cents: 10,
+        amount_cents: 10
       },
       {
         fee_id: fee2.id,
-        amount_cents: 5,
+        amount_cents: 5
       },
     ]
   end
@@ -112,7 +112,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
-          credit_note_method: 'both',
+          credit_note_method: 'both'
         },
       )
     end
@@ -147,11 +147,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         [
           {
             fee_id: fee1.id,
-            amount_cents: 10,
+            amount_cents: 10
           },
           {
             fee_id: fee2.id,
-            amount_cents: 15,
+            amount_cents: 15
           },
         ]
       end
@@ -383,11 +383,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         [
           {
             fee_id: fee1.id,
-            amount_cents: 10,
+            amount_cents: 10
           },
           {
             fee_id: fee2.id,
-            amount_cents: 5,
+            amount_cents: 5
           },
         ]
       end

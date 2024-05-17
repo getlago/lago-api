@@ -43,11 +43,11 @@ module Integrations
               'custentity_lago_sf_id' => customer.external_salesforce_id,
               'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
               'email' => customer.email,
-              'phone' => customer.phone,
+              'phone' => customer.phone
             },
             'options' => {
-              'isDynamic' => false,
-            },
+              'isDynamic' => false
+            }
           }
         end
       end

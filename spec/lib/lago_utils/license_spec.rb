@@ -15,7 +15,7 @@ RSpec.describe LagoUtils::License do
     context 'when license is valid' do
       let(:response) do
         {
-          'valid' => true,
+          'valid' => true
         }.to_json
       end
 
@@ -46,7 +46,7 @@ RSpec.describe LagoUtils::License do
     context 'when license is invalid' do
       let(:response) do
         {
-          'valid' => false,
+          'valid' => false
         }.to_json
       end
 

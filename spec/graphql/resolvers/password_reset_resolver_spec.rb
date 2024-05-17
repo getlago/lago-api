@@ -23,7 +23,7 @@ RSpec.describe Resolvers::PasswordResetResolver, type: :graphql do
     result = execute_graphql(
       query:,
       variables: {
-        token: password_reset.token,
+        token: password_reset.token
       },
     )
 
@@ -38,7 +38,7 @@ RSpec.describe Resolvers::PasswordResetResolver, type: :graphql do
       result = execute_graphql(
         query:,
         variables: {
-          token: 'foo',
+          token: 'foo'
         },
       )
 

@@ -64,7 +64,7 @@ RSpec.describe RequiredOrganization, type: :graphql do
 
       partial_error = {
         'message' => 'Missing organization id',
-        'extensions' => {'status' => :forbidden, 'code' => 'forbidden'},
+        'extensions' => {'status' => :forbidden, 'code' => 'forbidden'}
       }
 
       expect(result['errors']).to include hash_including(partial_error)
@@ -81,7 +81,7 @@ RSpec.describe RequiredOrganization, type: :graphql do
 
       partial_error = {
         'message' => 'Not in organization',
-        'extensions' => {'status' => :forbidden, 'code' => 'forbidden'},
+        'extensions' => {'status' => :forbidden, 'code' => 'forbidden'}
       }
 
       expect(result['errors']).to include hash_including(partial_error)

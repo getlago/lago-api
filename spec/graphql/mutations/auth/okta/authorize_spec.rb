@@ -21,8 +21,8 @@ RSpec.describe Mutations::Auth::Okta::Authorize, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          email: "foo@#{okta_integration.domain}",
-        },
+          email: "foo@#{okta_integration.domain}"
+        }
       },
     )
 
@@ -39,8 +39,8 @@ RSpec.describe Mutations::Auth::Okta::Authorize, type: :graphql do
         query: mutation,
         variables: {
           input: {
-            email: 'foo@b.ar',
-          },
+            email: 'foo@b.ar'
+          }
         },
       )
 
@@ -62,8 +62,8 @@ RSpec.describe Mutations::Auth::Okta::Authorize, type: :graphql do
         variables: {
           input: {
             email: "foo@#{okta_integration.domain}",
-            inviteToken: invite.token,
-          },
+            inviteToken: invite.token
+          }
         },
       )
 

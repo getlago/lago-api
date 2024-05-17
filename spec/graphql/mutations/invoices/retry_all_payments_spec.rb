@@ -63,7 +63,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
         permissions: required_permission,
         query: mutation,
         variables: {
-          input: {},
+          input: {}
         },
       )
 

@@ -8,7 +8,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     let(:create_params) do
       {
         webhook_url: Faker::Internet.url,
-        signature_algo: 'jwt',
+        signature_algo: 'jwt'
       }
     end
 
@@ -111,7 +111,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     let(:update_params) do
       {
         webhook_url: 'http://foo.bar',
-        signature_algo: 'hmac',
+        signature_algo: 'hmac'
       }
     end
 

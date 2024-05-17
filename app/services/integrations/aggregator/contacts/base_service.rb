@@ -14,7 +14,7 @@ module Integrations
           {
             'Connection-Id' => integration.connection_id,
             'Authorization' => "Bearer #{secret_key}",
-            'Provider-Config-Key' => provider,
+            'Provider-Config-Key' => provider
           }
         end
 
@@ -33,7 +33,7 @@ module Integrations
             provider_code: integration.code,
             provider_error: {
               message:,
-              error_code: code,
+              error_code: code
             },
           )
         end

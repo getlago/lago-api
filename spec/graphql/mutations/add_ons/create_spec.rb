@@ -42,8 +42,8 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
           description: 'some text',
           amountCents: 5000,
           amountCurrency: 'EUR',
-          taxCodes: [tax.code],
-        },
+          taxCodes: [tax.code]
+        }
       },
     )
 

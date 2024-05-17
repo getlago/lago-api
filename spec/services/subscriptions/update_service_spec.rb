@@ -16,7 +16,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       {
         name: 'new name',
         ending_at:,
-        subscription_at:,
+        subscription_at:
       }
     end
 
@@ -37,7 +37,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     context 'when subscription_at is not passed at all' do
       let(:params) do
         {
-          name: 'new name',
+          name: 'new name'
         }
       end
 
@@ -94,7 +94,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     context 'when subscription is nil' do
       let(:params) do
         {
-          name: 'new name',
+          name: 'new name'
         }
       end
 
@@ -114,8 +114,8 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       let(:params) do
         {
           plan_overrides: {
-            name: 'new name',
-          },
+            name: 'new name'
+          }
         }
       end
 
@@ -146,8 +146,8 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         {
           name: 'new name',
           plan_overrides: {
-            amount_cents: 0,
-          },
+            amount_cents: 0
+          }
         }
       end
 

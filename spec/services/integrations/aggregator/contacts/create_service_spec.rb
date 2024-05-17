@@ -16,7 +16,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
     {
       'Connection-Id' => integration.connection_id,
       'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-      'Provider-Config-Key' => 'netsuite',
+      'Provider-Config-Key' => 'netsuite'
     }
   end
 
@@ -31,11 +31,11 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
         'custentity_lago_sf_id' => customer.external_salesforce_id,
         'custentity_form_activeprospect_customer' => customer.name,
         'email' => customer.email,
-        'phone' => customer.phone,
+        'phone' => customer.phone
       },
       'options' => {
-        'ignoreMandatoryFields' => false,
-      },
+        'ignoreMandatoryFields' => false
+      }
     }
   end
 
@@ -107,7 +107,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
             provider_code: integration.code,
             provider_error: {
               message: 'submitFields: Missing a required argument: type',
-              error_code: 'action_script_runtime_error',
+              error_code: 'action_script_runtime_error'
             },
           )
       end

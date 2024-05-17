@@ -29,7 +29,7 @@ class IntegrationItemsQuery < BaseQuery
       m: 'or',
       external_name_cont: search_term,
       external_id_cont: search_term,
-      external_account_code_cont: search_term,
+      external_account_code_cont: search_term
     }
   end
 end

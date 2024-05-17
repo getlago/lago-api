@@ -32,8 +32,8 @@ RSpec.describe Organizations::UpdateService do
       billing_configuration: {
         invoice_footer: 'invoice footer',
         document_locale: 'fr',
-        invoice_grace_period:,
-      },
+        invoice_grace_period:
+      }
     }
   end
 
@@ -182,8 +182,8 @@ RSpec.describe Organizations::UpdateService do
             vat_rate:,
             invoice_footer: 'invoice footer',
             document_locale: 'fr',
-            invoice_grace_period:,
-          },
+            invoice_grace_period:
+          }
         }
       end
 

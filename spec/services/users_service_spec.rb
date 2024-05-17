@@ -24,7 +24,7 @@ RSpec.describe UsersService, type: :service do
         event: 'organization_registered',
         properties: {
           organization_name: result.organization.name,
-          organization_id: result.organization.id,
+          organization_id: result.organization.id
         },
       )
     end

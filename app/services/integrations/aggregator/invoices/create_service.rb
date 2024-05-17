@@ -36,7 +36,7 @@ module Integrations
           {
             'Connection-Id' => integration.connection_id,
             'Authorization' => "Bearer #{secret_key}",
-            'Provider-Config-Key' => provider,
+            'Provider-Config-Key' => provider
           }
         end
 
@@ -79,7 +79,7 @@ module Integrations
             'item' => mapped_item.external_id,
             'account' => mapped_item.external_account_code,
             'quantity' => fee.units,
-            'rate' => fee.precise_unit_amount,
+            'rate' => fee.precise_unit_amount
           }
         end
 
@@ -91,7 +91,7 @@ module Integrations
               'item' => coupon_item.external_id,
               'account' => coupon_item.external_account_code,
               'quantity' => 1,
-              'rate' => -amount(invoice.coupons_amount_cents),
+              'rate' => -amount(invoice.coupons_amount_cents)
             }
           end
 
@@ -100,7 +100,7 @@ module Integrations
               'item' => credit_item.external_id,
               'account' => credit_item.external_account_code,
               'quantity' => 1,
-              'rate' => -amount(invoice.prepaid_credit_amount_cents),
+              'rate' => -amount(invoice.prepaid_credit_amount_cents)
             }
           end
 
@@ -109,7 +109,7 @@ module Integrations
               'item' => credit_note_item.external_id,
               'account' => credit_note_item.external_account_code,
               'quantity' => 1,
-              'rate' => -amount(invoice.credit_notes_amount_cents),
+              'rate' => -amount(invoice.credit_notes_amount_cents)
             }
           end
 
@@ -128,7 +128,7 @@ module Integrations
               'taxamountoverride' => amount(invoice.taxes_amount_cents),
               'otherrefnum' => invoice.number,
               'custbody_lago_id' => invoice.id,
-              'custbody_ava_disable_tax_calculation' => true,
+              'custbody_ava_disable_tax_calculation' => true
             },
             'lines' => [
               {
@@ -137,8 +137,8 @@ module Integrations
               },
             ],
             'options' => {
-              'ignoreMandatoryFields' => false,
-            },
+              'ignoreMandatoryFields' => false
+            }
           }
         end
       end

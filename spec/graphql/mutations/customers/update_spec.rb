@@ -36,7 +36,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
   let(:body) do
     {
       object: 'event',
-      data: {},
+      data: {}
     }
   end
 
@@ -69,20 +69,20 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           netPaymentTerm: 3,
           providerCustomer: {
             providerCustomerId: 'cu_12345',
-            providerPaymentMethods: %w[card sepa_debit],
+            providerPaymentMethods: %w[card sepa_debit]
           },
           billingConfiguration: {
-            documentLocale: 'fr',
+            documentLocale: 'fr'
           },
           metadata: [
             {
               key: 'test-key',
               value: 'value',
-              displayInInvoice: true,
+              displayInInvoice: true
             },
           ],
-          taxCodes: [tax.code],
-        },
+          taxCodes: [tax.code]
+        }
       },
     )
 
@@ -122,8 +122,8 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
             externalId: SecureRandom.uuid,
             name: 'Updated customer',
             timezone: 'TZ_EUROPE_PARIS',
-            invoiceGracePeriod: 2,
-          },
+            invoiceGracePeriod: 2
+          }
         },
       )
 

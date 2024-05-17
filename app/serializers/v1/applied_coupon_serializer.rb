@@ -20,7 +20,7 @@ module V1
         frequency_duration_remaining: model.frequency_duration_remaining,
         expiration_at: model.coupon.expiration_at&.iso8601,
         created_at: model.created_at.iso8601,
-        terminated_at: model.terminated_at&.iso8601,
+        terminated_at: model.terminated_at&.iso8601
       }
 
       payload = payload.merge(legacy_values)

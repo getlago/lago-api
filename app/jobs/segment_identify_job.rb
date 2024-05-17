@@ -13,7 +13,7 @@ class SegmentIdentifyJob < ApplicationJob
       hosting_type:,
       version:,
       organization_name: membership.organization.name,
-      email: membership.user.email,
+      email: membership.user.email
     }
 
     SEGMENT_CLIENT.identify(user_id: membership_id, traits:)

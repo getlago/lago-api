@@ -98,7 +98,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             customer,
             provider_error: {
               message: 'API key invalid.',
-              error_code: nil,
+              error_code: nil
             },
           ).on_queue(:webhook)
       end
@@ -119,7 +119,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             customer,
             provider_error: {
               message: 'error',
-              error_code: nil,
+              error_code: nil
             },
           )
       end
@@ -169,7 +169,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               customer,
               provider_error: {
                 message: 'Invalid request',
-                error_code: nil,
+                error_code: nil
               },
             ).on_queue(:webhook)
         end
@@ -196,7 +196,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               customer,
               provider_error: {
                 message: 'Permission error',
-                error_code: nil,
+                error_code: nil
               },
             ).on_queue(:webhook)
         end
@@ -222,7 +222,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               customer,
               provider_error: {
                 message: 'Invalid username.',
-                error_code: nil,
+                error_code: nil
               },
             ).on_queue(:webhook)
         end
@@ -319,7 +319,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             stripe_customer_id: 'cus_InvaLid',
             payment_method_id: 'pm_123456',
             metadata: {
-              lago_customer_id: SecureRandom.uuid,
+              lago_customer_id: SecureRandom.uuid
             },
           )
 
@@ -337,7 +337,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             stripe_customer_id: 'cus_InvaLid',
             payment_method_id: 'pm_123456',
             metadata: {
-              lago_customer_id: customer.id,
+              lago_customer_id: customer.id
             },
           )
 
@@ -479,7 +479,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             stripe_customer_id: 'cus_InvaLid',
             payment_method_id: 'pm_123456',
             metadata: {
-              lago_customer_id: SecureRandom.uuid,
+              lago_customer_id: SecureRandom.uuid
             },
           )
 
@@ -497,7 +497,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             stripe_customer_id: 'cus_InvaLid',
             payment_method_id: 'pm_123456',
             metadata: {
-              lago_customer_id: customer.id,
+              lago_customer_id: customer.id
             },
           )
 
@@ -574,7 +574,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             stripe_customer_id: 'cus_InvaLid',
             payment_method_id: 'pm_123456',
             metadata: {
-              lago_customer_id: SecureRandom.uuid,
+              lago_customer_id: SecureRandom.uuid
             },
           )
 
@@ -592,7 +592,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             stripe_customer_id: 'cus_InvaLid',
             payment_method_id: 'pm_123456',
             metadata: {
-              lago_customer_id: customer.id,
+              lago_customer_id: customer.id
             },
           )
 

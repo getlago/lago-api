@@ -107,7 +107,7 @@ module Events
             {
               from_datetime:,
               to_datetime:,
-              timezone: customer.applicable_timezone,
+              timezone: customer.applicable_timezone
             },
           ],
         )
@@ -124,7 +124,7 @@ module Events
             {
               from_datetime:,
               to_datetime:,
-              timezone: customer.applicable_timezone,
+              timezone: customer.applicable_timezone
             },
           ],
         )
@@ -150,7 +150,7 @@ module Events
             {
               from_datetime:,
               to_datetime:,
-              timezone: customer.applicable_timezone,
+              timezone: customer.applicable_timezone
             },
           ],
         )
@@ -264,7 +264,7 @@ module Events
             {
               from_datetime:,
               to_datetime: to_datetime.ceil,
-              initial_value: initial_value || 0,
+              initial_value: initial_value || 0
             },
           ],
         )
@@ -298,7 +298,7 @@ module Events
             query.grouped_query(initial_values: formated_initial_values),
             {
               from_datetime:,
-              to_datetime: to_datetime.ceil,
+              to_datetime: to_datetime.ceil
             },
           ],
         )
@@ -316,7 +316,7 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
-                initial_value: initial_value || 0,
+                initial_value: initial_value || 0
               },
             ],
           ),
@@ -397,7 +397,7 @@ module Events
 
           result = {
             groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
-            value: row.last,
+            value: row.last
           }
 
           result[:timestamp] = row[-2] if timestamp

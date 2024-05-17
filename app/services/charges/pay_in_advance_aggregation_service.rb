@@ -19,7 +19,7 @@ module Charges
         boundaries: {
           from_datetime: boundaries[:charges_from_datetime],
           to_datetime: boundaries[:charges_to_datetime],
-          charges_duration: boundaries[:charges_duration],
+          charges_duration: boundaries[:charges_duration]
         },
         filters: aggregation_filters,
       )
@@ -37,7 +37,7 @@ module Charges
     def aggregation_options
       {
         free_units_per_events: properties['free_units_per_events'].to_i,
-        free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0),
+        free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0)
       }
     end
 

@@ -83,7 +83,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
-          refund_status: 'paid',
+          refund_status: 'paid'
         },
       )
     end
@@ -105,7 +105,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
             provider_customer_id: gocardless_customer.provider_customer_id,
             provider_error: {
               message: 'error',
-              error_code: 'code',
+              error_code: 'code'
             },
           )
       end
@@ -211,7 +211,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
-          refund_status: 'paid',
+          refund_status: 'paid'
         },
       )
     end
@@ -271,7 +271,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
               provider_customer_id: gocardless_customer.provider_customer_id,
               provider_error: {
                 message: 'Payment refund failed',
-                error_code: nil,
+                error_code: nil
               },
             )
         end

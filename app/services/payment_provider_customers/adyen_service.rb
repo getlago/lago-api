@@ -108,14 +108,14 @@ module PaymentProviderCustomers
         reference: "authorization customer #{customer.external_id}",
         amount: {
           value: 0, # pre-authorization
-          currency: customer.currency.presence || 'USD',
+          currency: customer.currency.presence || 'USD'
         },
         merchantAccount: adyen_payment_provider.merchant_account,
         returnUrl: success_redirect_url,
         shopperReference: customer.external_id,
         storePaymentMethodMode: 'enabled',
         recurringProcessingModel: 'UnscheduledCardOnFile',
-        expiresAt: Time.current + 69.days,
+        expiresAt: Time.current + 69.days
       }
       prms[:shopperEmail] = customer.email&.strip&.split(',')&.first if customer.email
       prms
@@ -133,7 +133,7 @@ module PaymentProviderCustomers
         customer,
         provider_error: {
           message: adyen_error.request&.dig('msg') || adyen_error.msg,
-          error_code: adyen_error.request&.dig('code') || adyen_error.code,
+          error_code: adyen_error.request&.dig('code') || adyen_error.code
         },
       )
     end

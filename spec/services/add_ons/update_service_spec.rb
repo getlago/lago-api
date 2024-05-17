@@ -26,7 +26,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
         description: 'desc',
         amount_cents: 100,
         amount_currency: 'EUR',
-        tax_codes:,
+        tax_codes:
       }
     end
     let(:tax_codes) { [tax2.code] }
@@ -65,7 +65,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
           name: nil,
           code: 'code',
           amount_cents: 100,
-          amount_currency: 'EUR',
+          amount_currency: 'EUR'
         }
       end
 
@@ -86,7 +86,7 @@ RSpec.describe AddOns::UpdateService, type: :service do
           id: add_on.id,
           name: 'new name',
           description: 'new desc',
-          code: 'new code',
+          code: 'new code'
         }
       end
 

@@ -20,7 +20,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         description: 'New metric description',
         organization_id: organization.id,
         aggregation_type: 'count_agg',
-        recurring: false,
+        recurring: false
       }
     end
 
@@ -49,7 +49,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
           values: [
             {name: 'AWS', key: 'region', values: %w[usa europe]},
             {name: 'Google', key: 'region', values: ['usa']},
-          ],
+          ]
         }
       end
 
@@ -75,7 +75,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         [
           {
             key: 'cloud',
-            values: %w[aws google],
+            values: %w[aws google]
           },
         ]
       end
@@ -108,7 +108,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
           description: metric.description,
           aggregation_type: metric.aggregation_type,
           aggregation_property: metric.field_name,
-          organization_id: metric.organization_id,
+          organization_id: metric.organization_id
         },
       )
     end
@@ -141,7 +141,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
           description: 'New metric description',
           organization_id: organization.id,
           aggregation_type: 'custom_agg',
-          recurring: false,
+          recurring: false
         }
       end
 

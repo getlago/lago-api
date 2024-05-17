@@ -35,7 +35,7 @@ module Resolvers
         filters: {
           ids:,
           applied_to_organization:,
-          auto_generated:,
+          auto_generated:
         },
       )
 

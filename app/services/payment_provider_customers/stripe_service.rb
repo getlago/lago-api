@@ -119,7 +119,7 @@ module PaymentProviderCustomers
       res = Stripe::Checkout::Session.create(
         checkout_link_params,
         {
-          api_key:,
+          api_key:
         },
       )
 
@@ -158,7 +158,7 @@ module PaymentProviderCustomers
         success_url: success_redirect_url,
         mode: 'setup',
         payment_method_types: stripe_customer.provider_payment_methods,
-        customer: stripe_customer.provider_customer_id,
+        customer: stripe_customer.provider_customer_id
       }
     end
 
@@ -172,7 +172,7 @@ module PaymentProviderCustomers
         stripe_create_payload,
         {
           api_key:,
-          idempotency_key: customer.id,
+          idempotency_key: customer.id
         },
       )
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
@@ -200,15 +200,15 @@ module PaymentProviderCustomers
           line1: customer.address_line1,
           line2: customer.address_line2,
           postal_code: customer.zipcode,
-          state: customer.state,
+          state: customer.state
         },
         email: customer.email&.strip&.split(',')&.first,
         name: customer.name,
         metadata: {
           lago_customer_id: customer.id,
-          customer_id: customer.external_id,
+          customer_id: customer.external_id
         },
-        phone: customer.phone,
+        phone: customer.phone
       }
     end
 
@@ -220,11 +220,11 @@ module PaymentProviderCustomers
           line1: customer.address_line1,
           line2: customer.address_line2,
           postal_code: customer.zipcode,
-          state: customer.state,
+          state: customer.state
         },
         email: customer.email&.strip&.split(',')&.first,
         name: customer.name,
-        phone: customer.phone,
+        phone: customer.phone
       }
     end
 
@@ -245,7 +245,7 @@ module PaymentProviderCustomers
         customer,
         provider_error: {
           message: stripe_error.message,
-          error_code: stripe_error.code,
+          error_code: stripe_error.code
         },
       )
     end

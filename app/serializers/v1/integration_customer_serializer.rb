@@ -6,7 +6,7 @@ module V1
       base_response = {
         lago_id: model.id,
         external_customer_id: model.external_customer_id,
-        type:,
+        type:
       }
 
       base_response.merge!(model&.settings || {})

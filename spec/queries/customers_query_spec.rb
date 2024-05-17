@@ -69,7 +69,7 @@ RSpec.describe CustomersQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [customer_second.id],
+          ids: [customer_second.id]
         },
       )
 

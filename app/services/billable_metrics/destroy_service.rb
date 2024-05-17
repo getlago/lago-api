@@ -57,7 +57,7 @@ module BillableMetrics
           description: metric.description,
           aggregation_type: metric.aggregation_type,
           aggregation_property: metric.field_name,
-          organization_id: metric.organization_id,
+          organization_id: metric.organization_id
         },
       )
     end

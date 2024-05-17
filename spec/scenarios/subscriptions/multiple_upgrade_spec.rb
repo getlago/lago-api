@@ -52,7 +52,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan1.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
 
@@ -72,7 +72,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan2.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
 
@@ -97,7 +97,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan3.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
 
@@ -129,7 +129,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan1.code,
-            billing_time: 'anniversary',
+            billing_time: 'anniversary'
           },
         )
 
@@ -149,7 +149,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan2.code,
-            billing_time: 'anniversary',
+            billing_time: 'anniversary'
           },
         )
 
@@ -174,7 +174,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan3.code,
-            billing_time: 'anniversary',
+            billing_time: 'anniversary'
           },
         )
 

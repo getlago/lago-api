@@ -135,7 +135,7 @@ module BillableMetrics
           return @grouped_latest_values = quantified_events.map do |quantified_event|
             {
               groups: quantified_event.grouped_by,
-              value: BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS)),
+              value: BigDecimal(quantified_event.properties.[](QuantifiedEvent::RECURRING_TOTAL_UNITS))
             }
           end
         end

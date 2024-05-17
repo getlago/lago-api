@@ -39,7 +39,7 @@ module Integrations
         {
           'Connection-Id' => integration.connection_id,
           'Authorization' => "Bearer #{secret_key}",
-          'Provider-Config-Key' => provider,
+          'Provider-Config-Key' => provider
         }
       end
 
@@ -61,7 +61,7 @@ module Integrations
       def params
         {
           limit: LIMIT,
-          cursor:,
+          cursor:
         }
       end
     end

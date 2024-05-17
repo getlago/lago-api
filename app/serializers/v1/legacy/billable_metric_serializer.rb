@@ -5,7 +5,7 @@ module V1
     class BillableMetricSerializer < ModelSerializer
       def serialize
         {
-          group: model.active_groups_as_tree,
+          group: model.active_groups_as_tree
         }
       end
     end

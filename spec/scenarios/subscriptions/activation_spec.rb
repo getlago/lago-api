@@ -30,7 +30,7 @@ describe 'Subscriptions Activation Scenario', :scenarios, type: :request do
           external_id: customer.external_id,
           plan_code: plan.code,
           billing_time: 'calendar',
-          subscription_at: subscription_at.iso8601,
+          subscription_at: subscription_at.iso8601
         },
       )
 

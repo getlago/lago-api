@@ -112,7 +112,7 @@ RSpec.describe CustomerCreditNotesQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [credit_note_second.id],
+          ids: [credit_note_second.id]
         },
       )
 

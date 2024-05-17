@@ -76,7 +76,7 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
             customer,
             provider_error: {
               message: 'error',
-              error_code: nil,
+              error_code: nil
             },
           )
       end

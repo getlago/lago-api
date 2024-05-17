@@ -4,8 +4,8 @@ redis_config = {
   url: ENV['REDIS_URL'],
   pool_timeout: 5,
   ssl_params: {
-    verify_mode: OpenSSL::SSL::VERIFY_NONE,
-  },
+    verify_mode: OpenSSL::SSL::VERIFY_NONE
+  }
 }
 
 if ENV['REDIS_PASSWORD'].present? && !ENV['REDIS_PASSWORD'].empty?

@@ -11,7 +11,7 @@ module V1
           interval: model.interval,
           threshold_credits: model.threshold_credits,
           trigger: model.trigger,
-          created_at: model.created_at.iso8601,
+          created_at: model.created_at.iso8601
         }
       end
     end

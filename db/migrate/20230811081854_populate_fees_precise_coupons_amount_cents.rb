@@ -67,7 +67,7 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
               .where(charge: {
                 billable_metric_id: coupon.coupon_targets
                                           .where.not(billable_metric_id: nil)
-                                          .select(:billable_metric_id),
+                                          .select(:billable_metric_id)
               })
 
             fees.find_each do |fee|

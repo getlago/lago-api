@@ -40,8 +40,8 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite, type: :graphql do
       variables: {
         input: {
           code: 'code',
-          inviteToken: invite.token,
-        },
+          inviteToken: invite.token
+        }
       },
     )
 
@@ -68,8 +68,8 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite, type: :graphql do
         variables: {
           input: {
             code: 'code',
-            inviteToken: invite.token,
-          },
+            inviteToken: invite.token
+          }
         },
       )
 
@@ -96,8 +96,8 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite, type: :graphql do
         variables: {
           input: {
             code: 'code',
-            inviteToken: invite.token,
-          },
+            inviteToken: invite.token
+          }
         },
       )
 

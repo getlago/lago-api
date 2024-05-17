@@ -48,8 +48,8 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
           name:,
           merchantAccount: merchant_account,
           livePrefix: live_prefix,
-          successRedirectUrl: success_redirect_url,
-        },
+          successRedirectUrl: success_redirect_url
+        }
       },
     )
 

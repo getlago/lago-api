@@ -10,7 +10,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:,
+        to_datetime:
       },
       filters:,
     )
@@ -56,7 +56,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
         subscription:,
         timestamp: Time.zone.now - 2.days,
         properties: {
-          total_count: rand(10),
+          total_count: rand(10)
         },
       ),
 
@@ -68,7 +68,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
         subscription:,
         timestamp: Time.zone.now - 1.day,
         properties: {
-          total_count: 12,
+          total_count: 12
         },
       ),
     ].flatten
@@ -118,7 +118,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           subscription:,
           timestamp: Time.zone.now - 1.day,
           properties: {
-            total_count: 14.2,
+            total_count: 14.2
           },
         ),
       ]
@@ -142,7 +142,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           subscription:,
           timestamp: Time.zone.now - 1.day,
           properties: {
-            total_count: 'foo_bar',
+            total_count: 'foo_bar'
           },
         ),
       ]
@@ -196,7 +196,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           timestamp: Time.zone.now - 1.day,
           properties: {
             total_count: 8,
-            region: 'europe',
+            region: 'europe'
           },
         ),
 
@@ -209,7 +209,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           timestamp: Time.zone.now - 1.day,
           properties: {
             total_count: 12,
-            region: 'africa',
+            region: 'africa'
           },
         ),
       ]
@@ -246,7 +246,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           timestamp: Time.zone.now - 1.day,
           properties: {
             total_count: 12,
-            agent_name:,
+            agent_name:
           },
         )
       end + [
@@ -258,7 +258,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           subscription:,
           timestamp: Time.zone.now - 1.day,
           properties: {
-            total_count: 12,
+            total_count: 12
           },
         ),
       ]

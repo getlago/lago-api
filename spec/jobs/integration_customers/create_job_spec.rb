@@ -11,7 +11,7 @@ RSpec.describe IntegrationCustomers::CreateJob, type: :job do
   let(:result) { BaseService::Result.new }
   let(:integration_customer_params) do
     {
-      sync_with_provider: true,
+      sync_with_provider: true
     }
   end
 

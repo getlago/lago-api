@@ -18,7 +18,7 @@ RSpec.describe Coupons::ValidateService, type: :service do
       amount_currency: 'EUR',
       frequency: 'once',
       expiration: 'time_limit',
-      expiration_at:,
+      expiration_at:
     }
   end
 

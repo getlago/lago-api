@@ -9,7 +9,7 @@ RSpec.describe ::V1::Analytics::MrrSerializer do
     {
       'month' => Time.current.beginning_of_month.iso8601,
       'amount_cents' => 100,
-      'currency' => 'EUR',
+      'currency' => 'EUR'
     }
   end
 

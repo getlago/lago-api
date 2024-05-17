@@ -39,8 +39,8 @@ RSpec.describe Mutations::Auth::Google::LoginUser, type: :graphql do
       request: Rack::Request.new(Rack::MockRequest.env_for('http://example.com')),
       variables: {
         input: {
-          code: 'code',
-        },
+          code: 'code'
+        }
       },
     )
 
@@ -66,8 +66,8 @@ RSpec.describe Mutations::Auth::Google::LoginUser, type: :graphql do
         request: Rack::Request.new(Rack::MockRequest.env_for('http://example.com')),
         variables: {
           input: {
-            code: 'code',
-          },
+            code: 'code'
+          }
         },
       )
 

@@ -27,7 +27,7 @@ describe 'Update Customer Invoice Grace Period Scenarios', :scenarios, type: :re
         {
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
-          plan_code: plan.code,
+          plan_code: plan.code
         },
       )
     end
@@ -44,7 +44,7 @@ describe 'Update Customer Invoice Grace Period Scenarios', :scenarios, type: :re
         create_or_update_customer(
           {
             external_id: customer.external_id,
-            billing_configuration: {invoice_grace_period: 0},
+            billing_configuration: {invoice_grace_period: 0}
           },
         )
       end.to change { ActionMailer::Base.deliveries.count }.by(1)

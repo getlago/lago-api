@@ -29,7 +29,7 @@ RSpec.describe Events::CreateService, type: :service do
       code:,
       transaction_id:,
       properties: {foo: 'bar'},
-      timestamp:,
+      timestamp:
     }
   end
 

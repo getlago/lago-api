@@ -22,7 +22,7 @@ module V1
           filter_invoice_display_name: model.charge_filter&.display_name,
           lago_item_id: model.item_id,
           item_type: model.item_type,
-          grouped_by: model.grouped_by,
+          grouped_by: model.grouped_by
         },
         pay_in_advance:,
         invoiceable:,
@@ -41,7 +41,7 @@ module V1
         succeeded_at: model.succeeded_at&.iso8601,
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
-        amount_details: model.amount_details,
+        amount_details: model.amount_details
       }.deep_merge(legacy_values)
 
       payload.merge!(date_boundaries) if model.charge? || model.subscription?
@@ -62,13 +62,13 @@ module V1
 
         return {
           from_date: interval[:charges_from_date]&.to_datetime&.iso8601,
-          to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601,
+          to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601
         }
       end
 
       {
         from_date:,
-        to_date:,
+        to_date:
       }
     end
 

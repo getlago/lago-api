@@ -12,7 +12,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
     {
       id: webhook_endpoint.id,
       webhookUrl: webhook_url,
-      signatureAlgo: 'hmac',
+      signatureAlgo: 'hmac'
     }
   end
 

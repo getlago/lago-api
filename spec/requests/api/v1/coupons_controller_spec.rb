@@ -21,8 +21,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         expiration_at:,
         reusable: false,
         applies_to: {
-          billable_metric_codes: [billable_metric.code],
-        },
+          billable_metric_codes: [billable_metric.code]
+        }
       }
     end
 
@@ -71,7 +71,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         amount_cents: 123,
         amount_currency: 'EUR',
         expiration: 'time_limit',
-        expiration_at:,
+        expiration_at:
       }
     end
 

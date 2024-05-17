@@ -20,7 +20,7 @@ RSpec.describe AddOns::CreateService, type: :service do
         organization_id: organization.id,
         amount_cents: 100,
         amount_currency: 'EUR',
-        tax_codes: [tax.code],
+        tax_codes: [tax.code]
       }
     end
 
@@ -46,7 +46,7 @@ RSpec.describe AddOns::CreateService, type: :service do
           addon_code: add_on.code,
           addon_name: add_on.name,
           addon_invoice_display_name: add_on.invoice_display_name,
-          organization_id: add_on.organization_id,
+          organization_id: add_on.organization_id
         },
       )
     end

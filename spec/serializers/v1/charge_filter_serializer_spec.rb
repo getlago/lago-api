@@ -27,7 +27,7 @@ RSpec.describe ::V1::ChargeFilterSerializer do
       expect(result['filter']['properties']).to eq(charge_filter.properties)
       expect(result['filter']['values']).to eq(
         {
-          filter.key => filter_value.values,
+          filter.key => filter_value.values
         },
       )
     end

@@ -64,7 +64,7 @@ RSpec.describe AuthenticableApiUser, type: :graphql do
 
       partial_error = {
         'message' => 'unauthorized',
-        'extensions' => {'status' => :unauthorized, 'code' => 'unauthorized'},
+        'extensions' => {'status' => :unauthorized, 'code' => 'unauthorized'}
       }
 
       expect(result['errors']).to include hash_including(partial_error)

@@ -22,7 +22,7 @@ class PlanLegacyInput < BaseLegacyInput
         {
           invoice_display_name: properties[:invoice_display_name],
           properties: properties[:values],
-          values:,
+          values:
         }
       end
 
@@ -37,7 +37,7 @@ class PlanLegacyInput < BaseLegacyInput
 
         charge[:filters] << {
           properties: charge[:properties],
-          values:,
+          values:
         }
       end
     end

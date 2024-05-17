@@ -6,7 +6,7 @@ class Commitment < ApplicationRecord
   has_many :taxes, through: :applied_taxes
 
   COMMITMENT_TYPES = {
-    minimum_commitment: 0,
+    minimum_commitment: 0
   }.freeze
 
   enum commitment_type: COMMITMENT_TYPES

@@ -11,7 +11,7 @@ RSpec.describe ::V1::Analytics::InvoiceCollectionSerializer do
       'payment_status' => 'succeeded',
       'invoices_count' => 1,
       'currency' => 'EUR',
-      'amount_cents' => 100,
+      'amount_cents' => 100
     }
   end
 

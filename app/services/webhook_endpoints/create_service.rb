@@ -35,7 +35,7 @@ module WebhookEndpoints
         properties: {
           webhook_endpoint_id: webhook_endpoint.id,
           organization_id: webhook_endpoint.organization_id,
-          webhook_url: webhook_endpoint.webhook_url,
+          webhook_url: webhook_endpoint.webhook_url
         },
       )
     end

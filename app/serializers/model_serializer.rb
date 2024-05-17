@@ -14,7 +14,7 @@ class ModelSerializer
 
   def to_json(options = {})
     {
-      root_name => serialize,
+      root_name => serialize
     }.to_json(options)
   end
 

@@ -9,7 +9,7 @@ RSpec.describe Mutations::Taxes::Create, type: :graphql do
       name: 'Tax name',
       code: 'tax-code',
       description: 'Tax description',
-      rate: 15.0,
+      rate: 15.0
     }
   end
 

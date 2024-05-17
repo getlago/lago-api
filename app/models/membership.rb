@@ -14,7 +14,7 @@ class Membership < ApplicationRecord
   ROLES = {
     admin: 0,
     manager: 1,
-    finance: 2,
+    finance: 2
   }.freeze
 
   enum status: STATUSES

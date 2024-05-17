@@ -14,7 +14,7 @@ module Charges
           graduated_percentage_ranges: ranges.each_with_object([]) do |range, amounts|
             amounts << Charges::AmountDetails::RangeGraduatedPercentageService.call(range:, total_units: units)
             break amounts if range[:to_value].nil? || range[:to_value] >= units
-          end,
+          end
         }
       end
 

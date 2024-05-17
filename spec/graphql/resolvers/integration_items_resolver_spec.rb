@@ -38,7 +38,7 @@ RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
       query:,
       variables: {
         integrationId: integration.id,
-        itemType: 'tax',
+        itemType: 'tax'
       },
     )
 

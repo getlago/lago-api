@@ -40,8 +40,8 @@ RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          id: credit_note.id,
-        },
+          id: credit_note.id
+        }
       },
     )
 

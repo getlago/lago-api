@@ -16,7 +16,7 @@ module Api
           {
             external_customer_id: params[:external_customer_id],
             currency: params[:currency]&.upcase,
-            months: params[:months],
+            months: params[:months]
           }
         end
       end

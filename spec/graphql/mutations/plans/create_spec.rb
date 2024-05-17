@@ -101,7 +101,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
           minimumCommitment: {
             amountCents: minimum_commitment_amount_cents,
             invoiceDisplayName: minimum_commitment_invoice_display_name,
-            taxCodes: [commitment_tax.code],
+            taxCodes: [commitment_tax.code]
           },
           charges: [
             {
@@ -113,9 +113,9 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                 {
                   invoiceDisplayName: 'Payment Method',
                   properties: {amount: '100.00'},
-                  values: {billable_metric_filter.key => %w[card sepa]},
+                  values: {billable_metric_filter.key => %w[card sepa]}
                 },
-              ],
+              ]
             },
             {
               billableMetricId: billable_metrics[1].id,
@@ -123,8 +123,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               properties: {
                 amount: '300.00',
                 freeUnits: 10,
-                packageSize: 10,
-              },
+                packageSize: 10
+              }
             },
             {
               billableMetricId: billable_metrics[2].id,
@@ -135,8 +135,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                 freeUnitsPerEvents: 5,
                 freeUnitsPerTotalAggregation: '50',
                 perTransactionMaxAmount: '20',
-                perTransactionMinAmount: '10',
-              },
+                perTransactionMinAmount: '10'
+              }
             },
             {
               billableMetricId: billable_metrics[3].id,
@@ -147,16 +147,16 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                     fromValue: 0,
                     toValue: 10,
                     perUnitAmount: '2.00',
-                    flatAmount: '0',
+                    flatAmount: '0'
                   },
                   {
                     fromValue: 11,
                     toValue: nil,
                     perUnitAmount: '3.00',
-                    flatAmount: '3.00',
+                    flatAmount: '3.00'
                   },
-                ],
-              },
+                ]
+              }
             },
             {
               billableMetricId: billable_metrics[4].id,
@@ -167,16 +167,16 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                     fromValue: 0,
                     toValue: 10,
                     perUnitAmount: '2.00',
-                    flatAmount: '0',
+                    flatAmount: '0'
                   },
                   {
                     fromValue: 11,
                     toValue: nil,
                     perUnitAmount: '3.00',
-                    flatAmount: '3.00',
+                    flatAmount: '3.00'
                   },
-                ],
-              },
+                ]
+              }
             },
             {
               billableMetricId: billable_metrics[5].id,
@@ -187,19 +187,19 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                     fromValue: 0,
                     toValue: 10,
                     flatAmount: '0',
-                    rate: '2',
+                    rate: '2'
                   },
                   {
                     fromValue: 11,
                     toValue: nil,
                     flatAmount: '3.00',
-                    rate: '3',
+                    rate: '3'
                   },
-                ],
-              },
+                ]
+              }
             },
-          ],
-        },
+          ]
+        }
       },
     )
 

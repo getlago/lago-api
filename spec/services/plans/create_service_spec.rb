@@ -31,7 +31,7 @@ RSpec.describe Plans::CreateService, type: :service do
         amount_currency: 'EUR',
         tax_codes: [plan_tax.code],
         charges: charges_args,
-        minimum_commitment: minimum_commitment_args,
+        minimum_commitment: minimum_commitment_args
       }
     end
 
@@ -39,7 +39,7 @@ RSpec.describe Plans::CreateService, type: :service do
       {
         amount_cents: minimum_commitment_amount_cents,
         invoice_display_name: minimum_commitment_invoice_display_name,
-        tax_codes: [plan_tax.code],
+        tax_codes: [plan_tax.code]
       }
     end
 
@@ -56,16 +56,16 @@ RSpec.describe Plans::CreateService, type: :service do
           group_properties: [
             {
               group_id: group.id,
-              values: {amount: '100'},
+              values: {amount: '100'}
             },
           ],
           filters: [
             {
               values: {billable_metric_filter.key => ['card']},
               invoice_display_name: 'Card filter',
-              properties: {amount: '90'},
+              properties: {amount: '90'}
             },
-          ],
+          ]
         },
         {
           billable_metric_id: sum_billable_metric.id,
@@ -78,16 +78,16 @@ RSpec.describe Plans::CreateService, type: :service do
                 from_value: 0,
                 to_value: 10,
                 per_unit_amount: '2',
-                flat_amount: '0',
+                flat_amount: '0'
               },
               {
                 from_value: 11,
                 to_value: nil,
                 per_unit_amount: '3',
-                flat_amount: '3',
+                flat_amount: '3'
               },
-            ],
-          },
+            ]
+          }
         },
       ]
     end
@@ -133,7 +133,7 @@ RSpec.describe Plans::CreateService, type: :service do
       expect(standard_charge.group_properties.first).to have_attributes(
         {
           group_id: group.id,
-          values: {'amount' => '100'},
+          values: {'amount' => '100'}
         },
       )
       expect(standard_charge.filters.first).to have_attributes(
@@ -169,7 +169,7 @@ RSpec.describe Plans::CreateService, type: :service do
           nb_graduated_charges: 1,
           nb_package_charges: 0,
           organization_id: plan.organization_id,
-          parent_id: nil,
+          parent_id: nil
         },
       )
     end
@@ -187,9 +187,9 @@ RSpec.describe Plans::CreateService, type: :service do
             group_properties: [
               {
                 group_id: group.id,
-                values: {amount: '100'},
+                values: {amount: '100'}
               },
-            ],
+            ]
           },
           {
             billable_metric_id: sum_billable_metric.id,
@@ -202,16 +202,16 @@ RSpec.describe Plans::CreateService, type: :service do
                   from_value: 0,
                   to_value: 10,
                   rate: '3',
-                  flat_amount: '0',
+                  flat_amount: '0'
                 },
                 {
                   from_value: 11,
                   to_value: nil,
                   rate: '2',
-                  flat_amount: '3',
+                  flat_amount: '3'
                 },
-              ],
-            },
+              ]
+            }
           },
         ]
       end
@@ -222,7 +222,7 @@ RSpec.describe Plans::CreateService, type: :service do
         expect(plan.minimum_commitment).to have_attributes(
           {
             amount_cents: minimum_commitment_amount_cents,
-            invoice_display_name: minimum_commitment_invoice_display_name,
+            invoice_display_name: minimum_commitment_invoice_display_name
           },
         )
 
@@ -230,7 +230,7 @@ RSpec.describe Plans::CreateService, type: :service do
           {
             pay_in_advance: false,
             min_amount_cents: 100,
-            invoiceable: true,
+            invoiceable: true
           },
         )
 
@@ -238,7 +238,7 @@ RSpec.describe Plans::CreateService, type: :service do
           {
             pay_in_advance: true,
             invoiceable: false,
-            charge_model: 'graduated_percentage',
+            charge_model: 'graduated_percentage'
           },
         )
       end
@@ -284,16 +284,16 @@ RSpec.describe Plans::CreateService, type: :service do
                     from_value: 0,
                     to_value: 10,
                     rate: '3',
-                    flat_amount: '0',
+                    flat_amount: '0'
                   },
                   {
                     from_value: 11,
                     to_value: nil,
                     rate: '2',
-                    flat_amount: '3',
+                    flat_amount: '3'
                   },
-                ],
-              },
+                ]
+              }
             },
           ]
         end

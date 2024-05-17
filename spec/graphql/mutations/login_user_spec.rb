@@ -25,8 +25,8 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
       variables: {
         input: {
           email: user.email,
-          password: 'ILoveLago',
-        },
+          password: 'ILoveLago'
+        }
       },
     )
 
@@ -45,8 +45,8 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
         variables: {
           input: {
             email: user.email,
-            password: 'badpassword',
-          },
+            password: 'badpassword'
+          }
         },
       )
 
@@ -67,8 +67,8 @@ RSpec.describe Mutations::LoginUser, type: :graphql do
         variables: {
           input: {
             email: revoked_membership.user.email,
-            password: 'ILoveLago',
-          },
+            password: 'ILoveLago'
+          }
         },
       )
 

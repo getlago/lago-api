@@ -24,7 +24,7 @@ module V1
         total_amount_cents: model.total_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
-        version_number: model.version_number,
+        version_number: model.version_number
       }.merge(legacy_values)
 
       payload.merge!(customer) if include?(:customer)
@@ -41,7 +41,7 @@ module V1
 
     def customer
       {
-        customer: ::V1::CustomerSerializer.new(model.customer).serialize,
+        customer: ::V1::CustomerSerializer.new(model.customer).serialize
       }
     end
 

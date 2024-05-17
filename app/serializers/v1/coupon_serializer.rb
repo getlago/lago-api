@@ -22,7 +22,7 @@ module V1
         created_at: model.created_at.iso8601,
         expiration: model.expiration,
         expiration_at: model.expiration_at&.iso8601,
-        terminated_at: model.terminated_at&.iso8601,
+        terminated_at: model.terminated_at&.iso8601
       }.merge(legacy_values)
     end
 

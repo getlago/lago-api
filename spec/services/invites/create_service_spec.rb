@@ -13,7 +13,7 @@ RSpec.describe Invites::CreateService, type: :service do
       {
         email: Faker::Internet.email,
         current_organization: organization,
-        role: 'admin',
+        role: 'admin'
       }
     end
 

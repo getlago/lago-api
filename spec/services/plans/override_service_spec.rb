@@ -40,7 +40,7 @@ RSpec.describe Plans::OverrideService, type: :service do
         trial_period: 20,
         tax_codes: [tax.code],
         charges: charges_params,
-        minimum_commitment: minimum_commitment_params,
+        minimum_commitment: minimum_commitment_params
       }
     end
 
@@ -48,7 +48,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       {
         amount_cents: minimum_commitment_amount_cents,
         invoice_display_name: minimum_commitment_invoice_display_name,
-        tax_codes: [tax.code],
+        tax_codes: [tax.code]
       }
     end
 
@@ -59,7 +59,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       [
         {
           id: charge.id,
-          min_amount_cents: 1000,
+          min_amount_cents: 1000
         },
       ]
     end
@@ -124,7 +124,7 @@ RSpec.describe Plans::OverrideService, type: :service do
           nb_graduated_charges: 0,
           nb_package_charges: 0,
           organization_id: plan.organization_id,
-          parent_id: plan.parent.id,
+          parent_id: plan.parent.id
         },
       )
     end
@@ -140,9 +140,9 @@ RSpec.describe Plans::OverrideService, type: :service do
               from_value: 0,
               to_value: nil,
               per_unit_amount: '0.01',
-              flat_amount: '0.01',
+              flat_amount: '0.01'
             },
-          ],
+          ]
         },
       )
 

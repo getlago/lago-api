@@ -22,7 +22,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
         'from_datetime' => DateTime.parse('2023-08-01 00:00:00'),
         'to_datetime' => DateTime.parse('2023-08-31 23:59:59'),
         'charges_from_datetime' => DateTime.parse('2023-08-01 00:00:00'),
-        'charges_to_datetime' => DateTime.parse('2023-08-31 23:59:59'),
+        'charges_to_datetime' => DateTime.parse('2023-08-31 23:59:59')
       },
     )
   end
@@ -87,7 +87,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             'from_datetime' => DateTime.parse('2022-08-01 00:00:00'),
             'to_datetime' => DateTime.parse('2022-08-15 23:59:59'),
             'charges_from_datetime' => DateTime.parse('2022-08-01 00:00:00'),
-            'charges_to_datetime' => DateTime.parse('2022-08-15 23:59:59'),
+            'charges_to_datetime' => DateTime.parse('2022-08-15 23:59:59')
           },
         )
       end

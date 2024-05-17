@@ -9,7 +9,7 @@ module ExecutionErrorResponder
   def execution_error(error: 'Internal Error', status: 422, code: 'internal_error', details: nil)
     payload = {
       status:,
-      code:,
+      code:
     }
 
     if details.is_a?(Hash)
@@ -27,7 +27,7 @@ module ExecutionErrorResponder
       status: 404,
       code: 'not_found',
       details: {
-        resource => ['not_found'],
+        resource => ['not_found']
       },
     )
   end

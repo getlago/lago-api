@@ -10,7 +10,7 @@ module Integrations
       def call
         payload = {
           provider_config_key: provider,
-          syncs: sync_list,
+          syncs: sync_list
         }
 
         response = http_client.post_with_response(payload, headers)
@@ -30,7 +30,7 @@ module Integrations
             items: 'netsuite-items-sync',
             subsidiaries: 'netsuite-subsidiaries-sync',
             contacts: 'netsuite-contacts-sync',
-            tax_items: 'netsuite-tax-items-sync',
+            tax_items: 'netsuite-tax-items-sync'
           }
         end
 

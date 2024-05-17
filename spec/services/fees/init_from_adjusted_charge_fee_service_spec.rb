@@ -24,7 +24,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       billable_metric:,
       properties: {
         amount: '20',
-        amount_currency: 'EUR',
+        amount_currency: 'EUR'
       },
     )
   end
@@ -33,7 +33,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
   let(:boundaries) do
     {
       charges_from_datetime: subscription.started_at.beginning_of_day,
-      charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+      charges_to_datetime: subscription.started_at.end_of_month.end_of_day
     }
   end
 

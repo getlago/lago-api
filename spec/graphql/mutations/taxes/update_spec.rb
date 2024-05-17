@@ -12,7 +12,7 @@ RSpec.describe Mutations::Taxes::Update, type: :graphql do
       code: 'updated-tax-code',
       description: 'Updated tax description',
       rate: 30.0,
-      appliedToOrganization: false,
+      appliedToOrganization: false
     }
   end
 

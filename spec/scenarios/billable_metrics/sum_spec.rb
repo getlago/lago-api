@@ -21,7 +21,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         pay_in_advance: true,
         properties: {
           amount: '29',
-          grouped_by: %w[key_1 key_2 key_3],
+          grouped_by: %w[key_1 key_2 key_3]
         },
       )
     end
@@ -32,7 +32,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -50,8 +50,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => 10,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 
@@ -73,8 +73,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => -5,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 
@@ -96,8 +96,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => 2,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 
@@ -120,7 +120,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         pay_in_advance: true,
         properties: {
           amount: '29',
-          grouped_by: %w[key_1 key_2 key_3],
+          grouped_by: %w[key_1 key_2 key_3]
         },
       )
     end
@@ -131,7 +131,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             external_customer_id: customer.external_id,
             external_id: "#{customer.external_id}_1",
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -143,7 +143,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             external_customer_id: customer.external_id,
             external_id: "#{customer.external_id}_2",
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -161,8 +161,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => 10,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 
@@ -182,8 +182,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => -5,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 
@@ -203,8 +203,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => 2,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 
@@ -226,8 +226,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => 10,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 
@@ -245,8 +245,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => -5,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 
@@ -264,8 +264,8 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'item_id' => 2,
               'key_1' => '2024',
               'key_2' => 'Feb',
-              'key_3' => '06',
-            },
+              'key_3' => '06'
+            }
           },
         )
 

@@ -12,8 +12,8 @@ RSpec.describe Webhooks::Events::ValidationErrorsService do
       errors: {
         invalid_code: [SecureRandom.uuid],
         missing_aggregation_property: [SecureRandom.uuid],
-        missing_group_key: [SecureRandom.uuid],
-      },
+        missing_group_key: [SecureRandom.uuid]
+      }
     }
   end
 

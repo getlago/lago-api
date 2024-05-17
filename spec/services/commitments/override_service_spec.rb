@@ -15,7 +15,7 @@ RSpec.describe Commitments::OverrideService, type: :service do
         plan_id: plan.id,
         invoice_display_name: 'invoice display name',
         amount_cents: 1000,
-        tax_codes: [tax.code],
+        tax_codes: [tax.code]
       }
     end
 

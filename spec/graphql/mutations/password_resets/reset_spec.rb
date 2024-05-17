@@ -22,8 +22,8 @@ RSpec.describe Mutations::PasswordResets::Reset, type: :graphql do
       variables: {
         input: {
           newPassword: 'HelloLago!2',
-          token: password_reset.token,
-        },
+          token: password_reset.token
+        }
       },
     )
 
@@ -43,8 +43,8 @@ RSpec.describe Mutations::PasswordResets::Reset, type: :graphql do
         variables: {
           input: {
             newPassword: 'HelloLago!3',
-            token: expired_password_reset.token,
-          },
+            token: expired_password_reset.token
+          }
         },
       )
 

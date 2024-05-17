@@ -55,7 +55,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
               source: 'stripe',
               action: 'payment_provider.register_webhook',
               message: 'This API call cannot be made with a publishable API key. Please use a secret API key. You can find a list of your API keys at https://dashboard.stripe.com/account/apikeys.',
-              code: nil,
+              code: nil
             },
           )
       end

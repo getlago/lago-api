@@ -46,7 +46,7 @@ RSpec.describe WebhooksController, type: :request do
         params: event.to_json,
         headers: {
           'HTTP_STRIPE_SIGNATURE' => 'signature',
-          'Content-Type' => 'application/json',
+          'Content-Type' => 'application/json'
         },
       )
 
@@ -67,7 +67,7 @@ RSpec.describe WebhooksController, type: :request do
           params: event.to_json,
           headers: {
             'HTTP_STRIPE_SIGNATURE' => 'signature',
-            'Content-Type' => 'application/json',
+            'Content-Type' => 'application/json'
           },
         )
 
@@ -122,7 +122,7 @@ RSpec.describe WebhooksController, type: :request do
         params: events.to_json,
         headers: {
           'Webhook-Signature' => 'signature',
-          'Content-Type' => 'application/json',
+          'Content-Type' => 'application/json'
         },
       )
 
@@ -143,7 +143,7 @@ RSpec.describe WebhooksController, type: :request do
           params: events.to_json,
           headers: {
             'Webhook-Signature' => 'signature',
-            'Content-Type' => 'application/json',
+            'Content-Type' => 'application/json'
           },
         )
 
@@ -192,7 +192,7 @@ RSpec.describe WebhooksController, type: :request do
         "/webhooks/adyen/#{adyen_provider.organization_id}",
         params: body.to_json,
         headers: {
-          'Content-Type' => 'application/json',
+          'Content-Type' => 'application/json'
         },
       )
 
@@ -212,7 +212,7 @@ RSpec.describe WebhooksController, type: :request do
           "/webhooks/adyen/#{adyen_provider.organization_id}",
           params: body.to_json,
           headers: {
-            'Content-Type' => 'application/json',
+            'Content-Type' => 'application/json'
           },
         )
 

@@ -65,7 +65,7 @@ RSpec.describe CouponsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [coupon_second.id],
+          ids: [coupon_second.id]
         },
       )
 

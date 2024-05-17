@@ -127,7 +127,7 @@ module Subscriptions
         to_datetime: dates_service.to_datetime,
         charges_from_datetime: dates_service.charges_from_datetime,
         charges_to_datetime: dates_service.charges_to_datetime,
-        charges_duration: dates_service.charges_duration_in_days,
+        charges_duration: dates_service.charges_duration_in_days
       }
 
       InvoiceSubscription.matching?(subscription, boundaries, recurring: false)

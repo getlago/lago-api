@@ -7,7 +7,7 @@ module ApiErrors
     render(
       json: {
         status: 400,
-        error: "BadRequest: #{error.message}",
+        error: "BadRequest: #{error.message}"
       },
       status: :bad_request,
     )
@@ -17,7 +17,7 @@ module ApiErrors
     render(
       json: {
         status: 401,
-        error: message,
+        error: message
       },
       status: :unauthorized,
     )
@@ -29,7 +29,7 @@ module ApiErrors
         status: 422,
         error: 'Unprocessable Entity',
         code: 'validation_errors',
-        error_details: errors,
+        error_details: errors
       },
       status: :unprocessable_entity,
     )
@@ -40,7 +40,7 @@ module ApiErrors
       json: {
         status: 403,
         error: 'Forbidden',
-        code:,
+        code:
       },
       status: :forbidden,
     )
@@ -51,7 +51,7 @@ module ApiErrors
       json: {
         status: 405,
         error: 'Method Not Allowed',
-        code:,
+        code:
       },
       status: :method_not_allowed,
     )

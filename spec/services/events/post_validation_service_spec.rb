@@ -97,7 +97,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       code: billable_metric_with_group.code,
       properties: {
         parent_group.key => parent_group.value,
-        billable_metric_with_group.field_name => 12,
+        billable_metric_with_group.field_name => 12
       },
       created_at: Time.current.beginning_of_hour - 25.minutes,
     )
@@ -169,7 +169,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
             invalid_code: [invalid_code_event.transaction_id],
             missing_aggregation_property: [missing_aggregation_property_event.transaction_id],
             missing_group_key: Array,
-            invalid_filter_values: [invalid_filter_values_event.transaction_id],
+            invalid_filter_values: [invalid_filter_values_event.transaction_id]
           },
         )
     end

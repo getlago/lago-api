@@ -44,8 +44,8 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql do
         input: {
           state:,
           code: 'code',
-          inviteToken: invite.token,
-        },
+          inviteToken: invite.token
+        }
       },
     )
 
@@ -67,8 +67,8 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql do
           input: {
             state:,
             code: 'code',
-            inviteToken: invite.token,
-          },
+            inviteToken: invite.token
+          }
         },
       )
 

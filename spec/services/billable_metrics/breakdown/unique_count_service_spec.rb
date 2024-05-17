@@ -11,11 +11,11 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       boundaries: {
         from_datetime:,
         to_datetime:,
-        charges_duration: (to_datetime - from_datetime).fdiv(1.day).round,
+        charges_duration: (to_datetime - from_datetime).fdiv(1.day).round
       },
       filters: {
         matching_filters:,
-        ignored_filters:,
+        ignored_filters:
       },
     )
   end

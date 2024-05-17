@@ -10,7 +10,7 @@ RSpec.describe Mutations::WebhookEndpoints::Create, type: :graphql do
   let(:input) do
     {
       webhookUrl: webhook_url,
-      signatureAlgo: 'hmac',
+      signatureAlgo: 'hmac'
     }
   end
 

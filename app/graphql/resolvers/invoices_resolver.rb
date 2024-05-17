@@ -37,7 +37,7 @@ module Resolvers
         payment_dispute_lost:,
         status:,
         filters: {
-          ids:,
+          ids:
         },
       )
 

@@ -17,7 +17,7 @@ RSpec.describe BillableMetrics::AggregationFactory, type: :service do
   let(:boundaries) do
     {
       charges_from_datetime: subscription.started_at.beginning_of_day,
-      charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+      charges_to_datetime: subscription.started_at.end_of_month.end_of_day
     }
   end
 

@@ -33,8 +33,8 @@ RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          id: webhook.id,
-        },
+          id: webhook.id
+        }
       },
     )
 

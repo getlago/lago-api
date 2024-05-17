@@ -30,7 +30,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -60,7 +60,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -83,7 +83,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -106,7 +106,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -129,7 +129,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -152,7 +152,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -176,7 +176,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
       end
@@ -214,7 +214,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -268,7 +268,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -315,7 +315,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -350,7 +350,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -398,7 +398,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -414,7 +414,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan_new.code,
+              plan_code: plan_new.code
             },
           )
         }.to change { subscription.reload.status }.from('active').to('terminated')
@@ -452,7 +452,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -477,7 +477,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             {
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
-              plan_code: plan_new.code,
+              plan_code: plan_new.code
             },
           )
         }.to change { subscription.reload.status }.from('active').to('terminated')
@@ -514,7 +514,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
       end
@@ -570,7 +570,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
       end
@@ -584,7 +584,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: {amount: '5'},
+            properties: {amount: '5'}
           },
         )
       end
@@ -601,7 +601,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan_new.code,
-              billing_time: 'calendar',
+              billing_time: 'calendar'
             },
           )
           perform_all_enqueued_jobs
@@ -660,7 +660,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
       end
@@ -674,7 +674,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: {amount: '5'},
+            properties: {amount: '5'}
           },
         )
       end
@@ -691,7 +691,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan_new.code,
-              billing_time: 'calendar',
+              billing_time: 'calendar'
             },
           )
           perform_all_enqueued_jobs
@@ -748,7 +748,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'anniversary',
+            billing_time: 'anniversary'
           },
         )
       end
@@ -762,7 +762,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: {amount: '10'},
+            properties: {amount: '10'}
           },
         )
 
@@ -779,7 +779,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan_new.code,
-              billing_time: 'anniversary',
+              billing_time: 'anniversary'
             },
           )
           perform_all_enqueued_jobs
@@ -806,7 +806,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: active_subscription.external_id,
-            properties: {amount: '10000'},
+            properties: {amount: '10000'}
           },
         )
 
@@ -823,7 +823,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'anniversary',
+              billing_time: 'anniversary'
             },
           )
           perform_all_enqueued_jobs
@@ -877,7 +877,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
       end
@@ -891,7 +891,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: {amount: '5'},
+            properties: {amount: '5'}
           },
         )
       end
@@ -932,7 +932,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
       end
@@ -966,7 +966,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'calendar',
+              billing_time: 'calendar'
             },
           )
         end
@@ -979,7 +979,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               code: metric.code,
               transaction_id: SecureRandom.uuid,
               organization_id: organization.id,
-              external_customer_id: customer.external_id,
+              external_customer_id: customer.external_id
             },
           )
         end
@@ -1012,7 +1012,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     let(:adjusted_fee_params) do
       {
         unit_amount_cents: 500,
-        units: 3,
+        units: 3
       }
     end
 
@@ -1034,7 +1034,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
       end
@@ -1051,7 +1051,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: {amount: '5'},
+            properties: {amount: '5'}
           },
         )
       end
@@ -1110,7 +1110,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       let(:adjusted_fee_params) do
         {
           unit_amount_cents: 50,
-          units: 18, # 50 x 18 = 900
+          units: 18 # 50 x 18 = 900
         }
       end
 
@@ -1130,7 +1130,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'calendar',
+              billing_time: 'calendar'
             },
           )
         end
@@ -1191,7 +1191,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       let(:adjusted_fee_params) do
         {
           unit_amount_cents: 0,
-          units: 1,
+          units: 1
         }
       end
 
@@ -1211,7 +1211,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code,
-              billing_time: 'calendar',
+              billing_time: 'calendar'
             },
           )
         end
@@ -1303,7 +1303,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           },
         )
       end
@@ -1317,7 +1317,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
-            properties: {amount: '5'},
+            properties: {amount: '5'}
           },
         )
       end
@@ -1350,7 +1350,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -1445,7 +1445,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            customer:,
+            customer:
           },
         )
 
@@ -1533,7 +1533,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code,
-            customer:,
+            customer:
           },
         )
       end
@@ -1549,7 +1549,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             code: metric.code,
             transaction_id: SecureRandom.uuid,
             organization_id: organization.id,
-            external_subscription_id: subscription.external_id,
+            external_subscription_id: subscription.external_id
           },
         )
 
@@ -1566,7 +1566,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             code: metric.code,
             transaction_id: SecureRandom.uuid,
             organization_id: organization.id,
-            external_subscription_id: subscription.external_id,
+            external_subscription_id: subscription.external_id
           },
         )
 
@@ -1591,7 +1591,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             timestamp: DateTime.parse('2022-12-18').to_i,
             organization_id: organization.id,
-            external_subscription_id: subscription.external_id,
+            external_subscription_id: subscription.external_id
           },
         )
 
@@ -1628,7 +1628,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: pay_in_arrear_plan.code,
+            plan_code: pay_in_arrear_plan.code
           },
         )
 
@@ -1639,7 +1639,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: pay_in_advance_plan.code,
+            plan_code: pay_in_advance_plan.code
           },
         )
 
@@ -1676,7 +1676,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
-            plan_code: plan.code,
+            plan_code: plan.code
           },
         )
 
@@ -1686,7 +1686,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
 
         params = {
           external_id: customer.external_id,
-          billing_configuration: {invoice_grace_period: 0},
+          billing_configuration: {invoice_grace_period: 0}
         }
 
         expect {

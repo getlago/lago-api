@@ -24,7 +24,7 @@ RSpec.describe PaymentProviders::BaseProvider, type: :model do
       expect(provider.secrets_json).to eq(
         {
           'api_key' => 'foo_bar',
-          'api_secret' => api_secret,
+          'api_secret' => api_secret
         },
       )
     end

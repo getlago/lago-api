@@ -49,7 +49,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [wallet_transaction_second.id],
+          ids: [wallet_transaction_second.id]
         },
       )
 
@@ -74,7 +74,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          status: 'pending',
+          status: 'pending'
         },
       )
 
@@ -99,7 +99,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          transaction_type: 'outbound',
+          transaction_type: 'outbound'
         },
       )
 

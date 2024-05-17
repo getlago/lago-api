@@ -12,7 +12,7 @@ RSpec.describe Api::V1::TaxesController, type: :request do
         code: 'tax_code',
         rate: 20.0,
         description: 'tax_description',
-        applied_to_organization: false,
+        applied_to_organization: false
       }
     end
 

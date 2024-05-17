@@ -108,7 +108,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
       permissions: required_permission,
       query:,
       variables: {
-        id: invoice.id,
+        id: invoice.id
       },
     )
 
@@ -154,7 +154,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         permissions: required_permission,
         query:,
         variables: {
-          id: 'foo',
+          id: 'foo'
         },
       )
 
@@ -190,7 +190,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         permissions: required_permission,
         query:,
         variables: {
-          id: invoice.id,
+          id: invoice.id
         },
       )
 
@@ -222,7 +222,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         permissions: required_permission,
         query:,
         variables: {
-          id: invoice.id,
+          id: invoice.id
         },
       )
 
@@ -252,7 +252,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
           permissions: required_permission,
           query:,
           variables: {
-            id: invoice.id,
+            id: invoice.id
           },
         )
 
@@ -285,7 +285,7 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         permissions: required_permission,
         query:,
         variables: {
-          id: invoice.id,
+          id: invoice.id
         },
       )
 

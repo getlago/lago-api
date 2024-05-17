@@ -40,8 +40,8 @@ RSpec.describe Mutations::Auth::Okta::Login, type: :graphql do
       variables: {
         input: {
           state:,
-          code: 'code',
-        },
+          code: 'code'
+        }
       },
     )
 
@@ -62,8 +62,8 @@ RSpec.describe Mutations::Auth::Okta::Login, type: :graphql do
         variables: {
           input: {
             state:,
-            code: 'code',
-          },
+            code: 'code'
+          }
         },
       )
 

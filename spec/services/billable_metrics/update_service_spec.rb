@@ -15,7 +15,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       code: 'new_metric',
       description: 'New metric description',
       aggregation_type: 'sum_agg',
-      field_name: 'field_value',
+      field_name: 'field_value'
     }.tap do |p|
       p[:group] = group unless group.nil?
       p[:filters] = filters unless filters.nil?
@@ -46,7 +46,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
           values: [
             {name: 'AWS', key: 'region', values: %w[usa europe]},
             {name: 'Google', key: 'region', values: ['usa']},
-          ],
+          ]
         }
       end
 
@@ -84,7 +84,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         [
           {
             key: 'cloud',
-            values: %w[aws google],
+            values: %w[aws google]
           },
         ]
       end
@@ -100,7 +100,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
           name: nil,
           code: 'new_metric',
           description: 'New metric description',
-          aggregation_type: 'count_agg',
+          aggregation_type: 'count_agg'
         }
       end
 

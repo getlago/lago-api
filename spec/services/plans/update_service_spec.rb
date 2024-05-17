@@ -27,7 +27,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       amount_cents: 200,
       amount_currency: 'EUR',
       tax_codes: [tax2.code],
-      charges: charges_args,
+      charges: charges_args
     }
   end
 
@@ -35,7 +35,7 @@ RSpec.describe Plans::UpdateService, type: :service do
     {
       amount_cents: minimum_commitment_amount_cents,
       invoice_display_name: minimum_commitment_invoice_display_name,
-      tax_codes: [tax1.code],
+      tax_codes: [tax1.code]
     }
   end
 
@@ -52,10 +52,10 @@ RSpec.describe Plans::UpdateService, type: :service do
         group_properties: [
           {
             group_id: group.id,
-            values: {amount: '100'},
+            values: {amount: '100'}
           },
         ],
-        tax_codes: [tax1.code],
+        tax_codes: [tax1.code]
       },
       {
         billable_metric_id: billable_metric.id,
@@ -67,16 +67,16 @@ RSpec.describe Plans::UpdateService, type: :service do
               from_value: 0,
               to_value: 10,
               per_unit_amount: '2',
-              flat_amount: '0',
+              flat_amount: '0'
             },
             {
               from_value: 11,
               to_value: nil,
               per_unit_amount: '3',
-              flat_amount: '3',
+              flat_amount: '3'
             },
-          ],
-        },
+          ]
+        }
       },
     ]
   end
@@ -109,7 +109,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           interval: 'monthly',
           pay_in_advance: false,
           amount_cents: 200,
-          amount_currency: 'EUR',
+          amount_currency: 'EUR'
         }
       end
 
@@ -136,7 +136,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           interval: 'monthly',
           pay_in_advance: false,
           amount_cents: 5,
-          amount_currency: 'EUR',
+          amount_currency: 'EUR'
         }
       end
 
@@ -185,7 +185,7 @@ RSpec.describe Plans::UpdateService, type: :service do
             interval: 'monthly',
             pay_in_advance: false,
             amount_cents: 200,
-            amount_currency: 'EUR',
+            amount_currency: 'EUR'
           }
         end
 
@@ -242,8 +242,8 @@ RSpec.describe Plans::UpdateService, type: :service do
               pay_in_advance: false,
               invoiceable: true,
               properties: {
-                amount: '100',
-              },
+                amount: '100'
+              }
             },
           ]
         end
@@ -270,16 +270,16 @@ RSpec.describe Plans::UpdateService, type: :service do
                     from_value: 0,
                     to_value: 10,
                     rate: '3',
-                    flat_amount: '0',
+                    flat_amount: '0'
                   },
                   {
                     from_value: 11,
                     to_value: nil,
                     rate: '2',
-                    flat_amount: '3',
+                    flat_amount: '3'
                   },
-                ],
-              },
+                ]
+              }
             },
           ]
         end
@@ -304,7 +304,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               {
                 pay_in_advance: true,
                 invoiceable: false,
-                charge_model: 'graduated_percentage',
+                charge_model: 'graduated_percentage'
               },
             )
           end
@@ -503,7 +503,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           billable_metric_id: sum_billable_metric.id,
           amount_currency: 'USD',
           properties: {
-            amount: '300',
+            amount: '300'
           },
         )
       end
@@ -537,27 +537,27 @@ RSpec.describe Plans::UpdateService, type: :service do
               group_properties: [
                 {
                   group_id: group.id,
-                  values: {amount: '100'},
+                  values: {amount: '100'}
                 },
               ],
               filters: [
                 {
                   invoice_display_name: 'Card filter',
                   properties: {amount: '90'},
-                  values: {billable_metric_filter.key => ['card']},
+                  values: {billable_metric_filter.key => ['card']}
                 },
-              ],
+              ]
             },
             {
               billable_metric_id: billable_metric.id,
               charge_model: 'standard',
               min_amount_cents: 100,
               properties: {
-                amount: '300',
+                amount: '300'
               },
-              tax_codes: [tax1.code],
+              tax_codes: [tax1.code]
             },
-          ],
+          ]
         }
       end
 
@@ -619,7 +619,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           billable_metric_id: sum_billable_metric.id,
           amount_currency: 'USD',
           properties: {
-            amount: '300',
+            amount: '300'
           },
         )
       end
@@ -636,9 +636,9 @@ RSpec.describe Plans::UpdateService, type: :service do
               id: existing_charge.id,
               billable_metric_id: sum_billable_metric.id,
               charge_model: 'standard',
-              tax_codes: [tax2.code],
+              tax_codes: [tax2.code]
             },
-          ],
+          ]
         }
       end
 
@@ -672,7 +672,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           pay_in_advance: false,
           amount_cents: 200,
           amount_currency: 'EUR',
-          charges: [],
+          charges: []
         }
       end
 
@@ -715,7 +715,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           plan_id: plan.id,
           billable_metric_id: sum_billable_metric.id,
           properties: {
-            amount: '300',
+            amount: '300'
           },
         )
       end
@@ -735,17 +735,17 @@ RSpec.describe Plans::UpdateService, type: :service do
               billable_metric_id: sum_billable_metric.id,
               charge_model: 'standard',
               properties: {
-                amount: '100',
-              },
+                amount: '100'
+              }
             },
             {
               billable_metric_id: billable_metric.id,
               charge_model: 'standard',
               properties: {
-                amount: '300',
-              },
+                amount: '300'
+              }
             },
-          ],
+          ]
         }
       end
 

@@ -40,7 +40,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 wallet_id: wallet.id,
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
+                source: :interval
               },
             )
         end
@@ -68,7 +68,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 wallet_id: wallet.id,
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
+                source: :interval
               },
             )
         end
@@ -95,7 +95,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   wallet_id: wallet.id,
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
+                  source: :interval
                 },
               )
           end
@@ -118,7 +118,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 wallet_id: wallet.id,
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
+                source: :interval
               },
             )
         end
@@ -145,7 +145,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   wallet_id: wallet.id,
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
+                  source: :interval
                 },
               )
           end
@@ -167,7 +167,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   wallet_id: wallet.id,
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
+                  source: :interval
                 },
               )
           end
@@ -190,7 +190,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 wallet_id: wallet.id,
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
+                source: :interval
               },
             )
         end
@@ -217,7 +217,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   wallet_id: wallet.id,
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
+                  source: :interval
                 },
               )
           end

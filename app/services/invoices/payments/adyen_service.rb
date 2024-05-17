@@ -161,7 +161,7 @@ module Invoices
       def payment_method_params
         {
           merchantAccount: adyen_payment_provider.merchant_account,
-          shopperReference: customer.adyen_customer.provider_customer_id,
+          shopperReference: customer.adyen_customer.provider_customer_id
         }
       end
 
@@ -169,17 +169,17 @@ module Invoices
         prms = {
           amount: {
             currency: invoice.currency.upcase,
-            value: invoice.total_amount_cents,
+            value: invoice.total_amount_cents
           },
           reference: invoice.number,
           paymentMethod: {
             type: 'scheme',
-            storedPaymentMethodId: customer.adyen_customer.payment_method_id,
+            storedPaymentMethodId: customer.adyen_customer.payment_method_id
           },
           shopperReference: customer.adyen_customer.provider_customer_id,
           merchantAccount: adyen_payment_provider.merchant_account,
           shopperInteraction: 'ContAuth',
-          recurringProcessingModel: 'UnscheduledCardOnFile',
+          recurringProcessingModel: 'UnscheduledCardOnFile'
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms
@@ -190,7 +190,7 @@ module Invoices
           reference: invoice.number,
           amount: {
             value: invoice.total_amount_cents,
-            currency: invoice.currency.upcase,
+            currency: invoice.currency.upcase
           },
           merchantAccount: adyen_payment_provider.merchant_account,
           returnUrl: success_redirect_url,
@@ -203,8 +203,8 @@ module Invoices
             lago_invoice_id: invoice.id,
             invoice_issuing_date: invoice.issuing_date.iso8601,
             invoice_type: invoice.invoice_type,
-            payment_type: 'one-time',
-          },
+            payment_type: 'one-time'
+          }
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms
@@ -223,7 +223,7 @@ module Invoices
           invoice:,
           params: {
             payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded,
+            ready_for_payment_processing: payment_status.to_sym != :succeeded
           },
           webhook_notification: deliver_webhook,
         )
@@ -243,7 +243,7 @@ module Invoices
           provider_customer_id: customer.adyen_customer.provider_customer_id,
           provider_error: {
             message: adyen_error.msg,
-            error_code: adyen_error.code,
+            error_code: adyen_error.code
           },
         )
       end

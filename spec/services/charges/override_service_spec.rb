@@ -46,9 +46,9 @@ RSpec.describe Charges::OverrideService, type: :service do
         group_properties: [
           {
             group_id: group.id,
-            values: {amount: '100'},
+            values: {amount: '100'}
           },
-        ],
+        ]
       }
     end
 
@@ -90,7 +90,7 @@ RSpec.describe Charges::OverrideService, type: :service do
         expect(charge.group_properties.first).to have_attributes(
           {
             group_id: group.id,
-            values: {'amount' => '100'},
+            values: {'amount' => '100'}
           },
         )
         expect(charge.taxes).to contain_exactly(tax)
@@ -150,9 +150,9 @@ RSpec.describe Charges::OverrideService, type: :service do
               {
                 properties: {amount: '10'},
                 invoice_display_name: 'invoice display name',
-                values: {billable_metric_filter.key => [billable_metric_filter.values.first]},
+                values: {billable_metric_filter.key => [billable_metric_filter.values.first]}
               },
-            ],
+            ]
           }
         end
 
@@ -168,7 +168,7 @@ RSpec.describe Charges::OverrideService, type: :service do
           expect(charge.filters.first).to have_attributes(
             {
               invoice_display_name: 'invoice display name',
-              properties: {'amount' => '10'},
+              properties: {'amount' => '10'}
             },
           )
           expect(charge.filters.first.values.count).to eq(1)

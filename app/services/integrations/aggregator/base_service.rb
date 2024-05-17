@@ -41,7 +41,7 @@ module Integrations
       def headers
         {
           'Connection-Id' => integration.connection_id,
-          'Authorization' => "Bearer #{secret_key}",
+          'Authorization' => "Bearer #{secret_key}"
         }
       end
 

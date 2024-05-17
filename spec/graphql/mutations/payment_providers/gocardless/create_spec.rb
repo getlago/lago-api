@@ -53,8 +53,8 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
           accessCode: access_code,
           code:,
           name:,
-          successRedirectUrl: success_redirect_url,
-        },
+          successRedirectUrl: success_redirect_url
+        }
       },
     )
 

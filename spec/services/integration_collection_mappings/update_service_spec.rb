@@ -17,7 +17,7 @@ RSpec.describe IntegrationCollectionMappings::UpdateService, type: :service do
       {
         external_id: '456',
         external_name: 'Name1',
-        external_account_code: 'code-2',
+        external_account_code: 'code-2'
       }
     end
 

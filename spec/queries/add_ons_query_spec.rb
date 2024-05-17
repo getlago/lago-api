@@ -62,7 +62,7 @@ RSpec.describe AddOnsQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          ids: [add_on_second.id],
+          ids: [add_on_second.id]
         },
       )
 

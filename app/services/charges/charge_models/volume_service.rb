@@ -26,14 +26,14 @@ module Charges
           return {
             flat_unit_amount: BigDecimal(0),
             per_unit_amount: BigDecimal(0),
-            per_unit_total_amount: BigDecimal(0),
+            per_unit_total_amount: BigDecimal(0)
           }
         end
 
         {
           flat_unit_amount:,
           per_unit_amount: per_unit_amount.to_s,
-          per_unit_total_amount:,
+          per_unit_total_amount:
         }
       end
 

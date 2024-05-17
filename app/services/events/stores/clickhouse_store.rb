@@ -155,7 +155,7 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
-              timezone: customer.applicable_timezone,
+              timezone: customer.applicable_timezone
             },
           ],
         )
@@ -173,7 +173,7 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
-              timezone: customer.applicable_timezone,
+              timezone: customer.applicable_timezone
             },
           ],
         )
@@ -188,7 +188,7 @@ module Events
             query.grouped_query,
             {
               to_datetime: to_datetime.ceil,
-              decimal_scale: DECIMAL_SCALE,
+              decimal_scale: DECIMAL_SCALE
             },
           ],
         )
@@ -205,7 +205,7 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
-              timezone: customer.applicable_timezone,
+              timezone: customer.applicable_timezone
             },
           ],
         )
@@ -395,7 +395,7 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
-              initial_value: initial_value || 0,
+              initial_value: initial_value || 0
             },
           ],
         )
@@ -430,7 +430,7 @@ module Events
             {
               from_datetime:,
               to_datetime: to_datetime.ceil,
-              decimal_scale: DECIMAL_SCALE,
+              decimal_scale: DECIMAL_SCALE
             },
           ],
         )
@@ -450,7 +450,7 @@ module Events
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE,
-                initial_value: initial_value || 0,
+                initial_value: initial_value || 0
               },
             ],
           ),
@@ -540,7 +540,7 @@ module Events
 
           result = {
             groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
-            value: row.last,
+            value: row.last
           }
 
           result[:timestamp] = row[-2] if timestamp

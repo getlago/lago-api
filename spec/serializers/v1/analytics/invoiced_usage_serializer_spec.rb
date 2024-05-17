@@ -10,7 +10,7 @@ RSpec.describe ::V1::Analytics::InvoicedUsageSerializer do
       'month' => Time.current.beginning_of_month.iso8601,
       'code' => 'count_bm',
       'currency' => 'EUR',
-      'amount_cents' => 100,
+      'amount_cents' => 100
     }
   end
 

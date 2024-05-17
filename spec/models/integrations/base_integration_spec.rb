@@ -30,7 +30,7 @@ RSpec.describe Integrations::BaseIntegration, type: :model do
       expect(integration.secrets_json).to eq(
         {
           'api_key' => 'foo_bar',
-          'api_secret' => api_secret,
+          'api_secret' => api_secret
         },
       )
     end
@@ -49,7 +49,7 @@ RSpec.describe Integrations::BaseIntegration, type: :model do
 
       expect(integration.settings).to eq(
         {
-          'key1' => 'val1',
+          'key1' => 'val1'
         },
       )
     end

@@ -42,7 +42,7 @@ Charge.create_with(
   charge_model: 'standard',
   amount_currency: 'EUR',
   properties: {
-    amount: Faker::Number.between(from: 100, to: 500).to_s,
+    amount: Faker::Number.between(from: 100, to: 500).to_s
   },
 ).find_or_create_by!(
   plan:,
@@ -53,7 +53,7 @@ Charge.create_with(
   charge_model: 'standard',
   amount_currency: 'EUR',
   properties: {
-    amount: Faker::Number.between(from: 100, to: 500).to_s,
+    amount: Faker::Number.between(from: 100, to: 500).to_s
   },
 ).find_or_create_by!(
   plan:,
@@ -111,11 +111,11 @@ Charge.create_with(
         created_at: time,
         code: sum_metric.code,
         properties: {
-          custom_field: 10,
+          custom_field: 10
         },
         metadata: {
           user_agent: 'Lago Python v0.1.5',
-          ip_address: Faker::Internet.ip_v4_address,
+          ip_address: Faker::Internet.ip_v4_address
         },
       )
     end
@@ -133,7 +133,7 @@ Charge.create_with(
         code: count_metric.code,
         metadata: {
           user_agent: 'Lago Python v0.1.5',
-          ip_address: Faker::Internet.ip_v4_address,
+          ip_address: Faker::Internet.ip_v4_address
         },
       )
     end
@@ -154,7 +154,7 @@ Charge.create_with(
       properties: {},
       metadata: {
         user_agent: 'Lago Python v0.1.5',
-        ip_address: Faker::Internet.ip_v4_address,
+        ip_address: Faker::Internet.ip_v4_address
       },
     )
   end
@@ -174,7 +174,7 @@ Charge.create_with(
       properties: {},
       metadata: {
         user_agent: 'Lago Python v0.1.5',
-        ip_address: Faker::Internet.ip_v4_address,
+        ip_address: Faker::Internet.ip_v4_address
       },
     )
   end
@@ -238,11 +238,11 @@ organization.customers.find_each do |customer|
       created_at: time,
       code: sum_metric.code,
       properties: {
-        custom_field: 10,
+        custom_field: 10
       },
       metadata: {
         user_agent: 'Lago Python v0.1.5',
-        ip_address: Faker::Internet.ip_v4_address,
+        ip_address: Faker::Internet.ip_v4_address
       },
     )
   end

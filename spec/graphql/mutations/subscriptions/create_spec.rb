@@ -60,9 +60,9 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
               id: charge.id,
               billableMetricId: charge.billable_metric_id,
               invoiceDisplayName: 'invoice display name',
-            ],
-          },
-        },
+            ]
+          }
+        }
       },
     )
 

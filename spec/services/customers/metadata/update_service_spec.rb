@@ -14,12 +14,12 @@ RSpec.describe Customers::Metadata::UpdateService do
         id: customer_metadata.id,
         key: 'new key',
         value: 'new value',
-        display_in_invoice: true,
+        display_in_invoice: true
       },
       {
         key: 'Added key',
         value: 'Added value',
-        display_in_invoice: true,
+        display_in_invoice: true
       },
     ]
   end

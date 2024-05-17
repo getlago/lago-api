@@ -26,7 +26,7 @@ FactoryBot.define do
         {
           amount: '100',
           free_units: 10,
-          package_size: 10,
+          package_size: 10
         }
       end
     end
@@ -36,7 +36,7 @@ FactoryBot.define do
       properties do
         {
           rate: '0.0555',
-          fixed_amount: '2',
+          fixed_amount: '2'
         }
       end
     end
@@ -48,7 +48,7 @@ FactoryBot.define do
           volume_ranges: [
             {from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1'},
             {from_value: 101, to_value: nil, per_unit_amount: '1', flat_amount: '0'},
-          ],
+          ]
         }
       end
     end
@@ -62,15 +62,15 @@ FactoryBot.define do
               from_value: 0,
               to_value: 10,
               rate: '0',
-              flat_amount: '200',
+              flat_amount: '200'
             },
             {
               from_value: 11,
               to_value: nil,
               rate: '0',
-              flat_amount: '300',
+              flat_amount: '300'
             },
-          ],
+          ]
         }
       end
     end

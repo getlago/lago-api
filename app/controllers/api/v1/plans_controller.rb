@@ -107,23 +107,23 @@ module Api
             :invoiceable,
             :min_amount_cents,
             {
-              properties: {},
+              properties: {}
             },
             {
               filters: [
                 :invoice_display_name,
                 {
                   properties: {},
-                  values: {},
+                  values: {}
                 },
-              ],
+              ]
             },
             {
               group_properties: [
                 :group_id,
                 :invoice_display_name,
                 {values: {}},
-              ],
+              ]
             },
             {tax_codes: []},
           ],

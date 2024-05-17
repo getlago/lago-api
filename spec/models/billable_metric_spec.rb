@@ -127,7 +127,7 @@ RSpec.describe BillableMetric, type: :model do
         expect(billable_metric.active_groups_as_tree).to eq(
           {
             key: 'country',
-            values: %w[france italy],
+            values: %w[france italy]
           },
         )
       end
@@ -150,14 +150,14 @@ RSpec.describe BillableMetric, type: :model do
               {
                 name: 'france',
                 key: 'cloud',
-                values: %w[aws google],
+                values: %w[aws google]
               },
               {
                 name: 'italy',
                 key: 'cloud',
-                values: %w[google],
+                values: %w[google]
               },
-            ],
+            ]
           },
         )
       end

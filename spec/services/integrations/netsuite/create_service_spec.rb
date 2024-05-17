@@ -22,7 +22,7 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
         client_id: 'cl1',
         client_secret: 'secret',
         account_id: 'acc1',
-        script_endpoint_url:,
+        script_endpoint_url:
       }
     end
 

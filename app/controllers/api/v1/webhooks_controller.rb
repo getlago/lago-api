@@ -12,8 +12,8 @@ module Api
         render(
           json: {
             webhook: {
-              public_key: Base64.encode64(RsaPublicKey.to_s),
-            },
+              public_key: Base64.encode64(RsaPublicKey.to_s)
+            }
           },
           status: :ok,
         )

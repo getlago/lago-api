@@ -16,7 +16,7 @@ class ApplicationController < ActionController::API
         json: {
           version: result.version.number,
           github_url: result.version.github_url,
-          message: 'Success',
+          message: 'Success'
         },
         status: :ok,
       )
@@ -26,7 +26,7 @@ class ApplicationController < ActionController::API
           version: result.version.number,
           github_url: result.version.github_url,
           message: 'Unhealthy',
-          details: e.message,
+          details: e.message
         },
         status: :internal_server_error,
       )

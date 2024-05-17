@@ -24,7 +24,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
   let(:boundaries) do
     {
       charges_from_datetime: subscription.started_at.beginning_of_day,
-      charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+      charges_to_datetime: subscription.started_at.end_of_month.end_of_day
     }
   end
 
@@ -47,10 +47,10 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
-              charges_duration: boundaries[:charges_duration],
+              charges_duration: boundaries[:charges_duration]
             },
             filters: {
-              event:,
+              event:
             },
           )
 
@@ -91,11 +91,11 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               boundaries: {
                 from_datetime: boundaries[:charges_from_datetime],
                 to_datetime: boundaries[:charges_to_datetime],
-                charges_duration: boundaries[:charges_duration],
+                charges_duration: boundaries[:charges_duration]
               },
               filters: {
                 event:,
-                grouped_by_values: {'operator' => 'foo'},
+                grouped_by_values: {'operator' => 'foo'}
               },
             )
 
@@ -133,13 +133,13 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               boundaries: {
                 from_datetime: boundaries[:charges_from_datetime],
                 to_datetime: boundaries[:charges_to_datetime],
-                charges_duration: boundaries[:charges_duration],
+                charges_duration: boundaries[:charges_duration]
               },
               filters: {
                 event:,
                 charge_filter:,
                 matching_filters: charge_filter.to_h,
-                ignored_filters: [],
+                ignored_filters: []
               },
             )
 
@@ -170,10 +170,10 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
-              charges_duration: boundaries[:charges_duration],
+              charges_duration: boundaries[:charges_duration]
             },
             filters: {
-              event:,
+              event:
             },
           )
 
@@ -202,10 +202,10 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             boundaries: {
               from_datetime: boundaries[:charges_from_datetime],
               to_datetime: boundaries[:charges_to_datetime],
-              charges_duration: boundaries[:charges_duration],
+              charges_duration: boundaries[:charges_duration]
             },
             filters: {
-              event:,
+              event:
             },
           )
 

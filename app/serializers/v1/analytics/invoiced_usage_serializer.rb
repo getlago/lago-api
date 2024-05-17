@@ -8,7 +8,7 @@ module V1
           month: model['month'],
           code: model['code'],
           currency: model['currency'],
-          amount_cents: model['amount_cents'],
+          amount_cents: model['amount_cents']
         }
       end
     end

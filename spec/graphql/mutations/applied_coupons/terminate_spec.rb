@@ -29,7 +29,7 @@ RSpec.describe Mutations::AppliedCoupons::Terminate, type: :graphql do
       permissions: 'coupons:detach',
       query: mutation,
       variables: {
-        input: {id: applied_coupon.id},
+        input: {id: applied_coupon.id}
       },
     )
 

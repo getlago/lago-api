@@ -48,10 +48,10 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           recurringTransactionRules: [
             {
               trigger: 'interval',
-              interval: 'monthly',
+              interval: 'monthly'
             },
-          ],
-        },
+          ]
+        }
       },
     )
 
@@ -85,8 +85,8 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             paidCredits: '0.00',
             grantedCredits: '0.00',
             expirationAt: (Time.zone.now + 1.year).iso8601,
-            currency: 'EUR',
-          },
+            currency: 'EUR'
+          }
         },
       )
 

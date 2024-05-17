@@ -10,7 +10,7 @@ RSpec.describe Admin::MembershipsController, type: [:request, :admin] do
     let(:create_params) do
       {
         user_id: user.id,
-        organization_id: organization.id,
+        organization_id: organization.id
       }
     end
 

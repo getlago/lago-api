@@ -27,7 +27,7 @@ class CustomersQuery < BaseQuery
       m: 'or',
       name_cont: search_term,
       external_id_cont: search_term,
-      email_cont: search_term,
+      email_cont: search_term
     }
   end
 end

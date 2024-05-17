@@ -11,10 +11,10 @@ RSpec.describe ::V1::Integrations::CustomerErrorSerializer do
     {
       'provider_error' => {
         'error_message' => 'message',
-        'error_code' => 'code',
+        'error_code' => 'code'
       },
       'provider' => 'netsuite',
-      'provider_code' => integration_customer.integration.code,
+      'provider_code' => integration_customer.integration.code
     }.with_indifferent_access
   end
 

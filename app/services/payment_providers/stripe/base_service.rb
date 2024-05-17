@@ -29,7 +29,7 @@ module PaymentProviders
             source: 'stripe',
             action: action,
             message: error.message,
-            code: error.code,
+            code: error.code
           },
         )
       end

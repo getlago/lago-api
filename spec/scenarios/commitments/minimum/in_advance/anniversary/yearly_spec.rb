@@ -106,7 +106,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code,
-          billing_time:,
+          billing_time:
         },
       )
     end
@@ -117,7 +117,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_advance_metered.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: {total: '2'},
+          properties: {total: '2'}
         },
       )
 
@@ -126,7 +126,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_metered.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: {total: '1'},
+          properties: {total: '1'}
         },
       )
 
@@ -135,7 +135,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_advance_metered.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: {total: '30'},
+          properties: {total: '30'}
         },
       )
 
@@ -165,7 +165,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
                   code: billable_metric_advance_metered.code,
                   transaction_id: SecureRandom.uuid,
                   external_customer_id: customer.external_id,
-                  properties: {total: '55'},
+                  properties: {total: '55'}
                 },
               )
             end
@@ -176,7 +176,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
                   code: billable_metric_metered.code,
                   transaction_id: SecureRandom.uuid,
                   external_customer_id: customer.external_id,
-                  properties: {total: '1'},
+                  properties: {total: '1'}
                 },
               )
             end

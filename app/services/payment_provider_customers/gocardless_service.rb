@@ -73,7 +73,7 @@ module PaymentProviderCustomers
       client.customers.create(
         params: {
           email: customer.email&.strip&.split(',')&.first,
-          company_name: customer.name,
+          company_name: customer.name
         },
       )
     rescue GoCardlessPro::Error => e
@@ -99,7 +99,7 @@ module PaymentProviderCustomers
         customer,
         provider_error: {
           message: gocardless_error.message,
-          error_code: gocardless_error.code,
+          error_code: gocardless_error.code
         },
       )
     end
@@ -108,11 +108,11 @@ module PaymentProviderCustomers
       client.billing_requests.create(
         params: {
           mandate_request: {
-            scheme: 'bacs',
+            scheme: 'bacs'
           },
           links: {
-            customer: gocardless_customer_id,
-          },
+            customer: gocardless_customer_id
+          }
         },
       )
     rescue GoCardlessPro::Error => e
@@ -127,8 +127,8 @@ module PaymentProviderCustomers
           redirect_uri: success_redirect_url,
           exit_uri: success_redirect_url,
           links: {
-            billing_request: billing_request_id,
-          },
+            billing_request: billing_request_id
+          }
         },
       )
     rescue GoCardlessPro::Error => e

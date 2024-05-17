@@ -61,11 +61,11 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
               {
                 name: 'AWS',
                 key: 'country',
-                values: %w[France],
+                values: %w[France]
               },
-            ],
+            ]
           },
-        ],
+        ]
       }
     end
 
@@ -115,14 +115,14 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
             name: 'AWS',
             invoice_display_name: "AWS Invoice name",
             key: 'region',
-            values: %w[usa europe],
+            values: %w[usa europe]
           },
           {
             name: 'Google',
             key: 'region',
-            values: %w[usa usa],
+            values: %w[usa usa]
           },
-        ],
+        ]
       }
     end
 

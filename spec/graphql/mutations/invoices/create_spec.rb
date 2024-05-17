@@ -19,10 +19,10 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
         units: 2,
         description: 'desc-123',
         invoiceDisplayName: 'fee-123',
-        taxCodes: [tax.code],
+        taxCodes: [tax.code]
       },
       {
-        addOnId: add_on_second.id,
+        addOnId: add_on_second.id
       },
     ]
   end
@@ -61,8 +61,8 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
         input: {
           customerId: customer.id,
           currency:,
-          fees:,
-        },
+          fees:
+        }
       },
     )
 

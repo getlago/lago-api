@@ -18,7 +18,7 @@ RSpec.describe Taxes::UpdateService, type: :service do
       {
         code: 'updated code',
         rate: 15.0,
-        description: 'updated desc',
+        description: 'updated desc'
       }
     end
 
@@ -90,7 +90,7 @@ RSpec.describe Taxes::UpdateService, type: :service do
           name: nil,
           code: 'code',
           amount_cents: 100,
-          amount_currency: 'EUR',
+          amount_currency: 'EUR'
         }
       end
 

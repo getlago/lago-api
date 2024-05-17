@@ -83,7 +83,7 @@ module Invoices
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
-        timestamp: datetime,
+        timestamp: datetime
       }
     end
 
@@ -124,7 +124,7 @@ module Invoices
         charges_from_datetime: dates_service.charges_from_datetime,
         charges_to_datetime: dates_service.charges_to_datetime,
         timestamp: datetime,
-        charges_duration: dates_service.charges_duration_in_days,
+        charges_duration: dates_service.charges_duration_in_days
       }
 
       InvoiceSubscription.matching?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries

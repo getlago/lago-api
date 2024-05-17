@@ -22,7 +22,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       {
         id: wallet.id,
         name: 'new name',
-        expiration_at:,
+        expiration_at:
       }
     end
 
@@ -42,7 +42,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         {
           id: '123456',
           name: 'new name',
-          expiration_date: '2022-01-01',
+          expiration_date: '2022-01-01'
         }
       end
 
@@ -99,7 +99,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
             trigger: 'interval',
             interval: 'weekly',
             paid_credits: '105',
-            granted_credits: '105',
+            granted_credits: '105'
           },
         ]
       end
@@ -108,7 +108,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
           id: wallet.id,
           name: 'new name',
           expiration_at:,
-          recurring_transaction_rules: rules,
+          recurring_transaction_rules: rules
         }
       end
 
@@ -140,7 +140,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               trigger: 'interval',
               interval: 'weekly',
               paid_credits: '105',
-              granted_credits: '105',
+              granted_credits: '105'
             },
           ]
         end
@@ -172,7 +172,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               trigger: 'threshold',
               threshold_credits: '205',
               paid_credits: '105',
-              granted_credits: '105',
+              granted_credits: '105'
             },
           ]
         end
@@ -217,13 +217,13 @@ RSpec.describe Wallets::UpdateService, type: :service do
               trigger: 'interval',
               interval: 'monthly',
               paid_credits: '105',
-              granted_credits: '105',
+              granted_credits: '105'
             },
             {
               trigger: 'threshold',
               threshold_credits: '1.0',
               paid_credits: '105',
-              granted_credits: '105',
+              granted_credits: '105'
             },
           ]
         end
@@ -244,7 +244,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               trigger: 'invalid',
               interval: 'monthly',
               paid_credits: '105',
-              granted_credits: '105',
+              granted_credits: '105'
             },
           ]
         end
@@ -264,7 +264,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               trigger: 'threshold',
               threshold_credits: 'abc',
               paid_credits: '105',
-              granted_credits: '105',
+              granted_credits: '105'
             },
           ]
         end

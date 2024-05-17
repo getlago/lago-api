@@ -22,7 +22,7 @@ module V1
         expiration_at: model.expiration_at&.iso8601,
         last_balance_sync_at: model.last_balance_sync_at&.iso8601,
         last_consumed_credit_at: model.last_consumed_credit_at&.iso8601,
-        terminated_at: model.terminated_at,
+        terminated_at: model.terminated_at
       }.merge(legacy_values)
 
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)

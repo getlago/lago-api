@@ -38,11 +38,11 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     [
       {
         fee_id: fee1.id,
-        amount_cents: 10,
+        amount_cents: 10
       },
       {
         fee_id: fee2.id,
-        amount_cents: 5,
+        amount_cents: 5
       },
     ]
   end
@@ -96,11 +96,11 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       [
         {
           fee_id: fee1.id,
-          amount_cents: 10,
+          amount_cents: 10
         },
         {
           fee_id: fee2.id,
-          amount_cents: 15,
+          amount_cents: 15
         },
       ]
     end

@@ -22,18 +22,18 @@ RSpec.describe Api::V1::PlansController, type: :request do
         pay_in_advance: false,
         minimum_commitment: {
           amount_cents: 1000,
-          invoice_display_name: 'Minimum commitment',
+          invoice_display_name: 'Minimum commitment'
         },
         charges: [
           {
             billable_metric_id: billable_metric.id,
             charge_model: 'standard',
             properties: {
-              amount: '0.22',
+              amount: '0.22'
             },
-            tax_codes:,
+            tax_codes:
           },
-        ],
+        ]
       }
     end
     let(:tax_codes) { [tax.code] }
@@ -94,18 +94,18 @@ RSpec.describe Api::V1::PlansController, type: :request do
                     to_value: 1,
                     from_value: 0,
                     flat_amount: '0',
-                    per_unit_amount: '0',
+                    per_unit_amount: '0'
                   },
                   {
                     to_value: nil,
                     from_value: 2,
                     flat_amount: '0',
-                    per_unit_amount: '3200',
+                    per_unit_amount: '3200'
                   },
-                ],
-              },
+                ]
+              }
             },
-          ],
+          ]
         }
       end
 
@@ -145,11 +145,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
                 {
                   group_id: group.id,
                   invoice_display_name: 'Europe',
-                  values: {amount: '0.22'},
+                  values: {amount: '0.22'}
                 },
-              ],
+              ]
             },
-          ],
+          ]
         }
       end
 
@@ -167,7 +167,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             {
               group_id: group.id,
               invoice_display_name: 'Europe',
-              values: {amount: '0.22'},
+              values: {amount: '0.22'}
             },
           ],
         )
@@ -177,7 +177,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             {
               invoice_display_name: 'Europe',
               properties: {amount: '0.22'},
-              values: {group.key.to_sym => [group.value]},
+              values: {group.key.to_sym => [group.value]}
             },
           ],
         )
@@ -194,7 +194,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           amount_cents: 100,
           amount_currency: 'EUR',
           trial_period: 1,
-          pay_in_advance: false,
+          pay_in_advance: false
         }
       end
 
@@ -247,11 +247,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
             billable_metric_id: billable_metric.id,
             charge_model: 'standard',
             properties: {
-              amount: '0.22',
+              amount: '0.22'
             },
-            tax_codes:,
+            tax_codes:
           },
-        ],
+        ]
       }
     end
 
@@ -259,8 +259,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
       {
         minimum_commitment: {
           amount_cents: 5000,
-          invoice_display_name: 'Minimum commitment updated',
-        },
+          invoice_display_name: 'Minimum commitment updated'
+        }
       }
     end
 
@@ -450,11 +450,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
                 {
                   group_id: group.id,
                   invoice_display_name: 'Europe',
-                  values: {amount: '0.22'},
+                  values: {amount: '0.22'}
                 },
-              ],
+              ]
             },
-          ],
+          ]
         }
       end
 
@@ -472,7 +472,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             {
               group_id: group.id,
               invoice_display_name: 'Europe',
-              values: {amount: '0.22'},
+              values: {amount: '0.22'}
             },
           ],
         )
@@ -482,7 +482,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             {
               invoice_display_name: 'Europe',
               properties: {amount: '0.22'},
-              values: {group.key.to_sym => [group.value]},
+              values: {group.key.to_sym => [group.value]}
             },
           ],
         )

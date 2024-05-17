@@ -32,8 +32,8 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
       variables: {
         input: {
           id: credit_note.id,
-          refundStatus: 'succeeded',
-        },
+          refundStatus: 'succeeded'
+        }
       },
     )
 
@@ -54,8 +54,8 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
         variables: {
           input: {
             id: 'foo_bar',
-            refundStatus: 'succeeded',
-          },
+            refundStatus: 'succeeded'
+          }
         },
       )
 

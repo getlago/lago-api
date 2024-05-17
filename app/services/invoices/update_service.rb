@@ -73,7 +73,7 @@ module Invoices
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          payment_status: invoice.payment_status,
+          payment_status: invoice.payment_status
         },
       )
     end

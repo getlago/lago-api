@@ -40,13 +40,13 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         'charge' => {
           'lago_id' => charge.id,
           'charge_model' => charge.charge_model,
-          'invoice_display_name' => charge.invoice_display_name,
+          'invoice_display_name' => charge.invoice_display_name
         },
         'billable_metric' => {
           'lago_id' => billable_metric.id,
           'name' => billable_metric.name,
           'code' => billable_metric.code,
-          'aggregation_type' => billable_metric.aggregation_type,
+          'aggregation_type' => billable_metric.aggregation_type
         },
         'filters' => [],
         'groups' => [],
@@ -57,7 +57,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             'units' => '10.0',
             'grouped_by' => {'card_type' => 'visa'},
             'filters' => [],
-            'groups' => [],
+            'groups' => []
           },
         ],
       )
@@ -82,7 +82,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             value: fee2.charge_filter.to_h.values.flatten.join(', '),
             units: fee2.units,
             amount_cents: fee2.amount_cents,
-            events_count: fee2.events_count,
+            events_count: fee2.events_count
           },
           {
             lago_id: "charge-filter-#{fee1.charge_filter_id}",
@@ -90,7 +90,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             value: fee1.charge_filter.to_h.values.flatten.join(', '),
             units: fee1.units,
             amount_cents: fee1.amount_cents,
-            events_count: fee1.events_count,
+            events_count: fee1.events_count
           },
         ]
       end
@@ -112,7 +112,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             value: fee2.charge_filter.to_h.values.flatten.join(', '),
             units: fee2.units,
             amount_cents: fee2.amount_cents,
-            events_count: fee2.events_count,
+            events_count: fee2.events_count
           },
         ]
       end

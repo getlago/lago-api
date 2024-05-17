@@ -69,7 +69,7 @@ module LagoHttpClient
             StringIO.new(file_content),
             file_type,
             file_name,
-          ),
+          )
         },
       )
 

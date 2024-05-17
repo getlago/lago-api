@@ -119,7 +119,7 @@ module Invoices
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type,
+          invoice_type: invoice.invoice_type
         },
       )
     end

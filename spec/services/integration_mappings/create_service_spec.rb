@@ -17,7 +17,7 @@ RSpec.describe IntegrationMappings::CreateService, type: :service do
       {
         mappable_type: 'AddOn',
         mappable_id: add_on.id,
-        integration_id: integration.id,
+        integration_id: integration.id
       }
     end
 
@@ -45,7 +45,7 @@ RSpec.describe IntegrationMappings::CreateService, type: :service do
       let(:create_args) do
         {
           mappable_type: 'AddOn',
-          mappable_id: add_on.id,
+          mappable_id: add_on.id
         }
       end
 

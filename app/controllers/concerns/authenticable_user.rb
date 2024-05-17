@@ -33,7 +33,7 @@ module AuthenticableUser
 
   def decode_options
     {
-      algorithm: 'HS256',
+      algorithm: 'HS256'
     }
   end
 

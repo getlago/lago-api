@@ -36,8 +36,8 @@ module Types
             external_subscription_id: object.external_subscription_id,
             code: object.code,
             timestamp: object.timestamp.to_i,
-            properties: object.properties || {},
-          },
+            properties: object.properties || {}
+          }
         }
       end
 

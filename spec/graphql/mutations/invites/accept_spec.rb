@@ -34,8 +34,8 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
             input: {
               email: invite.email,
               password:,
-              token: invite.token,
-            },
+              token: invite.token
+            }
           },
         )
 
@@ -58,8 +58,8 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
             input: {
               email: invite.email,
               password:,
-              token: invite.token,
-            },
+              token: invite.token
+            }
           },
         )
 
@@ -81,8 +81,8 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
             input: {
               email: invite.email,
               password:,
-              token: invite.token,
-            },
+              token: invite.token
+            }
           },
         )
 

@@ -42,29 +42,29 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
               {
                 invoice_display_name: 'f1',
                 properties: {amount: '10'},
-                values: {image_size: ['512x152'], steps: ['0-25'], model_name: ['llama-2']},
+                values: {image_size: ['512x152'], steps: ['0-25'], model_name: ['llama-2']}
               },
               {
                 invoice_display_name: 'f2',
                 properties: {amount: '5'},
-                values: {image_size: ['512x152'], steps: ['0-25']},
+                values: {image_size: ['512x152'], steps: ['0-25']}
               },
               {
                 invoice_display_name: 'f3',
                 properties: {amount: '5'},
                 values: {
                   image_size: [ChargeFilterValue::ALL_FILTER_VALUES],
-                  steps: [ChargeFilterValue::ALL_FILTER_VALUES],
-                },
+                  steps: [ChargeFilterValue::ALL_FILTER_VALUES]
+                }
               },
               {
                 invoice_display_name: 'f4',
                 properties: {amount: '2.5'},
                 values: {
-                  image_size: [ChargeFilterValue::ALL_FILTER_VALUES],
-                },
+                  image_size: [ChargeFilterValue::ALL_FILTER_VALUES]
+                }
               },
-            ],
+            ]
           },
         ],
       )
@@ -121,34 +121,34 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
               {
                 invoice_display_name: 'f2',
                 properties: {amount: '5'},
-                values: {image_size: ['512x512'], steps: ['0-25']},
+                values: {image_size: ['512x512'], steps: ['0-25']}
               },
               {
                 invoice_display_name: 'f3',
                 properties: {amount: '5'},
                 values: {
                   image_size: [ChargeFilterValue::ALL_FILTER_VALUES],
-                  steps: [ChargeFilterValue::ALL_FILTER_VALUES],
-                },
+                  steps: [ChargeFilterValue::ALL_FILTER_VALUES]
+                }
               },
               {
                 invoice_display_name: 'f4',
                 properties: {amount: '2.5'},
                 values: {
-                  image_size: [ChargeFilterValue::ALL_FILTER_VALUES],
-                },
+                  image_size: [ChargeFilterValue::ALL_FILTER_VALUES]
+                }
               },
               {
                 invoice_display_name: 'f1',
                 properties: {amount: '10'},
-                values: {image_size: ['512x512'], steps: ['0-25'], model_name: ['llama-2']},
+                values: {image_size: ['512x512'], steps: ['0-25'], model_name: ['llama-2']}
               },
               {
                 invoice_display_name: 'f5',
                 properties: {amount: '1'},
-                values: {image_size: ['1024x1024']},
+                values: {image_size: ['1024x1024']}
               },
-            ],
+            ]
           },
         ],
       )
@@ -181,7 +181,7 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
           value: 10,
           image_size: '512x512',
           steps: '0-25',
-          model: 'llama-3',
+          model: 'llama-3'
         },
       )
 
@@ -193,7 +193,7 @@ RSpec.describe 'Create and edit plans with charge filters', :scenarios, type: :r
           value: 10,
           image: '512x512',
           step: '0-25',
-          model: 'llama-3',
+          model: 'llama-3'
         },
       )
 

@@ -19,7 +19,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       {
         wallet_id:,
         paid_credits: '10',
-        granted_credits: '10',
+        granted_credits: '10'
       }
     end
 
@@ -42,7 +42,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       let(:params) do
         {
           wallet_id:,
-          voided_credits: '10',
+          voided_credits: '10'
         }
       end
 

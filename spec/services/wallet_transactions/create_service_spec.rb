@@ -34,7 +34,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
         paid_credits:,
         granted_credits:,
         voided_credits:,
-        source: :manual,
+        source: :manual
       }
     end
 

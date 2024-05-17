@@ -184,19 +184,19 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
             from_value: 0,
             to_value: 10,
             per_unit_amount: '0',
-            flat_amount: '0',
+            flat_amount: '0'
           },
           {
             from_value: 11,
             to_value: 20,
             per_unit_amount: '10',
-            flat_amount: '20',
+            flat_amount: '20'
           },
           {
             from_value: 21,
             to_value: nil,
             per_unit_amount: '15',
-            flat_amount: '30',
+            flat_amount: '30'
           },
         ]
       end

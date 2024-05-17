@@ -26,7 +26,7 @@ module GraphQLHelper
         current_organization:,
         customer_portal_user:,
         request:,
-        permissions:,
+        permissions:
       },
     )
 

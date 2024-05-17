@@ -52,8 +52,8 @@ RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
           id: integration.id,
           name:,
           code:,
-          scriptEndpointUrl: script_endpoint_url,
-        },
+          scriptEndpointUrl: script_endpoint_url
+        }
       },
     )
 

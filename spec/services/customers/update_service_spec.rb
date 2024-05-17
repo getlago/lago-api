@@ -24,8 +24,8 @@ RSpec.describe Customers::UpdateService, type: :service do
         net_payment_term: 8,
         external_id:,
         billing_configuration: {
-          vat_rate: 20,
-        },
+          vat_rate: 20
+        }
       }
     end
 
@@ -50,8 +50,8 @@ RSpec.describe Customers::UpdateService, type: :service do
           id: customer.id,
           timezone: 'Europe/Paris',
           billing_configuration: {
-            invoice_grace_period: 3,
-          },
+            invoice_grace_period: 3
+          }
         }
       end
 
@@ -75,7 +75,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           name: 'Updated customer name',
           external_id:,
           invoice_grace_period: 3,
-          vat_rate: 20,
+          vat_rate: 20
         }
       end
 
@@ -98,14 +98,14 @@ RSpec.describe Customers::UpdateService, type: :service do
               id: customer_metadata.id,
               key: 'new key',
               value: 'new value',
-              display_in_invoice: true,
+              display_in_invoice: true
             },
             {
               key: 'Added key',
               value: 'Added value',
-              display_in_invoice: true,
+              display_in_invoice: true
             },
-          ],
+          ]
         }
       end
 
@@ -161,7 +161,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         let(:update_args) do
           {
             id: customer.id,
-            currency: 'CAD',
+            currency: 'CAD'
           }
         end
 
@@ -185,7 +185,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           name: 'Updated customer name',
           external_id:,
           payment_provider: 'stripe',
-          payment_provider_code:,
+          payment_provider_code:
         }
       end
 
@@ -223,7 +223,7 @@ RSpec.describe Customers::UpdateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'stripe',
-            provider_customer: {provider_customer_id: 'cus_12345'},
+            provider_customer: {provider_customer_id: 'cus_12345'}
           }
         end
 
@@ -254,7 +254,7 @@ RSpec.describe Customers::UpdateService, type: :service do
               name: 'Foo Bar',
               organization_id: organization.id,
               payment_provider: nil,
-              provider_customer: {provider_customer_id: nil},
+              provider_customer: {provider_customer_id: nil}
             }
           end
 
@@ -289,7 +289,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       let(:update_args) do
         {
           id: customer.id,
-          invoice_grace_period: 8,
+          invoice_grace_period: 8
         }
       end
 

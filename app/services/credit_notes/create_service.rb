@@ -144,7 +144,7 @@ module CreditNotes
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
-          credit_note_method: types,
+          credit_note_method: types
         },
       )
     end

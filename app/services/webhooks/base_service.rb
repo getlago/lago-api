@@ -18,7 +18,7 @@ module Webhooks
       payload = {
         :webhook_type => webhook_type,
         :object_type => object_type,
-        object_type => object_serializer.serialize,
+        object_type => object_serializer.serialize
       }
 
       current_organization.webhook_endpoints.each do |webhook_endpoint|
@@ -95,7 +95,7 @@ module Webhooks
       {
         'X-Lago-Signature' => signature,
         'X-Lago-Signature-Algorithm' => webhook_endpoint.signature_algo.to_s,
-        'X-Lago-Unique-Key' => webhook_id,
+        'X-Lago-Unique-Key' => webhook_id
       }
     end
 
@@ -103,7 +103,7 @@ module Webhooks
       JWT.encode(
         {
           data: payload.to_json,
-          iss: issuer,
+          iss: issuer
         },
         RsaPrivateKey,
         'RS256',

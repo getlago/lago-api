@@ -19,8 +19,8 @@ RSpec.describe Customers::CreateService, type: :service do
         tax_identification_number: '123456789',
         billing_configuration: {
           vat_rate: 20,
-          document_locale: 'fr',
-        },
+          document_locale: 'fr'
+        }
       }
     end
 
@@ -86,7 +86,7 @@ RSpec.describe Customers::CreateService, type: :service do
           customer_id: customer.id,
           created_at: customer.created_at,
           payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id,
+          organization_id: customer.organization_id
         },
       )
     end
@@ -114,20 +114,20 @@ RSpec.describe Customers::CreateService, type: :service do
           currency: 'EUR',
           billing_configuration: {
             vat_rate: 20,
-            document_locale: 'fr',
+            document_locale: 'fr'
           },
           metadata: [
             {
               key: 'manager name',
               value: 'John',
-              display_in_invoice: true,
+              display_in_invoice: true
             },
             {
               key: 'manager address',
               value: 'Test',
-              display_in_invoice: false,
+              display_in_invoice: false
             },
-          ],
+          ]
         }
       end
 
@@ -155,8 +155,8 @@ RSpec.describe Customers::CreateService, type: :service do
           name: 'Foo Bar',
           timezone: 'Europe/Paris',
           billing_configuration: {
-            invoice_grace_period: 3,
-          },
+            invoice_grace_period: 3
+          }
         }
       end
 
@@ -256,21 +256,21 @@ RSpec.describe Customers::CreateService, type: :service do
             currency: 'EUR',
             billing_configuration: {
               vat_rate: 20,
-              document_locale: 'fr',
+              document_locale: 'fr'
             },
             metadata: [
               {
                 id: customer_metadata.id,
                 key: 'new key',
                 value: 'new value',
-                display_in_invoice: true,
+                display_in_invoice: true
               },
               {
                 key: 'Added key',
                 value: 'Added value',
-                display_in_invoice: true,
+                display_in_invoice: true
               },
-            ],
+            ]
           }
         end
 
@@ -302,41 +302,41 @@ RSpec.describe Customers::CreateService, type: :service do
               currency: 'EUR',
               billing_configuration: {
                 vat_rate: 20,
-                document_locale: 'fr',
+                document_locale: 'fr'
               },
               metadata: [
                 {
                   id: customer_metadata.id,
                   key: 'new key',
                   value: 'new value',
-                  display_in_invoice: true,
+                  display_in_invoice: true
                 },
                 {
                   key: 'Added key1',
                   value: 'Added value1',
-                  display_in_invoice: true,
+                  display_in_invoice: true
                 },
                 {
                   key: 'Added key2',
                   value: 'Added value2',
-                  display_in_invoice: true,
+                  display_in_invoice: true
                 },
                 {
                   key: 'Added key3',
                   value: 'Added value3',
-                  display_in_invoice: true,
+                  display_in_invoice: true
                 },
                 {
                   key: 'Added key4',
                   value: 'Added value4',
-                  display_in_invoice: true,
+                  display_in_invoice: true
                 },
                 {
                   key: 'Added key5',
                   value: 'Added value5',
-                  display_in_invoice: true,
+                  display_in_invoice: true
                 },
-              ],
+              ]
             }
           end
 
@@ -360,7 +360,7 @@ RSpec.describe Customers::CreateService, type: :service do
           {
             external_id:,
             name: 'Foo Bar',
-            currency: 'CAD',
+            currency: 'CAD'
           }
         end
 
@@ -390,7 +390,7 @@ RSpec.describe Customers::CreateService, type: :service do
         let(:create_args) do
           {
             external_id:,
-            billing_configuration: {invoice_grace_period: 2},
+            billing_configuration: {invoice_grace_period: 2}
           }
         end
 
@@ -408,7 +408,7 @@ RSpec.describe Customers::CreateService, type: :service do
     context 'with validation error' do
       let(:create_args) do
         {
-          name: 'Foo Bar',
+          name: 'Foo Bar'
         }
       end
 
@@ -430,8 +430,8 @@ RSpec.describe Customers::CreateService, type: :service do
           billing_configuration: {
             payment_provider: 'stripe',
             payment_provider_code: 'stripe_1',
-            provider_customer_id: 'stripe_id',
-          },
+            provider_customer_id: 'stripe_id'
+          }
         }
       end
 
@@ -485,8 +485,8 @@ RSpec.describe Customers::CreateService, type: :service do
               vat_rate: 28,
               payment_provider:,
               payment_provider_code:,
-              provider_customer_id: 'stripe_id',
-            },
+              provider_customer_id: 'stripe_id'
+            }
           }
         end
         let(:customer) do
@@ -552,8 +552,8 @@ RSpec.describe Customers::CreateService, type: :service do
               name: 'Foo Bar',
               billing_configuration: {
                 vat_rate: 28,
-                sync_with_provider: true,
-              },
+                sync_with_provider: true
+              }
             }
           end
 
@@ -584,8 +584,8 @@ RSpec.describe Customers::CreateService, type: :service do
           name: 'Foo Bar',
           billing_configuration: {
             payment_provider: 'gocardless',
-            provider_customer_id: 'gocardless_id',
-          },
+            provider_customer_id: 'gocardless_id'
+          }
         }
       end
 
@@ -635,8 +635,8 @@ RSpec.describe Customers::CreateService, type: :service do
           external_id: SecureRandom.uuid,
           name: 'Foo Bar',
           billing_configuration: {
-            payment_provider: 'foo',
-          },
+            payment_provider: 'foo'
+          }
         }
       end
 
@@ -716,8 +716,8 @@ RSpec.describe Customers::CreateService, type: :service do
           currency: 'EUR',
           billing_configuration: {
             vat_rate:,
-            document_locale: 'fr',
-          },
+            document_locale: 'fr'
+          }
         }
       end
 
@@ -832,7 +832,7 @@ RSpec.describe Customers::CreateService, type: :service do
         organization_id: organization.id,
         currency: 'EUR',
         timezone: 'Europe/Paris',
-        invoice_grace_period: 2,
+        invoice_grace_period: 2
       }
     end
 
@@ -868,7 +868,7 @@ RSpec.describe Customers::CreateService, type: :service do
           customer_id: customer.id,
           created_at: customer.created_at,
           payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id,
+          organization_id: customer.organization_id
         },
       )
     end
@@ -882,7 +882,7 @@ RSpec.describe Customers::CreateService, type: :service do
           name: 'Foo Bar',
           organization_id: organization.id,
           timezone: 'Europe/Paris',
-          invoice_grace_period: 2,
+          invoice_grace_period: 2
         }
       end
 
@@ -910,14 +910,14 @@ RSpec.describe Customers::CreateService, type: :service do
             {
               key: 'manager name',
               value: 'John',
-              display_in_invoice: true,
+              display_in_invoice: true
             },
             {
               key: 'manager address',
               value: 'Test',
-              display_in_invoice: false,
+              display_in_invoice: false
             },
-          ],
+          ]
         }
       end
 
@@ -950,7 +950,7 @@ RSpec.describe Customers::CreateService, type: :service do
     context 'with validation error' do
       let(:create_args) do
         {
-          name: 'Foo Bar',
+          name: 'Foo Bar'
         }
       end
 
@@ -976,7 +976,7 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'stripe',
-            provider_customer: {provider_customer_id: 'cus_12345'},
+            provider_customer: {provider_customer_id: 'cus_12345'}
           }
         end
 
@@ -1011,7 +1011,7 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'gocardless',
-            provider_customer: {provider_customer_id: 'cus_12345'},
+            provider_customer: {provider_customer_id: 'cus_12345'}
           }
         end
 
@@ -1037,7 +1037,7 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             organization_id: organization.id,
             payment_provider: 'gocardless',
-            provider_customer: {sync_with_provider: true},
+            provider_customer: {sync_with_provider: true}
           }
         end
 

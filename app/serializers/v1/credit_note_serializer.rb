@@ -25,7 +25,7 @@ module V1
         taxes_rate: model.taxes_rate,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
-        file_url: model.file_url,
+        file_url: model.file_url
       }.merge(legacy_values)
 
       payload.merge!(customer) if include?(:customer)
@@ -39,7 +39,7 @@ module V1
 
     def customer
       {
-        customer: ::V1::CustomerSerializer.new(model.customer).serialize,
+        customer: ::V1::CustomerSerializer.new(model.customer).serialize
       }
     end
 

@@ -153,9 +153,9 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           .and_return(Stripe::StripeObject.construct_from(
             {
               invoice_settings: {
-                default_payment_method: nil,
+                default_payment_method: nil
               },
-              default_source: nil,
+              default_source: nil
             },
           ))
 
@@ -170,7 +170,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
                 customer: 'cus_123456',
                 livemode: false,
                 metadata: {},
-                type: 'card',
+                type: 'card'
               },
             ],
           ))
@@ -217,7 +217,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             provider_customer_id: stripe_customer.provider_customer_id,
             provider_error: {
               message: 'error',
-              error_code: nil,
+              error_code: nil
             },
           )
       end

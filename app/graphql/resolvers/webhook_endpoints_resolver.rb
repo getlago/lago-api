@@ -23,7 +23,7 @@ module Resolvers
         page:,
         limit:,
         filters: {
-          ids:,
+          ids:
         },
       )
 

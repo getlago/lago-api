@@ -27,9 +27,9 @@ RSpec.describe GraphqlController, type: :request do
           variables: {
             input: {
               email: user.email,
-              password: 'ILoveLago',
-            },
-          },
+              password: 'ILoveLago'
+            }
+          }
         }
 
       expect(response.status).to be(200)
@@ -49,7 +49,7 @@ RSpec.describe GraphqlController, type: :request do
         JWT.encode(
           {
             sub: user.id,
-            exp: Time.now.to_i,
+            exp: Time.now.to_i
           },
           ENV['SECRET_KEY_BASE'],
           'HS256',
@@ -59,16 +59,16 @@ RSpec.describe GraphqlController, type: :request do
       it 'retrieves the current user and refreshes the token' do
         post '/graphql',
           headers: {
-            'Authorization' => "Bearer #{token}",
+            'Authorization' => "Bearer #{token}"
           },
           params: {
             query: mutation,
             variables: {
               input: {
                 email: user.email,
-                password: 'ILoveLago',
-              },
-            },
+                password: 'ILoveLago'
+              }
+            }
           }
 
         expect(response.status).to be(200)
@@ -79,16 +79,16 @@ RSpec.describe GraphqlController, type: :request do
         post '/graphql',
           headers: {
             'Authorization' => "Bearer #{token}",
-            'x-lago-organization' => membership.organization,
+            'x-lago-organization' => membership.organization
           },
           params: {
             query: mutation,
             variables: {
               input: {
                 email: user.email,
-                password: 'ILoveLago',
-              },
-            },
+                password: 'ILoveLago'
+              }
+            }
           }
 
         expect(response.status).to be(200)
@@ -102,16 +102,16 @@ RSpec.describe GraphqlController, type: :request do
         post(
           '/graphql',
           headers: {
-            'Authorization' => "Bearer #{expired_token}",
+            'Authorization' => "Bearer #{expired_token}"
           },
           params: {
             query: mutation,
             variables: {
               input: {
                 email: user.email,
-                password: 'ILoveLago',
-              },
-            },
+                password: 'ILoveLago'
+              }
+            }
           },
         )
 
@@ -145,10 +145,10 @@ RSpec.describe GraphqlController, type: :request do
         post(
           '/graphql',
           headers: {
-            'customer-portal-token' => token,
+            'customer-portal-token' => token
           },
           params: {
-            query:,
+            query:
           },
         )
 

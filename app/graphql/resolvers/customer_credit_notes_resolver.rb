@@ -25,7 +25,7 @@ module Resolvers
         customer_id:,
         limit:,
         filters: {
-          ids:,
+          ids:
         },
       )
 
