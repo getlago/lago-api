@@ -7,7 +7,7 @@ module Resolvers
 
       description 'Query customer portal organization'
 
-      type Types::OrganizationType, null: true
+      type Types::Organizations::OrganizationType, null: true
 
       def resolve
         context[:customer_portal_user].organization

@@ -6,7 +6,7 @@ module Types
       graphql_name 'AddOn'
 
       field :id, ID, null: false
-      field :organization, Types::OrganizationType
+      field :organization, Types::Organizations::OrganizationType
 
       field :code, String, null: false
       field :description, String, null: true
