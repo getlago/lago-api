@@ -653,7 +653,8 @@ GEM
     request_store (1.5.1)
       rack (>= 1.4)
     retriable (3.1.2)
-    rexml (3.2.5)
+    rexml (3.2.8)
+      strscan (>= 3.0.9)
     roda (3.79.0)
       rack
     rspec (3.12.0)
@@ -800,6 +801,7 @@ GEM
       lint_roller (~> 1.1)
       rubocop-performance (~> 1.20.2)
     stripe (6.5.0)
+    strscan (3.1.0)
     temple (0.8.2)
     terminal-table (3.0.2)
       unicode-display_width (>= 1.1.1, < 3)
