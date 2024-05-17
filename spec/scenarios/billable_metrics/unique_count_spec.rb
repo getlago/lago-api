@@ -109,6 +109,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
+            timestamp: Time.zone.parse('2024-02-01T01:00:00').to_f,
             properties: {
               'item_id' => '001',
               'operation_type' => 'remove',
@@ -129,6 +130,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
+            timestamp: Time.zone.parse('2024-02-01T01:00:10').to_f,
             properties: {
               'item_id' => '001',
               'operation_type' => 'add',
@@ -151,6 +153,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
+            timestamp: Time.zone.parse('2024-02-02T01:00:00').to_f,
             properties: {
               'item_id' => '001',
               'operation_type' => 'add',
@@ -173,6 +176,7 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
+            timestamp: Time.zone.parse('2024-02-03T01:00:00').to_f,
             properties: {
               'item_id' => '001',
               'operation_type' => 'remove',
