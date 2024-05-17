@@ -16,7 +16,7 @@ module Webhooks
       payload = {
         :webhook_type => webhook_type,
         :object_type => object_type,
-        object_type => object_serializer.serialize,
+        object_type => object_serializer.serialize
       }
 
       # TODO: Wrap in transaction so we create all webhook models or none

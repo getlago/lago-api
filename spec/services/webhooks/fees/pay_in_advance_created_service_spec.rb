@@ -11,6 +11,6 @@ RSpec.describe Webhooks::Fees::PayInAdvanceCreatedService do
   let(:fee) { create(:fee, customer:, subscription:) }
 
   describe '.call' do
-    it_behaves_like 'creates webhook', 'fee.created', 'fee', { 'amount_cents' => Integer }
+    it_behaves_like 'creates webhook', 'fee.created', 'fee', {'amount_cents' => Integer}
   end
 end

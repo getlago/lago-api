@@ -28,7 +28,7 @@ class Webhook < ApplicationRecord
     {
       'X-Lago-Signature' => signature,
       'X-Lago-Signature-Algorithm' => webhook_endpoint.signature_algo.to_s,
-      'X-Lago-Unique-Key' => id,
+      'X-Lago-Unique-Key' => id
     }
   end
 
@@ -36,7 +36,7 @@ class Webhook < ApplicationRecord
     JWT.encode(
       {
         data: payload.to_json,
-        iss: issuer,
+        iss: issuer
       },
       RsaPrivateKey,
       'RS256',

@@ -31,7 +31,7 @@ RSpec.describe Webhook, type: :model do
         {
           algorithm: 'RS256',
           iss: ENV['LAGO_API_URL'],
-          verify_iss: true,
+          verify_iss: true
         },
       )
 

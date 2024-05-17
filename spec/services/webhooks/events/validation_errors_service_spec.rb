@@ -21,7 +21,7 @@ RSpec.describe Webhooks::Events::ValidationErrorsService do
     it_behaves_like 'creates webhook', 'events.errors', 'events_errors', {
       'invalid_code' => Array,
       'missing_aggregation_property' => Array,
-      'missing_group_key' => Array,
+      'missing_group_key' => Array
     }
   end
 end

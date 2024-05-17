@@ -19,7 +19,7 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
 
       expect(WebMock).to have_requested(:post, 'https://wh.test.com').with(
         body: webhook.payload.to_json,
-        headers: { 'Content-Type' => 'application/json' }
+        headers: {'Content-Type' => 'application/json'}
       )
       expect(webhook.status).to eq 'succeeded'
       expect(webhook.http_status).to eq 200
@@ -30,7 +30,7 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
   context 'when client returns an error' do
     let(:error_body) do
       {
-        message: 'forbidden',
+        message: 'forbidden'
       }
     end
 

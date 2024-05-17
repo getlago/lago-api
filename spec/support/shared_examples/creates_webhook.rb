@@ -8,7 +8,7 @@ RSpec.shared_examples 'creates webhook' do |webhook_type, object_type, object = 
     expect(webhook.payload).to match({
       'webhook_type' => webhook_type,
       'object_type' => object_type,
-      object_type => hash_including(object),
+      object_type => hash_including(object)
     })
   end
 end

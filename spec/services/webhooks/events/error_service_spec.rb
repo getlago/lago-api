@@ -10,6 +10,6 @@ RSpec.describe Webhooks::Events::ErrorService do
   let(:options) { {error: {transaction_id: ['value_already_exist']}} }
 
   describe '.call' do
-    it_behaves_like 'creates webhook', 'event.error', 'event_error', { 'error' => String, 'event' => Hash }
+    it_behaves_like 'creates webhook', 'event.error', 'event_error', {'error' => String, 'event' => Hash}
   end
 end

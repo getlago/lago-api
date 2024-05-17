@@ -16,6 +16,6 @@ RSpec.describe Webhooks::Invoices::PaymentDisputeLostService do
   end
 
   describe '.call' do
-    it_behaves_like 'creates webhook', 'invoice.payment_dispute_lost', 'payment_dispute_lost', { 'invoice' => Hash }
+    it_behaves_like 'creates webhook', 'invoice.payment_dispute_lost', 'payment_dispute_lost', {'invoice' => Hash}
   end
 end

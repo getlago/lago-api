@@ -17,6 +17,6 @@ RSpec.describe Webhooks::Invoices::DraftedService do
   end
 
   describe '.call' do
-    it_behaves_like 'creates webhook', 'invoice.drafted', 'invoice', { 'fees' => Array, 'credits' => Array }
+    it_behaves_like 'creates webhook', 'invoice.drafted', 'invoice', {'fees' => Array, 'credits' => Array}
   end
 end
