@@ -282,22 +282,18 @@ class Invoice < ApplicationRecord
     save!
   end
 
+  def should_sync_invoice?
+    finalized? && customer.integration_customers.any? { |c| c.integration.sync_invoices }
+  end
+
+  def should_sync_sales_order?
+    finalized? && customer.integration_customers.any? { |c| c.integration.sync_sales_orders }
+  end
+
   private
 
   def should_assign_sequential_id?
     status_changed_to_finalized?
-  end
-
-  def trigger_invoice_sync
-    return if customer.integration_customers.none? { |c| c.integration.sync_invoices }
-
-    Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: self)
-  end
-
-  def trigger_sales_order_sync
-    return if customer.integration_customers.none? { |c| c.integration.sync_sales_orders }
-
-    Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice: self)
   end
 
   def void_invoice!
