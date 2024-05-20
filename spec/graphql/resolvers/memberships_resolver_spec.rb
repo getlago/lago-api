@@ -8,7 +8,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
       query {
         memberships(limit: 5) {
           collection { id }
-          metadata { currentPage, totalCount }
+          metadata { currentPage, totalCount, adminCount }
         }
       }
     GQL
@@ -21,6 +21,9 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
   it_behaves_like 'requires current organization'
 
   it 'returns a list of memberships' do
+    create(:membership, organization: organization, role: :admin)
+    create_list(:membership, 2, organization: organization, role: :finance)
+
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -34,7 +37,8 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
       expect(memberships_response['collection'].first['id']).to eq(membership.id)
 
       expect(memberships_response['metadata']['currentPage']).to eq(1)
-      expect(memberships_response['metadata']['totalCount']).to eq(1)
+      expect(memberships_response['metadata']['totalCount']).to eq(4)
+      expect(memberships_response['metadata']['adminCount']).to eq(2)
     end
   end
 
