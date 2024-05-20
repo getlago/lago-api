@@ -270,6 +270,19 @@ GEM
     graphql (2.0.11)
     graphql-pagination (2.0.1)
       graphql (~> 2.0)
+    grpc (1.63.0-aarch64-linux)
+      google-protobuf (~> 3.25)
+      googleapis-common-protos-types (~> 1.0)
+    grpc (1.63.0-arm64-darwin)
+      google-protobuf (~> 3.25)
+      googleapis-common-protos-types (~> 1.0)
+    grpc (1.63.0-x86_64-darwin)
+      google-protobuf (~> 3.25)
+      googleapis-common-protos-types (~> 1.0)
+    grpc (1.63.0-x86_64-linux)
+      google-protobuf (~> 3.25)
+      googleapis-common-protos-types (~> 1.0)
+    grpc-tools (1.63.0)
     guard (2.18.1)
       formatador (>= 0.2.4)
       listen (>= 2.7, < 4.0)
@@ -931,6 +944,8 @@ DEPENDENCIES
   graphiql-rails!
   graphql
   graphql-pagination
+  grpc (~> 1.63)
+  grpc-tools (~> 1.63)
   guard-rspec
   i18n-tasks!
   jwt
