@@ -1905,7 +1905,7 @@ input CreateNetsuiteIntegrationInput {
   code: String!
   connectionId: String!
   name: String!
-  scriptEndpointUrl: String
+  scriptEndpointUrl: String!
   syncCreditNotes: Boolean
   syncInvoices: Boolean
   syncPayments: Boolean
@@ -4785,7 +4785,7 @@ type NetsuiteIntegration {
   hasMappingsConfigured: Boolean
   id: ID!
   name: String!
-  scriptEndpointUrl: String
+  scriptEndpointUrl: String!
   syncCreditNotes: Boolean
   syncInvoices: Boolean
   syncPayments: Boolean

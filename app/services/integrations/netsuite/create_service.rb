@@ -18,13 +18,12 @@ module Integrations
           client_secret: args[:client_secret],
           account_id: args[:account_id],
           connection_id: args[:connection_id],
+          script_endpoint_url: args[:script_endpoint_url],
           sync_credit_notes: ActiveModel::Type::Boolean.new.cast(args[:sync_credit_notes]),
           sync_invoices: ActiveModel::Type::Boolean.new.cast(args[:sync_invoices]),
           sync_payments: ActiveModel::Type::Boolean.new.cast(args[:sync_payments]),
           sync_sales_orders: ActiveModel::Type::Boolean.new.cast(args[:sync_sales_orders]),
         )
-
-        integration.script_endpoint_url = args[:script_endpoint_url] if args.key?(:script_endpoint_url)
 
         integration.save!
 

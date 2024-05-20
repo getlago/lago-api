@@ -13,7 +13,7 @@ module Types
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
       field :name, String, null: false
-      field :script_endpoint_url, String, null: true
+      field :script_endpoint_url, String, null: false
       field :sync_credit_notes, Boolean
       field :sync_invoices, Boolean
       field :sync_payments, Boolean
