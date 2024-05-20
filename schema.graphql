@@ -3650,6 +3650,7 @@ enum IntegrationItemTypeEnum {
 
 enum IntegrationTypeEnum {
   netsuite
+  okta
 }
 
 type Invite {
