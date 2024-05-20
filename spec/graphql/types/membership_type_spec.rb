@@ -11,7 +11,7 @@ RSpec.describe Types::MembershipType do
   it { is_expected.to have_field(:user).of_type('User!') }
 
   it { is_expected.to have_field(:permissions).of_type('Permissions!') }
-  it { is_expected.to have_field(:role).of_type('MembershipRole') }
+  it { is_expected.to have_field(:role).of_type('MembershipRole!') }
   it { is_expected.to have_field(:status).of_type('MembershipStatus!') }
 
   it { is_expected.to have_field(:created_at).of_type('ISO8601DateTime!') }
