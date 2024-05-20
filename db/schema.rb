@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_05_14_081110) do
+ActiveRecord::Schema[7.0].define(version: 2024_05_20_115450) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -582,7 +582,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_14_081110) do
     t.string "external_name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["external_id", "integration_id"], name: "index_integration_items_on_external_id_and_integration_id", unique: true
+    t.index ["external_id", "integration_id", "item_type"], name: "index_int_items_on_external_id_and_int_id_and_type", unique: true
     t.index ["integration_id"], name: "index_integration_items_on_integration_id"
   end
 
@@ -604,6 +604,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_14_081110) do
     t.string "external_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "integration_id"
+    t.index ["integration_id"], name: "index_integration_resources_on_integration_id"
     t.index ["syncable_type", "syncable_id"], name: "index_integration_resources_on_syncable"
   end
 
@@ -1093,6 +1095,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_14_081110) do
   add_foreign_key "integration_customers", "integrations"
   add_foreign_key "integration_items", "integrations"
   add_foreign_key "integration_mappings", "integrations"
+  add_foreign_key "integration_resources", "integrations"
   add_foreign_key "integrations", "organizations"
   add_foreign_key "invites", "memberships"
   add_foreign_key "invites", "organizations"
