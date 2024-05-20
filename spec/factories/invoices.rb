@@ -12,6 +12,16 @@ FactoryBot.define do
 
     organization_sequential_id { rand(1_000_000) }
 
+    trait :with_file do
+      after(:build) do |model|
+        model.file.attach(
+          io: File.open(Rails.root.join('spec/fixtures/blank.pdf')),
+          filename: 'blank.pdf',
+          content_type: 'application/pdf',
+        )
+      end
+    end
+
     trait :draft do
       status { :draft }
     end

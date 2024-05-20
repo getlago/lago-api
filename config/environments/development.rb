@@ -63,6 +63,8 @@ Rails.application.configure do
     address: 'mailhog',
     port: 1025,
   }
+  config.action_mailer.default_url_options = { host: 'app.lago.dev' }
+  config.action_mailer.preview_path = "#{Rails.root}/spec/mailer_previews"
 
   Dotenv.load
 end
