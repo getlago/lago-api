@@ -7,7 +7,7 @@ module Types
       description 'Base billable metric'
 
       field :id, ID, null: false
-      field :organization, Types::OrganizationType
+      field :organization, Types::Organizations::OrganizationType
 
       field :code, String, null: false
       field :name, String, null: false

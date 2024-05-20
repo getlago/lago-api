@@ -5,7 +5,7 @@ module Types
     class Object < Types::BaseObject
       graphql_name 'Invite'
 
-      field :organization, Types::OrganizationType, null: false
+      field :organization, Types::Organizations::OrganizationType, null: false
       field :recipient, Types::MembershipType, null: false
 
       field :id, ID, null: false

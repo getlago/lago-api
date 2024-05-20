@@ -6,7 +6,7 @@ module Types
       graphql_name 'WebhookEndpoint'
 
       field :id, ID, null: false
-      field :organization, Types::OrganizationType
+      field :organization, Types::Organizations::OrganizationType
       field :signature_algo, Types::WebhookEndpoints::SignatureAlgoEnum
       field :webhook_url, String, null: false
 

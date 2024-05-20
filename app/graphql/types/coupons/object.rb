@@ -6,7 +6,7 @@ module Types
       graphql_name 'Coupon'
 
       field :id, ID, null: false
-      field :organization, Types::OrganizationType
+      field :organization, Types::Organizations::OrganizationType
 
       field :amount_cents, GraphQL::Types::BigInt, null: true
       field :amount_currency, Types::CurrencyEnum, null: true

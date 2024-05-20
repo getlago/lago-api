@@ -4,7 +4,7 @@ module Types
   class MembershipType < Types::BaseObject
     field :id, ID, null: false
 
-    field :organization, Types::OrganizationType, null: false
+    field :organization, Types::Organizations::OrganizationType, null: false
     field :user, Types::UserType, null: false
 
     field :permissions, Types::PermissionsType, null: false
