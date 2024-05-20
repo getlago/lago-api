@@ -3890,7 +3890,7 @@ type Membership {
   organization: Organization!
   permissions: Permissions!
   revokedAt: ISO8601DateTime!
-  role: MembershipRole
+  role: MembershipRole!
   status: MembershipStatus!
   updatedAt: ISO8601DateTime!
   user: User!
