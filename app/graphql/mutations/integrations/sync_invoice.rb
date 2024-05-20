@@ -11,13 +11,15 @@ module Mutations
       graphql_name 'SyncIntegrationInvoice'
       description 'Sync integration invoice'
 
-      argument :invoice_id, ID, required: true
+      input_object_class Types::Integrations::SyncInvoiceInput
 
-      type Types::IntegrationItems::Object.collection_type, null: false
+      field :invoice_id, ID, null: true
 
       def resolve(**args)
-        ::Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:)
+        invoice = current_organization.invoices.find_by(id: args[:invoice_id])
 
+        result = ::Integrations::Aggregator::Invoices::CreateService.call_async(invoice:)
+        result.success? ? result.invoice_id : result_error(result)
         result
       end
     end

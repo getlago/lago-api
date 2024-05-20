@@ -27,6 +27,15 @@ module Integrations
 
           result
         end
+
+        def call_async
+          return result.not_found_failure!(resource: 'invoice') unless invoice
+
+          ::Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:)
+
+          result.invoice_id = invoice.id
+          result
+        end
       end
     end
   end

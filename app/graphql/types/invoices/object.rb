@@ -52,14 +52,15 @@ module Types
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
       field :subscriptions, [Types::Subscriptions::Object]
 
-      field :integration_syncable, Boolean!
+      field :integration_syncable, GraphQL::Types::Boolean, null: false
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
       end
 
       def integration_syncable
-        object.should_sync_invoice? && object.integration_resources.where(syncable_type: 'Invoice').none?
+        object.should_sync_invoice? &&
+          object.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').none?
       end
     end
   end

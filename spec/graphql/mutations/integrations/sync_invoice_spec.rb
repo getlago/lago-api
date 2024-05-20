@@ -10,12 +10,12 @@ RSpec.describe Mutations::Integrations::SyncInvoice, type: :graphql do
       permissions: required_permission,
       query: mutation,
       variables: {
-        input: {invoiceId: invoice.id},
+        input: {invoiceId: invoice.id}
       },
     )
   end
 
-  let(:required_permission) { 'organization:integrations:delete' }
+  let(:required_permission) { 'organization:integrations:update' }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { membership.organization }
@@ -31,14 +31,29 @@ RSpec.describe Mutations::Integrations::SyncInvoice, type: :graphql do
     GQL
   end
 
-  before { subject }
+  let(:service) { instance_double(Integrations::Aggregator::Invoices::CreateService) }
+
+  let(:result) do
+    r = BaseService::Result.new
+    r.invoice_id = invoice.id
+    r
+  end
+
+  before do
+    integration_customer
+    allow(Integrations::Aggregator::Invoices::CreateService).to receive(:new).and_return(service)
+    allow(service).to receive(:call_async).and_return(result)
+    execute_graphql_call
+  end
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:integrations:update'
 
   it 'syncs an invoice' do
-    # expect(::Integrations::Aggregator::Invoices::CreateJob).to have_received(:perform_later).with(invoice:)
-    pending
+    aggregate_failures do
+      expect(::Integrations::Aggregator::Invoices::CreateService).to have_received(:new).with(invoice:)
+      expect(service).to have_received(:call_async)
+    end
   end
 end
