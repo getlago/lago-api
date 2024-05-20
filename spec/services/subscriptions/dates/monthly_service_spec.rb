@@ -28,7 +28,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
   let(:previous_subscription) { nil }
 
-  describe 'from_datetime' do
+  describe '#from_datetime' do
     let(:result) { date_service.from_datetime.to_s }
 
     context 'when billing_time is calendar' do
@@ -174,7 +174,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'to_datetime' do
+  describe '#to_datetime' do
     let(:result) { date_service.to_datetime.to_s }
 
     context 'when billing_time is calendar' do
@@ -292,7 +292,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'charges_from_datetime' do
+  describe '#charges_from_datetime' do
     let(:result) { date_service.charges_from_datetime.to_s }
 
     context 'when billing_time is calendar' do
@@ -405,7 +405,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'charges_to_datetime' do
+  describe '#charges_to_datetime' do
     let(:result) { date_service.charges_to_datetime.to_s }
 
     context 'when billing_time is calendar' do
@@ -497,7 +497,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'next_end_of_period' do
+  describe '#next_end_of_period' do
     let(:result) { date_service.next_end_of_period.to_s }
 
     context 'when billing_time is calendar' do
@@ -547,7 +547,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'previous_beginning_of_period' do
+  describe '#previous_beginning_of_period' do
     let(:result) { date_service.previous_beginning_of_period(current_period:).to_s }
 
     let(:current_period) { false }
@@ -601,7 +601,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'single_day_price' do
+  describe '#single_day_price' do
     let(:result) { date_service.single_day_price }
 
     context 'when billing_time is calendar' do
@@ -647,7 +647,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
-  describe 'charges_duration_in_days' do
+  describe '#charges_duration_in_days' do
     let(:result) { date_service.charges_duration_in_days }
 
     context 'when billing_time is calendar' do
@@ -681,6 +681,74 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         it 'returns the month duration' do
           expect(result).to eq(29)
         end
+      end
+    end
+  end
+
+  # In February 2022, customer changed timezone from Asia/Tokyo to America/Los_Angeles.
+  # The invoice generated in February 2022 had subscription from Feb 1st to Feb 28th
+  # and usage-based charges from Jan 1st to Jan 31st.
+  # The dates are correct but *they are in customer timezone*: "2022-01-31 23:59:59 Asia/Tokyo" is "2022-01-31 14:59:59 UTC"
+  # In Feb, if we use "2022-02-01 00:00:00 America/Los_Angeles", which is "2022-02-01 07:00:00 UTC" we're now missing
+  # all events between "2022-01-31 14:59:59 UTC" and "2022-02-01 07:00:00 UTC", which is a 16h gap.
+  #
+  # We need to use the previous invoice charges_to_datetime as the new invoice charges_from_datetime.
+  #
+  #
+  context 'when customer changed timezone' do
+    let(:organization) { create(:organization, invoice_grace_period: 3) }
+    let(:customer) { create(:customer, timezone:, organization:) }
+    let(:plan) { create(:plan, interval: :monthly, pay_in_advance:, organization:) }
+
+    let(:billing_time) { :calendar }
+    let(:timezone) { 'Asia/Tokyo' }
+    let(:new_timezone) { 'America/Los_Angeles' }
+
+    # Clock::SubscriptionsBillerJob will find this subscription as soon as it's March in the customer timezone
+    let(:billing_at) { Time.new(2022, 3, 1, 0, 10, 0, Time.new(2022, 3, 1, 0, 10, 0).in_time_zone(new_timezone).formatted_offset) }
+    let(:previous_invoice_charges_to_datetime) { Time.new(2022, 1, 31, 23, 59, 59, Time.new(2022, 1, 31, 23, 59, 59).in_time_zone(timezone).formatted_offset) }
+
+    let(:previous_invoice_subscription) do
+      create(
+        :invoice_subscription,
+        subscription:,
+        charges_to_datetime: previous_invoice_charges_to_datetime,
+        invoice: create(:invoice, timezone: timezone),
+      )
+    end
+
+    before do
+      previous_invoice_subscription
+    end
+
+    it 'takes previous invoice charges_to_datetime into account and compute correct following month' do
+      expect(previous_invoice_subscription.charges_to_datetime).to be_utc
+      expect(date_service.send(:timezone_has_changed?)).to be_falsey
+
+      result = Invoices::SubscriptionService.call(
+        subscriptions: [subscription],
+        timestamp: billing_at.to_i,
+        invoicing_reason: 'subscription_periodic',
+        invoice: nil,
+        skip_charges: false,
+      )
+
+      expect(result.invoice.status).to eq 'draft'
+      invoice_sub = result.invoice.invoice_subscriptions.first
+      aggregate_failures do
+        expect(invoice_sub.charges_from_datetime.to_s).to match_datetime("2022-01-31 15:00:00 UTC")
+        expect(invoice_sub.charges_to_datetime.to_s).to match_datetime("2022-02-28 14:59:59 UTC")
+      end
+
+      subscription.customer.update!(timezone: new_timezone)
+
+      finalized_result = Invoices::FinalizeService.call(invoice: result.invoice.reload)
+      invoice_sub = finalized_result.invoice.reload.invoice_subscriptions.first
+
+      aggregate_failures do
+        expect(invoice_sub.charges_from_datetime.to_s).to match_datetime("2022-01-31 15:00:00 UTC")
+        # "2022-02-28 23:59:59 America/Los_Angeles" which is "2022-03-01 07:59:59 UTC"
+        expect(invoice_sub.charges_to_datetime.to_s).to match_datetime("2022-03-01 07:59:59 UTC")
       end
     end
   end
