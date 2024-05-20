@@ -27,7 +27,7 @@ RSpec.describe Memberships::RevokeService, type: :service do
     end
 
     context 'when revoking another membership' do
-      let(:another_membership) { create(:membership) }
+      let(:another_membership) { create(:membership, organization: membership.organization) }
 
       it 'revokes the membership' do
         freeze_time do
