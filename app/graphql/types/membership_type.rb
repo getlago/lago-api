@@ -8,7 +8,7 @@ module Types
     field :user, Types::UserType, null: false
 
     field :permissions, Types::PermissionsType, null: false
-    field :role, Types::Memberships::RoleEnum, null: true
+    field :role, Types::Memberships::RoleEnum, null: false
     field :status, Types::Memberships::StatusEnum, null: false
 
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false

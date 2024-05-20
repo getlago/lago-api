@@ -19078,9 +19078,13 @@
               "name": "role",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "MembershipRole",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "MembershipRole",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
