@@ -27,6 +27,8 @@ module Resolvers
       case type
       when 'netsuite'
         'Integrations::NetsuiteIntegration'
+      when 'okta'
+        'Integrations::OktaIntegration'
       else
         raise(NotImplementedError)
       end

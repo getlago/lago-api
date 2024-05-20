@@ -16206,6 +16206,11 @@
               "kind": "OBJECT",
               "name": "NetsuiteIntegration",
               "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "OktaIntegration",
+              "ofType": null
             }
           ],
           "fields": null,

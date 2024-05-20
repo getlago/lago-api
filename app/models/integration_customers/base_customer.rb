@@ -18,6 +18,8 @@ module IntegrationCustomers
       case type
       when 'netsuite'
         'IntegrationCustomers::NetsuiteCustomer'
+      when 'okta'
+        'IntegrationCustomers::OktaCustomer'
       else
         raise(NotImplementedError)
       end
