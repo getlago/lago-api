@@ -146,7 +146,7 @@ module Api
           json: ::V1::CustomerSerializer.new(
             customer,
             root_name: 'customer',
-            includes: %i[taxes],
+            includes: %i[taxes integration_customers],
           ),
         )
       end

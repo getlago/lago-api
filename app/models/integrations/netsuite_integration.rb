@@ -2,7 +2,7 @@
 
 module Integrations
   class NetsuiteIntegration < BaseIntegration
-    validates :connection_id, :client_secret, :client_id, :account_id, presence: true
+    validates :connection_id, :client_secret, :client_id, :account_id, :script_endpoint_url, presence: true
 
     settings_accessors :client_id,
       :sync_credit_notes,

@@ -13,9 +13,9 @@ module IntegrationCustomers
 
       return result.not_found_failure!(resource: 'integration_customer') unless integration_customer
 
-      if external_customer_id.present?
-        integration_customer.update!(external_customer_id:)
-      elsif sync_with_provider
+      integration_customer.update!(external_customer_id:) if external_customer_id.present?
+
+      if sync_with_provider
         update_result = Integrations::Aggregator::Contacts::UpdateService.call(integration:, integration_customer:)
         integration_customer.update!(subsidiary_id:)
 
