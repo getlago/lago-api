@@ -3613,7 +3613,7 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
 
-union Integration = NetsuiteIntegration
+union Integration = NetsuiteIntegration | OktaIntegration
 
 type IntegrationCollection {
   collection: [Integration!]!
