@@ -376,11 +376,4 @@ class Invoice < ApplicationRecord
   def status_changed_to_finalized?
     status_changed?(from: 'draft', to: 'finalized') || status_changed?(from: 'generating', to: 'finalized')
   end
-
-  def status_updated_to_finalized?
-    saved_change_to_status&.first.present? &&
-      saved_change_to_status&.first != 'finalized' &&
-      saved_change_to_status&.last.present? &&
-      finalized?
-  end
 end
