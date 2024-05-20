@@ -27,6 +27,7 @@ class Invoice < ApplicationRecord
 
   has_many :applied_taxes, class_name: 'Invoice::AppliedTax', dependent: :destroy
   has_many :taxes, through: :applied_taxes
+  has_many :integration_resources, as: :syncable
 
   has_one_attached :file
 
@@ -281,6 +282,14 @@ class Invoice < ApplicationRecord
     save!
   end
 
+  def should_sync_invoice?
+    finalized? && customer.integration_customers.any? { |c| c.integration.sync_invoices }
+  end
+
+  def should_sync_sales_order?
+    finalized? && customer.integration_customers.any? { |c| c.integration.sync_sales_orders }
+  end
+
   private
 
   def should_assign_sequential_id?
@@ -366,5 +375,12 @@ class Invoice < ApplicationRecord
 
   def status_changed_to_finalized?
     status_changed?(from: 'draft', to: 'finalized') || status_changed?(from: 'generating', to: 'finalized')
+  end
+
+  def status_updated_to_finalized?
+    saved_change_to_status&.first.present? &&
+      saved_change_to_status&.first != 'finalized' &&
+      saved_change_to_status&.last.present? &&
+      finalized?
   end
 end

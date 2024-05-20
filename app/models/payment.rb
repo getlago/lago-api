@@ -8,4 +8,7 @@ class Payment < ApplicationRecord
   belongs_to :payment_provider_customer, class_name: 'PaymentProviderCustomers::BaseCustomer'
 
   has_many :refunds
+  has_many :integration_resources, as: :syncable
+
+  delegate :customer, to: :invoice
 end
