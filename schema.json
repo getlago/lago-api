@@ -7930,6 +7930,22 @@
               "deprecationReason": null
             },
             {
+              "name": "method",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "RecurringTransactionMethodEnum",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "thresholdCredits",
               "description": null,
               "type": {
@@ -28180,6 +28196,29 @@
           ]
         },
         {
+          "kind": "ENUM",
+          "name": "RecurringTransactionMethodEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "fixed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "target",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "OBJECT",
           "name": "RecurringTransactionRule",
           "description": null,
@@ -28247,6 +28286,24 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "method",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "RecurringTransactionMethodEnum",
                   "ofType": null
                 }
               },
@@ -33468,6 +33525,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "method",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "RecurringTransactionMethodEnum",
                 "ofType": null
               },
               "defaultValue": null,

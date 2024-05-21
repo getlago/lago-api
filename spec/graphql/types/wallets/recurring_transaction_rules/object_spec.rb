@@ -6,6 +6,7 @@ RSpec.describe Types::Wallets::RecurringTransactionRules::Object do
   subject { described_class }
 
   it { is_expected.to have_field(:lago_id).of_type('ID!') }
+  it { is_expected.to have_field(:method).of_type('RecurringTransactionMethodEnum!') }
   it { is_expected.to have_field(:trigger).of_type('RecurringTransactionTriggerEnum!') }
   it { is_expected.to have_field(:interval).of_type('RecurringTransactionIntervalEnum') }
 
