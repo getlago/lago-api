@@ -29,12 +29,15 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
 
       aggregate_failures do
         expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
-        expect(rule.id).to eq(recurring_transaction_rule.id)
-        expect(rule.trigger).to eq('interval')
-        expect(rule.interval).to eq('weekly')
-        expect(rule.threshold_credits).to eq(0.0)
-        expect(rule.paid_credits).to eq(105.0)
-        expect(rule.granted_credits).to eq(105.0)
+        expect(rule).to have_attributes(
+          granted_credits: 105.0,
+          id: recurring_transaction_rule.id,
+          interval: "weekly",
+          method: "fixed",
+          paid_credits: 105.0,
+          threshold_credits: 0.0,
+          trigger: "interval"
+        )
       end
     end
 
@@ -42,10 +45,12 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
       let(:params) do
         [
           {
-            trigger: 'interval',
-            interval: 'weekly',
-            paid_credits: '105',
-            granted_credits: '105'
+            granted_credits: "105",
+            interval: "weekly",
+            method: "target",
+            paid_credits: "105",
+            target_ongoing_balance: "300",
+            trigger: "interval"
           },
         ]
       end
@@ -57,12 +62,16 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
 
         aggregate_failures do
           expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+          expect(rule).to have_attributes(
+            granted_credits: 105.0,
+            interval: "weekly",
+            method: "target",
+            paid_credits: 105.0,
+            target_ongoing_balance: 300.0,
+            threshold_credits: 0.0,
+            trigger: "interval"
+          )
           expect(rule.id).not_to eq(recurring_transaction_rule.id)
-          expect(rule.trigger).to eq('interval')
-          expect(rule.interval).to eq('weekly')
-          expect(rule.threshold_credits).to eq(0.0)
-          expect(rule.paid_credits).to eq(105.0)
-          expect(rule.granted_credits).to eq(105.0)
         end
       end
     end
