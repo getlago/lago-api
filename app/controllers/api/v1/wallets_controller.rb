@@ -91,6 +91,7 @@ module Api
           :expiration_date, # NOTE: Legacy field
           recurring_transaction_rules: [
             :interval,
+            :method,
             :threshold_credits,
             :trigger,
           ],
@@ -109,6 +110,7 @@ module Api
           recurring_transaction_rules: [
             :lago_id,
             :interval,
+            :method,
             :threshold_credits,
             :trigger,
             :paid_credits,

@@ -12,6 +12,7 @@ RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
 
     aggregate_failures do
       expect(result['recurring_transaction_rule']['lago_id']).to eq(recurring_transaction_rule.id)
+      expect(result['recurring_transaction_rule']['method']).to eq(recurring_transaction_rule.method)
       expect(result['recurring_transaction_rule']['trigger']).to eq(recurring_transaction_rule.trigger)
       expect(result['recurring_transaction_rule']['interval']).to eq(recurring_transaction_rule.interval)
       expect(result['recurring_transaction_rule']['paid_credits']).to eq(recurring_transaction_rule.paid_credits.to_s)
