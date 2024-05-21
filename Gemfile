@@ -131,3 +131,6 @@ gem "packwerk", "~> 3.2"
 # gRPC
 gem "grpc", "~> 1.63"
 gem "grpc-tools", "~> 1.63"
+
+# Amazon verified permission
+gem 'aws-sdk-verifiedpermissions', '~> 1.19'
