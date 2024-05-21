@@ -26,8 +26,10 @@ module Clockwork
     Clock::RefreshDraftInvoicesJob.perform_later
   end
 
-  every(5.minutes, 'schedule:refresh_wallets_ongoing_balance') do
-    Clock::RefreshWalletsOngoingBalanceJob.perform_later
+  if ENV['LAGO_MEMCACHE_SERVERS'].present? || ENV['LAGO_REDIS_CACHE_URL'].present?
+    every(5.minutes, 'schedule:refresh_wallets_ongoing_balance') do
+      Clock::RefreshWalletsOngoingBalanceJob.perform_later
+    end
   end
 
   every(1.hour, 'schedule:terminate_ended_subscriptions', at: '*:05') do
