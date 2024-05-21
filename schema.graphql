@@ -1975,7 +1975,8 @@ input CreatePlanInput {
 
 input CreateRecurringTransactionRuleInput {
   interval: RecurringTransactionIntervalEnum
-  method: RecurringTransactionMethodEnum!
+  method: RecurringTransactionMethodEnum
+  targetOngoingBalance: String
   thresholdCredits: String
   trigger: RecurringTransactionTriggerEnum!
 }
@@ -5604,6 +5605,7 @@ type RecurringTransactionRule {
   lagoId: ID!
   method: RecurringTransactionMethodEnum!
   paidCredits: String!
+  targetOngoingBalance: String
   thresholdCredits: String
   trigger: RecurringTransactionTriggerEnum!
 }
@@ -6925,6 +6927,7 @@ input UpdateRecurringTransactionRuleInput {
   lagoId: ID
   method: RecurringTransactionMethodEnum
   paidCredits: String
+  targetOngoingBalance: String
   thresholdCredits: String
   trigger: RecurringTransactionTriggerEnum
 }

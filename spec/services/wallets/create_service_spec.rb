@@ -79,7 +79,7 @@ RSpec.describe Wallets::CreateService, type: :service do
             interval: "monthly",
             method: "target",
             target_ongoing_balance: "100.0",
-            trigger: "interval",
+            trigger: "interval"
           },
         ]
       end
