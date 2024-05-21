@@ -5,18 +5,24 @@ class RecurringTransactionRule < ApplicationRecord
 
   belongs_to :wallet
 
-  TRIGGERS = [
-    :interval,
-    :threshold,
-  ].freeze
-
   INTERVALS = [
     :weekly,
     :monthly,
     :quarterly,
-    :yearly,
+    :yearly
   ].freeze
 
-  enum trigger: TRIGGERS
+  METHODS = [
+    :fixed,
+    :target
+  ].freeze
+
+  TRIGGERS = [
+    :interval,
+    :threshold
+  ].freeze
+
   enum interval: INTERVALS
+  enum method: METHODS
+  enum trigger: TRIGGERS
 end
