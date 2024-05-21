@@ -10,7 +10,7 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
-    type Types::MembershipType.collection_type, null: false
+    type Types::MembershipType.collection_type(metadata_type: Types::Memberships::Metadata), null: false
 
     def resolve(page: nil, limit: nil)
       current_organization

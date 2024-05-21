@@ -23,6 +23,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
 
   it 'Revokes a membership' do
     user = create(:user)
+    create(:membership, organization: organization, role: :admin)
 
     result = execute_graphql(
       current_user: user,
@@ -52,6 +53,27 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
     aggregate_failures do
       expect(result['errors'].first['message']).to eq('Method Not Allowed')
       expect(result['errors'].first['extensions']['code']).to eq('cannot_revoke_own_membership')
+      expect(result['errors'].first['extensions']['status']).to eq(405)
+    end
+  end
+
+  it 'cannot revoke membership if it\'s the last admin of the organization' do
+    # `finance` users normally don't have delete permissions on memberships
+    # but here the permissions array is passed regardless of the actual user permission
+    other_user = create(:membership, organization: organization, role: :finance)
+
+    result = execute_graphql(
+      current_user: other_user.user,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {id: membership.id},
+      },
+    )
+
+    aggregate_failures do
+      expect(result['errors'].first['message']).to eq('Method Not Allowed')
+      expect(result['errors'].first['extensions']['code']).to eq('last_admin')
       expect(result['errors'].first['extensions']['status']).to eq(405)
     end
   end

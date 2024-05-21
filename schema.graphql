@@ -3898,7 +3898,7 @@ type Membership {
 
 type MembershipCollection {
   collection: [Membership!]!
-  metadata: CollectionMetadata!
+  metadata: Metadata!
 }
 
 enum MembershipRole {
@@ -3910,6 +3910,14 @@ enum MembershipRole {
 enum MembershipStatus {
   active
   revoked
+}
+
+type Metadata {
+  adminCount: Int!
+  currentPage: Int!
+  limitValue: Int!
+  totalCount: Int!
+  totalPages: Int!
 }
 
 type Mrr {
