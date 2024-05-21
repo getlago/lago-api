@@ -16,10 +16,12 @@ module IntegrationCustomers
       integration_customer.update!(external_customer_id:) if external_customer_id.present?
 
       if sync_with_provider
-        update_result = Integrations::Aggregator::Contacts::UpdateService.call(integration:, integration_customer:)
-        integration_customer.update!(subsidiary_id:)
+        integration_customer.subsidiary_id = subsidiary_id if subsidiary_id.present?
 
-        return update_result if update_result.error
+        update_result = Integrations::Aggregator::Contacts::UpdateService.call(integration:, integration_customer:)
+        return update_result unless update_result.success?
+
+        integration_customer.save!
       end
 
       result.integration_customer = integration_customer
