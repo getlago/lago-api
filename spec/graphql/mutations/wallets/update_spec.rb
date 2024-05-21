@@ -20,7 +20,16 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
           name
           status
           expirationAt
-          recurringTransactionRules { lagoId, method, trigger, interval, thresholdCredits, paidCredits, grantedCredits }
+          recurringTransactionRules {
+            lagoId
+            method
+            trigger
+            interval
+            thresholdCredits
+            paidCredits
+            grantedCredits
+            targetOngoingBalance
+          }
         }
       }
     GQL
@@ -55,7 +64,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
               trigger: 'interval',
               interval: 'weekly',
               paidCredits: '22.2',
-              grantedCredits: '22.2'
+              grantedCredits: '22.2',
+              targetOngoingBalance: '300'
             },
           ]
         }
@@ -64,17 +74,22 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
 
     result_data = result['data']['updateCustomerWallet']
 
-    aggregate_failures do
-      expect(result_data['name']).to eq('New name')
-      expect(result_data['status']).to eq('active')
-      expect(result_data['expirationAt']).to eq(expiration_at.iso8601)
-      expect(result_data['recurringTransactionRules'].count).to eq(1)
-      expect(result_data['recurringTransactionRules'][0]['lagoId']).to eq(recurring_transaction_rule.id)
-      expect(result_data['recurringTransactionRules'][0]['method']).to eq('target')
-      expect(result_data['recurringTransactionRules'][0]['trigger']).to eq('interval')
-      expect(result_data['recurringTransactionRules'][0]['interval']).to eq('weekly')
-      expect(result_data['recurringTransactionRules'][0]['paidCredits']).to eq('22.2')
-      expect(result_data['recurringTransactionRules'][0]['grantedCredits']).to eq('22.2')
-    end
+    expect(result_data).to include(
+      "id" => wallet.id,
+      "name" => "New name",
+      "status" => "active",
+      "expirationAt" => expiration_at.iso8601
+    )
+
+    expect(result_data['recurringTransactionRules'].count).to eq(1)
+    expect(result_data['recurringTransactionRules'][0]).to include(
+      "lagoId" => recurring_transaction_rule.id,
+      "method" => "target",
+      "trigger" => "interval",
+      "interval" => "weekly",
+      "paidCredits" => "22.2",
+      "grantedCredits" => "22.2",
+      "targetOngoingBalance" => "300.0"
+    )
   end
 end

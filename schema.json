@@ -7933,13 +7933,21 @@
               "name": "method",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "RecurringTransactionMethodEnum",
-                  "ofType": null
-                }
+                "kind": "ENUM",
+                "name": "RecurringTransactionMethodEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "targetOngoingBalance",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -28332,6 +28340,20 @@
               ]
             },
             {
+              "name": "targetOngoingBalance",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "thresholdCredits",
               "description": null,
               "type": {
@@ -33545,6 +33567,18 @@
             },
             {
               "name": "paidCredits",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "targetOngoingBalance",
               "description": null,
               "type": {
                 "kind": "SCALAR",

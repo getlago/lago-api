@@ -18,7 +18,16 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           status
           currency
           expirationAt
-          recurringTransactionRules { lagoId, method, trigger, interval, thresholdCredits, paidCredits, grantedCredits }
+          recurringTransactionRules {
+            lagoId
+            method
+            trigger
+            interval
+            thresholdCredits
+            paidCredits
+            grantedCredits
+            targetOngoingBalance
+          }
         }
       }
     GQL
