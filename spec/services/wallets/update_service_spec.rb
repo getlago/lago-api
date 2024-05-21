@@ -237,7 +237,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context 'when rule type is invalid' do
+      context 'when trigger is invalid' do
         let(:rules) do
           [
             {
