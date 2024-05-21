@@ -31,6 +31,8 @@ module Invoices
       track_invoice_created(invoice)
       SendWebhookJob.perform_later('invoice.one_off_created', invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
+      Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
+      Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
       Invoices::Payments::CreateService.new(invoice).call
 
       result.invoice = invoice

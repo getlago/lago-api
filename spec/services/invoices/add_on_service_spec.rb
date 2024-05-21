@@ -107,6 +107,14 @@ RSpec.describe Invoices::AddOnService, type: :service do
       expect(payment_create_service).to have_received(:call)
     end
 
+    it_behaves_like 'syncs invoice' do
+      let(:service_call) { invoice_service.create }
+    end
+
+    it_behaves_like 'syncs sales order' do
+      let(:service_call) { invoice_service.create }
+    end
+
     context 'when organization does not have a webhook endpoint' do
       before { applied_add_on.customer.organization.webhook_endpoints.destroy_all }
 

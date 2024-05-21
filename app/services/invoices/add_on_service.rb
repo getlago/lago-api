@@ -36,6 +36,14 @@ module Invoices
       SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
 
+      if result.invoice.should_sync_invoice?
+        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: result.invoice)
+      end
+
+      if result.invoice.should_sync_sales_order?
+        Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice: result.invoice)
+      end
+
       create_payment(result.invoice)
 
       result
