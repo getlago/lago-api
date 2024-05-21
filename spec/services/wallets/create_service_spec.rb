@@ -76,8 +76,10 @@ RSpec.describe Wallets::CreateService, type: :service do
       let(:rules) do
         [
           {
-            trigger: 'interval',
-            interval: 'monthly'
+            interval: "monthly",
+            method: "target",
+            target_ongoing_balance: "100.0",
+            trigger: "interval",
           },
         ]
       end
@@ -105,13 +107,17 @@ RSpec.describe Wallets::CreateService, type: :service do
           rule = service_result.wallet.reload.recurring_transaction_rules.first
 
           expect(wallet.name).to eq('New Wallet')
-          expect(rule.wallet_id).to eq(wallet.id)
           expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
-          expect(rule.trigger).to eq('interval')
-          expect(rule.interval).to eq('monthly')
-          expect(rule.threshold_credits).to eq(0.0)
-          expect(rule.paid_credits).to eq(1.0)
-          expect(rule.granted_credits).to eq(0.0)
+          expect(rule).to have_attributes(
+            granted_credits: 0.0,
+            interval: "monthly",
+            method: "target",
+            paid_credits: 1.0,
+            target_ongoing_balance: 100.0,
+            threshold_credits: 0.0,
+            trigger: "interval",
+            wallet_id: wallet.id
+          )
         end
       end
 

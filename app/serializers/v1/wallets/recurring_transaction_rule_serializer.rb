@@ -10,6 +10,7 @@ module V1
           granted_credits: model.granted_credits,
           interval: model.interval,
           method: model.method,
+          target_ongoing_balance: model.target_ongoing_balance,
           threshold_credits: model.threshold_credits,
           trigger: model.trigger,
           created_at: model.created_at.iso8601

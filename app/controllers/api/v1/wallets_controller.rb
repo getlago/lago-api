@@ -92,6 +92,7 @@ module Api
           recurring_transaction_rules: [
             :interval,
             :method,
+            :target_ongoing_balance,
             :threshold_credits,
             :trigger,
           ],
@@ -111,6 +112,7 @@ module Api
             :lago_id,
             :interval,
             :method,
+            :target_ongoing_balance,
             :threshold_credits,
             :trigger,
             :paid_credits,

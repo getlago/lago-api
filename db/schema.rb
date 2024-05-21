@@ -893,6 +893,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_22_105942) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "method", default: 0, null: false
+    t.decimal "target_ongoing_balance", precision: 30, scale: 5
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
   end
 
