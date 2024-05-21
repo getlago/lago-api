@@ -43,6 +43,13 @@ class SendWebhookJob < ApplicationJob
   def perform(webhook_type, object, options = {}, webhook_id = nil)
     raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
 
-    WEBHOOK_SERVICES.fetch(webhook_type).new(object:, options:, webhook_id:).call
+    # NOTE: This condition is only temporary to handle enqueued jobs
+    # TODO: Remove this condition after queued jobs are processed
+    if webhook_id
+      SendHttpWebhookJob.perform_later(Webhook.find(webhook_id))
+      return
+    end
+
+    WEBHOOK_SERVICES.fetch(webhook_type).new(object:, options:).call
   end
 end
