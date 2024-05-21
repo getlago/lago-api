@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Integrations::Aggregator::Invoices::CreateService do
+RSpec.describe Integrations::Aggregator::SalesOrders::CreateService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:netsuite_integration, organization:) }
@@ -10,7 +10,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { 'https://api.nango.dev/v1/netsuite/invoices' }
+  let(:endpoint) { 'https://api.nango.dev/v1/netsuite/salesorders' }
   let(:add_on) { create(:add_on, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, billable_metric:) }
@@ -125,7 +125,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
 
   let(:params) do
     {
-      'type' => 'invoice',
+      'type' => 'salesorder',
       'isDynamic' => false,
       'columns' => {
         'tranid' => invoice.id,
@@ -203,7 +203,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
     minimum_commitment_fee
     charge_fee
 
-    integration.sync_invoices = true
+    integration.sync_sales_orders = true
     integration.save!
   end
 
@@ -237,7 +237,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         integration_resource = IntegrationResource.order(created_at: :desc).first
 
         expect(integration_resource.syncable_id).to eq(invoice.id)
-        expect(integration_resource.syncable_type).to eq('Invoice')
+        expect(integration_resource.syncable_type).to eq('SalesOrder')
       end
     end
 
