@@ -21,6 +21,12 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :last_retried_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def payload
+        return object.payload&.to_json unless object.payload.is_a?(String)
+
+        object.payload
+      end
     end
   end
 end
