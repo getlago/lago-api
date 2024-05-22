@@ -14,7 +14,7 @@ module Integrations
 
         attr_reader :invoice
 
-        delegate :customer, to: :invoice
+        delegate :customer, to: :invoice, allow_nil: true
 
         def headers
           {
@@ -31,7 +31,7 @@ module Integrations
         end
 
         def integration_customer
-          @integration_customer ||= customer.integration_customers&.first
+          @integration_customer ||= customer&.integration_customers&.first
         end
 
         def billable_metric_item(fee)

@@ -68,6 +68,8 @@ module Types
     field :fetch_integration_items, mutation: Mutations::IntegrationItems::FetchItems
     field :fetch_integration_tax_items, mutation: Mutations::IntegrationItems::FetchTaxItems
 
+    field :sync_integration_invoice, mutation: Mutations::Integrations::SyncInvoice
+
     field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download
     field :update_credit_note, mutation: Mutations::CreditNotes::Update

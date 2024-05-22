@@ -148,6 +148,10 @@ class BaseService
     new(*, **).call(&block)
   end
 
+  def self.call_async(*, **, &block)
+    new(*, **).call_async(&block)
+  end
+
   def initialize(current_user = nil)
     @result = Result.new
     @source = CurrentContext&.source
@@ -155,6 +159,10 @@ class BaseService
   end
 
   def call(**args, &block)
+    raise NotImplementedError
+  end
+
+  def call_async(**args, &block)
     raise NotImplementedError
   end
 

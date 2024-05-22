@@ -207,6 +207,29 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
     integration.save!
   end
 
+  describe '#call_async' do
+    subject(:service_call_async) { described_class.new(invoice:).call_async }
+
+    context 'when invoice exists' do
+      it 'enqueues invoice create job' do
+        expect { service_call_async }.to enqueue_job(Integrations::Aggregator::Invoices::CreateJob)
+      end
+    end
+
+    context 'when invoice does not exist' do
+      let(:invoice) { nil }
+
+      it 'returns an error' do
+        result = service_call_async
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.error_code).to eq('invoice_not_found')
+        end
+      end
+    end
+  end
+
   describe '#call' do
     context 'when service call is successful' do
       let(:response) { instance_double(Net::HTTPOK) }
