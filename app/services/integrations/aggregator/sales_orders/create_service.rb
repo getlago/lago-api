@@ -21,7 +21,8 @@ module Integrations
             integration:,
             external_id: result.external_id,
             syncable_id: invoice.id,
-            syncable_type: 'SalesOrder',
+            syncable_type: 'Invoice',
+            resource_type: :sales_order,
           )
 
           result

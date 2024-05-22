@@ -238,6 +238,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
 
         expect(integration_resource.syncable_id).to eq(invoice.id)
         expect(integration_resource.syncable_type).to eq('Invoice')
+        expect(integration_resource.resource_type).to eq('invoice')
       end
     end
 

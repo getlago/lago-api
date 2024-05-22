@@ -237,7 +237,8 @@ RSpec.describe Integrations::Aggregator::SalesOrders::CreateService do
         integration_resource = IntegrationResource.order(created_at: :desc).first
 
         expect(integration_resource.syncable_id).to eq(invoice.id)
-        expect(integration_resource.syncable_type).to eq('SalesOrder')
+        expect(integration_resource.syncable_type).to eq('Invoice')
+        expect(integration_resource.resource_type).to eq('sales_order')
       end
     end
 
