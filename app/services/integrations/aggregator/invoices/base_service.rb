@@ -103,7 +103,7 @@ module Integrations
         def payload(type)
           {
             'type' => type,
-            'isDynamic' => false,
+            'isDynamic' => true,
             'columns' => {
               'tranid' => invoice.id,
               'entity' => integration_customer.external_customer_id,
