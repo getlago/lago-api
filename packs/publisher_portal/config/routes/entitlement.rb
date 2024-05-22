@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
-scope :entitlement do
+require 'entitlement/authorization_controller'
+
+namespace :entitlement do
   get '/authorization', to: 'authorization#index'
 end
