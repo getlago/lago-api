@@ -8,8 +8,9 @@ module Integrations
 
         retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 3
 
-        # TODO:
         def perform(invoice:)
+          result = Integrations::Aggregator::Invoices::CreateService.call(invoice:)
+          result.raise_if_error!
         end
       end
     end
