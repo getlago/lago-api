@@ -9,7 +9,7 @@ module Mutations
       REQUIRED_PERMISSION = 'organization:members:delete'
 
       graphql_name 'RevokeInvite'
-      description 'Revokes a invite'
+      description 'Revokes an invite'
 
       argument :id, ID, required: true
 

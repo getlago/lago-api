@@ -92,7 +92,10 @@ module Types
     field :accept_invite, mutation: Mutations::Invites::Accept
     field :create_invite, mutation: Mutations::Invites::Create
     field :revoke_invite, mutation: Mutations::Invites::Revoke
+    field :update_invite, mutation: Mutations::Invites::Update
+
     field :revoke_membership, mutation: Mutations::Memberships::Revoke
+    field :update_membership, mutation: Mutations::Memberships::Update
 
     field :create_password_reset, mutation: Mutations::PasswordResets::Create
     field :reset_password, mutation: Mutations::PasswordResets::Reset
