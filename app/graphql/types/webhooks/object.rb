@@ -23,7 +23,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       def payload
-        object.payload&.to_json&.to_s
+        object.payload&.to_json
       end
     end
   end
