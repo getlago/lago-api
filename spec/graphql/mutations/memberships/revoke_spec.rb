@@ -67,7 +67,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
       permissions: required_permission,
       query: mutation,
       variables: {
-        input: {id: membership.id},
+        input: {id: membership.id}
       },
     )
 
