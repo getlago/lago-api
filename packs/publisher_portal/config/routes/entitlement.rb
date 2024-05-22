@@ -2,6 +2,10 @@
 
 require 'entitlement/authorization_controller'
 
-namespace :entitlement do
-  get '/authorization', to: 'authorization#index'
+namespace :api do
+  namespace :v1 do
+    namespace :entitlement do
+      get '/authorization', to: 'authorization#index'
+    end
+  end
 end
