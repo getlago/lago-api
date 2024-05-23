@@ -14,9 +14,9 @@ module Integrations
       okta_integration = ::Integrations::OktaIntegration
           .where('settings->>\'domain\' IS NOT NULL')
           .where('settings->>\'domain\' = ?', domain)
-          .first
+          .exists?
       
-      errors.add(:domain, 'domain_not_unique') if okta_integration.present?
+      errors.add(:domain, 'domain_not_unique') if okta_integration
     end
   end
 end

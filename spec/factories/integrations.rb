@@ -21,7 +21,6 @@ FactoryBot.define do
     type { 'Integrations::OktaIntegration' }
     code { 'okta' }
     name { 'Okta Integration' }
-    domain { 'foo.test' }
 
     settings do
       {client_id: SecureRandom.uuid, domain: 'foo.test', organization_name: 'Foobar'}
