@@ -52,7 +52,7 @@ module Types
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
       field :subscriptions, [Types::Subscriptions::Object]
 
-      field :integration_external_id, String, null: true
+      field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
 
       def applied_taxes
@@ -64,7 +64,7 @@ module Types
           object.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').none?
       end
 
-      def integration_external_id
+      def external_integration_id
         integration_customer = object.customer&.integration_customers&.first
 
         return nil unless integration_customer
