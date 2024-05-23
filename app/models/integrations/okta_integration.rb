@@ -12,9 +12,9 @@ module Integrations
 
     def domain_uniqueness
       okta_integration = ::Integrations::OktaIntegration
-          .where('settings->>\'domain\' IS NOT NULL')
-          .where('settings->>\'domain\' = ?', domain)
-          .exists?
+        .where('settings->>\'domain\' IS NOT NULL')
+        .where('settings->>\'domain\' = ?', domain)
+        .exists?
       
       errors.add(:domain, 'domain_not_unique') if okta_integration
     end
