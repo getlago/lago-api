@@ -2,8 +2,8 @@
 
 require 'aws_avp'
 
-module Entitlement
-  module V1
+module V1
+  module Entitlement
     class AuthorizationController < ApplicationController
       def index
         client = AwsAvp.init
