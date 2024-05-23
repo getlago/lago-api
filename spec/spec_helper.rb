@@ -22,6 +22,19 @@ RSpec.configure do |config|
     DatabaseCleaner.strategy = :transaction
   end
 
+  # Custom metadata
+  config.before do |example|
+    if example.metadata[:cache]
+      Rails.cache = if example.metadata[:cache].to_sym == :memory
+        ActiveSupport::Cache.lookup_store(:memory_store)
+      elsif example.metadata[:cache].to_sym == :null
+        ActiveSupport::Cache.lookup_store(:null_store)
+      else
+        raise "Unknown cache store: #{example.metadata[:cache]}"
+      end
+    end
+  end
+
   config.before(:each, transaction: false) do
     DatabaseCleaner.strategy = :deletion
   end

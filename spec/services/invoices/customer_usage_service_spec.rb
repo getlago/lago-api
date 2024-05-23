@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::CustomerUsageService, type: :service do
+RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
   subject(:usage_service) do
     described_class.new(membership.user, customer_id:, subscription_id:)
   end
@@ -50,14 +50,10 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
     )
   end
 
-  let(:memory_store) { ActiveSupport::Cache.lookup_store(:memory_store) }
-  let(:cache) { Rails.cache }
-
   describe '#call' do
     before do
       events if subscription
       charge
-      allow(Rails).to receive(:cache).and_return(memory_store)
       Rails.cache.clear
 
       tax
@@ -73,7 +69,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service do
 
       expect do
         usage_service.call
-      end.to change { cache.exist?(key) }.from(false).to(true)
+      end.to change { Rails.cache.exist?(key) }.from(false).to(true)
     end
 
     it 'initializes an invoice' do

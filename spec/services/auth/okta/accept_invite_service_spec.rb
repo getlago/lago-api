@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Auth::Okta::AcceptInviteService do
+RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
   subject(:service) { described_class.new(invite_token:, code: 'code', state:) }
 
   let(:organization) { create(:organization) }
@@ -12,15 +12,13 @@ RSpec.describe Auth::Okta::AcceptInviteService do
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
   let(:okta_token_response) { OpenStruct.new(body: {access_token: 'access_token'}) }
   let(:okta_userinfo_response) { OpenStruct.new({email: 'foo@bar.com'}) }
-  let(:memory_store) { ActiveSupport::Cache.lookup_store(:memory_store) }
   let(:state) { SecureRandom.uuid }
 
   before do
     okta_integration
     invite_token
 
-    allow(Rails).to receive(:cache).and_return(memory_store)
-    memory_store.write(state, 'foo@bar.com')
+    Rails.cache.write(state, 'foo@bar.com')
 
     allow(LagoHttpClient::Client).to receive(:new).and_return(lago_http_client)
     allow(lago_http_client).to receive(:post_url_encoded).and_return(okta_token_response)
