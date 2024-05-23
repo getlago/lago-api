@@ -3691,6 +3691,7 @@ type Invoice {
   creditableAmountCents: BigInt!
   currency: CurrencyEnum
   customer: Customer!
+  externalIntegrationId: String
   fees: [Fee!]
   feesAmountCents: BigInt!
   fileUrl: String
