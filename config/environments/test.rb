@@ -15,7 +15,6 @@ Rails.application.configure do
 
   config.consider_all_requests_local = true
   config.action_controller.perform_caching = false
-  config.cache_store = :null_store
   config.action_dispatch.show_exceptions = false
   config.action_controller.allow_forgery_protection = false
   config.active_storage.service = :test
@@ -35,4 +34,15 @@ Rails.application.configure do
 
   config.active_job.queue_adapter = :test
   config.license_url = 'http://license.lago'
+
+  # Configure the redis cache store but always set the null_store by default
+  # Use `context '...', cache: :redis` to enable the redis cache store in specs
+  if ENV['LAGO_REDIS_CACHE_URL'].present?
+    redis_store_config = {
+      url: ENV['LAGO_REDIS_CACHE_URL'],
+      ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}
+    }
+    config.cache_store = :redis_cache_store, redis_store_config
+  end
+  config.cache_store = :null_store
 end
