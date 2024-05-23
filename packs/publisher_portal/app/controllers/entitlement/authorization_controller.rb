@@ -2,7 +2,7 @@
 
 require 'aws_avp'
 
-module EntitlementApi
+module Entitlement
   module V1
     class AuthorizationController < ApplicationController
       def index
