@@ -29,6 +29,8 @@ RSpec.configure do |config|
         ActiveSupport::Cache.lookup_store(:memory_store)
       elsif example.metadata[:cache].to_sym == :null
         ActiveSupport::Cache.lookup_store(:null_store)
+      elsif example.metadata[:cache].to_sym == :redis
+        ActiveSupport::Cache.lookup_store(:redis_cache_store)
       else
         raise "Unknown cache store: #{example.metadata[:cache]}"
       end

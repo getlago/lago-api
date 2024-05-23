@@ -18,9 +18,20 @@ jobs:
           POSTGRES_DB: lago
           POSTGRES_USER: lago
           POSTGRES_PASSWORD: lago
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
+      LAGO_REDIS_CACHE_URL: "redis://localhost:6379"
       RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
       LAGO_API_URL: https://api.lago.dev
@@ -32,6 +43,7 @@ jobs:
       LAGO_CLICKHOUSE_DATABASE: default
       LAGO_CLICKHOUSE_USERNAME: ""
       LAGO_CLICKHOUSE_PASSWORD: ""
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

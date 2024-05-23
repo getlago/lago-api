@@ -11,6 +11,10 @@ module Events
     def call
       event.external_customer_id ||= customer&.external_id
 
+      unless event.external_subscription_id
+        Deprecation.report('event_missing_external_subscription_id', organization.id)
+      end
+
       # NOTE: prevent subscription if more than 1 subscription is active
       #       if multiple terminated matches the timestamp, takes the most recent
       if !event.external_subscription_id && subscriptions.count(&:active?) <= 1
