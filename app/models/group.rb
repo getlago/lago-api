@@ -10,7 +10,6 @@ class Group < ApplicationRecord
   has_many :children, class_name: 'Group', foreign_key: 'parent_group_id'
   has_many :properties, class_name: 'GroupProperty'
   has_many :fees
-  has_many :quantified_events, dependent: :destroy
 
   validates :key, :value, presence: true
 

@@ -216,34 +216,6 @@ module Fees
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
 
-      if billable_metric.custom_agg?
-        create_cached_aggregations(aggregation_results, charge_filter)
-      else
-        create_quantified_events(aggregation_results, charge_filter)
-      end
-    end
-
-    # TODO: Move cached aggregation for weighted sum to cached_aggregations table
-    def create_quantified_events(aggregation_results, charge_filter)
-      result.quantified_events ||= []
-
-      # NOTE: persist current recurring value for next period
-      aggregation_results.each do |aggregation_result|
-        result.quantified_events << QuantifiedEvent.find_or_initialize_by(
-          organization_id: billable_metric.organization_id,
-          external_subscription_id: subscription.external_id,
-          charge_filter_id: charge_filter&.id,
-          billable_metric_id: billable_metric.id,
-          added_at: aggregation_result.recurring_updated_at,
-          grouped_by: aggregation_result.grouped_by || {},
-        ) do |event|
-          event.properties[QuantifiedEvent::RECURRING_TOTAL_UNITS] = aggregation_result.total_aggregated_units
-          event.save!
-        end
-      end
-    end
-
-    def create_cached_aggregations(aggregation_results, charge_filter)
       result.cached_aggregations ||= []
 
       # NOTE: persist current recurring value for next period
@@ -256,7 +228,7 @@ module Fees
           grouped_by: aggregation_result.grouped_by || {},
           timestamp: aggregation_result.recurring_updated_at,
         ) do |aggregation|
-          aggregation.current_aggregation = aggregation_result.aggregation
+          aggregation.current_aggregation = aggregation_result.total_aggregated_units || aggregation_result.aggregation
           aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)
           aggregation.save!
         end
