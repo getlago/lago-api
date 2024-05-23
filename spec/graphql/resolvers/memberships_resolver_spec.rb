@@ -42,6 +42,19 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
     end
   end
 
+  it 'returns the count of active admin memberships' do
+    create(:membership, organization: organization, role: :admin, status: :revoked)
+    create_list(:membership, 2, organization: organization, role: :finance)
+
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      query:,
+    )
+
+    expect(result['data']['memberships']['metadata']['adminCount']).to eq(1)
+  end
+
   describe 'traversal attack attempt' do
     let!(:other_org) { create(:organization) }
 
