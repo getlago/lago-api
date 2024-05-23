@@ -6,7 +6,7 @@ module Types
       field :admin_count, Integer, null: false
 
       def admin_count
-        context[:current_organization].memberships.admin.count
+        context[:current_organization].memberships.active.admin.count
       end
     end
   end
