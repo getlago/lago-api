@@ -1996,8 +1996,10 @@ input CreatePlanInput {
 }
 
 input CreateRecurringTransactionRuleInput {
+  grantedCredits: String
   interval: RecurringTransactionIntervalEnum
   method: RecurringTransactionMethodEnum
+  paidCredits: String
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String

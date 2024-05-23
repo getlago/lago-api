@@ -6,8 +6,10 @@ module Types
       class CreateInput < Types::BaseInputObject
         graphql_name 'CreateRecurringTransactionRuleInput'
 
+        argument :granted_credits, String, required: false
         argument :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, required: false
         argument :method, Types::Wallets::RecurringTransactionRules::MethodEnum, required: false
+        argument :paid_credits, String, required: false
         argument :started_at, GraphQL::Types::ISO8601DateTime, required: false
         argument :target_ongoing_balance, String, required: false
         argument :threshold_credits, String, required: false

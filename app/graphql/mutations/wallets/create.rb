@@ -16,14 +16,11 @@ module Mutations
       type Types::Wallets::Object
 
       def resolve(**args)
-        result = ::Wallets::CreateService
-          .new(context[:current_user])
-          .create(
-            args
-              .merge(organization_id: current_organization.id)
-              .merge(customer: current_customer(args[:customer_id]))
-              .except(:customer_id)
-          )
+        result = ::Wallets::CreateService.call(
+          params: args.merge(organization_id: current_organization.id)
+            .merge(customer: current_customer(args[:customer_id]))
+            .except(:customer_id)
+        )
 
         result.success? ? result.wallet : result_error(result)
       end
