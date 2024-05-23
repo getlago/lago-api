@@ -9,10 +9,10 @@ module Integrations
         end
 
         def call
-          return unless integration
-          return unless integration.sync_sales_orders
-          return unless invoice.finalized?
-          return unless fallback_item
+          return result unless integration
+          return result unless integration.sync_sales_orders
+          return result unless invoice.finalized?
+          return result unless fallback_item
 
           response = http_client.post_with_response(payload('salesorder'), headers)
           result.external_id = JSON.parse(response.body)

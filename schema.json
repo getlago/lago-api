@@ -22140,6 +22140,20 @@
               ]
             },
             {
+              "name": "integrationId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "integrationType",
               "description": null,
               "type": {

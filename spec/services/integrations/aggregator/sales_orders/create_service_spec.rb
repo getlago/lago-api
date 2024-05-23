@@ -126,7 +126,7 @@ RSpec.describe Integrations::Aggregator::SalesOrders::CreateService do
   let(:params) do
     {
       'type' => 'salesorder',
-      'isDynamic' => false,
+      'isDynamic' => true,
       'columns' => {
         'tranid' => invoice.id,
         'entity' => integration_customer.external_customer_id,

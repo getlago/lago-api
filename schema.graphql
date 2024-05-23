@@ -4810,6 +4810,7 @@ type NetsuiteCustomer {
   externalCustomerId: String
   id: ID!
   integrationCode: String
+  integrationId: ID
   integrationType: IntegrationTypeEnum
   subsidiaryId: String
   syncWithProvider: Boolean
