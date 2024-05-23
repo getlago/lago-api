@@ -2,40 +2,45 @@
 
 module Wallets
   class CreateService < BaseService
-    def create(args)
-      return result unless valid?(**args)
+    def initialize(params:)
+      @params = params
+      super
+    end
+
+    def call
+      return result unless valid?
 
       wallet = Wallet.new(
         customer_id: result.current_customer.id,
-        name: args[:name],
-        rate_amount: args[:rate_amount],
-        expiration_at: args[:expiration_at],
+        name: params[:name],
+        rate_amount: params[:rate_amount],
+        expiration_at: params[:expiration_at],
         status: :active
       )
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
           customer: result.current_customer,
-          currency: args[:currency]
+          currency: params[:currency]
         )
         return currency_result unless currency_result.success?
 
         wallet.currency = wallet.customer.currency
         wallet.save!
 
-        if args[:recurring_transaction_rules]
-          Wallets::RecurringTransactionRules::CreateService.call(wallet:, wallet_params: args)
+        if params[:recurring_transaction_rules]
+          Wallets::RecurringTransactionRules::CreateService.call(wallet:, wallet_params: params)
         end
       end
 
       result.wallet = wallet
 
       WalletTransactions::CreateJob.perform_later(
-        organization_id: args[:organization_id],
+        organization_id: params[:organization_id],
         params: {
           wallet_id: wallet.id,
-          paid_credits: args[:paid_credits],
-          granted_credits: args[:granted_credits],
+          paid_credits: params[:paid_credits],
+          granted_credits: params[:granted_credits],
           source: :manual
         }
       )
@@ -47,8 +52,10 @@ module Wallets
 
     private
 
-    def valid?(**args)
-      Wallets::ValidateService.new(result, **args).valid?
+    attr_reader :params
+
+    def valid?
+      Wallets::ValidateService.new(result, **params).valid?
     end
   end
 end

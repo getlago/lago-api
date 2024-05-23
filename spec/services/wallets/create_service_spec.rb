@@ -3,19 +3,19 @@
 require 'rails_helper'
 
 RSpec.describe Wallets::CreateService, type: :service do
-  subject(:create_service) { described_class.new(membership.user) }
+  subject(:create_service) { described_class.new(params:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:, external_id: 'foobar', currency: customer_currency) }
   let(:customer_currency) { 'EUR' }
 
-  describe '.create' do
+  describe '#call' do
     let(:paid_credits) { '1.00' }
     let(:granted_credits) { '0.00' }
     let(:expiration_at) { (Time.current + 1.year).iso8601 }
 
-    let(:create_args) do
+    let(:params) do
       {
         name: 'New Wallet',
         customer:,
@@ -28,7 +28,7 @@ RSpec.describe Wallets::CreateService, type: :service do
       }
     end
 
-    let(:service_result) { create_service.create(**create_args) }
+    let(:service_result) { create_service.call }
 
     it 'creates a wallet' do
       aggregate_failures do
@@ -64,8 +64,7 @@ RSpec.describe Wallets::CreateService, type: :service do
       let(:customer_currency) { nil }
 
       it 'applies the currency to the customer' do
-        create_service.create(**create_args)
-
+        service_result
         expect(customer.reload.currency).to eq('EUR')
       end
     end
@@ -78,12 +77,14 @@ RSpec.describe Wallets::CreateService, type: :service do
           {
             interval: "monthly",
             method: "target",
+            paid_credits: "10.0",
+            granted_credits: "5.0",
             target_ongoing_balance: "100.0",
             trigger: "interval"
           }
         ]
       end
-      let(:create_args) do
+      let(:params) do
         {
           name: 'New Wallet',
           customer:,

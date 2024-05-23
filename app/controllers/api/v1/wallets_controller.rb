@@ -4,9 +4,8 @@ module Api
   module V1
     class WalletsController < Api::BaseController
       def create
-        service = Wallets::CreateService.new
-        result = service.create(
-          WalletLegacyInput.new(
+        result = Wallets::CreateService.call(
+          params: WalletLegacyInput.new(
             current_organization,
             input_params
               .merge(organization_id: current_organization.id)
@@ -89,8 +88,10 @@ module Api
           :expiration_at,
           :expiration_date, # NOTE: Legacy field
           recurring_transaction_rules: [
+            :granted_credits,
             :interval,
             :method,
+            :paid_credits,
             :started_at,
             :target_ongoing_balance,
             :threshold_credits,

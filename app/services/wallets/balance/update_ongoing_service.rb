@@ -50,7 +50,6 @@ module Wallets
         threshold_rule = wallet.recurring_transaction_rules.where(trigger: :threshold).first
 
         return if threshold_rule.nil? || wallet.credits_ongoing_balance > threshold_rule.threshold_credits
-        return if usage_amount_cents.positive? && ongoing_usage_balance_cents == usage_amount_cents
         return if (pending_transactions_amount + credits_ongoing_balance) > threshold_rule.threshold_credits
 
         WalletTransactions::CreateJob.set(wait: 2.seconds).perform_later(
