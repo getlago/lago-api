@@ -2,7 +2,7 @@
 
 Rails.application.routes.draw do
   draw :publisher_portal
-  draw :entitlement
+  draw :entitlement_api
 
   mount Sidekiq::Web, at: '/sidekiq' if defined? Sidekiq::Web
   mount Karafka::Web::App, at: '/karafka' if defined? Karafka::Web::App
