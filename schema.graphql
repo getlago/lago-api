@@ -3626,6 +3626,7 @@ input IntegrationCustomerInput {
   externalCustomerId: String
   id: ID
   integrationCode: String
+  integrationId: ID
   integrationType: IntegrationTypeEnum
   subsidiaryId: String
   syncWithProvider: Boolean
