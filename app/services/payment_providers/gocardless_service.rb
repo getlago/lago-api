@@ -91,6 +91,7 @@ module PaymentProviders
               .new.update_status(
                 provider_refund_id: event.links.refund,
                 status: event.action,
+                metadata: event.metadata
               )
 
             return status_result unless status_result.success?

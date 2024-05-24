@@ -217,17 +217,15 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
     end
 
     context 'when refund is not found' do
-      it 'fails' do
+      it 'returns an empty result' do
         result = gocardless_service.update_status(
           provider_refund_id: 'foo',
           status: 'paid',
         )
 
         aggregate_failures do
-          expect(result).not_to be_success
-
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq('gocardless_refund')
+          expect(result).to be_success
+          expect(result.refund).to be_nil
         end
       end
     end
