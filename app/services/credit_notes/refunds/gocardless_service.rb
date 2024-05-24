@@ -40,9 +40,9 @@ module CreditNotes
         result
       end
 
-      def update_status(provider_refund_id:, status:)
+      def update_status(provider_refund_id:, status:, metadata: {})
         refund = Refund.find_by(provider_refund_id:)
-        return result.not_found_failure!(resource: 'gocardless_refund') unless refund
+        return handle_missing_refund(metadata) unless refund
 
         result.refund = refund
         @credit_note = result.credit_note = refund.credit_note
@@ -152,6 +152,16 @@ module CreditNotes
             refund_status: status
           },
         )
+      end
+
+      def handle_missing_refund(metadata)
+        # NOTE: Refund was not initiated by lago
+        return result unless metadata&.key?(:lago_invoice_id)
+
+        # NOTE: Invoice does not belongs to this lago instance
+        return result unless Invoice.find_by(id: metadata[:lago_invoice_id])
+
+        result.not_found_failure!(resource: 'gocardless_refund')
       end
     end
   end
