@@ -169,7 +169,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               trigger: 'interval',
               interval: 'weekly',
               paid_credits: '105',
-              granted_credits: '105'
+              granted_credits: '105',
+              target_ongoing_balance: '300'
             }
           ]
         }

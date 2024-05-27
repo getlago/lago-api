@@ -41,7 +41,9 @@ module Wallets
       end
 
       def valid_method?
-        (method == "target") ? valid_decimal?(params[:target_ongoing_balance]) : true
+        return valid_decimal?(params[:target_ongoing_balance]) if method == "target"
+
+        true
       end
 
       def valid_credits?
