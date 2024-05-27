@@ -67,18 +67,9 @@ module Events
       end
 
       def count
-        cte_sql = events.group(DEDUPLICATION_GROUP)
-          .select('COUNT(events_raw.transaction_id) as transaction_count')
-          .group(:transaction_id)
+        sql = events.reorder('')
+          .select('uniqExact(events_raw.transaction_id) AS event_count')
           .to_sql
-
-        sql = <<-SQL
-          with events as (#{cte_sql})
-
-          select
-            COUNT(events.transaction_count) AS events_count
-          from events
-        SQL
 
         ::Clickhouse::EventsRaw.connection.select_value(sql).to_i
       end
