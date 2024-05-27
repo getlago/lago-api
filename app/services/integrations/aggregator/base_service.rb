@@ -54,7 +54,7 @@ module Integrations
           provider_error: {
             message:,
             error_code: code
-          },
+          }
         )
       end
 
