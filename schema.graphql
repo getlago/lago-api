@@ -62,7 +62,7 @@ type AddOn {
   deletedAt: ISO8601DateTime
   description: String
   id: ID!
-  integrationMappings: [Mapping!]
+  integrationMappings(integrationId: ID): [Mapping!]
   invoiceDisplayName: String
   name: String!
   organization: Organization
@@ -178,7 +178,7 @@ type BillableMetric {
   fieldName: String
   filters: [BillableMetricFilter!]
   id: ID!
-  integrationMappings: [Mapping!]
+  integrationMappings(integrationId: ID): [Mapping!]
   name: String!
   organization: Organization
   plansCount: Int!

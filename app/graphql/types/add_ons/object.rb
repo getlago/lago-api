@@ -25,7 +25,9 @@ module Types
 
       field :taxes, [Types::Taxes::Object]
 
-      field :integration_mappings, [Types::IntegrationMappings::Object], null: true
+      field :integration_mappings, [Types::IntegrationMappings::Object], null: true do
+        argument :integration_id, ID, required: false
+      end
 
       def customers_count
         object.applied_add_ons.select(:customer_id).distinct.count
@@ -33,6 +35,12 @@ module Types
 
       def applied_add_ons_count
         object.applied_add_ons.count
+      end
+
+      def integration_mappings(integration_id: nil)
+        mappings = object.integration_mappings
+        mappings = mappings.where(integration_id:) if integration_id
+        mappings
       end
     end
   end
