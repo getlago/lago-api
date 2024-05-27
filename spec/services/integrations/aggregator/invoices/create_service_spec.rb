@@ -282,6 +282,12 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
           service_call
         end.to raise_error(http_error)
       end
+
+      it 'enqueues a SendWebhookJob' do
+        expect { service_call }
+          .to have_enqueued_job(SendWebhookJob)
+          .and raise_error(http_error)
+      end
     end
   end
 end

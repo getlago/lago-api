@@ -45,6 +45,19 @@ module Integrations
         }
       end
 
+      def deliver_error_webhook(customer:, code:, message:)
+        SendWebhookJob.perform_later(
+          'customer.accounting_provider_error',
+          customer,
+          provider:,
+          provider_code: integration.code,
+          provider_error: {
+            message:,
+            error_code: code
+          },
+        )
+      end
+
       def tax_item
         @tax_item ||= collection_mapping(:tax) || fallback_item
       end

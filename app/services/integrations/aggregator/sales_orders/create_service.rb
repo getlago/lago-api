@@ -26,6 +26,14 @@ module Integrations
           )
 
           result
+        rescue LagoHttpClient::HttpError => e
+          error = e.json_message
+          code = error['type']
+          message = error.dig('payload', 'message')
+
+          deliver_error_webhook(customer:, code:, message:)
+
+          raise e
         end
       end
     end
