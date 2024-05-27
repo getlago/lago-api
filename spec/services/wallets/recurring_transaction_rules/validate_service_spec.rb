@@ -8,9 +8,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
   let(:params) do
     {
       trigger: "interval",
-      interval: "weekly",
-      paid_credits: "105",
-      granted_credits: "105"
+      interval: "weekly"
     }
   end
 
@@ -52,6 +50,20 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
           trigger: "interval",
           interval: "weekly",
           target_ongoing_balance: "invalid"
+        }
+      end
+
+      it "returns false" do
+        expect(validate_service.call).to be_falsey
+      end
+    end
+
+    context "when invalid credits" do
+      let(:params) do
+        {
+          trigger: "interval",
+          interval: "weekly",
+          paid_credits: "invalid"
         }
       end
 
