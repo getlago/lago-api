@@ -9,10 +9,10 @@ module Wallets
       end
 
       def call
-        return true if valid_interval?
-        return true if valid_threshold?
+        return false unless valid_trigger?
+        return false unless valid_method?
 
-        false
+        true
       end
 
       private
@@ -23,12 +23,28 @@ module Wallets
         @trigger ||= params[:trigger]&.to_s
       end
 
-      def valid_interval?
+      def method
+        @method ||= params[:method]&.to_s
+      end
+
+      def valid_trigger?
+        valid_interval_trigger? || valid_threshold_trigger?
+      end
+
+      def valid_interval_trigger?
         trigger == "interval" && RecurringTransactionRule.intervals.key?(params[:interval])
       end
 
-      def valid_threshold?
+      def valid_threshold_trigger?
         trigger == "threshold" && ::Validators::DecimalAmountService.new(params[:threshold_credits]).valid_decimal?
+      end
+
+      def valid_method?
+        (method == "target") ? valid_target_method? : true
+      end
+
+      def valid_target_method?
+        ::Validators::DecimalAmountService.new(params[:target_ongoing_balance]).valid_decimal?
       end
     end
   end

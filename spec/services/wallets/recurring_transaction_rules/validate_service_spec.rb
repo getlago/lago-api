@@ -44,5 +44,20 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         expect(validate_service.call).to be_falsey
       end
     end
+
+    context "when invalid method" do
+      let(:params) do
+        {
+          method: "target",
+          trigger: "interval",
+          interval: "weekly",
+          target_ongoing_balance: "invalid"
+        }
+      end
+
+      it "returns false" do
+        expect(validate_service.call).to be_falsey
+      end
+    end
   end
 end
