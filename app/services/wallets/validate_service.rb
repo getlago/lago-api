@@ -70,21 +70,9 @@ module Wallets
         return add_error(field: :recurring_transaction_rules, error_code: 'invalid_number_of_recurring_rules')
       end
 
-      recurring_rule = args[:recurring_transaction_rules].first
-
-      if recurring_rule[:trigger]&.to_s == 'interval' &&
-          RecurringTransactionRule.intervals.key?(recurring_rule[:interval])
-
-        return true
+      unless Wallets::RecurringTransactionRules::ValidateService.call(params: args[:recurring_transaction_rules].first)
+        add_error(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
       end
-
-      if recurring_rule[:trigger]&.to_s == 'threshold' &&
-          ::Validators::DecimalAmountService.new(recurring_rule[:threshold_credits]).valid_decimal?
-
-        return true
-      end
-
-      add_error(field: :recurring_transaction_rules, error_code: 'invalid_recurring_rule')
     end
   end
 end

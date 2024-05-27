@@ -130,38 +130,6 @@ RSpec.describe Wallets::ValidateService, type: :service do
         expect(validate_service).not_to be_valid
         expect(result.error.messages[:recurring_transaction_rules]).to eq(['invalid_number_of_recurring_rules'])
       end
-
-      context 'when invalid interval' do
-        let(:rules) do
-          [
-            {
-              trigger: 'interval',
-              interval: 'invalid'
-            }
-          ]
-        end
-
-        it 'returns false and result has errors' do
-          expect(validate_service).not_to be_valid
-          expect(result.error.messages[:recurring_transaction_rules]).to eq(['invalid_recurring_rule'])
-        end
-      end
-
-      context 'when invalid threshold credits' do
-        let(:rules) do
-          [
-            {
-              trigger: 'threshold',
-              threshold_credits: 'invalid'
-            }
-          ]
-        end
-
-        it 'returns false and result has errors' do
-          expect(validate_service).not_to be_valid
-          expect(result.error.messages[:recurring_transaction_rules]).to eq(['invalid_recurring_rule'])
-        end
-      end
     end
   end
 end
