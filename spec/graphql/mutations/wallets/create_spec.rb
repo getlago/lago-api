@@ -58,7 +58,8 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             {
               method: 'target',
               trigger: 'interval',
-              interval: 'monthly'
+              interval: 'monthly',
+              targetOngoingBalance: '0.0'
             }
           ]
         }
