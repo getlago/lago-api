@@ -27,9 +27,6 @@ Style/TrailingCommaInArguments:
 Style/TrailingCommaInArrayLiteral:
   Enabled: false
 
-Style/TrailingCommaInBlockArgs:
-  Enabled: false
-
 Performance/CaseWhenSplat:
   Enabled: true
 
