@@ -66,7 +66,7 @@ FactoryBot.define do
             'brands' => %w[amex bcmc cartebancaire mc visa visadankort],
             'name' => 'Credit Card',
             'type' => 'scheme'
-          },
+          }
         ],
         'storedPaymentMethods' => [
           {
@@ -81,7 +81,7 @@ FactoryBot.define do
             'supportedRecurringProcessingModels' => %w[CardOnFile Subscription UnscheduledCardOnFile],
             'supportedShopperInteractions' => %w[Ecommerce ContAuth],
             'type' => 'scheme'
-          },
+          }
         ]
       },
     )

@@ -39,7 +39,7 @@ RSpec.describe Wallets::ValidateRecurringTransactionRulesService, type: :service
             threshold_credits: '1.0',
             paid_credits: '105',
             granted_credits: '105'
-          },
+          }
         ]
       end
 
@@ -57,7 +57,7 @@ RSpec.describe Wallets::ValidateRecurringTransactionRulesService, type: :service
             interval: 'invalid',
             paid_credits: '105',
             granted_credits: '105'
-          },
+          }
         ]
       end
 
@@ -75,7 +75,7 @@ RSpec.describe Wallets::ValidateRecurringTransactionRulesService, type: :service
             threshold_credits: 'invalid',
             paid_credits: '105',
             granted_credits: '105'
-          },
+          }
         ]
       end
 

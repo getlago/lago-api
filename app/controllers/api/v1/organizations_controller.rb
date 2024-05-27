@@ -72,7 +72,7 @@ module Api
             :document_locale,
 
             # NOTE(legacy): vat has been moved to tax model
-            :vat_rate,
+            :vat_rate
           ],
         )
       end

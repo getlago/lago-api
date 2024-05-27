@@ -46,7 +46,7 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
         values: %w[visa mastercard],
         billable_metric_filter: scheme,
         charge_filter: filter1,
-      ),
+      )
     ]
   end
 
@@ -61,7 +61,7 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
         billable_metric_filter: scheme,
         charge_filter: filter2,
       ),
-      create(:charge_filter_value, values: ['credit'], billable_metric_filter: card_type, charge_filter: filter2),
+      create(:charge_filter_value, values: ['credit'], billable_metric_filter: card_type, charge_filter: filter2)
     ]
   end
 

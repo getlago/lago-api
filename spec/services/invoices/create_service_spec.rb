@@ -24,7 +24,7 @@ RSpec.describe Invoices::CreateService, type: :service do
       },
       {
         add_on_code: add_on_second.code
-      },
+      }
     ]
   end
 
@@ -108,7 +108,7 @@ RSpec.describe Invoices::CreateService, type: :service do
             unit_amount_cents: 0,
             units: 2,
             description: 'desc-123'
-          },
+          }
         ]
       end
 
@@ -248,7 +248,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           },
           {
             add_on_code: 'invalid'
-          },
+          }
         ]
       end
 

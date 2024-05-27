@@ -80,7 +80,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
               key: 'manager',
               value: 'John Doe',
               displayInInvoice: true
-            },
+            }
           ],
           taxCodes: [tax.code]
         }

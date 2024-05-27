@@ -85,7 +85,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         ranges: [
           {from: 0, to: 10, storage_eu: '0', storage_us: '0', storage_asia: '0'},
           {from: 10, to: 20, storage_eu: '0.10', storage_us: '0.20', storage_asia: '0.30'},
-          {from: 20, to: nil, storage_eu: '0.20', storage_us: '0.30', storage_asia: '0.40'},
+          {from: 20, to: nil, storage_eu: '0.20', storage_us: '0.30', storage_asia: '0.40'}
         ]
       }
     }
@@ -122,7 +122,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         customer:,
         timestamp: Time.zone.now - 2.days,
         properties: {value: 35, storage_zone: 'storage_us'},
-      ),
+      )
     ]
   end
 
@@ -165,7 +165,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           customer:,
           timestamp: Time.zone.now - 4.days,
           properties: {value: 11, storage_zone: 'storage_eu'},
-        ),
+        )
       ]
     end
     let(:event) { event_list.first }
@@ -244,7 +244,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           subscription:,
           timestamp: Time.zone.now - 2.days,
           properties: {value: 11, storage_zone: 'storage_eu'},
-        ),
+        )
       ]
     end
 

@@ -226,7 +226,7 @@ module Invoices
                   name: invoice.number
                 }
               }
-            },
+            }
           ],
           mode: 'payment',
           success_url: success_redirect_url,

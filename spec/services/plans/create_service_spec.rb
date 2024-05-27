@@ -57,14 +57,14 @@ RSpec.describe Plans::CreateService, type: :service do
             {
               group_id: group.id,
               values: {amount: '100'}
-            },
+            }
           ],
           filters: [
             {
               values: {billable_metric_filter.key => ['card']},
               invoice_display_name: 'Card filter',
               properties: {amount: '90'}
-            },
+            }
           ]
         },
         {
@@ -85,10 +85,10 @@ RSpec.describe Plans::CreateService, type: :service do
                 to_value: nil,
                 per_unit_amount: '3',
                 flat_amount: '3'
-              },
+              }
             ]
           }
-        },
+        }
       ]
     end
 
@@ -188,7 +188,7 @@ RSpec.describe Plans::CreateService, type: :service do
               {
                 group_id: group.id,
                 values: {amount: '100'}
-              },
+              }
             ]
           },
           {
@@ -209,10 +209,10 @@ RSpec.describe Plans::CreateService, type: :service do
                   to_value: nil,
                   rate: '2',
                   flat_amount: '3'
-                },
+                }
               ]
             }
-          },
+          }
         ]
       end
 
@@ -291,10 +291,10 @@ RSpec.describe Plans::CreateService, type: :service do
                     to_value: nil,
                     rate: '2',
                     flat_amount: '3'
-                  },
+                  }
                 ]
               }
-            },
+            }
           ]
         end
 

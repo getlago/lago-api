@@ -332,7 +332,7 @@ RSpec.describe ChargeFilter, type: :model do
     let(:values) do
       [
         create(:charge_filter_value, values: ['card'], charge_filter:, billable_metric_filter: method_filter),
-        create(:charge_filter_value, values: ['visa'], charge_filter:, billable_metric_filter: scheme_filter),
+        create(:charge_filter_value, values: ['visa'], charge_filter:, billable_metric_filter: scheme_filter)
       ]
     end
 
@@ -359,7 +359,7 @@ RSpec.describe ChargeFilter, type: :model do
     let(:values) do
       [
         create(:charge_filter_value, charge_filter:, values: ['credit'], billable_metric_filter: card),
-        create(:charge_filter_value, charge_filter:, values: ['visa'], billable_metric_filter: scheme),
+        create(:charge_filter_value, charge_filter:, values: ['visa'], billable_metric_filter: scheme)
       ]
     end
 
@@ -387,7 +387,7 @@ RSpec.describe ChargeFilter, type: :model do
           :charge_filter_value,
           values: [ChargeFilterValue::ALL_FILTER_VALUES],
           billable_metric_filter: scheme,
-        ),
+        )
       ]
     end
 

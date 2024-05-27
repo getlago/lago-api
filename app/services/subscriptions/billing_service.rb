@@ -141,7 +141,7 @@ module Subscriptions
         interval: :yearly,
         conditions: [
           "DATE_PART('day', (:today#{at_time_zone})) = 1",
-          "plans.bill_charges_monthly = 't'",
+          "plans.bill_charges_monthly = 't'"
         ],
       )
     end
@@ -153,7 +153,7 @@ module Subscriptions
         interval: :yearly,
         conditions: [
           "DATE_PART('month', (:today#{at_time_zone})) = 1",
-          "DATE_PART('day', (:today#{at_time_zone})) = 1",
+          "DATE_PART('day', (:today#{at_time_zone})) = 1"
         ],
       )
     end
@@ -164,7 +164,7 @@ module Subscriptions
         interval: :weekly,
         conditions: [
           "EXTRACT(ISODOW FROM (subscriptions.subscription_at#{at_time_zone})) =
-          EXTRACT(ISODOW FROM (:today#{at_time_zone}))",
+          EXTRACT(ISODOW FROM (:today#{at_time_zone}))"
         ],
       )
     end
@@ -279,7 +279,7 @@ module Subscriptions
         interval: :yearly,
         conditions: [
           "plans.bill_charges_monthly = 't'",
-          billing_day,
+          billing_day
         ],
       )
     end

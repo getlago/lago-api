@@ -13,7 +13,7 @@ module PaymentProviders
       'charge.refund.updated',
       'customer.updated',
       'charge.succeeded',
-      'charge.dispute.closed',
+      'charge.dispute.closed'
     ].freeze
 
     validates :secret_key, presence: true

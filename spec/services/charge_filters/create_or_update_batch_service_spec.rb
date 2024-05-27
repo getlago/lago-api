@@ -80,7 +80,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           },
           invoice_display_name: 'Visa debit domestic card payment',
           properties: {amount: '20'}
-        },
+        }
       ]
     end
 
@@ -120,7 +120,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           charge_filter: filter,
           billable_metric_filter: scheme_filter,
           values: ['visa'],
-        ),
+        )
       ]
     end
 
@@ -133,7 +133,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           },
           invoice_display_name: 'New display name',
           properties: {amount: '20'}
-        },
+        }
       ]
     end
 
@@ -159,7 +159,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
             },
             invoice_display_name: 'New display name',
             properties: {amount: '20'}
-          },
+          }
         ]
       end
 
@@ -185,7 +185,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
             },
             invoice_display_name: 'New display name',
             properties: {amount: '20'}
-          },
+          }
         ]
       end
 

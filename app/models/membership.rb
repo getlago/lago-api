@@ -8,7 +8,7 @@ class Membership < ApplicationRecord
 
   STATUSES = [
     :active,
-    :revoked,
+    :revoked
   ].freeze
 
   ROLES = {

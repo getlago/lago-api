@@ -79,7 +79,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
               key: 'test-key',
               value: 'value',
               displayInInvoice: true
-            },
+            }
           ],
           taxCodes: [tax.code]
         }

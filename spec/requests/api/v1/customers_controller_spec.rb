@@ -185,7 +185,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
               key: 'Hello',
               value: 'Hi',
               display_in_invoice: true
-            },
+            }
           ]
         }
       end

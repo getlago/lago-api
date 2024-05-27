@@ -32,7 +32,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               amount: '0.22'
             },
             tax_codes:
-          },
+          }
         ]
       }
     end
@@ -101,10 +101,10 @@ RSpec.describe Api::V1::PlansController, type: :request do
                     from_value: 2,
                     flat_amount: '0',
                     per_unit_amount: '3200'
-                  },
+                  }
                 ]
               }
-            },
+            }
           ]
         }
       end
@@ -146,9 +146,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
                   group_id: group.id,
                   invoice_display_name: 'Europe',
                   values: {amount: '0.22'}
-                },
+                }
               ]
-            },
+            }
           ]
         }
       end
@@ -168,7 +168,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               group_id: group.id,
               invoice_display_name: 'Europe',
               values: {amount: '0.22'}
-            },
+            }
           ],
         )
 
@@ -178,7 +178,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               invoice_display_name: 'Europe',
               properties: {amount: '0.22'},
               values: {group.key.to_sym => [group.value]}
-            },
+            }
           ],
         )
       end
@@ -250,7 +250,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               amount: '0.22'
             },
             tax_codes:
-          },
+          }
         ]
       }
     end
@@ -451,9 +451,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
                   group_id: group.id,
                   invoice_display_name: 'Europe',
                   values: {amount: '0.22'}
-                },
+                }
               ]
-            },
+            }
           ]
         }
       end
@@ -473,7 +473,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               group_id: group.id,
               invoice_display_name: 'Europe',
               values: {amount: '0.22'}
-            },
+            }
           ],
         )
 
@@ -483,7 +483,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               invoice_display_name: 'Europe',
               properties: {amount: '0.22'},
               values: {group.key.to_sym => [group.value]}
-            },
+            }
           ],
         )
       end

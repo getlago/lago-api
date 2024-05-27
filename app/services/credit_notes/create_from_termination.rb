@@ -34,7 +34,7 @@ module CreditNotes
           {
             fee_id: last_subscription_fee.id,
             amount_cents: amount.truncate(CreditNote::DB_PRECISION_SCALE)
-          },
+          }
         ],
         reason: reason.to_sym,
         automatic: true,
@@ -102,7 +102,7 @@ module CreditNotes
           CreditNoteItem.new(
             fee_id: last_subscription_fee.id,
             precise_amount_cents: item_amount.truncate(CreditNote::DB_PRECISION_SCALE),
-          ),
+          )
         ],
       )
 

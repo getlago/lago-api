@@ -15,7 +15,7 @@ class Wallet < ApplicationRecord
 
   STATUSES = [
     :active,
-    :terminated,
+    :terminated
   ].freeze
 
   enum status: STATUSES

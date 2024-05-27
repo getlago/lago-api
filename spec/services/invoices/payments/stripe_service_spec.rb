@@ -171,7 +171,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
                 livemode: false,
                 metadata: {},
                 type: 'card'
-              },
+              }
             ],
           ))
       end

@@ -23,7 +23,7 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
       },
       {
         addOnId: add_on_second.id
-      },
+      }
     ]
   end
   let(:mutation) do

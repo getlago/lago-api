@@ -94,7 +94,7 @@ module Api
           :reusable,
           applies_to: [
             plan_codes: [],
-            billable_metric_codes: [],
+            billable_metric_codes: []
           ],
         )
       end

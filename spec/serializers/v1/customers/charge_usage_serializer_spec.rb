@@ -24,7 +24,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         code: billable_metric.code,
         aggregation_type: billable_metric.aggregation_type,
         grouped_by: {'card_type' => 'visa'},
-      ),
+      )
     ]
   end
 
@@ -58,7 +58,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             'grouped_by' => {'card_type' => 'visa'},
             'filters' => [],
             'groups' => []
-          },
+          }
         ],
       )
     end
@@ -91,7 +91,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             units: fee1.units,
             amount_cents: fee1.amount_cents,
             events_count: fee1.events_count
-          },
+          }
         ]
       end
 
@@ -113,7 +113,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             units: fee2.units,
             amount_cents: fee2.amount_cents,
             events_count: fee2.events_count
-          },
+          }
         ]
       end
 
@@ -144,7 +144,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           aggregation_type: billable_metric.aggregation_type,
           grouped_by: {'card_type' => 'visa'},
           charge_filter:,
-        ),
+        )
       ]
     end
 

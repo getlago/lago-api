@@ -70,7 +70,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
         properties: {
           total_count: 12
         },
-      ),
+      )
     ].flatten
   end
 
@@ -120,7 +120,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           properties: {
             total_count: 14.2
           },
-        ),
+        )
       ]
     end
 
@@ -144,7 +144,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           properties: {
             total_count: 'foo_bar'
           },
-        ),
+        )
       ]
     end
 
@@ -169,7 +169,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           customer:,
           subscription:,
           timestamp: Time.zone.now - 1.day,
-        ),
+        )
       ]
     end
 
@@ -211,7 +211,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
             total_count: 12,
             region: 'africa'
           },
-        ),
+        )
       ]
     end
 
@@ -260,7 +260,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
           properties: {
             total_count: 12
           },
-        ),
+        )
       ]
     end
 

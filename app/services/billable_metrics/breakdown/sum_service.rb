@@ -43,7 +43,7 @@ module BillableMetrics
             amount: persisted_sum,
             duration: (to_date_in_customer_timezone + 1.day - from_date_in_customer_timezone).to_i,
             total_duration: period_duration,
-          ),
+          )
         ]
       end
 

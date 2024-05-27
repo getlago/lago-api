@@ -95,7 +95,7 @@ RSpec.describe Invoices::UpdateService do
             {
               key: 'Added key',
               value: 'Added value'
-            },
+            }
           ]
         }
       end
@@ -155,7 +155,7 @@ RSpec.describe Invoices::UpdateService do
               {
                 key: 'Added key5',
                 value: 'Added value5'
-              },
+              }
             ]
           }
         end

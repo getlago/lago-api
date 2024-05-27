@@ -100,7 +100,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
                 transaction_id: '123456',
                 properties: {foo: 'bar'},
                 timestamp:
-              },
+              }
             ]
           }
         end
@@ -135,7 +135,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               transaction_id: SecureRandom.uuid,
               properties: {foo: 'bar'},
               timestamp:
-            },
+            }
           ]
         }
       end
@@ -161,7 +161,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               transaction_id: SecureRandom.uuid,
               properties: {foo: 'bar'},
               timestamp:
-            },
+            }
           ]
         }
       end
@@ -187,7 +187,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               transaction_id: SecureRandom.uuid,
               properties: {foo: 'bar'},
               timestamp:
-            },
+            }
           ]
         }
       end

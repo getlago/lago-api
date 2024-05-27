@@ -34,7 +34,7 @@ module Charges
             to_value: nil,
             per_unit_amount: '0',
             flat_amount: '0'
-          },
+          }
         ]
       }
     end
@@ -59,7 +59,7 @@ module Charges
             to_value: nil,
             per_unit_amount: '0',
             flat_amount: '0'
-          },
+          }
         ]
       }
     end
@@ -73,7 +73,7 @@ module Charges
             rate: '0',
             fixed_amount: '0',
             flat_amount: '0'
-          },
+          }
         ]
       }
     end

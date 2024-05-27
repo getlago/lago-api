@@ -125,7 +125,7 @@ module Events
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
             query.query,
-            {decimal_scale: DECIMAL_SCALE},
+            {decimal_scale: DECIMAL_SCALE}
           ],
         )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
@@ -140,7 +140,7 @@ module Events
           ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               query.breakdown_query,
-              {decimal_scale: DECIMAL_SCALE},
+              {decimal_scale: DECIMAL_SCALE}
             ],
           ),
         ).rows
@@ -156,7 +156,7 @@ module Events
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
               timezone: customer.applicable_timezone
-            },
+            }
           ],
         )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
@@ -174,7 +174,7 @@ module Events
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
               timezone: customer.applicable_timezone
-            },
+            }
           ],
         )
 
@@ -189,7 +189,7 @@ module Events
             {
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE
-            },
+            }
           ],
         )
 
@@ -206,7 +206,7 @@ module Events
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
               timezone: customer.applicable_timezone
-            },
+            }
           ],
         )
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
@@ -396,7 +396,7 @@ module Events
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE,
               initial_value: initial_value || 0
-            },
+            }
           ],
         )
 
@@ -431,7 +431,7 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE
-            },
+            }
           ],
         )
 
@@ -451,7 +451,7 @@ module Events
                 to_datetime: to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE,
                 initial_value: initial_value || 0
-              },
+              }
             ],
           ),
         ).rows
@@ -498,7 +498,7 @@ module Events
           [
             'toDecimal128OrNull(events_raw.properties[?], ?) IS NOT NULL',
             aggregation_property,
-            DECIMAL_SCALE,
+            DECIMAL_SCALE
           ],
         )
       end

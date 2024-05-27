@@ -144,7 +144,7 @@ module Api
             :refund_amount_cents,
             items: [
               :fee_id,
-              :amount_cents,
+              :amount_cents
             ],
           )
       end
@@ -159,7 +159,7 @@ module Api
             :invoice_id,
             items: [
               :fee_id,
-              :amount_cents,
+              :amount_cents
             ],
           )
       end

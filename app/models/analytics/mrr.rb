@@ -12,7 +12,7 @@ module Analytics
           and_months_sql = sanitize_sql(
             [
               "AND am.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL ':months months')",
-              {months: months_interval},
+              {months: months_interval}
             ],
           )
         end
@@ -187,7 +187,7 @@ module Analytics
           Date.current.strftime('%Y-%m-%d'),
           organization_id,
           args[:currency],
-          args[:months],
+          args[:months]
         ].join('/')
       end
     end

@@ -79,7 +79,7 @@ module Wallets
         interval: :weekly,
         conditions: [
           "EXTRACT(ISODOW FROM (wallets.created_at#{at_time_zone})) =
-          EXTRACT(ISODOW FROM (:today#{at_time_zone}))",
+          EXTRACT(ISODOW FROM (:today#{at_time_zone}))"
         ],
       )
     end

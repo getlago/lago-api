@@ -30,7 +30,7 @@ RSpec.describe ::V1::Customers::UsageSerializer do
           amount_cents: 5,
           amount_currency: 'EUR',
           groups: [],
-        ),
+        )
       ],
     )
   end

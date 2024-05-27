@@ -14,7 +14,7 @@ module Subscriptions
         'charge-usage',
         charge.id,
         subscription.id,
-        charge.updated_at.iso8601,
+        charge.updated_at.iso8601
       ].join('/')
     end
 

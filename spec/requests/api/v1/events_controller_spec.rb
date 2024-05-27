@@ -76,7 +76,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
               properties: {
                 foo: 'bar'
               }
-            },
+            }
           ],
         )
       end.to change(Event, :count).by(1)

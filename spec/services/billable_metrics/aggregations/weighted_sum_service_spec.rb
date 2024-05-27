@@ -48,7 +48,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
       {timestamp: Time.zone.parse('2023-08-01 02:00:00'), value: -4},
       {timestamp: Time.zone.parse('2023-08-01 04:00:00'), value: -2},
       {timestamp: Time.zone.parse('2023-08-01 05:00:00'), value: 10},
-      {timestamp: Time.zone.parse('2023-08-01 05:30:00'), value: -10},
+      {timestamp: Time.zone.parse('2023-08-01 05:30:00'), value: -10}
     ]
   end
 
@@ -80,7 +80,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
   context 'with a single event' do
     let(:events_values) do
       [
-        {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 1000},
+        {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 1000}
       ]
     end
 
@@ -108,7 +108,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
     let(:events_values) do
       [
         {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3},
-        {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3},
+        {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3}
       ]
     end
 
@@ -220,7 +220,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
           {timestamp: DateTime.parse('2023-08-01 02:00:00'), value: -4},
           {timestamp: DateTime.parse('2023-08-01 04:00:00'), value: -2},
           {timestamp: DateTime.parse('2023-08-01 05:00:00'), value: 10},
-          {timestamp: DateTime.parse('2023-08-01 05:30:00'), value: -10},
+          {timestamp: DateTime.parse('2023-08-01 05:30:00'), value: -10}
         ]
       end
 
@@ -243,7 +243,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
 
     let(:events_values) do
       [
-        {timestamp: DateTime.parse('2023-08-01 00:00:00.000'), value: 1000, region: 'europe'},
+        {timestamp: DateTime.parse('2023-08-01 00:00:00.000'), value: 1000, region: 'europe'}
       ]
     end
 
@@ -275,7 +275,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         {timestamp: Time.zone.parse('2023-08-01 02:00:00'), value: -4, agent_name: 'frodo'},
         {timestamp: Time.zone.parse('2023-08-01 04:00:00'), value: -2, agent_name: 'frodo'},
         {timestamp: Time.zone.parse('2023-08-01 05:00:00'), value: 10, agent_name: 'frodo'},
-        {timestamp: Time.zone.parse('2023-08-01 05:30:00'), value: -10, agent_name: 'frodo'},
+        {timestamp: Time.zone.parse('2023-08-01 05:30:00'), value: -10, agent_name: 'frodo'}
       ]
     end
 
@@ -313,7 +313,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
           {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3, agent_name: 'aragorn'},
 
           {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3, agent_name: 'frodo'},
-          {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3, agent_name: 'frodo'},
+          {timestamp: Time.zone.parse('2023-08-01 00:00:00.000'), value: 3, agent_name: 'frodo'}
         ]
       end
 
@@ -355,7 +355,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
             timestamp: from_datetime - 1.day,
             current_aggregation: 1000,
             grouped_by: {'agent_name' => 'frodo'},
-          ),
+          )
         ]
       end
 
@@ -472,7 +472,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
             {timestamp: DateTime.parse('2023-08-01 02:00:00'), value: -4, agent_name: 'frodo'},
             {timestamp: DateTime.parse('2023-08-01 04:00:00'), value: -2, agent_name: 'frodo'},
             {timestamp: DateTime.parse('2023-08-01 05:00:00'), value: 10, agent_name: 'frodo'},
-            {timestamp: DateTime.parse('2023-08-01 05:30:00'), value: -10, agent_name: 'frodo'},
+            {timestamp: DateTime.parse('2023-08-01 05:30:00'), value: -10, agent_name: 'frodo'}
           ]
         end
 
@@ -506,7 +506,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
             region: 'europe',
             agent_name: 'aragorn'
           },
-          {timestamp: DateTime.parse('2023-08-01 00:00:00.000'), value: 1000, region: 'europe', agent_name: 'frodo'},
+          {timestamp: DateTime.parse('2023-08-01 00:00:00.000'), value: 1000, region: 'europe', agent_name: 'frodo'}
         ]
       end
 

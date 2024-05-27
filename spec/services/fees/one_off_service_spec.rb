@@ -25,7 +25,7 @@ RSpec.describe Fees::OneOffService do
       },
       {
         add_on_code: add_on_second.code
-      },
+      }
     ]
   end
 
@@ -86,7 +86,7 @@ RSpec.describe Fees::OneOffService do
           },
           {
             add_on_code: 'invalid'
-          },
+          }
         ]
       end
 
@@ -106,7 +106,7 @@ RSpec.describe Fees::OneOffService do
             units: 2,
             description: 'desc-123',
             tax_codes: [tax2.code]
-          },
+          }
         ]
       end
 

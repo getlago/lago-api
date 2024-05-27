@@ -11,13 +11,13 @@ class AppliedCoupon < ApplicationRecord
 
   STATUSES = [
     :active,
-    :terminated,
+    :terminated
   ].freeze
 
   FREQUENCIES = [
     :once,
     :recurring,
-    :forever,
+    :forever
   ].freeze
 
   enum status: STATUSES

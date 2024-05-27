@@ -73,7 +73,7 @@ module Charges
       def free_units_count
         [
           free_units_per_events,
-          aggregation_result.options[:running_total]&.count { |e| e < free_units_per_total_aggregation } || 0,
+          aggregation_result.options[:running_total]&.count { |e| e < free_units_per_total_aggregation } || 0
         ].excluding(0).min || 0
       end
 

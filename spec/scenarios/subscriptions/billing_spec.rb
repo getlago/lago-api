@@ -112,14 +112,14 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2023, 2, 12, 18, 0), # 12th of Feb 18:00 UTC - 12th of Feb 23:30 Asia/Kolkata
+            DateTime.new(2023, 2, 12, 18, 0) # 12th of Feb 18:00 UTC - 12th of Feb 23:30 Asia/Kolkata
           ]
         end
         let(:billing_times) do
           [
             DateTime.new(2023, 2, 12, 19, 0), # 12th of Feb 19:00 UTC - 13th of Feb 00:30 Asia/Kolkata
             DateTime.new(2023, 2, 13, 0, 0), # 13th of Feb 00:00 UTC - 13th of Feb 05:30 Asia/Kolkata
-            DateTime.new(2023, 2, 13, 18, 0), # 13th of Feb 18:00 UTC - 13th of Feb 23:30 Asia/Kolkata
+            DateTime.new(2023, 2, 13, 18, 0) # 13th of Feb 18:00 UTC - 13th of Feb 23:30 Asia/Kolkata
           ]
         end
         let(:after_billing_times) do
@@ -135,7 +135,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2023, 2, 13, 4, 0), # 13th of Feb 04:00 UTC - 12th of Feb 23:00 America/Bogota
+            DateTime.new(2023, 2, 13, 4, 0) # 13th of Feb 04:00 UTC - 12th of Feb 23:00 America/Bogota
           ]
         end
         let(:billing_times) do
@@ -143,7 +143,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 2, 13, 5, 0), # 13th of Feb 05:00 UTC - 13th of Feb 00:00 America/Bogota
             DateTime.new(2023, 2, 13, 6, 0), # 13th of Feb 06:00 UTC - 13th of Feb 1:00 America/Bogota
             DateTime.new(2023, 2, 13, 3, 0), # 13th of Feb 23:00 UTC - 13th of Feb 18:00 America/Bogota
-            DateTime.new(2023, 2, 14, 4, 0), # 14th of Feb 04:00 UTC - 13th of Feb 23:00 America/Bogota
+            DateTime.new(2023, 2, 14, 4, 0) # 14th of Feb 04:00 UTC - 13th of Feb 23:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
@@ -170,7 +170,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2023, 5, 22, 21, 0), # 22sd of May 21:00 UTC - 22sd of May 23:00 Europe/Paris
+            DateTime.new(2023, 5, 22, 21, 0) # 22sd of May 21:00 UTC - 22sd of May 23:00 Europe/Paris
           ]
         end
         let(:billing_times) do
@@ -178,7 +178,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 5, 22, 22, 0), # 22sd of May 22:00 UTC - 23rd of May 00:00 Europe/Paris
             DateTime.new(2023, 5, 23, 20, 0), # 23rd of May 20:00 UTC - 23rd of May 22:00 Europe/Paris
             DateTime.new(2023, 5, 23, 21, 0), # 23rd of May 21:00 UTC - 23rd of May 23:00 Europe/Paris
-            DateTime.new(2023, 5, 23, 22, 10), # 23rd of May 22:59 UTC - 24th of May 00:59 Europe/Paris
+            DateTime.new(2023, 5, 23, 22, 10) # 23rd of May 22:59 UTC - 24th of May 00:59 Europe/Paris
           ]
         end
         let(:after_billing_times) do
@@ -194,7 +194,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2023, 2, 15, 4, 0), # 15th of Feb 04:00 UTC - 14th of Feb 23:00 America/Bogota
+            DateTime.new(2023, 2, 15, 4, 0) # 15th of Feb 04:00 UTC - 14th of Feb 23:00 America/Bogota
           ]
         end
         let(:billing_times) do
@@ -202,7 +202,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 2, 15, 5, 0), # 15th of Feb 05:00 UTC - 15th of Feb 00:00 America/Bogota
             DateTime.new(2023, 2, 15, 6, 0), # 15th of Feb 06:00 UTC - 15th of Feb 1:00 America/Bogota
             DateTime.new(2023, 2, 15, 3, 0), # 15th of Feb 23:00 UTC - 15th of Feb 18:00 America/Bogota
-            DateTime.new(2023, 2, 16, 4, 0), # 16th of Feb 04:00 UTC - 15th of Feb 23:00 America/Bogota
+            DateTime.new(2023, 2, 16, 4, 0) # 16th of Feb 04:00 UTC - 15th of Feb 23:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
@@ -238,13 +238,13 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [
             DateTime.new(2023, 2, 28, 19, 0), # 28 of Feb 19:00 UTC - 1st of Mar 00:30 Asia/Kolkata
             DateTime.new(2023, 3, 1, 0, 0), # 1st of Mar 00:00 UTC - 1st of Mar 05:30 Asia/Kolkata
-            DateTime.new(2023, 3, 1, 18, 0), # 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
+            DateTime.new(2023, 3, 1, 18, 0) # 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
           ]
         end
         let(:after_billing_times) do
           [
             DateTime.new(2023, 3, 1, 19, 0), # 1st of Mar 19:00 UTC - 2nd of Mar 00:30 Asia/Kolkata
-            DateTime.new(2023, 3, 2, 0, 0), # 2nd of Mar 00:00 UTC - 2nd of Mar 05:30 Asia/Kolkata
+            DateTime.new(2023, 3, 2, 0, 0) # 2nd of Mar 00:00 UTC - 2nd of Mar 05:30 Asia/Kolkata
           ]
         end
 
@@ -263,13 +263,13 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 3, 1, 5, 0), # 1st of Mar 05:00 UTC - 1st of Mar 00:00 America/Bogota
             DateTime.new(2023, 3, 1, 6, 0), # 1st of Mar 06:00 UTC - 1st of Mar 01:00 America/Bogota
             DateTime.new(2023, 3, 1, 0, 0), # 2nd of Mar 00:00 UTC - 1st of Mar 19:00 America/Bogota
-            DateTime.new(2023, 3, 2, 4, 0), # 2nd of Mar 04:00 UTC - 1st of Mar 23:00 America/Bogota
+            DateTime.new(2023, 3, 2, 4, 0) # 2nd of Mar 04:00 UTC - 1st of Mar 23:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
           [
             DateTime.new(2023, 3, 2, 5, 0), # 2nd of Mar 05:00 UTC - 2nd of Mar 00:00 America/Bogota
-            DateTime.new(2023, 3, 3, 5, 0), # 3th of Mar 05:00 UTC - 3th of Mar 00:00 America/Bogota
+            DateTime.new(2023, 3, 3, 5, 0) # 3th of Mar 05:00 UTC - 3th of Mar 00:00 America/Bogota
           ]
         end
 
@@ -314,7 +314,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 12, 31, 2),
             DateTime.new(2024, 1, 31, 2),
             DateTime.new(2024, 2, 29, 2),
-            DateTime.new(2024, 3, 31, 2),
+            DateTime.new(2024, 3, 31, 2)
           ]
         end
 
@@ -339,7 +339,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 11, 30, 2),
             DateTime.new(2023, 12, 30, 2),
             DateTime.new(2024, 2, 29, 2),
-            DateTime.new(2024, 3, 30, 2),
+            DateTime.new(2024, 3, 30, 2)
           ]
         end
 
@@ -362,7 +362,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 9, 28, 2),
             DateTime.new(2023, 10, 28, 2),
             DateTime.new(2023, 11, 28, 2),
-            DateTime.new(2023, 12, 28, 2),
+            DateTime.new(2023, 12, 28, 2)
           ]
         end
 
@@ -377,14 +377,14 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2023, 3, 1, 18, 0), # 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
+            DateTime.new(2023, 3, 1, 18, 0) # 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
           ]
         end
         let(:billing_times) do
           [
             DateTime.new(2023, 3, 1, 19, 0), # 1st of Mar 19:00 UTC - 2nd of Mar 00:30 Asia/Kolkata
             DateTime.new(2023, 3, 2, 0, 0), # 2nd of Mar 00:00 UTC - 2nd of Mar 05:30 Asia/Kolkata
-            DateTime.new(2023, 3, 2, 18, 0), # 2nd of Mar 18:00 UTC - 2nd of Mar 23:30 Asia/Kolkata
+            DateTime.new(2023, 3, 2, 18, 0) # 2nd of Mar 18:00 UTC - 2nd of Mar 23:30 Asia/Kolkata
           ]
         end
         let(:after_billing_times) do
@@ -401,14 +401,14 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
         let(:before_billing_times) do
           [
             DateTime.new(2023, 3, 1, 23, 0), # 1st of Mar 23:00 UTC - 1st of Mar 18:00 America/Bogota
-            DateTime.new(2023, 3, 2, 4, 0), # 2nd of Mar 04:00 UTC - 1st of Mar 23:00 America/Bogota
+            DateTime.new(2023, 3, 2, 4, 0) # 2nd of Mar 04:00 UTC - 1st of Mar 23:00 America/Bogota
           ]
         end
         let(:billing_times) do
           [
             DateTime.new(2023, 3, 2, 6, 0), # 2nd of Mar 06:00 UTC - 2nd of Mar 01:00 America/Bogota
             DateTime.new(2023, 3, 1, 7, 0), # 2nd of Mar 07:00 UTC - 2nd of Mar 02:00 America/Bogota
-            DateTime.new(2023, 3, 3, 0, 0), # 3rd of Mar 00:00 UTC - 2nd of Mar 19:00 America/Bogota
+            DateTime.new(2023, 3, 3, 0, 0) # 3rd of Mar 00:00 UTC - 2nd of Mar 19:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
@@ -444,13 +444,13 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [
             DateTime.new(2023, 3, 31, 19, 0), # 31 of Mar 19:00 UTC - 1st of Apr 00:30 Asia/Kolkata
             DateTime.new(2023, 4, 1, 0, 0), # 1st of Apr 00:00 UTC - 1st of Apr 05:30 Asia/Kolkata
-            DateTime.new(2023, 4, 1, 18, 0), # 1st of Apr 18:00 UTC - 1st of Apr 23:30 Asia/Kolkata
+            DateTime.new(2023, 4, 1, 18, 0) # 1st of Apr 18:00 UTC - 1st of Apr 23:30 Asia/Kolkata
           ]
         end
         let(:after_billing_times) do
           [
             DateTime.new(2023, 4, 1, 19, 0), # 1st of Apr 19:00 UTC - 2nd of Apr 00:30 Asia/Kolkata
-            DateTime.new(2023, 4, 2, 0, 0), # 2nd of Apr 00:00 UTC - 2nd of Apr 05:30 Asia/Kolkata
+            DateTime.new(2023, 4, 2, 0, 0) # 2nd of Apr 00:00 UTC - 2nd of Apr 05:30 Asia/Kolkata
           ]
         end
 
@@ -469,13 +469,13 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 4, 1, 5, 0), # 1st of Apr 05:00 UTC - 1st of Apr 00:00 America/Bogota
             DateTime.new(2023, 4, 1, 6, 0), # 1st of Apr 06:00 UTC - 1st of Apr 01:00 America/Bogota
             DateTime.new(2023, 4, 2, 0, 0), # 2nd of Apr 00:00 UTC - 1st of Apr 19:00 America/Bogota
-            DateTime.new(2023, 4, 2, 4, 0), # 2nd of Apr 04:00 UTC - 1st of Apr 23:00 America/Bogota
+            DateTime.new(2023, 4, 2, 4, 0) # 2nd of Apr 04:00 UTC - 1st of Apr 23:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
           [
             DateTime.new(2023, 4, 2, 5, 0), # 2nd of Apr 05:00 UTC - 2nd of Apr 00:00 America/Bogota
-            DateTime.new(2023, 4, 3, 5, 0), # 3th of Apr 05:00 UTC - 3th of Apr 00:00 America/Bogota
+            DateTime.new(2023, 4, 3, 5, 0) # 3th of Apr 05:00 UTC - 3th of Apr 00:00 America/Bogota
           ]
         end
 
@@ -509,7 +509,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 3, 31, 1),
             DateTime.new(2023, 6, 30, 1),
             DateTime.new(2023, 9, 30, 2),
-            DateTime.new(2023, 12, 31, 2),
+            DateTime.new(2023, 12, 31, 2)
           ]
         end
 
@@ -524,7 +524,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 1, 30, 1),
             DateTime.new(2023, 4, 30, 1),
             DateTime.new(2023, 7, 30, 2),
-            DateTime.new(2023, 10, 30, 2),
+            DateTime.new(2023, 10, 30, 2)
           ]
         end
 
@@ -539,7 +539,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 2, 28, 1),
             DateTime.new(2023, 5, 28, 1),
             DateTime.new(2023, 8, 28, 2),
-            DateTime.new(2023, 11, 28, 2),
+            DateTime.new(2023, 11, 28, 2)
           ]
         end
 
@@ -554,14 +554,14 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2023, 5, 1, 18, 0), # 1st of May 18:00 UTC - 1st of May 23:30 Asia/Kolkata
+            DateTime.new(2023, 5, 1, 18, 0) # 1st of May 18:00 UTC - 1st of May 23:30 Asia/Kolkata
           ]
         end
         let(:billing_times) do
           [
             DateTime.new(2023, 5, 1, 19, 0), # 1st of May 19:00 UTC - 2nd of May 00:30 Asia/Kolkata
             DateTime.new(2023, 5, 2, 0, 0), # 2nd of May 00:00 UTC - 2nd of May 05:30 Asia/Kolkata
-            DateTime.new(2023, 5, 2, 18, 0), # 2nd of May 18:00 UTC - 2nd of May 23:30 Asia/Kolkata
+            DateTime.new(2023, 5, 2, 18, 0) # 2nd of May 18:00 UTC - 2nd of May 23:30 Asia/Kolkata
           ]
         end
         let(:after_billing_times) do
@@ -578,14 +578,14 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
         let(:before_billing_times) do
           [
             DateTime.new(2023, 5, 1, 23, 0), # 1st of May 23:00 UTC - 1st of May 18:00 America/Bogota
-            DateTime.new(2023, 5, 2, 4, 0), # 2nd of May 04:00 UTC - 1st of May 23:00 America/Bogota
+            DateTime.new(2023, 5, 2, 4, 0) # 2nd of May 04:00 UTC - 1st of May 23:00 America/Bogota
           ]
         end
         let(:billing_times) do
           [
             DateTime.new(2023, 5, 2, 6, 0), # 2nd of May 06:00 UTC - 2nd of May 01:00 America/Bogota
             DateTime.new(2023, 5, 1, 7, 0), # 2nd of May 07:00 UTC - 2nd of May 02:00 America/Bogota
-            DateTime.new(2023, 5, 3, 0, 0), # 3rd of May 00:00 UTC - 2nd of May 19:00 America/Bogota
+            DateTime.new(2023, 5, 3, 0, 0) # 3rd of May 00:00 UTC - 2nd of May 19:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
@@ -616,20 +616,20 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2022, 12, 31, 21, 0), # 31th of Dec 21:00 UTC - 31th of Dec 23:00 Europe/Paris
+            DateTime.new(2022, 12, 31, 21, 0) # 31th of Dec 21:00 UTC - 31th of Dec 23:00 Europe/Paris
           ]
         end
         let(:billing_times) do
           [
             DateTime.new(2022, 12, 31, 23, 0), # 31th of Dec 23:00 UTC - 1st of Jan 01:00 Europe/Paris
             DateTime.new(2023, 1, 1, 20, 0), # 1st of Jan 20:00 UTC - 1st of Jan 22:00 Europe/Paris
-            DateTime.new(2023, 1, 1, 21, 0), # 1st of Jan 21:00 UTC - 1st of Jan 23:00 Europe/Paris
+            DateTime.new(2023, 1, 1, 21, 0) # 1st of Jan 21:00 UTC - 1st of Jan 23:00 Europe/Paris
           ]
         end
         let(:after_billing_times) do
           [
             DateTime.new(2023, 1, 1, 22, 59), # 1st of Jan 22:59 UTC - 2nd of Jan 00:59 Europe/Paris
-            DateTime.new(2023, 1, 2, 0, 10), # 2nd of Jan 00:10 UTC - 2nd of Jan 02:10 Europe/Paris
+            DateTime.new(2023, 1, 2, 0, 10) # 2nd of Jan 00:10 UTC - 2nd of Jan 02:10 Europe/Paris
           ]
         end
 
@@ -647,7 +647,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [
             DateTime.new(2023, 1, 1, 5, 0), # 1st of Jan 05:00 UTC - 1st of Jan 00:00 America/Bogota
             DateTime.new(2023, 1, 1, 6, 0), # 1st of Jan 06:00 UTC - 1st of Jan 01:00 America/Bogota
-            DateTime.new(2023, 1, 2, 0, 0), # 2nd of Jan 00:00 UTC - 1st of Jan 19:00 America/Bogota
+            DateTime.new(2023, 1, 2, 0, 0) # 2nd of Jan 00:00 UTC - 1st of Jan 19:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
@@ -684,7 +684,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2023, 4, 1, 21, 0), # 1st of April 21:00 UTC - 1st of April 23:00 Europe/Paris
+            DateTime.new(2023, 4, 1, 21, 0) # 1st of April 21:00 UTC - 1st of April 23:00 Europe/Paris
           ]
         end
         let(:billing_times) do
@@ -692,12 +692,12 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 4, 2, 23, 0), # 1st of April 23:00 UTC - 2nd of April 01:00 Europe/Paris
             DateTime.new(2023, 4, 2, 20, 0), # 2nd of April 20:00 UTC - 2nd of April 22:00 Europe/Paris
             DateTime.new(2023, 4, 2, 21, 0), # 2nd of April 21:00 UTC - 2nd of April 23:00 Europe/Paris
-            DateTime.new(2023, 4, 2, 22, 10), # 2nd of April 22:59 UTC - 3rd of April 00:59 Europe/Paris
+            DateTime.new(2023, 4, 2, 22, 10) # 2nd of April 22:59 UTC - 3rd of April 00:59 Europe/Paris
           ]
         end
         let(:after_billing_times) do
           [
-            DateTime.new(2023, 4, 3, 0, 10), # 3rd of April 00:10 UTC - 3rd of April 02:10 Europe/Paris
+            DateTime.new(2023, 4, 3, 0, 10) # 3rd of April 00:10 UTC - 3rd of April 02:10 Europe/Paris
           ]
         end
 
@@ -715,7 +715,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [
             DateTime.new(2023, 2, 4, 5, 0), # 4th of Feb 05:00 UTC - 4th of Feb 00:00 America/Bogota
             DateTime.new(2023, 2, 4, 6, 0), # 4th of Feb 06:00 UTC - 4th of Feb 01:00 America/Bogota
-            DateTime.new(2023, 2, 5, 0, 0), # 5th of Feb 00:00 UTC - 4th of Feb 19:00 America/Bogota
+            DateTime.new(2023, 2, 5, 0, 0) # 5th of Feb 00:00 UTC - 4th of Feb 19:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
@@ -753,13 +753,13 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [
             DateTime.new(2023, 2, 28, 19, 0), # 28 of Feb 19:00 UTC - 1st of Mar 00:30 Asia/Kolkata
             DateTime.new(2023, 3, 1, 0, 0), # 1st of Mar 00:00 UTC - 1st of Mar 05:30 Asia/Kolkata
-            DateTime.new(2023, 3, 1, 18, 0), # 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
+            DateTime.new(2023, 3, 1, 18, 0) # 1st of Mar 18:00 UTC - 1st of Mar 23:30 Asia/Kolkata
           ]
         end
         let(:after_billing_times) do
           [
             DateTime.new(2023, 3, 1, 19, 0), # 1st of Mar 19:00 UTC - 2nd of Mar 00:30 Asia/Kolkata
-            DateTime.new(2023, 3, 2, 0, 0), # 2nd of Mar 00:00 UTC - 2nd of Mar 05:30 Asia/Kolkata
+            DateTime.new(2023, 3, 2, 0, 0) # 2nd of Mar 00:00 UTC - 2nd of Mar 05:30 Asia/Kolkata
           ]
         end
 
@@ -778,13 +778,13 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 3, 1, 5, 0), # 1st of Mar 05:00 UTC - 1st of Mar 00:00 America/Bogota
             DateTime.new(2023, 3, 1, 6, 0), # 1st of Mar 06:00 UTC - 1st of Mar 01:00 America/Bogota
             DateTime.new(2023, 3, 1, 0, 0), # 2nd of Mar 00:00 UTC - 1st of Mar 19:00 America/Bogota
-            DateTime.new(2023, 3, 2, 4, 0), # 2nd of Mar 04:00 UTC - 1st of Mar 23:00 America/Bogota
+            DateTime.new(2023, 3, 2, 4, 0) # 2nd of Mar 04:00 UTC - 1st of Mar 23:00 America/Bogota
           ]
         end
         let(:after_billing_times) do
           [
             DateTime.new(2023, 3, 2, 5, 0), # 2nd of Mar 05:00 UTC - 2nd of Mar 00:00 America/Bogota
-            DateTime.new(2023, 3, 3, 5, 0), # 3th of Mar 05:00 UTC - 3th of Mar 00:00 America/Bogota
+            DateTime.new(2023, 3, 3, 5, 0) # 3th of Mar 05:00 UTC - 3th of Mar 00:00 America/Bogota
           ]
         end
 
@@ -819,7 +819,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:before_billing_times) do
           [
-            DateTime.new(2023, 4, 1, 21, 0), # 1st of April 21:00 UTC - 1st of April 23:00 Europe/Paris
+            DateTime.new(2023, 4, 1, 21, 0) # 1st of April 21:00 UTC - 1st of April 23:00 Europe/Paris
           ]
         end
         let(:billing_times) do
@@ -827,12 +827,12 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             DateTime.new(2023, 4, 2, 22, 0), # 1st of April 23:00 UTC - 2nd of April 01:00 Europe/Paris
             DateTime.new(2023, 4, 2, 20, 0), # 2nd of April 20:00 UTC - 2nd of April 22:00 Europe/Paris
             DateTime.new(2023, 4, 2, 21, 0), # 2nd of April 21:00 UTC - 2nd of April 23:00 Europe/Paris
-            DateTime.new(2023, 4, 2, 22, 10), # 2nd of April 22:59 UTC - 3rd of April 00:59 Europe/Paris
+            DateTime.new(2023, 4, 2, 22, 10) # 2nd of April 22:59 UTC - 3rd of April 00:59 Europe/Paris
           ]
         end
         let(:after_billing_times) do
           [
-            DateTime.new(2023, 4, 3, 0, 10), # 3rd of April 00:10 UTC - 3rd of April 02:10 Europe/Paris
+            DateTime.new(2023, 4, 3, 0, 10) # 3rd of April 00:10 UTC - 3rd of April 02:10 Europe/Paris
           ]
         end
 
@@ -850,7 +850,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [
             DateTime.new(2023, 3, 4, 5, 0), # 4th of Mar 05:00 UTC - 4th of Mar 00:00 America/Bogota
             DateTime.new(2023, 3, 4, 6, 0), # 4th of Mar 06:00 UTC - 4th of Mar 01:00 America/Bogota
-            DateTime.new(2023, 3, 5, 0, 0), # 5th of Mar 00:00 UTC - 4th of Mar 19:00 America/Bogota
+            DateTime.new(2023, 3, 5, 0, 0) # 5th of Mar 00:00 UTC - 4th of Mar 19:00 America/Bogota
           ]
         end
         let(:after_billing_times) do

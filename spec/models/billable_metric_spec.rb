@@ -156,7 +156,7 @@ RSpec.describe BillableMetric, type: :model do
                 name: 'italy',
                 key: 'cloud',
                 values: %w[google]
-              },
+              }
             ]
           },
         )

@@ -691,7 +691,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 0, to: 10_000, rate: '0.4'},
               {from: 10_001, to: 15_000, rate: '0.3'},
               {from: 15_001, to: 22_000, rate: '0.25'},
-              {from: 22_001, to: nil, rate: '0.2'},
+              {from: 22_001, to: nil, rate: '0.2'}
             ],
             fx_rate: 0.88
           }
@@ -725,7 +725,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 0, to: 10_000, amount: '0.6'},
               {from: 10_001, to: 15_000, amount: '0.5'},
               {from: 15_001, to: 22_000, amount: '0.45'},
-              {from: 22_001, to: nil, amount: '0.4'},
+              {from: 22_001, to: nil, amount: '0.4'}
             ]
           }
         },

@@ -160,7 +160,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             values: %w[visa mastercard],
             billable_metric_filter: scheme,
             charge_filter: filter,
-          ),
+          )
         ]
       end
 

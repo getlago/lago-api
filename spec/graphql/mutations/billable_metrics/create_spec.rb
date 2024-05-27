@@ -43,7 +43,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
             {
               key: 'region',
               values: %w[usa europe]
-            },
+            }
           ]
         }
       },
