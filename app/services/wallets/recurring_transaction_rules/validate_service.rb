@@ -11,6 +11,7 @@ module Wallets
       def call
         return false unless valid_trigger?
         return false unless valid_method?
+        return false unless valid_credits?
 
         true
       end
@@ -40,11 +41,18 @@ module Wallets
       end
 
       def valid_method?
-        (method == "target") ? valid_target_method? : true
+        (method == "target") ? valid_decimal?(params[:target_ongoing_balance]) : true
       end
 
-      def valid_target_method?
-        ::Validators::DecimalAmountService.new(params[:target_ongoing_balance]).valid_decimal?
+      def valid_credits?
+        return true unless params[:paid_credits] || params[:granted_credits]
+
+        params[:paid_credits] && valid_decimal?(params[:paid_credits]) ||
+          params[:granted_credits] && valid_decimal?(params[:granted_credits])
+      end
+
+      def valid_decimal?(value)
+        ::Validators::DecimalAmountService.new(value).valid_decimal?
       end
     end
   end
