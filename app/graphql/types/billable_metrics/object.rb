@@ -30,7 +30,9 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      field :integration_mappings, [Types::IntegrationMappings::Object], null: true
+      field :integration_mappings, [Types::IntegrationMappings::Object], null: true do
+        argument :integration_id, ID, required: false
+      end
 
       def subscriptions_count
         object.plans.joins(:subscriptions).count
@@ -51,6 +53,12 @@ module Types
 
       def plans_count
         object.plans.distinct.count
+      end
+
+      def integration_mappings(integration_id: nil)
+        mappings = object.integration_mappings
+        mappings = mappings.where(integration_id:) if integration_id
+        mappings
       end
     end
   end
