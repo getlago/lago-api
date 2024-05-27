@@ -37,7 +37,7 @@ class FillCachedAggregations < ActiveRecord::Migration[7.0]
               .where([
                 "metadata->>'current_aggregation' IS NOT NULL",
                 "metadata->>'max_aggregation' IS NOT NULL",
-                "metadata->>'max_aggregation_with_proration' IS NOT NULL",
+                "metadata->>'max_aggregation_with_proration' IS NOT NULL"
               ].join(' OR '))
 
             events.find_each do |event|

@@ -66,7 +66,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
               paidCredits: '22.2',
               grantedCredits: '22.2',
               targetOngoingBalance: '300'
-            },
+            }
           ]
         }
       },

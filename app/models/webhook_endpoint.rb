@@ -5,7 +5,7 @@ class WebhookEndpoint < ApplicationRecord
 
   SIGNATURE_ALGOS = [
     :jwt,
-    :hmac,
+    :hmac
   ].freeze
 
   belongs_to :organization

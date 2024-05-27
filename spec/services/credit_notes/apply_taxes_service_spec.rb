@@ -93,7 +93,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         amount_cents: 50,
         precise_amount_cents: 50,
         amount_currency: invoice.currency,
-      ),
+      )
     ]
   end
 

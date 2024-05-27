@@ -34,7 +34,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               to_value: nil,
               per_unit_amount: '0.01',
               flat_amount: '0.01'
-            },
+            }
           ]
         },
       )
@@ -44,7 +44,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       [
         '/api/v1/customers',
         customer.external_id,
-        "current_usage?external_subscription_id=#{subscription.external_id}",
+        "current_usage?external_subscription_id=#{subscription.external_id}"
       ].join('/')
     end
 
@@ -361,7 +361,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       [
         '/api/v1/customers',
         customer.external_id,
-        "past_usage?external_subscription_id=#{subscription.external_id}&periods_count=2",
+        "past_usage?external_subscription_id=#{subscription.external_id}&periods_count=2"
       ].join('/')
     end
 
@@ -406,7 +406,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         [
           '/api/v1/customers',
           customer.external_id,
-          'past_usage',
+          'past_usage'
         ].join('/')
       end
 
@@ -422,7 +422,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         [
           '/api/v1/customers',
           customer.external_id,
-          "past_usage?billable_metric_code=foo&external_subscription_id=#{subscription.external_id}",
+          "past_usage?billable_metric_code=foo&external_subscription_id=#{subscription.external_id}"
         ].join('/')
       end
 

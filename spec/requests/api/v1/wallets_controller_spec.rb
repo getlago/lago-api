@@ -72,7 +72,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
             {
               trigger: 'interval',
               interval: 'monthly'
-            },
+            }
           ]
         }
       end
@@ -170,7 +170,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               interval: 'weekly',
               paid_credits: '105',
               granted_credits: '105'
-            },
+            }
           ]
         }
       end

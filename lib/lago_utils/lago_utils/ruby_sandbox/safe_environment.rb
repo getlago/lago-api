@@ -101,7 +101,7 @@ module LagoUtils
         :RubyToken,
         :RubyLex,
         :RUBYGEMS_ACTIVATION_MONITOR,
-        :JSON,
+        :JSON
       ].freeze
 
       KERNEL_S_METHODS = %w[

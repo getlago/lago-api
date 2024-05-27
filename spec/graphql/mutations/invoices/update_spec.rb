@@ -36,7 +36,7 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
             {
               key: 'test-key',
               value: 'value'
-            },
+            }
           ]
         }
       },

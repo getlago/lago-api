@@ -176,9 +176,9 @@ RSpec.describe Integrations::Aggregator::SalesOrders::CreateService do
               'account' => '11',
               'quantity' => 1,
               'rate' => -60.0
-            },
+            }
           ]
-        },
+        }
       ],
       'options' => {
         'ignoreMandatoryFields' => false

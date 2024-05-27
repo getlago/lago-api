@@ -48,7 +48,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
           key: 'cloud',
           values: [
             {name: 'AWS', key: 'region', values: %w[usa europe]},
-            {name: 'Google', key: 'region', values: ['usa']},
+            {name: 'Google', key: 'region', values: ['usa']}
           ]
         }
       end
@@ -76,7 +76,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
           {
             key: 'cloud',
             values: %w[aws google]
-          },
+          }
         ]
       end
 

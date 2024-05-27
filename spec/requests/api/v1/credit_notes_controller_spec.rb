@@ -258,7 +258,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
           {
             fee_id: fee2.id,
             amount_cents: 5
-          },
+          }
         ]
       }
     end

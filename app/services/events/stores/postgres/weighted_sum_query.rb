@@ -146,7 +146,7 @@ module Events
               groups,
               'timestamp without time zone :from_datetime',
               initial_value[:value],
-              'timestamp without time zone :from_datetime',
+              'timestamp without time zone :from_datetime'
             ].flatten.join(', ')
           end
 
@@ -172,7 +172,7 @@ module Events
               groups,
               'timestamp without time zone :from_datetime',
               0,
-              'timestamp without time zone :from_datetime',
+              'timestamp without time zone :from_datetime'
             ].flatten.join(', ')
           end
 

@@ -25,7 +25,7 @@ RSpec.describe Plans::OverrideService, type: :service do
             :group_property,
             group:,
             values: {amount: '10', amount_currency: 'EUR'},
-          ),
+          )
         ],
       )
     end
@@ -60,7 +60,7 @@ RSpec.describe Plans::OverrideService, type: :service do
         {
           id: charge.id,
           min_amount_cents: 1000
-        },
+        }
       ]
     end
 
@@ -141,7 +141,7 @@ RSpec.describe Plans::OverrideService, type: :service do
               to_value: nil,
               per_unit_amount: '0.01',
               flat_amount: '0.01'
-            },
+            }
           ]
         },
       )

@@ -118,7 +118,7 @@ module Integrations
               {
                 'sublistId' => 'item',
                 'lineItems' => invoice.fees.map { |fee| item(fee) } + discounts
-              },
+              }
             ],
             'options' => {
               'ignoreMandatoryFields' => false

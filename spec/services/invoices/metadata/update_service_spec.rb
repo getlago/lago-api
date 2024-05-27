@@ -18,7 +18,7 @@ RSpec.describe Invoices::Metadata::UpdateService do
       {
         key: 'Added key',
         value: 'Added value'
-      },
+      }
     ]
   end
 

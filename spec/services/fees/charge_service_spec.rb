@@ -273,7 +273,7 @@ RSpec.describe Fees::ChargeService do
                   to_value: nil,
                   per_unit_amount: '0.01',
                   flat_amount: '0.01'
-                },
+                }
               ]
             },
           )
@@ -1277,7 +1277,7 @@ RSpec.describe Fees::ChargeService do
                 to_value: nil,
                 per_unit_amount: '0.01',
                 flat_amount: '0.01'
-              },
+              }
             ]
           },
         )
@@ -1302,7 +1302,7 @@ RSpec.describe Fees::ChargeService do
                 to_value: nil,
                 per_unit_amount: '0.03',
                 flat_amount: '0.01'
-              },
+              }
             ]
           },
         )
@@ -1323,7 +1323,7 @@ RSpec.describe Fees::ChargeService do
                 to_value: nil,
                 per_unit_amount: '0',
                 flat_amount: '0'
-              },
+              }
             ]
           },
         )
@@ -1407,7 +1407,7 @@ RSpec.describe Fees::ChargeService do
           charge:,
           properties: {
             volume_ranges: [
-              {from_value: 0, to_value: nil, per_unit_amount: '2', flat_amount: '10'},
+              {from_value: 0, to_value: nil, per_unit_amount: '2', flat_amount: '10'}
             ]
           },
         )
@@ -1427,7 +1427,7 @@ RSpec.describe Fees::ChargeService do
           charge:,
           properties: {
             volume_ranges: [
-              {from_value: 0, to_value: nil, per_unit_amount: '1', flat_amount: '10'},
+              {from_value: 0, to_value: nil, per_unit_amount: '1', flat_amount: '10'}
             ]
           },
         )
@@ -1443,7 +1443,7 @@ RSpec.describe Fees::ChargeService do
           billable_metric:,
           properties: {
             volume_ranges: [
-              {from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '0'},
+              {from_value: 0, to_value: nil, per_unit_amount: '0', flat_amount: '0'}
             ]
           },
         )
@@ -1532,7 +1532,7 @@ RSpec.describe Fees::ChargeService do
                 to_value: nil,
                 flat_amount: '0.01',
                 rate: '2'
-              },
+              }
             ]
           },
         )
@@ -1557,7 +1557,7 @@ RSpec.describe Fees::ChargeService do
                 to_value: nil,
                 flat_amount: '0.01',
                 rate: '3'
-              },
+              }
             ]
           },
         )
@@ -1578,7 +1578,7 @@ RSpec.describe Fees::ChargeService do
                 to_value: nil,
                 flat_amount: '1',
                 rate: '0'
-              },
+              }
             ]
           },
         )
@@ -1824,7 +1824,7 @@ RSpec.describe Fees::ChargeService do
                 to_value: nil,
                 per_unit_amount: '0.01',
                 flat_amount: '0.01'
-              },
+              }
             ]
           },
         )

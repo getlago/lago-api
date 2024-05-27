@@ -143,7 +143,7 @@ module Fees
         charge_filter&.id,
         (grouped_by || {}).map do |k, v|
           "#{k}-#{v}"
-        end.sort.join('|'),
+        end.sort.join('|')
       ].compact.join('|')
       key = 'default' if key.blank?
 

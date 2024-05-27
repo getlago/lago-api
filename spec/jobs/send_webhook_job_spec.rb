@@ -116,7 +116,7 @@ RSpec.describe SendWebhookJob, type: :job do
         errors: [
           invalid_code: [SecureRandom.uuid],
           missing_aggregation_property: [SecureRandom.uuid],
-          missing_group_key: [SecureRandom.uuid],
+          missing_group_key: [SecureRandom.uuid]
         ]
       }
     end

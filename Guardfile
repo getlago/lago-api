@@ -10,7 +10,7 @@ guard :rspec, cmd: 'bundle exec rspec' do
   watch(%r{^app/controllers/(.+)_(controller)\.rb$}) do |m|
     [
       "spec/#{m[2]}s/#{m[1]}_#{m[2]}_spec.rb",
-      "spec/requests/#{m[1]}_controller_spec.rb",
+      "spec/requests/#{m[1]}_controller_spec.rb"
     ]
   end
 end

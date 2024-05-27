@@ -77,7 +77,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
         let(:ranges) do
           [
             {from_value: 0, to_value: 100},
-            {from_value: 120, to_value: 1000},
+            {from_value: 120, to_value: 1000}
           ]
         end
 
@@ -96,7 +96,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
         let(:ranges) do
           [
             {from_value: 0, to_value: 100},
-            {from_value: 90, to_value: 1000},
+            {from_value: 90, to_value: 1000}
           ]
         end
 
@@ -218,7 +218,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
             to_value: nil,
             rate: '1',
             flat_amount: '30'
-          },
+          }
         ]
       end
 

@@ -77,7 +77,7 @@ class GraphqlController < ApplicationController
           {
             message: message || code,
             extensions: {status:, code:}
-          },
+          }
         ]
       },
     )

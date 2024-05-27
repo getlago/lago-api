@@ -54,7 +54,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
                 min_amount_cents: 5000,
                 properties: {amount: '30'},
                 tax_codes: [organization.taxes.find_by(code: 'sales_tax').code]
-              },
+              }
             ]
           },
         )

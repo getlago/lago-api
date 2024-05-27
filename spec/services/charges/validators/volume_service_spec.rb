@@ -55,7 +55,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
       let(:ranges) do
         [
           {from_value: 0, to_value: 100},
-          {from_value: 120, to_value: 100},
+          {from_value: 120, to_value: 100}
         ]
       end
 
@@ -73,7 +73,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
       let(:ranges) do
         [
           {from_value: 0, to_value: 100},
-          {from_value: 90, to_value: 100},
+          {from_value: 90, to_value: 100}
         ]
       end
 
@@ -197,7 +197,7 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
             to_value: nil,
             per_unit_amount: '15',
             flat_amount: '30'
-          },
+          }
         ]
       end
 

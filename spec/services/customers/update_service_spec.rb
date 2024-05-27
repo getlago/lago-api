@@ -104,7 +104,7 @@ RSpec.describe Customers::UpdateService, type: :service do
               key: 'Added key',
               value: 'Added value',
               display_in_invoice: true
-            },
+            }
           ]
         }
       end

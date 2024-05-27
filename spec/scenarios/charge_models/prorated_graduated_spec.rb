@@ -55,7 +55,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 to_value: nil,
                 per_unit_amount: '2',
                 flat_amount: '0'
-              },
+              }
             ]
           },
         )
@@ -234,7 +234,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                   to_value: nil,
                   per_unit_amount: '12',
                   flat_amount: '0'
-                },
+                }
               ]
             },
           )
@@ -340,7 +340,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                   to_value: nil,
                   per_unit_amount: '10',
                   flat_amount: '0'
-                },
+                }
               ]
             },
           )
@@ -451,7 +451,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                   to_value: nil,
                   per_unit_amount: '2',
                   flat_amount: '0'
-                },
+                }
               ]
             },
           )
@@ -591,7 +591,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                     to_value: nil,
                     per_unit_amount: '2',
                     flat_amount: '0'
-                  },
+                  }
                 ]
               },
             )
@@ -677,7 +677,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 to_value: nil,
                 per_unit_amount: '5',
                 flat_amount: '50'
-              },
+              }
             ]
           },
         )
@@ -850,7 +850,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                 to_value: nil,
                 per_unit_amount: '5',
                 flat_amount: '50'
-              },
+              }
             ]
           },
         )
@@ -1008,7 +1008,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
                   to_value: nil,
                   per_unit_amount: '15',
                   flat_amount: '30'
-                },
+                }
               ]
             },
           )

@@ -62,9 +62,9 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
                 name: 'AWS',
                 key: 'country',
                 values: %w[France]
-              },
+              }
             ]
-          },
+          }
         ]
       }
     end
@@ -121,7 +121,7 @@ RSpec.describe Groups::CreateOrUpdateBatchService, type: :service do
             name: 'Google',
             key: 'region',
             values: %w[usa usa]
-          },
+          }
         ]
       }
     end

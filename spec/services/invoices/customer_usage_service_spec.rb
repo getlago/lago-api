@@ -64,7 +64,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
         'charge-usage',
         charge.id,
         subscription.id,
-        charge.updated_at.iso8601,
+        charge.updated_at.iso8601
       ].join('/')
 
       expect do

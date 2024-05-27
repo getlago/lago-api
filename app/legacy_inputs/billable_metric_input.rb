@@ -10,14 +10,14 @@ class BillableMetricInput < BaseLegacyInput
           {
             key: group_args[:key],
             values: group_args[:values]
-          },
+          }
         ]
       else
         args[:filters] = [
           {
             key: group_args[:key],
             values: group_args[:values].map { |v| v[:name] }
-          },
+          }
         ]
 
         group_args[:values].each do |group|

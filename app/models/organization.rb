@@ -7,7 +7,7 @@ class Organization < ApplicationRecord
 
   EMAIL_SETTINGS = [
     'invoice.finalized',
-    'credit_note.created',
+    'credit_note.created'
   ].freeze
 
   has_many :memberships
@@ -43,7 +43,7 @@ class Organization < ApplicationRecord
 
   DOCUMENT_NUMBERINGS = [
     :per_customer,
-    :per_organization,
+    :per_organization
   ].freeze
 
   INTEGRATIONS = %w[netsuite okta].freeze

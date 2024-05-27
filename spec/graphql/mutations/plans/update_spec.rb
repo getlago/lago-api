@@ -99,7 +99,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
                   invoiceDisplayName: 'Payment method',
                   properties: {amount: '10.00'},
                   values: {billable_metric_filter.key => %w[card]}
-                },
+                }
               ]
             },
             {
@@ -137,7 +137,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
                     toValue: nil,
                     perUnitAmount: '3.00',
                     flatAmount: '3.00'
-                  },
+                  }
                 ]
               }
             },
@@ -157,10 +157,10 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
                     toValue: nil,
                     perUnitAmount: '3.00',
                     flatAmount: '3.00'
-                  },
+                  }
                 ]
               }
-            },
+            }
           ]
         }
       }

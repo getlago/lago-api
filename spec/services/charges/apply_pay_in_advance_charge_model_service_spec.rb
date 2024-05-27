@@ -86,7 +86,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
                 to_value: nil,
                 per_unit_amount: '0.01',
                 flat_amount: '0.01'
-              },
+              }
             ]
           },
         )
@@ -122,7 +122,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
                 to_value: nil,
                 flat_amount: '0.01',
                 rate: '2'
-              },
+              }
             ]
           },
         )

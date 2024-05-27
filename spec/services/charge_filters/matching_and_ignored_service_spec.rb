@@ -19,7 +19,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
     [
       create(:charge_filter_value, values: ['25'], billable_metric_filter: filter_steps, charge_filter: f1),
       create(:charge_filter_value, values: ['512'], billable_metric_filter: filter_size, charge_filter: f1),
-      create(:charge_filter_value, values: ['llama-2'], billable_metric_filter: filter_model, charge_filter: f1),
+      create(:charge_filter_value, values: ['llama-2'], billable_metric_filter: filter_model, charge_filter: f1)
     ]
   end
 
@@ -27,7 +27,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
   let(:f2_values) do
     [
       create(:charge_filter_value, values: ['25'], billable_metric_filter: filter_steps, charge_filter: f2),
-      create(:charge_filter_value, values: ['512'], billable_metric_filter: filter_size, charge_filter: f2),
+      create(:charge_filter_value, values: ['512'], billable_metric_filter: filter_size, charge_filter: f2)
     ]
   end
 
@@ -45,7 +45,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
         values: [ChargeFilterValue::ALL_FILTER_VALUES],
         billable_metric_filter: filter_size,
         charge_filter: f3,
-      ),
+      )
     ]
   end
 
@@ -57,7 +57,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
         values: [ChargeFilterValue::ALL_FILTER_VALUES],
         billable_metric_filter: filter_size,
         charge_filter: f4,
-      ),
+      )
     ]
   end
 
@@ -69,7 +69,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
         values: ['512'],
         billable_metric_filter: filter_size,
         charge_filter: f5,
-      ),
+      )
     ]
   end
 
@@ -103,7 +103,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
       expect(service_result.ignored_filters).to eq(
         [
           {'model' => %w[llama-2], 'size' => %w[512], 'steps' => %w[25]},
-          {'size' => ['1024'], 'steps' => %w[50 75 100]},
+          {'size' => ['1024'], 'steps' => %w[50 75 100]}
         ],
       )
     end
@@ -117,7 +117,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
       expect(service_result.ignored_filters).to eq(
         [
           {'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25']},
-          {'size' => ['512'], 'steps' => ['25']},
+          {'size' => ['512'], 'steps' => ['25']}
         ],
       )
     end
@@ -133,7 +133,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
           {'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25']},
           {'size' => ['512'], 'steps' => ['25']},
           {'size' => %w[512 1024], 'steps' => %w[25 50 75 100]},
-          {'size' => ['512']},
+          {'size' => ['512']}
         ],
       )
     end
@@ -149,7 +149,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
           {'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25']},
           {'size' => ['512'], 'steps' => ['25']},
           {'size' => %w[512 1024], 'steps' => %w[25 50 75 100]},
-          {'size' => ['1024']},
+          {'size' => ['1024']}
         ],
       )
     end

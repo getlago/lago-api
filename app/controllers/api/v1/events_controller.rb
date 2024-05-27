@@ -104,7 +104,7 @@ module Api
               :code,
               :timestamp,
               :external_subscription_id,
-              properties: {}, # rubocop:disable Style/HashAsLastArrayItem
+              properties: {} # rubocop:disable Style/HashAsLastArrayItem
             ],
           ).to_h.deep_symbolize_keys
       end

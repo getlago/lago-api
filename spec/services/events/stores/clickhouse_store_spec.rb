@@ -346,7 +346,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           code:,
           timestamp: boundaries[:from_datetime] + 2.days,
           properties: {billable_metric.field_name => 2},
-        ),
+        )
       ]
     end
 
@@ -423,7 +423,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           code:,
           timestamp: boundaries[:from_datetime] + 2.days,
           properties: {billable_metric.field_name => 2},
-        ),
+        )
       ]
     end
 
@@ -877,7 +877,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         {timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4},
         {timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2},
         {timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10},
-        {timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10},
+        {timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10}
       ]
     end
 
@@ -910,7 +910,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     context 'with a single event' do
       let(:events_values) do
         [
-          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000},
+          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000}
         ]
       end
 
@@ -931,7 +931,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       let(:events_values) do
         [
           {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3},
-          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3},
+          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 3}
         ]
       end
 
@@ -961,7 +961,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       let(:events_values) do
         [
-          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000, region: 'europe'},
+          {timestamp: Time.zone.parse('2023-03-01 00:00:00.000'), value: 1000, region: 'europe'}
         ]
       end
 
@@ -1000,7 +1000,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         {timestamp: Time.zone.parse('2023-03-01 02:00:00'), value: -4},
         {timestamp: Time.zone.parse('2023-03-01 04:00:00'), value: -2},
         {timestamp: Time.zone.parse('2023-03-01 05:00:00'), value: 10},
-        {timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10},
+        {timestamp: Time.zone.parse('2023-03-01 05:30:00'), value: -10}
       ]
     end
 
@@ -1059,7 +1059,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         [
           {groups: {'agent_name' => 'frodo', 'other' => nil}, value: 1000},
           {groups: {'agent_name' => 'aragorn', 'other' => nil}, value: 1000},
-          {groups: {'agent_name' => nil, 'other' => nil}, value: 1000},
+          {groups: {'agent_name' => nil, 'other' => nil}, value: 1000}
         ]
       end
 

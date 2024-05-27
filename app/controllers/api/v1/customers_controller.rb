@@ -116,7 +116,7 @@ module Api
             :integration_type,
             :integration_code,
             :subsidiary_id,
-            :sync_with_provider,
+            :sync_with_provider
           ],
           billing_configuration: [
             :invoice_grace_period,
@@ -129,13 +129,13 @@ module Api
 
             # NOTE(legacy): vat has been moved to tax model
             :vat_rate,
-            provider_payment_methods: [],
+            provider_payment_methods: []
           ],
           metadata: [
             :id,
             :key,
             :value,
-            :display_in_invoice,
+            :display_in_invoice
           ],
           tax_codes: [],
         )

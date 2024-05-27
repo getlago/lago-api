@@ -80,7 +80,7 @@ RSpec.describe Wallets::CreateService, type: :service do
             method: "target",
             target_ongoing_balance: "100.0",
             trigger: "interval"
-          },
+          }
         ]
       end
       let(:create_args) do
@@ -131,7 +131,7 @@ RSpec.describe Wallets::CreateService, type: :service do
             {
               trigger: 'threshold',
               threshold_credits: '1.0'
-            },
+            }
           ]
         end
 
@@ -148,7 +148,7 @@ RSpec.describe Wallets::CreateService, type: :service do
             {
               trigger: 'invalid',
               interval: 'monthly'
-            },
+            }
           ]
         end
 
@@ -164,7 +164,7 @@ RSpec.describe Wallets::CreateService, type: :service do
             {
               trigger: 'threshold',
               threshold_credits: 'abc'
-            },
+            }
           ]
         end
 

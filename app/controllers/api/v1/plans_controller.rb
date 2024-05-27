@@ -95,7 +95,7 @@ module Api
             :id,
             :invoice_display_name,
             :amount_cents,
-            {tax_codes: []},
+            {tax_codes: []}
           ],
           charges: [
             :id,
@@ -115,17 +115,17 @@ module Api
                 {
                   properties: {},
                   values: {}
-                },
+                }
               ]
             },
             {
               group_properties: [
                 :group_id,
                 :invoice_display_name,
-                {values: {}},
+                {values: {}}
               ]
             },
-            {tax_codes: []},
+            {tax_codes: []}
           ],
         )
       end

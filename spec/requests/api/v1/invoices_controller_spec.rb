@@ -30,7 +30,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           },
           {
             add_on_code: add_on_second.code
-          },
+          }
         ]
       }
     end
@@ -79,7 +79,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
             },
             {
               add_on_code: 'invalid'
-            },
+            }
           ]
         }
       end
@@ -120,7 +120,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
             {
               key: 'Hello',
               value: 'Hi'
-            },
+            }
           ]
         }
       end

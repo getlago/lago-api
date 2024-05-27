@@ -44,7 +44,7 @@ module Events
             [
               "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}",
               'events.timestamp',
-              "(#{sanitized_property_name})::numeric AS value",
+              "(#{sanitized_property_name})::numeric AS value"
             ].join(', '),
           )
           .to_sql
@@ -108,7 +108,7 @@ module Events
               from_datetime:,
               to_datetime:,
               timezone: customer.applicable_timezone
-            },
+            }
           ],
         )
         result = ActiveRecord::Base.connection.select_one(sql)
@@ -125,7 +125,7 @@ module Events
               from_datetime:,
               to_datetime:,
               timezone: customer.applicable_timezone
-            },
+            }
           ],
         )
 
@@ -151,7 +151,7 @@ module Events
               from_datetime:,
               to_datetime:,
               timezone: customer.applicable_timezone
-            },
+            }
           ],
         )
         prepare_grouped_result(Event.connection.select_all(sql).rows)
@@ -265,7 +265,7 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil,
               initial_value: initial_value || 0
-            },
+            }
           ],
         )
 
@@ -299,7 +299,7 @@ module Events
             {
               from_datetime:,
               to_datetime: to_datetime.ceil
-            },
+            }
           ],
         )
 
@@ -317,7 +317,7 @@ module Events
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
                 initial_value: initial_value || 0
-              },
+              }
             ],
           ),
         ).rows

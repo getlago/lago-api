@@ -37,7 +37,7 @@ describe 'Change charge model with filters', :scenarios, type: :request do
           properties: {
             graduated_ranges: [
               {from_value: 0, to_value: 100, per_unit_amount: '10', flat_amount: '0'},
-              {from_value: 101, to_value: nil, per_unit_amount: '20', flat_amount: '0'},
+              {from_value: 101, to_value: nil, per_unit_amount: '20', flat_amount: '0'}
             ]
           },
           filters: [
@@ -46,15 +46,15 @@ describe 'Change charge model with filters', :scenarios, type: :request do
               properties: {
                 graduated_ranges: [
                   {from_value: 0, to_value: 100, per_unit_amount: '12', flat_amount: '0'},
-                  {from_value: 101, to_value: nil, per_unit_amount: '22', flat_amount: '0'},
+                  {from_value: 101, to_value: nil, per_unit_amount: '22', flat_amount: '0'}
                 ]
               },
               values: {
                 cloud: ['aws']
               }
-            },
+            }
           ]
-        },
+        }
       ],
     )
 

@@ -20,7 +20,7 @@ RSpec.describe Customers::Metadata::UpdateService do
         key: 'Added key',
         value: 'Added value',
         display_in_invoice: true
-      },
+      }
     ]
   end
 

@@ -53,7 +53,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           {
             group_id: group.id,
             values: {amount: '100'}
-          },
+          }
         ],
         tax_codes: [tax1.code]
       },
@@ -74,10 +74,10 @@ RSpec.describe Plans::UpdateService, type: :service do
               to_value: nil,
               per_unit_amount: '3',
               flat_amount: '3'
-            },
+            }
           ]
         }
-      },
+      }
     ]
   end
 
@@ -244,7 +244,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               properties: {
                 amount: '100'
               }
-            },
+            }
           ]
         end
 
@@ -277,10 +277,10 @@ RSpec.describe Plans::UpdateService, type: :service do
                     to_value: nil,
                     rate: '2',
                     flat_amount: '3'
-                  },
+                  }
                 ]
               }
-            },
+            }
           ]
         end
 
@@ -538,14 +538,14 @@ RSpec.describe Plans::UpdateService, type: :service do
                 {
                   group_id: group.id,
                   values: {amount: '100'}
-                },
+                }
               ],
               filters: [
                 {
                   invoice_display_name: 'Card filter',
                   properties: {amount: '90'},
                   values: {billable_metric_filter.key => ['card']}
-                },
+                }
               ]
             },
             {
@@ -556,7 +556,7 @@ RSpec.describe Plans::UpdateService, type: :service do
                 amount: '300'
               },
               tax_codes: [tax1.code]
-            },
+            }
           ]
         }
       end
@@ -637,7 +637,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               billable_metric_id: sum_billable_metric.id,
               charge_model: 'standard',
               tax_codes: [tax2.code]
-            },
+            }
           ]
         }
       end
@@ -744,7 +744,7 @@ RSpec.describe Plans::UpdateService, type: :service do
               properties: {
                 amount: '300'
               }
-            },
+            }
           ]
         }
       end

@@ -29,7 +29,7 @@ RSpec.describe Charges::OverrideService, type: :service do
             :group_property,
             group: group2,
             values: {amount: '20', amount_currency: 'EUR'},
-          ),
+          )
         ],
       )
     end
@@ -47,7 +47,7 @@ RSpec.describe Charges::OverrideService, type: :service do
           {
             group_id: group.id,
             values: {amount: '100'}
-          },
+          }
         ]
       }
     end
@@ -118,7 +118,7 @@ RSpec.describe Charges::OverrideService, type: :service do
               :charge_filter,
               charge:,
               properties: {amount: '20'},
-            ),
+            )
           ]
         end
 
@@ -135,7 +135,7 @@ RSpec.describe Charges::OverrideService, type: :service do
               charge_filter: filters.second,
               billable_metric_filter:,
               values: [billable_metric_filter.values.second],
-            ),
+            )
           ]
         end
 
@@ -151,7 +151,7 @@ RSpec.describe Charges::OverrideService, type: :service do
                 properties: {amount: '10'},
                 invoice_display_name: 'invoice display name',
                 values: {billable_metric_filter.key => [billable_metric_filter.values.first]}
-              },
+              }
             ]
           }
         end

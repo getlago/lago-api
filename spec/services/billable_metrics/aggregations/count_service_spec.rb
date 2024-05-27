@@ -125,7 +125,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
             cloud: 'AWS',
             region: 'africa'
           },
-        ),
+        )
       ]
     end
 
@@ -180,7 +180,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
           subscription:,
           timestamp: Time.zone.now - 1.day,
           properties: {},
-        ),
+        )
       ]
     end
 

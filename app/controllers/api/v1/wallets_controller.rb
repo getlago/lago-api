@@ -94,7 +94,7 @@ module Api
             :method,
             :target_ongoing_balance,
             :threshold_credits,
-            :trigger,
+            :trigger
           ],
         )
       end
@@ -116,7 +116,7 @@ module Api
             :threshold_credits,
             :trigger,
             :paid_credits,
-            :granted_credits,
+            :granted_credits
           ],
         )
       end

@@ -32,7 +32,7 @@ RSpec.describe Charges::ChargeModels::GroupedStandardService do
         grouped_by: {'cloud' => 'gcp'},
         aggregation: 20,
         count: 7
-      },
+      }
     ]
   end
 

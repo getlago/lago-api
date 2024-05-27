@@ -100,7 +100,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
             interval: 'weekly',
             paid_credits: '105',
             granted_credits: '105'
-          },
+          }
         ]
       end
       let(:update_args) do
@@ -141,7 +141,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               interval: 'weekly',
               paid_credits: '105',
               granted_credits: '105'
-            },
+            }
           ]
         end
 
@@ -173,7 +173,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               threshold_credits: '205',
               paid_credits: '105',
               granted_credits: '105'
-            },
+            }
           ]
         end
 
@@ -224,7 +224,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               threshold_credits: '1.0',
               paid_credits: '105',
               granted_credits: '105'
-            },
+            }
           ]
         end
 
@@ -245,7 +245,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               interval: 'monthly',
               paid_credits: '105',
               granted_credits: '105'
-            },
+            }
           ]
         end
 
@@ -265,7 +265,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
               threshold_credits: 'abc',
               paid_credits: '105',
               granted_credits: '105'
-            },
+            }
           ]
         end
 

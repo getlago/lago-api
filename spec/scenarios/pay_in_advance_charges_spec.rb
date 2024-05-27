@@ -643,7 +643,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               to_value: nil,
               per_unit_amount: '0.01',
               flat_amount: '0.01'
-            },
+            }
           ]
         },
       )

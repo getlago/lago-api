@@ -16,23 +16,23 @@ class Coupon < ApplicationRecord
 
   STATUSES = [
     :active,
-    :terminated,
+    :terminated
   ].freeze
 
   EXPIRATION_TYPES = [
     :no_expiration,
-    :time_limit,
+    :time_limit
   ].freeze
 
   COUPON_TYPES = [
     :fixed_amount,
-    :percentage,
+    :percentage
   ].freeze
 
   FREQUENCIES = [
     :once,
     :recurring,
-    :forever,
+    :forever
   ].freeze
 
   enum status: STATUSES
@@ -61,7 +61,7 @@ class Coupon < ApplicationRecord
           [
             'coupons.status ASC',
             'coupons.expiration ASC',
-            'coupons.expiration_at ASC',
+            'coupons.expiration_at ASC'
           ].join(', '),
         ),
       )

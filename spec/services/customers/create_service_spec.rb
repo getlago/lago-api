@@ -126,7 +126,7 @@ RSpec.describe Customers::CreateService, type: :service do
               key: 'manager address',
               value: 'Test',
               display_in_invoice: false
-            },
+            }
           ]
         }
       end
@@ -269,7 +269,7 @@ RSpec.describe Customers::CreateService, type: :service do
                 key: 'Added key',
                 value: 'Added value',
                 display_in_invoice: true
-              },
+              }
             ]
           }
         end
@@ -335,7 +335,7 @@ RSpec.describe Customers::CreateService, type: :service do
                   key: 'Added key5',
                   value: 'Added value5',
                   display_in_invoice: true
-                },
+                }
               ]
             }
           end
@@ -916,7 +916,7 @@ RSpec.describe Customers::CreateService, type: :service do
               key: 'manager address',
               value: 'Test',
               display_in_invoice: false
-            },
+            }
           ]
         }
       end
