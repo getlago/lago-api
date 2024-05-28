@@ -248,4 +248,83 @@ RSpec.describe CreditNote, type: :model do
         .to eq(credit_note.items.sum(&:precise_amount_cents) - credit_note.precise_coupons_adjustment_amount_cents)
     end
   end
+
+  describe '#should_sync_credit_note?' do
+    subject(:method_call) { credit_note.should_sync_credit_note? }
+
+    let(:credit_note) { create(:credit_note, customer:, organization:, status:) }
+    let(:organization) { create(:organization) }
+
+    context 'when credit note is not finalized' do
+      let(:status) { :draft }
+
+      context 'without integration customer' do
+        let(:customer) { create(:customer, organization:) }
+
+        it 'returns false' do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context 'with integration customer' do
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+        let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { integration_customer }
+
+        context 'when sync credit notes is true' do
+          let(:sync_credit_notes) { true }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
+
+        context 'when sync credit notes is false' do
+          let(:sync_credit_notes) { false }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+    end
+
+    context 'when credit note is finalized' do
+      let(:status) { :finalized }
+
+      context 'without integration customer' do
+        let(:customer) { create(:customer, organization:) }
+
+        it 'returns false' do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context 'with integration customer' do
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+        let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { integration_customer }
+
+        context 'when sync credit notes is true' do
+          let(:sync_credit_notes) { true }
+
+          it 'returns true' do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context 'when sync credit notes is false' do
+          let(:sync_credit_notes) { false }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+    end
+  end
 end

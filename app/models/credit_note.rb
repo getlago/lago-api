@@ -105,6 +105,10 @@ class CreditNote < ApplicationRecord
       .includes(:fee)
   end
 
+  def should_sync_credit_note?
+    finalized? && customer.integration_customers.any? { |c| c.integration.sync_credit_notes }
+  end
+
   def voidable?
     return false if voided?
 
