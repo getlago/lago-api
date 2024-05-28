@@ -2,19 +2,60 @@
 
 module Integrations
   module Aggregator
-    module Invoices
-      class BaseService < Integrations::Aggregator::BaseService
-        def initialize(invoice:)
-          @invoice = invoice
+    module CreditNotes
+      class CreateService < BaseService
+        def initialize(credit_note:)
+          @credit_note = credit_note
 
           super(integration:)
         end
 
+        def action_path
+          "v1/#{provider}/creditnotes"
+        end
+
+        def call
+          return result unless integration
+          return result unless integration.sync_credit_notes
+          return result unless credit_note.finalized?
+          return result unless fallback_item
+
+          response = http_client.post_with_response(payload, headers)
+          result.external_id = JSON.parse(response.body)
+
+          IntegrationResource.create!(
+            integration:,
+            external_id: result.external_id,
+            syncable_id: credit_note.id,
+            syncable_type: 'CreditNote',
+            resource_type: :credit_note,
+          )
+
+          result
+        rescue LagoHttpClient::HttpError => e
+          error = e.json_message
+          code = error['type']
+          message = error.dig('payload', 'message')
+
+          deliver_error_webhook(customer:, code:, message:)
+
+          raise e
+        end
+
+        def call_async
+          return result.not_found_failure!(resource: 'credit_note') unless credit_note
+
+          ::Integrations::Aggregator::CreditNotes::CreateJob.perform_later(credit_note:)
+
+          result.credit_note_id = credit_note.id
+          result
+        end
+
         private
 
-        attr_reader :invoice
+        attr_reader :credit_note
 
-        delegate :customer, to: :invoice, allow_nil: true
+        delegate :customer, to: :credit_note, allow_nil: true
 
         def headers
           {
@@ -59,8 +100,6 @@ module Integrations
             subscription_item
           end
 
-          return {} unless mapped_item
-
           {
             'item' => mapped_item.external_id,
             'account' => mapped_item.external_account_code,
@@ -69,57 +108,39 @@ module Integrations
           }
         end
 
-        def discounts
+        def coupons
           output = []
 
-          if coupon_item && invoice.coupons_amount_cents > 0
+          if credit_note.coupons_adjustment_amount_cents > 0
             output << {
               'item' => coupon_item.external_id,
               'account' => coupon_item.external_account_code,
               'quantity' => 1,
-              'rate' => -amount(invoice.coupons_amount_cents, resource: invoice)
-            }
-          end
-
-          if credit_item && invoice.prepaid_credit_amount_cents > 0
-            output << {
-              'item' => credit_item.external_id,
-              'account' => credit_item.external_account_code,
-              'quantity' => 1,
-              'rate' => -amount(invoice.prepaid_credit_amount_cents, resource: invoice)
-            }
-          end
-
-          if credit_note_item && invoice.credit_notes_amount_cents > 0
-            output << {
-              'item' => credit_note_item.external_id,
-              'account' => credit_note_item.external_account_code,
-              'quantity' => 1,
-              'rate' => -amount(invoice.credit_notes_amount_cents, resource: invoice)
+              'rate' => -amount(credit_note.coupons_adjustment_amount_cents, resource: credit_note)
             }
           end
 
           output
         end
 
-        def payload(type)
+        def payload
           {
-            'type' => type,
+            'type' => 'creditmemo',
             'isDynamic' => true,
             'columns' => {
-              'tranid' => invoice.id,
+              'tranid' => credit_note.number,
               'entity' => integration_customer.external_customer_id,
               'istaxable' => true,
-              'taxitem' => tax_item&.external_id,
-              'taxamountoverride' => amount(invoice.taxes_amount_cents, resource: invoice),
-              'otherrefnum' => invoice.number,
-              'custbody_lago_id' => invoice.id,
-              'custbody_ava_disable_tax_calculation' => true
+              'taxitem' => tax_item.external_id,
+              'taxamountoverride' => amount(credit_note.taxes_amount_cents, resource: credit_note),
+              'otherrefnum' => credit_note.number,
+              'custbody_lago_id' => credit_note.id,
+              'tranId' => credit_note.id
             },
             'lines' => [
               {
                 'sublistId' => 'item',
-                'lineItems' => invoice.fees.map { |fee| item(fee) } + discounts
+                'lineItems' => credit_note.items.map { |item| item(item.fee) } + coupons
               }
             ],
             'options' => {

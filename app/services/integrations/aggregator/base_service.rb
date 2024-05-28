@@ -86,8 +86,8 @@ module Integrations
         @fallback_item ||= collection_mapping(:fallback_item)
       end
 
-      def amount(amount_cents)
-        currency = invoice.total_amount.currency
+      def amount(amount_cents, resource:)
+        currency = resource.total_amount.currency
 
         amount_cents.round.fdiv(currency.subunit_to_unit)
       end
