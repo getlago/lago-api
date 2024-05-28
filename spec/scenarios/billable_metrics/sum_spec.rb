@@ -150,7 +150,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
 
       subscription2 = customer.subscriptions.order(:created_at).last
 
-      travel_to(DateTime.new(2024, 2, 6)) do
+      travel_to(DateTime.new(2024, 2, 6, 0, 1)) do
         create_event(
           {
             code: billable_metric.code,
@@ -171,7 +171,9 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         fetch_current_usage(customer:, subscription: subscription1)
         expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
         expect(json[:customer_usage][:charges_usage].first[:units]).to eq('10.0')
+      end
 
+      travel_to(DateTime.new(2024, 2, 6, 0, 2)) do
         create_event(
           {
             code: billable_metric.code,
@@ -192,7 +194,9 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         fetch_current_usage(customer:, subscription: subscription1)
         expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
         expect(json[:customer_usage][:charges_usage].first[:units]).to eq('5.0')
+      end
 
+      travel_to(DateTime.new(2024, 2, 6, 0, 3)) do
         create_event(
           {
             code: billable_metric.code,
@@ -215,7 +219,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         expect(json[:customer_usage][:charges_usage].first[:units]).to eq('7.0')
       end
 
-      travel_to(DateTime.new(2024, 2, 6, 1)) do
+      travel_to(DateTime.new(2024, 2, 6, 1, 0, 1)) do
         create_event(
           {
             code: billable_metric.code,
@@ -234,7 +238,9 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         fetch_current_usage(customer:, subscription: subscription2)
         expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
         expect(json[:customer_usage][:charges_usage].first[:units]).to eq('10.0')
+      end
 
+      travel_to(DateTime.new(2024, 2, 6, 1, 0, 2)) do
         create_event(
           {
             code: billable_metric.code,
@@ -253,7 +259,9 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         fetch_current_usage(customer:, subscription: subscription2)
         expect(json[:customer_usage][:total_amount_cents]).to eq(24_000)
         expect(json[:customer_usage][:charges_usage].first[:units]).to eq('5.0')
+      end
 
+      travel_to(DateTime.new(2024, 2, 6, 1, 0, 3)) do
         create_event(
           {
             code: billable_metric.code,

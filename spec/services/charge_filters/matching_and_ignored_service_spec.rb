@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe ChargeFilters::MatchingAndIgnoredService do
-  subject(:service_result) { described_class.call(filter: current_filter) }
+  subject(:service_result) { described_class.call(charge:, filter: current_filter) }
 
   let(:billable_metric) { create(:billable_metric) }
   let(:charge) { create(:standard_charge, billable_metric:) }

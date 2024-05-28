@@ -2,7 +2,8 @@
 
 module ChargeFilters
   class MatchingAndIgnoredService < BaseService
-    def initialize(filter:)
+    def initialize(charge:, filter:)
+      @charge = charge
       @filter = filter
       super
     end
@@ -56,12 +57,10 @@ module ChargeFilters
 
     private
 
-    attr_reader :filter
-
-    delegate :charge, to: :filter
+    attr_reader :charge, :filter
 
     def other_filters
-      @other_filters ||= charge.filters.where.not(id: filter.id).includes(values: :billable_metric_filter)
+      @other_filters ||= charge.filters.select { _1.id != filter.id }
     end
   end
 end

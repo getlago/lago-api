@@ -892,6 +892,7 @@ DEPENDENCIES
   opentelemetry-instrumentation-all
   opentelemetry-sdk
   paper_trail
+  parallel
   pg
   puma (~> 6.4)
   rack-cors
