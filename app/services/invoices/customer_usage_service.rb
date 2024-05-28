@@ -66,11 +66,14 @@ module Invoices
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .order(Arel.sql('lower(unaccent(billable_metrics.name)) ASC'))
 
-      invoice.fees = Parallel.flat_map(query.all, in_threads: ENV['LAGO_PARALLEL_THREADS_COUNT']&.to_i || 1) do |charge|
-        ActiveRecord::Base.connection_pool.with_connection do
-          charge_usage(charge)
-        end
+      # TODO: fix issue with db connection pool
+      # invoice.fees = Parallel.flat_map(query.all, in_threads: ENV['LAGO_PARALLEL_THREADS_COUNT']&.to_i || 1) do |charge|
+      #   ActiveRecord::Base.connection_pool.with_connection do
+      query.each do |charge|
+        invoice.fees << charge_usage(charge)
       end
+      #   end
+      # end
     end
 
     def charge_usage(charge)
