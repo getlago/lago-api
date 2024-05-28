@@ -52,7 +52,7 @@ module Charges
       end
 
       if charge_filter.present?
-        result = ChargeFilters::MatchingAndIgnoredService.call(filter: charge_filter)
+        result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
         filters[:charge_filter] = charge_filter if charge_filter.persisted?
         filters[:matching_filters] = result.matching_filters
         filters[:ignored_filters] = result.ignored_filters

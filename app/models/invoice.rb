@@ -170,7 +170,7 @@ class Invoice < ApplicationRecord
 
     filters = {}
     if fee.charge_filter
-      result = ChargeFilters::MatchingAndIgnoredService.call(filter: fee.charge_filter)
+      result = ChargeFilters::MatchingAndIgnoredService.call(charge: fee.charge, filter: fee.charge_filter)
       filters[:charge_filter] = fee.charge_filter if fee.charge_filter
       filters[:matching_filters] = result.matching_filters
       filters[:ignored_filters] = result.ignored_filters
