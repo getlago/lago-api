@@ -13,6 +13,7 @@ module Webhooks
         ::V1::CustomerSerializer.new(
           object,
           root_name: object_type,
+          includes: %i[integration_customers]
         )
       end
 
