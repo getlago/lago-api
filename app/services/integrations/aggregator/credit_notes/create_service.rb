@@ -54,8 +54,7 @@ module Integrations
 
         attr_reader :credit_note
 
-        delegate :customer, to: :credit_note, allow_nil: true
-        delegate :invoice, to: :credit_note
+        delegate :customer, :invoice, to: :credit_note, allow_nil: true
 
         def coupons
           output = []
