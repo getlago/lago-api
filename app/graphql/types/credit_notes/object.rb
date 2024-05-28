@@ -45,8 +45,15 @@ module Types
         description 'Check if credit note can be voided'
       end
 
+      field :integration_syncable, GraphQL::Types::Boolean, null: false
+
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
+      end
+
+      def integration_syncable
+        object.should_sync_credit_note? &&
+          object.integration_resources.where(resource_type: 'credit_note', syncable_type: 'CreditNote').none?
       end
     end
   end
