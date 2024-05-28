@@ -67,7 +67,9 @@ module Invoices
         .order(Arel.sql('lower(unaccent(billable_metrics.name)) ASC'))
 
       invoice.fees = Parallel.flat_map(query.all, in_threads: ENV['LAGO_PARALLEL_THREADS_COUNT']&.to_i || 1) do |charge|
-        charge_usage(charge)
+        ActiveRecord::Base.connection_pool.with_connection do
+          charge_usage(charge)
+        end
       end
     end
 
