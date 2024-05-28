@@ -9,6 +9,9 @@ RSpec.describe Webhooks::Integrations::CustomerCreatedService do
   let(:organization) { create(:organization) }
 
   describe '.call' do
-    it_behaves_like 'creates webhook', 'customer.accounting_provider_created', 'customer'
+    it_behaves_like 'creates webhook',
+      'customer.accounting_provider_created',
+      'customer',
+      {'integration_customers' => []}
   end
 end
