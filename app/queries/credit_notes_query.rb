@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
-class CustomerCreditNotesQuery < BaseQuery
+class CreditNotesQuery < BaseQuery
   def call(customer_id:, search_term:, page:, limit:, filters: {})
     @search_term = search_term
 
-    credit_notes = base_scope(customer_id:).result
+    credit_notes = base_scope.result
+    credit_notes = credit_notes.where(customer_id:) if customer_id.present?
     credit_notes = credit_notes.where(id: filters[:ids]) if filters[:ids].present?
     credit_notes = credit_notes.order(issuing_date: :desc).page(page).per(limit)
 
@@ -16,8 +17,8 @@ class CustomerCreditNotesQuery < BaseQuery
 
   attr_reader :search_term
 
-  def base_scope(customer_id:)
-    Customer.find(customer_id).credit_notes.finalized.ransack(search_params)
+  def base_scope
+    CreditNote.finalized.ransack(search_params)
   end
 
   def search_params
