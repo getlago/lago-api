@@ -2,7 +2,7 @@ class CreateEventsRaw < ActiveRecord::Migration[7.0]
   def change
     options = <<-SQL
       MergeTree
-      ORDER BY (organization_id, external_subscription_id, code, timestamp)
+      ORDER BY (organization_id, external_subscription_id, code, transaction_id, timestamp)
     SQL
 
     create_table :events_raw, id: false, options: do |t|
