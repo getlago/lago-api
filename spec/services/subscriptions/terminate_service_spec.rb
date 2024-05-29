@@ -33,7 +33,7 @@ RSpec.describe Subscriptions::TerminateService do
     context 'when subscription is starting in the future' do
       let(:subscription) { create(:subscription, :pending) }
 
-      it 'terminates a subscription' do
+      it 'cancels a subscription' do
         result = terminate_service.call
 
         aggregate_failures do
