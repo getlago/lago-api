@@ -5194,6 +5194,21 @@ type Query {
   creditNoteEstimate(invoiceId: ID!, items: [CreditNoteItemInput!]!): CreditNoteEstimate!
 
   """
+  Query credit notes
+  """
+  creditNotes(
+    customerId: ID
+
+    """
+    List of credit notes IDs to fetch
+    """
+    ids: [ID!]
+    limit: Int
+    page: Int
+    searchTerm: String
+  ): CreditNoteCollection!
+
+  """
   Retrieves currently connected user
   """
   currentUser: User!
@@ -5212,24 +5227,6 @@ type Query {
     """
     id: ID!
   ): Customer
-
-  """
-  Query customer's credit note
-  """
-  customerCreditNotes(
-    """
-    Uniq ID of the customer
-    """
-    customerId: ID!
-
-    """
-    List of plan ID to fetch
-    """
-    ids: [String!]
-    limit: Int
-    page: Int
-    searchTerm: String
-  ): CreditNoteCollection
 
   """
   Query invoices of a customer

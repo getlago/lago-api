@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe CustomerCreditNotesQuery, type: :query do
-  subject(:customer_credit_notes_query) do
+RSpec.describe CreditNotesQuery, type: :query do
+  subject(:credit_notes_query) do
     described_class.new(organization:)
   end
 
@@ -22,8 +22,27 @@ RSpec.describe CustomerCreditNotesQuery, type: :query do
     credit_note_fourth
   end
 
+  it 'returns all credit_notes when no customer is provided' do
+    result = credit_notes_query.call(
+      search_term: nil,
+      customer_id: nil,
+      page: 1,
+      limit: 10,
+    )
+
+    returned_ids = result.credit_notes.pluck(:id)
+
+    aggregate_failures do
+      expect(result.credit_notes.count).to eq(4)
+      expect(returned_ids).to include(credit_note_first.id)
+      expect(returned_ids).to include(credit_note_second.id)
+      expect(returned_ids).to include(credit_note_third.id)
+      expect(returned_ids).to include(credit_note_fourth.id)
+    end
+  end
+
   it 'returns all credit_notes of the customer' do
-    result = customer_credit_notes_query.call(
+    result = credit_notes_query.call(
       search_term: nil,
       customer_id: customer.id,
       page: 1,
@@ -43,7 +62,7 @@ RSpec.describe CustomerCreditNotesQuery, type: :query do
 
   context 'when searching for /imthe/ term' do
     it 'returns three credit_notes' do
-      result = customer_credit_notes_query.call(
+      result = credit_notes_query.call(
         search_term: 'imthe',
         customer_id: customer.id,
         page: 1,
@@ -64,7 +83,7 @@ RSpec.describe CustomerCreditNotesQuery, type: :query do
 
   context 'when searching for /done/ term' do
     it 'returns two credit_notes' do
-      result = customer_credit_notes_query.call(
+      result = credit_notes_query.call(
         search_term: 'done',
         customer_id: customer.id,
         page: 1,
@@ -85,7 +104,7 @@ RSpec.describe CustomerCreditNotesQuery, type: :query do
 
   context 'when searching for an id' do
     it 'returns only one credit_notes' do
-      result = customer_credit_notes_query.call(
+      result = credit_notes_query.call(
         search_term: credit_note_second.id.scan(/.{10}/).first,
         customer_id: customer.id,
         page: 1,
@@ -106,7 +125,7 @@ RSpec.describe CustomerCreditNotesQuery, type: :query do
 
   context 'when filtering by id' do
     it 'returns only one credit_note' do
-      result = customer_credit_notes_query.call(
+      result = credit_notes_query.call(
         search_term: nil,
         customer_id: customer.id,
         page: 1,
@@ -130,7 +149,7 @@ RSpec.describe CustomerCreditNotesQuery, type: :query do
 
   context 'when searching for a random user' do
     it 'returns no credit_note' do
-      result = customer_credit_notes_query.call(
+      result = credit_notes_query.call(
         search_term: nil,
         customer_id: create(:customer, organization:).id,
         page: 1,
