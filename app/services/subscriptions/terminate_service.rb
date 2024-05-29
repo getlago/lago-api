@@ -13,9 +13,7 @@ module Subscriptions
     def call
       return result.not_found_failure!(resource: 'subscription') if subscription.blank?
 
-      if subscription.starting_in_the_future?
-        subscription.mark_as_terminated!
-      elsif subscription.pending?
+      if subscription.pending?
         subscription.mark_as_canceled!
       elsif !subscription.terminated?
         subscription.mark_as_terminated!
