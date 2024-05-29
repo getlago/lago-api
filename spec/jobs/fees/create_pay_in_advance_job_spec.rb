@@ -14,7 +14,7 @@ RSpec.describe Fees::CreatePayInAdvanceJob, type: :job do
 
   it 'delegates to the pay_in_advance aggregation service' do
     allow(Fees::CreatePayInAdvanceService).to receive(:new)
-      .with(charge:, event:)
+      .with(charge:, event:, billing_at: event.timestamp)
       .and_return(instant_service)
     allow(instant_service).to receive(:call)
       .and_return(result)
