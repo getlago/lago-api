@@ -33,6 +33,17 @@ RSpec.describe Subscriptions::TerminateService do
     context 'when subscription is starting in the future' do
       let(:subscription) { create(:subscription, :pending) }
 
+      it 'terminates a subscription' do
+        result = terminate_service.call
+
+        aggregate_failures do
+          expect(result.subscription).to be_present
+          expect(result.subscription).to be_canceled
+          expect(result.subscription.canceled_at).to be_present
+          expect(result.subscription.terminated_at).to be_nil
+        end
+      end
+
       it 'does not enqueue a BillSubscriptionJob' do
         expect do
           terminate_service.call
