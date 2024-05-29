@@ -84,6 +84,7 @@ production:
     database: <%= ENV['LAGO_CLICKHOUSE_DATABASE'] %>
     host: <%= ENV['LAGO_CLICKHOUSE_HOST'] %>
     port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
     username: <%= ENV['LAGO_CLICKHOUSE_USERNAME'] %>
     password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
     ssl: <%= ENV.fetch('LAGO_CLICKHOUSE_SSL', false) %>
