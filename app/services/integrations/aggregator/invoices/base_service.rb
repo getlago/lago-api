@@ -59,6 +59,8 @@ module Integrations
             subscription_item
           end
 
+          return {} unless mapped_item
+
           {
             'item' => mapped_item.external_id,
             'account' => mapped_item.external_account_code,
@@ -70,7 +72,7 @@ module Integrations
         def discounts
           output = []
 
-          if invoice.coupons_amount_cents > 0
+          if coupon_item && invoice.coupons_amount_cents > 0
             output << {
               'item' => coupon_item.external_id,
               'account' => coupon_item.external_account_code,
@@ -79,7 +81,7 @@ module Integrations
             }
           end
 
-          if invoice.prepaid_credit_amount_cents > 0
+          if credit_item && invoice.prepaid_credit_amount_cents > 0
             output << {
               'item' => credit_item.external_id,
               'account' => credit_item.external_account_code,
@@ -88,7 +90,7 @@ module Integrations
             }
           end
 
-          if invoice.credit_notes_amount_cents > 0
+          if credit_note_item && invoice.credit_notes_amount_cents > 0
             output << {
               'item' => credit_note_item.external_id,
               'account' => credit_note_item.external_account_code,
@@ -108,7 +110,7 @@ module Integrations
               'tranid' => invoice.id,
               'entity' => integration_customer.external_customer_id,
               'istaxable' => true,
-              'taxitem' => tax_item.external_id,
+              'taxitem' => tax_item&.external_id,
               'taxamountoverride' => amount(invoice.taxes_amount_cents),
               'otherrefnum' => invoice.number,
               'custbody_lago_id' => invoice.id,

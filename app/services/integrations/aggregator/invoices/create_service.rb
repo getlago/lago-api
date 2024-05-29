@@ -12,7 +12,6 @@ module Integrations
           return result unless integration
           return result unless integration.sync_invoices
           return result unless invoice.finalized?
-          return result unless fallback_item
 
           response = http_client.post_with_response(payload('invoice'), headers)
           result.external_id = JSON.parse(response.body)
