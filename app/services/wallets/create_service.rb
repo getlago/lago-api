@@ -8,11 +8,7 @@ module Wallets
     end
 
     def call
-<<<<<<< HEAD
       return result unless valid?
-=======
-      return result unless valid?(**params)
->>>>>>> 62c2da89 (feat(wallet): Add granted and paid credits on recurring transaction rule)
 
       wallet = Wallet.new(
         customer_id: result.current_customer.id,
@@ -58,11 +54,7 @@ module Wallets
 
     attr_reader :params
 
-<<<<<<< HEAD
     def valid?
-=======
-    def valid?(**params)
->>>>>>> 62c2da89 (feat(wallet): Add granted and paid credits on recurring transaction rule)
       Wallets::ValidateService.new(result, **params).valid?
     end
   end
