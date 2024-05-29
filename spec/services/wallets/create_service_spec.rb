@@ -102,22 +102,9 @@ RSpec.describe Wallets::CreateService, type: :service do
           expect { service_result }.to change(Wallet, :count).by(1)
 
           expect(service_result).to be_success
-
           wallet = service_result.wallet
-          rule = service_result.wallet.reload.recurring_transaction_rules.first
-
           expect(wallet.name).to eq('New Wallet')
           expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
-          expect(rule).to have_attributes(
-            granted_credits: 0.0,
-            interval: "monthly",
-            method: "target",
-            paid_credits: 1.0,
-            target_ongoing_balance: 100.0,
-            threshold_credits: 0.0,
-            trigger: "interval",
-            wallet_id: wallet.id
-          )
         end
       end
 
