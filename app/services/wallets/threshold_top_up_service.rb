@@ -16,8 +16,8 @@ module Wallets
         organization_id: wallet.organization.id,
         params: {
           wallet_id: wallet.id,
-          paid_credits: threshold_rule.paid_credits.to_s,
-          granted_credits: threshold_rule.granted_credits.to_s,
+          paid_credits:,
+          granted_credits:,
           source: :threshold
         }
       )
@@ -33,6 +33,18 @@ module Wallets
 
     def pending_transactions_amount
       @pending_transactions_amount ||= wallet.wallet_transactions.pending.sum(:amount)
+    end
+
+    def paid_credits
+      return (threshold_rule.target_ongoing_balance - wallet.credits_ongoing_balance).to_s if threshold_rule.target?
+
+      threshold_rule.paid_credits.to_s
+    end
+
+    def granted_credits
+      return "0.0" if threshold_rule.target?
+
+      threshold_rule.granted_credits.to_s
     end
   end
 end
