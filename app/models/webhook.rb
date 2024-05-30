@@ -17,6 +17,19 @@ class Webhook < ApplicationRecord
     %w[id webhook_type]
   end
 
+  # Up until 1.4.0, we stored the payload as a string. This method
+  # ensures that we can still read the old payloads.
+  # Webhooks created after 1.4.0 will have the payload stored as a hash.
+  # Webhooks are deleted after 90 days, so we can remove this method 90 days after every client has updated to 1.4.0.
+  def payload
+    attr = super
+    if attr.is_a?(String)
+      JSON.parse(attr)
+    else
+      attr
+    end
+  end
+
   def generate_headers
     signature = case webhook_endpoint.signature_algo&.to_sym
     when :jwt

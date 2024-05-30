@@ -10,6 +10,21 @@ RSpec.describe Webhook, type: :model do
   it { is_expected.to belong_to(:webhook_endpoint) }
   it { is_expected.to belong_to(:object).optional }
 
+  describe '#payload' do
+    it 'returns a hash' do
+      expect(webhook.payload).to be_a(Hash)
+    end
+
+    context 'when payload was stored as json' do
+      it 'returns a hash' do
+        webhook.update_column(:payload, {'key' => 'value'}.to_json) # rubocop:disable Rails/SkipsModelValidations
+
+        expect(webhook.reload.payload).to eq({'key' => 'value'})
+        expect(webhook.read_attribute(:payload)).to be_a String
+      end
+    end
+  end
+
   describe '#generate_headers' do
     it 'generates the query headers' do
       headers = webhook.generate_headers
