@@ -36,6 +36,12 @@ RSpec.describe Wallets::UpdateService, type: :service do
       end
     end
 
+    it "calls Wallets::Balance::RefreshOngoingService" do
+      allow(Wallets::Balance::RefreshOngoingService).to receive(:call)
+      update_service.call
+      expect(Wallets::Balance::RefreshOngoingService).to have_received(:call).with(wallet:)
+    end
+
     context 'when wallet is not found' do
       let(:wallet) { nil }
 

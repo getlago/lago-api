@@ -25,6 +25,8 @@ module Wallets
         wallet.save!
       end
 
+      Wallets::Balance::RefreshOngoingService.call(wallet:)
+
       result.wallet = wallet
       result
     rescue ActiveRecord::RecordInvalid => e
