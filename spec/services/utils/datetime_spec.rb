@@ -21,6 +21,12 @@ RSpec.describe Utils::Datetime, type: :service do
         expect(datetime).to be_valid_format(Time.current)
       end
     end
+
+    context 'when parameter is a string with microseconds' do
+      it 'returns true' do
+        expect(datetime).to be_valid_format('2024-05-30T09:45:44.394316274Z')
+      end
+    end
   end
 
   describe '.date_diff_with_timezone' do
