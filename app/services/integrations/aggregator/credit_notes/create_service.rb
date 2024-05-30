@@ -3,11 +3,11 @@
 module Integrations
   module Aggregator
     module CreditNotes
-      class CreateService < BaseService
+      class CreateService < Integrations::Aggregator::Invoices::BaseService
         def initialize(credit_note:)
           @credit_note = credit_note
 
-          super(integration:)
+          super(invoice:)
         end
 
         def action_path
@@ -56,65 +56,15 @@ module Integrations
         attr_reader :credit_note
 
         delegate :customer, to: :credit_note, allow_nil: true
-
-        def headers
-          {
-            'Connection-Id' => integration.connection_id,
-            'Authorization' => "Bearer #{secret_key}",
-            'Provider-Config-Key' => provider
-          }
-        end
-
-        def integration
-          return nil unless integration_customer
-
-          integration_customer&.integration
-        end
-
-        def integration_customer
-          @integration_customer ||= customer&.integration_customers&.first
-        end
-
-        def billable_metric_item(fee)
-          integration
-            .integration_mappings
-            .find_by(mappable_type: 'BillableMetric', mappable_id: fee.billable_metric.id) || fallback_item
-        end
-
-        def add_on_item(fee)
-          integration
-            .integration_mappings
-            .find_by(mappable_type: 'AddOn', mappable_id: fee.add_on.id) || fallback_item
-        end
-
-        def item(fee)
-          mapped_item = if fee.charge?
-            billable_metric_item(fee)
-          elsif fee.add_on?
-            add_on_item(fee)
-          elsif fee.credit?
-            credit_item
-          elsif fee.commitment?
-            commitment_item
-          elsif fee.subscription?
-            subscription_item
-          end
-
-          {
-            'item' => mapped_item.external_id,
-            'account' => mapped_item.external_account_code,
-            'quantity' => fee.units,
-            'rate' => fee.precise_unit_amount
-          }
-        end
+        delegate :invoice, to: :credit_note
 
         def coupons
           output = []
 
           if credit_note.coupons_adjustment_amount_cents > 0
             output << {
-              'item' => coupon_item.external_id,
-              'account' => coupon_item.external_account_code,
+              'item' => coupon_item&.external_id,
+              'account' => coupon_item&.external_account_code,
               'quantity' => 1,
               'rate' => -amount(credit_note.coupons_adjustment_amount_cents, resource: credit_note)
             }
