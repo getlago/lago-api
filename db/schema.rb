@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_05_22_105942) do
+ActiveRecord::Schema[7.0].define(version: 2024_05_30_123427) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -896,6 +896,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_05_22_105942) do
     t.datetime "updated_at", null: false
     t.integer "method", default: 0, null: false
     t.decimal "target_ongoing_balance", precision: 30, scale: 5
+    t.datetime "started_at"
+    t.index ["started_at"], name: "index_recurring_transaction_rules_on_started_at"
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
   end
 
