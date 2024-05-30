@@ -18,7 +18,6 @@ module Integrations
           return result unless integration
           return result unless integration.sync_credit_notes
           return result unless credit_note.finalized?
-          return result unless fallback_item
 
           response = http_client.post_with_response(payload, headers)
           result.external_id = JSON.parse(response.body)
