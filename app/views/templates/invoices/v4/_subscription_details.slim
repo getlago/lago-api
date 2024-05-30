@@ -15,15 +15,17 @@
           td.body-2 = I18n.t('invoice.unit_price')
           td.body-2 = I18n.t('invoice.tax_rate')
           td.body-2 = I18n.t('invoice.amount')
-        tr
-          - if subscription_fee&.invoice_display_name&.present?
-            td.body-1 = subscription_fee&.invoice_display_name
-          - else
-            td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
-          td.body-2 = 1
-          td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
-          td.body-2 == TaxHelper.applied_taxes(subscription_fee)
-          td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
+
+        - if FeeDisplayHelper.should_display_subscription_fee?(invoice_subscription)
+          tr
+            - if subscription_fee&.invoice_display_name&.present?
+              td.body-1 = subscription_fee&.invoice_display_name
+            - else
+              td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
+            td.body-2 = 1
+            td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
+            td.body-2 == TaxHelper.applied_taxes(subscription_fee)
+            td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
 
         - if subscription? && subscription_fees(subscription.id).charge_kind.any?
           / Charges payed in advance on payed in advance plan
