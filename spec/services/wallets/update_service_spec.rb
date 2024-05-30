@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Wallets::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(membership.user) }
+  subject(:update_service) { described_class.new(wallet:, params:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -12,23 +12,22 @@ RSpec.describe Wallets::UpdateService, type: :service do
   let(:wallet) { create(:wallet, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
 
-  describe 'update' do
+  describe '#call' do
     before do
       subscription
       wallet
     end
 
-    let(:update_args) do
+    let(:params) do
       {
-        id: wallet.id,
+        id: wallet&.id,
         name: 'new name',
         expiration_at:
       }
     end
 
     it 'updates the wallet' do
-      result = update_service.update(wallet:, args: update_args)
-
+      result = update_service.call
       expect(result).to be_success
 
       aggregate_failures do
@@ -38,16 +37,10 @@ RSpec.describe Wallets::UpdateService, type: :service do
     end
 
     context 'when wallet is not found' do
-      let(:update_args) do
-        {
-          id: '123456',
-          name: 'new name',
-          expiration_date: '2022-01-01'
-        }
-      end
+      let(:wallet) { nil }
 
       it 'returns an error' do
-        result = update_service.update(wallet: nil, args: update_args)
+        result = update_service.call
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('wallet_not_found')
@@ -59,7 +52,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         let(:expiration_at) { 'invalid' }
 
         it 'returns false and result has errors' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           expect(result).not_to be_success
           expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
@@ -70,7 +63,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         let(:expiration_at) { 123 }
 
         it 'returns false and result has errors' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           expect(result).not_to be_success
           expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
@@ -81,7 +74,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         let(:expiration_at) { (Time.current - 1.year).iso8601 }
 
         it 'returns false and result has errors' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           expect(result).not_to be_success
           expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
@@ -103,7 +96,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
           }
         ]
       end
-      let(:update_args) do
+      let(:params) do
         {
           id: wallet.id,
           name: 'new name',
@@ -115,7 +108,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       before { recurring_transaction_rule }
 
       it 'creates a new rule and removes the old one' do
-        result = update_service.update(wallet:, args: update_args)
+        result = update_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -146,7 +139,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
 
         it 'updates the rule' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           aggregate_failures do
             expect(result).to be_success
@@ -178,7 +171,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
 
         it 'updates the rule' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           expect(result).to be_success
 
@@ -201,7 +194,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
 
         it 'sanitizes rules successfully' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           aggregate_failures do
             expect(result).to be_success
@@ -229,7 +222,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
 
         it 'returns an error' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           expect(result).not_to be_success
           expect(result.error.messages[:recurring_transaction_rules])
@@ -250,7 +243,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
 
         it 'returns an error' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           expect(result).not_to be_success
           expect(result.error.messages[:recurring_transaction_rules]).to eq(['invalid_recurring_rule'])
@@ -270,7 +263,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
 
         it 'returns an error' do
-          result = update_service.update(wallet:, args: update_args)
+          result = update_service.call
 
           expect(result).not_to be_success
           expect(result.error.messages[:recurring_transaction_rules]).to eq(['invalid_recurring_rule'])
