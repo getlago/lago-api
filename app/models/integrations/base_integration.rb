@@ -34,6 +34,8 @@ module Integrations
         'Integrations::NetsuiteIntegration'
       when 'okta'
         'Integrations::OktaIntegration'
+      when 'anrok'
+        'Integrations::AnrokIntegration'
       else
         raise(NotImplementedError)
       end
