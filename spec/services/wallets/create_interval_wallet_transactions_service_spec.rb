@@ -6,7 +6,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
   subject(:create_interval_transactions_service) { described_class.new }
 
   describe '.call' do
-    let(:wallet) { create(:wallet, customer:, created_at:) }
+    let(:wallet) { create(:wallet, customer:, created_at:, credits_ongoing_balance: 50) }
     let(:created_at) { DateTime.parse('20 Feb 2021') }
     let(:customer) { create(:customer) }
 
@@ -49,6 +49,35 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       it 'does not enqueue a job on other day' do
         travel_to(current_date + 1.day) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+        end
+      end
+
+      context "when method is target" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            trigger: :interval,
+            wallet:,
+            interval:,
+            created_at: created_at + 1.second,
+            method: "target",
+            target_ongoing_balance: "200"
+          )
+        end
+
+        it "calls wallet transaction create job with expected params" do
+          travel_to(current_date) do
+            expect { create_interval_transactions_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+              .with(
+                organization_id: wallet.organization.id,
+                params: {
+                  wallet_id: wallet.id,
+                  paid_credits: "150.0",
+                  granted_credits: "0.0",
+                  source: :interval
+                }
+              )
+          end
         end
       end
     end
