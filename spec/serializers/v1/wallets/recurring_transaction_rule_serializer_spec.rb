@@ -16,6 +16,7 @@ RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
       "trigger" => recurring_transaction_rule.trigger,
       "interval" => recurring_transaction_rule.interval,
       "paid_credits" => recurring_transaction_rule.paid_credits.to_s,
+      "started_at" => recurring_transaction_rule.started_at&.iso8601,
       "target_ongoing_balance" => recurring_transaction_rule.target_ongoing_balance,
       "threshold_credits" => recurring_transaction_rule.threshold_credits.to_s,
       "granted_credits" => recurring_transaction_rule.granted_credits.to_s,

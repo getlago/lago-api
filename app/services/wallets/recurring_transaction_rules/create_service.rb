@@ -24,6 +24,7 @@ module Wallets
           threshold_credits: rule_params[:threshold_credits] || 0.0,
           interval: rule_params[:interval],
           method:,
+          started_at: rule_params[:started_at],
           target_ongoing_balance: rule_params[:target_ongoing_balance],
           trigger: rule_params[:trigger].to_s
         )

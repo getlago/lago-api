@@ -20,6 +20,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
       method: "target",
       paid_credits: "10.0",
       granted_credits: "5.0",
+      started_at: "2024-05-30T12:48:26Z",
       target_ongoing_balance: "100.0",
       trigger: "interval"
     }
@@ -43,6 +44,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           interval: "monthly",
           method: "target",
           paid_credits: 10.0,
+          started_at: Time.parse("2024-05-30T12:48:26Z"),
           target_ongoing_balance: 100.0,
           threshold_credits: 0.0,
           trigger: "interval"
