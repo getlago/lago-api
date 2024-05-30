@@ -30,4 +30,15 @@ FactoryBot.define do
       {client_secret: SecureRandom.uuid}.to_json
     end
   end
+
+  factory :anrok_integration, class: 'Integrations::AnrokIntegration' do
+    organization
+    type { 'Integrations::AnrokIntegration' }
+    code { 'anrok' }
+    name { 'Anrok Integration' }
+
+    secrets do
+      {api_key: SecureRandom.uuid}.to_json
+    end
+  end
 end
