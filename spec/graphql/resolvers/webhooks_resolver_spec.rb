@@ -8,7 +8,7 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
     <<~GQL
       query {
         webhooks(limit: 5, webhookEndpointId: "#{webhook_endpoint.id}") {
-          collection { id }
+          collection { id payload }
           metadata { currentPage, totalCount }
         }
       }
@@ -36,10 +36,38 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
     )
 
     webhooks_response = result['data']['webhooks']
+    webhook = webhooks_response['collection'].first
 
     aggregate_failures do
       expect(webhooks_response['collection'].count).to eq(webhook_endpoint.webhooks.count)
       expect(webhooks_response['metadata']['currentPage']).to eq(1)
+      expect(webhook['payload']).to be_a String
+      expect(JSON.parse(webhook['payload'])).to be_a Hash
+    end
+  end
+
+  context 'when the webhook payload is json-serialized in the database' do
+    it 'returns a list of webhooks' do
+      Webhook.all.find_each do |w|
+        w.update_column(:payload, {'foo' => 'bar'}.to_json) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+      )
+
+      webhooks_response = result['data']['webhooks']
+      webhook = webhooks_response['collection'].first
+
+      aggregate_failures do
+        expect(webhooks_response['collection'].count).to eq(webhook_endpoint.webhooks.count)
+        expect(webhooks_response['metadata']['currentPage']).to eq(1)
+        expect(webhook['payload']).to be_a String
+        expect(JSON.parse(webhook['payload'])).to be_a Hash
+      end
     end
   end
 end
