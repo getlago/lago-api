@@ -77,7 +77,7 @@ module Integrations
               'item' => coupon_item.external_id,
               'account' => coupon_item.external_account_code,
               'quantity' => 1,
-              'rate' => -amount(invoice.coupons_amount_cents)
+              'rate' => -amount(invoice.coupons_amount_cents, resource: invoice)
             }
           end
 
@@ -86,7 +86,7 @@ module Integrations
               'item' => credit_item.external_id,
               'account' => credit_item.external_account_code,
               'quantity' => 1,
-              'rate' => -amount(invoice.prepaid_credit_amount_cents)
+              'rate' => -amount(invoice.prepaid_credit_amount_cents, resource: invoice)
             }
           end
 
@@ -95,7 +95,7 @@ module Integrations
               'item' => credit_note_item.external_id,
               'account' => credit_note_item.external_account_code,
               'quantity' => 1,
-              'rate' => -amount(invoice.credit_notes_amount_cents)
+              'rate' => -amount(invoice.credit_notes_amount_cents, resource: invoice)
             }
           end
 
@@ -111,7 +111,7 @@ module Integrations
               'entity' => integration_customer.external_customer_id,
               'istaxable' => true,
               'taxitem' => tax_item&.external_id,
-              'taxamountoverride' => amount(invoice.taxes_amount_cents),
+              'taxamountoverride' => amount(invoice.taxes_amount_cents, resource: invoice),
               'otherrefnum' => invoice.number,
               'custbody_lago_id' => invoice.id,
               'custbody_ava_disable_tax_calculation' => true
