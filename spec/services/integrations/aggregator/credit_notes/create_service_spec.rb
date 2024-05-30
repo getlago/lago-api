@@ -209,29 +209,28 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
     integration.save!
   end
 
-  # TODO: uncomment after jobs are merged
-  # describe '#call_async' do
-  #   subject(:service_call_async) { described_class.new(credit_note:).call_async }
+  describe '#call_async' do
+    subject(:service_call_async) { described_class.new(credit_note:).call_async }
 
-  #   context 'when credit_note exists' do
-  #     it 'enqueues credit_note create job' do
-  #       expect { service_call_async }.to enqueue_job(Integrations::Aggregator::CreditNotes::CreateJob)
-  #     end
-  #   end
+    context 'when credit_note exists' do
+      it 'enqueues credit_note create job' do
+        expect { service_call_async }.to enqueue_job(Integrations::Aggregator::CreditNotes::CreateJob)
+      end
+    end
 
-  #   context 'when credit_note does not exist' do
-  #     let(:credit_note) { nil }
+    context 'when credit_note does not exist' do
+      let(:credit_note) { nil }
 
-  #     it 'returns an error' do
-  #       result = service_call_async
+      it 'returns an error' do
+        result = service_call_async
 
-  #       aggregate_failures do
-  #         expect(result).not_to be_success
-  #         expect(result.error.error_code).to eq('credit_note_not_found')
-  #       end
-  #     end
-  #   end
-  # end
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.error_code).to eq('credit_note_not_found')
+        end
+      end
+    end
+  end
 
   describe '#call' do
     context 'when service call is successful' do
