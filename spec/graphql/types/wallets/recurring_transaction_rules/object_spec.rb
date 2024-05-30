@@ -10,6 +10,7 @@ RSpec.describe Types::Wallets::RecurringTransactionRules::Object do
   it { is_expected.to have_field(:trigger).of_type('RecurringTransactionTriggerEnum!') }
   it { is_expected.to have_field(:interval).of_type('RecurringTransactionIntervalEnum') }
 
+  it { is_expected.to have_field(:started_at).of_type('ISO8601DateTime') }
   it { is_expected.to have_field(:target_ongoing_balance).of_type('String') }
   it { is_expected.to have_field(:threshold_credits).of_type('String') }
   it { is_expected.to have_field(:paid_credits).of_type('String!') }
