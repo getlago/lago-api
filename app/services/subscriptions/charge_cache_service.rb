@@ -2,6 +2,10 @@
 
 module Subscriptions
   class ChargeCacheService < BaseService
+    def self.expire_for_subscription(subscription)
+      subscription.plan.charges.each { new(subscription: subscription, charge: _1).expire_cache }
+    end
+
     def initialize(subscription:, charge:)
       @subscription = subscription
       @charge = charge
