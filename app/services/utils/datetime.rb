@@ -3,7 +3,9 @@
 module Utils
   class Datetime
     def self.valid_format?(datetime)
-      datetime.respond_to?(:strftime) || datetime.is_a?(String) && DateTime._strptime(datetime).present?
+      datetime.respond_to?(:strftime) || datetime.is_a?(String) && Time.zone.parse(datetime.to_s).present?
+    rescue ArgumentError
+      false
     end
 
     def self.date_diff_with_timezone(from_datetime, to_datetime, timezone)
