@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class SlimHelper
+  PDF_LOGO_FILENAME = "lago-logo-invoice.png"
+
   def self.render(path, context)
     Slim::Template.new do
       File.read(

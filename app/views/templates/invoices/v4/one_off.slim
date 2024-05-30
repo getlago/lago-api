@@ -463,8 +463,7 @@ html
       == SlimHelper.render('templates/invoices/v4/_eu_tax_management', self)
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
-
       .powered-by
         span.body-2
           | #{I18n.t('invoice.powered_by')} &nbsp;
-        img src="lago-logo-invoice.png" alt="Lago Logo"
+        img src="#{::SlimHelper::PDF_LOGO_FILENAME}" alt="Lago Logo"

@@ -37,7 +37,11 @@ module Utils
 
       response = http_client.post_multipart_file(
         file1: prepare_http_files(render_html, 'text/html', 'index.html'),
-        file2: prepare_http_files(File.read(Rails.root.join('public/assets/images/lago-logo-invoice.png')), 'image/png', 'lago-logo-invoice.png'),
+        file2: prepare_http_files(
+          File.read(Rails.root.join('public/assets/images/', SlimHelper::PDF_LOGO_FILENAME)),
+          'image/png',
+          SlimHelper::PDF_LOGO_FILENAME
+        ),
         scale: '1.28',
         marginTop: '0.42',
         marginBottom: '0.42',

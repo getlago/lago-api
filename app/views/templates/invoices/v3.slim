@@ -434,7 +434,7 @@ html
       .powered-by
         span.body-2
           | #{I18n.t('invoice.powered_by')} &nbsp;
-        img src="lago-logo-invoice.png" alt="Lago Logo"
+        img src="#{::SlimHelper::PDF_LOGO_FILENAME}" alt="Lago Logo"
 
       - if subscriptions.count > 1
         == SlimHelper.render('templates/invoices/v3/_subscription_details', self)
