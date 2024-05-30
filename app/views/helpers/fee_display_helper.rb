@@ -8,4 +8,11 @@ class FeeDisplayHelper
 
     " • #{fee.grouped_by.values.compact.join(" • ")}"
   end
+
+  def self.should_display_subscription_fee?(invoice_subscription)
+    return false if invoice_subscription.blank?
+    return true if invoice_subscription.charge_amount_cents.zero?
+
+    invoice_subscription.subscription_amount_cents.positive?
+  end
 end
