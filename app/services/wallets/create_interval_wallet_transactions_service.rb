@@ -10,8 +10,8 @@ module Wallets
           organization_id: wallet.organization.id,
           params: {
             wallet_id: wallet.id,
-            paid_credits: recurring_transaction_rule.paid_credits.to_s,
-            granted_credits: recurring_transaction_rule.granted_credits.to_s,
+            paid_credits: paid_credits(recurring_transaction_rule),
+            granted_credits: granted_credits(recurring_transaction_rule),
             source: :interval
           }
         )
@@ -22,6 +22,18 @@ module Wallets
 
     def today
       @today ||= Time.current
+    end
+
+    def paid_credits(rule)
+      return (rule.target_ongoing_balance - rule.wallet.credits_ongoing_balance).to_s if rule.target?
+
+      rule.paid_credits.to_s
+    end
+
+    def granted_credits(rule)
+      return "0.0" if rule.target?
+
+      rule.granted_credits.to_s
     end
 
     # NOTE: Retrieve list of recurring_transaction_rules that should create wallet transactions today
