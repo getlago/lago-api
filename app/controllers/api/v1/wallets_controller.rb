@@ -22,13 +22,12 @@ module Api
       end
 
       def update
-        service = Wallets::UpdateService.new
-        result = service.update(
+        result = Wallets::UpdateService.call(
           wallet: current_organization.wallets.find_by(id: params[:id]),
-          args: WalletLegacyInput.new(
+          params: WalletLegacyInput.new(
             current_organization,
-            update_params.merge(id: params[:id]).to_h.deep_symbolize_keys,
-          ).update_input,
+            update_params.merge(id: params[:id]).to_h.deep_symbolize_keys
+          ).update_input
         )
 
         if result.success?
