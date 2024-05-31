@@ -2028,6 +2028,7 @@ type CreditNote {
   currency: CurrencyEnum!
   customer: Customer!
   description: String
+  externalIntegrationId: String
   fileUrl: String
   id: ID!
   integrationSyncable: Boolean!
