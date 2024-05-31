@@ -9,6 +9,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
     let(:wallet) { create(:wallet, customer:, created_at:, credits_ongoing_balance: 50) }
     let(:created_at) { DateTime.parse('20 Feb 2021') }
     let(:customer) { create(:customer) }
+    let(:started_at) { nil }
 
     let(:recurring_transaction_rule) do
       create(
@@ -16,7 +17,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         trigger: :interval,
         wallet:,
         interval:,
-        created_at: created_at + 1.second
+        created_at: created_at + 1.second,
+        started_at:
       )
     end
 
@@ -49,6 +51,35 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       it 'does not enqueue a job on other day' do
         travel_to(current_date + 1.day) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+        end
+      end
+
+      context "when started_at is set on the transaction recurring rule" do
+        let(:started_at) { DateTime.parse("20 Jun 2022") }
+
+        it "does not enqueue a job one week after the creation date" do
+          travel_to(current_date) do
+            expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+          end
+        end
+
+        it 'enqueues a job one week after the started_at date' do
+          current_date = DateTime.parse('20 Jun 2022').next_occurring(started_at.strftime('%A').downcase.to_sym)
+
+          travel_to(current_date) do
+            create_interval_transactions_service.call
+
+            expect(WalletTransactions::CreateJob).to have_been_enqueued
+              .with(
+                organization_id: customer.organization_id,
+                params: {
+                  wallet_id: wallet.id,
+                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                  source: :interval
+                }
+              )
+          end
         end
       end
 
@@ -114,6 +145,38 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         let(:current_date) { DateTime.parse('30 Apr 2021') }
 
         it 'enqueues a job if the month count less than 31 days' do
+          travel_to(current_date) do
+            create_interval_transactions_service.call
+
+            expect(WalletTransactions::CreateJob).to have_been_enqueued
+              .with(
+                organization_id: customer.organization_id,
+                params: {
+                  wallet_id: wallet.id,
+                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
+                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
+                  source: :interval
+                }
+              )
+          end
+        end
+      end
+
+      context "when started_at is set on the transaction recurring rule" do
+        let(:created_at) { DateTime.parse("31 Mar 2025") }
+        let(:started_at) { DateTime.parse("15 Apr 2025") }
+
+        it "does not enqueue a job one month after the creation date" do
+          current_date = DateTime.parse("30 Apr 2025")
+
+          travel_to(current_date) do
+            expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+          end
+        end
+
+        it 'enqueues a job one month after the started_at date' do
+          current_date = DateTime.parse("15 May 2025")
+
           travel_to(current_date) do
             create_interval_transactions_service.call
 

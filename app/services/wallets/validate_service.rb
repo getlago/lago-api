@@ -7,7 +7,7 @@ module Wallets
       valid_paid_credits_amount? if args[:paid_credits]
       valid_granted_credits_amount? if args[:granted_credits]
       valid_expiration_at? if args[:expiration_at]
-      valid_recurring_transaction_rules? if args[:recurring_transaction_rules]
+      valid_recurring_transaction_rules? if args[:recurring_transaction_rules].present?
 
       if errors?
         result.validation_failure!(errors:)
@@ -66,7 +66,7 @@ module Wallets
     end
 
     def valid_recurring_transaction_rules?
-      if args[:recurring_transaction_rules].count != 1
+      if args[:recurring_transaction_rules].count > 1
         return add_error(field: :recurring_transaction_rules, error_code: 'invalid_number_of_recurring_rules')
       end
 

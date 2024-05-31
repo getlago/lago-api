@@ -90,7 +90,7 @@ module Wallets
       base_recurring_transaction_rule_scope(
         interval: :weekly,
         conditions: [
-          "EXTRACT(ISODOW FROM (wallets.created_at#{at_time_zone})) =
+          "EXTRACT(ISODOW FROM (#{wallet_started_at})) =
           EXTRACT(ISODOW FROM (:today#{at_time_zone}))"
         ]
       )
@@ -100,7 +100,7 @@ module Wallets
       base_recurring_transaction_rule_scope(
         interval: :monthly,
         conditions: [<<-SQL]
-          DATE_PART('day', (wallets.created_at#{at_time_zone})) = ANY (
+          DATE_PART('day', (#{wallet_started_at})) = ANY (
             -- Check if today is the last day of the month
             CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
             THEN
@@ -118,7 +118,7 @@ module Wallets
     # NOTE: Billed quarterly on anniversary date
     def quarterly_anniversary
       billing_day = <<-SQL
-        DATE_PART('day', (wallets.created_at#{at_time_zone})) = ANY (
+        DATE_PART('day', (#{wallet_started_at})) = ANY (
           -- Check if today is the last day of the month
           CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
           THEN
@@ -134,14 +134,14 @@ module Wallets
       billing_month = <<-SQL
         (
           -- We need to avoid zero and instead of it use 12. E.g.: (3 + 9) % 12 = 0 -> 12
-          CASE WHEN MOD(CAST(DATE_PART('month', (wallets.created_at#{at_time_zone})) AS INTEGER), 3) = 0
+          CASE WHEN MOD(CAST(DATE_PART('month', (#{wallet_started_at})) AS INTEGER), 3) = 0
           THEN
             (DATE_PART('month', :today#{at_time_zone}) IN (3, 6, 9, 12))
           ELSE (
-            DATE_PART('month', (wallets.created_at#{at_time_zone})) = DATE_PART('month', :today#{at_time_zone})
-              OR MOD(CAST(DATE_PART('month', (wallets.created_at#{at_time_zone})) + 3 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
-              OR MOD(CAST(DATE_PART('month', (wallets.created_at#{at_time_zone})) + 6 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
-              OR MOD(CAST(DATE_PART('month', (wallets.created_at#{at_time_zone})) + 9 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
+            DATE_PART('month', (#{wallet_started_at})) = DATE_PART('month', :today#{at_time_zone})
+              OR MOD(CAST(DATE_PART('month', (#{wallet_started_at})) + 3 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
+              OR MOD(CAST(DATE_PART('month', (#{wallet_started_at})) + 6 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
+              OR MOD(CAST(DATE_PART('month', (#{wallet_started_at})) + 9 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
           )
           END
         )
@@ -156,12 +156,12 @@ module Wallets
     def yearly_anniversary
       billing_month = <<-SQL
         -- Ensure we are on the billing month
-        DATE_PART('month', (wallets.created_at#{at_time_zone})) = DATE_PART('month', :today#{at_time_zone})
+        DATE_PART('month', (#{wallet_started_at})) = DATE_PART('month', :today#{at_time_zone})
       SQL
 
       billing_day = <<-SQL
         -- Check if we are not in a leap year when today is february the 28th
-        DATE_PART('day', (wallets.created_at#{at_time_zone})) = ANY (
+        DATE_PART('day', (#{wallet_started_at})) = ANY (
           CASE WHEN (
             DATE_PART('month', :today#{at_time_zone}) = 2
             AND DATE_PART('day', :today#{at_time_zone}) = 28
@@ -186,6 +186,15 @@ module Wallets
     def end_of_month
       <<-SQL
         (DATE_TRUNC('month', :today#{at_time_zone}) + INTERVAL '1 month - 1 day')::date
+      SQL
+    end
+
+    def wallet_started_at
+      <<-SQL
+        COALESCE(
+          recurring_transaction_rules.started_at#{at_time_zone},
+          wallets.created_at#{at_time_zone}
+        )
       SQL
     end
 
