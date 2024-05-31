@@ -164,7 +164,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
             invoiceGracePeriod: 2,
             timezone: 'TZ_EUROPE_PARIS'
           })
-        },
+        }
       )
 
       result_data = result['data']['updateCustomer']

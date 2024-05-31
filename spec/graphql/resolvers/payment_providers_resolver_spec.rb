@@ -184,7 +184,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
           current_user: membership.user,
           current_organization: organization,
           permissions: required_permission,
-          query:,
+          query:
         )
 
         expect(adyen_provider.live_prefix).to be_a String
@@ -202,7 +202,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
           current_user: membership.user,
           current_organization: organization,
           permissions: ['organization:integrations:view'],
-          query:,
+          query:
         )
 
         payment_providers_response = result['data']['paymentProviders']['collection']
