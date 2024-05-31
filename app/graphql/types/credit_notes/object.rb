@@ -56,6 +56,19 @@ module Types
         object.should_sync_credit_note? &&
           object.integration_resources.where(resource_type: 'credit_note', syncable_type: 'CreditNote').none?
       end
+
+      def external_integration_id
+        integration_customer = object.customer&.integration_customers&.first
+
+        return nil unless integration_customer
+
+        IntegrationResource.find_by(
+          integration: integration_customer.integration,
+          syncable_id: object.id,
+          syncable_type: 'CreditNote',
+          resource_type: :credit_note
+        )&.external_id
+      end
     end
   end
 end
