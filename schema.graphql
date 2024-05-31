@@ -115,6 +115,14 @@ enum AggregationTypeEnum {
   weighted_sum_agg
 }
 
+type AnrokIntegration {
+  apiKey: String!
+  code: String!
+  hasMappingsConfigured: Boolean
+  id: ID!
+  name: String!
+}
+
 type AppliedAddOn {
   addOn: AddOn!
   amountCents: BigInt!
@@ -3617,7 +3625,7 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
 
-union Integration = NetsuiteIntegration | OktaIntegration
+union Integration = AnrokIntegration | NetsuiteIntegration | OktaIntegration
 
 type IntegrationCollection {
   collection: [Integration!]!
