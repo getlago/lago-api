@@ -36,7 +36,7 @@ RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     aggregate_failures do

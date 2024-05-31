@@ -36,7 +36,7 @@ module Invoices
           amount_cents: gocardless_result.amount,
           amount_currency: gocardless_result.currency&.upcase,
           provider_payment_id: gocardless_result.id,
-          status: gocardless_result.status,
+          status: gocardless_result.status
         )
         payment.save!
 
@@ -81,7 +81,7 @@ module Invoices
       def client
         @client ||= GoCardlessPro::Client.new(
           access_token: gocardless_payment_provider.access_token,
-          environment: gocardless_payment_provider.environment,
+          environment: gocardless_payment_provider.environment
         )
       end
 
@@ -94,7 +94,7 @@ module Invoices
           params: {
             customer: customer.gocardless_customer.provider_customer_id,
             status: %w[pending_customer_approval pending_submission submitted active]
-          },
+          }
         )
 
         mandate = result&.records&.first
@@ -122,7 +122,7 @@ module Invoices
           },
           headers: {
             'Idempotency-Key' => "#{invoice.id}/#{invoice.payment_attempts}"
-          },
+          }
         )
       rescue GoCardlessPro::Error => e
         deliver_error_webhook(e)
@@ -146,7 +146,7 @@ module Invoices
             payment_status:,
             ready_for_payment_processing: payment_status.to_sym != :succeeded
           },
-          webhook_notification: deliver_webhook,
+          webhook_notification: deliver_webhook
         )
         update_invoice_result.raise_if_error!
       end
@@ -165,7 +165,7 @@ module Invoices
           provider_error: {
             message: gocardless_error.message,
             error_code: gocardless_error.code
-          },
+          }
         )
       end
     end

@@ -11,7 +11,7 @@ class BillSubscriptionJob < ApplicationJob
       timestamp:,
       invoicing_reason:,
       invoice:,
-      skip_charges:,
+      skip_charges:
     )
     return if result.success?
 
@@ -23,7 +23,7 @@ class BillSubscriptionJob < ApplicationJob
       timestamp,
       invoicing_reason:,
       invoice: result.invoice,
-      skip_charges:,
+      skip_charges:
     )
   end
 end

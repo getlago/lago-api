@@ -21,9 +21,6 @@ AllCops:
 Style/StringLiterals:
   Enabled: false
 
-Style/TrailingCommaInArguments:
-  Enabled: false
-
 Performance/CaseWhenSplat:
   Enabled: true
 

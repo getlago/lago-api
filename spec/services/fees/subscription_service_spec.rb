@@ -7,7 +7,7 @@ RSpec.describe Fees::SubscriptionService do
     described_class.new(
       invoice:,
       subscription:,
-      boundaries:,
+      boundaries:
     )
   end
 
@@ -23,7 +23,7 @@ RSpec.describe Fees::SubscriptionService do
       :plan,
       organization:,
       amount_cents: 100,
-      amount_currency: 'EUR',
+      amount_currency: 'EUR'
     )
   end
   let(:invoice) { create(:invoice, organization:, customer:) }
@@ -43,7 +43,7 @@ RSpec.describe Fees::SubscriptionService do
       subscription_at:,
       customer:,
       created_at:,
-      external_id: 'sub_id',
+      external_id: 'sub_id'
     )
   end
 
@@ -63,7 +63,7 @@ RSpec.describe Fees::SubscriptionService do
         payment_status: 'pending',
         unit_amount_cents: 100,
         precise_unit_amount: 1,
-        amount_details: {'plan_amount_cents' => 100},
+        amount_details: {'plan_amount_cents' => 100}
       )
     end
 
@@ -84,7 +84,7 @@ RSpec.describe Fees::SubscriptionService do
             amount_cents: 90,
             unit_amount_cents: 90,
             precise_unit_amount: 0.9,
-            amount_details: {'plan_amount_cents' => 100},
+            amount_details: {'plan_amount_cents' => 100}
           )
         end
       end
@@ -109,7 +109,7 @@ RSpec.describe Fees::SubscriptionService do
           properties:,
           adjusted_units: true,
           adjusted_amount: false,
-          units: 3,
+          units: 3
         )
       end
       let(:properties) do
@@ -137,7 +137,7 @@ RSpec.describe Fees::SubscriptionService do
             events_count: nil,
             payment_status: 'pending',
             unit_amount_cents: 100,
-            precise_unit_amount: 1,
+            precise_unit_amount: 1
           )
         end
       end
@@ -152,7 +152,7 @@ RSpec.describe Fees::SubscriptionService do
             adjusted_units: false,
             adjusted_amount: true,
             units: 3,
-            unit_amount_cents: 200,
+            unit_amount_cents: 200
           )
         end
 
@@ -168,7 +168,7 @@ RSpec.describe Fees::SubscriptionService do
             events_count: nil,
             payment_status: 'pending',
             unit_amount_cents: 200,
-            precise_unit_amount: 2,
+            precise_unit_amount: 2
           )
         end
       end
@@ -183,7 +183,7 @@ RSpec.describe Fees::SubscriptionService do
             adjusted_units: false,
             adjusted_amount: false,
             units: 1,
-            invoice_display_name: 'test123',
+            invoice_display_name: 'test123'
           )
         end
 
@@ -200,7 +200,7 @@ RSpec.describe Fees::SubscriptionService do
             payment_status: 'pending',
             unit_amount_cents: 100,
             precise_unit_amount: 1,
-            invoice_display_name: 'test123',
+            invoice_display_name: 'test123'
           )
         end
       end
@@ -220,7 +220,7 @@ RSpec.describe Fees::SubscriptionService do
             events_count: nil,
             payment_status: 'pending',
             unit_amount_cents: 100,
-            precise_unit_amount: 1,
+            precise_unit_amount: 1
           )
         end
       end
@@ -262,7 +262,7 @@ RSpec.describe Fees::SubscriptionService do
             amount_currency: 'EUR',
             unit_amount_cents: 100,
             precise_unit_amount: 1,
-            units: 1,
+            units: 1
           )
         end
 
@@ -341,7 +341,7 @@ RSpec.describe Fees::SubscriptionService do
             invoice_id: invoice.id,
             amount_cents: 71,
             amount_currency: plan.amount_currency,
-            units: 1,
+            units: 1
           )
         end
 
@@ -456,7 +456,7 @@ RSpec.describe Fees::SubscriptionService do
             amount_currency: 'EUR',
             unit_amount_cents: 100,
             precise_unit_amount: 1,
-            units: 1,
+            units: 1
           )
         end
 
@@ -542,7 +542,7 @@ RSpec.describe Fees::SubscriptionService do
             invoice_id: invoice.id,
             amount_cents: 55,
             amount_currency: plan.amount_currency,
-            units: 1,
+            units: 1
           )
         end
 
@@ -623,7 +623,7 @@ RSpec.describe Fees::SubscriptionService do
           create(
             :plan,
             amount_cents: 3000,
-            amount_currency: 'EUR',
+            amount_currency: 'EUR'
           )
         end
 
@@ -635,7 +635,7 @@ RSpec.describe Fees::SubscriptionService do
             subscription_at: DateTime.parse('2022-08-31'),
             billing_time: :anniversary,
             customer:,
-            external_id: 'sub_id',
+            external_id: 'sub_id'
           )
         end
 
@@ -704,7 +704,7 @@ RSpec.describe Fees::SubscriptionService do
             amount_currency: 'EUR',
             unit_amount_cents: 100,
             precise_unit_amount: 1,
-            units: 1,
+            units: 1
           )
         end
 
@@ -741,7 +741,7 @@ RSpec.describe Fees::SubscriptionService do
             invoice_id: invoice.id,
             amount_cents: 80,
             amount_currency: plan.amount_currency,
-            units: 1,
+            units: 1
           )
         end
 
@@ -775,7 +775,7 @@ RSpec.describe Fees::SubscriptionService do
     let(:invoice) do
       create(
         :invoice,
-        issuing_date: subscription.started_at.end_of_month.to_date + 1.day,
+        issuing_date: subscription.started_at.end_of_month.to_date + 1.day
       )
     end
 
@@ -808,7 +808,7 @@ RSpec.describe Fees::SubscriptionService do
             plan.update!(
               pay_in_advance: true,
               trial_period:,
-              interval:,
+              interval:
             )
           end
 
@@ -888,7 +888,7 @@ RSpec.describe Fees::SubscriptionService do
       create(
         :plan,
         amount_cents: 100,
-        amount_currency: 'EUR',
+        amount_currency: 'EUR'
       )
     end
 
@@ -922,7 +922,7 @@ RSpec.describe Fees::SubscriptionService do
         started_at:,
         subscription_at:,
         customer:,
-        external_id: 'sub_id',
+        external_id: 'sub_id'
       )
     end
 
@@ -946,7 +946,7 @@ RSpec.describe Fees::SubscriptionService do
         invoice_id: invoice.id,
         amount_cents: 65,
         amount_currency: plan.amount_currency,
-        units: 1,
+        units: 1
       )
     end
 
@@ -974,7 +974,7 @@ RSpec.describe Fees::SubscriptionService do
           invoice_id: invoice.id,
           amount_cents: 65,
           amount_currency: plan.amount_currency,
-          units: 1,
+          units: 1
         )
       end
     end
@@ -1000,7 +1000,7 @@ RSpec.describe Fees::SubscriptionService do
           invoice_id: invoice.id,
           amount_cents: 43,
           amount_currency: plan.amount_currency,
-          units: 1,
+          units: 1
         )
       end
     end
@@ -1018,7 +1018,7 @@ RSpec.describe Fees::SubscriptionService do
           invoice_id: invoice.id,
           amount_cents: 61, # 100/31 * 19
           amount_currency: plan.amount_currency,
-          units: 1,
+          units: 1
         )
       end
     end
@@ -1060,7 +1060,7 @@ RSpec.describe Fees::SubscriptionService do
         plan: previous_plan,
         started_at: started_at - 6.months,
         customer:,
-        external_id: 'sub_id',
+        external_id: 'sub_id'
       )
     end
     let(:started_at) { Time.zone.parse('2022-03-15 00:00:00') }
@@ -1073,7 +1073,7 @@ RSpec.describe Fees::SubscriptionService do
         subscription_at:,
         previous_subscription:,
         customer:,
-        external_id: 'sub_id',
+        external_id: 'sub_id'
       )
     end
 
@@ -1095,7 +1095,7 @@ RSpec.describe Fees::SubscriptionService do
         invoice_id: invoice.id,
         amount_cents: 55,
         amount_currency: plan.amount_currency,
-        units: 1,
+        units: 1
       )
     end
 
@@ -1123,7 +1123,7 @@ RSpec.describe Fees::SubscriptionService do
           invoice_id: invoice.id,
           amount_cents: 55,
           amount_currency: plan.amount_currency,
-          units: 1,
+          units: 1
         )
       end
     end

@@ -25,7 +25,7 @@ module CreditNotes
           amount_cents: stripe_result.amount,
           amount_currency: stripe_result.currency&.upcase,
           status: stripe_result.status,
-          provider_refund_id: stripe_result.id,
+          provider_refund_id: stripe_result.id
         )
         refund.save!
 
@@ -84,7 +84,7 @@ module CreditNotes
           {
             api_key: stripe_api_key,
             idempotency_key: credit_note.id
-          },
+          }
         )
       rescue Stripe::InvalidRequestError => e
         deliver_error_webhook(message: e.message, code: e.code)
@@ -127,7 +127,7 @@ module CreditNotes
           provider_error: {
             message:,
             error_code: code
-          },
+          }
         )
       end
 
@@ -145,7 +145,7 @@ module CreditNotes
             organization_id: organization.id,
             credit_note_id: credit_note.id,
             refund_status: status
-          },
+          }
         )
       end
 

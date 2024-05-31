@@ -13,7 +13,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       :subscription,
       plan:,
       customer:,
-      started_at: Time.zone.now - 2.years,
+      started_at: Time.zone.now - 2.years
     )
   end
 
@@ -36,7 +36,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               flat_amount: '0.01'
             }
           ]
-        },
+        }
       )
     end
 
@@ -60,7 +60,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         customer:,
         subscription:,
         code: metric.code,
-        timestamp: Time.zone.now,
+        timestamp: Time.zone.now
       )
     end
 
@@ -102,7 +102,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :standard_charge,
           plan: subscription.plan,
           billable_metric: metric,
-          properties: {amount: '0'},
+          properties: {amount: '0'}
         )
       end
 
@@ -129,7 +129,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: {cloud: 'aws'},
+          properties: {cloud: 'aws'}
         )
 
         create(
@@ -139,7 +139,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: {cloud: 'google'},
+          properties: {cloud: 'google'}
         )
       end
 
@@ -168,7 +168,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               units: '1.0',
               amount_cents: 2000,
               events_count: 1
-            },
+            }
           )
         end
       end
@@ -191,7 +191,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :charge_filter_value,
           charge_filter: charge_filter_aws_usa,
           billable_metric_filter: billable_metric_filter_cloud,
-          values: ['aws'],
+          values: ['aws']
         )
       end
       let(:charge_filter_value12) do
@@ -199,7 +199,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :charge_filter_value,
           charge_filter: charge_filter_aws_usa,
           billable_metric_filter: billable_metric_filter_region,
-          values: ['usa'],
+          values: ['usa']
         )
       end
 
@@ -208,7 +208,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :charge_filter_value,
           charge_filter: charge_filter_aws_france,
           billable_metric_filter: billable_metric_filter_cloud,
-          values: ['aws'],
+          values: ['aws']
         )
       end
       let(:charge_filter_value22) do
@@ -216,7 +216,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :charge_filter_value,
           charge_filter: charge_filter_aws_france,
           billable_metric_filter: billable_metric_filter_region,
-          values: ['france'],
+          values: ['france']
         )
       end
 
@@ -225,7 +225,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :charge_filter_value,
           charge_filter: charge_filter_google_usa,
           billable_metric_filter: billable_metric_filter_cloud,
-          values: ['google'],
+          values: ['google']
         )
       end
       let(:charge_filter_value32) do
@@ -233,7 +233,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :charge_filter_value,
           charge_filter: charge_filter_google_usa,
           billable_metric_filter: billable_metric_filter_region,
-          values: ['usa'],
+          values: ['usa']
         )
       end
 
@@ -242,7 +242,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           :standard_charge,
           plan: subscription.plan,
           billable_metric: metric,
-          properties: {amount: '0'},
+          properties: {amount: '0'}
         )
       end
 
@@ -262,7 +262,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: {cloud: 'aws', region: 'usa'},
+          properties: {cloud: 'aws', region: 'usa'}
         )
 
         create(
@@ -272,7 +272,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: {cloud: 'aws', region: 'france'},
+          properties: {cloud: 'aws', region: 'france'}
         )
 
         create(
@@ -282,7 +282,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           subscription:,
           code: metric.code,
           timestamp: Time.zone.now,
-          properties: {cloud: 'google', region: 'usa'},
+          properties: {cloud: 'google', region: 'usa'}
         )
       end
 
@@ -319,7 +319,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
               units: '1.0',
               amount_cents: 3000,
               events_count: 1
-            },
+            }
           )
         end
       end
@@ -342,7 +342,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         :invoice_subscription,
         charges_from_datetime: DateTime.parse('2023-08-17T00:00:00'),
         charges_to_datetime: DateTime.parse('2023-09-16T23:59:59'),
-        subscription:,
+        subscription:
       )
     end
 

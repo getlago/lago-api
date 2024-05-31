@@ -21,7 +21,7 @@ RSpec.describe Resolvers::Auth::Google::AuthUrlResolver, type: :graphql do
   it 'returns the google auth url' do
     result = execute_graphql(
       query:,
-      request: Rack::Request.new(Rack::MockRequest.env_for('http://example.com')),
+      request: Rack::Request.new(Rack::MockRequest.env_for('http://example.com'))
     )
 
     response = result['data']['googleAuthUrl']
@@ -38,7 +38,7 @@ RSpec.describe Resolvers::Auth::Google::AuthUrlResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         query:,
-        request: Rack::Request.new(Rack::MockRequest.env_for('http://example.com')),
+        request: Rack::Request.new(Rack::MockRequest.env_for('http://example.com'))
       )
 
       response = result['errors'].first

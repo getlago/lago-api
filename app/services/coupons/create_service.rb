@@ -25,7 +25,7 @@ module Coupons
         expiration_at: args[:expiration_at],
         limited_plans: plan_identifiers.present?,
         limited_billable_metrics: billable_metric_identifiers.present?,
-        reusable:,
+        reusable:
       )
 
       if plan_identifiers.present? && plans.count != plan_identifiers.count
@@ -69,7 +69,7 @@ module Coupons
           coupon_code: coupon.code,
           coupon_name: coupon.name,
           organization_id:
-        },
+        }
       )
     end
 

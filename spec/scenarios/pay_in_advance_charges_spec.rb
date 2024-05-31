@@ -22,7 +22,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -32,7 +32,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         invoiceable: false,
         plan:,
         billable_metric:,
-        properties: {amount: '10'},
+        properties: {amount: '10'}
       )
 
       subscription = customer.subscriptions.first
@@ -47,7 +47,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -71,7 +71,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -101,7 +101,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -111,7 +111,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         invoiceable: false,
         plan:,
         billable_metric:,
-        properties: {amount: '12'},
+        properties: {amount: '12'}
       )
 
       subscription = customer.subscriptions.order(created_at: :desc).first
@@ -127,7 +127,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {unique_id: 'id_1'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -152,7 +152,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {unique_id: 'id_1', operation_type: 'remove'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -177,7 +177,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {unique_id: 'id_1'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -202,7 +202,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {unique_id: 'id_2'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(3).to(4)
 
@@ -226,7 +226,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {unique_id: 'id_2'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(4).to(5)
 
@@ -251,7 +251,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {unique_id: 'id_3'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(5).to(6)
 
@@ -276,7 +276,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {unique_id: 'id_3', operation_type: 'remove'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(6).to(7)
 
@@ -306,7 +306,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -316,7 +316,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         invoiceable: true,
         plan:,
         billable_metric:,
-        properties: {amount: '1'},
+        properties: {amount: '1'}
       )
 
       subscription = customer.subscriptions.first
@@ -332,7 +332,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '10'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -354,7 +354,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '-4'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -372,7 +372,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '8'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -399,7 +399,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         end
 
@@ -409,7 +409,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           invoiceable: true,
           plan:,
           billable_metric:,
-          properties: {amount: '0'},
+          properties: {amount: '0'}
         )
         charge_filter = create(:charge_filter, charge:, properties: {amount: '20'})
         create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ['europe'])
@@ -426,7 +426,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id:,
               external_customer_id: customer.external_id,
               properties: {amount: '10', region: 'europe'}
-            },
+            }
           )
 
           expect(subscription.reload.fees.count).to eq(1)
@@ -465,7 +465,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         end
 
@@ -475,7 +475,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           invoiceable: true,
           plan:,
           billable_metric:,
-          properties: {amount: '10'},
+          properties: {amount: '10'}
         )
         charge_filter = create(:charge_filter, charge:, properties: {amount: '20'})
         create(:charge_filter_value, charge_filter:, billable_metric_filter: region_metric_filter, values: ['europe'])
@@ -493,7 +493,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id:,
               external_customer_id: customer.external_id,
               properties: {amount: '10', region: 'africa', cloud: 'AWS'}
-            },
+            }
           )
 
           expect(Event.find_by(transaction_id:).metadata['current_aggregation']).to be_nil
@@ -528,7 +528,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -538,7 +538,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
         invoiceable: false,
         plan:,
         billable_metric:,
-        properties: {amount: '100', free_units: 3, package_size: 2},
+        properties: {amount: '100', free_units: 3, package_size: 2}
       )
 
       subscription = customer.subscriptions.first
@@ -554,7 +554,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '3'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -576,7 +576,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '1'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -594,7 +594,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '2'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -620,7 +620,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -645,7 +645,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               flat_amount: '0.01'
             }
           ]
-        },
+        }
       )
 
       subscription = customer.subscriptions.first
@@ -661,7 +661,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '3'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -683,7 +683,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '1'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -701,7 +701,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '2'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -728,7 +728,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         end
 
@@ -743,7 +743,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             fixed_amount: '1',
             free_units_per_events: 2,
             free_units_per_total_aggregation: '120.0'
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -755,7 +755,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '8'}
-            },
+            }
           )
         end
 
@@ -770,7 +770,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
                 properties: {amount: '5'}
-              },
+              }
             )
           end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -782,7 +782,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 5,
             events_count: 1,
-            amount_cents: 0,
+            amount_cents: 0
           )
         end
 
@@ -793,7 +793,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '3'}
-            },
+            }
           )
 
           fee = subscription.fees.order(created_at: :desc).first
@@ -804,7 +804,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 3,
             events_count: 1,
-            amount_cents: 100 + 15,
+            amount_cents: 100 + 15
           )
         end
       end
@@ -821,7 +821,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         end
 
@@ -836,7 +836,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             fixed_amount: '1',
             free_units_per_events: 1,
             free_units_per_total_aggregation: '120.0'
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -848,7 +848,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '2'}
-            },
+            }
           )
         end
 
@@ -863,7 +863,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
                 properties: {amount: '1'}
-              },
+              }
             )
           end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -875,7 +875,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 1,
             events_count: 1,
-            amount_cents: 100 + 5,
+            amount_cents: 100 + 5
           )
         end
       end
@@ -894,7 +894,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         end
 
@@ -909,7 +909,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             fixed_amount: '0.5',
             per_transaction_max_amount: '2',
             per_transaction_min_amount: '1.75'
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -923,7 +923,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
                 properties: {amount: '100'}
-              },
+              }
             )
           end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -935,7 +935,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 100,
             events_count: 1,
-            amount_cents: 175, # Apply minimum amount
+            amount_cents: 175 # Apply minimum amount
           )
         end
 
@@ -950,7 +950,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
                 properties: {amount: '1000'}
-              },
+              }
             )
           end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -962,7 +962,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 1_000,
             events_count: 1,
-            amount_cents: 200, # Apply maximum amount
+            amount_cents: 200 # Apply maximum amount
           )
         end
 
@@ -977,7 +977,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
                 properties: {amount: '10000'}
-              },
+              }
             )
           end.to change { subscription.reload.fees.count }.from(2).to(3)
 
@@ -989,7 +989,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 10_000,
             events_count: 1,
-            amount_cents: 200, # Apply maximum amount
+            amount_cents: 200 # Apply maximum amount
           )
 
           fetch_current_usage(customer:)
@@ -1008,7 +1008,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -1022,7 +1022,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
           rate: '5',
           fixed_amount: '1',
           free_units_per_total_aggregation: '3.0'
-        },
+        }
       )
 
       subscription = customer.subscriptions.first
@@ -1038,7 +1038,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '5'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -1060,7 +1060,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {amount: '1'}
-            },
+            }
           )
         end.to change { subscription.reload.fees.count }.from(1).to(2)
 
@@ -1087,7 +1087,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         end
 
@@ -1101,7 +1101,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             rate: '1',
             fixed_amount: '1',
             free_units_per_events: 1
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -1117,7 +1117,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
                 transaction_id: SecureRandom.uuid,
                 external_customer_id: customer.external_id,
                 properties: {amount: '5'}
-              },
+              }
             )
           end.to change { subscription.reload.fees.count }.from(0).to(1)
 
@@ -1129,7 +1129,7 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 1,
             events_count: 1,
-            amount_cents: 0,
+            amount_cents: 0
           )
         end
       end

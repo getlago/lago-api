@@ -13,7 +13,7 @@ module Webhooks
         ::V1::PaymentProviders::CustomerCheckoutSerializer.new(
           object,
           root_name: object_type,
-          checkout_url: options[:checkout_url],
+          checkout_url: options[:checkout_url]
         )
       end
 

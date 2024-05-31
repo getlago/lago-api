@@ -71,7 +71,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
         invoice.file.attach(
           io: StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))),
           filename: 'invoice.pdf',
-          content_type: 'application/pdf',
+          content_type: 'application/pdf'
         )
       end
 
@@ -98,7 +98,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
           :deleted,
           charge_filter:,
           billable_metric_filter:,
-          values: [billable_metric_filter.values.first],
+          values: [billable_metric_filter.values.first]
         )
       end
 
@@ -128,7 +128,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
         invoice.file.attach(
           io: StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))),
           filename: 'invoice.pdf',
-          content_type: 'application/pdf',
+          content_type: 'application/pdf'
         )
       end
 

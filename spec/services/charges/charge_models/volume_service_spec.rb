@@ -7,7 +7,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties,
+      properties: charge.properties
     )
   end
 
@@ -26,7 +26,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           {from_value: 101, to_value: 200, per_unit_amount: '1', flat_amount: '0'},
           {from_value: 201, to_value: nil, per_unit_amount: '0.5', flat_amount: '50'}
         ]
-      },
+      }
     )
   end
 
@@ -41,7 +41,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           flat_unit_amount: 0.0,
           per_unit_amount: 0.0,
           per_unit_total_amount: 0.0
-        },
+        }
       )
     end
   end
@@ -57,7 +57,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           flat_unit_amount: 10,
           per_unit_amount: '2.0',
           per_unit_total_amount: 2
-        },
+        }
       )
     end
   end
@@ -73,7 +73,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           flat_unit_amount: 10,
           per_unit_amount: '2.0',
           per_unit_total_amount: 200
-        },
+        }
       )
     end
   end
@@ -89,7 +89,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           flat_unit_amount: 0,
           per_unit_amount: '1.0',
           per_unit_total_amount: 100.5
-        },
+        }
       )
     end
   end
@@ -105,7 +105,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           flat_unit_amount: 0,
           per_unit_amount: '1.0',
           per_unit_total_amount: 101
-        },
+        }
       )
     end
   end
@@ -121,7 +121,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           flat_unit_amount: 0,
           per_unit_amount: '1.0',
           per_unit_total_amount: 200
-        },
+        }
       )
     end
   end
@@ -137,7 +137,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           flat_unit_amount: 50,
           per_unit_amount: '0.5',
           per_unit_total_amount: 150
-        },
+        }
       )
     end
   end
@@ -159,7 +159,7 @@ RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
           flat_unit_amount: 50,
           per_unit_amount: '0.331',
           per_unit_total_amount: 99.3
-        },
+        }
       )
     end
   end

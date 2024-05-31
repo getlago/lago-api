@@ -53,8 +53,8 @@ module Api
             taxes,
             ::V1::TaxSerializer,
             collection_name: 'taxes',
-            meta: pagination_metadata(taxes),
-          ),
+            meta: pagination_metadata(taxes)
+          )
         )
       end
 

@@ -70,7 +70,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
         expect { service_call }.to enqueue_job(SendWebhookJob)
           .with(
             'customer.accounting_provider_created',
-            customer,
+            customer
           ).on_queue(:webhook)
       end
     end
@@ -108,7 +108,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
             provider_error: {
               message: 'submitFields: Missing a required argument: type',
               error_code: 'action_script_runtime_error'
-            },
+            }
           )
       end
     end

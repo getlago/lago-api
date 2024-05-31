@@ -47,7 +47,7 @@ RSpec.describe Webhook, type: :model do
           algorithm: 'RS256',
           iss: ENV['LAGO_API_URL'],
           verify_iss: true
-        },
+        }
       )
 
       expect(decoded_signature).to eq([{"data" => webhook.payload.to_json, "iss" => "https://api.lago.dev"}, {"alg" => "RS256"}])

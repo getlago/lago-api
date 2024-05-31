@@ -22,7 +22,7 @@ module Mutations
 
         result = ::IntegrationCollectionMappings::UpdateService.call(
           integration_collection_mapping:,
-          params: args,
+          params: args
         )
 
         result.success? ? result.integration_collection_mapping : result_error(result)

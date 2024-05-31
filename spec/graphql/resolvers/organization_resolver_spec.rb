@@ -24,7 +24,7 @@ RSpec.describe Resolvers::OrganizationResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: {},
+      variables: {}
     )
 
     data = result['data']['organization']
@@ -59,7 +59,7 @@ RSpec.describe Resolvers::OrganizationResolver, type: :graphql do
         current_organization: organization,
         permissions: Permission::ADMIN_PERMISSIONS_HASH,
         query:,
-        variables: {},
+        variables: {}
       )
 
       data = result['data']['organization']

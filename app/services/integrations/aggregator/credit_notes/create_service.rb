@@ -27,7 +27,7 @@ module Integrations
             external_id: result.external_id,
             syncable_id: credit_note.id,
             syncable_type: 'CreditNote',
-            resource_type: :credit_note,
+            resource_type: :credit_note
           )
 
           result

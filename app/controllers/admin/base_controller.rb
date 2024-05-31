@@ -17,7 +17,7 @@ module Admin
       token = auth_header.split(' ').second
       payload = Google::Auth::IDTokens.verify_oidc(
         token,
-        aud: ENV['GOOGLE_AUTH_CLIENT_ID'],
+        aud: ENV['GOOGLE_AUTH_CLIENT_ID']
       )
 
       CurrentContext.email = payload['email']

@@ -30,7 +30,7 @@ RSpec.describe Mutations::CustomerPortal::GenerateUrl, type: :graphql do
         query: mutation,
         variables: {
           input: {id: customer.id}
-        },
+        }
       )
 
       data = result['data']['generateCustomerPortalUrl']

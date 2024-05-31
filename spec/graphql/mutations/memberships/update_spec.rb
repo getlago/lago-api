@@ -37,7 +37,7 @@ RSpec.describe Mutations::Memberships::Update, type: :graphql do
             id: membership_to_edit.id,
             role: 'admin'
           }
-        },
+        }
       )
 
       data = result['data']['updateMembership']

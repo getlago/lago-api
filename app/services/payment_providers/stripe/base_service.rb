@@ -30,7 +30,7 @@ module PaymentProviders
             action: action,
             message: error.message,
             code: error.code
-          },
+          }
         )
       end
     end

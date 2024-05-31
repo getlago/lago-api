@@ -11,8 +11,8 @@ class AddRateToPercentageAmountDetails < ActiveRecord::Migration[7.0]
     percentage_fees.find_each do |fee|
       fee.update!(
         amount_details: fee.amount_details.except!('per_unit_amount').merge(
-          rate: BigDecimal(fee.charge.properties['rate'].to_s),
-        ),
+          rate: BigDecimal(fee.charge.properties['rate'].to_s)
+        )
       )
     end
 

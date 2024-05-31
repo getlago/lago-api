@@ -13,7 +13,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       subscription_at:,
       billing_time:,
       started_at:,
-      previous_subscription:,
+      previous_subscription:
     )
   end
 
@@ -207,7 +207,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at: DateTime.parse('02 Mar 2022'),
+            terminated_at: DateTime.parse('02 Mar 2022')
           )
         end
 
@@ -281,7 +281,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at: DateTime.parse('02 Mar 2022'),
+            terminated_at: DateTime.parse('02 Mar 2022')
           )
         end
 
@@ -317,7 +317,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
             create(
               :invoice_subscription,
               subscription:,
-              charges_to_datetime: '2022-01-31T23:59:59Z',
+              charges_to_datetime: '2022-01-31T23:59:59Z'
             )
           end
 
@@ -368,7 +368,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
           create(
             :subscription,
             :terminated,
-            terminated_at: started_at,
+            terminated_at: started_at
           )
         end
 
@@ -439,7 +439,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
             create(
               :subscription,
               started_at: terminated_at,
-              previous_subscription: subscription,
+              previous_subscription: subscription
             )
           end
 
@@ -713,7 +713,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         :invoice_subscription,
         subscription:,
         charges_to_datetime: previous_invoice_charges_to_datetime,
-        invoice: create(:invoice, timezone: timezone),
+        invoice: create(:invoice, timezone: timezone)
       )
     end
 
@@ -730,7 +730,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         timestamp: billing_at.to_i,
         invoicing_reason: 'subscription_periodic',
         invoice: nil,
-        skip_charges: false,
+        skip_charges: false
       )
 
       expect(result.invoice.status).to eq 'draft'

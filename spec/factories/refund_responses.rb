@@ -12,7 +12,7 @@ FactoryBot.define do
           'currency' => 'CHF',
           'value' => 134
         }
-      },
+      }
     )
   end
 end

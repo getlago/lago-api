@@ -26,7 +26,7 @@ RSpec.describe Events::PostProcessService, type: :service do
       external_subscription_id:,
       timestamp:,
       code:,
-      properties: event_properties,
+      properties: event_properties
     )
   end
 

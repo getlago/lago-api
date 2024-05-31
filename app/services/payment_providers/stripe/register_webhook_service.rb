@@ -9,12 +9,12 @@ module PaymentProviders
             url: webhook_end_point,
             enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS
           },
-          {api_key:},
+          {api_key:}
         )
 
         payment_provider.update!(
           webhook_id: stripe_webhook.id,
-          webhook_secret: stripe_webhook.secret,
+          webhook_secret: stripe_webhook.secret
         )
 
         result.payment_provider = payment_provider

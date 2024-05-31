@@ -18,7 +18,7 @@ module Mutations
       def resolve(**args)
         result = ::WebhookEndpoints::CreateService.call(
           organization: current_organization,
-          params: args,
+          params: args
         )
         result.success? ? result.webhook_endpoint : result_error(result)
       end

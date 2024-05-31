@@ -62,10 +62,10 @@ module V1
             :group,
             :billable_metric,
             {charge_filter: {values: :billable_metric_filter}}
-          ],
+          ]
         ),
         ::V1::FeeSerializer,
-        collection_name: 'fees',
+        collection_name: 'fees'
       ).serialize
     end
 
@@ -77,7 +77,7 @@ module V1
       ::CollectionSerializer.new(
         model.metadata,
         ::V1::Invoices::MetadataSerializer,
-        collection_name: 'metadata',
+        collection_name: 'metadata'
       ).serialize
     end
 
@@ -85,7 +85,7 @@ module V1
       ::CollectionSerializer.new(
         model.applied_taxes,
         ::V1::Invoices::AppliedTaxSerializer,
-        collection_name: 'applied_taxes',
+        collection_name: 'applied_taxes'
       ).serialize
     end
 

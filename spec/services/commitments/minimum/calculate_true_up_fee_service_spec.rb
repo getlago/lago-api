@@ -13,7 +13,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
       to_datetime:,
       charges_from_datetime:,
       charges_to_datetime:,
-      timestamp:,
+      timestamp:
     )
   end
 
@@ -68,7 +68,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
             create(
               :fee,
               subscription: invoice_subscription.subscription,
-              invoice: invoice_subscription.invoice,
+              invoice: invoice_subscription.invoice
             )
 
             create(
@@ -80,7 +80,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
               properties: {
                 charges_from_datetime:,
                 charges_to_datetime:
-              },
+              }
             )
           end
 
@@ -117,7 +117,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime: charges_from_datetime + 1.year,
                           charges_to_datetime: charges_to_datetime + 1.year
-                        },
+                        }
                       )
                     end
 
@@ -138,7 +138,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime:,
                           charges_to_datetime:
-                        },
+                        }
                       )
                     end
 
@@ -155,7 +155,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         subscription:,
                         pay_in_advance: true,
                         charge: create(:standard_charge, :pay_in_advance),
-                        amount_cents: 500,
+                        amount_cents: 500
                       )
                     end
 
@@ -178,7 +178,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                     to_datetime: DateTime.parse('2024-01-31T23:59:59.999'),
                     charges_from_datetime: DateTime.parse('2024-01-01T00:00:00'),
                     charges_to_datetime: DateTime.parse('2024-01-31T23:59:59.999'),
-                    timestamp: DateTime.parse('2024-02-01T10:00:00'),
+                    timestamp: DateTime.parse('2024-02-01T10:00:00')
                   )
                 end
 
@@ -194,7 +194,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime: charges_from_datetime + 1.year,
                         charges_to_datetime: charges_to_datetime + 1.year
-                      },
+                      }
                     )
                   end
 
@@ -215,7 +215,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime:,
                         charges_to_datetime:
-                      },
+                      }
                     )
                   end
 
@@ -232,7 +232,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       subscription:,
                       pay_in_advance: true,
                       charge: create(:standard_charge, :pay_in_advance),
-                      amount_cents: 500,
+                      amount_cents: 500
                     )
                   end
 
@@ -272,7 +272,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime: DateTime.parse('2024-04-01T00:00:00'),
                         charges_to_datetime: DateTime.parse('2024-06-30T23:59:59.999')
-                      },
+                      }
                     )
                   end
 
@@ -293,7 +293,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime:,
                         charges_to_datetime:
-                      },
+                      }
                     )
                   end
 
@@ -310,7 +310,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       subscription:,
                       pay_in_advance: true,
                       charge: create(:standard_charge, :pay_in_advance),
-                      amount_cents: 500,
+                      amount_cents: 500
                     )
                   end
 
@@ -350,7 +350,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime: DateTime.parse('2024-03-01T00:00:00'),
                         charges_to_datetime: DateTime.parse('2024-03-31T23:59:59.999')
-                      },
+                      }
                     )
                   end
 
@@ -371,7 +371,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime:,
                         charges_to_datetime:
-                      },
+                      }
                     )
                   end
 
@@ -388,7 +388,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       subscription:,
                       pay_in_advance: true,
                       charge: create(:standard_charge, :pay_in_advance),
-                      amount_cents: 500,
+                      amount_cents: 500
                     )
                   end
 
@@ -428,7 +428,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime: DateTime.parse('2024-02-12T00:00:00'),
                         charges_to_datetime: DateTime.parse('2024-02-18T23:59:59.999')
-                      },
+                      }
                     )
                   end
 
@@ -449,7 +449,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime:,
                         charges_to_datetime:
-                      },
+                      }
                     )
                   end
 
@@ -466,7 +466,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       subscription:,
                       pay_in_advance: true,
                       charge: create(:standard_charge, :pay_in_advance),
-                      amount_cents: 500,
+                      amount_cents: 500
                     )
                   end
 
@@ -511,7 +511,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime: charges_from_datetime + 1.year,
                           charges_to_datetime: charges_to_datetime + 1.year
-                        },
+                        }
                       )
                     end
 
@@ -532,7 +532,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime:,
                           charges_to_datetime:
-                        },
+                        }
                       )
                     end
 
@@ -549,7 +549,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         subscription:,
                         pay_in_advance: true,
                         charge: create(:standard_charge, :pay_in_advance),
-                        amount_cents: 500,
+                        amount_cents: 500
                       )
                     end
 
@@ -572,7 +572,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                     to_datetime: DateTime.parse('2024-01-31T23:59:59.999'),
                     charges_from_datetime: DateTime.parse('2024-01-01T00:00:00'),
                     charges_to_datetime: DateTime.parse('2024-01-31T23:59:59.999'),
-                    timestamp: DateTime.parse('2024-02-01T10:00:00'),
+                    timestamp: DateTime.parse('2024-02-01T10:00:00')
                   )
                 end
 
@@ -580,7 +580,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                   create(
                     :fee,
                     subscription: invoice_subscription_previous.subscription,
-                    invoice: invoice_subscription_previous.invoice,
+                    invoice: invoice_subscription_previous.invoice
                   )
 
                   create(
@@ -592,7 +592,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                     properties: {
                       charges_from_datetime:,
                       charges_to_datetime:
-                    },
+                    }
                   )
                 end
 
@@ -611,7 +611,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime: charges_from_datetime + 1.year,
                           charges_to_datetime: charges_to_datetime + 1.year
-                        },
+                        }
                       )
                     end
 
@@ -632,7 +632,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime:,
                           charges_to_datetime:
-                        },
+                        }
                       )
                     end
 
@@ -649,7 +649,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         subscription:,
                         pay_in_advance: true,
                         charge: create(:standard_charge, :pay_in_advance),
-                        amount_cents: 500,
+                        amount_cents: 500
                       )
                     end
 
@@ -674,7 +674,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime: charges_from_datetime + 1.year,
                           charges_to_datetime: charges_to_datetime + 1.year
-                        },
+                        }
                       )
                     end
 
@@ -695,7 +695,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime:,
                           charges_to_datetime:
-                        },
+                        }
                       )
                     end
 
@@ -712,7 +712,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         subscription:,
                         pay_in_advance: true,
                         charge: create(:standard_charge, :pay_in_advance),
-                        amount_cents: 500,
+                        amount_cents: 500
                       )
                     end
 
@@ -753,7 +753,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime: DateTime.parse('2024-04-01T00:00:00'),
                         charges_to_datetime: DateTime.parse('2024-06-30T23:59:59.999')
-                      },
+                      }
                     )
                   end
 
@@ -774,7 +774,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime:,
                         charges_to_datetime:
-                      },
+                      }
                     )
                   end
 
@@ -791,7 +791,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       subscription:,
                       pay_in_advance: true,
                       charge: create(:standard_charge, :pay_in_advance),
-                      amount_cents: 500,
+                      amount_cents: 500
                     )
                   end
 
@@ -831,7 +831,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime: DateTime.parse('2024-03-01T00:00:00'),
                         charges_to_datetime: DateTime.parse('2024-03-31T23:59:59.999')
-                      },
+                      }
                     )
                   end
 
@@ -852,7 +852,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime:,
                         charges_to_datetime:
-                      },
+                      }
                     )
                   end
 
@@ -869,7 +869,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       subscription:,
                       pay_in_advance: true,
                       charge: create(:standard_charge, :pay_in_advance),
-                      amount_cents: 500,
+                      amount_cents: 500
                     )
                   end
 
@@ -909,7 +909,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime: DateTime.parse('2024-02-12T00:00:00'),
                         charges_to_datetime: DateTime.parse('2024-02-18T23:59:59.999')
-                      },
+                      }
                     )
                   end
 
@@ -930,7 +930,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       properties: {
                         charges_from_datetime:,
                         charges_to_datetime:
-                      },
+                      }
                     )
                   end
 
@@ -947,7 +947,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       subscription:,
                       pay_in_advance: true,
                       charge: create(:standard_charge, :pay_in_advance),
-                      amount_cents: 500,
+                      amount_cents: 500
                     )
                   end
 
@@ -994,7 +994,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                 from_datetime: DateTime.parse('2024-01-02T00:00:00'),
                 to_datetime: DateTime.parse('2024-01-07T23:59:59.999')
               },
-              amount_cents: 857, # prorated
+              amount_cents: 857 # prorated
             )
           end
 
@@ -1026,7 +1026,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime: invoice_subscription.charges_from_datetime,
                           charges_to_datetime: invoice_subscription.charges_to_datetime
-                        },
+                        }
                       )
 
                       create(
@@ -1039,7 +1039,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime: invoice_subscription.charges_from_datetime,
                           charges_to_datetime: invoice_subscription.charges_to_datetime
-                        },
+                        }
                       )
                     end
 
@@ -1057,7 +1057,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         to_datetime: DateTime.parse('2024-01-07T23:59:59.999'),
                         charges_from_datetime: DateTime.parse('2024-01-02T00:00:00'),
                         charges_to_datetime: DateTime.parse('2024-01-07T23:59:59.999'),
-                        timestamp: DateTime.parse('2024-01-02T10:00:00'),
+                        timestamp: DateTime.parse('2024-01-02T10:00:00')
                       )
                     end
 
@@ -1071,7 +1071,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                       create(
                         :fee,
                         subscription: previous_invoice_subscription.subscription,
-                        invoice: previous_invoice_subscription.invoice,
+                        invoice: previous_invoice_subscription.invoice
                       )
 
                       create(
@@ -1084,7 +1084,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime: previous_invoice_subscription.charges_from_datetime,
                           charges_to_datetime: previous_invoice_subscription.charges_to_datetime
-                        },
+                        }
                       )
 
                       create(
@@ -1097,7 +1097,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
                         properties: {
                           charges_from_datetime: previous_invoice_subscription.charges_from_datetime,
                           charges_to_datetime: previous_invoice_subscription.charges_to_datetime
-                        },
+                        }
                       )
                     end
 

@@ -7,7 +7,7 @@ class SlimHelper
     Slim::Template.new do
       File.read(
         Rails.root.join("app/views/#{path}.slim"),
-        encoding: 'UTF-8',
+        encoding: 'UTF-8'
       )
     end.render(context)
   end

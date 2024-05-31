@@ -78,7 +78,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 50_001, to: nil, third_party: '0.08', first_party: '0.06'}
             ]
           }
-        },
+        }
       )
     end
 
@@ -97,7 +97,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 50_001, to: nil, third_party: '0.08', first_party: '0.06'}
             ]
           }
-        },
+        }
       )
     end
 
@@ -114,7 +114,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         end
 
@@ -131,7 +131,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 1,
                 certif: 'first_party'
               }
-            },
+            }
           )
 
           fetch_current_usage(customer:)
@@ -162,7 +162,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 999,
                 certif: 'first_party'
               }
-            },
+            }
           )
 
           fetch_current_usage(customer:)
@@ -193,7 +193,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 1,
                 certif: 'third_party'
               }
-            },
+            }
           )
 
           fetch_current_usage(customer:)
@@ -224,7 +224,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 1,
                 certif: 'first_party'
               }
-            },
+            }
           )
 
           fetch_current_usage(customer:)
@@ -255,7 +255,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 18998,
                 certif: 'first_party'
               }
-            },
+            }
           )
 
           fetch_current_usage(customer:)
@@ -286,7 +286,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 1,
                 certif: 'first_party'
               }
-            },
+            }
           )
 
           fetch_current_usage(customer:)
@@ -317,7 +317,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 30_002,
                 certif: 'first_party'
               }
-            },
+            }
           )
 
           fetch_current_usage(customer:)
@@ -348,7 +348,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 external_customer_id: customer.external_id,
                 external_id: customer.external_id,
                 plan_code: plan.code
-              },
+              }
             )
           end
 
@@ -365,7 +365,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                   value: 1,
                   certif: 'first_party'
                 }
-              },
+              }
             )
 
             fetch_current_usage(customer:)
@@ -396,7 +396,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                   value: 10,
                   certif: 'first_party'
                 }
-              },
+              }
             )
 
             fetch_current_usage(customer:)
@@ -439,7 +439,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                   value: 1000,
                   certif: 'first_party'
                 }
-              },
+              }
             )
 
             fetch_current_usage(customer:)
@@ -473,7 +473,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         end
 
@@ -490,7 +490,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 1,
                 certif: 'first_party'
               }
-            },
+            }
           )
 
           perform_all_enqueued_jobs
@@ -520,7 +520,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 10,
                 certif: 'first_party'
               }
-            },
+            }
           )
 
           expect(subscription.fees.count).to eq(4)
@@ -548,7 +548,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 value: 1000,
                 certif: 'third_party'
               }
-            },
+            }
           )
 
           expect(subscription.fees.count).to eq(6)
@@ -653,7 +653,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         billable_metric:,
         plan:,
         pay_in_advance:,
-        properties: {custom_properties: {}},
+        properties: {custom_properties: {}}
       )
     end
 
@@ -661,7 +661,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {amount: '1'}},
+        properties: {custom_properties: {amount: '1'}}
       )
     end
 
@@ -669,7 +669,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {amount: '15'}},
+        properties: {custom_properties: {amount: '15'}}
       )
     end
 
@@ -677,7 +677,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {amount: '25'}},
+        properties: {custom_properties: {amount: '25'}}
       )
     end
 
@@ -703,7 +703,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {amount: '25'}},
+        properties: {custom_properties: {amount: '25'}}
       )
     end
 
@@ -711,7 +711,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {rate: '0.2', min_amount: '25'}},
+        properties: {custom_properties: {rate: '0.2', min_amount: '25'}}
       )
     end
 
@@ -728,7 +728,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               {from: 22_001, to: nil, amount: '0.4'}
             ]
           }
-        },
+        }
       )
     end
 
@@ -738,7 +738,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         charge:,
         properties: {
           custom_properties: {amount: '25'}
-        },
+        }
       )
     end
 
@@ -748,13 +748,13 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: eur_sepa_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['eur'],
+        values: ['eur']
       )
       create(
         :charge_filter_value,
         charge_filter: eur_sepa_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['sepa'],
+        values: ['sepa']
       )
 
       # EUR SWIFT inbound
@@ -762,19 +762,19 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: eur_swift_inbound_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['eur'],
+        values: ['eur']
       )
       create(
         :charge_filter_value,
         charge_filter: eur_swift_inbound_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['swift'],
+        values: ['swift']
       )
       create(
         :charge_filter_value,
         charge_filter: eur_swift_inbound_filter,
         billable_metric_filter: billable_metric_direction_filter,
-        values: ['inbound'],
+        values: ['inbound']
       )
 
       # EUR SWIFT outbound
@@ -782,19 +782,19 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: eur_swift_outbound_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['eur'],
+        values: ['eur']
       )
       create(
         :charge_filter_value,
         charge_filter: eur_swift_outbound_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['swift'],
+        values: ['swift']
       )
       create(
         :charge_filter_value,
         charge_filter: eur_swift_outbound_filter,
         billable_metric_filter: billable_metric_direction_filter,
-        values: ['outbound'],
+        values: ['outbound']
       )
 
       # CHF
@@ -802,7 +802,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: chf_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['chf'],
+        values: ['chf']
       )
 
       # GBP Swift inbound
@@ -810,19 +810,19 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: gbp_swift_inbound_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['gbp'],
+        values: ['gbp']
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_swift_inbound_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['swift'],
+        values: ['swift']
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_swift_inbound_filter,
         billable_metric_filter: billable_metric_direction_filter,
-        values: ['inbound'],
+        values: ['inbound']
       )
 
       # GBP Swift outbound
@@ -830,19 +830,19 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: gbp_swift_outbound_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['gbp'],
+        values: ['gbp']
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_swift_outbound_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['swift'],
+        values: ['swift']
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_swift_outbound_filter,
         billable_metric_filter: billable_metric_direction_filter,
-        values: ['outbound'],
+        values: ['outbound']
       )
 
       # GBP Domestic FPS
@@ -850,13 +850,13 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: gbp_domestic_fps_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['gbp'],
+        values: ['gbp']
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_domestic_fps_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['fps'],
+        values: ['fps']
       )
 
       # GBP Domestic BACS
@@ -864,13 +864,13 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: gbp_domestic_bacs_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['gbp'],
+        values: ['gbp']
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_domestic_bacs_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['bacs'],
+        values: ['bacs']
       )
     end
 
@@ -881,7 +881,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -901,7 +901,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               scheme: 'fps',
               currency: 'gbp'
             }
-          },
+          }
         )
 
         perform_all_enqueued_jobs
@@ -925,7 +925,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           charge_filter: gbp_domestic_fps_filter,
           current_aggregation: 10_000,
           max_aggregation: 10_000,
-          current_amount: 600_000,
+          current_amount: 600_000
         )
 
         create_event(
@@ -940,7 +940,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               scheme: 'fps',
               currency: 'gbp'
             }
-          },
+          }
         )
 
         perform_all_enqueued_jobs
@@ -968,7 +968,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               scheme: 'bacs',
               currency: 'gbp'
             }
-          },
+          }
         )
 
         perform_all_enqueued_jobs
@@ -996,7 +996,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               scheme: 'swift',
               currency: 'gbp'
             }
-          },
+          }
         )
 
         perform_all_enqueued_jobs
@@ -1023,7 +1023,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               scheme: 'swift',
               currency: 'gbp'
             }
-          },
+          }
         )
 
         perform_all_enqueued_jobs
@@ -1051,7 +1051,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               scheme: 'sepa',
               currency: 'eur'
             }
-          },
+          }
         )
 
         perform_all_enqueued_jobs
@@ -1079,7 +1079,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               scheme: 'sic',
               currency: 'chf'
             }
-          },
+          }
         )
 
         perform_all_enqueued_jobs
@@ -1103,7 +1103,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           charge_filter: chf_filter,
           current_aggregation: 10_000,
           max_aggregation: 10_000,
-          current_amount: 600_000,
+          current_amount: 600_000
         )
 
         create_event(
@@ -1118,7 +1118,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               scheme: 'sic',
               currency: 'chf'
             }
-          },
+          }
         )
 
         perform_all_enqueued_jobs

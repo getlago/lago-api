@@ -29,9 +29,9 @@ module Api
           organization: current_organization,
           pagination: BaseQuery::Pagination.new(
             page: params[:page],
-            limit: params[:per_page] || PER_PAGE,
+            limit: params[:per_page] || PER_PAGE
           ),
-          filters: BaseQuery::Filters.new(index_filters),
+          filters: BaseQuery::Filters.new(index_filters)
         )
 
         if result.success?
@@ -41,8 +41,8 @@ module Api
               ::V1::FeeSerializer,
               collection_name: 'fees',
               meta: pagination_metadata(result.fees),
-              includes: %i[applied_taxes],
-            ),
+              includes: %i[applied_taxes]
+            )
           )
         else
           render_error_response(result)
@@ -70,7 +70,7 @@ module Api
           :succeeded_at_from,
           :succeeded_at_to,
           :refunded_at_from,
-          :refunded_at_to,
+          :refunded_at_to
         )
       end
     end

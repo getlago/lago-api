@@ -47,7 +47,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update, type: :graphql 
           externalId: external_id,
           externalName: external_name
         }
-      },
+      }
     )
 
     result_data = result['data']['updateIntegrationCollectionMapping']

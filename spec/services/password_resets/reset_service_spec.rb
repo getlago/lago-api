@@ -32,7 +32,7 @@ RSpec.describe PasswordResets::ResetService, type: :service do
 
       expect(data).to be_present
       expect(SegmentIdentifyJob).to have_received(:perform_later).with(
-        membership_id: "membership/#{membership.id}",
+        membership_id: "membership/#{membership.id}"
       )
     end
 

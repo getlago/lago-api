@@ -11,7 +11,7 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
       balance_cents: 1000,
       ongoing_balance_cents: 800,
       credits_balance: 10.0,
-      credits_ongoing_balance: 8.0,
+      credits_ongoing_balance: 8.0
     )
   end
   let(:credits_amount) { BigDecimal('4.5') }

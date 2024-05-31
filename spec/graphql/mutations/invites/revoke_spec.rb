@@ -36,7 +36,7 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
           query: mutation,
           variables: {
             input: {id: invite.id}
-          },
+          }
         )
 
         data = result['data']['revokeInvite']
@@ -58,7 +58,7 @@ RSpec.describe Mutations::Invites::Revoke, type: :graphql do
           query: mutation,
           variables: {
             input: {id: invite.id}
-          },
+          }
         )
 
         aggregate_failures do

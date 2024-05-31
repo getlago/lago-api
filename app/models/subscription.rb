@@ -149,7 +149,7 @@ class Subscription < ApplicationRecord
     number_od_days = Utils::Datetime.date_diff_with_timezone(
       from_datetime,
       to_datetime,
-      customer.applicable_timezone,
+      customer.applicable_timezone
     )
 
     return number_od_days unless terminated? && upgraded?

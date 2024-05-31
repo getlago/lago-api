@@ -69,7 +69,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
             }
           ]
         }
-      },
+      }
     )
 
     result_data = result['data']['updateCustomerWallet']

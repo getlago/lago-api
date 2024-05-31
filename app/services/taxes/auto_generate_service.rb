@@ -37,7 +37,7 @@ module Taxes
 
     def create_tax(tax_code, tax_name, rate)
       tax = organization.taxes.find_or_initialize_by(
-        code: tax_code,
+        code: tax_code
       )
 
       tax.name = tax_name

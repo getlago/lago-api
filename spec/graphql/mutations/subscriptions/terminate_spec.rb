@@ -32,7 +32,7 @@ RSpec.describe Mutations::Subscriptions::Terminate, type: :graphql do
         input: {
           id: subscription.id
         }
-      },
+      }
     )
 
     result_data = result['data']['terminateSubscription']

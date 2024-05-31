@@ -19,7 +19,7 @@ describe 'Customer usage Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan.code,
             subscription_at: DateTime.new(2023, 1, 1, 9, 30).iso8601
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -41,7 +41,7 @@ describe 'Customer usage Scenario', :scenarios, type: :request do
               external_id: customer.external_id,
               plan_code: plan.code,
               subscription_at: DateTime.new(2023, 1, 1, 9, 30).iso8601
-            },
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -64,7 +64,7 @@ describe 'Customer usage Scenario', :scenarios, type: :request do
               external_id: customer.external_id,
               plan_code: plan.code,
               subscription_at: DateTime.new(2023, 1, 1, 9, 30).iso8601
-            },
+            }
           )
 
           subscription = customer.subscriptions.first

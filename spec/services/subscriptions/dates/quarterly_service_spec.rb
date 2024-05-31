@@ -12,7 +12,7 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
       customer:,
       subscription_at:,
       billing_time:,
-      started_at:,
+      started_at:
     )
   end
 
@@ -215,7 +215,7 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at: DateTime.parse('27 Jun 2022'),
+            terminated_at: DateTime.parse('27 Jun 2022')
           )
         end
 
@@ -288,7 +288,7 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at: DateTime.parse('30 Apr 2022'),
+            terminated_at: DateTime.parse('30 Apr 2022')
           )
         end
 
@@ -324,7 +324,7 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
             create(
               :invoice_subscription,
               subscription:,
-              charges_to_datetime: '2021-12-31T23:59:59Z',
+              charges_to_datetime: '2021-12-31T23:59:59Z'
             )
           end
 

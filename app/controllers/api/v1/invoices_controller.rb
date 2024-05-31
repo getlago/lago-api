@@ -8,7 +8,7 @@ module Api
           customer:,
           currency: create_params[:currency],
           fees: create_params[:fees],
-          timestamp: Time.current.to_i,
+          timestamp: Time.current.to_i
         ).call
 
         if result.success?
@@ -24,7 +24,7 @@ module Api
         result = Invoices::UpdateService.new(
           invoice:,
           params: update_params.to_h.deep_symbolize_keys,
-          webhook_notification: true,
+          webhook_notification: true
         ).call
 
         if result.success?
@@ -65,8 +65,8 @@ module Api
             ::V1::InvoiceSerializer,
             collection_name: 'invoices',
             meta: pagination_metadata(invoices),
-            includes: %i[customer metadata applied_taxes],
-          ),
+            includes: %i[customer metadata applied_taxes]
+          )
         )
       end
 
@@ -79,8 +79,8 @@ module Api
           return render(
             json: ::V1::InvoiceSerializer.new(
               invoice,
-              root_name: 'invoice',
-            ),
+              root_name: 'invoice'
+            )
           )
         end
 
@@ -156,8 +156,8 @@ module Api
             json: ::V1::PaymentProviders::InvoicePaymentSerializer.new(
               invoice,
               root_name: 'invoice_payment_details',
-              payment_url: result.payment_url,
-            ),
+              payment_url: result.payment_url
+            )
           )
         else
           render_error_response(result)
@@ -181,7 +181,7 @@ module Api
                 :units,
                 :description,
                 {tax_codes: []}
-              ],
+              ]
             ).to_h.deep_symbolize_keys
       end
 
@@ -192,7 +192,7 @@ module Api
             :id,
             :key,
             :value
-          ],
+          ]
         )
       end
 
@@ -201,8 +201,8 @@ module Api
           json: ::V1::InvoiceSerializer.new(
             invoice,
             root_name: 'invoice',
-            includes: %i[customer subscriptions fees credits metadata applied_taxes],
-          ),
+            includes: %i[customer subscriptions fees credits metadata applied_taxes]
+          )
         )
       end
 
@@ -225,7 +225,7 @@ module Api
       def customer
         Customer.find_by(
           external_id: create_params[:external_customer_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
       end
     end

@@ -42,7 +42,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
       external_customer_id: customer.external_id,
       timestamp: 2.days.ago,
       properties: {foo_bar: 1234},
-      metadata: {user_agent: 'Lago Ruby v0.0.1', ip_address: '182.11.32.11'},
+      metadata: {user_agent: 'Lago Ruby v0.0.1', ip_address: '182.11.32.11'}
     )
   end
 
@@ -52,7 +52,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
     events_response = result['data']['events']
@@ -83,7 +83,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
       events_response = result['data']['events']
@@ -102,7 +102,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
         code: 'foo',
         organization:,
         timestamp: 2.days.ago,
-        properties: {foo_bar: 1234},
+        properties: {foo_bar: 1234}
       )
     end
 
@@ -111,7 +111,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
       events_response = result['data']['events']
@@ -127,7 +127,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
       events_response = result['data']['events']
@@ -142,7 +142,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
 
       events_response = result['data']['events']

@@ -30,7 +30,7 @@ RSpec.describe CustomersQuery, type: :query do
     result = customer_query.call(
       search_term: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.customers.pluck(:id)
@@ -48,7 +48,7 @@ RSpec.describe CustomersQuery, type: :query do
       result = customer_query.call(
         search_term: 'de',
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.customers.pluck(:id)
@@ -70,7 +70,7 @@ RSpec.describe CustomersQuery, type: :query do
         limit: 10,
         filters: {
           ids: [customer_second.id]
-        },
+        }
       )
 
       returned_ids = result.customers.pluck(:id)

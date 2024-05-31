@@ -75,7 +75,7 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
         credit_note.file.attach(
           io: StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))),
           filename: 'credit_note.pdf',
-          content_type: 'application/pdf',
+          content_type: 'application/pdf'
         )
       end
 

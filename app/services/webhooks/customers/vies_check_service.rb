@@ -14,7 +14,7 @@ module Webhooks
           object,
           root_name: 'customer',
           includes: %i[vies_check],
-          vies_check: options[:vies_check],
+          vies_check: options[:vies_check]
         )
       end
 

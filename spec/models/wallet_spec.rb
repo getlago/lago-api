@@ -11,7 +11,7 @@ RSpec.describe Wallet, type: :model do
 
       expect(wallet).to have_attributes(
         balance_currency: 'CAD',
-        consumed_amount_currency: 'CAD',
+        consumed_amount_currency: 'CAD'
       )
     end
   end

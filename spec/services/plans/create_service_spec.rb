@@ -127,22 +127,22 @@ RSpec.describe Plans::CreateService, type: :service do
         prorated: false,
         min_amount_cents: 0,
         invoiceable: true,
-        properties: {'amount' => '0'},
+        properties: {'amount' => '0'}
       )
       expect(standard_charge.taxes.pluck(:code)).to eq([charge_tax.code])
       expect(standard_charge.group_properties.first).to have_attributes(
         {
           group_id: group.id,
           values: {'amount' => '100'}
-        },
+        }
       )
       expect(standard_charge.filters.first).to have_attributes(
         invoice_display_name: 'Card filter',
-        properties: {'amount' => '90'},
+        properties: {'amount' => '90'}
       )
       expect(standard_charge.filters.first.values.first).to have_attributes(
         billable_metric_filter_id: billable_metric_filter.id,
-        values: ['card'],
+        values: ['card']
       )
 
       expect(graduated_charge).to have_attributes(pay_in_advance: true, invoiceable: true, prorated: false)
@@ -170,7 +170,7 @@ RSpec.describe Plans::CreateService, type: :service do
           nb_package_charges: 0,
           organization_id: plan.organization_id,
           parent_id: nil
-        },
+        }
       )
     end
 
@@ -223,7 +223,7 @@ RSpec.describe Plans::CreateService, type: :service do
           {
             amount_cents: minimum_commitment_amount_cents,
             invoice_display_name: minimum_commitment_invoice_display_name
-          },
+          }
         )
 
         expect(plan.charges.standard.first).to have_attributes(
@@ -231,7 +231,7 @@ RSpec.describe Plans::CreateService, type: :service do
             pay_in_advance: false,
             min_amount_cents: 100,
             invoiceable: true
-          },
+          }
         )
 
         expect(plan.charges.graduated_percentage.first).to have_attributes(
@@ -239,7 +239,7 @@ RSpec.describe Plans::CreateService, type: :service do
             pay_in_advance: true,
             invoiceable: false,
             charge_model: 'graduated_percentage'
-          },
+          }
         )
       end
     end

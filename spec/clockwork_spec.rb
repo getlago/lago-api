@@ -17,7 +17,7 @@ describe Clockwork do
         file: clock_file,
         start_time:,
         end_time:,
-        tick_speed: 1.second,
+        tick_speed: 1.second
       )
 
       expect(Clockwork::Test).to be_ran_job(job)
@@ -38,7 +38,7 @@ describe Clockwork do
         file: clock_file,
         start_time:,
         end_time:,
-        tick_speed: 1.second,
+        tick_speed: 1.second
       )
 
       expect(Clockwork::Test).to be_ran_job(job)
@@ -59,7 +59,7 @@ describe Clockwork do
         file: clock_file,
         start_time:,
         end_time:,
-        tick_speed: 1.second,
+        tick_speed: 1.second
       )
 
       expect(Clockwork::Test).to be_ran_job(job)

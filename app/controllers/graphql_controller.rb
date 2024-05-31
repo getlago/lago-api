@@ -79,7 +79,7 @@ class GraphqlController < ApplicationController
             extensions: {status:, code:}
           }
         ]
-      },
+      }
     )
   end
 

@@ -46,7 +46,7 @@ module V1
       ::CollectionSerializer.new(
         model.metadata,
         ::V1::Customers::MetadataSerializer,
-        collection_name: 'metadata',
+        collection_name: 'metadata'
       ).serialize
     end
 
@@ -95,7 +95,7 @@ module V1
       ::CollectionSerializer.new(
         model.integration_customers,
         ::V1::IntegrationCustomerSerializer,
-        collection_name: 'integration_customers',
+        collection_name: 'integration_customers'
       ).serialize
     end
   end

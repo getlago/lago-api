@@ -45,7 +45,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         post_with_token(
           organization,
           '/api/v1/billable_metrics',
-          {billable_metric: create_params.merge(group:)},
+          {billable_metric: create_params.merge(group:)}
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
@@ -58,7 +58,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         post_with_token(
           organization,
           '/api/v1/billable_metrics',
-          {billable_metric: create_params.merge(group: {foo: 'bar'})},
+          {billable_metric: create_params.merge(group: {foo: 'bar'})}
         )
 
         aggregate_failures do
@@ -88,7 +88,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         expect(json[:billable_metric][:lago_id]).to be_present
         expect(json[:billable_metric][:recurring]).to eq(
           create_params[:recurring
-                    ],
+                    ]
         )
         expect(json[:billable_metric][:aggregation_type]).to eq('weighted_sum_agg')
         expect(json[:billable_metric][:weighted_interval]).to eq('seconds')
@@ -113,7 +113,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       put_with_token(
         organization,
         "/api/v1/billable_metrics/#{billable_metric.code}",
-        {billable_metric: update_params},
+        {billable_metric: update_params}
       )
 
       expect(response).to have_http_status(:success)
@@ -129,7 +129,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          {billable_metric: update_params.merge(group:)},
+          {billable_metric: update_params.merge(group:)}
         )
 
         expect(json[:billable_metric][:group]).to eq(group)
@@ -142,7 +142,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          {billable_metric: update_params.merge(group: {foo: 'bar'})},
+          {billable_metric: update_params.merge(group: {foo: 'bar'})}
         )
 
         aggregate_failures do
@@ -170,7 +170,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          {billable_metric: update_params},
+          {billable_metric: update_params}
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -194,7 +194,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/billable_metrics/#{billable_metric.code}",
-          {billable_metric: update_params},
+          {billable_metric: update_params}
         )
 
         expect(response).to have_http_status(:success)

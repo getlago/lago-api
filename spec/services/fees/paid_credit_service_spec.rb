@@ -35,7 +35,7 @@ RSpec.describe Fees::PaidCreditService do
         unit_amount_cents: 100,
         units: 15,
         payment_status: 'pending',
-        precise_unit_amount: 1,
+        precise_unit_amount: 1
       )
     end
 
@@ -45,7 +45,7 @@ RSpec.describe Fees::PaidCreditService do
           :fee,
           invoiceable_type: 'WalletTransaction',
           invoiceable_id: wallet_transaction.id,
-          invoice:,
+          invoice:
         )
       end
 

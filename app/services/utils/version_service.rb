@@ -8,7 +8,7 @@ module Utils
     def version
       result.version = OpenStruct.new(
         number: version_number,
-        github_url:,
+        github_url:
       )
       result
     end

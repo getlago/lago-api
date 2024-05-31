@@ -18,7 +18,7 @@ RSpec.describe Commitments::CalculateProratedCoefficientService, type: :service 
       to_datetime:,
       charges_from_datetime:,
       charges_to_datetime:,
-      timestamp:,
+      timestamp:
     )
   end
 

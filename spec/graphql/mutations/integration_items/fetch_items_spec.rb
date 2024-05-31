@@ -46,7 +46,7 @@ RSpec.describe Mutations::IntegrationItems::FetchItems, type: :graphql do
       query: mutation,
       variables: {
         input: {integrationId: integration.id}
-      },
+      }
     )
 
     result_data = result['data']['fetchIntegrationItems']

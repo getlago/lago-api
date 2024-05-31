@@ -24,7 +24,7 @@ module Resolvers
         limit:,
         filters: {
           ids:
-        },
+        }
       )
 
       result.add_ons

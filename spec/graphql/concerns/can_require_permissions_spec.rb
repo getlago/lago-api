@@ -47,7 +47,7 @@ RSpec.describe CanRequirePermissions, type: :graphql do
       result = CanRequirePermissionsSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: 'new name'}},
-        context: {permissions: {'things:rename' => true}},
+        context: {permissions: {'things:rename' => true}}
       )
 
       expect(result['data']['renameThing']['name']).to eq 'new name'
@@ -59,7 +59,7 @@ RSpec.describe CanRequirePermissions, type: :graphql do
       result = CanRequirePermissionsSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: 'new name'}},
-        context: {permissions: Permission::EMPTY_PERMISSIONS_HASH},
+        context: {permissions: Permission::EMPTY_PERMISSIONS_HASH}
       )
 
       partial_error = {

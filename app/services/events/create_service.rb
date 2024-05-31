@@ -54,7 +54,7 @@ module Events
           code: event.code,
           properties: event.properties,
           ingested_at: Time.zone.now.iso8601[...-1]
-        }.to_json,
+        }.to_json
       )
     end
   end

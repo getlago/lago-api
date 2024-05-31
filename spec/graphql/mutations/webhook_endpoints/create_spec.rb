@@ -36,13 +36,13 @@ RSpec.describe Mutations::WebhookEndpoints::Create, type: :graphql do
       current_organization: membership.organization,
       permissions: required_permission,
       query: mutation,
-      variables: {input:},
+      variables: {input:}
     )
 
     expect(result['data']['createWebhookEndpoint']).to include(
       'id' => String,
       'webhookUrl' => webhook_url,
-      'signatureAlgo' => 'hmac',
+      'signatureAlgo' => 'hmac'
     )
   end
 end

@@ -22,7 +22,7 @@ module Mutations
             args
               .merge(organization_id: current_organization.id)
               .merge(customer: current_customer(args[:customer_id]))
-              .except(:customer_id),
+              .except(:customer_id)
           )
 
         result.success? ? result.wallet : result_error(result)

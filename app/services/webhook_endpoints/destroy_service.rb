@@ -30,7 +30,7 @@ module WebhookEndpoints
           webhook_endpoint_id: webhook_endpoint.id,
           organization_id: webhook_endpoint.organization_id,
           webhook_url: webhook_endpoint.webhook_url
-        },
+        }
       )
     end
   end

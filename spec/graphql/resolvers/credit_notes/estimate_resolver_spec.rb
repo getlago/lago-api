@@ -32,7 +32,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
       2,
       invoice:,
       amount_cents: 100,
-      precise_coupons_amount_cents: 50,
+      precise_coupons_amount_cents: 50
     )
   end
 
@@ -43,7 +43,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
       amount_cents: 100,
       expiration: :no_expiration,
       coupon_type: :fixed_amount,
-      frequency: :forever,
+      frequency: :forever
     )
   end
 
@@ -66,7 +66,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
       variables: {
         invoiceId: invoice.id,
         items: fees.map { |f| {feeId: f.id, amountCents: 50} }
-      },
+      }
     )
 
     estimate_response = result['data']['creditNoteEstimate']
@@ -92,7 +92,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
         variables: {
           invoiceId: create(:invoice).id,
           items: fees.map { |f| {feeId: f.id, amountCents: 50} }
-        },
+        }
       )
 
       expect_not_found(result)

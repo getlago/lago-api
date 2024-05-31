@@ -58,7 +58,7 @@ RSpec.describe Plans::DestroyService, type: :service do
           nb_graduated_charges: 0,
           nb_package_charges: 0,
           organization_id: plan.organization_id
-        },
+        }
       )
     end
 

@@ -11,7 +11,7 @@ module AddOns
           code: args[:code],
           description: args[:description],
           amount_cents: args[:amount_cents],
-          amount_currency: args[:amount_currency],
+          amount_currency: args[:amount_currency]
         )
 
         if args[:tax_codes]
@@ -39,7 +39,7 @@ module AddOns
           addon_name: add_on.name,
           addon_invoice_display_name: add_on.invoice_display_name,
           organization_id: add_on.organization_id
-        },
+        }
       )
     end
   end

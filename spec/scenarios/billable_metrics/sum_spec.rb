@@ -22,7 +22,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         properties: {
           amount: '29',
           grouped_by: %w[key_1 key_2 key_3]
-        },
+        }
       )
     end
 
@@ -33,7 +33,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -52,7 +52,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         expect(Fee.count).to eq(1)
@@ -75,7 +75,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         expect(Fee.count).to eq(2)
@@ -98,7 +98,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         expect(Fee.count).to eq(3)
@@ -121,7 +121,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
         properties: {
           amount: '29',
           grouped_by: %w[key_1 key_2 key_3]
-        },
+        }
       )
     end
 
@@ -132,7 +132,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
             external_customer_id: customer.external_id,
             external_id: "#{customer.external_id}_1",
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -144,7 +144,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
             external_customer_id: customer.external_id,
             external_id: "#{customer.external_id}_2",
             plan_code: plan.code
-          },
+          }
         )
       end
 
@@ -163,7 +163,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         expect(Fee.count).to eq(1)
@@ -186,7 +186,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         expect(Fee.count).to eq(2)
@@ -209,7 +209,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         expect(Fee.count).to eq(3)
@@ -232,7 +232,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         fetch_current_usage(customer:, subscription: subscription2)
@@ -253,7 +253,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         fetch_current_usage(customer:, subscription: subscription2)
@@ -274,7 +274,7 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
               'key_2' => 'Feb',
               'key_3' => '06'
             }
-          },
+          }
         )
 
         fetch_current_usage(customer:, subscription: subscription2)

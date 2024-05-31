@@ -21,7 +21,7 @@ module Credits
         applied_coupon:,
         amount_cents: credit_amount,
         amount_currency: invoice.currency,
-        before_taxes: true,
+        before_taxes: true
       )
 
       fees.reload.each do |fee|

@@ -70,14 +70,14 @@ module BillableMetrics
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: grouped_by_values,
+          grouped_by: grouped_by_values
         )
 
         unless cached_aggregation
           handle_event_metadata(
             current_aggregation: newly_applied_units,
             max_aggregation: newly_applied_units,
-            units_applied: newly_applied_units,
+            units_applied: newly_applied_units
           )
 
           return newly_applied_units

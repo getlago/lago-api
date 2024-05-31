@@ -17,7 +17,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       amount_currency: 'GBP',
       interval: plan_interval,
       pay_in_advance: false,
-      bill_charges_monthly: plan_monthly_charges,
+      bill_charges_monthly: plan_monthly_charges
     )
   end
 
@@ -31,7 +31,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan.code,
             billing_time:
-          },
+          }
         )
       end
 
@@ -75,7 +75,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan.code,
             billing_time:
-          },
+          }
         )
       end
 

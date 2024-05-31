@@ -109,7 +109,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
           aggregation_type: metric.aggregation_type,
           aggregation_property: metric.field_name,
           organization_id: metric.organization_id
-        },
+        }
       )
     end
 
@@ -118,7 +118,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         create(
           :billable_metric,
           code: create_args[:code],
-          organization: membership.organization,
+          organization: membership.organization
         )
       end
 

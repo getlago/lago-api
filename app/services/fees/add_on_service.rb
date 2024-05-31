@@ -21,7 +21,7 @@ module Fees
         invoiceable: applied_add_on,
         units: 1,
         payment_status: :pending,
-        taxes_amount_cents: 0,
+        taxes_amount_cents: 0
       )
 
       taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)

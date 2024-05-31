@@ -44,7 +44,7 @@ module V1
 
     def legacy_values
       ::V1::Legacy::AppliedCouponSerializer.new(
-        model,
+        model
       ).serialize
     end
   end

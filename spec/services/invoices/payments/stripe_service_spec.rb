@@ -18,7 +18,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       customer:,
       total_amount_cents: 200,
       currency: 'EUR',
-      ready_for_payment_processing: true,
+      ready_for_payment_processing: true
     )
   end
 
@@ -47,8 +47,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             id: 'ch_123456',
             status: payment_status,
             amount: invoice.total_amount_cents,
-            currency: invoice.currency,
-          ),
+            currency: invoice.currency
+          )
         )
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
@@ -108,7 +108,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           organization:,
           customer:,
           total_amount_cents: 0,
-          currency: 'EUR',
+          currency: 'EUR'
         )
       end
 
@@ -156,7 +156,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
                 default_payment_method: nil
               },
               default_source: nil
-            },
+            }
           ))
 
         allow(Stripe::PaymentMethod).to receive(:list)
@@ -172,7 +172,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
                 metadata: {},
                 type: 'card'
               }
-            ],
+            ]
           ))
       end
 
@@ -218,7 +218,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             provider_error: {
               message: 'error',
               error_code: nil
-            },
+            }
           )
       end
     end
@@ -235,7 +235,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           customer:,
           total_amount_cents: 20,
           currency: 'EUR',
-          ready_for_payment_processing: true,
+          ready_for_payment_processing: true
         )
       end
 
@@ -322,7 +322,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       create(
         :payment,
         invoice:,
-        provider_payment_id: 'ch_123456',
+        provider_payment_id: 'ch_123456'
       )
     end
 
@@ -336,14 +336,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       result = stripe_service.update_payment_status(
         organization_id: organization.id,
         provider_payment_id: 'ch_123456',
-        status: 'succeeded',
+        status: 'succeeded'
       )
 
       expect(result).to be_success
       expect(result.payment.status).to eq('succeeded')
       expect(result.invoice.reload).to have_attributes(
         payment_status: 'succeeded',
-        ready_for_payment_processing: false,
+        ready_for_payment_processing: false
       )
     end
 
@@ -352,14 +352,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
           provider_payment_id: 'ch_123456',
-          status: 'failed',
+          status: 'failed'
         )
 
         expect(result).to be_success
         expect(result.payment.status).to eq('failed')
         expect(result.invoice.reload).to have_attributes(
           payment_status: 'failed',
-          ready_for_payment_processing: true,
+          ready_for_payment_processing: true
         )
       end
     end
@@ -371,7 +371,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
           provider_payment_id: 'ch_123456',
-          status: 'succeeded',
+          status: 'succeeded'
         )
 
         expect(result).to be_success
@@ -384,7 +384,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
           provider_payment_id: 'ch_123456',
-          status: 'foo-bar',
+          status: 'foo-bar'
         )
 
         aggregate_failures do
@@ -409,7 +409,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           organization_id: organization.id,
           provider_payment_id: 'ch_123456',
           status: 'succeeded',
-          metadata: {lago_invoice_id: invoice.id, payment_type: 'one-time'},
+          metadata: {lago_invoice_id: invoice.id, payment_type: 'one-time'}
         )
 
         aggregate_failures do
@@ -417,7 +417,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           expect(result.payment.status).to eq('succeeded')
           expect(result.invoice.reload).to have_attributes(
             payment_status: 'succeeded',
-            ready_for_payment_processing: false,
+            ready_for_payment_processing: false
           )
         end
       end
@@ -430,7 +430,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
           provider_payment_id: 'ch_123456',
-          status: 'succeeded',
+          status: 'succeeded'
         )
 
         aggregate_failures do
@@ -445,7 +445,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
             organization_id: organization.id,
             provider_payment_id: 'ch_123456',
             status: 'succeeded',
-            metadata: {lago_invoice_id: SecureRandom.uuid},
+            metadata: {lago_invoice_id: SecureRandom.uuid}
           )
 
           aggregate_failures do
@@ -460,7 +460,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
               organization_id: organization.id,
               provider_payment_id: 'ch_123456',
               status: 'succeeded',
-              metadata: {lago_invoice_id: invoice.id},
+              metadata: {lago_invoice_id: invoice.id}
             )
 
             aggregate_failures do

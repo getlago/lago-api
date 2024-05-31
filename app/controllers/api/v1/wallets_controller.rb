@@ -10,8 +10,8 @@ module Api
             current_organization,
             input_params
               .merge(organization_id: current_organization.id)
-              .merge(customer:).to_h.deep_symbolize_keys,
-          ).create_input,
+              .merge(customer:).to_h.deep_symbolize_keys
+          ).create_input
         )
 
         if result.success?
@@ -50,7 +50,7 @@ module Api
 
       def show
         wallet = current_organization.wallets.find_by(
-          id: params[:id],
+          id: params[:id]
         )
 
         return not_found_error(resource: 'wallet') unless wallet
@@ -72,8 +72,8 @@ module Api
             ::V1::WalletSerializer,
             collection_name: 'wallets',
             meta: pagination_metadata(wallets),
-            includes: %i[recurring_transaction_rules],
-          ),
+            includes: %i[recurring_transaction_rules]
+          )
         )
       end
 
@@ -95,7 +95,7 @@ module Api
             :target_ongoing_balance,
             :threshold_credits,
             :trigger
-          ],
+          ]
         )
       end
 
@@ -118,7 +118,7 @@ module Api
             :trigger,
             :paid_credits,
             :granted_credits
-          ],
+          ]
         )
       end
 
@@ -131,8 +131,8 @@ module Api
           json: ::V1::WalletSerializer.new(
             wallet,
             root_name: 'wallet',
-            includes: %i[recurring_transaction_rules],
-          ),
+            includes: %i[recurring_transaction_rules]
+          )
         )
       end
     end

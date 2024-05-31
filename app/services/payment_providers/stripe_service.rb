@@ -7,7 +7,7 @@ module PaymentProviders
         organization_id: args[:organization_id],
         code: args[:code],
         id: args[:id],
-        payment_provider_type: 'stripe',
+        payment_provider_type: 'stripe'
       )
 
       stripe_provider = if payment_provider_result.success?
@@ -15,7 +15,7 @@ module PaymentProviders
       else
         PaymentProviders::StripeProvider.new(
           organization_id: args[:organization_id],
-          code: args[:code],
+          code: args[:code]
         )
       end
 
@@ -36,7 +36,7 @@ module PaymentProviders
         #       attached to the provider
         reattach_provider_customers(
           organization_id: args[:organization_id],
-          stripe_provider:,
+          stripe_provider:
         )
       end
 
@@ -57,7 +57,7 @@ module PaymentProviders
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id:,
         code:,
-        payment_provider_type: 'stripe',
+        payment_provider_type: 'stripe'
       )
 
       return payment_provider_result unless payment_provider_result.success?
@@ -65,12 +65,12 @@ module PaymentProviders
       event = ::Stripe::Webhook.construct_event(
         params,
         signature,
-        payment_provider_result.payment_provider&.webhook_secret,
+        payment_provider_result.payment_provider&.webhook_secret
       )
 
       PaymentProviders::Stripe::HandleEventJob.perform_later(
         organization:,
-        event: event.to_json,
+        event: event.to_json
       )
 
       result.event = event
@@ -97,7 +97,7 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
         result.raise_if_error!
 
@@ -106,7 +106,7 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
 
         result.raise_if_error! || result
@@ -120,7 +120,7 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.id,
             payment_method_id:,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
 
         result.raise_if_error! || result
@@ -130,12 +130,12 @@ module PaymentProviders
             organization_id: organization.id,
             provider_payment_id: event.data.object.payment_intent,
             status: 'succeeded',
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
       when 'charge.dispute.closed'
         PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService.call(
           organization_id: organization.id,
-          event_json:,
+          event_json:
         )
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
         status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
@@ -145,7 +145,7 @@ module PaymentProviders
             organization_id: organization.id,
             provider_payment_id: event.data.object.id,
             status:,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
       when 'payment_method.detached'
         result = PaymentProviderCustomers::StripeService
@@ -154,7 +154,7 @@ module PaymentProviders
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.id,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
         result.raise_if_error! || result
       when 'charge.refund.updated'
@@ -162,7 +162,7 @@ module PaymentProviders
           .new.update_status(
             provider_refund_id: event.data.object.id,
             status: event.data.object.status,
-            metadata: event.data.object.metadata.to_h.symbolize_keys,
+            metadata: event.data.object.metadata.to_h.symbolize_keys
           )
       end
     rescue BaseService::NotFoundFailure => e

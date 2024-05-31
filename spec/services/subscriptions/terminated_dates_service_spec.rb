@@ -18,7 +18,7 @@ RSpec.describe Subscriptions::TerminatedDatesService, type: :service do
       :invoice_subscription,
       invoice:,
       subscription:,
-      timestamp: billing_date,
+      timestamp: billing_date
     )
   end
 
@@ -39,7 +39,7 @@ RSpec.describe Subscriptions::TerminatedDatesService, type: :service do
           plan:,
           subscription_at:,
           billing_time: :calendar,
-          started_at:,
+          started_at:
         )
       end
 
@@ -73,7 +73,7 @@ RSpec.describe Subscriptions::TerminatedDatesService, type: :service do
           plan:,
           subscription_at:,
           billing_time: :anniversary,
-          started_at:,
+          started_at:
         )
       end
 

@@ -10,7 +10,7 @@ RSpec.describe WebhooksController, type: :request do
       create(
         :stripe_provider,
         organization:,
-        webhook_secret: 'secrests',
+        webhook_secret: 'secrests'
       )
     end
 
@@ -35,7 +35,7 @@ RSpec.describe WebhooksController, type: :request do
           organization_id: organization.id,
           code: nil,
           params: event.to_json,
-          signature: 'signature',
+          signature: 'signature'
         )
         .and_return(result)
     end
@@ -47,7 +47,7 @@ RSpec.describe WebhooksController, type: :request do
         headers: {
           'HTTP_STRIPE_SIGNATURE' => 'signature',
           'Content-Type' => 'application/json'
-        },
+        }
       )
 
       expect(response).to have_http_status(:success)
@@ -68,7 +68,7 @@ RSpec.describe WebhooksController, type: :request do
           headers: {
             'HTTP_STRIPE_SIGNATURE' => 'signature',
             'Content-Type' => 'application/json'
-          },
+          }
         )
 
         expect(response).to have_http_status(:bad_request)
@@ -86,7 +86,7 @@ RSpec.describe WebhooksController, type: :request do
       create(
         :gocardless_provider,
         organization:,
-        webhook_secret: 'secrets',
+        webhook_secret: 'secrets'
       )
     end
 
@@ -111,7 +111,7 @@ RSpec.describe WebhooksController, type: :request do
           organization_id: organization.id,
           code: nil,
           body: events.to_json,
-          signature: 'signature',
+          signature: 'signature'
         )
         .and_return(result)
     end
@@ -123,7 +123,7 @@ RSpec.describe WebhooksController, type: :request do
         headers: {
           'Webhook-Signature' => 'signature',
           'Content-Type' => 'application/json'
-        },
+        }
       )
 
       expect(response).to have_http_status(:success)
@@ -144,7 +144,7 @@ RSpec.describe WebhooksController, type: :request do
           headers: {
             'Webhook-Signature' => 'signature',
             'Content-Type' => 'application/json'
-          },
+          }
         )
 
         expect(response).to have_http_status(:bad_request)
@@ -182,7 +182,7 @@ RSpec.describe WebhooksController, type: :request do
         .with(
           organization_id: organization.id,
           code: nil,
-          body: body['notificationItems'].first&.dig('NotificationRequestItem'),
+          body: body['notificationItems'].first&.dig('NotificationRequestItem')
         )
         .and_return(result)
     end
@@ -193,7 +193,7 @@ RSpec.describe WebhooksController, type: :request do
         params: body.to_json,
         headers: {
           'Content-Type' => 'application/json'
-        },
+        }
       )
 
       expect(response).to have_http_status(:success)
@@ -213,7 +213,7 @@ RSpec.describe WebhooksController, type: :request do
           params: body.to_json,
           headers: {
             'Content-Type' => 'application/json'
-          },
+          }
         )
 
         expect(response).to have_http_status(:bad_request)

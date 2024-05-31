@@ -16,7 +16,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       balance_cents: 1000,
       credits_balance: 10.0,
       ongoing_balance_cents: 1000,
-      credits_ongoing_balance: 10.0,
+      credits_ongoing_balance: 10.0
     )
   end
 

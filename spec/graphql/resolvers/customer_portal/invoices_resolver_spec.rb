@@ -30,7 +30,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
   it 'returns a list of invoices' do
     result = execute_graphql(
       customer_portal_user: customer,
-      query:,
+      query:
     )
 
     invoices_response = result['data']['customerPortalInvoices']
@@ -59,7 +59,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
       result = execute_graphql(
         customer_portal_user: customer,
         query:,
-        variables: {status: ['draft']},
+        variables: {status: ['draft']}
       )
 
       invoices_response = result['data']['customerPortalInvoices']
@@ -75,7 +75,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
   context 'without customer portal user' do
     it 'returns an error' do
       result = execute_graphql(
-        query:,
+        query:
       )
 
       expect_unauthorized_error(result)

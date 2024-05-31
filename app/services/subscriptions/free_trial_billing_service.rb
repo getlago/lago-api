@@ -17,7 +17,7 @@ module Subscriptions
             [subscription],
             timestamp,
             invoicing_reason: :subscription_starting,
-            skip_charges: true,
+            skip_charges: true
           )
         end
 
@@ -40,8 +40,8 @@ module Subscriptions
         invoice_id: subscription.invoice_subscriptions.select('invoices.id').joins(:invoice).where(
           'invoices.invoice_type' => :subscription,
           'invoices.status' => %i[draft finalized],
-          :timestamp => subscription.started_at.all_day,
-        ),
+          :timestamp => subscription.started_at.all_day
+        )
       ).any?
     end
 

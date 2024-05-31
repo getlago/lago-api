@@ -24,7 +24,7 @@ module WalletTransactions
         transaction = handle_granted_credits(
           wallet: result.current_wallet,
           granted_credits: params[:granted_credits],
-          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits]),
+          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits])
         )
         wallet_transactions << transaction
       end
@@ -33,7 +33,7 @@ module WalletTransactions
         void_result = WalletTransactions::VoidService.call(
           wallet: result.current_wallet,
           credits: params[:voided_credits],
-          from_source: source,
+          from_source: source
         )
         wallet_transactions << void_result.wallet_transaction
       end
@@ -63,7 +63,7 @@ module WalletTransactions
         credit_amount: paid_credits_amount,
         status: :pending,
         source:,
-        transaction_status: :purchased,
+        transaction_status: :purchased
       )
 
       BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
@@ -85,13 +85,13 @@ module WalletTransactions
           status: :settled,
           settled_at: Time.current,
           source:,
-          transaction_status: :granted,
+          transaction_status: :granted
         )
 
         Wallets::Balance::IncreaseService.new(
           wallet:,
           credits_amount: granted_credits_amount,
-          reset_consumed_credits:,
+          reset_consumed_credits:
         ).call
 
         wallet_transaction
@@ -101,7 +101,7 @@ module WalletTransactions
     def valid?
       WalletTransactions::ValidateService.new(
         result,
-        **params.merge(organization_id: organization.id),
+        **params.merge(organization_id: organization.id)
       ).valid?
     end
   end

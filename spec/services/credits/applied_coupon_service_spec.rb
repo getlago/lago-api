@@ -16,7 +16,7 @@ RSpec.describe Credits::AppliedCouponService do
       organization:,
       customer:,
       currency: 'EUR',
-      sub_total_excluding_taxes_amount_cents: base_amount_cents,
+      sub_total_excluding_taxes_amount_cents: base_amount_cents
     )
   end
   let(:base_amount_cents) { 300 }
@@ -95,7 +95,7 @@ RSpec.describe Credits::AppliedCouponService do
           invoice:,
           applied_coupon:,
           amount_cents: 12,
-          amount_currency: 'EUR',
+          amount_currency: 'EUR'
         )
       end
 
@@ -110,7 +110,7 @@ RSpec.describe Credits::AppliedCouponService do
         create(
           :credit,
           applied_coupon:,
-          amount_cents: 6,
+          amount_cents: 6
         )
       end
 
@@ -177,7 +177,7 @@ RSpec.describe Credits::AppliedCouponService do
           frequency: 'recurring',
           frequency_duration: 3,
           frequency_duration_remaining: 3,
-          amount_cents: 12,
+          amount_cents: 12
         )
       end
 
@@ -230,7 +230,7 @@ RSpec.describe Credits::AppliedCouponService do
           frequency: 'forever',
           frequency_duration: 0,
           frequency_duration_remaining: 0,
-          amount_cents: 12,
+          amount_cents: 12
         )
       end
 
@@ -285,7 +285,7 @@ RSpec.describe Credits::AppliedCouponService do
           frequency: 'recurring',
           frequency_duration: 3,
           frequency_duration_remaining: 3,
-          percentage_rate: 20.00,
+          percentage_rate: 20.00
         )
       end
 
@@ -321,7 +321,7 @@ RSpec.describe Credits::AppliedCouponService do
             frequency: 'recurring',
             frequency_duration: 3,
             frequency_duration_remaining: 1,
-            percentage_rate: 20.00,
+            percentage_rate: 20.00
           )
         end
 
@@ -357,7 +357,7 @@ RSpec.describe Credits::AppliedCouponService do
           :applied_coupon,
           customer:,
           amount_cents: 10,
-          amount_currency: 'NOK',
+          amount_currency: 'NOK'
         )
       end
 

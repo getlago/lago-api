@@ -10,13 +10,13 @@ module Wallets
         name: args[:name],
         rate_amount: args[:rate_amount],
         expiration_at: args[:expiration_at],
-        status: :active,
+        status: :active
       )
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
           customer: result.current_customer,
-          currency: args[:currency],
+          currency: args[:currency]
         )
         return currency_result unless currency_result.success?
 
@@ -37,7 +37,7 @@ module Wallets
           paid_credits: args[:paid_credits],
           granted_credits: args[:granted_credits],
           source: :manual
-        },
+        }
       )
 
       result

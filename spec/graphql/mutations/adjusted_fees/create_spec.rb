@@ -41,7 +41,7 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
       current_organization: membership.organization,
       permissions: required_permission,
       query: mutation,
-      variables: {input:},
+      variables: {input:}
     )
 
     expect(result['data']['createAdjustedFee']['id']).to eq(fee.id)
@@ -56,7 +56,7 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
         current_organization: membership.organization,
         permissions: required_permission,
         query: mutation,
-        variables: {input:},
+        variables: {input:}
       )
 
       expect_forbidden_error(result)

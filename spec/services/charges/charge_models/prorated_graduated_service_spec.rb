@@ -7,7 +7,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties,
+      properties: charge.properties
     )
   end
 
@@ -19,7 +19,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
       event_store_class:,
       charge:,
       subscription: nil,
-      boundaries: nil,
+      boundaries: nil
     )
   end
   let(:event_store_class) { Events::Stores::PostgresStore }
@@ -48,7 +48,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
             flat_amount: '50'
           }
         ]
-      },
+      }
     )
   end
 
@@ -262,7 +262,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
                 flat_amount: '50'
               }
             ]
-          },
+          }
         )
       end
 
@@ -305,7 +305,7 @@ RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service d
               flat_amount: '0'
             }
           ]
-        },
+        }
       )
     end
 

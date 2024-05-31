@@ -19,7 +19,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code
-        },
+        }
       )
     end
 
@@ -32,7 +32,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {value: '2500'}
-        },
+        }
       )
 
       fetch_current_usage(customer:)
@@ -66,7 +66,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {value: '-2000'}
-        },
+        }
       )
     end
 
@@ -77,7 +77,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {value: '-200'}
-        },
+        }
       )
 
       fetch_current_usage(customer:)

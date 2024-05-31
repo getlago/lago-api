@@ -11,7 +11,7 @@ module Webhooks
         ::V1::Invoices::PaymentDisputeLostSerializer.new(
           object,
           root_name: object_type,
-          provider_error: options[:provider_error],
+          provider_error: options[:provider_error]
         )
       end
 

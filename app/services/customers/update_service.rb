@@ -11,7 +11,7 @@ module Customers
       unless valid_metadata_count?(metadata: args[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
-          error_code: 'invalid_count',
+          error_code: 'invalid_count'
         )
       end
 
@@ -133,14 +133,14 @@ module Customers
         unless customer.editable?
           return result.single_validation_failure!(
             field: :currency,
-            error_code: 'currencies_does_not_match',
+            error_code: 'currencies_does_not_match'
           )
         end
       elsif customer.currency.present? || !customer.editable?
         # NOTE: Assign currency from another resource
         return result.single_validation_failure!(
           field: :currency,
-          error_code: 'currencies_does_not_match',
+          error_code: 'currencies_does_not_match'
         )
       end
 
@@ -195,7 +195,7 @@ module Customers
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::StripeCustomer,
         payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration,
+        params: billing_configuration
       )
       create_result.raise_if_error!
 
@@ -207,7 +207,7 @@ module Customers
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::GocardlessCustomer,
         payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration,
+        params: billing_configuration
       )
       create_result.raise_if_error!
 
@@ -219,7 +219,7 @@ module Customers
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
         customer_class: PaymentProviderCustomers::AdyenCustomer,
         payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration,
+        params: billing_configuration
       )
       create_result.raise_if_error!
 

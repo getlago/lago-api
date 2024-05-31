@@ -17,7 +17,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
         plan:,
         subscription_at:,
         started_at: Time.zone.now,
-        billing_time:,
+        billing_time:
       )
     end
 
@@ -33,7 +33,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           customer:,
           plan:,
           subscription_at:,
-          started_at: Time.zone.now,
+          started_at: Time.zone.now
         )
       end
 
@@ -43,7 +43,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           customer:,
           plan:,
           subscription_at:,
-          started_at: Time.zone.now,
+          started_at: Time.zone.now
         )
       end
 
@@ -52,7 +52,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           :subscription,
           plan:,
           subscription_at:,
-          started_at: Time.zone.now,
+          started_at: Time.zone.now
         )
       end
 
@@ -72,7 +72,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             .with(
               contain_exactly(subscription1, subscription2),
               current_date.to_i,
-              invoicing_reason: :subscription_periodic,
+              invoicing_reason: :subscription_periodic
             )
 
           expect(BillSubscriptionJob).to have_been_enqueued
@@ -121,7 +121,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             subscription_at:,
             started_at: Time.zone.now,
             billing_time:,
-            ending_at: billing_date,
+            ending_at: billing_date
           )
         end
 
@@ -381,7 +381,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           subscription_at:,
           started_at: Time.zone.now,
           previous_subscription:,
-          status: :pending,
+          status: :pending
         )
       end
 
@@ -390,7 +390,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           :subscription,
           subscription_at:,
           started_at: Time.zone.now,
-          billing_time: :anniversary,
+          billing_time: :anniversary
         )
       end
 
@@ -417,7 +417,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           subscription_at:,
           started_at:,
           billing_time:,
-          created_at: subscription_at,
+          created_at: subscription_at
         )
       end
 
@@ -456,7 +456,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           subscription:,
           invoicing_reason: :subscription_periodic,
           timestamp: subscription_at - 1.hour,
-          recurring: true,
+          recurring: true
         )
       end
 

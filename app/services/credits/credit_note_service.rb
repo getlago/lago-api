@@ -26,7 +26,7 @@ module Credits
             credit_note:,
             amount_cents: credit_amount,
             amount_currency: invoice.currency,
-            before_taxes: false,
+            before_taxes: false
           )
 
           # NOTE: Consume remaining credit on the credit note
@@ -66,7 +66,7 @@ module Credits
 
     def update_remaining_credit(credit_note, consumed_credit)
       credit_note.update!(
-        balance_amount_cents: credit_note.balance_amount_cents - consumed_credit,
+        balance_amount_cents: credit_note.balance_amount_cents - consumed_credit
       )
 
       credit_note.consumed! if credit_note.balance_amount_cents.zero?

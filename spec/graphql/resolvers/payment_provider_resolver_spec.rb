@@ -51,7 +51,7 @@ RSpec.describe Resolvers::PaymentProviderResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: {paymentProviderId: stripe_provider.id},
+      variables: {paymentProviderId: stripe_provider.id}
     )
 
     payment_provider_response = result['data']['paymentProvider']

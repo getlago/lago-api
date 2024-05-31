@@ -29,7 +29,7 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     customers_response = result['data']['customers']
@@ -49,7 +49,7 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: 'Missing organization id'
       )
     end
   end

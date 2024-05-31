@@ -56,7 +56,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       put_with_token(
         organization,
         "/api/v1/add_ons/#{add_on.code}",
-        {add_on: update_params},
+        {add_on: update_params}
       )
 
       expect(response).to have_http_status(:success)
@@ -84,7 +84,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/add_ons/#{add_on.code}",
-          {add_on: update_params},
+          {add_on: update_params}
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -98,7 +98,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     it 'returns a add-on' do
       get_with_token(
         organization,
-        "/api/v1/add_ons/#{add_on.code}",
+        "/api/v1/add_ons/#{add_on.code}"
       )
 
       expect(response).to have_http_status(:success)

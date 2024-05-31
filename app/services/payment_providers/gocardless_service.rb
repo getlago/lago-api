@@ -15,7 +15,7 @@ module PaymentProviders
         organization_id: args[:organization].id,
         code: args[:code],
         id: args[:id],
-        payment_provider_type: 'gocardless',
+        payment_provider_type: 'gocardless'
       )
 
       gocardless_provider = if payment_provider_result.success?
@@ -23,7 +23,7 @@ module PaymentProviders
       else
         PaymentProviders::GocardlessProvider.new(
           organization_id: args[:organization].id,
-          code: args[:code],
+          code: args[:code]
         )
       end
 
@@ -46,7 +46,7 @@ module PaymentProviders
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id:,
         code:,
-        payment_provider_type: 'gocardless',
+        payment_provider_type: 'gocardless'
       )
 
       return payment_provider_result unless payment_provider_result.success?
@@ -54,7 +54,7 @@ module PaymentProviders
       events = GoCardlessPro::Webhook.parse(
         request_body: body,
         signature_header: signature,
-        webhook_endpoint_secret: payment_provider_result.payment_provider&.webhook_secret,
+        webhook_endpoint_secret: payment_provider_result.payment_provider&.webhook_secret
       )
 
       PaymentProviders::Gocardless::HandleEventJob.perform_later(events_json: body)
@@ -78,7 +78,7 @@ module PaymentProviders
             update_payment_status_result = Invoices::Payments::GocardlessService
               .new.update_payment_status(
                 provider_payment_id: event.links.payment,
-                status: event.action,
+                status: event.action
               )
 
             return update_payment_status_result unless update_payment_status_result.success?
@@ -115,7 +115,7 @@ module PaymentProviders
         site: PaymentProviders::GocardlessProvider.auth_site,
         authorize_url: '/oauth/authorize',
         token_url: '/oauth/access_token',
-        auth_scheme: :request_body,
+        auth_scheme: :request_body
       )
     end
   end

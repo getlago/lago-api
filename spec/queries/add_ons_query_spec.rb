@@ -23,7 +23,7 @@ RSpec.describe AddOnsQuery, type: :query do
     result = add_ons_query.call(
       search_term: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.add_ons.pluck(:id)
@@ -41,7 +41,7 @@ RSpec.describe AddOnsQuery, type: :query do
       result = add_ons_query.call(
         search_term: 'de',
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.add_ons.pluck(:id)
@@ -63,7 +63,7 @@ RSpec.describe AddOnsQuery, type: :query do
         limit: 10,
         filters: {
           ids: [add_on_second.id]
-        },
+        }
       )
 
       returned_ids = result.add_ons.pluck(:id)
@@ -82,7 +82,7 @@ RSpec.describe AddOnsQuery, type: :query do
       result = add_ons_query.call(
         search_term: '1',
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.add_ons.pluck(:id)

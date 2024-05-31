@@ -47,7 +47,7 @@ RSpec.describe Mutations::IntegrationMappings::Create, type: :graphql do
           externalId: external_id,
           externalName: external_name
         }
-      },
+      }
     )
 
     result_data = result['data']['createIntegrationMapping']

@@ -15,7 +15,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       invoice:,
       customer:,
       credit_amount_cents:,
-      refund_amount_cents:,
+      refund_amount_cents:
     )
   end
   let(:item) do
@@ -23,7 +23,7 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       :credit_note_item,
       credit_note:,
       amount_cents:,
-      fee:,
+      fee:
     )
   end
 

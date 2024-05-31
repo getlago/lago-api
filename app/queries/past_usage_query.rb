@@ -9,7 +9,7 @@ class PastUsageQuery < BaseQuery
     result.usage_periods = query_result.map do |invoice_subscription|
       OpenStruct.new(
         invoice_subscription:,
-        fees: fees_query(invoice_subscription.invoice),
+        fees: fees_query(invoice_subscription.invoice)
       )
     end
 
@@ -49,14 +49,14 @@ class PastUsageQuery < BaseQuery
     if filters.external_customer_id.blank?
       return result.single_validation_failure!(
         field: :external_customer_id,
-        error_code: 'value_is_mandatory',
+        error_code: 'value_is_mandatory'
       )
     end
 
     if filters.external_subscription_id.blank?
       return result.single_validation_failure!(
         field: :external_subscription_id,
-        error_code: 'value_is_mandatory',
+        error_code: 'value_is_mandatory'
       )
     end
 

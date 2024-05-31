@@ -53,7 +53,7 @@ RSpec.describe Customers::CreateService, type: :service do
     it 'creates customer with correctly persisted attributes' do
       result = customers_service.create_from_api(
         organization:,
-        params: create_args,
+        params: create_args
       )
 
       expect(result).to be_success
@@ -69,14 +69,14 @@ RSpec.describe Customers::CreateService, type: :service do
         timezone: nil,
         vat_rate: billing[:vat_rate],
         document_locale: billing[:document_locale],
-        invoice_grace_period: nil,
+        invoice_grace_period: nil
       )
     end
 
     it 'calls SegmentTrackJob' do
       customer = customers_service.create_from_api(
         organization:,
-        params: create_args,
+        params: create_args
       ).customer
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
@@ -87,7 +87,7 @@ RSpec.describe Customers::CreateService, type: :service do
           created_at: customer.created_at,
           payment_provider: customer.payment_provider,
           organization_id: customer.organization_id
-        },
+        }
       )
     end
 
@@ -134,7 +134,7 @@ RSpec.describe Customers::CreateService, type: :service do
       it 'creates customer with metadata' do
         result = customers_service.create_from_api(
           organization:,
-          params: create_args,
+          params: create_args
         )
 
         aggregate_failures do
@@ -163,7 +163,7 @@ RSpec.describe Customers::CreateService, type: :service do
       it 'creates a new customer' do
         result = customers_service.create_from_api(
           organization:,
-          params: create_args,
+          params: create_args
         )
 
         expect(result).to be_success
@@ -184,7 +184,7 @@ RSpec.describe Customers::CreateService, type: :service do
           :customer,
           organization:,
           external_id:,
-          email: 'foo@bar.com',
+          email: 'foo@bar.com'
         )
       end
 
@@ -193,7 +193,7 @@ RSpec.describe Customers::CreateService, type: :service do
       it 'updates the customer' do
         result = customers_service.create_from_api(
           organization:,
-          params: create_args,
+          params: create_args
         )
 
         aggregate_failures do
@@ -232,7 +232,7 @@ RSpec.describe Customers::CreateService, type: :service do
         it 'updates the customer' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           aggregate_failures do
@@ -282,7 +282,7 @@ RSpec.describe Customers::CreateService, type: :service do
         it 'updates metadata' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           metadata_keys = result.customer.metadata.pluck(:key)
@@ -343,7 +343,7 @@ RSpec.describe Customers::CreateService, type: :service do
           it 'fails to create customer with metadata' do
             result = customers_service.create_from_api(
               organization:,
-              params: create_args,
+              params: create_args
             )
 
             aggregate_failures do
@@ -372,7 +372,7 @@ RSpec.describe Customers::CreateService, type: :service do
         it 'fails is we change the subscription' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           aggregate_failures do
@@ -415,7 +415,7 @@ RSpec.describe Customers::CreateService, type: :service do
       it 'return a failed result' do
         result = customers_service.create_from_api(
           organization:,
-          params: create_args,
+          params: create_args
         )
 
         expect(result).not_to be_success
@@ -441,7 +441,7 @@ RSpec.describe Customers::CreateService, type: :service do
         it 'fails to create customer' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -455,7 +455,7 @@ RSpec.describe Customers::CreateService, type: :service do
         it 'creates a stripe customer' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           expect(result).to be_success
@@ -496,7 +496,7 @@ RSpec.describe Customers::CreateService, type: :service do
             external_id: create_args[:external_id],
             email: 'foo@bar.com',
             payment_provider_code: nil,
-            payment_provider: nil,
+            payment_provider: nil
           )
         end
 
@@ -505,7 +505,7 @@ RSpec.describe Customers::CreateService, type: :service do
         it 'updates the customer' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           aggregate_failures do
@@ -529,7 +529,7 @@ RSpec.describe Customers::CreateService, type: :service do
           it 'updates the customer and reset payment_provider attribute' do
             result = customers_service.create_from_api(
               organization:,
-              params: create_args,
+              params: create_args
             )
 
             aggregate_failures do
@@ -560,7 +560,7 @@ RSpec.describe Customers::CreateService, type: :service do
           it 'updates the customer and reset payment_provider attribute' do
             result = customers_service.create_from_api(
               organization:,
-              params: create_args,
+              params: create_args
             )
 
             aggregate_failures do
@@ -595,7 +595,7 @@ RSpec.describe Customers::CreateService, type: :service do
         it 'fails to create customer' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -609,7 +609,7 @@ RSpec.describe Customers::CreateService, type: :service do
         it 'creates a gocardless customer' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           expect(result).to be_success
@@ -643,7 +643,7 @@ RSpec.describe Customers::CreateService, type: :service do
       it 'does not create a payment provider customer' do
         result = customers_service.create_from_api(
           organization:,
-          params: create_args,
+          params: create_args
         )
 
         expect(result).to be_success
@@ -662,7 +662,7 @@ RSpec.describe Customers::CreateService, type: :service do
       it 'creates a payment provider customer' do
         result = customers_service.create_from_api(
           organization:,
-          params: create_args,
+          params: create_args
         )
 
         aggregate_failures do
@@ -684,14 +684,14 @@ RSpec.describe Customers::CreateService, type: :service do
             external_id: create_args[:external_id],
             payment_provider: nil,
             payment_provider_code: nil,
-            email: 'foo@bar.com',
+            email: 'foo@bar.com'
           )
         end
 
         it 'does not create a payment provider customer' do
           result = customers_service.create_from_api(
             organization:,
-            params: create_args,
+            params: create_args
           )
 
           aggregate_failures do
@@ -811,7 +811,7 @@ RSpec.describe Customers::CreateService, type: :service do
       it 'assigns the right tax to the customer' do
         result = customers_service.create_from_api(
           organization:,
-          params: create_args,
+          params: create_args
         )
 
         aggregate_failures do
@@ -869,7 +869,7 @@ RSpec.describe Customers::CreateService, type: :service do
           created_at: customer.created_at,
           payment_provider: customer.payment_provider,
           organization_id: customer.organization_id
-        },
+        }
       )
     end
 
@@ -965,7 +965,7 @@ RSpec.describe Customers::CreateService, type: :service do
       before do
         create(
           :stripe_provider,
-          organization:,
+          organization:
         )
       end
 
@@ -1000,7 +1000,7 @@ RSpec.describe Customers::CreateService, type: :service do
       before do
         create(
           :gocardless_provider,
-          organization:,
+          organization:
         )
       end
 

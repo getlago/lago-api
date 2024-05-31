@@ -12,7 +12,7 @@ module Auth
         client_id,
         BASE_SCOPE,
         nil, # token_store is nil because we don't need to store the token
-        "#{ENV["LAGO_FRONT_URL"]}/auth/google/callback",
+        "#{ENV["LAGO_FRONT_URL"]}/auth/google/callback"
       )
 
       result.url = authorizer.get_authorization_url(request:)
@@ -68,7 +68,7 @@ module Auth
         invite:,
         email: google_oidc['email'],
         token: invite_token,
-        password: SecureRandom.hex,
+        password: SecureRandom.hex
       )
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: 'invalid_google_token')
@@ -93,7 +93,7 @@ module Auth
         client_id,
         BASE_SCOPE,
         nil, # token_store is nil because we don't need to store the token
-        "#{ENV["LAGO_FRONT_URL"]}/auth/google/callback",
+        "#{ENV["LAGO_FRONT_URL"]}/auth/google/callback"
       )
 
       credentials = authorizer.get_credentials_from_code(code:)

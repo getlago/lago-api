@@ -11,7 +11,7 @@ namespace :memberships do
     duplicated_memberships.each do |membership|
       memberships = Membership.where(
         user_id: membership.user_id,
-        organization_id: membership.organization_id,
+        organization_id: membership.organization_id
       ).order('created_at ASC')
 
       memberships.first.mark_as_revoke!

@@ -87,7 +87,7 @@ module V1
 
       event = Event.find_by(
         organization_id: model.subscription.organization,
-        id: model.pay_in_advance_event_id,
+        id: model.pay_in_advance_event_id
       )
 
       {event_transaction_id: event&.transaction_id}
@@ -97,7 +97,7 @@ module V1
       ::CollectionSerializer.new(
         model.applied_taxes,
         ::V1::Fees::AppliedTaxSerializer,
-        collection_name: 'applied_taxes',
+        collection_name: 'applied_taxes'
       ).serialize
     end
 

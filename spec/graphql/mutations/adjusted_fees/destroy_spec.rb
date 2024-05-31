@@ -31,7 +31,7 @@ RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
         current_organization: membership.organization,
         permissions: required_permission,
         query: mutation,
-        variables: {input: {id: fee.id}},
+        variables: {input: {id: fee.id}}
       )
     end.to change(AdjustedFee, :count).by(-1)
   end

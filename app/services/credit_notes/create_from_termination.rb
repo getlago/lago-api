@@ -37,7 +37,7 @@ module CreditNotes
           }
         ],
         reason: reason.to_sym,
-        automatic: true,
+        automatic: true
       ).call
     end
 
@@ -58,7 +58,7 @@ module CreditNotes
     def date_service
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
-        terminated_at,
+        terminated_at
       )
     end
 
@@ -101,9 +101,9 @@ module CreditNotes
         items: [
           CreditNoteItem.new(
             fee_id: last_subscription_fee.id,
-            precise_amount_cents: item_amount.truncate(CreditNote::DB_PRECISION_SCALE),
+            precise_amount_cents: item_amount.truncate(CreditNote::DB_PRECISION_SCALE)
           )
-        ],
+        ]
       )
 
       (

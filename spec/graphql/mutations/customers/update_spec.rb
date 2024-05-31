@@ -83,7 +83,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           ],
           taxCodes: [tax.code]
         }
-      },
+      }
     )
 
     result_data = result['data']['updateCustomer']
@@ -124,7 +124,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
             timezone: 'TZ_EUROPE_PARIS',
             invoiceGracePeriod: 2
           }
-        },
+        }
       )
 
       result_data = result['data']['updateCustomer']

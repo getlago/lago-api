@@ -6,7 +6,7 @@ module Api
       def create
         result = WalletTransactions::CreateService.call(
           organization: current_organization,
-          params: input_params,
+          params: input_params
         )
 
         if result.success?
@@ -14,8 +14,8 @@ module Api
             json: ::CollectionSerializer.new(
               result.wallet_transactions,
               ::V1::WalletTransactionSerializer,
-              collection_name: 'wallet_transactions',
-            ),
+              collection_name: 'wallet_transactions'
+            )
           )
         else
           render_error_response(result)
@@ -31,7 +31,7 @@ module Api
           filters: {
             status: params[:status],
             transaction_type: params[:transaction_type]
-          },
+          }
         )
 
         return render_error_response(result) unless result.success?
@@ -41,8 +41,8 @@ module Api
             result.wallet_transactions,
             ::V1::WalletTransactionSerializer,
             collection_name: 'wallet_transactions',
-            meta: pagination_metadata(result.wallet_transactions),
-          ),
+            meta: pagination_metadata(result.wallet_transactions)
+          )
         )
       end
 
@@ -53,7 +53,7 @@ module Api
           :wallet_id,
           :paid_credits,
           :granted_credits,
-          :voided_credits,
+          :voided_credits
         )
       end
     end

@@ -18,7 +18,7 @@ module OrganizationTimezone
 
   def respond_to_missing?(method_name, include_private = false)
     method_name.to_s.end_with?(ORGANIZATION_SUFFIX) && respond_to?(
-      method_name.gsub(ORGANIZATION_SUFFIX, ''),
+      method_name.gsub(ORGANIZATION_SUFFIX, '')
     ) || super
   end
 

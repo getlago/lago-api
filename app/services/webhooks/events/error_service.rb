@@ -13,9 +13,9 @@ module Webhooks
         ::V1::EventErrorSerializer.new(
           OpenStruct.new(
             error: options[:error],
-            event: object,
+            event: object
           ),
-          root_name: 'event_error',
+          root_name: 'event_error'
         )
       end
 

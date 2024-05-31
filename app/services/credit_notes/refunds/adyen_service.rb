@@ -25,7 +25,7 @@ module CreditNotes
           amount_cents: adyen_result.response.dig('amount', 'value'),
           amount_currency: adyen_result.response.dig('amount', 'currency'),
           status: 'pending',
-          provider_refund_id: adyen_result.response['pspReference'],
+          provider_refund_id: adyen_result.response['pspReference']
         )
         refund.save!
 
@@ -68,7 +68,7 @@ module CreditNotes
         @client ||= Adyen::Client.new(
           api_key: payment.payment_provider.api_key,
           env: payment.payment_provider.environment,
-          live_url_prefix: payment.payment_provider.live_prefix,
+          live_url_prefix: payment.payment_provider.live_prefix
         )
       end
 
@@ -89,7 +89,7 @@ module CreditNotes
       def create_adyen_refund
         client.checkout.modifications_api.refund_captured_payment(
           Lago::Adyen::Params.new(adyen_refund_params).to_h,
-          payment.provider_payment_id,
+          payment.provider_payment_id
         )
       rescue Adyen::AdyenError => e
         deliver_error_webhook(message: e.msg, code: e.code)
@@ -119,7 +119,7 @@ module CreditNotes
           provider_error: {
             message:,
             error_code: code
-          },
+          }
         )
       end
 
@@ -137,7 +137,7 @@ module CreditNotes
             organization_id: organization.id,
             credit_note_id: credit_note.id,
             refund_status: status
-          },
+          }
         )
       end
 

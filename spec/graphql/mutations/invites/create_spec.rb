@@ -9,7 +9,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
     create(
       :membership,
       organization: membership.organization,
-      status: :revoked,
+      status: :revoked
     )
   end
   let(:organization) { membership.organization }
@@ -44,7 +44,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
           email:,
           role:
         }
-      },
+      }
     )
 
     data = result['data']['createInvite']
@@ -65,7 +65,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
           email: revoked_membership.user.email,
           role:
         }
-      },
+      }
     )
 
     data = result['data']['createInvite']
@@ -87,7 +87,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
           email:,
           role:
         }
-      },
+      }
     )
 
     expect(result['errors'].first['extensions']['status']).to eq(422)
@@ -106,7 +106,7 @@ RSpec.describe Mutations::Invites::Create, type: :graphql do
           email: membership.user.email,
           role:
         }
-      },
+      }
     )
 
     expect(result['errors'].first['extensions']['status']).to eq(422)

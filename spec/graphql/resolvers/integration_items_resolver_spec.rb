@@ -39,7 +39,7 @@ RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
       variables: {
         integrationId: integration.id,
         itemType: 'tax'
-      },
+      }
     )
 
     integration_items_response = result['data']['integrationItems']
@@ -58,12 +58,12 @@ RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Variable $integrationId of type ID! was provided invalid value',
+        message: 'Variable $integrationId of type ID! was provided invalid value'
       )
     end
   end

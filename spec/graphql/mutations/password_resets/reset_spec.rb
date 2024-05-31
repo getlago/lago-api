@@ -24,7 +24,7 @@ RSpec.describe Mutations::PasswordResets::Reset, type: :graphql do
           newPassword: 'HelloLago!2',
           token: password_reset.token
         }
-      },
+      }
     )
 
     data = result['data']['resetPassword']
@@ -45,7 +45,7 @@ RSpec.describe Mutations::PasswordResets::Reset, type: :graphql do
             newPassword: 'HelloLago!3',
             token: expired_password_reset.token
           }
-        },
+        }
       )
 
       expect_not_found(result)

@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(**args)
         result = ::Invoices::FinalizeService.call(
-          invoice: current_organization.invoices.draft.find_by(id: args[:id]),
+          invoice: current_organization.invoices.draft.find_by(id: args[:id])
         )
         result.success? ? result.invoice : result_error(result)
       end

@@ -33,7 +33,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         }.to change(Invoice, :count).by(1)
 
@@ -42,7 +42,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           plan:,
           billable_metric: metric,
           properties: {amount: '8'},
-          min_amount_cents: 1000,
+          min_amount_cents: 1000
         )
       end
 
@@ -64,7 +64,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             code: metric.code,
             transaction_id: SecureRandom.uuid,
             external_customer_id: customer.external_id
-          },
+          }
         )
 
         expect {
@@ -82,21 +82,21 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         expect(usage_fee).to have_attributes(
           amount_cents: 800,
           taxes_amount_cents: 160,
-          units: 1,
+          units: 1
         )
 
         # True up fee is pro-rated for 25/28 days.
         expect(true_up_fee).to have_attributes(
           amount_cents: 92, # (1000 / 28.0 * 25 - 800).floor
           taxes_amount_cents: 18,
-          units: 1,
+          units: 1
         )
 
         expect(term_invoice).to have_attributes(
           fees_amount_cents: 892,
           taxes_amount_cents: 178,
           credit_notes_amount_cents: 0,
-          total_amount_cents: 1070,
+          total_amount_cents: 1070
         )
 
         # Refresh pay in advance invoice
@@ -129,7 +129,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           fees_amount_cents: 892,
           taxes_amount_cents: 178,
           credit_notes_amount_cents: 643,
-          total_amount_cents: 427, # 892 + 178 - 643
+          total_amount_cents: 427 # 892 + 178 - 643
         )
       end
     end
@@ -149,7 +149,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: plan.code
-            },
+            }
           )
         }.to change(Invoice, :count).by(1)
 
@@ -158,7 +158,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           plan:,
           billable_metric: metric,
           properties: {amount: '0'},
-          min_amount_cents: 10_000,
+          min_amount_cents: 10_000
         )
 
         europe_filter = create(:charge_filter, charge:, properties: {amount: '20'})
@@ -187,7 +187,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             properties: {
               region: 'usa'
             }
-          },
+          }
         )
 
         create_event(
@@ -198,7 +198,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             properties: {
               region: 'europe'
             }
-          },
+          }
         )
 
         expect {
@@ -219,14 +219,14 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         expect(true_up_fee).to have_attributes(
           amount_cents: 1928, # (10000 / 28.0 * 25 - 2000 - 5000).floor
           taxes_amount_cents: 386,
-          units: 1,
+          units: 1
         )
 
         expect(term_invoice).to have_attributes(
           fees_amount_cents: 8928, # 1928 + 2000 + 5000
           taxes_amount_cents: 1786,
           credit_notes_amount_cents: 643,
-          total_amount_cents: 10_071,
+          total_amount_cents: 10_071
         )
       end
     end

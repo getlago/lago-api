@@ -11,7 +11,7 @@ RSpec.describe ::V1::FeeSerializer do
       properties: {
         from_datetime: Time.current,
         to_datetime: Time.current
-      },
+      }
     )
   end
 
@@ -49,7 +49,7 @@ RSpec.describe ::V1::FeeSerializer do
         'succeeded_at' => fee.succeeded_at&.iso8601,
         'failed_at' => fee.failed_at&.iso8601,
         'refunded_at' => fee.refunded_at&.iso8601,
-        'amount_details' => fee.amount_details,
+        'amount_details' => fee.amount_details
       )
       expect(result['fee']['item']).to include(
         'type' => fee.fee_type,
@@ -60,7 +60,7 @@ RSpec.describe ::V1::FeeSerializer do
         'filters' => nil,
         'lago_item_id' => fee.item_id,
         'item_type' => fee.item_type,
-        'grouped_by' => fee.grouped_by,
+        'grouped_by' => fee.grouped_by
       )
 
       expect(result['fee']['from_date']).not_to be_nil
@@ -80,7 +80,7 @@ RSpec.describe ::V1::FeeSerializer do
         properties: {
           charges_from_datetime: Time.current,
           charges_to_datetime: Time.current
-        },
+        }
       )
     end
 
@@ -94,7 +94,7 @@ RSpec.describe ::V1::FeeSerializer do
         'invoice_display_name' => fee.invoice_name,
         'filter_invoice_display_name' => fee.filter_display_name,
         'lago_item_id' => fee.item_id,
-        'item_type' => fee.item_type,
+        'item_type' => fee.item_type
       )
     end
 
@@ -107,7 +107,7 @@ RSpec.describe ::V1::FeeSerializer do
           properties: {
             charges_from_datetime: (timestamp - 1.month).beginning_of_day,
             charges_to_datetime: (timestamp - 1.day).end_of_day
-          },
+          }
         )
       end
       let(:invoice_subscription) do
@@ -115,7 +115,7 @@ RSpec.describe ::V1::FeeSerializer do
           :invoice_subscription,
           invoice: fee.invoice,
           subscription: fee.subscription,
-          timestamp:,
+          timestamp:
         )
       end
 
@@ -125,7 +125,7 @@ RSpec.describe ::V1::FeeSerializer do
         fee.subscription.update!(
           started_at: timestamp - 1.year,
           billing_time: 'anniversary',
-          subscription_at: timestamp,
+          subscription_at: timestamp
         )
       end
 
@@ -139,7 +139,7 @@ RSpec.describe ::V1::FeeSerializer do
           'invoice_display_name' => fee.invoice_name,
           'group_invoice_display_name' => fee.filter_display_name,
           'lago_item_id' => fee.item_id,
-          'item_type' => fee.item_type,
+          'item_type' => fee.item_type
         )
       end
     end
@@ -177,7 +177,7 @@ RSpec.describe ::V1::FeeSerializer do
         :event,
         subscription_id: subscription.id,
         organization_id: organization.id,
-        customer_id: customer.id,
+        customer_id: customer.id
       )
     end
 
@@ -194,7 +194,7 @@ RSpec.describe ::V1::FeeSerializer do
           'external_customer_id' => customer.external_id,
           'event_transaction_id' => event.transaction_id,
           'pay_in_advance' => true,
-          'invoiceable' => true,
+          'invoiceable' => true
         )
       end
     end

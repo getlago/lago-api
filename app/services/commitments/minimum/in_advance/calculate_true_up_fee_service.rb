@@ -15,7 +15,7 @@ module Commitments
         def subscription_fees
           dates_service = Commitments::DatesService.new_instance(
             commitment: minimum_commitment,
-            invoice_subscription: invoice_subscription.previous_invoice_subscription,
+            invoice_subscription: invoice_subscription.previous_invoice_subscription
           ).call
 
           Fee
@@ -23,15 +23,15 @@ module Commitments
             .joins(subscription: :plan)
             .where(
               "(fees.properties->>'from_datetime') >= ?",
-              dates_service.previous_beginning_of_period,
+              dates_service.previous_beginning_of_period
             )
             .where(
               "(fees.properties->>'to_datetime') <= ?",
-              dates_service.end_of_period&.iso8601(3),
+              dates_service.end_of_period&.iso8601(3)
             )
             .where(
               subscription_id: subscription.id,
-              plan: {pay_in_advance: true},
+              plan: {pay_in_advance: true}
             )
         end
 
@@ -44,14 +44,14 @@ module Commitments
             .where(
               subscription_id: subscription.id,
               invoice_id: invoices_result.invoices.ids,
-              charge: {pay_in_advance: false},
+              charge: {pay_in_advance: false}
             )
         end
 
         def charge_in_advance_fees
           dates_service = Commitments::DatesService.new_instance(
             commitment: minimum_commitment,
-            invoice_subscription: invoice_subscription.previous_invoice_subscription,
+            invoice_subscription: invoice_subscription.previous_invoice_subscription
           ).call
 
           Fee
@@ -60,15 +60,15 @@ module Commitments
             .where(
               subscription_id: subscription.id,
               charge: {pay_in_advance: true},
-              pay_in_advance: true,
+              pay_in_advance: true
             )
             .where(
               "(fees.properties->>'charges_from_datetime') >= ?",
-              dates_service.previous_beginning_of_period,
+              dates_service.previous_beginning_of_period
             )
             .where(
               "(fees.properties->>'charges_to_datetime') <= ?",
-              dates_service.end_of_period&.iso8601(3),
+              dates_service.end_of_period&.iso8601(3)
             )
         end
 
@@ -77,7 +77,7 @@ module Commitments
 
           dates_service = Commitments::DatesService.new_instance(
             commitment: minimum_commitment,
-            invoice_subscription: invoice_subscription.previous_invoice_subscription,
+            invoice_subscription: invoice_subscription.previous_invoice_subscription
           ).call
 
           Fee
@@ -88,15 +88,15 @@ module Commitments
             .where(
               subscription_id: subscription.id,
               charge: {pay_in_advance: true},
-              pay_in_advance: false,
+              pay_in_advance: false
             )
             .where(
               "(fees.properties->>'from_datetime') >= ?",
-              dates_service.previous_beginning_of_period,
+              dates_service.previous_beginning_of_period
             )
             .where(
               "(fees.properties->>'to_datetime') <= ?",
-              dates_service.end_of_period&.iso8601(3),
+              dates_service.end_of_period&.iso8601(3)
             )
         end
       end

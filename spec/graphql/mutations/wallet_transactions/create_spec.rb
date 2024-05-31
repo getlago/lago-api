@@ -40,7 +40,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
           paidCredits: '5.00',
           grantedCredits: '5.00'
         }
-      },
+      }
     )
 
     result_data = result['data']['createCustomerWalletTransaction']

@@ -49,13 +49,13 @@ module Invoices
           subscriptions: Subscription.find(subscription_ids),
           timestamp:,
           invoicing_reason:,
-          refresh: true,
+          refresh: true
         ).raise_if_error!
 
         calculate_result = Invoices::CalculateFeesService.call(
           invoice: invoice.reload,
           recurring:,
-          context:,
+          context:
         )
 
         invoice.credit_notes.each do |credit_note|

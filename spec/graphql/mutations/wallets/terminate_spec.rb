@@ -34,7 +34,7 @@ RSpec.describe Mutations::Wallets::Terminate, type: :graphql do
       query: mutation,
       variables: {
         input: {id: wallet.id}
-      },
+      }
     )
 
     data = result['data']['terminateCustomerWallet']

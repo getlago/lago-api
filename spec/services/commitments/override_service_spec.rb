@@ -40,7 +40,7 @@ RSpec.describe Commitments::OverrideService, type: :service do
         expect(commitment).to have_attributes(
           plan_id: plan.id,
           invoice_display_name: 'invoice display name',
-          amount_cents: 1000,
+          amount_cents: 1000
         )
         expect(commitment.taxes).to contain_exactly(tax)
       end

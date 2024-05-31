@@ -30,7 +30,7 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     expect(result['data']['grossRevenues']['collection']).to eq([])

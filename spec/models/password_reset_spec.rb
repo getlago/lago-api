@@ -7,7 +7,7 @@ RSpec.describe PasswordReset, type: :model do
     described_class.new(
       user: create(:user),
       token: SecureRandom.hex(20),
-      expire_at: Time.current + 30.minutes,
+      expire_at: Time.current + 30.minutes
     )
   end
 

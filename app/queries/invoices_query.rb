@@ -38,7 +38,7 @@ class InvoicesQuery < BaseQuery
     terms.merge(
       customer_name_cont: search_term,
       customer_external_id_cont: search_term,
-      customer_email_cont: search_term,
+      customer_email_cont: search_term
     )
   end
 end

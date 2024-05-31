@@ -18,7 +18,7 @@ class ApplicationController < ActionController::API
           github_url: result.version.github_url,
           message: 'Success'
         },
-        status: :ok,
+        status: :ok
       )
     rescue ActiveRecord::ActiveRecordError => e
       render(
@@ -28,7 +28,7 @@ class ApplicationController < ActionController::API
           message: 'Unhealthy',
           details: e.message
         },
-        status: :internal_server_error,
+        status: :internal_server_error
       )
     end
   end

@@ -41,12 +41,12 @@ RSpec.describe ::V1::PlanSerializer do
         'active_subscriptions_count' => 2,
         'draft_invoices_count' => 0,
         'parent_id' => nil,
-        'taxes' => [],
+        'taxes' => []
       )
 
       expect(result['plan']['charges'].first).to include(
         'lago_id' => charge.id,
-        'group_properties' => [],
+        'group_properties' => []
       )
 
       expect(result['plan']['minimum_commitment']).to include(
@@ -57,10 +57,10 @@ RSpec.describe ::V1::PlanSerializer do
         'interval' => commitment.plan.interval,
         'created_at' => commitment.created_at.iso8601,
         'updated_at' => commitment.updated_at.iso8601,
-        'taxes' => [],
+        'taxes' => []
       )
       expect(result['plan']['minimum_commitment']).not_to include(
-        'commitment_type' => 'minimum_commitment',
+        'commitment_type' => 'minimum_commitment'
       )
     end
   end
@@ -90,12 +90,12 @@ RSpec.describe ::V1::PlanSerializer do
         'active_subscriptions_count' => 2,
         'draft_invoices_count' => 0,
         'parent_id' => nil,
-        'taxes' => [],
+        'taxes' => []
       )
 
       expect(result['plan']['charges'].first).to include(
         'lago_id' => charge.id,
-        'group_properties' => [],
+        'group_properties' => []
       )
 
       expect(result['plan']['minimum_commitment']).to be_nil

@@ -112,7 +112,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       put_with_token(
         organization,
         "/api/v1/wallets/#{wallet.id}",
-        {wallet: update_params},
+        {wallet: update_params}
       )
 
       aggregate_failures do
@@ -134,7 +134,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/wallets/#{wallet.id}",
-          {wallet: update_params},
+          {wallet: update_params}
         )
 
         aggregate_failures do
@@ -182,7 +182,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/wallets/#{wallet.id}",
-          {wallet: update_params},
+          {wallet: update_params}
         )
 
         recurring_rules = json[:wallet][:recurring_transaction_rules]
@@ -210,7 +210,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     it 'returns a wallet' do
       get_with_token(
         organization,
-        "/api/v1/wallets/#{wallet.id}",
+        "/api/v1/wallets/#{wallet.id}"
       )
 
       expect(response).to have_http_status(:success)

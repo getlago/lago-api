@@ -14,7 +14,7 @@ module Mutations
       result = UsersService.new.register(
         email,
         password,
-        organization_name,
+        organization_name
       )
 
       result.success? ? result : result_error(result)

@@ -45,7 +45,7 @@ module Invoices
         organization: subscription.organization,
         customer: subscription.customer,
         issuing_date: boundaries[:issuing_date],
-        currency: plan.amount_currency,
+        currency: plan.amount_currency
       )
 
       add_charge_fees
@@ -57,7 +57,7 @@ module Invoices
     def customer(customer_id: nil)
       @customer ||= Customer.find_by(
         id: customer_id,
-        organization_id: result.user.organization_ids,
+        organization_id: result.user.organization_ids
       )
     end
 
@@ -78,7 +78,7 @@ module Invoices
 
       json = Rails.cache.fetch(charge_cache_key(charge), expires_in: charge_cache_expiration) do
         fees_result = Fees::ChargeService.new(
-          invoice:, charge:, subscription:, boundaries:,
+          invoice:, charge:, subscription:, boundaries:
         ).current_usage
 
         fees_result.raise_if_error!
@@ -91,7 +91,7 @@ module Invoices
 
     def charge_usage_without_cache(charge)
       fees_result = Fees::ChargeService.new(
-        invoice:, charge:, subscription:, boundaries:,
+        invoice:, charge:, subscription:, boundaries:
       ).current_usage
 
       fees_result.raise_if_error!
@@ -105,7 +105,7 @@ module Invoices
       date_service = Subscriptions::DatesService.new_instance(
         subscription,
         Time.current,
-        current_usage: true,
+        current_usage: true
       )
 
       {
@@ -149,7 +149,7 @@ module Invoices
         amount_cents: invoice.fees_amount_cents,
         total_amount_cents: invoice.total_amount_cents,
         taxes_amount_cents: invoice.taxes_amount_cents,
-        fees: invoice.fees,
+        fees: invoice.fees
       )
     end
   end

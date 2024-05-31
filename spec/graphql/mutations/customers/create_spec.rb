@@ -84,7 +84,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           ],
           taxCodes: [tax.code]
         }
-      },
+      }
     )
 
     result_data = result['data']['createCustomer']
@@ -134,7 +134,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
               providerPaymentMethods: ['card']
             }
           }
-        },
+        }
       )
 
       result_data = result['data']['createCustomer']
@@ -160,7 +160,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
             city: 'London',
             country: 0
           }
-        },
+        }
       )
 
       expect(result['errors']).to be_present

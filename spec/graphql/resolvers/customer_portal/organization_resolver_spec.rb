@@ -27,7 +27,7 @@ RSpec.describe Resolvers::CustomerPortal::OrganizationResolver, type: :graphql d
   it 'returns the customer portal organization' do
     result = execute_graphql(
       customer_portal_user: customer,
-      query:,
+      query:
     )
 
     data = result['data']['customerPortalOrganization']

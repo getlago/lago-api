@@ -20,6 +20,6 @@ unless ENV['LAGO_DISABLE_SEGMENT'] == 'true'
       write_key: ENV.fetch('SEGMENT_WRITE_KEY', 'changeme'),
       on_error: proc { |status, msg| Sentry.capture_exception(SegmentError.new(status, msg)) },
       stub: Rails.env.development? || Rails.env.test?
-    },
+    }
   )
 end

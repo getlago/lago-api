@@ -9,7 +9,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       params:,
       result:,
       customer:,
-      subscriptions: [subscription],
+      subscriptions: [subscription]
     )
   end
 
@@ -66,7 +66,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           params:,
           result:,
           customer: nil,
-          subscriptions: [subscription],
+          subscriptions: [subscription]
         )
       end
 
@@ -85,7 +85,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           params:,
           result:,
           customer:,
-          subscriptions: [subscription, subscription2],
+          subscriptions: [subscription, subscription2]
         )
       end
 
@@ -118,7 +118,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           params:,
           result:,
           customer:,
-          subscriptions: [subscription, subscription2],
+          subscriptions: [subscription, subscription2]
         )
       end
 
@@ -165,7 +165,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
           transaction_id:,
           external_subscription_id: subscription.external_id,
           subscription_id: subscription.id,
-          organization_id: organization.id,
+          organization_id: organization.id
         )
       end
 

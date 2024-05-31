@@ -28,7 +28,7 @@ RSpec.describe Mutations::Customers::Destroy, type: :graphql do
       query: mutation,
       variables: {
         input: {id: customer.id}
-      },
+      }
     )
 
     data = result['data']['destroyCustomer']

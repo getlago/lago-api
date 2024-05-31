@@ -26,7 +26,7 @@ RSpec.describe Mutations::AddOns::Destroy, type: :graphql do
       query: mutation,
       variables: {
         input: {id: add_on.id}
-      },
+      }
     )
 
     data = result['data']['destroyAddOn']

@@ -55,17 +55,17 @@ describe 'Change charge model with filters', :scenarios, type: :request do
             }
           ]
         }
-      ],
+      ]
     )
 
     plan.reload
     expect(plan.charges.first.charge_model).to eq('graduated')
     expect(plan.charges.first.filters.count).to eq(1)
     expect(plan.charges.first.filters.first.properties['graduated_ranges'][0]).to include(
-      'from_value' => 0, 'to_value' => 100, 'per_unit_amount' => '12', 'flat_amount' => '0',
+      'from_value' => 0, 'to_value' => 100, 'per_unit_amount' => '12', 'flat_amount' => '0'
     )
     expect(plan.charges.first.filters.first.properties['graduated_ranges'][1]).to include(
-      'from_value' => 101, 'to_value' => nil, 'per_unit_amount' => '22', 'flat_amount' => '0',
+      'from_value' => 101, 'to_value' => nil, 'per_unit_amount' => '22', 'flat_amount' => '0'
     )
   end
 end

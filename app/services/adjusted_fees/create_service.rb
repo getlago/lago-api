@@ -30,7 +30,7 @@ module AdjustedFees
         units: params[:units].presence || 0,
         unit_amount_cents: params[:unit_amount_cents].presence || 0,
         grouped_by: fee.grouped_by,
-        charge_filter: fee.charge_filter,
+        charge_filter: fee.charge_filter
       )
 
       adjusted_fee.save!

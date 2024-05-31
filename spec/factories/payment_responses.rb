@@ -11,7 +11,7 @@ FactoryBot.define do
         'pspReference' => SecureRandom.uuid,
         'resultCode' => 'Authorised',
         'merchantReference' => SecureRandom.uuid
-      },
+      }
     )
   end
 
@@ -21,7 +21,7 @@ FactoryBot.define do
       response: {
         'errorType' => 'validation',
         'message' => 'There are no payment methods available for the given parameters.'
-      },
+      }
     )
   end
 
@@ -43,7 +43,7 @@ FactoryBot.define do
         'id' => SecureRandom.uuid,
         'status' => 'active',
         'url' => 'https://test.adyen.link/test'
-      },
+      }
     )
   end
 
@@ -53,7 +53,7 @@ FactoryBot.define do
       response: {
         'errorType' => 'validation',
         'message' => 'There are no payment methods available for the given parameters.'
-      },
+      }
     )
   end
 
@@ -83,7 +83,7 @@ FactoryBot.define do
             'type' => 'scheme'
           }
         ]
-      },
+      }
     )
   end
 end

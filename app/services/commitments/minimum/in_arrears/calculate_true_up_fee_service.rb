@@ -15,14 +15,14 @@ module Commitments
             .where(
               subscription_id: subscription.id,
               invoice_id: invoices_result.invoices.ids,
-              plan: {pay_in_advance: false},
+              plan: {pay_in_advance: false}
             )
         end
 
         def charge_fees
           dates_service = Commitments::DatesService.new_instance(
             commitment: minimum_commitment,
-            invoice_subscription:,
+            invoice_subscription:
           ).call
 
           Fee
@@ -30,22 +30,22 @@ module Commitments
             .joins(:charge)
             .where(
               subscription_id: subscription.id,
-              charge: {pay_in_advance: false},
+              charge: {pay_in_advance: false}
             )
             .where(
               "(fees.properties->>'charges_from_datetime') >= ?",
-              dates_service.previous_beginning_of_period,
+              dates_service.previous_beginning_of_period
             )
             .where(
               "(fees.properties->>'charges_to_datetime') <= ?",
-              dates_service.end_of_period&.iso8601(3),
+              dates_service.end_of_period&.iso8601(3)
             )
         end
 
         def charge_in_advance_fees
           dates_service = Commitments::DatesService.new_instance(
             commitment: minimum_commitment,
-            invoice_subscription:,
+            invoice_subscription:
           ).call
 
           Fee
@@ -54,15 +54,15 @@ module Commitments
             .where(
               subscription_id: subscription.id,
               charge: {pay_in_advance: true},
-              pay_in_advance: true,
+              pay_in_advance: true
             )
             .where(
               "(fees.properties->>'charges_from_datetime') >= ?",
-              dates_service.previous_beginning_of_period,
+              dates_service.previous_beginning_of_period
             )
             .where(
               "(fees.properties->>'charges_to_datetime') <= ?",
-              dates_service.end_of_period&.iso8601(3),
+              dates_service.end_of_period&.iso8601(3)
             )
         end
 
@@ -80,7 +80,7 @@ module Commitments
 
           dates_service = Commitments::Minimum::InArrears::DatesService.new(
             commitment: minimum_commitment,
-            invoice_subscription: is,
+            invoice_subscription: is
           ).call
 
           scope = Fee
@@ -91,11 +91,11 @@ module Commitments
             .where(
               subscription_id: subscription.id,
               charge: {pay_in_advance: true},
-              pay_in_advance: false,
+              pay_in_advance: false
             )
             .where(
               "(fees.properties->>'charges_to_datetime') <= ?",
-              dates_service.end_of_period&.iso8601(3),
+              dates_service.end_of_period&.iso8601(3)
             )
 
           # rubocop:disable Style/ConditionalAssignment
@@ -103,13 +103,13 @@ module Commitments
             scope = scope
               .where(
                 "(fees.properties->>'charges_from_datetime') >= ?",
-                dates_service.previous_beginning_of_period - 1.month,
+                dates_service.previous_beginning_of_period - 1.month
               )
               .where.not(invoice_id: invoice_subscription.invoice_id)
           else
             scope = scope.where(
               "(fees.properties->>'charges_from_datetime') >= ?",
-              dates_service.previous_beginning_of_period,
+              dates_service.previous_beginning_of_period
             )
           end
           # rubocop:enable Style/ConditionalAssignment

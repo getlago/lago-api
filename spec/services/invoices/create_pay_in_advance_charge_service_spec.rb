@@ -25,7 +25,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       :event,
       external_subscription_id: subscription.external_id,
       external_customer_id: customer.external_id,
-      organization_id: organization.id,
+      organization_id: organization.id
     )
   end
 
@@ -92,7 +92,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
           unit_amount_cents: 1,
-          precise_unit_amount: 0.01111111111,
+          precise_unit_amount: 0.01111111111
         )
 
         expect(result.invoice.currency).to eq(customer.currency)
@@ -122,7 +122,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type
-        },
+        }
       )
     end
 
@@ -237,7 +237,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           pay_in_advance_event_id: event.id,
           payment_status: 'pending',
           unit_amount_cents: 1,
-          precise_unit_amount: 0.01111111111,
+          precise_unit_amount: 0.01111111111
         )
 
         expect(result.invoice.currency).to eq(customer.currency)

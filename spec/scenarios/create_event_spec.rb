@@ -28,7 +28,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
         customer_id: nil,
         external_customer_id: nil,
         subscription_id: nil,
-        external_subscription_id: nil,
+        external_subscription_id: nil
       )
     end
   end
@@ -49,7 +49,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
         customer_id: nil,
         external_customer_id: 'unknown',
         subscription_id: nil,
-        external_subscription_id: nil,
+        external_subscription_id: nil
       )
     end
   end
@@ -73,7 +73,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
         customer_id: nil,
         external_customer_id: customer2.external_id,
         subscription_id: nil,
-        external_subscription_id: nil,
+        external_subscription_id: nil
       )
     end
   end
@@ -84,8 +84,8 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
         create_event(
           params.merge(
             external_customer_id: 'unknown',
-            external_subscription_id: subscription.external_id,
-          ),
+            external_subscription_id: subscription.external_id
+          )
         )
       end.to change(Event, :count)
 
@@ -95,7 +95,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: 'unknown',
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: subscription.external_id
       )
     end
   end
@@ -115,7 +115,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: 'unknown',
-        external_subscription_id: 'unknown',
+        external_subscription_id: 'unknown'
       )
     end
   end
@@ -138,7 +138,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: nil,
-        external_subscription_id: subscription2.external_id,
+        external_subscription_id: subscription2.external_id
       )
     end
   end
@@ -155,7 +155,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: subscription.customer.external_id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: subscription.external_id
       )
     end
   end
@@ -175,7 +175,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: subscription.customer.external_id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: subscription.external_id
       )
     end
   end
@@ -194,7 +194,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: subscription.customer.external_id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: subscription.external_id
       )
     end
   end
@@ -214,7 +214,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: subscription.customer.external_id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: subscription.external_id
       )
     end
   end
@@ -233,7 +233,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: subscription.customer.external_id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: subscription.external_id
       )
     end
   end
@@ -246,8 +246,8 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
         create_event(
           params.merge(
             external_subscription_id: subscription.external_id,
-            timestamp: 24.hours.ago.to_i,
-          ),
+            timestamp: 24.hours.ago.to_i
+          )
         )
       end.to change(Event, :count)
 
@@ -257,7 +257,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: subscription.customer.external_id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: subscription.external_id
       )
     end
   end
@@ -279,7 +279,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         external_customer_id: customer.external_id,
-        external_subscription_id: nil,
+        external_subscription_id: nil
       )
     end
   end
@@ -294,8 +294,8 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
         create_event(
           params.merge(
             external_customer_id: customer.external_id,
-            external_subscription_id: subscription2.external_id,
-          ),
+            external_subscription_id: subscription2.external_id
+          )
         )
       end.to change { Event.where(external_subscription_id: subscription2.external_id).count }
     end
@@ -307,7 +307,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
         :subscription,
         :pending,
         customer:,
-        external_id: subscription.external_id,
+        external_id: subscription.external_id
       )
     end
 

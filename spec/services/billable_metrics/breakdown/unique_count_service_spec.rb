@@ -16,7 +16,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       filters: {
         matching_filters:,
         ignored_filters:
-      },
+      }
     )
   end
 
@@ -30,14 +30,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       organization:,
       aggregation_type: 'unique_count_agg',
       field_name: 'unique_id',
-      recurring: true,
+      recurring: true
     )
   end
 
   let(:plan) do
     create(
       :plan,
-      organization:,
+      organization:
     )
   end
 
@@ -45,7 +45,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
     create(
       :standard_charge,
       plan:,
-      billable_metric:,
+      billable_metric:
     )
   end
 
@@ -56,7 +56,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       plan:,
       started_at:,
       subscription_at:,
-      billing_time: :anniversary,
+      billing_time: :anniversary
     )
   end
 
@@ -77,7 +77,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       timestamp: added_at,
       external_subscription_id: subscription.external_id,
       code: billable_metric.code,
-      properties: {unique_id: '111'},
+      properties: {unique_id: '111'}
     )
   end
 
@@ -90,7 +90,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
       timestamp: removed_at,
       external_subscription_id: subscription.external_id,
       code: billable_metric.code,
-      properties: {unique_id: '111', operation_type: 'remove'},
+      properties: {unique_id: '111', operation_type: 'remove'}
     )
   end
 
@@ -126,7 +126,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
             subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
-            status: :terminated,
+            status: :terminated
           )
         end
         let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
@@ -154,7 +154,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
             subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
-            status: :terminated,
+            status: :terminated
           )
         end
         let(:to_datetime) { Time.zone.parse('2022-07-24 23:59:59') }
@@ -165,7 +165,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
             previous_subscription: subscription,
             organization:,
             plan:,
-            started_at: to_datetime,
+            started_at: to_datetime
           )
         end
 
@@ -192,7 +192,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service do
               subscription_at:,
               billing_time: :calendar,
               terminated_at: to_datetime,
-              status: :terminated,
+              status: :terminated
             )
           end
 

@@ -102,12 +102,12 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
       filter = object.charge.filters.create!(
         invoice_display_name: object.group.key,
         properties: object.charge.properties,
-        deleted_at:,
+        deleted_at:
       )
 
       bm_filter = BillableMetricFilter.find_by(
         billable_metric_id: object.charge.billable_metric_id,
-        key: object.group.key,
+        key: object.group.key
       )
 
       filter.values.create!(billable_metric_filter_id: bm_filter.id, values: [object.group.value], deleted_at:)
@@ -115,13 +115,13 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
       if object.group.parent_group_id?
         parent_bm_filter = BillableMetricFilter.find_by(
           billable_metric_id: object.group.parent.billable_metric_id,
-          key: object.group.parent.key,
+          key: object.group.parent.key
         )
 
         filter.values.create!(
           billable_metric_filter_id: parent_bm_filter.id,
           values: [object.group.parent.value],
-          deleted_at:,
+          deleted_at:
         )
       end
     end

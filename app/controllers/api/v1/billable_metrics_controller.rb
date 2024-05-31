@@ -8,16 +8,16 @@ module Api
         result = service.create(
           BillableMetricInput.new(
             current_organization,
-            input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys,
-          ).create_input,
+            input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys
+          ).create_input
         )
 
         if result.success?
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: 'billable_metric',
-            ),
+              root_name: 'billable_metric'
+            )
           )
         else
           render_error_response(result)
@@ -27,23 +27,23 @@ module Api
       def update
         billable_metric = BillableMetric.find_by(
           code: params[:code],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         result = ::BillableMetrics::UpdateService.call(
           billable_metric:,
           params: BillableMetricInput.new(
             current_organization,
-            input_params.to_h.deep_symbolize_keys,
-          ).update_input,
+            input_params.to_h.deep_symbolize_keys
+          ).update_input
         )
 
         if result.success?
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: 'billable_metric',
-            ),
+              root_name: 'billable_metric'
+            )
           )
         else
           render_error_response(result)
@@ -52,15 +52,15 @@ module Api
 
       def destroy
         result = ::BillableMetrics::DestroyService.call(
-          metric: current_organization.billable_metrics.find_by(code: params[:code]),
+          metric: current_organization.billable_metrics.find_by(code: params[:code])
         )
 
         if result.success?
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: 'billable_metric',
-            ),
+              root_name: 'billable_metric'
+            )
           )
         else
           render_error_response(result)
@@ -69,7 +69,7 @@ module Api
 
       def show
         metric = current_organization.billable_metrics.find_by(
-          code: params[:code],
+          code: params[:code]
         )
 
         return not_found_error(resource: 'billable_metric') unless metric
@@ -77,8 +77,8 @@ module Api
         render(
           json: ::V1::BillableMetricSerializer.new(
             metric,
-            root_name: 'billable_metric',
-          ),
+            root_name: 'billable_metric'
+          )
         )
       end
 
@@ -93,8 +93,8 @@ module Api
             metrics,
             ::V1::BillableMetricSerializer,
             collection_name: 'billable_metrics',
-            meta: pagination_metadata(metrics),
-          ),
+            meta: pagination_metadata(metrics)
+          )
         )
       end
 
@@ -110,7 +110,7 @@ module Api
           :recurring,
           :field_name,
           filters: [:key, {values: []}],
-          group: {},
+          group: {}
         )
       end
     end

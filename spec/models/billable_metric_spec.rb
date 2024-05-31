@@ -128,7 +128,7 @@ RSpec.describe BillableMetric, type: :model do
           {
             key: 'country',
             values: %w[france italy]
-          },
+          }
         )
       end
     end
@@ -158,7 +158,7 @@ RSpec.describe BillableMetric, type: :model do
                 values: %w[google]
               }
             ]
-          },
+          }
         )
       end
     end

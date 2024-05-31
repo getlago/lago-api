@@ -45,7 +45,7 @@ module Events
               "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}",
               'events.timestamp',
               "(#{sanitized_property_name})::numeric AS value"
-            ].join(', '),
+            ].join(', ')
           )
           .to_sql
 
@@ -95,7 +95,7 @@ module Events
       def unique_count_breakdown
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
         ActiveRecord::Base.connection.select_all(
-          ActiveRecord::Base.sanitize_sql_for_conditions([query.breakdown_query]),
+          ActiveRecord::Base.sanitize_sql_for_conditions([query.breakdown_query])
         ).rows
       end
 
@@ -109,7 +109,7 @@ module Events
               to_datetime:,
               timezone: customer.applicable_timezone
             }
-          ],
+          ]
         )
         result = ActiveRecord::Base.connection.select_one(sql)
 
@@ -126,7 +126,7 @@ module Events
               to_datetime:,
               timezone: customer.applicable_timezone
             }
-          ],
+          ]
         )
 
         ActiveRecord::Base.connection.select_all(sql).to_a
@@ -136,7 +136,7 @@ module Events
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
 
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
-          [query.grouped_query],
+          [query.grouped_query]
         )
 
         prepare_grouped_result(Event.connection.select_all(sql).rows)
@@ -152,7 +152,7 @@ module Events
               to_datetime:,
               timezone: customer.applicable_timezone
             }
-          ],
+          ]
         )
         prepare_grouped_result(Event.connection.select_all(sql).rows)
       end
@@ -181,7 +181,7 @@ module Events
         sql = events
           .reorder(Arel.sql((groups + ['events.timestamp DESC, created_at DESC']).join(', ')))
           .select(
-            "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}, (#{sanitized_property_name})::numeric AS value",
+            "DISTINCT ON (#{groups.join(", ")}) #{groups.join(", ")}, (#{sanitized_property_name})::numeric AS value"
           )
           .to_sql
 
@@ -217,8 +217,8 @@ module Events
 
         ActiveRecord::Base.connection.execute(
           Arel.sql(
-            events.reorder('').select(sql).to_sql,
-          ),
+            events.reorder('').select(sql).to_sql
+          )
         ).first['sum_result']
       end
 
@@ -266,7 +266,7 @@ module Events
               to_datetime: to_datetime.ceil,
               initial_value: initial_value || 0
             }
-          ],
+          ]
         )
 
         result = ActiveRecord::Base.connection.select_one(sql)
@@ -300,7 +300,7 @@ module Events
               from_datetime:,
               to_datetime: to_datetime.ceil
             }
-          ],
+          ]
         )
 
         prepare_grouped_result(Event.connection.select_all(sql).rows)
@@ -318,8 +318,8 @@ module Events
                 to_datetime: to_datetime.ceil,
                 initial_value: initial_value || 0
               }
-            ],
-          ),
+            ]
+          )
         ).rows
       end
 
@@ -328,14 +328,14 @@ module Events
           scope = scope.where(
             'events.properties ->> ? IN (?)',
             key.to_s,
-            values.map(&:to_s),
+            values.map(&:to_s)
           )
         end
 
         conditions = ignored_filters.map do |filters|
           filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events.properties ->> ?, '') IN (?))", key.to_s, values.map(&:to_s)],
+              ["(coalesce(events.properties ->> ?, '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(' AND ')
         end
@@ -351,7 +351,7 @@ module Events
             scope.where('events.properties @> ?', {grouped_by.to_s => grouped_by_value.to_s}.to_json)
           else
             scope.where(
-              ActiveRecord::Base.sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') = ''", grouped_by]),
+              ActiveRecord::Base.sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') = ''", grouped_by])
             )
           end
         end
@@ -361,7 +361,7 @@ module Events
 
       def sanitized_property_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['events.properties->>?', property],
+          ['events.properties->>?', property]
         )
       end
 

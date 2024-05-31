@@ -25,7 +25,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
             properties: {
               foo: 'bar'
             }
-          },
+          }
         )
       end.to change(Event, :count).by(1)
 
@@ -52,7 +52,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
               properties: {
                 foo: 'bar'
               }
-            },
+            }
           )
         end.not_to change(Event, :count)
 
@@ -77,7 +77,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
                 foo: 'bar'
               }
             }
-          ],
+          ]
         )
       end.to change(Event, :count).by(1)
 
@@ -140,7 +140,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
           properties: {
             foo: 'bar'
           }
-        },
+        }
       )
 
       aggregate_failures do
@@ -175,7 +175,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
             properties: {
               foo: 'bar'
             }
-          },
+          }
         )
 
         aggregate_failures do
@@ -197,7 +197,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
             properties: {
               foo: 'bar'
             }
-          },
+          }
         )
 
         aggregate_failures do

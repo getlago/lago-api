@@ -54,7 +54,7 @@ RSpec.describe PaymentProviders::Webhooks::Adyen::ChargebackService, type: :serv
           end.to have_enqueued_job(SendWebhookJob).with(
             'invoice.payment_dispute_lost',
             payment.invoice,
-            provider_error: 'Merchandise/Services Not Received',
+            provider_error: 'Merchandise/Services Not Received'
           )
         end
       end

@@ -46,7 +46,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         amount_cents: 2800,
         taxes_amount_cents: 560,
         total_amount_cents: 3360,
-        currency: 'EUR',
+        currency: 'EUR'
       )
 
       fee = json[:invoice][:fees].find { |f| f[:item][:code] == 'first' }
@@ -158,7 +158,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           customer: Hash,
           subscriptions: [],
           credits: [],
-          applied_taxes: [],
+          applied_taxes: []
         )
         expect(json[:invoice][:fees].first).to include(lago_charge_filter_id: charge_filter.id)
       end
@@ -194,7 +194,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           :deleted,
           charge_filter:,
           billable_metric_filter:,
-          values: [billable_metric_filter.values.first],
+          values: [billable_metric_filter.values.first]
         )
       end
       let(:fee) { create(:charge_fee, invoice:, charge_filter:, charge:) }
@@ -221,7 +221,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
             customer: Hash,
             subscriptions: [],
             credits: [],
-            applied_taxes: [],
+            applied_taxes: []
           )
 
           json_fee = json[:invoice][:fees].first
@@ -229,7 +229,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           expect(json_fee[:item]).to include(
             type: 'charge',
             code: billable_metric.code,
-            name: billable_metric.name,
+            name: billable_metric.name
           )
         end
       end
@@ -250,7 +250,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       expect(json[:invoices].first).to include(
         lago_id: invoice.id,
         payment_status: invoice.payment_status,
-        status: invoice.status,
+        status: invoice.status
       )
     end
 
@@ -270,7 +270,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           next_page: 2,
           prev_page: nil,
           total_pages: 2,
-          total_count: 2,
+          total_count: 2
         )
       end
     end
@@ -288,7 +288,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       it 'returns invoices with correct issuing date' do
         get_with_token(
           organization,
-          "/api/v1/invoices?issuing_date_from=#{2.days.ago.to_date}&issuing_date_to=#{Date.tomorrow.to_date}",
+          "/api/v1/invoices?issuing_date_from=#{2.days.ago.to_date}&issuing_date_to=#{Date.tomorrow.to_date}"
         )
 
         expect(response).to have_http_status(:success)
@@ -609,7 +609,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       create(
         :stripe_customer,
         customer_id: customer.id,
-        payment_provider: stripe_provider,
+        payment_provider: stripe_provider
       )
 
       customer.update(payment_provider: 'stripe')

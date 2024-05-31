@@ -15,7 +15,7 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
       :invoice_subscription,
       charges_from_datetime: DateTime.parse('2023-08-17T00:00:00'),
       charges_to_datetime: DateTime.parse('2023-09-16T23:59:59'),
-      subscription:,
+      subscription:
     )
   end
 
@@ -44,7 +44,7 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
         'amount_cents' => invoice.fees_amount_cents,
         'total_amount_cents' => invoice.fees_amount_cents + invoice.fees.sum(:taxes_amount_cents),
         'taxes_amount_cents' => invoice.fees.sum(:taxes_amount_cents),
-        'lago_invoice_id' => invoice.id,
+        'lago_invoice_id' => invoice.id
       )
 
       expect(result['usage_period']['charges_usage'].count).to eq(2)

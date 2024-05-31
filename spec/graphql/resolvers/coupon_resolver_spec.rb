@@ -39,7 +39,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: {couponId: coupon.id},
+      variables: {couponId: coupon.id}
     )
 
     coupon_response = result['data']['coupon']
@@ -59,7 +59,7 @@ RSpec.describe Resolvers::CouponResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {couponId: 'foo'},
+        variables: {couponId: 'foo'}
       )
 
       expect_graphql_error(result:, message: 'Resource not found')

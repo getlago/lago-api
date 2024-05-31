@@ -38,7 +38,7 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
     response = result['data']['subscriptions']
 
@@ -46,10 +46,10 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
       expect(response['collection'].count).to eq(2)
       expect(response['collection'].map { |s| s['id'] }).to contain_exactly(
         first_subscription.id,
-        second_subscription.id,
+        second_subscription.id
       )
       expect(response['collection'].first['plan']).to include(
-        'code' => plan.code,
+        'code' => plan.code
       )
 
       expect(response['metadata']['currentPage']).to eq(1)

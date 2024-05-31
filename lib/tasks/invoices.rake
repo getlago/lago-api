@@ -14,7 +14,7 @@ namespace :invoices do
 
       invoice_subscription = InvoiceSubscription.find_by(
         invoice_id: invoice.id,
-        subscription_id:,
+        subscription_id:
       )
 
       next if invoice_subscription
@@ -34,7 +34,7 @@ namespace :invoices do
   task fill_taxes_rate: :environment do
     Invoice.where(taxes_rate: nil).find_each do |invoice|
       invoice.update!(
-        taxes_rate: (invoice.taxes_amount_cents.fdiv(invoice.amount_cents) * 100).round(2),
+        taxes_rate: (invoice.taxes_amount_cents.fdiv(invoice.amount_cents) * 100).round(2)
       )
     end
   end
@@ -45,7 +45,7 @@ namespace :invoices do
       invoice.fees.each do |fee|
         fee.update(
           amount_currency: invoice.currency,
-          vat_amount_currency: invoice.currency,
+          vat_amount_currency: invoice.currency
         )
       end
     end

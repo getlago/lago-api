@@ -17,7 +17,7 @@ module PaymentProviderCustomers
       gocardless_result = create_gocardless_customer
 
       gocardless_customer.update!(
-        provider_customer_id: gocardless_result.id,
+        provider_customer_id: gocardless_result.id
       )
 
       deliver_success_webhook
@@ -41,7 +41,7 @@ module PaymentProviderCustomers
         SendWebhookJob.perform_later(
           'customer.checkout_url_generated',
           customer,
-          checkout_url: result.checkout_url,
+          checkout_url: result.checkout_url
         )
       end
 
@@ -65,7 +65,7 @@ module PaymentProviderCustomers
     def client
       @client || GoCardlessPro::Client.new(
         access_token: gocardless_payment_provider.access_token,
-        environment: gocardless_payment_provider.environment,
+        environment: gocardless_payment_provider.environment
       )
     end
 
@@ -74,7 +74,7 @@ module PaymentProviderCustomers
         params: {
           email: customer.email&.strip&.split(',')&.first,
           company_name: customer.name
-        },
+        }
       )
     rescue GoCardlessPro::Error => e
       deliver_error_webhook(e)
@@ -87,7 +87,7 @@ module PaymentProviderCustomers
 
       SendWebhookJob.perform_later(
         'customer.payment_provider_created',
-        customer,
+        customer
       )
     end
 
@@ -100,7 +100,7 @@ module PaymentProviderCustomers
         provider_error: {
           message: gocardless_error.message,
           error_code: gocardless_error.code
-        },
+        }
       )
     end
 
@@ -113,7 +113,7 @@ module PaymentProviderCustomers
           links: {
             customer: gocardless_customer_id
           }
-        },
+        }
       )
     rescue GoCardlessPro::Error => e
       deliver_error_webhook(e)
@@ -129,7 +129,7 @@ module PaymentProviderCustomers
           links: {
             billing_request: billing_request_id
           }
-        },
+        }
       )
     rescue GoCardlessPro::Error => e
       deliver_error_webhook(e)

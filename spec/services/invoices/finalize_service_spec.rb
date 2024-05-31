@@ -12,7 +12,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
         :draft,
         subscriptions: [subscription],
         currency: 'EUR',
-        issuing_date: Time.zone.at(timestamp).to_date,
+        issuing_date: Time.zone.at(timestamp).to_date
       )
     end
 
@@ -22,7 +22,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
         plan:,
         subscription_at: started_at,
         started_at:,
-        created_at: started_at,
+        created_at: started_at
       )
     end
 
@@ -110,7 +110,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type
-        },
+        }
       )
     end
 
@@ -177,7 +177,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
             credit_note_id: credit_note.id,
             invoice_id: credit_note.invoice_id,
             credit_note_method: 'credit'
-          },
+          }
         )
       end
 

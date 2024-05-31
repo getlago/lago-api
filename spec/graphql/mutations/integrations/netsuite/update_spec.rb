@@ -54,7 +54,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Update, type: :graphql do
           code:,
           scriptEndpointUrl: script_endpoint_url
         }
-      },
+      }
     )
 
     result_data = result['data']['updateNetsuiteIntegration']

@@ -100,7 +100,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
             provider_error: {
               message: 'submitFields: Missing a required argument: type',
               error_code: 'action_script_runtime_error'
-            },
+            }
           )
       end
     end

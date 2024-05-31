@@ -56,16 +56,16 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           ending_at: (Time.current + 1.year).iso8601,
           previous_plan_code: nil,
           next_plan_code: nil,
-          downgrade_plan_date: nil,
+          downgrade_plan_date: nil
         )
         expect(json[:subscription][:plan]).to include(
           amount_cents: 100,
           name: 'overridden name',
-          description: 'desc',
+          description: 'desc'
         )
         expect(json[:subscription][:plan][:minimum_commitment]).to include(
           invoice_display_name: commitment_invoice_display_name,
-          amount_cents: commitment_amount_cents,
+          amount_cents: commitment_amount_cents
         )
       end
     end
@@ -88,7 +88,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           lago_id: String,
           external_customer_id: '123',
           name: '456',
-          external_id: '789',
+          external_id: '789'
         )
       end
     end
@@ -198,12 +198,12 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:subscription_at].to_s).to eq('2022-09-05T12:23:12Z')
 
       expect(json[:subscription][:plan]).to include(
-        name: 'plan new name',
+        name: 'plan new name'
       )
 
       expect(json[:subscription][:plan][:minimum_commitment]).to include(
         invoice_display_name: commitment_invoice_display_name,
-        amount_cents: commitment_amount_cents,
+        amount_cents: commitment_amount_cents
       )
     end
 
@@ -227,7 +227,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/subscriptions/#{subscription.external_id}",
-          {subscription: update_params},
+          {subscription: update_params}
         )
 
         expect(response).to have_http_status(:success)
@@ -235,7 +235,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(json[:subscription][:name]).to eq('subscription name new')
 
         expect(json[:subscription][:plan]).to include(
-          name: 'plan new name',
+          name: 'plan new name'
         )
       end
 
@@ -244,7 +244,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           put_with_token(
             organization,
             "/api/v1/subscriptions/#{subscription.external_id}",
-            {subscription: update_params, status: 'pending'},
+            {subscription: update_params, status: 'pending'}
           )
 
           expect(response).to have_http_status(:success)
@@ -253,7 +253,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           expect(json[:subscription][:subscription_at].to_s).to eq('2022-09-05T12:23:12Z')
 
           expect(json[:subscription][:plan]).to include(
-            name: 'plan new name',
+            name: 'plan new name'
           )
         end
       end
@@ -269,7 +269,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:subscription]).to include(
         lago_id: subscription.id,
-        external_id: subscription.external_id,
+        external_id: subscription.external_id
       )
     end
 
@@ -288,7 +288,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(response).to have_http_status(:success)
         expect(json[:subscription]).to include(
           lago_id: pending.id,
-          external_id: pending.external_id,
+          external_id: pending.external_id
         )
       end
     end
@@ -313,7 +313,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           :subscription,
           customer:,
           plan: create(:plan, organization:),
-          status: :terminated,
+          status: :terminated
         )
       end
 
@@ -322,7 +322,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           :subscription,
           customer:,
           plan: create(:plan, organization:),
-          status: :pending,
+          status: :pending
         )
       end
 
@@ -359,7 +359,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       it 'returns subscriptions with correct meta data' do
         get_with_token(
           organization,
-          "/api/v1/subscriptions?external_customer_id=#{customer.external_id}&page=1&per_page=1",
+          "/api/v1/subscriptions?external_customer_id=#{customer.external_id}&page=1&per_page=1"
         )
 
         expect(response).to have_http_status(:success)

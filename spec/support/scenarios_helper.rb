@@ -25,7 +25,7 @@ module ScenariosHelper
   def fetch_current_usage(customer:, subscription: customer.subscriptions.first)
     get_with_token(
       organization,
-      "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}",
+      "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}"
     )
   end
 

@@ -30,7 +30,7 @@ module V1
       ::CollectionSerializer.new(
         model.taxes,
         ::V1::TaxSerializer,
-        collection_name: 'taxes',
+        collection_name: 'taxes'
       ).serialize
     end
 
@@ -38,7 +38,7 @@ module V1
       ::CollectionSerializer.new(
         model.filters.includes(:billable_metric_filters),
         ::V1::ChargeFilterSerializer,
-        collection_name: 'filters',
+        collection_name: 'filters'
       ).serialize
     end
 

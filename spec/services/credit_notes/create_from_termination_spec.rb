@@ -21,7 +21,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       subscription_at:,
       started_at:,
       terminated_at:,
-      billing_time: :calendar,
+      billing_time: :calendar
     )
   end
 
@@ -30,7 +30,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       :plan,
       organization:,
       pay_in_advance: true,
-      amount_cents: 31,
+      amount_cents: 31
     )
   end
 
@@ -43,7 +43,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       taxes_amount_cents: 20,
       invoiceable_type: 'Subscription',
       invoiceable_id: subscription.id,
-      taxes_rate: 20,
+      taxes_rate: 20
     )
   end
 
@@ -54,7 +54,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       customer:,
       currency: 'EUR',
       fees_amount_cents: 100,
-      total_amount_cents: 120,
+      total_amount_cents: 120
     )
   end
 
@@ -102,7 +102,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           taxes_amount_cents: 0,
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
-          taxes_rate: 20,
+          taxes_rate: 20
         )
       end
 
@@ -122,7 +122,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
           taxes_rate: 20,
-          created_at: Time.current - 2.months,
+          created_at: Time.current - 2.months
         )
       end
 
@@ -136,7 +136,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
           taxes_rate: 20,
-          created_at: Time.current - 1.month,
+          created_at: Time.current - 1.month
         )
       end
 
@@ -161,7 +161,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           :credit_note,
           customer: subscription.customer,
           invoice: subscription_fee.invoice,
-          credit_amount_cents: 10,
+          credit_amount_cents: 10
         )
       end
 
@@ -170,7 +170,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           :credit_note_item,
           credit_note:,
           fee: subscription_fee,
-          amount_cents: 10,
+          amount_cents: 10
         )
       end
 
@@ -204,7 +204,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           :plan,
           pay_in_advance: true,
           amount_cents: 31,
-          trial_period: 46,
+          trial_period: 46
         )
       end
 
@@ -234,7 +234,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
             :plan,
             pay_in_advance: true,
             amount_cents: 31,
-            trial_period: 120,
+            trial_period: 120
           )
         end
 
@@ -336,7 +336,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           subscription_at:,
           started_at:,
           terminated_at:,
-          billing_time: :anniversary,
+          billing_time: :anniversary
         )
       end
 
@@ -345,7 +345,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           :plan,
           organization:,
           pay_in_advance: true,
-          amount_cents: 999,
+          amount_cents: 999
         )
       end
 
@@ -355,7 +355,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           customer:,
           currency: 'EUR',
           fees_amount_cents: 999,
-          total_amount_cents: 0,
+          total_amount_cents: 0
         )
       end
 
@@ -370,7 +370,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_id: subscription.id,
           taxes_rate: 0,
           created_at: Time.zone.parse('2023-02-28 10:00'),
-          amount_details: {'plan_amount_cents' => 999},
+          amount_details: {'plan_amount_cents' => 999}
         )
       end
 
@@ -411,7 +411,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           total_amount_cents: 108,
           coupons_amount_cents: 10,
           taxes_amount_cents: 18,
-          taxes_rate: 20,
+          taxes_rate: 20
         )
       end
 
@@ -426,7 +426,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_id: subscription.id,
           taxes_rate: 20,
           precise_coupons_amount_cents: 10,
-          amount_details: {'plan_amount_cents' => plan.amount_cents},
+          amount_details: {'plan_amount_cents' => plan.amount_cents}
         )
       end
 
@@ -440,7 +440,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           expect(credit_note).to have_attributes(
             total_amount_cents: 17,
             credit_amount_cents: 17,
-            balance_amount_cents: 17,
+            balance_amount_cents: 17
           )
         end
       end
@@ -457,7 +457,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
           taxes_rate: 0,
-          created_at: Time.zone.parse('2023-02-28 10:00'),
+          created_at: Time.zone.parse('2023-02-28 10:00')
         )
       end
 

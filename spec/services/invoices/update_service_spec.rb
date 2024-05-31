@@ -43,7 +43,7 @@ RSpec.describe Invoices::UpdateService do
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           payment_status: invoice.payment_status
-        },
+        }
       )
     end
 
@@ -182,7 +182,7 @@ RSpec.describe Invoices::UpdateService do
           fee_type: 'credit',
           invoiceable_type: 'WalletTransaction',
           invoiceable_id: wallet_transaction.id,
-          invoice:,
+          invoice:
         )
       end
 
@@ -208,7 +208,7 @@ RSpec.describe Invoices::UpdateService do
 
         expect(SendWebhookJob).to have_been_enqueued.with(
           'invoice.payment_status_updated',
-          invoice,
+          invoice
         )
       end
 
@@ -220,7 +220,7 @@ RSpec.describe Invoices::UpdateService do
 
           expect(SendWebhookJob).not_to have_been_enqueued.with(
             'invoice.payment_status_updated',
-            invoice,
+            invoice
           )
         end
       end

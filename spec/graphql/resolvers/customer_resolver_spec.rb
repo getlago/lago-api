@@ -85,7 +85,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       query:,
       variables: {
         customerId: customer.id
-      },
+      }
     )
 
     customer_response = result['data']['customer']
@@ -138,7 +138,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
         query:,
         variables: {
           customerId: customer.id
-        },
+        }
       )
 
       subscription_ids = result['data']['customer']['subscriptions'].map { |el| el['id'] }
@@ -159,12 +159,12 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
         query:,
         variables: {
           customerId: 'foo'
-        },
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found',
+        message: 'Resource not found'
       )
     end
   end

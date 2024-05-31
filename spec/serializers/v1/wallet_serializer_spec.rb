@@ -30,12 +30,12 @@ RSpec.describe ::V1::WalletSerializer do
         'credits_ongoing_usage_balance' => wallet.credits_ongoing_usage_balance.to_s,
         'ongoing_balance_cents' => wallet.ongoing_balance_cents,
         'ongoing_usage_balance_cents' => wallet.ongoing_usage_balance_cents,
-        'consumed_credits' => wallet.consumed_credits.to_s,
+        'consumed_credits' => wallet.consumed_credits.to_s
       )
 
       # NOTE: legacy values
       expect(result['wallet']).to include(
-        'balance' => wallet.balance.to_s,
+        'balance' => wallet.balance.to_s
       )
     end
   end

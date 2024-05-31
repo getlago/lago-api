@@ -28,7 +28,7 @@ RSpec.describe Mutations::Coupons::Terminate, type: :graphql do
       query: mutation,
       variables: {
         input: {id: coupon.id}
-      },
+      }
     )
 
     data = result['data']['terminateCoupon']

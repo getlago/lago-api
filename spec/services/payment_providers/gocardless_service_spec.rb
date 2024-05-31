@@ -35,7 +35,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
           access_code:,
           code:,
           name:,
-          success_redirect_url:,
+          success_redirect_url:
         )
       end.to change(PaymentProviders::GocardlessProvider, :count).by(1)
     end
@@ -53,7 +53,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
           access_code:,
           code:,
           name:,
-          success_redirect_url:,
+          success_redirect_url:
         )
 
         expect(result).to be_success
@@ -74,7 +74,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
       it 'returns an error result' do
         result = gocardless_service.create_or_update(
           organization:,
-          access_code:,
+          access_code:
         )
 
         aggregate_failures do
@@ -104,7 +104,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
       result = gocardless_service.handle_incoming_webhook(
         organization_id: organization.id,
         body: events.to_json,
-        signature: 'signature',
+        signature: 'signature'
       )
 
       expect(result).to be_success
@@ -120,7 +120,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         result = gocardless_service.handle_incoming_webhook(
           organization_id: organization.id,
           body: events.to_json,
-          signature: 'signature',
+          signature: 'signature'
         )
 
         aggregate_failures do
@@ -140,7 +140,7 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
         result = gocardless_service.handle_incoming_webhook(
           organization_id: organization.id,
           body: events.to_json,
-          signature: 'signature',
+          signature: 'signature'
         )
 
         aggregate_failures do

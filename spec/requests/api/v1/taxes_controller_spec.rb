@@ -48,7 +48,7 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       put_with_token(
         organization,
         "/api/v1/taxes/#{tax.code}",
-        {tax: update_params},
+        {tax: update_params}
       )
 
       aggregate_failures do

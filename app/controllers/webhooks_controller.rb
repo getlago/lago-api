@@ -6,7 +6,7 @@ class WebhooksController < ApplicationController
       organization_id: params[:organization_id],
       code: params[:code].presence,
       params: request.body.read,
-      signature: request.headers['HTTP_STRIPE_SIGNATURE'],
+      signature: request.headers['HTTP_STRIPE_SIGNATURE']
     )
 
     unless result.success?
@@ -25,7 +25,7 @@ class WebhooksController < ApplicationController
       organization_id: params[:organization_id],
       code: params[:code].presence,
       body: request.body.read,
-      signature: request.headers['Webhook-Signature'],
+      signature: request.headers['Webhook-Signature']
     )
 
     unless result.success?
@@ -43,7 +43,7 @@ class WebhooksController < ApplicationController
     result = PaymentProviders::AdyenService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],
       code: params[:code].presence,
-      body: adyen_params,
+      body: adyen_params
     )
 
     unless result.success?

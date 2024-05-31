@@ -9,7 +9,7 @@ module Api
           **input_params
             .merge(organization_id: current_organization.id)
             .to_h
-            .symbolize_keys,
+            .symbolize_keys
         )
 
         if result.success?
@@ -43,7 +43,7 @@ module Api
 
       def show
         add_on = current_organization.add_ons.find_by(
-          code: params[:code],
+          code: params[:code]
         )
 
         return not_found_error(resource: 'add_on') unless add_on
@@ -63,8 +63,8 @@ module Api
             ::V1::AddOnSerializer,
             collection_name: 'add_ons',
             meta: pagination_metadata(add_ons),
-            includes: %i[taxes],
-          ),
+            includes: %i[taxes]
+          )
         )
       end
 
@@ -78,7 +78,7 @@ module Api
           :amount_cents,
           :amount_currency,
           :description,
-          tax_codes: [],
+          tax_codes: []
         )
       end
 
@@ -87,8 +87,8 @@ module Api
           json: ::V1::AddOnSerializer.new(
             add_on,
             root_name: 'add_on',
-            includes: %i[taxes],
-          ),
+            includes: %i[taxes]
+          )
         )
       end
     end

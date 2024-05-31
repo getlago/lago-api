@@ -8,7 +8,7 @@ RSpec.describe Organization, type: :model do
       name: 'PiedPiper',
       email: 'foo@bar.com',
       country: 'FR',
-      invoice_footer: 'this is an invoice footer',
+      invoice_footer: 'this is an invoice footer'
     )
   end
 
@@ -74,7 +74,7 @@ RSpec.describe Organization, type: :model do
       organization.logo.attach(
         io: File.open(Rails.root.join('spec/factories/images/logo.png')),
         content_type: 'image/png',
-        filename: 'logo',
+        filename: 'logo'
       )
 
       expect(organization).to be_valid
@@ -84,7 +84,7 @@ RSpec.describe Organization, type: :model do
       organization.logo.attach(
         io: File.open(Rails.root.join('spec/factories/images/big_sized_logo.jpg')),
         content_type: 'image/jpeg',
-        filename: 'logo',
+        filename: 'logo'
       )
 
       expect(organization).not_to be_valid
@@ -94,7 +94,7 @@ RSpec.describe Organization, type: :model do
       organization.logo.attach(
         io: File.open(Rails.root.join('spec/factories/images/logo.gif')),
         content_type: 'image/gif',
-        filename: 'logo',
+        filename: 'logo'
       )
 
       expect(organization).not_to be_valid

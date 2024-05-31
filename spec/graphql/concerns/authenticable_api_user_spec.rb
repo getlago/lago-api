@@ -47,7 +47,7 @@ RSpec.describe AuthenticableApiUser, type: :graphql do
       result = AuthenticableApiUserSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: 'new name'}},
-        context: {current_user: membership.user},
+        context: {current_user: membership.user}
       )
 
       expect(result['data']['renameThing']['name']).to eq 'new name'
@@ -59,7 +59,7 @@ RSpec.describe AuthenticableApiUser, type: :graphql do
       result = AuthenticableApiUserSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: 'new name'}},
-        context: {current_user: nil},
+        context: {current_user: nil}
       )
 
       partial_error = {

@@ -30,7 +30,7 @@ RSpec.describe Resolvers::AddOnsResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     add_ons_response = result['data']['addOns']
@@ -71,7 +71,7 @@ RSpec.describe Resolvers::AddOnsResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {integrationId: integration.id},
+        variables: {integrationId: integration.id}
       )
 
       add_ons_response = result['data']['addOns']

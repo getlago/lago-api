@@ -8,8 +8,8 @@ module Api
         result = service.create(
           CouponLegacyInput.new(
             current_organization,
-            input_params.merge(organization_id: current_organization.id),
-          ).create_input,
+            input_params.merge(organization_id: current_organization.id)
+          ).create_input
         )
 
         if result.success?
@@ -26,8 +26,8 @@ module Api
           coupon:,
           params: CouponLegacyInput.new(
             current_organization,
-            input_params,
-          ).update_input,
+            input_params
+          ).update_input
         )
 
         if result.success?
@@ -50,7 +50,7 @@ module Api
 
       def show
         coupon = current_organization.coupons.find_by(
-          code: params[:code],
+          code: params[:code]
         )
 
         return not_found_error(resource: 'coupon') unless coupon
@@ -69,8 +69,8 @@ module Api
             coupons,
             ::V1::CouponSerializer,
             collection_name: 'coupons',
-            meta: pagination_metadata(coupons),
-          ),
+            meta: pagination_metadata(coupons)
+          )
         )
       end
 
@@ -95,7 +95,7 @@ module Api
           applies_to: [
             plan_codes: [],
             billable_metric_codes: []
-          ],
+          ]
         )
       end
 
@@ -103,8 +103,8 @@ module Api
         render(
           json: ::V1::CouponSerializer.new(
             coupon,
-            root_name: 'coupon',
-          ),
+            root_name: 'coupon'
+          )
         )
       end
     end

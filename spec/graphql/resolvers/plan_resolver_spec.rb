@@ -67,7 +67,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: {planId: plan.id},
+      variables: {planId: plan.id}
     )
 
     plan_response = result['data']['plan']
@@ -80,7 +80,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
         'id' => minimum_commitment.id,
         'amountCents' => minimum_commitment.amount_cents.to_s,
         'invoiceDisplayName' => minimum_commitment.invoice_display_name,
-        'taxes' => [],
+        'taxes' => []
       )
     end
   end
@@ -92,12 +92,12 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {planId: 'foo'},
+        variables: {planId: 'foo'}
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found',
+        message: 'Resource not found'
       )
     end
   end

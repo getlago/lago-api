@@ -11,7 +11,7 @@ RSpec.describe Mutations::Integrations::SyncCreditNote, type: :graphql do
       query: mutation,
       variables: {
         input: {creditNoteId: credit_note.id}
-      },
+      }
     )
   end
 

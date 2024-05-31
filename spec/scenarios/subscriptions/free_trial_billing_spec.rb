@@ -13,7 +13,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
       organization:,
       trial_period:,
       amount_cents: 5_000_000,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -24,13 +24,13 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
         external_customer_id: customer.external_id,
         external_id: customer.external_id,
         plan_code: plan.code
-      },
+      }
     )
   end
 
   def create_usage_event!
     create_event(
-      {code: billable_metric.code, transaction_id: SecureRandom.uuid, external_customer_id: customer.external_id},
+      {code: billable_metric.code, transaction_id: SecureRandom.uuid, external_customer_id: customer.external_id}
     )
   end
 
@@ -137,7 +137,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: upgrade_plan.code
-          },
+          }
         )
         perform_billing
         expect(customer.reload.invoices.count).to eq(1)
@@ -194,7 +194,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: upgrade_plan.code
-            },
+            }
           )
           perform_billing
           expect(customer.reload.invoices.count).to eq(1)
@@ -248,7 +248,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
               external_customer_id: customer.external_id,
               external_id: customer.external_id,
               plan_code: upgrade_plan.code
-            },
+            }
           )
           perform_billing
           expect(customer.reload.invoices.count).to eq(1)

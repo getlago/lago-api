@@ -5,7 +5,7 @@ module PaymentProviders
     def destroy(id:)
       payment_provider = PaymentProviders::BaseProvider.find_by(
         id:,
-        organization_id: result.user.organization_ids,
+        organization_id: result.user.organization_ids
       )
       return result.not_found_failure!(resource: 'payment_provider') unless payment_provider
 

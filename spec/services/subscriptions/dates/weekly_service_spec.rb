@@ -12,7 +12,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       customer:,
       subscription_at:,
       billing_time:,
-      started_at:,
+      started_at:
     )
   end
 
@@ -154,7 +154,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at:,
+            terminated_at:
           )
         end
 
@@ -192,7 +192,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at: DateTime.parse('02 Mar 2022'),
+            terminated_at: DateTime.parse('02 Mar 2022')
           )
         end
 
@@ -227,7 +227,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
             create(
               :invoice_subscription,
               subscription:,
-              charges_to_datetime: '2022-02-27T22:59:59Z',
+              charges_to_datetime: '2022-02-27T22:59:59Z'
             )
           end
 

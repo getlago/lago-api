@@ -31,7 +31,7 @@ RSpec.describe Resolvers::IntegrationMappingsResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     integration_mappings_response = result['data']['integrationMappings']

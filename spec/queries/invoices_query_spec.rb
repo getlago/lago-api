@@ -18,7 +18,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'finalized',
       payment_status: 'succeeded',
       customer: customer_first,
-      number: '1111111111',
+      number: '1111111111'
     )
   end
   let(:invoice_second) do
@@ -28,7 +28,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'finalized',
       payment_status: 'pending',
       customer: customer_second,
-      number: '2222222222',
+      number: '2222222222'
     )
   end
   let(:invoice_third) do
@@ -38,7 +38,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'finalized',
       payment_status: 'failed',
       customer: customer_first,
-      number: '3333333333',
+      number: '3333333333'
     )
   end
   let(:invoice_fourth) do
@@ -48,7 +48,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'draft',
       payment_status: 'pending',
       customer: customer_second,
-      number: '4444444444',
+      number: '4444444444'
     )
   end
   let(:invoice_fifth) do
@@ -58,7 +58,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'draft',
       payment_status: 'pending',
       customer: customer_first,
-      number: '5555555555',
+      number: '5555555555'
     )
   end
   let(:invoice_sixth) do
@@ -68,7 +68,7 @@ RSpec.describe InvoicesQuery, type: :query do
       organization:,
       payment_status: 'pending',
       customer: customer_first,
-      number: '6666666666',
+      number: '6666666666'
     )
   end
 
@@ -87,7 +87,7 @@ RSpec.describe InvoicesQuery, type: :query do
       status: nil,
       payment_status: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.invoices.pluck(:id)
@@ -113,7 +113,7 @@ RSpec.describe InvoicesQuery, type: :query do
         limit: 10,
         filters: {
           ids: [invoice_second.id, invoice_fifth.id]
-        },
+        }
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -136,7 +136,7 @@ RSpec.describe InvoicesQuery, type: :query do
         status: 'draft',
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -159,7 +159,7 @@ RSpec.describe InvoicesQuery, type: :query do
         status: nil,
         payment_status: 'failed',
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -182,7 +182,7 @@ RSpec.describe InvoicesQuery, type: :query do
         status: nil,
         payment_dispute_lost: true,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -206,7 +206,7 @@ RSpec.describe InvoicesQuery, type: :query do
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -229,7 +229,7 @@ RSpec.describe InvoicesQuery, type: :query do
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -252,7 +252,7 @@ RSpec.describe InvoicesQuery, type: :query do
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -275,7 +275,7 @@ RSpec.describe InvoicesQuery, type: :query do
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -299,7 +299,7 @@ RSpec.describe InvoicesQuery, type: :query do
         status: nil,
         payment_status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -322,7 +322,7 @@ RSpec.describe InvoicesQuery, type: :query do
         search_term: '44444444',
         status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -345,7 +345,7 @@ RSpec.describe InvoicesQuery, type: :query do
         search_term: nil,
         status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.invoices.pluck(:id)

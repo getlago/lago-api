@@ -27,7 +27,7 @@ module Wallets
       if result.current_customer.wallets.active.exists?
         return add_error(
           field: :customer,
-          error_code: 'wallet_already_exists',
+          error_code: 'wallet_already_exists'
         )
       end
 

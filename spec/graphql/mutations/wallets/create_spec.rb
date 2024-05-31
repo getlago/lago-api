@@ -63,7 +63,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             }
           ]
         }
-      },
+      }
     )
 
     result_data = result['data']['createCustomerWallet']
@@ -99,7 +99,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             expirationAt: (Time.zone.now + 1.year).iso8601,
             currency: 'EUR'
           }
-        },
+        }
       )
 
       result_data = result['data']['createCustomerWallet']

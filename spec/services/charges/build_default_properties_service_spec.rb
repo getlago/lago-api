@@ -28,7 +28,7 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
                 flat_amount: '0'
               }
             ]
-          },
+          }
         )
       end
     end
@@ -42,7 +42,7 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
             package_size: 1,
             amount: '0',
             free_units: 0
-          },
+          }
         )
       end
     end
@@ -69,7 +69,7 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
                 flat_amount: '0'
               }
             ]
-          },
+          }
         )
       end
     end
@@ -89,7 +89,7 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
                 flat_amount: '0'
               }
             ]
-          },
+          }
         )
       end
     end

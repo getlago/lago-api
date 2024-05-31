@@ -34,7 +34,7 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     coupons_response = result['data']['coupons']

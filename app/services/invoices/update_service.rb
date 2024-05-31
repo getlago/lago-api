@@ -17,14 +17,14 @@ module Invoices
       if params.key?(:payment_status) && !valid_payment_status?(params[:payment_status])
         return result.single_validation_failure!(
           field: :payment_status,
-          error_code: 'value_is_invalid',
+          error_code: 'value_is_invalid'
         )
       end
 
       unless valid_metadata_count?(metadata: params[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
-          error_code: 'invalid_count',
+          error_code: 'invalid_count'
         )
       end
 
@@ -74,7 +74,7 @@ module Invoices
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           payment_status: invoice.payment_status
-        },
+        }
       )
     end
 

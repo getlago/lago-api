@@ -50,7 +50,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Update, type: :graphql d
           id: gocardless_provider.id,
           successRedirectUrl: success_redirect_url
         }
-      },
+      }
     )
 
     result_data = result['data']['updateGocardlessPaymentProvider']
@@ -70,7 +70,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Update, type: :graphql d
             id: gocardless_provider.id,
             successRedirectUrl: nil
           }
-        },
+        }
       )
 
       result_data = result['data']['updateGocardlessPaymentProvider']

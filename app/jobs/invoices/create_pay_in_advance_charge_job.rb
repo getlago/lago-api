@@ -17,7 +17,7 @@ module Invoices
         charge:,
         event:,
         timestamp:,
-        invoice: result.invoice,
+        invoice: result.invoice
       )
     end
   end

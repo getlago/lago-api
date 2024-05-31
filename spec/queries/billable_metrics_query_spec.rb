@@ -25,7 +25,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
     result = billable_metric_query.call(
       search_term: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.billable_metrics.pluck(:id)
@@ -48,7 +48,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         name: 'defghz',
         code: '55',
         field_name: 'test',
-        recurring: true,
+        recurring: true
       )
     end
 
@@ -61,7 +61,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         limit: 10,
         filters: {
           recurring: true
-        },
+        }
       )
 
       returned_ids = result.billable_metrics.pluck(:id)
@@ -85,7 +85,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         limit: 10,
         filters: {
           aggregation_types: ['count_agg']
-        },
+        }
       )
 
       returned_ids = result.billable_metrics.pluck(:id)
@@ -108,7 +108,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         limit: 10,
         filters: {
           aggregation_types: ['max_agg']
-        },
+        }
       )
 
       returned_ids = result.billable_metrics.pluck(:id)
@@ -128,7 +128,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
       result = billable_metric_query.call(
         search_term: 'de',
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.billable_metrics.pluck(:id)
@@ -150,7 +150,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
         limit: 10,
         filters: {
           ids: [billable_metric_second.id]
-        },
+        }
       )
 
       returned_ids = result.billable_metrics.pluck(:id)

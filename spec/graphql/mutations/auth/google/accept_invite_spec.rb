@@ -42,7 +42,7 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite, type: :graphql do
           code: 'code',
           inviteToken: invite.token
         }
-      },
+      }
     )
 
     response = result['data']['googleAcceptInvite']
@@ -70,7 +70,7 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite, type: :graphql do
             code: 'code',
             inviteToken: invite.token
           }
-        },
+        }
       )
 
       response = result['errors'].first['extensions']
@@ -98,7 +98,7 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite, type: :graphql do
             code: 'code',
             inviteToken: invite.token
           }
-        },
+        }
       )
 
       response = result['errors'].first['extensions']

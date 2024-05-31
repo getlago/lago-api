@@ -117,7 +117,7 @@ RSpec.describe Subscription, type: :model do
           started_at: Time.zone.yesterday,
           plan:,
           external_id: 'sub_id',
-          customer: previous_subscription.customer,
+          customer: previous_subscription.customer
         )
       end
       let(:previous_subscription) do
@@ -164,7 +164,7 @@ RSpec.describe Subscription, type: :model do
           started_at: Time.zone.yesterday,
           plan:,
           external_id: 'sub_id',
-          customer: previous_subscription.customer,
+          customer: previous_subscription.customer
         )
       end
       let(:previous_subscription) do
@@ -210,7 +210,7 @@ RSpec.describe Subscription, type: :model do
         previous_subscription:,
         started_at: Time.zone.yesterday,
         external_id: 'sub_id',
-        customer:,
+        customer:
       )
     end
 
@@ -227,7 +227,7 @@ RSpec.describe Subscription, type: :model do
           started_at: Time.current.last_month,
           status: :terminated,
           external_id: 'sub_id',
-          customer:,
+          customer:
         )
       end
 
@@ -244,7 +244,7 @@ RSpec.describe Subscription, type: :model do
           started_at: Time.zone.yesterday,
           external_id: 'sub_id',
           customer:,
-          status: :terminated,
+          status: :terminated
         )
       end
 
@@ -254,7 +254,7 @@ RSpec.describe Subscription, type: :model do
           started_at: Time.current.last_year,
           external_id: 'sub_id',
           status: :terminated,
-          customer:,
+          customer:
         )
       end
 
@@ -272,7 +272,7 @@ RSpec.describe Subscription, type: :model do
       create(
         :subscription,
         plan:,
-        customer: create(:customer, organization:),
+        customer: create(:customer, organization:)
       )
     end
 
@@ -281,7 +281,7 @@ RSpec.describe Subscription, type: :model do
         :subscription,
         plan:,
         external_id:,
-        customer: create(:customer, organization:),
+        customer: create(:customer, organization:)
       )
     end
 
@@ -429,7 +429,7 @@ RSpec.describe Subscription, type: :model do
         :subscription,
         plan:,
         customer:,
-        terminated_at:,
+        terminated_at:
       )
     end
 
@@ -448,7 +448,7 @@ RSpec.describe Subscription, type: :model do
           :subscription,
           plan:,
           customer:,
-          previous_subscription_id: subscription.id,
+          previous_subscription_id: subscription.id
         )
       end
 

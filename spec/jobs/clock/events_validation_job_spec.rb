@@ -10,7 +10,7 @@ describe Clock::EventsValidationJob, job: true, transaction: false do
     create(
       :event,
       organization:,
-      created_at: Time.current.beginning_of_hour - 25.minutes,
+      created_at: Time.current.beginning_of_hour - 25.minutes
     )
   end
 

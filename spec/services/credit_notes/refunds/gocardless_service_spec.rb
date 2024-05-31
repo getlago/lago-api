@@ -20,7 +20,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       payment_provider_customer: gocardless_customer,
       amount_cents: 200,
       amount_currency: 'CHF',
-      invoice: credit_note.invoice,
+      invoice: credit_note.invoice
     )
   end
 
@@ -31,7 +31,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       invoice:,
       refund_amount_cents: 134,
       refund_amount_currency: 'CHF',
-      refund_status: :pending,
+      refund_status: :pending
     )
   end
 
@@ -48,7 +48,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
           'id' => 're_123456',
           'amount' => 134,
           'currency' => 'chf',
-          'status' => 'paid',
+          'status' => 'paid'
         ))
       allow(SegmentTrackJob).to receive(:perform_later)
     end
@@ -84,7 +84,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
           refund_status: 'paid'
-        },
+        }
       )
     end
 
@@ -106,7 +106,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
             provider_error: {
               message: 'error',
               error_code: 'code'
-            },
+            }
           )
       end
     end
@@ -117,7 +117,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
           :credit_note,
           customer:,
           refund_amount_cents: 0,
-          refund_amount_currency: 'CHF',
+          refund_amount_currency: 'CHF'
         )
       end
 
@@ -184,7 +184,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
     it 'updates the refund status' do
       result = gocardless_service.update_status(
         provider_refund_id: refund.provider_refund_id,
-        status: 'paid',
+        status: 'paid'
       )
 
       aggregate_failures do
@@ -202,7 +202,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
 
       gocardless_service.update_status(
         provider_refund_id: refund.provider_refund_id,
-        status: 'paid',
+        status: 'paid'
       )
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
@@ -212,7 +212,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
           refund_status: 'paid'
-        },
+        }
       )
     end
 
@@ -220,7 +220,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       it 'returns an empty result' do
         result = gocardless_service.update_status(
           provider_refund_id: 'foo',
-          status: 'paid',
+          status: 'paid'
         )
 
         aggregate_failures do
@@ -234,7 +234,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       it 'fails' do
         result = gocardless_service.update_status(
           provider_refund_id: refund.provider_refund_id,
-          status: 'invalid',
+          status: 'invalid'
         )
 
         aggregate_failures do
@@ -252,7 +252,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       it 'delivers an error webhook' do
         result = gocardless_service.update_status(
           provider_refund_id: refund.provider_refund_id,
-          status: 'failed',
+          status: 'failed'
         )
 
         aggregate_failures do
@@ -270,7 +270,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
               provider_error: {
                 message: 'Payment refund failed',
                 error_code: nil
-              },
+              }
             )
         end
       end

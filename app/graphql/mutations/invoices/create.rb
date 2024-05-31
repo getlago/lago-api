@@ -18,14 +18,14 @@ module Mutations
       def resolve(**args)
         customer = Customer.find_by(
           id: args[:customer_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         result = ::Invoices::CreateService.new(
           customer:,
           currency: args[:currency],
           fees: args[:fees],
-          timestamp: Time.current.to_i,
+          timestamp: Time.current.to_i
         ).call
 
         result.success? ? result.invoice : result_error(result)

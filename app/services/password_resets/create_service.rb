@@ -14,7 +14,7 @@ module PasswordResets
       password_reset = PasswordReset.create!(
         user:,
         token: SecureRandom.hex(20),
-        expire_at: Time.current + 30.minutes,
+        expire_at: Time.current + 30.minutes
       )
 
       PasswordResetMailer.with(password_reset:).requested.deliver_later

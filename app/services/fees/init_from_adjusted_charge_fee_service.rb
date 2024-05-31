@@ -77,7 +77,7 @@ module Fees
         amount_details:,
         invoice_display_name: adjusted_fee.invoice_display_name,
         grouped_by: adjusted_fee.grouped_by,
-        charge_filter_id: charge_filter&.id,
+        charge_filter_id: charge_filter&.id
       )
     end
   end

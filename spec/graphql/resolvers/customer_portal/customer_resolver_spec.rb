@@ -26,7 +26,7 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver, type: :graphql do
   it 'returns a single customer' do
     result = execute_graphql(
       customer_portal_user: customer,
-      query:,
+      query:
     )
 
     customer_response = result['data']['customerPortalUser']
@@ -41,7 +41,7 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver, type: :graphql do
   context 'without customer portal user' do
     it 'returns an error' do
       result = execute_graphql(
-        query:,
+        query:
       )
 
       expect_unauthorized_error(result)

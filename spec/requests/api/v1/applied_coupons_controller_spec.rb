@@ -23,7 +23,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       post_with_token(
         organization,
         '/api/v1/applied_coupons',
-        {applied_coupon: params},
+        {applied_coupon: params}
       )
 
       expect(response).to have_http_status(:success)
@@ -66,7 +66,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
         customer:,
         coupon:,
         amount_cents: 10,
-        amount_currency: customer.currency,
+        amount_currency: customer.currency
       )
     end
 

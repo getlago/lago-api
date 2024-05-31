@@ -65,7 +65,7 @@ module Fees
           taxes_amount_cents: 0,
           unit_amount_cents:,
           precise_unit_amount: result.unit_amount,
-          grouped_by: format_grouped_by,
+          grouped_by: format_grouped_by
         )
 
         taxes_result = Fees::ApplyTaxesService.call(fee:)
@@ -90,7 +90,7 @@ module Fees
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
         event.timestamp,
-        current_usage: true,
+        current_usage: true
       )
     end
 
@@ -107,7 +107,7 @@ module Fees
 
     def aggregate(properties:, charge_filter: nil)
       aggregation_result = Charges::PayInAdvanceAggregationService.call(
-        charge:, boundaries:, properties:, event:, charge_filter:,
+        charge:, boundaries:, properties:, event:, charge_filter:
       )
       aggregation_result.raise_if_error!
       aggregation_result
@@ -115,7 +115,7 @@ module Fees
 
     def apply_charge_model(aggregation_result:, properties:)
       charge_model_result = Charges::ApplyPayInAdvanceChargeModelService.call(
-        charge:, aggregation_result:, properties:,
+        charge:, aggregation_result:, properties:
       )
       charge_model_result.raise_if_error!
       charge_model_result
@@ -143,7 +143,7 @@ module Fees
         current_amount: aggregation_result.current_amount,
         max_aggregation: aggregation_result.max_aggregation,
         max_aggregation_with_proration: aggregation_result.max_aggregation_with_proration,
-        grouped_by: format_grouped_by,
+        grouped_by: format_grouped_by
       )
     end
 

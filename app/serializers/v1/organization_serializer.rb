@@ -51,7 +51,7 @@ module V1
       ::CollectionSerializer.new(
         model.taxes.applied_to_organization,
         ::V1::TaxSerializer,
-        collection_name: 'taxes',
+        collection_name: 'taxes'
       ).serialize
     end
 

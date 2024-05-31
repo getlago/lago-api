@@ -38,7 +38,7 @@ RSpec.describe Mutations::Invites::Update, type: :graphql do
               id: invite.id,
               role: 'finance'
             }
-          },
+          }
         )
 
         data = result['data']['updateInvite']
@@ -59,7 +59,7 @@ RSpec.describe Mutations::Invites::Update, type: :graphql do
           query: mutation,
           variables: {
             input: {id: invite.id, role: 'finance'}
-          },
+          }
         )
 
         aggregate_failures do

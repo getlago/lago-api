@@ -32,7 +32,7 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     webhooks_response = result['data']['webhooks']
@@ -56,7 +56,7 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       webhooks_response = result['data']['webhooks']

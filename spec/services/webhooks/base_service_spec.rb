@@ -78,7 +78,7 @@ module WebhooksSpec
     def object_serializer
       ::V1::InvoiceSerializer.new(
         object,
-        root_name: 'invoice',
+        root_name: 'invoice'
       )
     end
 

@@ -20,7 +20,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       total_amount_cents: 12,
       payment_status: :succeeded,
       taxes_rate: 20,
-      version_number: 3,
+      version_number: 3
     )
   end
 
@@ -68,7 +68,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         credit_amount_cents: 9,
         coupons_adjustment_amount_cents: 8,
         taxes_amount_cents: 2,
-        taxes_rate: 20,
+        taxes_rate: 20
       )
 
       expect(credit_note.applied_taxes.size).to eq(1)
@@ -79,14 +79,14 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       expect(item1).to have_attributes(
         fee: fee1,
         amount_cents: 10,
-        amount_currency: invoice.currency,
+        amount_currency: invoice.currency
       )
 
       item2 = credit_note.items.last
       expect(item2).to have_attributes(
         fee: fee2,
         amount_cents: 5,
-        amount_currency: invoice.currency,
+        amount_currency: invoice.currency
       )
     end
   end
@@ -115,7 +115,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         expect(result.error.messages[:amount_cents]).to eq(
           %w[
             higher_than_remaining_fee_amount
-          ],
+          ]
         )
       end
     end
@@ -145,7 +145,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         currency: 'EUR',
         total_amount_cents: 24,
         payment_status: :succeeded,
-        taxes_rate: 20,
+        taxes_rate: 20
       )
     end
 
@@ -170,7 +170,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         total_amount_cents: 24,
         payment_status: :succeeded,
         taxes_rate: 20,
-        version_number: 1,
+        version_number: 1
       )
     end
 

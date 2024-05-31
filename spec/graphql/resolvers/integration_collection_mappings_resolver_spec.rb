@@ -31,7 +31,7 @@ RSpec.describe Resolvers::IntegrationCollectionMappingsResolver, type: :graphql 
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     integration_collection_mappings_response = result['data']['integrationCollectionMappings']

@@ -8,7 +8,7 @@ RSpec.describe Mutations::Plans::Destroy, type: :graphql do
       current_user: membership.user,
       permissions: required_permission,
       query: mutation,
-      variables: {input: {id: plan.id}},
+      variables: {input: {id: plan.id}}
     )
   end
 

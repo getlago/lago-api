@@ -25,7 +25,7 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: {id: wallet.id},
+      variables: {id: wallet.id}
     )
 
     coupon_response = result['data']['wallet']
@@ -43,7 +43,7 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         query:,
-        variables: {id: wallet.id},
+        variables: {id: wallet.id}
       )
 
       expect_graphql_error(result:, message: 'Missing organization id')
@@ -56,7 +56,7 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: {id: 'foo'},
+        variables: {id: 'foo'}
       )
 
       expect_graphql_error(result:, message: 'Resource not found')

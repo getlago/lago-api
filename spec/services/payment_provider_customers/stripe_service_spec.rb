@@ -99,7 +99,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             provider_error: {
               message: 'API key invalid.',
               error_code: nil
-            },
+            }
           ).on_queue(:webhook)
       end
     end
@@ -120,7 +120,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             provider_error: {
               message: 'error',
               error_code: nil
-            },
+            }
           )
       end
     end
@@ -170,7 +170,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               provider_error: {
                 message: 'Invalid request',
                 error_code: nil
-              },
+              }
             ).on_queue(:webhook)
         end
       end
@@ -197,7 +197,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               provider_error: {
                 message: 'Permission error',
                 error_code: nil
-              },
+              }
             ).on_queue(:webhook)
         end
       end
@@ -223,7 +223,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               provider_error: {
                 message: 'Invalid username.',
                 error_code: nil
-              },
+              }
             ).on_queue(:webhook)
         end
       end
@@ -289,7 +289,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       result = stripe_service.update_provider_default_payment_method(
         organization_id: organization.id,
         stripe_customer_id: stripe_customer.provider_customer_id,
-        payment_method_id: 'pm_123456',
+        payment_method_id: 'pm_123456'
       )
 
       aggregate_failures do
@@ -303,7 +303,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         result = stripe_service.update_provider_default_payment_method(
           organization_id: organization.id,
           stripe_customer_id: 'cus_InvaLid',
-          payment_method_id: 'pm_123456',
+          payment_method_id: 'pm_123456'
         )
 
         aggregate_failures do
@@ -320,7 +320,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             payment_method_id: 'pm_123456',
             metadata: {
               lago_customer_id: SecureRandom.uuid
-            },
+            }
           )
 
           aggregate_failures do
@@ -338,7 +338,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             payment_method_id: 'pm_123456',
             metadata: {
               lago_customer_id: customer.id
-            },
+            }
           )
 
           aggregate_failures do
@@ -355,7 +355,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         result = stripe_service.update_provider_default_payment_method(
           organization_id: organization.id,
           stripe_customer_id: nil,
-          payment_method_id: 'pm_123456',
+          payment_method_id: 'pm_123456'
         )
 
         aggregate_failures do
@@ -378,7 +378,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       result = stripe_service.update_payment_method(
         organization_id: organization.id,
         stripe_customer_id: stripe_customer.provider_customer_id,
-        payment_method_id: 'pm_123456',
+        payment_method_id: 'pm_123456'
       )
 
       aggregate_failures do
@@ -395,7 +395,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           total_amount_cents: 200,
           currency: 'EUR',
           status:,
-          ready_for_payment_processing:,
+          ready_for_payment_processing:
         )
       end
 
@@ -408,7 +408,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         result = stripe_service.update_payment_method(
           organization_id: organization.id,
           stripe_customer_id: stripe_customer.provider_customer_id,
-          payment_method_id: 'pm_123456',
+          payment_method_id: 'pm_123456'
         )
 
         aggregate_failures do
@@ -426,7 +426,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           result = stripe_service.update_payment_method(
             organization_id: organization.id,
             stripe_customer_id: stripe_customer.provider_customer_id,
-            payment_method_id: 'pm_123456',
+            payment_method_id: 'pm_123456'
           )
 
           aggregate_failures do
@@ -445,7 +445,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
           result = stripe_service.update_payment_method(
             organization_id: organization.id,
             stripe_customer_id: stripe_customer.provider_customer_id,
-            payment_method_id: 'pm_123456',
+            payment_method_id: 'pm_123456'
           )
 
           aggregate_failures do
@@ -463,7 +463,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         result = stripe_service.update_payment_method(
           organization_id: organization.id,
           stripe_customer_id: 'cus_InvaLid',
-          payment_method_id: 'pm_123456',
+          payment_method_id: 'pm_123456'
         )
 
         aggregate_failures do
@@ -480,7 +480,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             payment_method_id: 'pm_123456',
             metadata: {
               lago_customer_id: SecureRandom.uuid
-            },
+            }
           )
 
           aggregate_failures do
@@ -498,7 +498,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             payment_method_id: 'pm_123456',
             metadata: {
               lago_customer_id: customer.id
-            },
+            }
           )
 
           aggregate_failures do
@@ -521,7 +521,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         :stripe_customer,
         customer:,
         provider_customer_id: 'cus_123456',
-        payment_method_id:,
+        payment_method_id:
       )
     end
 
@@ -529,7 +529,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       result = stripe_service.delete_payment_method(
         organization_id: organization.id,
         stripe_customer_id: stripe_customer.provider_customer_id,
-        payment_method_id:,
+        payment_method_id:
       )
 
       aggregate_failures do
@@ -543,7 +543,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         result = stripe_service.delete_payment_method(
           organization_id: organization.id,
           stripe_customer_id: stripe_customer.provider_customer_id,
-          payment_method_id: 'other_payment_method_id',
+          payment_method_id: 'other_payment_method_id'
         )
 
         aggregate_failures do
@@ -558,7 +558,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         result = stripe_service.delete_payment_method(
           organization_id: organization.id,
           stripe_customer_id: 'cus_InvaLid',
-          payment_method_id: 'pm_123456',
+          payment_method_id: 'pm_123456'
         )
 
         aggregate_failures do
@@ -575,7 +575,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             payment_method_id: 'pm_123456',
             metadata: {
               lago_customer_id: SecureRandom.uuid
-            },
+            }
           )
 
           aggregate_failures do
@@ -593,7 +593,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             payment_method_id: 'pm_123456',
             metadata: {
               lago_customer_id: customer.id
-            },
+            }
           )
 
           aggregate_failures do
@@ -614,7 +614,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
         :stripe_customer,
         customer:,
         provider_customer_id: 'cus_123456',
-        payment_method_id:,
+        payment_method_id:
       )
     end
 

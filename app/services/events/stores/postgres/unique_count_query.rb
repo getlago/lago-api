@@ -207,7 +207,7 @@ module Events
                 .select(
                   "timestamp, \
                   #{sanitized_property_name} AS property, \
-                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type",
+                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type"
                 ).to_sql
             })
           SQL
@@ -225,7 +225,7 @@ module Events
                   "#{groups.join(", ")}, \
                   timestamp, \
                   #{sanitized_property_name} AS property, \
-                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type",
+                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type"
                 ).to_sql
             })
           SQL

@@ -65,7 +65,7 @@ module LagoHttpClient
     def post_multipart_file(params = {})
       req = Net::HTTP::Post::Multipart.new(
         uri.path,
-        params,
+        params
       )
 
       response = http_client.request(req)

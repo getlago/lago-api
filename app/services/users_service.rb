@@ -34,7 +34,7 @@ class UsersService < BaseService
       result.membership = Membership.create!(
         user: result.user,
         organization: result.organization,
-        role: :admin,
+        role: :admin
       )
 
       result.token = generate_token
@@ -56,7 +56,7 @@ class UsersService < BaseService
       result.membership = Membership.create!(
         user: result.user,
         organization: result.organization,
-        role: invite.role,
+        role: invite.role
       )
 
       result.token = generate_token
@@ -95,7 +95,7 @@ class UsersService < BaseService
       properties: {
         organization_name: organization.name,
         organization_id: organization.id
-      },
+      }
     )
   end
 end

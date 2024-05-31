@@ -29,7 +29,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
 
     result = execute_graphql(
       current_user: user,
-      query:,
+      query:
     )
 
     aggregate_failures do
@@ -63,7 +63,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
       membership = create(:membership, organization:)
       result = execute_graphql(
         current_user: membership.user,
-        query:,
+        query:
       )
 
       expect(result['data']['currentUser']['organizations'][0]['id']).to eq organization.id
@@ -81,7 +81,7 @@ RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
     it 'only lists organizations when membership has an active status' do
       result = execute_graphql(
         current_user: membership.user,
-        query:,
+        query:
       )
 
       expect(result['data']['currentUser']['memberships']).not_to include(revoked_membership)

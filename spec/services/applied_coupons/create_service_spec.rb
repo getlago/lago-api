@@ -58,7 +58,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
           coupon_code: applied_coupon.coupon.code,
           coupon_name: applied_coupon.coupon.name,
           organization_id: applied_coupon.coupon.organization_id
-        },
+        }
       )
     end
 
@@ -69,7 +69,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
           status: 'active',
           organization:,
           coupon_type: 'percentage',
-          percentage_rate: 10.00,
+          percentage_rate: 10.00
         )
       end
 

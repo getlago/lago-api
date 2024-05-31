@@ -11,7 +11,7 @@ RSpec.describe UsersService, type: :service do
       result = user_service.register('email', 'password', 'organization_name')
 
       expect(SegmentIdentifyJob).to have_received(:perform_later).with(
-        membership_id: "membership/#{result.membership.id}",
+        membership_id: "membership/#{result.membership.id}"
       )
     end
 
@@ -25,7 +25,7 @@ RSpec.describe UsersService, type: :service do
         properties: {
           organization_name: result.organization.name,
           organization_id: result.organization.id
-        },
+        }
       )
     end
 
@@ -117,7 +117,7 @@ RSpec.describe UsersService, type: :service do
       result = user_service.login(membership.user.email, membership.user.password)
 
       expect(SegmentIdentifyJob).to have_received(:perform_later).with(
-        membership_id: "membership/#{result.user.memberships.first.id}",
+        membership_id: "membership/#{result.user.memberships.first.id}"
       )
     end
   end

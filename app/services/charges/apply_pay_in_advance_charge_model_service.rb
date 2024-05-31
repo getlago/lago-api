@@ -66,7 +66,7 @@ module Charges
       charge_model.apply(
         charge:,
         aggregation_result: previous_result,
-        properties: (properties || {}).merge(ignore_last_event: true),
+        properties: (properties || {}).merge(ignore_last_event: true)
       ).amount
     end
 

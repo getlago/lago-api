@@ -2,8 +2,8 @@
 
 namespace :filters do
   desc 'Clean duplicated filters'
-  task :deduplicate => :environment do
-    charges = Charge.joins(:filters).includes(filters: { values: :billable_metric_filter }).distinct
+  task deduplicate: :environment do
+    charges = Charge.joins(:filters).includes(filters: {values: :billable_metric_filter}).distinct
 
     charges.find_each do |charge|
       next if charge.filters.count <= 1

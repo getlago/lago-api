@@ -25,12 +25,12 @@ module Mutations
       def resolve(**args)
         customer = Customer.find_by(
           id: args[:customer_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         coupon = Coupon.find_by(
           id: args[:coupon_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         result = ::AppliedCoupons::CreateService.call(customer:, coupon:, params: args)

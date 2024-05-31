@@ -60,7 +60,7 @@ module Wallets
             paid_credits: threshold_rule.paid_credits.to_s,
             granted_credits: threshold_rule.granted_credits.to_s,
             source: :threshold
-          },
+          }
         )
       end
 

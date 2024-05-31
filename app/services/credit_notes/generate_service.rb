@@ -34,7 +34,7 @@ module CreditNotes
       credit_note.file.attach(
         io: pdf_result.io,
         filename: "#{credit_note.number}.pdf",
-        content_type: 'application/pdf',
+        content_type: 'application/pdf'
       )
 
       credit_note.save!

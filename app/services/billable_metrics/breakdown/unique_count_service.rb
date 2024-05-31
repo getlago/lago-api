@@ -23,7 +23,7 @@ module BillableMetrics
               action: operation_type,
               amount: row['prorated_value'].ceil,
               duration: ((to_datetime - from_datetime).fdiv(1.day).round * row['prorated_value']).round,
-              total_duration: period_duration,
+              total_duration: period_duration
             )
           end
 

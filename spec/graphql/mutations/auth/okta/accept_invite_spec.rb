@@ -44,7 +44,7 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql, cache: :memo
           code: 'code',
           inviteToken: invite.token
         }
-      },
+      }
     )
 
     response = result['data']['oktaAcceptInvite']
@@ -67,7 +67,7 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql, cache: :memo
             code: 'code',
             inviteToken: invite.token
           }
-        },
+        }
       )
 
       response = result['errors'].first['extensions']

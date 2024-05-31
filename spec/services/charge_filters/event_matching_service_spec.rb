@@ -21,7 +21,7 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
       :event,
       organization_id: organization.id,
       code: billable_metric.code,
-      properties: event_properties,
+      properties: event_properties
     )
   end
 
@@ -45,7 +45,7 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
         :charge_filter_value,
         values: %w[visa mastercard],
         billable_metric_filter: scheme,
-        charge_filter: filter1,
+        charge_filter: filter1
       )
     ]
   end
@@ -59,7 +59,7 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
         :charge_filter_value,
         values: %w[visa mastercard],
         billable_metric_filter: scheme,
-        charge_filter: filter2,
+        charge_filter: filter2
       ),
       create(:charge_filter_value, values: ['credit'], billable_metric_filter: card_type, charge_filter: filter2)
     ]

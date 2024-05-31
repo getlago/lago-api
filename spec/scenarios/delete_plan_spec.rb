@@ -18,7 +18,7 @@ describe 'Delete Plan Scenarios', :scenarios, type: :request do
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code
-        },
+        }
       )
 
       create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '3'})

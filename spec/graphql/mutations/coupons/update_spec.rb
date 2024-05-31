@@ -57,7 +57,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
             planIds: [plan.id]
           }
         }
-      },
+      }
     )
 
     result_data = result['data']['updateCoupon']
@@ -121,7 +121,7 @@ RSpec.describe Mutations::Coupons::Update, type: :graphql do
               billableMetricIds: [billable_metric.id]
             }
           }
-        },
+        }
       )
 
       result_data = result['data']['updateCoupon']

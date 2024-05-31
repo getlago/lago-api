@@ -32,7 +32,7 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
         taxes_amount_cents: 0,
         credit_amount_cents: 100,
         balance_amount_cents: 100,
-        total_amount_cents: 100,
+        total_amount_cents: 100
       )
     end
 

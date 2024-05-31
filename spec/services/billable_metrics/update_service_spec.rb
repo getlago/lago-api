@@ -154,13 +154,13 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
 
           expect(result.billable_metric).to have_attributes(
             name: 'New Metric',
-            description: 'New metric description',
+            description: 'New metric description'
           )
 
           expect(result.billable_metric).not_to have_attributes(
             code: 'new_metric',
             aggregation_type: 'sum_agg',
-            field_name: 'field_value',
+            field_name: 'field_value'
           )
         end
       end

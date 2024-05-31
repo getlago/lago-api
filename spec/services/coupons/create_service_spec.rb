@@ -46,7 +46,7 @@ RSpec.describe Coupons::CreateService, type: :service do
           coupon_code: coupon.code,
           coupon_name: coupon.name,
           organization_id: coupon.organization_id
-        },
+        }
       )
     end
 

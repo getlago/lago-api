@@ -12,7 +12,7 @@ module Webhooks
       def object_serializer
         ::V1::FeeSerializer.new(
           object,
-          root_name: 'fee',
+          root_name: 'fee'
         )
       end
 

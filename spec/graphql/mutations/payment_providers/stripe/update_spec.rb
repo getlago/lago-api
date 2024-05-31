@@ -36,7 +36,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
           id: stripe_provider.id,
           successRedirectUrl: success_redirect_url
         }
-      },
+      }
     )
 
     result_data = result['data']['updateStripePaymentProvider']
@@ -56,7 +56,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
             id: stripe_provider.id,
             successRedirectUrl: nil
           }
-        },
+        }
       )
 
       result_data = result['data']['updateStripePaymentProvider']

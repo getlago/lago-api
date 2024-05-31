@@ -39,7 +39,7 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
             }
           ]
         }
-      },
+      }
     )
 
     result_data = result['data']['updateInvoice']
@@ -63,12 +63,12 @@ RSpec.describe Mutations::Invoices::Update, type: :graphql do
             id: '1234',
             paymentStatus: 'succeeded'
           }
-        },
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found',
+        message: 'Resource not found'
       )
     end
   end

@@ -17,7 +17,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       currency: 'EUR',
       fees_amount_cents: 100,
       taxes_amount_cents: 120,
-      total_amount_cents: 120,
+      total_amount_cents: 120
     )
   end
 
@@ -46,7 +46,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
           balance_amount_currency: credit_note.balance_amount_currency,
           created_at: credit_note.created_at.iso8601,
           updated_at: credit_note.updated_at.iso8601,
-          applied_taxes: [],
+          applied_taxes: []
         )
 
         expect(json[:credit_note][:items].count).to eq(2)
@@ -55,13 +55,13 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(json[:credit_note][:items][0]).to include(
           lago_id: item.id,
           amount_cents: item.amount_cents,
-          amount_currency: item.amount_currency,
+          amount_currency: item.amount_currency
         )
 
         expect(json[:credit_note][:items][0][:fee][:item]).to include(
           type: item.fee.fee_type,
           code: item.fee.item_code,
-          name: item.fee.item_name,
+          name: item.fee.item_name
         )
       end
     end
@@ -217,7 +217,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
             next_page: 2,
             prev_page: nil,
             total_pages: 2,
-            total_count: 2,
+            total_count: 2
           )
         end
       end
@@ -284,7 +284,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
           balance_amount_currency: 'EUR',
           refund_amount_cents: 5,
           refund_amount_currency: 'EUR',
-          applied_taxes: [],
+          applied_taxes: []
         )
 
         expect(json[:credit_note][:items][0][:lago_id]).to be_present

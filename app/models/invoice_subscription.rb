@@ -55,7 +55,7 @@ class InvoiceSubscription < ApplicationRecord
   def fees
     @fees ||= Fee.where(
       subscription_id: subscription.id,
-      invoice_id: invoice.id,
+      invoice_id: invoice.id
     )
   end
 

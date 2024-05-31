@@ -25,7 +25,7 @@ module Resolvers
           customer_id:,
           page:,
           limit:,
-          status:,
+          status:
         )
 
         result.invoices

@@ -24,7 +24,7 @@ module Resolvers
         search_term: args[:search_term],
         page: args[:page],
         limit: args[:limit],
-        filters: args.slice(:ids, :recurring, :aggregation_types),
+        filters: args.slice(:ids, :recurring, :aggregation_types)
       )
 
       result.billable_metrics

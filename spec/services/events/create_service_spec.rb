@@ -8,7 +8,7 @@ RSpec.describe Events::CreateService, type: :service do
       organization:,
       params: create_args,
       timestamp: creation_timestamp,
-      metadata:,
+      metadata:
     )
   end
 
@@ -49,7 +49,7 @@ RSpec.describe Events::CreateService, type: :service do
           transaction_id:,
           code:,
           timestamp: Time.zone.at(timestamp),
-          properties: {'foo' => 'bar'},
+          properties: {'foo' => 'bar'}
         )
       end
     end
@@ -64,7 +64,7 @@ RSpec.describe Events::CreateService, type: :service do
           :event,
           organization:,
           transaction_id: create_args[:transaction_id],
-          external_subscription_id:,
+          external_subscription_id:
         )
       end
 

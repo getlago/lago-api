@@ -6,7 +6,7 @@ module Api
       def create
         service = CreditNotes::CreateService.new(
           invoice: current_organization.invoices.not_generating.find_by(id: input_params[:invoice_id]),
-          **input_params,
+          **input_params
         )
         result = service.call
 
@@ -15,8 +15,8 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               result.credit_note,
               root_name: 'credit_note',
-              includes: %i[items applied_taxes],
-            ),
+              includes: %i[items applied_taxes]
+            )
           )
         else
           render_error_response(result)
@@ -31,8 +31,8 @@ module Api
           json: ::V1::CreditNoteSerializer.new(
             credit_note,
             root_name: 'credit_note',
-            includes: %i[items applied_taxes],
-          ),
+            includes: %i[items applied_taxes]
+          )
         )
       end
 
@@ -47,8 +47,8 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
               root_name: 'credit_note',
-              includes: %i[items applied_taxes],
-            ),
+              includes: %i[items applied_taxes]
+            )
           )
         else
           render_error_response(result)
@@ -63,8 +63,8 @@ module Api
           return render(
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
-              root_name: 'credit_note',
-            ),
+              root_name: 'credit_note'
+            )
           )
         end
 
@@ -84,8 +84,8 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
               root_name: 'credit_note',
-              includes: %i[items applied_taxes],
-            ),
+              includes: %i[items applied_taxes]
+            )
           )
         else
           render_error_response(result)
@@ -109,23 +109,23 @@ module Api
             ::V1::CreditNoteSerializer,
             collection_name: 'credit_notes',
             meta: pagination_metadata(credit_notes),
-            includes: %i[items applied_taxes],
-          ),
+            includes: %i[items applied_taxes]
+          )
         )
       end
 
       def estimate
         result = CreditNotes::EstimateService.call(
           invoice: current_organization.invoices.not_generating.find_by(id: estimate_params[:invoice_id]),
-          items: estimate_params[:items],
+          items: estimate_params[:items]
         )
 
         if result.success?
           render(
             json: ::V1::CreditNotes::EstimateSerializer.new(
               result.credit_note,
-              root_name: 'estimated_credit_note',
-            ),
+              root_name: 'estimated_credit_note'
+            )
           )
         else
           render_error_response(result)
@@ -145,7 +145,7 @@ module Api
             items: [
               :fee_id,
               :amount_cents
-            ],
+            ]
           )
       end
 
@@ -160,7 +160,7 @@ module Api
             items: [
               :fee_id,
               :amount_cents
-            ],
+            ]
           )
       end
     end

@@ -25,7 +25,7 @@ module Resolvers
         search_term:,
         page:,
         limit:,
-        status:,
+        status:
       )
 
       result.webhooks

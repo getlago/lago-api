@@ -18,7 +18,7 @@ module PaymentProviderCustomers
       return result if !stripe_result || !result.success?
 
       stripe_customer.update!(
-        provider_customer_id: stripe_result.id,
+        provider_customer_id: stripe_result.id
       )
 
       deliver_success_webhook
@@ -74,7 +74,7 @@ module PaymentProviderCustomers
       Stripe::Customer.update(
         stripe_customer_id,
         {invoice_settings: {default_payment_method: payment_method_id}},
-        {api_key:},
+        {api_key:}
       )
 
       result.payment_method = payment_method_id
@@ -120,7 +120,7 @@ module PaymentProviderCustomers
         checkout_link_params,
         {
           api_key:
-        },
+        }
       )
 
       result.checkout_url = res['url']
@@ -129,7 +129,7 @@ module PaymentProviderCustomers
         SendWebhookJob.perform_later(
           'customer.checkout_url_generated',
           customer,
-          checkout_url: result.checkout_url,
+          checkout_url: result.checkout_url
         )
       end
 
@@ -173,7 +173,7 @@ module PaymentProviderCustomers
         {
           api_key:,
           idempotency_key: customer.id
-        },
+        }
       )
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
       deliver_error_webhook(e)
@@ -233,7 +233,7 @@ module PaymentProviderCustomers
 
       SendWebhookJob.perform_later(
         'customer.payment_provider_created',
-        customer,
+        customer
       )
     end
 
@@ -246,7 +246,7 @@ module PaymentProviderCustomers
         provider_error: {
           message: stripe_error.message,
           error_code: stripe_error.code
-        },
+        }
       )
     end
 

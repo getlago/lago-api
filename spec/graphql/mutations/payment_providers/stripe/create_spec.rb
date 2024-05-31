@@ -42,7 +42,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
           name:,
           successRedirectUrl: success_redirect_url
         }
-      },
+      }
     )
 
     result_data = result['data']['addStripePaymentProvider']

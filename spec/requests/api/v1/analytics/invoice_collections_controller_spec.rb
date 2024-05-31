@@ -13,7 +13,7 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController, type: :request 
       it 'returns the gross revenue' do
         get_with_token(
           organization,
-          '/api/v1/analytics/invoice_collection',
+          '/api/v1/analytics/invoice_collection'
         )
 
         aggregate_failures do
@@ -34,7 +34,7 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController, type: :request 
       it 'returns forbidden status' do
         get_with_token(
           organization,
-          '/api/v1/analytics/invoice_collection',
+          '/api/v1/analytics/invoice_collection'
         )
 
         expect(response).to have_http_status(:forbidden)

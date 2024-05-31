@@ -23,7 +23,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
       organization:,
       interval: 'monthly',
       amount_cents: 12_900,
-      pay_in_advance: false,
+      pay_in_advance: false
     )
   end
 
@@ -40,7 +40,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
       end
 
@@ -94,7 +94,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
       end
 

@@ -22,7 +22,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         organization:,
         subscription_at: started_at,
         started_at:,
-        created_at: started_at,
+        created_at: started_at
       )
     end
 

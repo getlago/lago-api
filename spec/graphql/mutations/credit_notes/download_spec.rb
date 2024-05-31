@@ -42,7 +42,7 @@ RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
         input: {
           id: credit_note.id
         }
-      },
+      }
     )
 
     result_data = result['data']['downloadCreditNote']

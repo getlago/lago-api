@@ -25,7 +25,7 @@ FactoryBot.define do
         create(
           :subscription,
           customer: source_customer,
-          organization: source_organization,
+          organization: source_organization
         )
       end
     end

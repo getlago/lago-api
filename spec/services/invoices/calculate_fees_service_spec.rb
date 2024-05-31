@@ -6,7 +6,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   subject(:invoice_service) do
     described_class.new(
       invoice:,
-      recurring:,
+      recurring:
     )
   end
 
@@ -21,7 +21,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       organization:,
       currency: 'EUR',
       issuing_date: Time.zone.at(timestamp).to_date,
-      customer: subscription.customer,
+      customer: subscription.customer
     )
   end
 
@@ -35,7 +35,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       started_at:,
       created_at:,
       status:,
-      terminated_at:,
+      terminated_at:
     )
   end
 
@@ -43,7 +43,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     Subscriptions::DatesService.new_instance(
       subscription,
       Time.zone.at(timestamp),
-      current_usage: subscription.terminated? && subscription.upgraded?,
+      current_usage: subscription.terminated? && subscription.upgraded?
     )
   end
 
@@ -56,7 +56,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       from_datetime: date_service.from_datetime,
       to_datetime: date_service.to_datetime,
       charges_from_datetime: date_service.charges_from_datetime,
-      charges_to_datetime: date_service.charges_to_datetime,
+      charges_to_datetime: date_service.charges_to_datetime
     )
   end
 
@@ -108,7 +108,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           invoice_subscription = invoice.invoice_subscriptions.first
           expect(invoice_subscription).to have_attributes(
             to_datetime: match_datetime(DateTime.parse('2022-03-05 23:59:59')),
-            from_datetime: match_datetime(DateTime.parse('2022-02-06 00:00:00')),
+            from_datetime: match_datetime(DateTime.parse('2022-02-06 00:00:00'))
           )
         end
       end
@@ -120,7 +120,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             :pay_in_advance,
             plan: subscription.plan,
             charge_model: 'standard',
-            invoiceable: true,
+            invoiceable: true
           )
         end
 
@@ -146,7 +146,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             plan: subscription.plan,
             charge_model: 'standard',
             invoiceable: true,
-            billable_metric:,
+            billable_metric:
           )
         end
 
@@ -167,7 +167,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             :standard_charge,
             plan: subscription.plan,
             charge_model: 'standard',
-            invoiceable: false,
+            invoiceable: false
           )
         end
 
@@ -202,7 +202,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
               to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
+              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
             )
           end
         end
@@ -235,7 +235,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           plan:,
           customer: subscription.customer,
           subscription_at: (Time.zone.now - 2.years).to_date,
-          started_at: Time.zone.now - 2.years,
+          started_at: Time.zone.now - 2.years
         )
       end
 
@@ -248,7 +248,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           from_datetime: date_service.from_datetime,
           to_datetime: date_service.to_datetime,
           charges_from_datetime: date_service.charges_from_datetime,
-          charges_to_datetime: date_service.charges_to_datetime,
+          charges_to_datetime: date_service.charges_to_datetime
         )
       end
 
@@ -268,7 +268,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
               to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day),
+              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day)
             )
           end
         end
@@ -293,7 +293,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
               to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day),
+              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day)
             )
           end
         end
@@ -322,7 +322,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
               to_datetime: match_datetime(terminated_at),
-              from_datetime: match_datetime(terminated_at.beginning_of_month),
+              from_datetime: match_datetime(terminated_at.beginning_of_month)
             )
           end
         end
@@ -339,7 +339,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
               to_datetime: match_datetime(terminated_at),
-              from_datetime: match_datetime(terminated_at.beginning_of_month),
+              from_datetime: match_datetime(terminated_at.beginning_of_month)
             )
           end
         end
@@ -357,7 +357,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             plan: subscription.plan,
             charge_model: 'standard',
             invoiceable: true,
-            billable_metric:,
+            billable_metric:
           )
         end
 
@@ -404,7 +404,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             charge_model: 'standard',
             invoiceable: true,
             billable_metric:,
-            prorated: false,
+            prorated: false
           )
         end
 
@@ -447,7 +447,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             previous_subscription: subscription,
             subscription_at: started_at.to_date,
             started_at: terminated_at + 1.day,
-            created_at: terminated_at + 1.day,
+            created_at: terminated_at + 1.day
           )
         end
 
@@ -462,7 +462,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             plan: subscription.plan,
             charge_model: 'standard',
             invoiceable: true,
-            billable_metric:,
+            billable_metric:
           )
         end
 
@@ -525,7 +525,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             previous_subscription: subscription,
             subscription_at: started_at.to_date,
             started_at: terminated_at + 1.day,
-            created_at: terminated_at + 1.day,
+            created_at: terminated_at + 1.day
           )
         end
 
@@ -541,7 +541,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             charge_model: 'standard',
             invoiceable: true,
             billable_metric:,
-            prorated: false,
+            prorated: false
           )
         end
 
@@ -613,7 +613,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(terminated_at),
-                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -644,7 +644,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(terminated_at),
-                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -685,7 +685,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(DateTime.parse('2022-04-05 23:59:59')),
-                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -719,7 +719,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(DateTime.parse('2022-04-05 23:59:59')),
-                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -849,7 +849,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             subscription_at: started_at.to_date,
             started_at:,
             status: :terminated,
-            terminated_at:,
+            terminated_at:
           )
         end
 
@@ -860,7 +860,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             previous_subscription:,
             subscription_at: started_at.to_date,
             started_at: terminated_at + 1.day,
-            created_at: terminated_at + 1.day,
+            created_at: terminated_at + 1.day
           )
         end
 
@@ -878,7 +878,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(subscription.started_at.end_of_month),
-                from_datetime: match_datetime(subscription.started_at.beginning_of_day),
+                from_datetime: match_datetime(subscription.started_at.beginning_of_day)
               )
             end
           end
@@ -912,7 +912,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(subscription.started_at.end_of_month),
-                from_datetime: match_datetime(subscription.started_at.beginning_of_day),
+                from_datetime: match_datetime(subscription.started_at.beginning_of_day)
               )
             end
           end
@@ -939,7 +939,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             status: :active,
             billing_time: :calendar,
             previous_subscription: subscription,
-            customer: subscription.customer,
+            customer: subscription.customer
           )
         end
 
@@ -955,7 +955,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             started_at:,
             status: :terminated,
             terminated_at:,
-            billing_time: :calendar,
+            billing_time: :calendar
           )
         end
 
@@ -976,7 +976,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 charges_from_datetime: match_datetime(DateTime.parse('2022-10-01 00:00:00')),
-                charges_to_datetime: match_datetime(terminated_at),
+                charges_to_datetime: match_datetime(terminated_at)
               )
             end
           end
@@ -1010,7 +1010,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
                 invoice_subscription = invoice.invoice_subscriptions.first
                 expect(invoice_subscription).to have_attributes(
                   charges_from_datetime: match_datetime(DateTime.parse('2022-10-01 00:00:00')),
-                  charges_to_datetime: match_datetime(terminated_at),
+                  charges_to_datetime: match_datetime(terminated_at)
                 )
               end
             end
@@ -1046,7 +1046,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           invoice_subscription = invoice.invoice_subscriptions.first
           expect(invoice_subscription).to have_attributes(
             to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-            from_datetime: match_datetime((timestamp - 1.year).beginning_of_day),
+            from_datetime: match_datetime((timestamp - 1.year).beginning_of_day)
           )
         end
       end
@@ -1070,7 +1070,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
               to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
-              from_datetime: match_datetime(DateTime.parse('2021-06-06 00:00:00')),
+              from_datetime: match_datetime(DateTime.parse('2021-06-06 00:00:00'))
             )
           end
         end
@@ -1091,7 +1091,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(DateTime.parse('2023-06-05 23:59:59')),
-                from_datetime: match_datetime(DateTime.parse('2022-06-06 00:00:00')),
+                from_datetime: match_datetime(DateTime.parse('2022-06-06 00:00:00'))
               )
             end
           end
@@ -1115,7 +1115,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
               to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
+              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
             )
           end
         end
@@ -1142,7 +1142,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             to_datetime: match_datetime((timestamp - 1.day).end_of_day),
             from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day),
             charges_to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-            charges_from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day),
+            charges_from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day)
           )
         end
       end
@@ -1168,7 +1168,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
               from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
               charges_to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
-              charges_from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+              charges_from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
             )
           end
         end
@@ -1181,7 +1181,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               :invoice,
               created_at: started_at - 3.months,
               customer: subscription.customer,
-              organization: plan.organization,
+              organization: plan.organization
             )
           end
 
@@ -1202,7 +1202,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
                 to_datetime: match_datetime(DateTime.parse('2022-09-05 23:59:59')),
                 from_datetime: match_datetime(DateTime.parse('2022-06-06 00:00:00')),
                 charges_to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
-                charges_from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
+                charges_from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -1229,7 +1229,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               to_datetime: match_datetime((timestamp - 1.day).end_of_day),
               from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
               charges_to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              charges_from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
+              charges_from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
             )
           end
         end
@@ -1246,7 +1246,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           balance_amount_cents: 10,
           balance_amount_currency: plan.amount_currency,
           credit_amount_cents: 10,
-          credit_amount_currency: plan.amount_currency,
+          credit_amount_currency: plan.amount_currency
         )
       end
 
@@ -1311,7 +1311,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             :applied_coupon,
             customer: subscription.customer,
             amount_cents: 120,
-            amount_currency: plan.amount_currency,
+            amount_currency: plan.amount_currency
           )
         end
 

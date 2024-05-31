@@ -11,7 +11,7 @@ RSpec.describe Mutations::Integrations::SyncInvoice, type: :graphql do
       query: mutation,
       variables: {
         input: {invoiceId: invoice.id}
-      },
+      }
     )
   end
 

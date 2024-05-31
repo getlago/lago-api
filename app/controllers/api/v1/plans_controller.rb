@@ -11,8 +11,8 @@ module Api
             input_params
               .merge(organization_id: current_organization.id)
               .to_h
-              .deep_symbolize_keys,
-          ).create_input,
+              .deep_symbolize_keys
+          ).create_input
         )
 
         if result.success?
@@ -28,8 +28,8 @@ module Api
           plan:,
           params: PlanLegacyInput.new(
             current_organization,
-            input_params.to_h.deep_symbolize_keys,
-          ).update_input,
+            input_params.to_h.deep_symbolize_keys
+          ).update_input
         )
 
         if result.success?
@@ -71,8 +71,8 @@ module Api
             ::V1::PlanSerializer,
             collection_name: 'plans',
             meta: pagination_metadata(plans),
-            includes: %i[charges taxes minimum_commitment],
-          ),
+            includes: %i[charges taxes minimum_commitment]
+          )
         )
       end
 
@@ -126,7 +126,7 @@ module Api
               ]
             },
             {tax_codes: []}
-          ],
+          ]
         )
       end
 
@@ -135,8 +135,8 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: 'plan',
-            includes: %i[charges taxes minimum_commitment],
-          ),
+            includes: %i[charges taxes minimum_commitment]
+          )
         )
       end
     end

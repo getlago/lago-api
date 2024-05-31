@@ -52,7 +52,7 @@ module Invoices
         customer:,
         invoice_type: :one_off,
         currency:,
-        datetime: Time.zone.at(timestamp),
+        datetime: Time.zone.at(timestamp)
       )
       invoice_result.raise_if_error!
 
@@ -76,7 +76,7 @@ module Invoices
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type
-        },
+        }
       )
     end
 

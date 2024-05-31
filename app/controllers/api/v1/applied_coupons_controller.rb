@@ -6,12 +6,12 @@ module Api
       def create
         customer = Customer.find_by(
           external_id: create_params[:external_customer_id],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         coupon = Coupon.find_by(
           code: create_params[:coupon_code],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         result = AppliedCoupons::CreateService.call(customer:, coupon:, params: create_params)
@@ -20,8 +20,8 @@ module Api
           render(
             json: ::V1::AppliedCouponSerializer.new(
               result.applied_coupon,
-              root_name: 'applied_coupon',
-            ),
+              root_name: 'applied_coupon'
+            )
           )
         else
           render_error_response(result)
@@ -33,9 +33,9 @@ module Api
           organization: current_organization,
           pagination: BaseQuery::Pagination.new(
             page: params[:page],
-            limit: params[:per_page] || PER_PAGE,
+            limit: params[:per_page] || PER_PAGE
           ),
-          filters: BaseQuery::Filters.new(index_filters),
+          filters: BaseQuery::Filters.new(index_filters)
         )
 
         if result.success?
@@ -45,8 +45,8 @@ module Api
               ::V1::AppliedCouponSerializer,
               collection_name: 'applied_coupons',
               meta: pagination_metadata(result.applied_coupons),
-              includes: %i[credits],
-            ),
+              includes: %i[credits]
+            )
           )
         else
           render_error_response(result)
@@ -63,7 +63,7 @@ module Api
           :frequency_duration,
           :amount_cents,
           :amount_currency,
-          :percentage_rate,
+          :percentage_rate
         )
       end
 

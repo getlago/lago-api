@@ -41,7 +41,7 @@ RSpec.describe Mutations::Auth::Google::RegisterUser, type: :graphql do
           code: 'code',
           organizationName: 'FooBar'
         }
-      },
+      }
     )
 
     response = result['data']['googleRegisterUser']
@@ -71,7 +71,7 @@ RSpec.describe Mutations::Auth::Google::RegisterUser, type: :graphql do
             code: 'code',
             organizationName: 'FooBar'
           }
-        },
+        }
       )
 
       response = result['errors'].first['extensions']

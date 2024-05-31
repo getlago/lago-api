@@ -12,7 +12,7 @@ RSpec.describe ::V1::BillableMetricFilterSerializer do
     aggregate_failures do
       expect(result['billable_metric_filter']).to include(
         'key' => billable_metric_filter.key,
-        'values' => billable_metric_filter.values.sort,
+        'values' => billable_metric_filter.values.sort
       )
     end
   end
