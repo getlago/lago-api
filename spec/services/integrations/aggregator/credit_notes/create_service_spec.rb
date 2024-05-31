@@ -118,9 +118,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
     )
   end
 
-  let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee: fee_sub) }
-  let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: minimum_commitment_fee) }
-  let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: charge_fee) }
+  let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: charge_fee, amount_cents: 212) }
 
   let(:headers) do
     {
@@ -149,22 +147,10 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
           'sublistId' => 'item',
           'lineItems' => [
             {
-              'item' => '3',
-              'account' => '33',
-              'quantity' => 0.0,
-              'rate' => 0.0
-            },
-            {
-              'item' => '4',
-              'account' => '44',
-              'quantity' => 0.0,
-              'rate' => 0.0
-            },
-            {
               'item' => 'm2',
               'account' => 'm22',
-              'quantity' => 2,
-              'rate' => 4.12
+              'quantity' => 1,
+              'rate' => 2.12
             },
             {
               'item' => '2',
@@ -199,8 +185,6 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
     charge_fee
 
     if credit_note
-      credit_note_item1
-      credit_note_item2
       credit_note_item3
       credit_note.reload
     end

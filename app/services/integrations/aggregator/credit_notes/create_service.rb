@@ -56,6 +56,31 @@ module Integrations
 
         delegate :customer, :invoice, to: :credit_note, allow_nil: true
 
+        def item(credit_note_item)
+          fee = credit_note_item.fee
+
+          mapped_item = if fee.charge?
+            billable_metric_item(fee)
+          elsif fee.add_on?
+            add_on_item(fee)
+          elsif fee.credit?
+            credit_item
+          elsif fee.commitment?
+            commitment_item
+          elsif fee.subscription?
+            subscription_item
+          end
+
+          return {} unless mapped_item
+
+          {
+            'item' => mapped_item.external_id,
+            'account' => mapped_item.external_account_code,
+            'quantity' => 1,
+            'rate' => amount(credit_note_item.amount_cents, resource: credit_note_item.credit_note)
+          }
+        end
+
         def coupons
           output = []
 
@@ -88,7 +113,7 @@ module Integrations
             'lines' => [
               {
                 'sublistId' => 'item',
-                'lineItems' => credit_note.items.map { |item| item(item.fee) } + coupons
+                'lineItems' => credit_note.items.map { |credit_note_item| item(credit_note_item) } + coupons
               }
             ],
             'options' => {
