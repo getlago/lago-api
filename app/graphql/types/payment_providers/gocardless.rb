@@ -6,11 +6,12 @@ module Types
       graphql_name 'GocardlessProvider'
 
       field :code, String, null: false
-      field :has_access_token, Boolean, null: false
       field :id, ID, null: false
       field :name, String, null: false
-      field :success_redirect_url, String, null: true
-      field :webhook_secret, String, null: true
+
+      field :has_access_token, Boolean, null: false, permission: 'organization:integrations:view'
+      field :success_redirect_url, String, null: true, permission: 'organization:integrations:view'
+      field :webhook_secret, String, null: true, permission: 'organization:integrations:view'
 
       # NOTE: Access token is a sensitive information. It should not be sent back to the
       #       front end application

@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
-  let(:required_permission) { 'organization:integrations:view' }
+  let(:required_permission) { 'customers:view' }
   let(:query) do
     <<~GQL
       query {
@@ -45,7 +45,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:view'
+  it_behaves_like 'requires permission', %w[customers:view organization:integrations:view]
 
   context 'when type is present' do
     let(:query) do
@@ -96,7 +96,34 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
   end
 
   context 'when type is not present' do
-    it 'returns a list of payment providers' do
+    let(:query) do
+      <<~GQL
+        query {
+          paymentProviders(limit: 5) {
+            collection {
+              ... on AdyenProvider {
+                id
+                code
+                __typename
+              }
+              ... on GocardlessProvider {
+                id
+                code
+                __typename
+              }
+              ... on StripeProvider {
+                id
+                code
+                __typename
+              }
+            }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    it 'returns a list of all payment providers' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -125,6 +152,61 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
 
         expect(payment_providers_response['metadata']['currentPage']).to eq(1)
         expect(payment_providers_response['metadata']['totalCount']).to eq(3)
+      end
+    end
+  end
+
+  context 'when requesting protected fields' do
+    let(:query) do
+      <<~GQL
+        query {
+          paymentProviders(limit: 5) {
+            collection {
+              ... on AdyenProvider {
+                livePrefix
+              }
+              ... on GocardlessProvider {
+                hasAccessToken
+              }
+              ... on StripeProvider {
+                successRedirectUrl
+              }
+            }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    context 'without organization:integrations:view permission' do
+      it 'filters out protected fields' do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+        )
+
+        expect(adyen_provider.live_prefix).to be_a String
+        expect(gocardless_provider.access_token).to be_a String
+        expect(stripe_provider.success_redirect_url).to be_a String
+
+        payment_providers_response = result['data']['paymentProviders']['collection']
+        expect(payment_providers_response.map(&:values)).to eq [[nil], [nil], [nil]]
+      end
+    end
+
+    context 'with permission' do
+      it 'filters out protected fields' do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: ['organization:integrations:view'],
+          query:,
+        )
+
+        payment_providers_response = result['data']['paymentProviders']['collection']
+        expect(payment_providers_response.map(&:values)).to eq [[adyen_provider.live_prefix], [true], [stripe_provider.success_redirect_url]]
       end
     end
   end
