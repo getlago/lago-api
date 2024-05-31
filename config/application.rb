@@ -20,7 +20,7 @@ module LagoApi
     ]
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
-    config.autoload_paths << "#{Rails.root}/app/jobs/concerns"
+    config.autoload_paths << Rails.root.join("app/jobs/concerns")
 
     # Configuration for active record encryption
     config.active_record.encryption.primary_key = ENV['ENCRYPTION_PRIMARY_KEY']

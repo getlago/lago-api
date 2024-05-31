@@ -2,7 +2,7 @@
 
 module Clock
   class RefreshWalletsOngoingBalanceJob < ApplicationJob
-    include SentryConcern
+    include SentryCronConcern
 
     queue_as 'clock'
 

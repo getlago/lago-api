@@ -20,7 +20,7 @@ module Clockwork
 
   every(5.minutes, 'schedule:activate_subscriptions') do
     Clock::ActivateSubscriptionsJob.perform_later(
-        slug: 'activate_subscriptions', cron: '*/5 * * * *'
+      slug: 'activate_subscriptions', cron: '*/5 * * * *'
     )
   end
 
@@ -32,10 +32,11 @@ module Clockwork
 
   if ENV['LAGO_MEMCACHE_SERVERS'].present? || ENV['LAGO_REDIS_CACHE_URL'].present?
     every(5.minutes, 'schedule:refresh_wallets_ongoing_balance') do
-      # NOTE: Sentry Cron monitor within activejob will need time updated if clock time changed here
-      Clock::RefreshWalletsOngoingBalanceJob.perform_later(
-        slug: 'lago_refresh_wallets_ongoing_balance', cron: '*/5 * * * *'
-      ) unless ENV['LAGO_DISABLE_WALLET_REFRESH'] == 'true'
+      unless ActiveModel::Type::Boolean.new.cast(ENV['LAGO_DISABLE_WALLET_REFRESH'])
+        Clock::RefreshWalletsOngoingBalanceJob.perform_later(
+          slug: 'lago_refresh_wallets_ongoing_balance', cron: '*/5 * * * *'
+        )
+      end
     end
   end
 
@@ -64,7 +65,9 @@ module Clockwork
   end
 
   every(1.hour, 'schedule:bill_ended_trial_subscriptions', at: '*:35') do
-    Clock::FreeTrialSubscriptionsBillerJob.perform_later
+    Clock::FreeTrialSubscriptionsBillerJob.perform_later(
+      slug: 'lago_bill_ended_trial_subscriptions', cron: '35 */1 * * *'
+    )
   end
 
   every(1.hour, 'schedule:terminate_wallets', at: '*:45') do
@@ -95,7 +98,7 @@ module Clockwork
     Clock::EventsValidationJob.perform_later(
       slug: 'lago_post_validate_events', cron: '5 */1 * * *'
     )
-  rescue StandardError e
+  rescue => e
     Sentry.capture_exception(e)
   end
 end
