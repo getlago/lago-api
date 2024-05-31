@@ -14,7 +14,7 @@ module Integrations
           organization:,
           name: args[:name],
           code: args[:code],
-          api_key: args[:api_key],
+          api_key: args[:api_key]
         )
 
         integration.save!
