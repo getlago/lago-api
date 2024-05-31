@@ -27,7 +27,6 @@ customers:
 subscriptions:
   create: true
   update: true
-  delete: true
 wallets:
   create: true
   update: true

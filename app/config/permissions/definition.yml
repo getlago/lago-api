@@ -32,7 +32,6 @@ subscriptions:
   view: true
   create:
   update:
-  delete:
 wallets:
   create:
   update:
