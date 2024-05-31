@@ -50,5 +50,6 @@ RSpec.describe Types::Invoices::Object do
   it { is_expected.to have_field(:invoice_subscriptions).of_type('[InvoiceSubscription!]') }
   it { is_expected.to have_field(:subscriptions).of_type('[Subscription!]') }
 
+  it { is_expected.to have_field(:external_integration_id).of_type('String') }
   it { is_expected.to have_field(:integration_syncable).of_type('Boolean!') }
 end

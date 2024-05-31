@@ -45,6 +45,7 @@ module Types
         description 'Check if credit note can be voided'
       end
 
+      field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
 
       def applied_taxes
