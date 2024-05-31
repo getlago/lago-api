@@ -35,7 +35,7 @@ class MigrateQuantifiedEventsToCachedAggregations < ActiveRecord::Migration[7.0]
         current_aggregation: BigDecimal(quantified_event.properties['total_aggregated_units'] || '0'),
         grouped_by: quantified_event.grouped_by,
         created_at: quantified_event.created_at,
-        updated_at: quantified_event.updated_at,
+        updated_at: quantified_event.updated_at
       )
     end
   end

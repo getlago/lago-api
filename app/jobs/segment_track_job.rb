@@ -9,7 +9,7 @@ class SegmentTrackJob < ApplicationJob
     SEGMENT_CLIENT.track(
       user_id: membership_id || 'membership/unidentifiable',
       event:,
-      properties: properties.merge(hosting_type, version),
+      properties: properties.merge(hosting_type, version)
     )
   end
 

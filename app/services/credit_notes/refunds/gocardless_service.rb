@@ -29,7 +29,7 @@ module CreditNotes
           amount_cents: gocardless_result.amount,
           amount_currency: gocardless_result.currency&.upcase,
           status: gocardless_result.status,
-          provider_refund_id: gocardless_result.id,
+          provider_refund_id: gocardless_result.id
         )
         refund.save!
 
@@ -81,7 +81,7 @@ module CreditNotes
       def client
         @client ||= GoCardlessPro::Client.new(
           access_token: gocardless_payment_provider.access_token,
-          environment: gocardless_payment_provider.environment,
+          environment: gocardless_payment_provider.environment
         )
       end
 
@@ -104,7 +104,7 @@ module CreditNotes
           },
           headers: {
             'Idempotency-Key' => credit_note.id
-          },
+          }
         )
       rescue GoCardlessPro::Error => e
         deliver_error_webhook(message: e.message, code: e.code)
@@ -123,7 +123,7 @@ module CreditNotes
           provider_error: {
             message:,
             error_code: code
-          },
+          }
         )
       end
 
@@ -150,7 +150,7 @@ module CreditNotes
             organization_id: organization.id,
             credit_note_id: credit_note.id,
             refund_status: status
-          },
+          }
         )
       end
 

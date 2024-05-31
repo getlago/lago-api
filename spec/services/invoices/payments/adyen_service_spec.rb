@@ -25,7 +25,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       customer:,
       total_amount_cents: 1000,
       currency: 'USD',
-      ready_for_payment_processing: true,
+      ready_for_payment_processing: true
     )
   end
 
@@ -96,7 +96,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
           organization:,
           customer:,
           total_amount_cents: 0,
-          currency: 'EUR',
+          currency: 'EUR'
         )
       end
 
@@ -149,7 +149,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
             provider_error: {
               message: 'There are no payment methods available for the given parameters.',
               error_code: 'validation'
-            },
+            }
           ).on_queue(:webhook)
       end
     end
@@ -184,7 +184,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
               provider_error: {
                 message: 'Invalid card number',
                 error_code: nil
-              },
+              }
             ).on_queue(:webhook)
         end
       end
@@ -204,7 +204,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
               provider_error: {
                 message: 'Invalid card number',
                 error_code: nil
-              },
+              }
             ).on_queue(:webhook)
         end
       end
@@ -240,7 +240,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
             provider_error: {
               message: 'error',
               error_code: 'code'
-            },
+            }
           )
       end
     end
@@ -272,7 +272,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         :payment,
         invoice:,
         provider_payment_id: 'ch_123456',
-        status: 'Pending',
+        status: 'Pending'
       )
     end
 
@@ -284,14 +284,14 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     it 'updates the payment and invoice payment_status' do
       result = adyen_service.update_payment_status(
         provider_payment_id: 'ch_123456',
-        status: 'Authorised',
+        status: 'Authorised'
       )
 
       expect(result).to be_success
       expect(result.payment.status).to eq('Authorised')
       expect(result.invoice.reload).to have_attributes(
         payment_status: 'succeeded',
-        ready_for_payment_processing: false,
+        ready_for_payment_processing: false
       )
     end
 
@@ -299,14 +299,14 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       it 'updates the payment and invoice status' do
         result = adyen_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: 'Refused',
+          status: 'Refused'
         )
 
         expect(result).to be_success
         expect(result.payment.status).to eq('Refused')
         expect(result.invoice.reload).to have_attributes(
           payment_status: 'failed',
-          ready_for_payment_processing: true,
+          ready_for_payment_processing: true
         )
       end
     end
@@ -317,7 +317,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       it 'does not update the status of invoice and payment' do
         result = adyen_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample,
+          status: %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample
         )
 
         expect(result).to be_success
@@ -329,7 +329,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       it 'does not update the payment_status of invoice' do
         result = adyen_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: 'foo-bar',
+          status: 'foo-bar'
         )
 
         aggregate_failures do
@@ -353,7 +353,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         result = adyen_service.update_payment_status(
           provider_payment_id: 'ch_123456',
           status: 'succeeded',
-          metadata: {lago_invoice_id: invoice.id, payment_type: 'one-time'},
+          metadata: {lago_invoice_id: invoice.id, payment_type: 'one-time'}
         )
 
         aggregate_failures do
@@ -361,7 +361,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
           expect(result.payment.status).to eq('succeeded')
           expect(result.invoice.reload).to have_attributes(
             payment_status: 'succeeded',
-            ready_for_payment_processing: false,
+            ready_for_payment_processing: false
           )
         end
       end

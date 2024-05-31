@@ -32,7 +32,7 @@ module Resolvers
         limit:,
         filters: {
           ids:
-        },
+        }
       )
 
       result.credit_notes

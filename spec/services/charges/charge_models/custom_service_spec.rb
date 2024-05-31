@@ -7,7 +7,7 @@ Rspec.describe Charges::ChargeModels::CustomService, type: :service do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties,
+      properties: charge.properties
     )
   end
 

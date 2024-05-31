@@ -23,7 +23,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       customer:,
       total_amount_cents: 200,
       currency: 'EUR',
-      ready_for_payment_processing: true,
+      ready_for_payment_processing: true
     )
   end
 
@@ -47,7 +47,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           'id' => '_ID_',
           'amount' => invoice.total_amount_cents,
           'currency' => invoice.currency,
-          'status' => 'paid_out',
+          'status' => 'paid_out'
         ))
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
@@ -99,7 +99,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           organization:,
           customer:,
           total_amount_cents: 0,
-          currency: 'EUR',
+          currency: 'EUR'
         )
       end
 
@@ -166,7 +166,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
             provider_error: {
               message: 'error',
               error_code: 'code'
-            },
+            }
           )
       end
     end
@@ -178,7 +178,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
         :payment,
         invoice:,
         provider_payment_id: 'ch_123456',
-        status: 'pending_submission',
+        status: 'pending_submission'
       )
     end
 
@@ -190,14 +190,14 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     it 'updates the payment and invoice payment_status' do
       result = gocardless_service.update_payment_status(
         provider_payment_id: 'ch_123456',
-        status: 'paid_out',
+        status: 'paid_out'
       )
 
       expect(result).to be_success
       expect(result.payment.status).to eq('paid_out')
       expect(result.invoice.reload).to have_attributes(
         payment_status: 'succeeded',
-        ready_for_payment_processing: false,
+        ready_for_payment_processing: false
       )
     end
 
@@ -205,14 +205,14 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       it 'updates the payment and invoice status' do
         result = gocardless_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: 'failed',
+          status: 'failed'
         )
 
         expect(result).to be_success
         expect(result.payment.status).to eq('failed')
         expect(result.invoice.reload).to have_attributes(
           payment_status: 'failed',
-          ready_for_payment_processing: true,
+          ready_for_payment_processing: true
         )
       end
     end
@@ -223,7 +223,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       it 'does not update the status of invoice and payment' do
         result = gocardless_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: 'paid_out',
+          status: 'paid_out'
         )
 
         expect(result).to be_success
@@ -235,7 +235,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       it 'does not update the payment_status of invoice' do
         result = gocardless_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: 'foo-bar',
+          status: 'foo-bar'
         )
 
         aggregate_failures do
@@ -253,14 +253,14 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       it 'updates the payment and invoice payment_status' do
         result = gocardless_service.update_payment_status(
           provider_payment_id: 'ch_123456',
-          status: 'paid_out',
+          status: 'paid_out'
         )
 
         expect(result).to be_success
         expect(result.payment.status).to eq('paid_out')
         expect(result.invoice.reload).to have_attributes(
           payment_status: 'succeeded',
-          ready_for_payment_processing: false,
+          ready_for_payment_processing: false
         )
       end
     end

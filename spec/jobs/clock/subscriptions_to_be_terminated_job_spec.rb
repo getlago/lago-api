@@ -82,7 +82,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
           :succeeded,
           object_id: subscription1.id,
           webhook_type: 'subscription.termination_alert',
-          created_at: Time.current + 2.months,
+          created_at: Time.current + 2.months
         )
       end
 
@@ -109,7 +109,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
           :succeeded,
           object_id: subscription1.id,
           webhook_type: 'subscription.termination_alert',
-          created_at: ending_at - 45.days,
+          created_at: ending_at - 45.days
         )
       end
 

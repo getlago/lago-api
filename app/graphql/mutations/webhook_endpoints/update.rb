@@ -19,7 +19,7 @@ module Mutations
         result = ::WebhookEndpoints::UpdateService.call(
           id: args[:id],
           organization: current_organization,
-          params: args,
+          params: args
         )
 
         result.success? ? result.webhook_endpoint : result_error(result)

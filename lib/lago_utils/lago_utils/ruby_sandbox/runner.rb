@@ -31,7 +31,7 @@ module LagoUtils
         if parsed_result.is_a?(Hash) && parsed_result['type'] == 'error'
           raise SandboxError.new(
             initial_error: parsed_result['error'],
-            backtrace: parsed_result['backtrace'],
+            backtrace: parsed_result['backtrace']
           )
         end
 

@@ -38,7 +38,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     credit_notes_response = result['data']['creditNotes']
@@ -60,7 +60,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       credit_notes_response = result['data']['creditNotes']
@@ -85,7 +85,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       credit_notes_response = result['data']['creditNotes']
@@ -108,7 +108,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       credit_notes_response = result['data']['creditNotes']

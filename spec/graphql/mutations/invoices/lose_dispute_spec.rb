@@ -33,7 +33,7 @@ RSpec.describe Mutations::Invoices::LoseDispute, type: :graphql do
         query: mutation,
         variables: {
           input: {id: invoice.id}
-        },
+        }
       )
 
       result_data = result['data']['loseInvoiceDispute']

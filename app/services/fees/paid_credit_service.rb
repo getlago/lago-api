@@ -30,7 +30,7 @@ module Fees
 
         # NOTE: No taxes should be applied on as it can be considered as an advance
         taxes_rate: 0,
-        taxes_amount_cents: 0,
+        taxes_amount_cents: 0
       )
       new_fee.precise_unit_amount = new_fee.unit_amount.to_f
       new_fee.save!

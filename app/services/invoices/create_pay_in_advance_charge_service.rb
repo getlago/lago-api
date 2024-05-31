@@ -64,7 +64,7 @@ module Invoices
         invoice_type: :subscription,
         currency: customer.currency,
         datetime: Time.zone.at(timestamp),
-        charge_in_advance: true,
+        charge_in_advance: true
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)
@@ -98,7 +98,7 @@ module Invoices
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type
-        },
+        }
       )
     end
 

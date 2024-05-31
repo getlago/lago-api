@@ -99,7 +99,7 @@ module BillableMetrics
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: grouped_by_values,
+          grouped_by: grouped_by_values
         )
 
         unless cached_aggregation

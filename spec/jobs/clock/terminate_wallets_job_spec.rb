@@ -7,7 +7,7 @@ describe Clock::TerminateWalletsJob, job: true do
     create(
       :wallet,
       status: 'active',
-      expiration_at: Time.zone.now - 40.days,
+      expiration_at: Time.zone.now - 40.days
     )
   end
 
@@ -15,7 +15,7 @@ describe Clock::TerminateWalletsJob, job: true do
     create(
       :wallet,
       status: 'active',
-      expiration_at: Time.zone.now + 40.days,
+      expiration_at: Time.zone.now + 40.days
     )
   end
 

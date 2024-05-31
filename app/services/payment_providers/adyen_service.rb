@@ -9,7 +9,7 @@ module PaymentProviders
         organization_id: args[:organization].id,
         code: args[:code],
         id: args[:id],
-        payment_provider_type: 'adyen',
+        payment_provider_type: 'adyen'
       )
 
       adyen_provider = if payment_provider_result.success?
@@ -17,7 +17,7 @@ module PaymentProviders
       else
         PaymentProviders::AdyenProvider.new(
           organization_id: args[:organization].id,
-          code: args[:code],
+          code: args[:code]
         )
       end
 
@@ -37,7 +37,7 @@ module PaymentProviders
         #       attached to the provider
         reattach_provider_customers(
           organization_id: args[:organization_id],
-          adyen_provider:,
+          adyen_provider:
         )
       end
 
@@ -54,7 +54,7 @@ module PaymentProviders
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id:,
         code:,
-        payment_provider_type: 'adyen',
+        payment_provider_type: 'adyen'
       )
 
       return payment_provider_result unless payment_provider_result.success?
@@ -77,7 +77,7 @@ module PaymentProviders
       unless WEBHOOKS_EVENTS.include?(event['eventCode'])
         return result.service_failure!(
           code: 'webhook_error',
-          message: "Invalid adyen event code: #{event["eventCode"]}",
+          message: "Invalid adyen event code: #{event["eventCode"]}"
         )
       end
 
@@ -108,7 +108,7 @@ module PaymentProviders
       when 'CHARGEBACK'
         PaymentProviders::Webhooks::Adyen::ChargebackService.call(
           organization_id: organization.id,
-          event_json:,
+          event_json:
         )
       when 'REFUND_FAILED'
         return result if event['success'] != 'true'

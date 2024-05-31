@@ -39,7 +39,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
           taxes_amount_cents: 40,
           taxes_rate: 20,
           sub_total_including_taxes_amount_cents: 240,
-          total_amount_cents: 240,
+          total_amount_cents: 240
         )
 
         expect(result.invoice.applied_taxes.count).to eq(1)
@@ -90,7 +90,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type
-        },
+        }
       )
     end
 

@@ -30,7 +30,7 @@ RSpec.describe Taxes::UpdateService, type: :service do
         name: tax.name,
         code: params[:code],
         rate: params[:rate],
-        description: params[:description],
+        description: params[:description]
       )
     end
 

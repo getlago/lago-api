@@ -81,7 +81,7 @@ RSpec.describe Subscriptions::TerminateService do
         create(
           :subscription,
           previous_subscription: subscription,
-          status: :pending,
+          status: :pending
         )
       end
 
@@ -103,7 +103,7 @@ RSpec.describe Subscriptions::TerminateService do
         Subscriptions::DatesService.new_instance(
           subscription,
           Time.current.beginning_of_month,
-          current_usage: false,
+          current_usage: false
         )
       end
       let(:invoice_subscription) do
@@ -115,7 +115,7 @@ RSpec.describe Subscriptions::TerminateService do
           from_datetime: date_service.from_datetime,
           to_datetime: date_service.to_datetime,
           charges_from_datetime: date_service.charges_from_datetime,
-          charges_to_datetime: date_service.charges_to_datetime,
+          charges_to_datetime: date_service.charges_to_datetime
         )
       end
       let(:invoice) do
@@ -126,7 +126,7 @@ RSpec.describe Subscriptions::TerminateService do
           sub_total_excluding_taxes_amount_cents: 100,
           fees_amount_cents: 100,
           taxes_amount_cents: 20,
-          total_amount_cents: 120,
+          total_amount_cents: 120
         )
       end
 
@@ -139,7 +139,7 @@ RSpec.describe Subscriptions::TerminateService do
           taxes_amount_cents: 20,
           invoiceable_type: 'Subscription',
           invoiceable_id: subscription.id,
-          taxes_rate: 20,
+          taxes_rate: 20
         )
       end
 
@@ -148,7 +148,7 @@ RSpec.describe Subscriptions::TerminateService do
         subscription.update!(
           billing_time: :anniversary,
           started_at: creation_time,
-          subscription_at: creation_time,
+          subscription_at: creation_time
         )
 
         invoice_subscription
@@ -224,7 +224,7 @@ RSpec.describe Subscriptions::TerminateService do
           :subscription,
           previous_subscription_id: subscription.id,
           plan:,
-          status: :pending,
+          status: :pending
         )
       end
 

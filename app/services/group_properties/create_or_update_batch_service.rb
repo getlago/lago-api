@@ -25,7 +25,7 @@ module GroupProperties
           charge.group_properties.create!(
             group_id: params[:group_id],
             values: params[:values],
-            invoice_display_name: params[:invoice_display_name],
+            invoice_display_name: params[:invoice_display_name]
           )
         end
       end

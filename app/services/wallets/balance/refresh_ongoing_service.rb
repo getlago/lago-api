@@ -14,7 +14,7 @@ module Wallets
             nil, # current_user
             customer_id: customer.external_id,
             subscription_id: subscription.external_id,
-            organization_id: customer.organization_id,
+            organization_id: customer.organization_id
           ).invoice.total_amount
         end
         usage_credits_amount = total_amount.to_f.fdiv(wallet.rate_amount)

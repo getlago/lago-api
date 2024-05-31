@@ -9,7 +9,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
     create(
       :subscription,
       status: :active,
-      started_at: DateTime.parse('2022-03-15'),
+      started_at: DateTime.parse('2022-03-15')
     )
   end
 
@@ -25,7 +25,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       properties: {
         amount: '20',
         amount_currency: 'EUR'
-      },
+      }
     )
   end
   let(:properties) { charge.properties }
@@ -47,7 +47,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       fee_type: :charge,
       adjusted_units: true,
       adjusted_amount: false,
-      units: 3,
+      units: 3
     )
   end
 
@@ -72,7 +72,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
         unit_amount_cents: 2_000,
         precise_unit_amount: 20,
         events_count: 0,
-        payment_status: 'pending',
+        payment_status: 'pending'
       )
     end
   end
@@ -89,7 +89,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
         adjusted_units: false,
         adjusted_amount: true,
         units: 4,
-        unit_amount_cents: 200,
+        unit_amount_cents: 200
       )
     end
 
@@ -108,7 +108,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
         unit_amount_cents: 200,
         precise_unit_amount: 2,
         events_count: 0,
-        payment_status: 'pending',
+        payment_status: 'pending'
       )
     end
   end

@@ -5,7 +5,7 @@ module Admin
     def update
       result = Admin::Organizations::UpdateService.call(
         organization:,
-        params: update_params,
+        params: update_params
       )
 
       return render_error_response(result) unless result.success?
@@ -13,8 +13,8 @@ module Admin
       render(
         json: ::V1::OrganizationSerializer.new(
           result.organization,
-          root_name: 'organization',
-        ),
+          root_name: 'organization'
+        )
       )
     end
 

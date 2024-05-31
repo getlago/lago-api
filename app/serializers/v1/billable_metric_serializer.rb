@@ -46,7 +46,7 @@ module V1
       ::CollectionSerializer.new(
         model.filters,
         ::V1::BillableMetricFilterSerializer,
-        collection_name: 'filters',
+        collection_name: 'filters'
       ).serialize
     end
 

@@ -19,7 +19,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
       result = create_service.create_or_update(
         customer_class: PaymentProviderCustomers::StripeCustomer,
         payment_provider_id: stripe_provider.id,
-        params: create_params,
+        params: create_params
       )
 
       expect(result).to be_success
@@ -32,7 +32,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
         create_service.create_or_update(
           customer_class: PaymentProviderCustomers::StripeCustomer,
           payment_provider_id: stripe_provider.id,
-          params: create_params,
+          params: create_params
         )
       end
 
@@ -42,7 +42,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
             :stripe_customer,
             customer:,
             payment_provider: stripe_provider,
-            provider_payment_methods: %w[sepa_debit],
+            provider_payment_methods: %w[sepa_debit]
           )
         end
 
@@ -100,7 +100,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
           create_service.create_or_update(
             customer_class: PaymentProviderCustomers::StripeCustomer,
             payment_provider_id: stripe_provider.id,
-            params: create_params,
+            params: create_params
           )
         end.to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
       end
@@ -114,7 +114,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
       let(:gocardless_provider) do
         create(
           :gocardless_provider,
-          organization: customer.organization,
+          organization: customer.organization
         )
       end
 
@@ -123,7 +123,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
           create_service.create_or_update(
             customer_class: PaymentProviderCustomers::GocardlessCustomer,
             payment_provider_id: gocardless_provider.id,
-            params: create_params,
+            params: create_params
           )
         end.to have_enqueued_job(PaymentProviderCustomers::GocardlessCreateJob)
       end
@@ -138,7 +138,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
         create(
           :stripe_customer,
           customer:,
-          payment_provider: stripe_provider,
+          payment_provider: stripe_provider
         )
       end
 
@@ -149,7 +149,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
           result = create_service.create_or_update(
             customer_class: PaymentProviderCustomers::StripeCustomer,
             payment_provider_id: stripe_provider.id,
-            params: create_params,
+            params: create_params
           )
 
           aggregate_failures do
@@ -166,7 +166,7 @@ RSpec.describe PaymentProviderCustomers::CreateService, type: :service do
         create_service.create_or_update(
           customer_class:,
           payment_provider_id: provider.id,
-          params: create_params,
+          params: create_params
         )
       end
 

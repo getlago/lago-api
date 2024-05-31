@@ -18,7 +18,7 @@ module CustomerTimezone
 
   def respond_to_missing?(method_name, include_private = false)
     method_name.to_s.end_with?(CUSTOMER_SUFFIX) && respond_to?(
-      method_name.to_s.gsub(CUSTOMER_SUFFIX, ''),
+      method_name.to_s.gsub(CUSTOMER_SUFFIX, '')
     ) || super
   end
 

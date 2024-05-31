@@ -21,7 +21,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       :subscription,
       plan:,
       customer:,
-      started_at: Time.zone.now - 2.years,
+      started_at: Time.zone.now - 2.years
     )
   end
 
@@ -34,7 +34,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       :standard_charge,
       plan:,
       billable_metric:,
-      properties: {amount: '12.66'},
+      properties: {amount: '12.66'}
     )
   end
 
@@ -46,7 +46,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       subscription:,
       customer:,
       code: billable_metric.code,
-      timestamp:,
+      timestamp:
     )
   end
 
@@ -86,7 +86,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
           currency: 'EUR',
           amount_cents: 2532, # 1266 * 2,
           taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
-          total_amount_cents: 3038,
+          total_amount_cents: 3038
         )
         expect(result.usage.fees.size).to eq(1)
         expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
@@ -121,7 +121,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
           customer:,
           subscription_at:,
           started_at:,
-          billing_time: :anniversary,
+          billing_time: :anniversary
         )
       end
 
@@ -138,7 +138,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
               currency: 'EUR',
               amount_cents: 2532, # 1266 * 2,
               taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
-              total_amount_cents: 3038,
+              total_amount_cents: 3038
             )
 
             expect(result.usage.from_datetime.to_date.to_s).to eq('2022-06-07')

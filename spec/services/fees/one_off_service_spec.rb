@@ -54,7 +54,7 @@ RSpec.describe Fees::OneOffService do
           amount_cents: 2400,
           amount_currency: 'EUR',
           fee_type: 'add_on',
-          payment_status: 'pending',
+          payment_status: 'pending'
         )
         expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
 
@@ -69,7 +69,7 @@ RSpec.describe Fees::OneOffService do
           amount_cents: 400,
           amount_currency: 'EUR',
           fee_type: 'add_on',
-          payment_status: 'pending',
+          payment_status: 'pending'
         )
         expect(second_fee.taxes.map(&:code)).to contain_exactly(tax.code)
       end
@@ -129,7 +129,7 @@ RSpec.describe Fees::OneOffService do
             amount_cents: 2400,
             amount_currency: 'EUR',
             fee_type: 'add_on',
-            payment_status: 'pending',
+            payment_status: 'pending'
           )
           expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
         end

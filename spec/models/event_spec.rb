@@ -18,7 +18,7 @@ RSpec.describe Event, type: :model do
         organization:,
         external_customer_id:,
         external_subscription_id:,
-        timestamp:,
+        timestamp:
       )
     end
 
@@ -65,7 +65,7 @@ RSpec.describe Event, type: :model do
         organization:,
         external_customer_id:,
         external_subscription_id:,
-        timestamp:,
+        timestamp:
       )
     end
 
@@ -108,7 +108,7 @@ RSpec.describe Event, type: :model do
             customer:,
             organization:,
             started_at: 1.day.ago,
-            external_id: subscription.external_id,
+            external_id: subscription.external_id
           )
         end
 
@@ -130,7 +130,7 @@ RSpec.describe Event, type: :model do
             customer:,
             external_id: external_subscription_id,
             started_at: 1.month.ago,
-            terminated_at: timestamp - 1.day,
+            terminated_at: timestamp - 1.day
           )
         end
 

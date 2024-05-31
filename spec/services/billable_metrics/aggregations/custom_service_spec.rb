@@ -12,7 +12,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         from_datetime:,
         to_datetime:
       },
-      filters:,
+      filters:
     )
   end
 
@@ -103,7 +103,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 4.days,
-        properties: {value: 1, storage_zone: 'storage_eu'},
+        properties: {value: 1, storage_zone: 'storage_eu'}
       ),
       create(
         :event,
@@ -112,7 +112,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 3.days,
-        properties: {value: 10, storage_zone: 'storage_asia'},
+        properties: {value: 10, storage_zone: 'storage_asia'}
       ),
       create(
         :event,
@@ -121,7 +121,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 2.days,
-        properties: {value: 35, storage_zone: 'storage_us'},
+        properties: {value: 35, storage_zone: 'storage_us'}
       )
     ]
   end
@@ -164,7 +164,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           subscription:,
           customer:,
           timestamp: Time.zone.now - 4.days,
-          properties: {value: 11, storage_zone: 'storage_eu'},
+          properties: {value: 11, storage_zone: 'storage_eu'}
         )
       ]
     end
@@ -195,7 +195,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           timestamp: Time.zone.now - 4.days,
           current_aggregation: 11.0,
           max_aggregation: 11.0,
-          current_amount: 0.1,
+          current_amount: 0.1
         )
       end
 
@@ -233,7 +233,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
             agent_name:,
             value: 11,
             storage_zone: 'storage_eu'
-          },
+          }
         )
       end + [
         create(
@@ -243,7 +243,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           customer:,
           subscription:,
           timestamp: Time.zone.now - 2.days,
-          properties: {value: 11, storage_zone: 'storage_eu'},
+          properties: {value: 11, storage_zone: 'storage_eu'}
         )
       ]
     end
@@ -286,7 +286,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           timestamp: from_datetime - 1.day,
           current_aggregation: 11.0,
           max_aggregation: 11.0,
-          current_amount: 0.1,
+          current_amount: 0.1
         )
       end
 

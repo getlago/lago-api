@@ -71,7 +71,7 @@ RSpec.describe Invoices::CreateService, type: :service do
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type
-        },
+        }
       )
     end
 

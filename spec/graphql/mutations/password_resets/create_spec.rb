@@ -23,7 +23,7 @@ RSpec.describe Mutations::PasswordResets::Create, type: :graphql do
         input: {
           email:
         }
-      },
+      }
     )
 
     data = result['data']['createPasswordReset']

@@ -20,7 +20,7 @@ module Invoices
           tax_code: tax.code,
           tax_name: tax.name,
           tax_rate: tax.rate,
-          amount_currency: invoice.currency,
+          amount_currency: invoice.currency
         )
         invoice.applied_taxes << applied_tax
 

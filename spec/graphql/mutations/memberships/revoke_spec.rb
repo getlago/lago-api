@@ -31,7 +31,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
       query: mutation,
       variables: {
         input: {id: membership.id}
-      },
+      }
     )
 
     data = result['data']['revokeMembership']
@@ -47,7 +47,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
       query: mutation,
       variables: {
         input: {id: membership.id}
-      },
+      }
     )
 
     aggregate_failures do
@@ -68,7 +68,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
       query: mutation,
       variables: {
         input: {id: membership.id}
-      },
+      }
     )
 
     aggregate_failures do

@@ -40,7 +40,7 @@ module Invoices
           amount_cents: invoice.total_amount_cents,
           amount_currency: invoice.currency.upcase,
           provider_payment_id: res.response['pspReference'],
-          status: res.response['resultCode'],
+          status: res.response['resultCode']
         )
         payment.save!
 
@@ -108,7 +108,7 @@ module Invoices
           payment_provider_customer_id: customer.adyen_customer.id,
           amount_cents: invoice.total_amount_cents,
           amount_currency: invoice.currency.upcase,
-          provider_payment_id:,
+          provider_payment_id:
         )
       end
 
@@ -123,7 +123,7 @@ module Invoices
         @client ||= Adyen::Client.new(
           api_key: adyen_payment_provider.api_key,
           env: adyen_payment_provider.environment,
-          live_url_prefix: adyen_payment_provider.live_prefix,
+          live_url_prefix: adyen_payment_provider.live_prefix
         )
       end
 
@@ -137,7 +137,7 @@ module Invoices
 
       def update_payment_method_id
         result = client.checkout.payments_api.payment_methods(
-          Lago::Adyen::Params.new(payment_method_params).to_h,
+          Lago::Adyen::Params.new(payment_method_params).to_h
         ).response
 
         payment_method_id = result['storedPaymentMethods']&.first&.dig('id')
@@ -225,7 +225,7 @@ module Invoices
             payment_status:,
             ready_for_payment_processing: payment_status.to_sym != :succeeded
           },
-          webhook_notification: deliver_webhook,
+          webhook_notification: deliver_webhook
         )
         result.raise_if_error!
       end
@@ -244,7 +244,7 @@ module Invoices
           provider_error: {
             message: adyen_error.msg,
             error_code: adyen_error.code
-          },
+          }
         )
       end
     end

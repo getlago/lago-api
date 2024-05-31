@@ -30,7 +30,7 @@ module BillableMetricFilters
               filter_values = filter.filter_values
                 .where(
                   deleted_values.map { '? = ANY(values)' }.join(' OR '),
-                  *deleted_values,
+                  *deleted_values
                 )
 
               filter_values.each { discard_filter_value(_1) }
@@ -96,7 +96,7 @@ module BillableMetricFilters
         charges_missing_group(group_values).each do |charge|
           filter = charge.filters.create!(
             invoice_display_name: nil,
-            properties: charge[:properties],
+            properties: charge[:properties]
           )
 
           group_values.each do |key, filter_values|
@@ -104,7 +104,7 @@ module BillableMetricFilters
 
             filter.values.create!(
               billable_metric_filter_id: billable_metric_filter&.id,
-              values: filter_values,
+              values: filter_values
             )
           end
         end

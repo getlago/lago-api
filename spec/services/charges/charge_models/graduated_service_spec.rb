@@ -7,7 +7,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties,
+      properties: charge.properties
     )
   end
 
@@ -41,7 +41,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
             flat_amount: '3'
           }
         ]
-      },
+      }
     )
   end
 
@@ -64,7 +64,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '0.0'
             }
           ]
-        },
+        }
       )
     end
   end
@@ -88,7 +88,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '1.0'
             }
           ]
-        },
+        }
       )
     end
   end
@@ -112,7 +112,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '10.0'
             }
           ]
-        },
+        }
       )
     end
   end
@@ -145,7 +145,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '1.0'
             }
           ]
-        },
+        }
       )
     end
   end
@@ -178,7 +178,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '2.0'
             }
           ]
-        },
+        }
       )
     end
   end
@@ -220,7 +220,7 @@ RSpec.describe Charges::ChargeModels::GraduatedService, type: :service do
               units: '1.0'
             }
           ]
-        },
+        }
       )
     end
   end

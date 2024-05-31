@@ -82,7 +82,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       coupons_amount_cents: 2000,
       prepaid_credit_amount_cents: 4000,
       credit_notes_amount_cents: 6000,
-      taxes_amount_cents: 8000,
+      taxes_amount_cents: 8000
     )
   end
   let(:credit_note) do
@@ -93,19 +93,19 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       status: 'finalized',
       organization:,
       coupons_adjustment_amount_cents: 2000,
-      taxes_amount_cents: 8000,
+      taxes_amount_cents: 8000
     )
   end
   let(:fee_sub) do
     create(
       :fee,
-      invoice:,
+      invoice:
     )
   end
   let(:minimum_commitment_fee) do
     create(
       :minimum_commitment_fee,
-      invoice:,
+      invoice:
     )
   end
   let(:charge_fee) do
@@ -114,7 +114,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       invoice:,
       charge:,
       units: 2,
-      precise_unit_amount: 4.12,
+      precise_unit_amount: 4.12
     )
   end
 

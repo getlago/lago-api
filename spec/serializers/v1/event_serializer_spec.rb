@@ -12,7 +12,7 @@ RSpec.describe ::V1::EventSerializer do
       subscription_id: nil,
       properties: {
         item_value: '12'
-      },
+      }
     )
   end
 
@@ -30,7 +30,7 @@ RSpec.describe ::V1::EventSerializer do
         'properties' => event.properties,
         'lago_subscription_id' => event.subscription_id,
         'external_subscription_id' => event.external_subscription_id,
-        'created_at' => event.created_at.iso8601,
+        'created_at' => event.created_at.iso8601
       )
     end
   end

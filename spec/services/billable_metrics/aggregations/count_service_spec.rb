@@ -12,7 +12,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         from_datetime:,
         to_datetime:
       },
-      filters:,
+      filters:
     )
   end
 
@@ -32,14 +32,14 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
     create(
       :billable_metric,
       organization:,
-      aggregation_type: 'count_agg',
+      aggregation_type: 'count_agg'
     )
   end
 
   let(:charge) do
     create(
       :standard_charge,
-      billable_metric:,
+      billable_metric:
     )
   end
 
@@ -56,7 +56,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
       code: billable_metric.code,
       subscription:,
       customer:,
-      timestamp: Time.zone.now - 1.day,
+      timestamp: Time.zone.now - 1.day
     )
   end
 
@@ -96,7 +96,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
             total_count: 12,
             cloud: 'AWS',
             region: 'europe'
-          },
+          }
         ),
 
         create(
@@ -110,7 +110,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
             total_count: 8,
             cloud: 'AWS',
             region: 'europe'
-          },
+          }
         ),
 
         create(
@@ -124,7 +124,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
             total_count: 12,
             cloud: 'AWS',
             region: 'africa'
-          },
+          }
         )
       ]
     end
@@ -169,7 +169,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
           timestamp: Time.zone.now - 1.day,
           properties: {
             agent_name:
-          },
+          }
         )
       end + [
         create(
@@ -179,7 +179,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
           customer:,
           subscription:,
           timestamp: Time.zone.now - 1.day,
-          properties: {},
+          properties: {}
         )
       ]
     end

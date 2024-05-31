@@ -12,7 +12,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
     let(:stripe_webhook) do
       ::Stripe::WebhookEndpoint.construct_from(
         id: 'we_123456',
-        secret: 'whsec_123456',
+        secret: 'whsec_123456'
       )
     end
 
@@ -56,7 +56,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
               action: 'payment_provider.register_webhook',
               message: 'This API call cannot be made with a publishable API key. Please use a secret API key. You can find a list of your API keys at https://dashboard.stripe.com/account/apikeys.',
               code: nil
-            },
+            }
           )
       end
     end

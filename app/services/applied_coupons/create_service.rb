@@ -26,14 +26,14 @@ module AppliedCoupons
         percentage_rate: params[:percentage_rate] || coupon.percentage_rate,
         frequency: params[:frequency] || coupon.frequency,
         frequency_duration: params[:frequency_duration] || coupon.frequency_duration,
-        frequency_duration_remaining: params[:frequency_duration] || coupon.frequency_duration,
+        frequency_duration_remaining: params[:frequency_duration] || coupon.frequency_duration
       )
 
       if coupon.fixed_amount?
         ActiveRecord::Base.transaction do
           currency_result = Customers::UpdateService.new(nil).update_currency(
             customer:,
-            currency: params[:amount_currency] || coupon.amount_currency,
+            currency: params[:amount_currency] || coupon.amount_currency
           )
           return currency_result unless currency_result.success?
 
@@ -108,7 +108,7 @@ module AppliedCoupons
           coupon_code: applied_coupon.coupon.code,
           coupon_name: applied_coupon.coupon.name,
           organization_id: applied_coupon.coupon.organization_id
-        },
+        }
       )
     end
   end

@@ -67,7 +67,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
             documentLocale: 'fr'
           }
         }
-      },
+      }
     )
 
     result_data = result['data']['updateOrganization']
@@ -109,7 +109,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
             taxIdentificationNumber: 'tax007',
             emailSettings: ['invoice_finalized']
           }
-        },
+        }
       )
 
       result_data = result['data']['updateOrganization']
@@ -142,7 +142,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
             },
             emailSettings: ['invoice_finalized']
           }
-        },
+        }
       )
 
       result_data = result['data']['updateOrganization']
@@ -171,7 +171,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
                 invoiceGracePeriod: 3
               }
             }
-          },
+          }
         )
 
         result_data = result['data']['updateOrganization']

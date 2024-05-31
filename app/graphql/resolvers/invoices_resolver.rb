@@ -38,7 +38,7 @@ module Resolvers
         status:,
         filters: {
           ids:
-        },
+        }
       )
 
       result.invoices

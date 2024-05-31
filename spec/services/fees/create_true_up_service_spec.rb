@@ -23,7 +23,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
         'to_datetime' => DateTime.parse('2023-08-31 23:59:59'),
         'charges_from_datetime' => DateTime.parse('2023-08-01 00:00:00'),
         'charges_to_datetime' => DateTime.parse('2023-08-31 23:59:59')
-      },
+      }
     )
   end
   let(:amount_cents) { 700 }
@@ -70,7 +70,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             amount_cents: 300,
             unit_amount_cents: 300,
             precise_unit_amount: 3,
-            true_up_parent_fee_id: fee.id,
+            true_up_parent_fee_id: fee.id
           )
         end
       end
@@ -88,7 +88,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             'to_datetime' => DateTime.parse('2022-08-15 23:59:59'),
             'charges_from_datetime' => DateTime.parse('2022-08-01 00:00:00'),
             'charges_to_datetime' => DateTime.parse('2022-08-15 23:59:59')
-          },
+          }
         )
       end
 
@@ -100,7 +100,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             expect(result).to be_success
 
             expect(result.true_up_fee).to have_attributes(
-              amount_cents: 283, # (1000 / 31.0 * 15) - 200
+              amount_cents: 283 # (1000 / 31.0 * 15) - 200
             )
           end
         end
@@ -131,7 +131,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
               amount_cents: 300,
               unit_amount_cents: 300,
               precise_unit_amount: 3,
-              true_up_parent_fee_id: fee.id,
+              true_up_parent_fee_id: fee.id
             )
           end
         end

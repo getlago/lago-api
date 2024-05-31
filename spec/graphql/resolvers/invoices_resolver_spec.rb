@@ -40,7 +40,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     invoices_response = result['data']['invoices']
@@ -73,7 +73,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       invoices_response = result['data']['invoices']
@@ -110,7 +110,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       invoices_response = result['data']['invoices']
@@ -131,7 +131,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
         :invoice,
         customer: customer_second,
         status: :draft,
-        organization:,
+        organization:
       )
     end
 
@@ -141,7 +141,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
         :dispute_lost,
         customer: customer_second,
         status: :finalized,
-        organization:,
+        organization:
       )
     end
 
@@ -166,7 +166,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       invoices_response = result['data']['invoices']

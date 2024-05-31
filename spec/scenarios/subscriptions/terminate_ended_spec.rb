@@ -14,7 +14,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
       organization:,
       interval: 'monthly',
       amount_cents: 1000,
-      pay_in_advance: false,
+      pay_in_advance: false
     )
   end
 
@@ -35,7 +35,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601,
             ending_at: ending_at.iso8601
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -77,7 +77,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601,
             ending_at: ending_at.iso8601
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -116,7 +116,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601,
             ending_at: ending_at.iso8601
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -155,7 +155,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601,
             ending_at: ending_at.iso8601
-          },
+          }
         )
 
         subscription = customer.subscriptions.first
@@ -185,7 +185,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
           organization:,
           interval: 'monthly',
           amount_cents: 1000,
-          pay_in_advance: true,
+          pay_in_advance: true
         )
       end
 
@@ -201,7 +201,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               billing_time: 'anniversary',
               subscription_at: subscription_at.iso8601,
               ending_at: ending_at.iso8601
-            },
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -239,7 +239,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               billing_time: 'anniversary',
               subscription_at: subscription_at.iso8601,
               ending_at: nil
-            },
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -281,7 +281,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               billing_time: 'anniversary',
               subscription_at: subscription_at.iso8601,
               ending_at: ending_at.iso8601
-            },
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -320,7 +320,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               billing_time: 'anniversary',
               subscription_at: subscription_at.iso8601,
               ending_at: ending_at.iso8601
-            },
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -361,7 +361,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
               billing_time: 'calendar',
               subscription_at: subscription_at.iso8601,
               ending_at: ending_at.iso8601
-            },
+            }
           )
 
           subscription = customer.subscriptions.first
@@ -391,7 +391,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
             organization:,
             interval: 'monthly',
             amount_cents: 1000,
-            pay_in_advance: true,
+            pay_in_advance: true
           )
         end
 
@@ -407,7 +407,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 billing_time: 'calendar',
                 subscription_at: subscription_at.iso8601,
                 ending_at: ending_at.iso8601
-              },
+              }
             )
 
             subscription = customer.subscriptions.first
@@ -450,7 +450,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 billing_time: 'calendar',
                 subscription_at: subscription_at.iso8601,
                 ending_at: ending_at.iso8601
-              },
+              }
             )
 
             subscription = customer.subscriptions.first
@@ -501,7 +501,7 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
                 billing_time: 'calendar',
                 subscription_at: subscription_at.iso8601,
                 ending_at: nil
-              },
+              }
             )
 
             subscription = customer.subscriptions.first

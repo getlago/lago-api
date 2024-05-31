@@ -47,13 +47,13 @@ RSpec.describe ::V1::InvoiceSerializer do
         'credit_amount_cents' => invoice.credits.sum(:amount_cents),
         'vat_amount_cents' => invoice.taxes_amount_cents,
         'sub_total_vat_excluded_amount_cents' => invoice.sub_total_excluding_taxes_amount_cents,
-        'sub_total_vat_included_amount_cents' => invoice.sub_total_including_taxes_amount_cents,
+        'sub_total_vat_included_amount_cents' => invoice.sub_total_including_taxes_amount_cents
       )
 
       expect(result['invoice']['metadata'].first).to include(
         'lago_id' => metadata.id,
         'key' => metadata.key,
-        'value' => metadata.value,
+        'value' => metadata.value
       )
     end
   end

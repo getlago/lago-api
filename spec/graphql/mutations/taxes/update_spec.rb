@@ -31,7 +31,7 @@ RSpec.describe Mutations::Taxes::Update, type: :graphql do
       current_user: membership.user,
       current_organization: membership.organization,
       query: mutation,
-      variables: {input:},
+      variables: {input:}
     )
 
     expect(result['data']['updateTax']).to include(
@@ -40,7 +40,7 @@ RSpec.describe Mutations::Taxes::Update, type: :graphql do
       'code' => 'updated-tax-code',
       'description' => 'Updated tax description',
       'rate' => 30.0,
-      'appliedToOrganization' => false,
+      'appliedToOrganization' => false
     )
   end
 end

@@ -53,7 +53,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
       it 'returns the customer' do
         get_with_token(
           organization,
-          "/api/v1/webhook_endpoints/#{webhook_endpoint.id}",
+          "/api/v1/webhook_endpoints/#{webhook_endpoint.id}"
         )
 
         aggregate_failures do
@@ -122,7 +122,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/webhook_endpoints/#{webhook_endpoint.id}",
-          {webhook_endpoint: update_params},
+          {webhook_endpoint: update_params}
         )
 
         aggregate_failures do
@@ -139,7 +139,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
         put_with_token(
           organization,
           '/api/v1/webhook_endpoints/12345',
-          {webhook_endpoint: update_params},
+          {webhook_endpoint: update_params}
         )
 
         expect(response).to have_http_status(:not_found)

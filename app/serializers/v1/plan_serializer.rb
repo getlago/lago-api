@@ -36,7 +36,7 @@ module V1
         model.charges,
         ::V1::ChargeSerializer,
         collection_name: 'charges',
-        includes: include?(:taxes) ? %i[taxes] : [],
+        includes: include?(:taxes) ? %i[taxes] : []
       ).serialize
     end
 
@@ -44,7 +44,7 @@ module V1
       {
         minimum_commitment: V1::CommitmentSerializer.new(
           model.minimum_commitment,
-          includes: include?(:taxes) ? %i[taxes] : [],
+          includes: include?(:taxes) ? %i[taxes] : []
         ).serialize.except(:commitment_type)
       }
     end
@@ -53,7 +53,7 @@ module V1
       ::CollectionSerializer.new(
         model.taxes,
         ::V1::TaxSerializer,
-        collection_name: 'taxes',
+        collection_name: 'taxes'
       ).serialize
     end
   end

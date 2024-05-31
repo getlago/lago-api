@@ -15,7 +15,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       filters: {
         matching_filters:,
         ignored_filters:
-      },
+      }
     )
   end
 
@@ -26,7 +26,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       :subscription,
       started_at:,
       subscription_at:,
-      billing_time: :anniversary,
+      billing_time: :anniversary
     )
   end
 
@@ -43,14 +43,14 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       organization:,
       aggregation_type: 'sum_agg',
       field_name: 'total_count',
-      recurring: true,
+      recurring: true
     )
   end
 
   let(:charge) do
     create(
       :standard_charge,
-      billable_metric:,
+      billable_metric:
     )
   end
 
@@ -68,7 +68,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       timestamp: subscription.started_at + 3.months,
       properties: {
         total_count: 2.5
-      },
+      }
     )
   end
   let(:latest_events) do
@@ -81,7 +81,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       timestamp: from_datetime + 25.days,
       properties: {
         total_count: 12
-      },
+      }
     )
   end
 
@@ -123,7 +123,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
             subscription_at:,
             billing_time: :anniversary,
             terminated_at: to_datetime,
-            status: :terminated,
+            status: :terminated
           )
         end
         let(:to_datetime) { DateTime.parse('2023-05-30 23:59:59') }

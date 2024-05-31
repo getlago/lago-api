@@ -13,7 +13,7 @@ RSpec.describe ::V1::ChargeFilterSerializer do
       :charge_filter_value,
       charge_filter:,
       billable_metric_filter: filter,
-      values: [filter.values.first],
+      values: [filter.values.first]
     )
   end
 
@@ -28,7 +28,7 @@ RSpec.describe ::V1::ChargeFilterSerializer do
       expect(result['filter']['values']).to eq(
         {
           filter.key => filter_value.values
-        },
+        }
       )
     end
   end

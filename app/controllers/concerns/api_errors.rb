@@ -9,7 +9,7 @@ module ApiErrors
         status: 400,
         error: "BadRequest: #{error.message}"
       },
-      status: :bad_request,
+      status: :bad_request
     )
   end
 
@@ -19,7 +19,7 @@ module ApiErrors
         status: 401,
         error: message
       },
-      status: :unauthorized,
+      status: :unauthorized
     )
   end
 
@@ -31,7 +31,7 @@ module ApiErrors
         code: 'validation_errors',
         error_details: errors
       },
-      status: :unprocessable_entity,
+      status: :unprocessable_entity
     )
   end
 
@@ -42,7 +42,7 @@ module ApiErrors
         error: 'Forbidden',
         code:
       },
-      status: :forbidden,
+      status: :forbidden
     )
   end
 
@@ -53,7 +53,7 @@ module ApiErrors
         error: 'Method Not Allowed',
         code:
       },
-      status: :method_not_allowed,
+      status: :method_not_allowed
     )
   end
 

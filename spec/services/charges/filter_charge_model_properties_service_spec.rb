@@ -75,7 +75,7 @@ RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
           'free_units_per_events',
           'free_units_per_total_aggregation',
           'per_transaction_max_amount',
-          'per_transaction_min_amount',
+          'per_transaction_min_amount'
         )
       end
     end

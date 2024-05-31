@@ -27,7 +27,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
           'billing_time' => subscription.billing_time,
           'created_at' => subscription.created_at.iso8601,
           'ending_at' => subscription.ending_at.iso8601,
-          'trial_ended_at' => nil,
+          'trial_ended_at' => nil
         )
 
         expect(result['subscription']['customer']['lago_id']).to be_present
@@ -41,10 +41,10 @@ RSpec.describe ::V1::SubscriptionSerializer do
           'interval' => commitment.plan.interval,
           'created_at' => commitment.created_at.iso8601,
           'updated_at' => commitment.updated_at.iso8601,
-          'taxes' => [],
+          'taxes' => []
         )
         expect(result['subscription']['plan']['minimum_commitment']).not_to include(
-          'commitment_type' => 'minimum_commitment',
+          'commitment_type' => 'minimum_commitment'
         )
       end
     end
@@ -65,7 +65,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
           'status' => subscription.status,
           'billing_time' => subscription.billing_time,
           'created_at' => subscription.created_at.iso8601,
-          'ending_at' => subscription.ending_at.iso8601,
+          'ending_at' => subscription.ending_at.iso8601
         )
 
         expect(result['subscription']['customer']['lago_id']).to be_present

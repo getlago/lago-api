@@ -25,7 +25,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
             organization_id: organization.id,
             name: 'Tax',
             rate: organization.vat_rate,
-            applied_to_organization: true,
+            applied_to_organization: true
           ).find_or_create_by!(code: "tax_#{organization.vat_rate}")
         end
 
@@ -33,15 +33,15 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
         Customer.where.not(vat_rate: nil).find_each do |customer|
           tax = Tax.create_with(
             name: 'Tax',
-            rate: customer.vat_rate,
+            rate: customer.vat_rate
           ).find_or_create_by!(
             organization_id: customer.organization_id,
-            code: "tax_#{customer.vat_rate}",
+            code: "tax_#{customer.vat_rate}"
           )
 
           CustomersTax.find_or_create_by!(
             customer_id: customer.id,
-            tax_id: tax.id,
+            tax_id: tax.id
           )
         end
 
@@ -83,10 +83,10 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
           taxes.each do |tax_rate, rows|
             tax = Tax.create_with(
               name: 'Tax',
-              rate: tax_rate,
+              rate: tax_rate
             ).find_or_create_by!(
               organization_id:,
-              code: "tax_#{tax_rate}",
+              code: "tax_#{tax_rate}"
             )
 
             rows.each do |row|
@@ -98,7 +98,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
                 tax_name: tax.name,
                 tax_rate: tax.rate,
                 amount_currency: row['currency'],
-                amount_cents: row['taxes_amount_cents'],
+                amount_cents: row['taxes_amount_cents']
               )
             end
           end
@@ -138,10 +138,10 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
           taxes.each do |tax_rate, rows|
             tax = Tax.create_with(
               name: 'Tax',
-              rate: tax_rate,
+              rate: tax_rate
             ).find_or_create_by!(
               organization_id:,
-              code: "tax_#{tax_rate}",
+              code: "tax_#{tax_rate}"
             )
 
             rows.each do |row|
@@ -153,7 +153,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
                 tax_name: tax.name,
                 tax_rate: tax.rate,
                 amount_currency: row['currency'],
-                amount_cents: row['taxes_amount_cents'],
+                amount_cents: row['taxes_amount_cents']
               )
             end
           end
@@ -194,10 +194,10 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
           taxes.each do |tax_rate, rows|
             tax = Tax.create_with(
               name: 'Tax',
-              rate: tax_rate,
+              rate: tax_rate
             ).find_or_create_by!(
               organization_id:,
-              code: "tax_#{tax_rate}",
+              code: "tax_#{tax_rate}"
             )
 
             rows.each do |row|
@@ -209,7 +209,7 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
                 tax_name: tax.name,
                 tax_rate: tax.rate,
                 amount_currency: row['currency'],
-                amount_cents: row['taxes_amount_cents'],
+                amount_cents: row['taxes_amount_cents']
               )
             end
           end

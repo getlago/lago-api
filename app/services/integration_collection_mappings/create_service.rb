@@ -9,7 +9,7 @@ module IntegrationCollectionMappings
 
       integration_collection_mapping = IntegrationCollectionMappings::Factory.new_instance(integration:).new(
         integration_id: args[:integration_id],
-        mapping_type: args[:mapping_type],
+        mapping_type: args[:mapping_type]
       )
 
       integration_collection_mapping.external_id = args[:external_id] if args.key?(:external_id)

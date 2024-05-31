@@ -18,7 +18,7 @@ module BillableMetrics
       aggregator_class(charge, current_usage).new(
         event_store_class: event_store,
         charge:,
-        **attributes,
+        **attributes
       )
     end
 

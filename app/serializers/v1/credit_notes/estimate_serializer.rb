@@ -33,7 +33,7 @@ module V1
       def applied_taxes
         collection = ::CollectionSerializer.new(
           model.applied_taxes,
-          ::V1::CreditNotes::AppliedTaxSerializer,
+          ::V1::CreditNotes::AppliedTaxSerializer
         ).serialize[:data]
 
         {

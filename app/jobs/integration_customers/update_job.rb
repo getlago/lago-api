@@ -10,7 +10,7 @@ module IntegrationCustomers
       result = IntegrationCustomers::UpdateService.call(
         params: integration_customer_params,
         integration:,
-        integration_customer:,
+        integration_customer:
       )
       result.raise_if_error!
     end

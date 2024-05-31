@@ -18,7 +18,7 @@ RSpec.describe TaxesQuery, type: :query do
       organization:,
       name: 'presuv',
       code: '33',
-      applied_to_organization: false,
+      applied_to_organization: false
     )
   end
 
@@ -29,7 +29,7 @@ RSpec.describe TaxesQuery, type: :query do
       name: 'auto_generated',
       code: 'auto_generated',
       rate: 0.0,
-      auto_generated: true,
+      auto_generated: true
     )
   end
 
@@ -60,7 +60,7 @@ RSpec.describe TaxesQuery, type: :query do
         search_term: 'de',
         page: 1,
         limit: 10,
-        filters: {ids: [tax_second.id]},
+        filters: {ids: [tax_second.id]}
       )
 
       expect(result.taxes).to eq([tax_second])
@@ -73,7 +73,7 @@ RSpec.describe TaxesQuery, type: :query do
         search_term: '',
         page: 1,
         limit: 10,
-        filters: {applied_to_organization: false},
+        filters: {applied_to_organization: false}
       )
 
       expect(result.taxes).to eq([tax_third])
@@ -86,7 +86,7 @@ RSpec.describe TaxesQuery, type: :query do
         search_term: '',
         page: 1,
         limit: 10,
-        filters: {auto_generated: true},
+        filters: {auto_generated: true}
       )
 
       expect(result.taxes).to eq([auto_generated_tax])
@@ -99,7 +99,7 @@ RSpec.describe TaxesQuery, type: :query do
         search_term: '',
         page: 1,
         limit: 10,
-        order: 'rate',
+        order: 'rate'
       )
 
       expect(result.taxes).to eq([auto_generated_tax, tax_first, tax_second, tax_third])

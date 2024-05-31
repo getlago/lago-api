@@ -16,7 +16,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
       balance_cents: 1000,
       credits_balance: 10.0,
       ongoing_balance_cents: 1000,
-      credits_ongoing_balance: 10.0,
+      credits_ongoing_balance: 10.0
     )
   end
   let(:credits) { '10.00' }
@@ -48,7 +48,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
           status: 'settled',
           source: 'manual',
           transaction_status: 'voided',
-          settled_at: Time.current,
+          settled_at: Time.current
         )
       end
     end

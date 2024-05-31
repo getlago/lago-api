@@ -54,7 +54,7 @@ RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       integrations_response = result['data']['integrations']

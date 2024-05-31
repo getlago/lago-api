@@ -21,7 +21,7 @@ module WalletTransactions
           wallet_id: wallet.id,
           granted_credits: wallet_transaction.credit_amount.to_s,
           reset_consumed_credits: true
-        },
+        }
       )
 
       return transaction_result unless transaction_result.success?

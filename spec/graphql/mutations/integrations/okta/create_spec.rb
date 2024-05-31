@@ -42,7 +42,7 @@ RSpec.describe Mutations::Integrations::Okta::Create, type: :graphql do
           domain: 'foo.bar',
           organizationName: 'Foobar'
         }
-      },
+      }
     )
 
     result_data = result['data']['createOktaIntegration']

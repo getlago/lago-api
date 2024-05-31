@@ -22,7 +22,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           secret_key:,
           code:,
           name:,
-          success_redirect_url:,
+          success_redirect_url:
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
@@ -38,7 +38,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           code:,
           name:,
           webhook_id: 'we_123456',
-          secret_key: 'secret',
+          secret_key: 'secret'
         )
       end
 
@@ -55,7 +55,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
           secret_key:,
           code:,
           name:,
-          success_redirect_url:,
+          success_redirect_url:
         )
 
         expect(result).to be_success
@@ -78,7 +78,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'returns an error result' do
         result = stripe_service.create_or_update(
           organization_id: organization.id,
-          secret_key: nil,
+          secret_key: nil
         )
 
         aggregate_failures do
@@ -98,7 +98,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
     let(:stripe_webhook) do
       ::Stripe::WebhookEndpoint.construct_from(
         id: 'we_123456',
-        secret: 'whsec_123456',
+        secret: 'whsec_123456'
       )
     end
 
@@ -141,7 +141,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       result = stripe_service.handle_incoming_webhook(
         organization_id: organization.id,
         params: event.to_json,
-        signature: 'signature',
+        signature: 'signature'
       )
 
       expect(result).to be_success
@@ -158,7 +158,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         result = stripe_service.handle_incoming_webhook(
           organization_id: organization.id,
           params: event.to_json,
-          signature: 'signature',
+          signature: 'signature'
         )
 
         aggregate_failures do
@@ -180,7 +180,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
         result = stripe_service.handle_incoming_webhook(
           organization_id: organization.id,
           params: event.to_json,
-          signature: 'signature',
+          signature: 'signature'
         )
 
         aggregate_failures do
@@ -214,7 +214,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
           organization:,
-          event_json: event,
+          event_json: event
         )
 
         expect(result).to be_success
@@ -227,7 +227,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
             status: 'succeeded',
             metadata: {
               lago_invoice_id: 'a587e552-36bc-4334-81f2-abcbf034ad3f'
-            },
+            }
           )
       end
     end
@@ -241,7 +241,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
           organization:,
-          event_json: event,
+          event_json: event
         )
 
         expect(result).to be_success
@@ -252,7 +252,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
             organization_id: organization.id,
             provider_payment_id: 'pi_123456',
             status: 'succeeded',
-            metadata: {},
+            metadata: {}
           )
       end
     end
@@ -275,7 +275,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
           organization:,
-          event_json: event,
+          event_json: event
         )
 
         expect(result).to be_success
@@ -302,7 +302,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
           organization:,
-          event_json: event,
+          event_json: event
         )
 
         expect(result).to be_success
@@ -316,7 +316,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
             },
             organization_id: organization.id,
             stripe_customer_id: 'cus_123456789',
-            payment_method_id: 'card_123456789',
+            payment_method_id: 'card_123456789'
           )
       end
     end
@@ -337,7 +337,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
           organization:,
-          event_json: event,
+          event_json: event
         )
 
         expect(result).to be_success
@@ -365,7 +365,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'routes the event to an other service' do
         result = stripe_service.handle_event(
           organization:,
-          event_json: event,
+          event_json: event
         )
 
         expect(result).to be_success
@@ -389,7 +389,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       it 'returns an empty result' do
         result = stripe_service.handle_event(
           organization:,
-          event_json: event.to_json,
+          event_json: event.to_json
         )
 
         aggregate_failures do

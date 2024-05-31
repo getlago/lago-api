@@ -17,7 +17,7 @@ RSpec.describe Admin::MembershipsController, type: [:request, :admin] do
     it 'creates a membership' do
       admin_post(
         '/admin/memberships',
-        create_params,
+        create_params
       )
 
       aggregate_failures do

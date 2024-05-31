@@ -27,7 +27,7 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
         create(
           :subscription,
           :pending,
-          {subscription_at: timestamp, customer: create(:customer, timezone: 'America/Bogota')},
+          {subscription_at: timestamp, customer: create(:customer, timezone: 'America/Bogota')}
         )
       end
 
@@ -44,7 +44,7 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
           :subscription,
           :pending,
           subscription_at: timestamp,
-          plan: create(:plan, pay_in_advance: true, trial_period: 10),
+          plan: create(:plan, pay_in_advance: true, trial_period: 10)
         )
 
         expect { activate_service.activate_all_pending }

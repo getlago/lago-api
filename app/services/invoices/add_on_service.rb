@@ -21,7 +21,7 @@ module Invoices
           invoice_type: :add_on,
           payment_status: :pending,
           currency:,
-          timezone: customer.applicable_timezone,
+          timezone: customer.applicable_timezone
         )
 
         create_add_on_fee(invoice)
@@ -86,7 +86,7 @@ module Invoices
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type
-        },
+        }
       )
     end
 

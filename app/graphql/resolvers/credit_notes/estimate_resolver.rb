@@ -16,7 +16,7 @@ module Resolvers
       def resolve(invoice_id:, items:)
         result = ::CreditNotes::EstimateService.call(
           invoice: current_organization.invoices.not_generating.find_by(id: invoice_id),
-          items:,
+          items:
         )
 
         result.success? ? result.credit_note : result_error(result)

@@ -13,7 +13,7 @@ describe Clock::FinalizeInvoicesJob, job: true do
         status: :draft,
         created_at: DateTime.parse('20 Jun 2022'),
         customer:,
-        organization: customer.organization,
+        organization: customer.organization
       )
     end
     let(:finalized_invoice) do
@@ -22,7 +22,7 @@ describe Clock::FinalizeInvoicesJob, job: true do
         status: :finalized,
         created_at: DateTime.parse('20 Jun 2022'),
         customer:,
-        organization: customer.organization,
+        organization: customer.organization
       )
     end
 

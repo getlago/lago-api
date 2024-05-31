@@ -23,8 +23,8 @@ class CreditNoteMailer < ApplicationMailer
         subject: I18n.t(
           'email.credit_note.created.subject',
           organization_name: @organization.name,
-          credit_note_number: @credit_note.number,
-        ),
+          credit_note_number: @credit_note.number
+        )
       )
     end
   end

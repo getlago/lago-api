@@ -38,7 +38,7 @@ RSpec.describe Utils::Datetime, type: :service do
       datetime.date_diff_with_timezone(
         from_datetime,
         to_datetime,
-        timezone,
+        timezone
       )
     end
 

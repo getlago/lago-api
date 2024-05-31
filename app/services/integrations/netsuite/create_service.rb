@@ -22,7 +22,7 @@ module Integrations
           sync_credit_notes: ActiveModel::Type::Boolean.new.cast(args[:sync_credit_notes]),
           sync_invoices: ActiveModel::Type::Boolean.new.cast(args[:sync_invoices]),
           sync_payments: ActiveModel::Type::Boolean.new.cast(args[:sync_payments]),
-          sync_sales_orders: ActiveModel::Type::Boolean.new.cast(args[:sync_sales_orders]),
+          sync_sales_orders: ActiveModel::Type::Boolean.new.cast(args[:sync_sales_orders])
         )
 
         integration.save!

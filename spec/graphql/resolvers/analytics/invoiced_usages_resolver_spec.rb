@@ -31,12 +31,12 @@ RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'unauthorized',
+        message: 'unauthorized'
       )
     end
   end
@@ -49,7 +49,7 @@ RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       expect(result['data']['invoicedUsages']['collection']).to eq([])

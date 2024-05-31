@@ -20,18 +20,18 @@ RSpec.describe ::V1::Customers::UsageSerializer do
             id: SecureRandom.uuid,
             name: 'Charge',
             code: 'charge',
-            aggregation_type: 'count_agg',
+            aggregation_type: 'count_agg'
           ),
           charge: OpenStruct.new(
             id: SecureRandom.uuid,
-            charge_model: 'graduated',
+            charge_model: 'graduated'
           ),
           units: '4.0',
           amount_cents: 5,
           amount_currency: 'EUR',
-          groups: [],
+          groups: []
         )
-      ],
+      ]
     )
   end
 

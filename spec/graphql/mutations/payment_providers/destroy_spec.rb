@@ -26,7 +26,7 @@ RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
       query: mutation,
       variables: {
         input: {id: payment_provider.id}
-      },
+      }
     )
 
     data = result['data']['destroyPaymentProvider']

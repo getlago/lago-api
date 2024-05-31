@@ -7,7 +7,7 @@ module PaperTrailTraceable
     has_paper_trail(
       meta: {
         whodunnit: proc { |_| CurrentContext.membership }
-      },
+      }
     )
   end
 end

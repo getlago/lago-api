@@ -12,7 +12,7 @@ RSpec.describe Credit, type: :model do
         create(
           :coupon,
           code: 'coupon_code',
-          name: 'Coupon name',
+          name: 'Coupon name'
         )
       end
 
@@ -33,7 +33,7 @@ RSpec.describe Credit, type: :model do
             code: 'coupon_code',
             name: 'Coupon name',
             amount_cents: 200,
-            amount_currency: 'EUR',
+            amount_currency: 'EUR'
           )
         end
 

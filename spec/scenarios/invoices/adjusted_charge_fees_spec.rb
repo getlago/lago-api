@@ -24,7 +24,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
       organization:,
       interval: 'monthly',
       amount_cents: 12_900,
-      pay_in_advance: false,
+      pay_in_advance: false
     )
   end
 
@@ -38,7 +38,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
           :standard_charge,
           plan: monthly_plan,
           billable_metric:,
-          properties: {amount: '5'},
+          properties: {amount: '5'}
         )
 
         create_subscription(
@@ -48,7 +48,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
       end
 
@@ -99,7 +99,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
           :standard_charge,
           plan: monthly_plan,
           billable_metric:,
-          properties: {amount: '10'},
+          properties: {amount: '10'}
         )
 
         create_subscription(
@@ -109,7 +109,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
       end
 

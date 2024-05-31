@@ -11,7 +11,7 @@ module Resolvers
     def resolve(token:)
       invite = Invite.find_by(
         token:,
-        status: 'pending',
+        status: 'pending'
       )
 
       return not_found_error(resource: 'invite') unless invite

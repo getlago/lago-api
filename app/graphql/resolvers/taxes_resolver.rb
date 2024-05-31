@@ -36,7 +36,7 @@ module Resolvers
           ids:,
           applied_to_organization:,
           auto_generated:
-        },
+        }
       )
 
       result.taxes

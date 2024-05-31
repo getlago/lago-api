@@ -26,7 +26,7 @@ module BillableMetrics
             aggregation,
             options[:is_pay_in_advance],
             target_result: result,
-            aggregation_without_proration:,
+            aggregation_without_proration:
           )
         else
           result.aggregation = aggregation
@@ -76,7 +76,7 @@ module BillableMetrics
               aggregation_value,
               options[:is_pay_in_advance],
               target_result: group_result,
-              aggregation_without_proration: group_result_without_proration,
+              aggregation_without_proration: group_result_without_proration
             )
           else
             group_result.aggregation = aggregation_value

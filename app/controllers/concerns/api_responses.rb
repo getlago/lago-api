@@ -14,7 +14,7 @@ module ApiResponses
         error: 'Not Found',
         code: "#{resource}_not_found"
       },
-      status: :not_found,
+      status: :not_found
     )
   end
 

@@ -17,7 +17,7 @@ module V1
 
     def legacy_values
       ::V1::Legacy::EventErrorSerializer.new(
-        model.event,
+        model.event
       ).serialize
     end
 

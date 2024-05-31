@@ -38,13 +38,13 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
         :charge_filter_value,
         values: [ChargeFilterValue::ALL_FILTER_VALUES],
         billable_metric_filter: filter_steps,
-        charge_filter: f3,
+        charge_filter: f3
       ),
       create(
         :charge_filter_value,
         values: [ChargeFilterValue::ALL_FILTER_VALUES],
         billable_metric_filter: filter_size,
-        charge_filter: f3,
+        charge_filter: f3
       )
     ]
   end
@@ -56,7 +56,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
         :charge_filter_value,
         values: [ChargeFilterValue::ALL_FILTER_VALUES],
         billable_metric_filter: filter_size,
-        charge_filter: f4,
+        charge_filter: f4
       )
     ]
   end
@@ -68,7 +68,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
         :charge_filter_value,
         values: ['512'],
         billable_metric_filter: filter_size,
-        charge_filter: f5,
+        charge_filter: f5
       )
     ]
   end
@@ -104,7 +104,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
         [
           {'model' => %w[llama-2], 'size' => %w[512], 'steps' => %w[25]},
           {'size' => ['1024'], 'steps' => %w[50 75 100]}
-        ],
+        ]
       )
     end
   end
@@ -118,7 +118,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
         [
           {'model' => ['llama-2'], 'size' => ['512'], 'steps' => ['25']},
           {'size' => ['512'], 'steps' => ['25']}
-        ],
+        ]
       )
     end
   end
@@ -134,7 +134,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
           {'size' => ['512'], 'steps' => ['25']},
           {'size' => %w[512 1024], 'steps' => %w[25 50 75 100]},
           {'size' => ['512']}
-        ],
+        ]
       )
     end
   end
@@ -150,7 +150,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
           {'size' => ['512'], 'steps' => ['25']},
           {'size' => %w[512 1024], 'steps' => %w[25 50 75 100]},
           {'size' => ['1024']}
-        ],
+        ]
       )
     end
   end

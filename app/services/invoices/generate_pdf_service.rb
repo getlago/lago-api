@@ -37,7 +37,7 @@ module Invoices
         invoice.file.attach(
           io: pdf_result.io,
           filename: "#{invoice.number}.pdf",
-          content_type: 'application/pdf',
+          content_type: 'application/pdf'
         )
 
         invoice.save!

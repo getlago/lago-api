@@ -55,7 +55,7 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql d
           name:,
           successRedirectUrl: success_redirect_url
         }
-      },
+      }
     )
 
     result_data = result['data']['addGocardlessPaymentProvider']

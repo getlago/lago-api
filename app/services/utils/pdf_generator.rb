@@ -46,7 +46,7 @@ module Utils
         marginTop: '0.42',
         marginBottom: '0.42',
         marginLeft: '0.42',
-        marginRight: '0.42',
+        marginRight: '0.42'
       )
 
       response.body.force_encoding('UTF-8')

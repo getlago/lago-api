@@ -62,8 +62,8 @@ class Coupon < ApplicationRecord
             'coupons.status ASC',
             'coupons.expiration ASC',
             'coupons.expiration_at ASC'
-          ].join(', '),
-        ),
+          ].join(', ')
+        )
       )
     }
 

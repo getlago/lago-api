@@ -15,7 +15,7 @@ module Invites
       return result.forbidden_failure!(code: 'cannot_update_revoked_invite') if invite.revoked?
 
       invite.update!(
-        role: params[:role],
+        role: params[:role]
       )
 
       result.invite = invite

@@ -27,12 +27,12 @@ module GraphQLHelper
         customer_portal_user:,
         request:,
         permissions:
-      },
+      }
     )
 
     LagoApiSchema.execute(
       query,
-      **args,
+      **args
     )
   end
 
@@ -51,28 +51,28 @@ module GraphQLHelper
   def expect_unauthorized_error(result)
     expect_graphql_error(
       result:,
-      message: :unauthorized,
+      message: :unauthorized
     )
   end
 
   def expect_forbidden_error(result)
     expect_graphql_error(
       result:,
-      message: :forbidden,
+      message: :forbidden
     )
   end
 
   def expect_unprocessable_entity(result)
     expect_graphql_error(
       result:,
-      message: :unprocessable_entity,
+      message: :unprocessable_entity
     )
   end
 
   def expect_not_found(result)
     expect_graphql_error(
       result:,
-      message: :not_found,
+      message: :not_found
     )
   end
 end

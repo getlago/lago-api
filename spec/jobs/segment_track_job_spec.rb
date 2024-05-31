@@ -29,7 +29,7 @@ describe SegmentTrackJob, job: true do
             method: 1,
             hosting_type: 'self',
             version: Utils::VersionService.new.version.version.number
-          },
+          }
         )
     end
 
@@ -40,7 +40,7 @@ describe SegmentTrackJob, job: true do
         subject.perform_now(membership_id:, event:, properties:)
 
         expect(SEGMENT_CLIENT).to have_received(:track).with(
-          hash_including(properties: hash_including(hosting_type: 'cloud')),
+          hash_including(properties: hash_including(hosting_type: 'cloud'))
         )
       end
     end
@@ -50,7 +50,7 @@ describe SegmentTrackJob, job: true do
         subject.perform_now(membership_id: nil, event:, properties:)
 
         expect(SEGMENT_CLIENT).to have_received(:track).with(
-          hash_including(user_id: 'membership/unidentifiable'),
+          hash_including(user_id: 'membership/unidentifiable')
         )
       end
     end

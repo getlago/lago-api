@@ -24,7 +24,7 @@ module Subscriptions
           credit_note_result = CreditNotes::CreateFromTermination.new(
             subscription:,
             reason: 'order_cancellation',
-            upgrade:,
+            upgrade:
           ).call
           credit_note_result.raise_if_error!
         end
@@ -91,13 +91,13 @@ module Subscriptions
         BillSubscriptionJob.set(wait: 2.seconds).perform_later(
           [subscription],
           subscription.terminated_at,
-          invoicing_reason: :subscription_terminating,
+          invoicing_reason: :subscription_terminating
         )
       else
         BillSubscriptionJob.perform_now(
           [subscription],
           subscription.terminated_at,
-          invoicing_reason: :subscription_terminating,
+          invoicing_reason: :subscription_terminating
         )
       end
     end
@@ -117,7 +117,7 @@ module Subscriptions
       dates_service = Subscriptions::DatesService.new_instance(
         duplicate,
         beginning_of_period,
-        current_usage: false,
+        current_usage: false
       )
 
       boundaries = {
@@ -135,7 +135,7 @@ module Subscriptions
       dates_service = Subscriptions::DatesService.new_instance(
         subscription_dup,
         subscription.terminated_at,
-        current_usage: false,
+        current_usage: false
       )
 
       dates_service.previous_beginning_of_period(current_period: true).to_datetime

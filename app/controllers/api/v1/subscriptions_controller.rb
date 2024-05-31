@@ -6,12 +6,12 @@ module Api
       def create
         customer = Customer.find_or_initialize_by(
           external_id: create_params[:external_customer_id].to_s.strip,
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         plan = Plan.parents.find_by(
           code: create_params[:plan_code],
-          organization_id: current_organization.id,
+          organization_id: current_organization.id
         )
 
         result = Subscriptions::CreateService.call(
@@ -19,8 +19,8 @@ module Api
           plan:,
           params: SubscriptionLegacyInput.new(
             current_organization,
-            create_params,
-          ).create_input,
+            create_params
+          ).create_input
         )
 
         if result.success?
@@ -66,8 +66,8 @@ module Api
           subscription:,
           params: SubscriptionLegacyInput.new(
             current_organization,
-            update_params,
-          ).update_input,
+            update_params
+          ).update_input
         )
 
         if result.success?
@@ -80,7 +80,7 @@ module Api
       def show
         subscription = current_organization.subscriptions.find_by(
           external_id: params[:external_id],
-          status: params[:status] || :active,
+          status: params[:status] || :active
         )
         return not_found_error(resource: 'subscription') unless subscription
 
@@ -92,9 +92,9 @@ module Api
           organization: current_organization,
           pagination: BaseQuery::Pagination.new(
             page: params[:page],
-            limit: params[:per_page] || PER_PAGE,
+            limit: params[:per_page] || PER_PAGE
           ),
-          filters: BaseQuery::Filters.new(index_filters),
+          filters: BaseQuery::Filters.new(index_filters)
         )
 
         if result.success?
@@ -103,8 +103,8 @@ module Api
               result.subscriptions,
               ::V1::SubscriptionSerializer,
               collection_name: 'subscriptions',
-              meta: pagination_metadata(result.subscriptions),
-            ),
+              meta: pagination_metadata(result.subscriptions)
+            )
           )
         else
           render_error_response(result)
@@ -124,7 +124,7 @@ module Api
             :subscription_date,
             :subscription_at,
             :ending_at,
-            plan_overrides:,
+            plan_overrides:
           )
       end
 
@@ -134,7 +134,7 @@ module Api
           :subscription_date,
           :subscription_at,
           :ending_at,
-          plan_overrides:,
+          plan_overrides:
         )
       end
 
@@ -192,8 +192,8 @@ module Api
           json: ::V1::SubscriptionSerializer.new(
             subscription,
             root_name: 'subscription',
-            includes: %i[plan],
-          ),
+            includes: %i[plan]
+          )
         )
       end
     end

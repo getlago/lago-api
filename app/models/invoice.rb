@@ -112,7 +112,7 @@ class Invoice < ApplicationRecord
 
     blob_path = Rails.application.routes.url_helpers.rails_blob_path(
       file,
-      host: 'void',
+      host: 'void'
     )
 
     File.join(ENV['LAGO_API_URL'], blob_path)
@@ -185,7 +185,7 @@ class Invoice < ApplicationRecord
         to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
         charges_duration: fee.properties['charges_duration']
       },
-      filters:,
+      filters:
     ).breakdown.breakdown
   end
 
@@ -193,7 +193,7 @@ class Invoice < ApplicationRecord
     date_service = Subscriptions::DatesService.new_instance(
       fee.subscription,
       Time.zone.at(timestamp),
-      current_usage: true,
+      current_usage: true
     )
 
     event = Event.find_by(id: fee.pay_in_advance_event_id)
@@ -203,7 +203,7 @@ class Invoice < ApplicationRecord
     number_of_days = Utils::Datetime.date_diff_with_timezone(
       event.timestamp,
       date_service.charges_to_datetime,
-      customer.applicable_timezone,
+      customer.applicable_timezone
     )
 
     {
@@ -216,7 +216,7 @@ class Invoice < ApplicationRecord
     date_service = Subscriptions::DatesService.new_instance(
       subscription,
       Time.zone.at(timestamp) + 1.day,
-      current_usage: true,
+      current_usage: true
     )
 
     {
@@ -331,13 +331,13 @@ class Invoice < ApplicationRecord
     organization_sequence_scope = organization.invoices.with_generated_number.where(
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
       timezone,
-      Time.now.in_time_zone(timezone).beginning_of_month.to_date,
+      Time.now.in_time_zone(timezone).beginning_of_month.to_date
     )
 
     result = Invoice.with_advisory_lock(
       organization_id,
       transaction: true,
-      timeout_seconds: 10.seconds,
+      timeout_seconds: 10.seconds
     ) do
       # If previous invoice had different numbering, base sequential id is the total number of invoices
       organization_sequential_id = if switched_from_customer_numbering?

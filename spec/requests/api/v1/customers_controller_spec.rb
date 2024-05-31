@@ -231,7 +231,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       it 'returns the portal url' do
         get_with_token(
           organization,
-          "/api/v1/customers/#{customer.external_id}/portal_url",
+          "/api/v1/customers/#{customer.external_id}/portal_url"
         )
 
         aggregate_failures do
@@ -246,7 +246,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         it 'returns not found error' do
           get_with_token(
             organization,
-            "/api/v1/customers/#{customer.external_id}/portal_url",
+            "/api/v1/customers/#{customer.external_id}/portal_url"
           )
 
           expect(response).to have_http_status(:not_found)
@@ -258,7 +258,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       it 'returns error' do
         get_with_token(
           organization,
-          "/api/v1/customers/#{customer.external_id}/portal_url",
+          "/api/v1/customers/#{customer.external_id}/portal_url"
         )
 
         expect(response).to have_http_status(:forbidden)
@@ -295,7 +295,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     it 'returns the customer' do
       get_with_token(
         organization,
-        "/api/v1/customers/#{customer.external_id}",
+        "/api/v1/customers/#{customer.external_id}"
       )
 
       aggregate_failures do
@@ -354,7 +354,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       create(
         :stripe_customer,
         customer_id: customer.id,
-        payment_provider: stripe_provider,
+        payment_provider: stripe_provider
       )
 
       customer.update(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)

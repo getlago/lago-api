@@ -24,7 +24,7 @@ module Fees
 
           next unless invoice.draft? && fee.true_up_parent_fee.nil? && adjusted_fee(
             charge_filter: fee.charge_filter,
-            grouped_by: fee.grouped_by,
+            grouped_by: fee.grouped_by
           )
 
           adjusted_fee(charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).update!(fee:)
@@ -79,12 +79,12 @@ module Fees
       # Base fee creation flow handles case when only name has been adjusted
       if invoice.draft? && (adjusted = adjusted_fee(
         charge_filter:,
-        grouped_by: amount_result.grouped_by,
+        grouped_by: amount_result.grouped_by
       )) && !adjusted.adjusted_display_name?
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted,
           boundaries:,
-          properties:,
+          properties:
         )
         return result.fail_with_error!(adjustement_result.error) unless adjustement_result.success?
 
@@ -126,7 +126,7 @@ module Fees
         precise_unit_amount: amount_result.unit_amount,
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
-        charge_filter_id: charge_filter&.id,
+        charge_filter_id: charge_filter&.id
       )
 
       if (adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?
@@ -206,7 +206,7 @@ module Fees
           to_datetime: boundaries.charges_to_datetime,
           charges_duration: boundaries.charges_duration
         },
-        filters: aggregation_filters(charge_filter:),
+        filters: aggregation_filters(charge_filter:)
       )
     end
 
@@ -226,7 +226,7 @@ module Fees
           charge_id: charge.id,
           charge_filter_id: charge_filter&.id,
           grouped_by: aggregation_result.grouped_by || {},
-          timestamp: aggregation_result.recurring_updated_at,
+          timestamp: aggregation_result.recurring_updated_at
         ) do |aggregation|
           aggregation.current_aggregation = aggregation_result.total_aggregated_units || aggregation_result.aggregation
           aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)

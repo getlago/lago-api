@@ -20,7 +20,7 @@ class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
         balance_cents: (wallet.attributes['balance'] * currency.subunit_to_unit).to_i,
         balance_currency: currency.iso_code,
         consumed_amount_cents: (wallet.attributes['consumed_amount'] * currency.subunit_to_unit).to_i,
-        consumed_amount_currenty: currency.iso_code,
+        consumed_amount_currenty: currency.iso_code
       )
     end
 

@@ -49,7 +49,7 @@ module Integrations
             integration:,
             external_id: item['id'],
             external_name: item['name'],
-            item_type: :tax,
+            item_type: :tax
           )
 
           integration_item.save!

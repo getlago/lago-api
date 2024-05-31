@@ -79,7 +79,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       put_with_token(
         organization,
         "/api/v1/coupons/#{coupon.code}",
-        {coupon: update_params},
+        {coupon: update_params}
       )
 
       expect(response).to have_http_status(:success)
@@ -98,7 +98,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/coupons/#{coupon.code}",
-          {coupon: update_params},
+          {coupon: update_params}
         )
 
         expect(response).to have_http_status(:success)
@@ -126,7 +126,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
         put_with_token(
           organization,
           "/api/v1/coupons/#{coupon.code}",
-          {coupon: update_params},
+          {coupon: update_params}
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -140,7 +140,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     it 'returns a coupon' do
       get_with_token(
         organization,
-        "/api/v1/coupons/#{coupon.code}",
+        "/api/v1/coupons/#{coupon.code}"
       )
 
       expect(response).to have_http_status(:success)
@@ -152,7 +152,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       it 'returns not found' do
         get_with_token(
           organization,
-          '/api/v1/coupons/555',
+          '/api/v1/coupons/555'
         )
 
         expect(response).to have_http_status(:not_found)

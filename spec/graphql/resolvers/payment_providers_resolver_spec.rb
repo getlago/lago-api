@@ -80,7 +80,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       payment_providers_response = result['data']['paymentProviders']
@@ -101,7 +101,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
-        query:,
+        query:
       )
 
       payment_providers_response = result['data']['paymentProviders']

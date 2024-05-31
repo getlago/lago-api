@@ -21,7 +21,7 @@ module Integrations
         def deliver_success_webhook(customer:)
           SendWebhookJob.perform_later(
             'customer.accounting_provider_created',
-            customer,
+            customer
           )
         end
       end

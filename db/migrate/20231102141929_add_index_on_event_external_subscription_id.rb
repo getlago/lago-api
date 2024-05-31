@@ -8,7 +8,7 @@ class AddIndexOnEventExternalSubscriptionId < ActiveRecord::Migration[7.0]
       :events,
       %i[organization_id external_subscription_id code timestamp],
       name: 'index_events_on_external_subscription_id_and_code_and_timestamp',
-      where: '(deleted_at IS NULL)',
+      where: '(deleted_at IS NULL)'
     )
   end
 end

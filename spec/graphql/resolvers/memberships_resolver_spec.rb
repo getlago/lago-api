@@ -27,7 +27,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
     memberships_response = result['data']['memberships']
@@ -49,7 +49,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
     expect(result['data']['memberships']['metadata']['adminCount']).to eq(1)
@@ -83,7 +83,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        query:,
+        query:
       )
     end
 
@@ -106,7 +106,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
       it 'allows the query' do
         expect(other_org_result_data).to eq(
           'id' => other_org.id,
-          'name' => other_org.name,
+          'name' => other_org.name
         )
       end
     end
@@ -118,7 +118,7 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
         expect(other_org_result_data).to be nil
         expect_graphql_error(
           result:,
-          message: "Field 'apiKey' doesn't exist on type 'Organization'",
+          message: "Field 'apiKey' doesn't exist on type 'Organization'"
         )
       end
     end
@@ -128,12 +128,12 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
     it 'returns an error' do
       result = execute_graphql(
         current_user: membership.user,
-        query:,
+        query:
       )
 
       expect_graphql_error(
         result:,
-        message: 'Missing organization id',
+        message: 'Missing organization id'
       )
     end
   end

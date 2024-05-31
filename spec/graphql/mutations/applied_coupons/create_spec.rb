@@ -45,7 +45,7 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
           amountCents: 123,
           amountCurrency: 'EUR'
         }
-      },
+      }
     )
 
     result_data = result['data']['createAppliedCoupon']

@@ -46,7 +46,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
             }
           ]
         }
-      },
+      }
     )
 
     result_data = result['data']['createBillableMetric']

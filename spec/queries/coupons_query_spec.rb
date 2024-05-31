@@ -24,7 +24,7 @@ RSpec.describe CouponsQuery, type: :query do
       search_term: nil,
       status: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.coupons.pluck(:id)
@@ -43,7 +43,7 @@ RSpec.describe CouponsQuery, type: :query do
         search_term: 'de',
         status: nil,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.coupons.pluck(:id)
@@ -66,7 +66,7 @@ RSpec.describe CouponsQuery, type: :query do
         limit: 10,
         filters: {
           ids: [coupon_second.id]
-        },
+        }
       )
 
       returned_ids = result.coupons.pluck(:id)
@@ -86,7 +86,7 @@ RSpec.describe CouponsQuery, type: :query do
         search_term: nil,
         status: 'terminated',
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.coupons.pluck(:id)

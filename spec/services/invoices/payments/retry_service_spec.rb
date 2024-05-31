@@ -62,7 +62,7 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
           customer:,
           status: 'finalized',
           payment_status: 'succeeded',
-          organization: customer.organization,
+          organization: customer.organization
         )
       end
 
@@ -96,7 +96,7 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
           customer:,
           status: 'finalized',
           payment_status: 'failed',
-          ready_for_payment_processing: false,
+          ready_for_payment_processing: false
         )
       end
 

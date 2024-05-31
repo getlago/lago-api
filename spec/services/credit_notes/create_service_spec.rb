@@ -10,7 +10,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       description: nil,
       credit_amount_cents:,
       refund_amount_cents:,
-      automatic:,
+      automatic:
     )
   end
 
@@ -26,7 +26,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       total_amount_cents: 24,
       payment_status: :succeeded,
       taxes_rate: 20,
-      version_number: 2,
+      version_number: 2
     )
   end
 
@@ -113,7 +113,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
           credit_note_method: 'both'
-        },
+        }
       )
     end
 
@@ -166,7 +166,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           expect(result.error.messages[:amount_cents]).to eq(
             %w[
               higher_than_remaining_fee_amount
-            ],
+            ]
           )
         end
       end
@@ -192,7 +192,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             :payment,
             invoice:,
             payment_provider: gocardless_provider,
-            payment_provider_customer: gocardless_customer,
+            payment_provider_customer: gocardless_customer
           )
         end
 
@@ -276,7 +276,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               fees_amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,
-              taxes_rate: 20,
+              taxes_rate: 20
             )
           end
 
@@ -309,7 +309,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               currency: 'EUR',
               total_amount_cents: 24,
               payment_status: :succeeded,
-              taxes_rate: 20,
+              taxes_rate: 20
             )
           end
 
@@ -334,7 +334,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
               total_amount_cents: 24,
               payment_status: :succeeded,
               taxes_rate: 20,
-              version_number: 1,
+              version_number: 1
             )
           end
 
@@ -365,7 +365,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           total_amount_cents: 12,
           payment_status: :succeeded,
           taxes_rate: 20,
-          version_number: 3,
+          version_number: 3
         )
       end
 
@@ -412,7 +412,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             balance_amount_cents: 6,
             coupons_adjustment_amount_cents: 8,
             taxes_amount_cents: 2,
-            taxes_rate: 20,
+            taxes_rate: 20
           )
           expect(credit_note.applied_taxes.count).to eq(1)
 
@@ -422,14 +422,14 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           expect(item1).to have_attributes(
             fee: fee1,
             amount_cents: 10,
-            amount_currency: invoice.currency,
+            amount_currency: invoice.currency
           )
 
           item2 = credit_note.items.order(created_at: :asc).last
           expect(item2).to have_attributes(
             fee: fee2,
             amount_cents: 5,
-            amount_currency: invoice.currency,
+            amount_currency: invoice.currency
           )
         end
       end

@@ -28,7 +28,7 @@ RSpec.describe Resolvers::InviteResolver, type: :graphql do
       query:,
       variables: {
         token: invite.token
-      },
+      }
     )
 
     data = result['data']['invite']
@@ -46,12 +46,12 @@ RSpec.describe Resolvers::InviteResolver, type: :graphql do
         query:,
         variables: {
           token: 'foo'
-        },
+        }
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found',
+        message: 'Resource not found'
       )
     end
   end

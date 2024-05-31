@@ -20,7 +20,7 @@ describe 'Billing Boundaries Scenario', :scenarios, type: :request do
       organization:,
       interval: plan_interval,
       pay_in_advance: plan_in_advance,
-      bill_charges_monthly: plan_monthly_charges,
+      bill_charges_monthly: plan_monthly_charges
     )
   end
 
@@ -30,7 +30,7 @@ describe 'Billing Boundaries Scenario', :scenarios, type: :request do
         external_customer_id: customer.external_id,
         external_id: customer.external_id,
         plan_code: plan.code,
-        billing_time:,
+        billing_time:
       )
     end
 
@@ -85,7 +85,7 @@ describe 'Billing Boundaries Scenario', :scenarios, type: :request do
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code,
-          billing_time:,
+          billing_time:
         )
       end
 

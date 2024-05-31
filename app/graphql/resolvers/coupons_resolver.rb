@@ -26,7 +26,7 @@ module Resolvers
         status:,
         filters: {
           ids:
-        },
+        }
       )
 
       result.coupons

@@ -16,7 +16,7 @@ module BillableMetrics
         proration_coefficient = Utils::Datetime.date_diff_with_timezone(
           event.timestamp,
           to_datetime,
-          customer.applicable_timezone,
+          customer.applicable_timezone
         ).fdiv(period_duration)
 
         value = (result_without_proration * proration_coefficient).ceil(5)
@@ -35,7 +35,7 @@ module BillableMetrics
         cached_aggregation = base_aggregator.find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: grouped_by_values,
+          grouped_by: grouped_by_values
         )
 
         unless cached_aggregation
@@ -61,7 +61,7 @@ module BillableMetrics
         cached_aggregation = base_aggregator.find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: target_result.grouped_by,
+          grouped_by: target_result.grouped_by
         )
 
         if !is_pay_in_advance
@@ -94,7 +94,7 @@ module BillableMetrics
         @period_duration ||= Subscriptions::DatesService.new_instance(
           subscription,
           to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?,
+          current_usage: subscription.terminated? && subscription.upgraded?
         ).charges_duration_in_days
       end
 

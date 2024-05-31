@@ -16,7 +16,7 @@ RSpec.describe Invoices::PrepaidCreditJob, type: :job do
       fee_type: 'credit',
       invoiceable_type: 'WalletTransaction',
       invoiceable_id: wallet_transaction.id,
-      invoice:,
+      invoice:
     )
   end
 

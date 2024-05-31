@@ -25,7 +25,7 @@ RSpec.describe PaymentProviders::BaseProvider, type: :model do
         {
           'api_key' => 'foo_bar',
           'api_secret' => api_secret
-        },
+        }
       )
     end
   end

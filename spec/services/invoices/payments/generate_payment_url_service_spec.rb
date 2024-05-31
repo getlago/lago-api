@@ -19,7 +19,7 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService, type: :service do
         create(
           :stripe_customer,
           customer_id: customer.id,
-          payment_provider: stripe_provider,
+          payment_provider: stripe_provider
         )
 
         customer.update(payment_provider: 'stripe')

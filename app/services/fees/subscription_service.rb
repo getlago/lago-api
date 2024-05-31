@@ -49,7 +49,7 @@ module Fees
         payment_status: :pending,
         taxes_amount_cents: 0,
         unit_amount_cents: new_amount_cents,
-        amount_details: {plan_amount_cents: plan.amount_cents},
+        amount_details: {plan_amount_cents: plan.amount_cents}
       )
 
       return base_fee if !invoice.draft? || !adjusted_fee
@@ -155,7 +155,7 @@ module Fees
       days_to_bill = Utils::Datetime.date_diff_with_timezone(
         from_datetime,
         to_datetime,
-        customer.applicable_timezone,
+        customer.applicable_timezone
       )
       days_to_bill * single_day_price(subscription)
     end
@@ -191,7 +191,7 @@ module Fees
       number_of_day_to_bill *
         single_day_price(
           subscription,
-          optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date,
+          optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date
         )
     end
 
@@ -212,7 +212,7 @@ module Fees
       number_of_day_to_bill = Utils::Datetime.date_diff_with_timezone(
         from_datetime,
         to_datetime,
-        customer.applicable_timezone,
+        customer.applicable_timezone
       )
 
       # NOTE: Subscription is upgraded from another plan
@@ -241,12 +241,12 @@ module Fees
           number_of_day_to_bill = Utils::Datetime.date_diff_with_timezone(
             subscription.trial_end_datetime,
             to_datetime,
-            customer.applicable_timezone,
+            customer.applicable_timezone
           )
 
           return number_of_day_to_bill * single_day_price(
             subscription,
-            optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date,
+            optional_from_date: from_datetime.in_time_zone(customer.applicable_timezone).to_date
           )
         end
       end
@@ -261,7 +261,7 @@ module Fees
     # NOTE: cost of a single day in a period
     def single_day_price(target_subscription, optional_from_date: nil)
       date_service(target_subscription).single_day_price(
-        optional_from_date:,
+        optional_from_date:
       )
     end
   end

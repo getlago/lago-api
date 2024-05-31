@@ -36,7 +36,7 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, type: :graphql do
           id: customer.id,
           invoiceGracePeriod: 12
         }
-      },
+      }
     )
 
     result_data = result['data']['updateCustomerInvoiceGracePeriod']

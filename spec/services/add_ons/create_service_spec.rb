@@ -47,7 +47,7 @@ RSpec.describe AddOns::CreateService, type: :service do
           addon_name: add_on.name,
           addon_invoice_display_name: add_on.invoice_display_name,
           organization_id: add_on.organization_id
-        },
+        }
       )
     end
 
@@ -68,7 +68,7 @@ RSpec.describe AddOns::CreateService, type: :service do
         create(
           :add_on,
           organization:,
-          code: 'free-beer-for-us',
+          code: 'free-beer-for-us'
         )
       end
 

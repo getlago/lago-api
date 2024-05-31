@@ -13,7 +13,7 @@ RSpec.describe Api::V1::Analytics::GrossRevenuesController, type: :request do
       it 'returns the gross revenue' do
         get_with_token(
           organization,
-          '/api/v1/analytics/gross_revenue',
+          '/api/v1/analytics/gross_revenue'
         )
 
         aggregate_failures do
@@ -27,7 +27,7 @@ RSpec.describe Api::V1::Analytics::GrossRevenuesController, type: :request do
       it 'returns the gross revenue' do
         get_with_token(
           organization,
-          '/api/v1/analytics/gross_revenue',
+          '/api/v1/analytics/gross_revenue'
         )
 
         expect(response).to have_http_status(:success)

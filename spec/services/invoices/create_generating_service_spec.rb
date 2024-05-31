@@ -66,7 +66,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
             from_datetime: datetime.beginning_of_month,
             to_datetime: datetime.end_of_month,
             charges_from_datetime: datetime.end_of_month,
-            charges_to_datetime: datetime.end_of_month,
+            charges_to_datetime: datetime.end_of_month
           )
         end
 

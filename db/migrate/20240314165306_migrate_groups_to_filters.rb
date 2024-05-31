@@ -41,7 +41,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
     Group.find_each do |group|
       filters = ::BillableMetricFilter.where(
         billable_metric_id: group.billable_metric_id,
-        key: group.key,
+        key: group.key
       )
       filters = if group.deleted_at.present?
         filters.where.not(deleted_at: nil)
@@ -52,7 +52,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
       filter = filters.first
       filter ||= ::BillableMetricFilter.new(
         billable_metric_id: group.billable_metric_id,
-        key: group.key,
+        key: group.key
       )
       filter.deleted_at = group.deleted_at if group.deleted_at.present?
 
@@ -77,14 +77,14 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         filter = charge.filters.create!(
           invoice_display_name: property.invoice_display_name,
           properties: property.values,
-          deleted_at: property.deleted_at,
+          deleted_at: property.deleted_at
         )
 
         group = property.group
         migrated_groups << group
         bm_filters = BillableMetricFilter.where(
           billable_metric_id: group.billable_metric_id,
-          key: group.key,
+          key: group.key
         )
         bm_filter = if group.deleted_at.present?
           bm_filters.where.not(deleted_at: nil).first
@@ -96,7 +96,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         filter.values.create!(
           billable_metric_filter_id: bm_filter.id,
           values: [group.value],
-          deleted_at: group.deleted_at,
+          deleted_at: group.deleted_at
         )
 
         next unless group.parent_group_id?
@@ -104,7 +104,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         # NOTE: When two dimensions, we create a filter value for the parent
         parent_bm_filters = BillableMetricFilter.where(
           billable_metric_id: group.parent.billable_metric_id,
-          key: group.parent.key,
+          key: group.parent.key
         )
         parent_bm_filter = if group.parent.deleted_at.present?
           parent_bm_filters.where.not(deleted_at: nil).first
@@ -115,7 +115,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         filter.values.create!(
           billable_metric_filter_id: parent_bm_filter.id,
           values: [group.parent.value],
-          deleted_at: group.parent.deleted_at,
+          deleted_at: group.parent.deleted_at
         )
       end
 
@@ -129,7 +129,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         # Create filter values
         bm_filters = BillableMetricFilter.where(
           billable_metric_id: group.billable_metric_id,
-          key: group.key,
+          key: group.key
         )
         bm_filter = if group.deleted_at.present?
           bm_filters.where.not(deleted_at: nil).first
@@ -139,14 +139,14 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         filter.values.create!(
           billable_metric_filter_id: bm_filter.id,
           values: [group.value],
-          deleted_at: group.deleted_at,
+          deleted_at: group.deleted_at
         )
 
         next unless group.parent_group_id?
 
         parent_bm_filters = BillableMetricFilter.where(
           billable_metric_id: group.parent.billable_metric_id,
-          key: group.parent.key,
+          key: group.parent.key
         )
         parent_bm_filter = if group.parent.deleted_at.present?
           parent_bm_filters.where.not(deleted_at: nil).first
@@ -157,7 +157,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
         filter.values.create!(
           billable_metric_filter_id: parent_bm_filter.id,
           values: [group.parent.value],
-          deleted_at: group.parent.deleted_at,
+          deleted_at: group.parent.deleted_at
         )
       end
     rescue => e

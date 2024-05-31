@@ -26,7 +26,7 @@ RSpec.describe ChargeFilter, type: :model do
         BaseService::Result.new.validation_failure!(
           errors: {
             amount: ['invalid_amount']
-          },
+          }
         )
       end
 
@@ -62,7 +62,7 @@ RSpec.describe ChargeFilter, type: :model do
             per_unit_amount: ['invalid_amount'],
             flat_amount: ['invalid_amount'],
             graduated_ranges: ['missing_graduated_ranges']
-          },
+          }
         )
       end
 
@@ -101,7 +101,7 @@ RSpec.describe ChargeFilter, type: :model do
             amount: ['invalid_amount'],
             free_units: ['invalid_free_units'],
             package_size: ['invalid_package_size']
-          },
+          }
         )
       end
 
@@ -159,7 +159,7 @@ RSpec.describe ChargeFilter, type: :model do
             free_units_per_events: ['invalid_free_units_per_events'],
             free_units_per_total_aggregation: ['invalid_free_units_per_total_aggregation'],
             rate: ['invalid_rate']
-          },
+          }
         )
       end
 
@@ -217,7 +217,7 @@ RSpec.describe ChargeFilter, type: :model do
           errors: {
             amount: ['invalid_amount'],
             volume_ranges: ['invalid_volume_ranges']
-          },
+          }
         )
       end
 
@@ -276,7 +276,7 @@ RSpec.describe ChargeFilter, type: :model do
           errors: {
             rate: ['invalid_rate'],
             ranges: ['invalid_graduated_percentage_ranges']
-          },
+          }
         )
       end
 
@@ -370,7 +370,7 @@ RSpec.describe ChargeFilter, type: :model do
         {
           'card' => ['credit'],
           'scheme' => ['visa']
-        },
+        }
       )
     end
   end
@@ -386,7 +386,7 @@ RSpec.describe ChargeFilter, type: :model do
         build(
           :charge_filter_value,
           values: [ChargeFilterValue::ALL_FILTER_VALUES],
-          billable_metric_filter: scheme,
+          billable_metric_filter: scheme
         )
       ]
     end
@@ -396,7 +396,7 @@ RSpec.describe ChargeFilter, type: :model do
         {
           'card' => ['credit'],
           'scheme' => %w[visa mastercard]
-        },
+        }
       )
     end
   end

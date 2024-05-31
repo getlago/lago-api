@@ -14,7 +14,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
       organization:,
       interval: 'monthly',
       amount_cents: 1_000,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -24,7 +24,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
       organization:,
       interval: 'monthly',
       amount_cents: 1_500,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -34,7 +34,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
       organization:,
       interval: 'monthly',
       amount_cents: 1_900,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -53,7 +53,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan1.code,
             billing_time: 'calendar'
-          },
+          }
         )
 
         expect(customer.invoices.count).to eq(1)
@@ -73,7 +73,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan2.code,
             billing_time: 'calendar'
-          },
+          }
         )
 
         expect(customer.invoices.count).to eq(2)
@@ -98,7 +98,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan3.code,
             billing_time: 'calendar'
-          },
+          }
         )
 
         perform_all_enqueued_jobs
@@ -130,7 +130,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan1.code,
             billing_time: 'anniversary'
-          },
+          }
         )
 
         expect(customer.invoices.count).to eq(1)
@@ -150,7 +150,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan2.code,
             billing_time: 'anniversary'
-          },
+          }
         )
 
         expect(customer.invoices.count).to eq(2)
@@ -175,7 +175,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_id: customer.external_id,
             plan_code: plan3.code,
             billing_time: 'anniversary'
-          },
+          }
         )
 
         perform_all_enqueued_jobs

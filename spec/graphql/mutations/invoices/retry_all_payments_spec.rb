@@ -34,7 +34,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
         customer: customer_first,
         status: 'finalized',
         payment_status: 'failed',
-        ready_for_payment_processing: true,
+        ready_for_payment_processing: true
       )
     end
     let(:invoice_second) do
@@ -44,7 +44,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
         customer: customer_second,
         status: 'finalized',
         payment_status: 'failed',
-        ready_for_payment_processing: true,
+        ready_for_payment_processing: true
       )
     end
 
@@ -64,7 +64,7 @@ RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
         query: mutation,
         variables: {
           input: {}
-        },
+        }
       )
 
       data = result['data']['retryAllInvoicePayments']

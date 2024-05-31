@@ -12,7 +12,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         from_datetime:,
         to_datetime:
       },
-      filters:,
+      filters:
     )
   end
 
@@ -34,14 +34,14 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       :billable_metric,
       organization:,
       aggregation_type: 'sum_agg',
-      field_name: 'total_count',
+      field_name: 'total_count'
     )
   end
 
   let(:charge) do
     create(
       :standard_charge,
-      billable_metric:,
+      billable_metric:
     )
   end
 
@@ -63,7 +63,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       timestamp: subscription.started_at + 3.months,
       properties: {
         total_count: 2.5
-      },
+      }
     )
   end
   let(:latest_events) do
@@ -77,7 +77,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       timestamp: to_datetime - 1.day,
       properties: {
         total_count: 12
-      },
+      }
     )
   end
 
@@ -162,7 +162,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime + 1.day,
         properties: {
           total_count: 12
-        },
+        }
       )
     end
 
@@ -200,7 +200,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 1.day,
         properties: {
           total_count: 4.5
-        },
+        }
       )
     end
 
@@ -222,7 +222,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 1.day,
         properties: {
           total_count: 'foo_bar'
-        },
+        }
       )
     end
 
@@ -252,7 +252,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 3.days,
         properties: {
           total_count: 4
-        },
+        }
       )
     end
 
@@ -265,7 +265,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         external_subscription_id: subscription.external_id,
         timestamp: to_datetime - 3.days,
         current_aggregation: '4',
-        max_aggregation: '6',
+        max_aggregation: '6'
       )
     end
 
@@ -308,7 +308,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         properties: {
           total_count: 12,
           region: 'europe'
-        },
+        }
       )
 
       create(
@@ -321,7 +321,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         properties: {
           total_count: 8,
           region: 'europe'
-        },
+        }
       )
 
       create(
@@ -334,7 +334,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         properties: {
           total_count: 12,
           region: 'africa'
-        },
+        }
       )
     end
 
@@ -359,7 +359,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         :charge_filter_value,
         charge_filter:,
         billable_metric_filter: filter,
-        values: ['europe'],
+        values: ['europe']
       )
     end
 
@@ -376,7 +376,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         properties: {
           total_count: 12,
           region: 'europe'
-        },
+        }
       )
 
       create(
@@ -389,7 +389,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         properties: {
           total_count: 8,
           region: 'europe'
-        },
+        }
       )
 
       create(
@@ -402,7 +402,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         properties: {
           total_count: 12,
           region: 'africa'
-        },
+        }
       )
     end
 
@@ -424,7 +424,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         customer:,
         started_at: from_datetime - 10.days,
         terminated_at: from_datetime,
-        status: :terminated,
+        status: :terminated
       )
     end
 
@@ -441,7 +441,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: from_datetime - 5.days,
         properties: {
           total_count: 10
-        },
+        }
       )
     end
 
@@ -463,7 +463,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         customer:,
         subscription:,
         timestamp: to_datetime - 2.days,
-        properties:,
+        properties:
       )
     end
 
@@ -486,7 +486,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           timestamp: to_datetime - 3.days,
           properties: {
             total_count: -6
-          },
+          }
         )
       end
 
@@ -498,7 +498,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 3.days,
           current_aggregation: '4',
-          max_aggregation: '10',
+          max_aggregation: '10'
         )
       end
 
@@ -523,7 +523,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           timestamp: to_datetime - 3.days,
           properties: {
             total_count: -6
-          },
+          }
         )
       end
 
@@ -536,7 +536,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 3.days,
           current_aggregation: '4',
-          max_aggregation: '10',
+          max_aggregation: '10'
         )
       end
 
@@ -607,7 +607,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           properties: {
             total_count: 12,
             agent_name:
-          },
+          }
         )
       end
     end
@@ -652,7 +652,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 3.days,
           current_aggregation: '4',
-          max_aggregation: '6',
+          max_aggregation: '6'
         )
       end
 

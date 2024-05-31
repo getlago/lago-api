@@ -35,7 +35,7 @@ module Fees
             invoiceable: add_on,
             units:,
             payment_status: :pending,
-            taxes_amount_cents: 0,
+            taxes_amount_cents: 0
           )
           fee.precise_unit_amount = fee.unit_amount.to_f
 

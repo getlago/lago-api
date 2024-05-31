@@ -21,7 +21,7 @@ module Mutations
         result = ::AdjustedFees::CreateService.call(
           organization: current_organization,
           fee:,
-          params: args,
+          params: args
         )
 
         result.success? ? result.fee : result_error(result)

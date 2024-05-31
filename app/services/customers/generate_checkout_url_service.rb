@@ -14,7 +14,7 @@ module Customers
 
       if provider_customer.blank?
         return result.single_validation_failure!(
-          error_code: 'no_linked_payment_provider',
+          error_code: 'no_linked_payment_provider'
         )
       end
 

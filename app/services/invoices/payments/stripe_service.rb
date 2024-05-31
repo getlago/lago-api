@@ -38,13 +38,13 @@ module Invoices
           amount_cents: stripe_result.amount,
           amount_currency: stripe_result.currency&.upcase,
           provider_payment_id: stripe_result.id,
-          status: stripe_result.status,
+          status: stripe_result.status
         )
         payment.save!
 
         update_invoice_payment_status(
           payment_status: invoice_payment_status(payment.status),
-          processing: payment.status == 'processing',
+          processing: payment.status == 'processing'
         )
 
         result.payment = payment
@@ -67,7 +67,7 @@ module Invoices
 
         update_invoice_payment_status(
           payment_status: invoice_payment_status(status),
-          processing: status == 'processing',
+          processing: status == 'processing'
         )
 
         result
@@ -82,7 +82,7 @@ module Invoices
           payment_url_payload,
           {
             api_key: stripe_api_key
-          },
+          }
         )
 
         result.payment_url = res['url']
@@ -111,7 +111,7 @@ module Invoices
           payment_provider_customer_id: customer.stripe_customer.id,
           amount_cents: invoice.total_amount_cents,
           amount_currency: invoice.currency&.upcase,
-          provider_payment_id:,
+          provider_payment_id:
         )
       end
 
@@ -148,7 +148,7 @@ module Invoices
           },
           {
             api_key: stripe_api_key
-          },
+          }
         ).first
         customer.stripe_customer.payment_method_id = payment_method&.id
         customer.stripe_customer.save!
@@ -161,7 +161,7 @@ module Invoices
           customer.stripe_customer.provider_customer_id,
           {
             api_key: stripe_api_key
-          },
+          }
         )
         # TODO: stripe customer should be updated/deleted
         return if result.deleted?
@@ -182,7 +182,7 @@ module Invoices
           {
             api_key: stripe_api_key,
             idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}"
-          },
+          }
         )
       rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
@@ -260,7 +260,7 @@ module Invoices
             # NOTE: A proper `processing` payment status should be introduced for invoices
             ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
           },
-          webhook_notification: deliver_webhook,
+          webhook_notification: deliver_webhook
         )
         result.raise_if_error!
       end
@@ -279,7 +279,7 @@ module Invoices
           provider_error: {
             message: stripe_error.message,
             error_code: stripe_error.code
-          },
+          }
         )
       end
 

@@ -7,7 +7,7 @@ module Api
         service = ::Customers::CreateService.new
         result = service.create_from_api(
           organization: current_organization,
-          params: create_params.to_h.deep_symbolize_keys,
+          params: create_params.to_h.deep_symbolize_keys
         )
 
         if result.success?
@@ -28,7 +28,7 @@ module Api
               customer: {
                 portal_url: result.url
               }
-            },
+            }
           )
         else
           render_error_response(result)
@@ -46,8 +46,8 @@ module Api
             ::V1::CustomerSerializer,
             collection_name: 'customers',
             meta: pagination_metadata(customers),
-            includes: %i[taxes],
-          ),
+            includes: %i[taxes]
+          )
         )
       end
 
@@ -80,8 +80,8 @@ module Api
             json: ::V1::PaymentProviders::CustomerCheckoutSerializer.new(
               customer,
               root_name: 'customer',
-              checkout_url: result.checkout_url,
-            ),
+              checkout_url: result.checkout_url
+            )
           )
         else
           render_error_response(result)
@@ -137,7 +137,7 @@ module Api
             :value,
             :display_in_invoice
           ],
-          tax_codes: [],
+          tax_codes: []
         )
       end
 
@@ -146,8 +146,8 @@ module Api
           json: ::V1::CustomerSerializer.new(
             customer,
             root_name: 'customer',
-            includes: %i[taxes integration_customers],
-          ),
+            includes: %i[taxes integration_customers]
+          )
         )
       end
     end

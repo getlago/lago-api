@@ -44,7 +44,7 @@ module ChargeFilters
             billable_metric_filter = charge.billable_metric.filters.find_by(key:)
 
             filter_value = filter.values.find_or_initialize_by(
-              billable_metric_filter_id: billable_metric_filter&.id,
+              billable_metric_filter_id: billable_metric_filter&.id
             )
 
             filter_value.values = values

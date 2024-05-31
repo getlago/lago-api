@@ -45,7 +45,7 @@ RSpec.describe Fees::AddOnService do
         create(
           :fee,
           applied_add_on:,
-          invoice:,
+          invoice:
         )
       end
 

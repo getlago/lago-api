@@ -7,7 +7,7 @@ module PaymentProviders
 
       def perform(stripe_provider)
         result = PaymentProviders::StripeService.new.refresh_webhook(
-          stripe_provider:,
+          stripe_provider:
         )
         result.raise_if_error!
       end

@@ -16,7 +16,7 @@ module Subscriptions
         .where(
           "DATE(subscriptions.subscription_at#{at_time_zone}) <= " \
           "DATE(?#{at_time_zone})",
-          Time.zone.at(timestamp),
+          Time.zone.at(timestamp)
         )
         .find_each do |subscription|
           subscription.mark_as_active!(Time.zone.at(timestamp))

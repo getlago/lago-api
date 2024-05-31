@@ -24,7 +24,7 @@ RSpec.describe Resolvers::TaxesResolver, type: :graphql do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      query:,
+      query:
     )
 
     taxes_response = result['data']['taxes']
@@ -32,12 +32,12 @@ RSpec.describe Resolvers::TaxesResolver, type: :graphql do
     aggregate_failures do
       expect(taxes_response['collection'].first).to include(
         'id' => tax.id,
-        'name' => tax.name,
+        'name' => tax.name
       )
 
       expect(taxes_response['metadata']).to include(
         'currentPage' => 1,
-        'totalCount' => 1,
+        'totalCount' => 1
       )
     end
   end
@@ -55,7 +55,7 @@ RSpec.describe Resolvers::TaxesResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        query:,
+        query:
       )
 
       expect_graphql_error(result:, message: 'Not in organization')

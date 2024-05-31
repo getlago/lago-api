@@ -178,7 +178,7 @@ RSpec.describe SendWebhookJob, type: :job do
       send_webhook_job.perform_now(
         'invoice.payment_failure',
         invoice,
-        webhook_options,
+        webhook_options
       )
 
       expect(Webhooks::PaymentProviders::InvoicePaymentFailureService).to have_received(:new)
@@ -200,7 +200,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook event service' do
       send_webhook_job.perform_now(
         'customer.payment_provider_created',
-        customer,
+        customer
       )
 
       expect(Webhooks::PaymentProviders::CustomerCreatedService).to have_received(:new)
@@ -223,7 +223,7 @@ RSpec.describe SendWebhookJob, type: :job do
       send_webhook_job.perform_now(
         'customer.checkout_url_generated',
         customer,
-        checkout_url: 'https://example.com',
+        checkout_url: 'https://example.com'
       )
 
       expect(Webhooks::PaymentProviders::CustomerCheckoutService).to have_received(:new)
@@ -255,7 +255,7 @@ RSpec.describe SendWebhookJob, type: :job do
       send_webhook_job.perform_now(
         'customer.payment_provider_error',
         customer,
-        webhook_options,
+        webhook_options
       )
 
       expect(Webhooks::PaymentProviders::CustomerErrorService).to have_received(:new)
@@ -277,7 +277,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
         'credit_note.created',
-        credit_note,
+        credit_note
       )
 
       expect(Webhooks::CreditNotes::CreatedService).to have_received(:new)
@@ -299,7 +299,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
         'credit_note.generated',
-        credit_note,
+        credit_note
       )
 
       expect(Webhooks::CreditNotes::GeneratedService).to have_received(:new)
@@ -331,7 +331,7 @@ RSpec.describe SendWebhookJob, type: :job do
       described_class.perform_now(
         'credit_note.provider_refund_failure',
         credit_note,
-        webhook_options,
+        webhook_options
       )
 
       expect(Webhooks::CreditNotes::PaymentProviderRefundFailureService).to have_received(:new)
@@ -353,7 +353,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
         'invoice.drafted',
-        invoice,
+        invoice
       )
 
       expect(Webhooks::Invoices::DraftedService).to have_received(:new)
@@ -375,7 +375,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
         'subscription.terminated',
-        subscription,
+        subscription
       )
 
       expect(Webhooks::Subscriptions::TerminatedService).to have_received(:new)
@@ -397,7 +397,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
         'subscription.termination_alert',
-        subscription,
+        subscription
       )
 
       expect(Webhooks::Subscriptions::TerminationAlertService).to have_received(:new)
@@ -419,7 +419,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
         'invoice.payment_status_updated',
-        invoice,
+        invoice
       )
 
       expect(Webhooks::Invoices::PaymentStatusUpdatedService).to have_received(:new)
@@ -448,7 +448,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
         'subscription.started',
-        subscription,
+        subscription
       )
 
       expect(Webhooks::Subscriptions::StartedService).to have_received(:new)
@@ -470,7 +470,7 @@ RSpec.describe SendWebhookJob, type: :job do
     it 'calls the webhook service' do
       send_webhook_job.perform_now(
         'customer.vies_check',
-        customer,
+        customer
       )
 
       expect(Webhooks::Customers::ViesCheckService).to have_received(:new)

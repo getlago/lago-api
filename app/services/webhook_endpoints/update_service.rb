@@ -17,7 +17,7 @@ module WebhookEndpoints
 
       webhook_endpoint.update!(
         webhook_url: params[:webhook_url],
-        signature_algo: params[:signature_algo],
+        signature_algo: params[:signature_algo]
       )
 
       result.webhook_endpoint = webhook_endpoint

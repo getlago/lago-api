@@ -52,7 +52,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
           clientSecret: '456',
           connectionId: 'this-is-random-uuid'
         }
-      },
+      }
     )
 
     result_data = result['data']['createNetsuiteIntegration']

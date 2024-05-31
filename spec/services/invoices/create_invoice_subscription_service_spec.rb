@@ -23,7 +23,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       started_at:,
       created_at:,
       status:,
-      terminated_at:,
+      terminated_at:
     )
   end
 
@@ -55,7 +55,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           charges_from_datetime: match_datetime(Time.zone.parse('2022-02-06 00:00:00')),
           charges_to_datetime: match_datetime(Time.zone.parse('2022-03-05 23:59:59')),
           recurring: true,
-          invoicing_reason: invoicing_reason.to_s,
+          invoicing_reason: invoicing_reason.to_s
         )
       end
     end
@@ -86,7 +86,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
             charges_from_datetime: match_datetime(Time.zone.parse('2023-09-01T00:00:00')),
             charges_to_datetime: match_datetime(Time.zone.parse('2023-09-30T23:59:59')),
             recurring: false,
-            invoicing_reason: invoicing_reason.to_s,
+            invoicing_reason: invoicing_reason.to_s
           )
         end
       end
@@ -102,7 +102,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
             charges_from_datetime: Time.zone.parse('2023-09-01T00:00:00.000Z'),
             charges_to_datetime: Time.zone.parse('2023-09-30T23:59:59.999Z').end_of_day,
             recurring: true,
-            invoicing_reason: 'subscription_periodic',
+            invoicing_reason: 'subscription_periodic'
           )
         end
 
@@ -111,7 +111,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
             :invoice,
             created_at: started_at - 3.months,
             customer: subscription.customer,
-            organization: plan.organization,
+            organization: plan.organization
           )
         end
 
@@ -133,7 +133,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
               charges_from_datetime: match_datetime(Time.zone.parse('2023-10-01T00:00:00')),
               charges_to_datetime: match_datetime(Time.zone.parse('2023-10-01T00:00:00')),
               recurring: false,
-              invoicing_reason: invoicing_reason.to_s,
+              invoicing_reason: invoicing_reason.to_s
             )
           end
         end
@@ -147,7 +147,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           plan:,
           customer: subscription.customer,
           subscription_at: (Time.zone.now - 2.years).to_date,
-          started_at: Time.zone.now - 2.years,
+          started_at: Time.zone.now - 2.years
         )
       end
 
@@ -197,7 +197,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
         Subscriptions::DatesService.new_instance(
           subscription,
           Time.zone.at(timestamp),
-          current_usage: false,
+          current_usage: false
         )
       end
 
@@ -211,7 +211,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           from_datetime: date_service.from_datetime,
           to_datetime: date_service.to_datetime,
           charges_from_datetime: date_service.charges_from_datetime,
-          charges_to_datetime: date_service.charges_to_datetime,
+          charges_to_datetime: date_service.charges_to_datetime
         )
       end
 

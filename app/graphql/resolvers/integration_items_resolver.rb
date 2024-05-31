@@ -30,7 +30,7 @@ module Resolvers
         limit:,
         filters: {
           item_type:
-        },
+        }
       )
 
       result.integration_items

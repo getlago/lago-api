@@ -8,7 +8,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
       organization:,
       events_params:,
       timestamp: creation_timestamp,
-      metadata:,
+      metadata:
     )
   end
 
@@ -61,7 +61,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
             transaction_id: SecureRandom.uuid,
             properties: {foo: 'bar'},
             timestamp:
-          },
+          }
         )
       end
 
@@ -86,7 +86,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
             :event,
             organization:,
             transaction_id: '123456',
-            external_subscription_id: '123456',
+            external_subscription_id: '123456'
           )
         end
 

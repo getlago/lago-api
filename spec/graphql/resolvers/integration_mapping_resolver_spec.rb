@@ -38,7 +38,7 @@ RSpec.describe Resolvers::IntegrationMappingResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: {integrationMappingId: netsuite_mapping.id},
+      variables: {integrationMappingId: netsuite_mapping.id}
     )
 
     integration_mapping_response = result['data']['integrationMapping']
@@ -61,12 +61,12 @@ RSpec.describe Resolvers::IntegrationMappingResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {integrationMappingId: '123456'},
+        variables: {integrationMappingId: '123456'}
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found',
+        message: 'Resource not found'
       )
     end
   end

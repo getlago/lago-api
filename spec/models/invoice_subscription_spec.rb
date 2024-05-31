@@ -9,7 +9,7 @@ RSpec.describe InvoiceSubscription, type: :model do
       from_datetime:,
       to_datetime:,
       charges_from_datetime:,
-      charges_to_datetime:,
+      charges_to_datetime:
     )
   end
 
@@ -39,7 +39,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge:,
-        amount_cents: 100,
+        amount_cents: 100
       )
 
       create(
@@ -47,14 +47,14 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge:,
-        amount_cents: 200,
+        amount_cents: 200
       )
 
       create(
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        amount_cents: 400,
+        amount_cents: 400
       )
 
       expect(invoice_subscription.charge_amount_cents).to eq(300)
@@ -67,7 +67,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        amount_cents: 50,
+        amount_cents: 50
       )
 
       create(
@@ -75,7 +75,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge: create(:standard_charge),
-        amount_cents: 200,
+        amount_cents: 200
       )
 
       expect(invoice_subscription.subscription_amount_cents).to eq(50)
@@ -89,7 +89,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         :fee,
         subscription_id: subscription.id,
         invoice_id: invoice.id,
-        amount_cents: 50,
+        amount_cents: 50
       )
 
       create(
@@ -97,7 +97,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge:,
-        amount_cents: 200,
+        amount_cents: 200
       )
 
       create(
@@ -105,7 +105,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         subscription_id: subscription.id,
         invoice_id: invoice.id,
         charge:,
-        amount_cents: 100,
+        amount_cents: 100
       )
 
       expect(invoice_subscription.total_amount_cents).to eq(350)
@@ -141,7 +141,7 @@ RSpec.describe InvoiceSubscription, type: :model do
           from_datetime: invoice_subscription.from_datetime - 1.year,
           to_datetime: invoice_subscription.to_datetime - 1.year,
           charges_from_datetime: invoice_subscription.charges_from_datetime - 1.year,
-          charges_to_datetime: invoice_subscription.charges_to_datetime - 1.year,
+          charges_to_datetime: invoice_subscription.charges_to_datetime - 1.year
         )
       end
 
@@ -152,7 +152,7 @@ RSpec.describe InvoiceSubscription, type: :model do
           :fee,
           subscription: previous_invoice_subscription.subscription,
           invoice: previous_invoice_subscription.invoice,
-          amount_cents: 857, # prorated
+          amount_cents: 857 # prorated
         )
       end
 
@@ -168,7 +168,7 @@ RSpec.describe InvoiceSubscription, type: :model do
           from_datetime: invoice_subscription.from_datetime - 1.year,
           to_datetime: invoice_subscription.to_datetime - 1.year,
           charges_from_datetime: invoice_subscription.charges_from_datetime - 1.year,
-          charges_to_datetime: invoice_subscription.charges_to_datetime - 1.year,
+          charges_to_datetime: invoice_subscription.charges_to_datetime - 1.year
         )
       end
 
@@ -180,7 +180,7 @@ RSpec.describe InvoiceSubscription, type: :model do
           from_datetime: invoice_subscription.from_datetime - 2.years,
           to_datetime: invoice_subscription.to_datetime - 2.years,
           charges_from_datetime: invoice_subscription.charges_from_datetime - 2.years,
-          charges_to_datetime: invoice_subscription.charges_to_datetime - 2.years,
+          charges_to_datetime: invoice_subscription.charges_to_datetime - 2.years
         )
       end
 
@@ -196,7 +196,7 @@ RSpec.describe InvoiceSubscription, type: :model do
           from_datetime: invoice_subscription.from_datetime + 1.year,
           to_datetime: invoice_subscription.to_datetime + 1.year,
           charges_from_datetime: invoice_subscription.charges_from_datetime + 1.year,
-          charges_to_datetime: invoice_subscription.charges_to_datetime + 1.year,
+          charges_to_datetime: invoice_subscription.charges_to_datetime + 1.year
         )
       end
 

@@ -18,7 +18,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       organization:,
       amount_cents: 10_000,
       interval: plan_interval,
-      pay_in_advance: false,
+      pay_in_advance: false
     )
   end
 
@@ -33,7 +33,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       code: 'metered',
       aggregation_type: 'sum_agg',
       field_name: 'total',
-      recurring: false,
+      recurring: false
     )
   end
 
@@ -45,7 +45,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       code: 'metered_advance',
       aggregation_type: 'sum_agg',
       field_name: 'total',
-      recurring: false,
+      recurring: false
     )
   end
 
@@ -57,7 +57,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       code: 'advance_recurring',
       aggregation_type: 'sum_agg',
       field_name: 'total',
-      recurring: true,
+      recurring: true
     )
   end
 
@@ -77,7 +77,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       billable_metric: billable_metric_metered,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'},
+      properties: {amount: '1'}
     )
 
     create(
@@ -86,7 +86,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       billable_metric: billable_metric_metered_advance,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'},
+      properties: {amount: '1'}
     )
 
     create(
@@ -95,7 +95,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       billable_metric: billable_metric_recurring_advance,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'},
+      properties: {amount: '1'}
     )
 
     # Create the subscription
@@ -106,7 +106,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
           external_id: customer.external_id,
           plan_code: plan.code,
           billing_time:
-        },
+        }
       )
 
       create_event(
@@ -115,7 +115,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {total: '10'}
-        },
+        }
       )
 
       create_event(
@@ -124,7 +124,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {total: '10'}
-        },
+        }
       )
 
       create_event(
@@ -133,7 +133,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {total: '10'}
-        },
+        }
       )
     end
 
@@ -174,7 +174,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
         :coupon,
         organization:,
         amount_cents: 1_000_000,
-        frequency: :forever,
+        frequency: :forever
       )
     end
 
@@ -184,7 +184,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       apply_coupon(
         external_customer_id: customer.external_id,
         coupon_code: coupon_target.coupon.code,
-        amount_cents: 1_000_000,
+        amount_cents: 1_000_000
       )
 
       travel_to((subscription_time + 1.month).beginning_of_month) do

@@ -169,7 +169,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               invoice_display_name: 'Europe',
               values: {amount: '0.22'}
             }
-          ],
+          ]
         )
 
         expect(json[:plan][:charges].first[:filters]).to eq(
@@ -179,7 +179,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               properties: {amount: '0.22'},
               values: {group.key.to_sym => [group.value]}
             }
-          ],
+          ]
         )
       end
     end
@@ -268,7 +268,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       put_with_token(
         organization,
         "/api/v1/plans/#{plan.code}",
-        {plan: update_params},
+        {plan: update_params}
       )
 
       expect(response).to have_http_status(:success)
@@ -294,7 +294,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         put_with_token(
           organization,
           "/api/v1/plans/#{plan.code}",
-          {plan: update_params},
+          {plan: update_params}
         )
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -474,7 +474,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               invoice_display_name: 'Europe',
               values: {amount: '0.22'}
             }
-          ],
+          ]
         )
 
         expect(json[:plan][:charges].first[:filters]).to eq(
@@ -484,7 +484,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
               properties: {amount: '0.22'},
               values: {group.key.to_sym => [group.value]}
             }
-          ],
+          ]
         )
       end
     end
@@ -496,7 +496,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     it 'returns a plan' do
       get_with_token(
         organization,
-        "/api/v1/plans/#{plan.code}",
+        "/api/v1/plans/#{plan.code}"
       )
 
       expect(response).to have_http_status(:success)
@@ -510,7 +510,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       it 'returns a plan' do
         get_with_token(
           organization,
-          "/api/v1/plans/#{plan.code}",
+          "/api/v1/plans/#{plan.code}"
         )
 
         expect(response).to have_http_status(:success)
@@ -524,7 +524,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       it 'returns not found' do
         get_with_token(
           organization,
-          '/api/v1/plans/555',
+          '/api/v1/plans/555'
         )
 
         expect(response).to have_http_status(:not_found)

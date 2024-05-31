@@ -8,7 +8,7 @@ RSpec.describe Charges::Validators::GraduatedPercentageService, type: :service d
   let(:charge) do
     build(
       :graduated_percentage_charge,
-      properties: {graduated_percentage_ranges: ranges},
+      properties: {graduated_percentage_ranges: ranges}
     )
   end
 

@@ -35,7 +35,7 @@ module IntegrationCustomers
         external_customer_id: create_result.contact_id,
         type: customer_type,
         subsidiary_id:,
-        sync_with_provider: true,
+        sync_with_provider: true
       )
 
       result.integration_customer = new_integration_customer
@@ -49,7 +49,7 @@ module IntegrationCustomers
         external_customer_id: params[:external_customer_id],
         type: customer_type,
         subsidiary_id:,
-        sync_with_provider: false,
+        sync_with_provider: false
       )
 
       result.integration_customer = new_integration_customer

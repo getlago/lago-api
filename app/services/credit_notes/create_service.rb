@@ -35,7 +35,7 @@ module CreditNotes
           reason:,
           description:,
           credit_status: 'available',
-          status: invoice.status,
+          status: invoice.status
         )
 
         create_items
@@ -51,7 +51,7 @@ module CreditNotes
 
         credit_note.update!(
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
-          balance_amount_cents: credit_note.credit_amount_cents,
+          balance_amount_cents: credit_note.credit_amount_cents
         )
       end
 
@@ -112,7 +112,7 @@ module CreditNotes
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),
           amount_cents: amount_cents.round,
           precise_amount_cents: amount_cents,
-          amount_currency: invoice.currency,
+          amount_currency: invoice.currency
         )
         break unless valid_item?(item)
 
@@ -145,14 +145,14 @@ module CreditNotes
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
           credit_note_method: types
-        },
+        }
       )
     end
 
     def deliver_webhook
       SendWebhookJob.perform_later(
         'credit_note.created',
-        credit_note,
+        credit_note
       )
     end
 
@@ -189,7 +189,7 @@ module CreditNotes
     def compute_amounts_and_taxes
       taxes_result = CreditNotes::ApplyTaxesService.call(
         invoice:,
-        items: credit_note.items,
+        items: credit_note.items
       )
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents

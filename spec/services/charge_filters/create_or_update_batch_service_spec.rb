@@ -13,7 +13,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       :billable_metric_filter,
       billable_metric: charge.billable_metric,
       key: 'card_location',
-      values: %w[domestic international],
+      values: %w[domestic international]
     )
   end
 
@@ -22,7 +22,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       :billable_metric_filter,
       billable_metric: charge.billable_metric,
       key: 'scheme',
-      values: %w[visa mastercard],
+      values: %w[visa mastercard]
     )
   end
 
@@ -31,7 +31,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       :billable_metric_filter,
       billable_metric: charge.billable_metric,
       key: 'card_type',
-      values: %w[debit credit],
+      values: %w[debit credit]
     )
   end
 
@@ -48,7 +48,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           :charge_filter_value,
           charge_filter: filter,
           billable_metric_filter: card_location_filter,
-          values: [card_location_filter.values.first],
+          values: [card_location_filter.values.first]
         )
       end
 
@@ -90,7 +90,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       filter1 = charge.filters.find_by(invoice_display_name: 'Visa domestic card payment')
       expect(filter1).to have_attributes(
         invoice_display_name: 'Visa domestic card payment',
-        properties: {'amount' => '10'},
+        properties: {'amount' => '10'}
       )
       expect(filter1.values.count).to eq(2)
       expect(filter1.values.pluck(:values).flatten).to match_array(%w[domestic visa])
@@ -98,7 +98,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       filter2 = charge.filters.find_by(invoice_display_name: 'Visa debit domestic card payment')
       expect(filter2).to have_attributes(
         invoice_display_name: 'Visa debit domestic card payment',
-        properties: {'amount' => '20'},
+        properties: {'amount' => '20'}
       )
       expect(filter2.values.count).to eq(3)
       expect(filter2.values.pluck(:values).flatten).to match_array(%w[domestic visa debit])
@@ -113,13 +113,13 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           :charge_filter_value,
           charge_filter: filter,
           billable_metric_filter: card_location_filter,
-          values: ['domestic'],
+          values: ['domestic']
         ),
         create(
           :charge_filter_value,
           charge_filter: filter,
           billable_metric_filter: scheme_filter,
-          values: ['visa'],
+          values: ['visa']
         )
       ]
     end
@@ -143,7 +143,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       expect { service }.not_to change(ChargeFilter, :count)
       expect(filter.reload).to have_attributes(
         invoice_display_name: 'New display name',
-        properties: {'amount' => '20'},
+        properties: {'amount' => '20'}
       )
       expect(filter.values.count).to eq(2)
       expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])

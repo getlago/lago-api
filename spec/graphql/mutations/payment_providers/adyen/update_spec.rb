@@ -36,7 +36,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
           id: adyen_provider.id,
           successRedirectUrl: success_redirect_url
         }
-      },
+      }
     )
 
     result_data = result['data']['updateAdyenPaymentProvider']
@@ -56,7 +56,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
             id: adyen_provider.id,
             successRedirectUrl: nil
           }
-        },
+        }
       )
 
       result_data = result['data']['updateAdyenPaymentProvider']

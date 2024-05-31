@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Charges::ChargeModels::GroupedStandardService do
   subject(:apply_grouped_standard_service) do
     described_class.apply(
-      charge:, aggregation_result:, properties: charge.properties,
+      charge:, aggregation_result:, properties: charge.properties
     )
   end
 
@@ -42,7 +42,7 @@ RSpec.describe Charges::ChargeModels::GroupedStandardService do
       charge_model: 'standard',
       properties: {
         amount: '5.12345'
-      },
+      }
     )
   end
 

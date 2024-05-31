@@ -18,7 +18,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       amount_currency: 'EUR',
       interval: plan_interval,
       pay_in_advance: true,
-      bill_charges_monthly:,
+      bill_charges_monthly:
     )
   end
 
@@ -40,7 +40,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           external_id: customer.external_id,
           plan_code: plan.code,
           billing_time:
-        },
+        }
       )
 
       Subscriptions::BillingService.new.call

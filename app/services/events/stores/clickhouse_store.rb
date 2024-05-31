@@ -41,7 +41,7 @@ module Events
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select(Arel.sql(
             (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', ')
           ))
           .to_sql
 
@@ -117,7 +117,7 @@ module Events
           [
             query.query,
             {decimal_scale: DECIMAL_SCALE}
-          ],
+          ]
         )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
 
@@ -132,8 +132,8 @@ module Events
             [
               query.breakdown_query,
               {decimal_scale: DECIMAL_SCALE}
-            ],
-          ),
+            ]
+          )
         ).rows
       end
 
@@ -148,7 +148,7 @@ module Events
               decimal_scale: DECIMAL_SCALE,
               timezone: customer.applicable_timezone
             }
-          ],
+          ]
         )
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
 
@@ -166,7 +166,7 @@ module Events
               decimal_scale: DECIMAL_SCALE,
               timezone: customer.applicable_timezone
             }
-          ],
+          ]
         )
 
         ::Clickhouse::EventsRaw.connection.select_all(sql).to_a
@@ -181,7 +181,7 @@ module Events
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE
             }
-          ],
+          ]
         )
 
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
@@ -198,7 +198,7 @@ module Events
               decimal_scale: DECIMAL_SCALE,
               timezone: customer.applicable_timezone
             }
-          ],
+          ]
         )
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
@@ -214,7 +214,7 @@ module Events
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select(Arel.sql(
             (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', ')
           ))
           .to_sql
 
@@ -245,7 +245,7 @@ module Events
         cte_sql = events.group(DEDUPLICATION_GROUP)
           .select(Arel.sql(
             (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', '),
+            ["#{sanitized_numeric_property} AS property", 'events_raw.timestamp']).join(', ')
           ))
           .to_sql
 
@@ -388,7 +388,7 @@ module Events
               decimal_scale: DECIMAL_SCALE,
               initial_value: initial_value || 0
             }
-          ],
+          ]
         )
 
         result = ::Clickhouse::EventsRaw.connection.select_one(sql)
@@ -423,7 +423,7 @@ module Events
               to_datetime: to_datetime.ceil,
               decimal_scale: DECIMAL_SCALE
             }
-          ],
+          ]
         )
 
         prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
@@ -443,8 +443,8 @@ module Events
                 decimal_scale: DECIMAL_SCALE,
                 initial_value: initial_value || 0
               }
-            ],
-          ),
+            ]
+          )
         ).rows
       end
 
@@ -456,7 +456,7 @@ module Events
         conditions = ignored_filters.map do |filters|
           filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events_raw.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)],
+              ["(coalesce(events_raw.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(' AND ')
         end
@@ -480,7 +480,7 @@ module Events
 
       def sanitized_property_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['events_raw.properties[?]', property],
+          ['events_raw.properties[?]', property]
         )
       end
 
@@ -490,13 +490,13 @@ module Events
             'toDecimal128OrNull(events_raw.properties[?], ?) IS NOT NULL',
             aggregation_property,
             DECIMAL_SCALE
-          ],
+          ]
         )
       end
 
       def sanitized_numeric_property
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE],
+          ['toDecimal128(events_raw.properties[?], ?)', aggregation_property, DECIMAL_SCALE]
         )
       end
 
@@ -508,7 +508,7 @@ module Events
         end
 
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          [sql, {date:, timezone: customer.applicable_timezone}],
+          [sql, {date:, timezone: customer.applicable_timezone}]
         )
       end
 

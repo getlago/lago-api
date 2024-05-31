@@ -47,7 +47,7 @@ RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
           domain: 'foo.bar',
           organizationName: 'Footest'
         }
-      },
+      }
     )
 
     result_data = result['data']['updateOktaIntegration']

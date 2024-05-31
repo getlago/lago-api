@@ -63,7 +63,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
             ]
           }
         }
-      },
+      }
     )
 
     result_data = result['data']['createSubscription']
@@ -75,14 +75,14 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
       'externalId' => 'custom-external-id',
       'startedAt' => String,
       'billingTime' => 'anniversary',
-      'endingAt' => ending_at.iso8601,
+      'endingAt' => ending_at.iso8601
     )
     expect(result_data['customer']).to include(
-      'id' => customer.id,
+      'id' => customer.id
     )
     expect(result_data['plan']).to include(
       'id' => String,
-      'amountCents' => '100',
+      'amountCents' => '100'
     )
   end
 end

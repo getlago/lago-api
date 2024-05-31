@@ -14,7 +14,7 @@ module Plans
         amount_cents: args[:amount_cents],
         amount_currency: args[:amount_currency],
         trial_period: args[:trial_period],
-        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil,
+        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil
       )
 
       # Validates billable metrics
@@ -50,7 +50,7 @@ module Plans
           if minimum_commitment[:tax_codes].present?
             taxes_result = Commitments::ApplyTaxesService.call(
               commitment: new_commitment,
-              tax_codes: minimum_commitment[:tax_codes],
+              tax_codes: minimum_commitment[:tax_codes]
             )
             return taxes_result unless taxes_result.success?
           end
@@ -71,7 +71,7 @@ module Plans
         plan:,
         commitment_type:,
         invoice_display_name: args[:invoice_display_name],
-        amount_cents: args[:amount_cents],
+        amount_cents: args[:amount_cents]
       )
     end
 
@@ -82,20 +82,20 @@ module Plans
         charge_model: charge_model(args),
         pay_in_advance: args[:pay_in_advance] || false,
         prorated: args[:prorated] || false,
-        group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
+        group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) }
       )
 
       properties = args[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(args))
       charge.properties = Charges::FilterChargeModelPropertiesService.call(
         charge:,
-        properties:,
+        properties:
       ).properties
 
       if args[:filters].present?
         charge.save!
         ChargeFilters::CreateOrUpdateBatchService.call(
           charge:,
-          filters_params: args[:filters].map(&:with_indifferent_access),
+          filters_params: args[:filters].map(&:with_indifferent_access)
         ).raise_if_error!
       end
 
@@ -137,7 +137,7 @@ module Plans
           nb_package_charges: count_by_charge_model['package'] || 0,
           organization_id: plan.organization_id,
           parent_id: plan.parent_id
-        },
+        }
       )
     end
   end

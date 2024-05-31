@@ -11,7 +11,7 @@ RSpec.describe Credits::AppliedCouponsService do
       fees_amount_cents: 100,
       sub_total_excluding_taxes_amount_cents: 100,
       currency: 'EUR',
-      customer: subscription.customer,
+      customer: subscription.customer
     )
   end
 
@@ -23,7 +23,7 @@ RSpec.describe Credits::AppliedCouponsService do
       subscription_at: started_at,
       started_at:,
       created_at:,
-      status: :active,
+      status: :active
     )
   end
   let(:started_at) { Time.zone.now - 2.years }
@@ -37,7 +37,7 @@ RSpec.describe Credits::AppliedCouponsService do
         :applied_coupon,
         customer: subscription.customer,
         amount_cents: 10,
-        amount_currency: plan.amount_currency,
+        amount_currency: plan.amount_currency
       )
     end
     let(:coupon_latest) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10.00) }
@@ -47,7 +47,7 @@ RSpec.describe Credits::AppliedCouponsService do
         coupon: coupon_latest,
         customer: subscription.customer,
         percentage_rate: 20.00,
-        created_at: applied_coupon.created_at + 1.day,
+        created_at: applied_coupon.created_at + 1.day
       )
     end
 
@@ -78,7 +78,7 @@ RSpec.describe Credits::AppliedCouponsService do
           fees_amount_cents: 5,
           sub_total_excluding_taxes_amount_cents: 5,
           currency: 'EUR',
-          customer: subscription.customer,
+          customer: subscription.customer
         )
       end
 
@@ -105,7 +105,7 @@ RSpec.describe Credits::AppliedCouponsService do
           customer: subscription.customer,
           amount_cents: 20,
           amount_currency: plan.amount_currency,
-          created_at: applied_coupon.created_at + 1.day,
+          created_at: applied_coupon.created_at + 1.day
         )
       end
 
@@ -128,7 +128,7 @@ RSpec.describe Credits::AppliedCouponsService do
           :applied_coupon,
           coupon:,
           customer: subscription.customer,
-          percentage_rate: 15.00,
+          percentage_rate: 15.00
         )
       end
 
@@ -150,7 +150,7 @@ RSpec.describe Credits::AppliedCouponsService do
           :applied_coupon,
           customer: subscription.customer,
           amount_cents: 10,
-          amount_currency: 'NOK',
+          amount_currency: 'NOK'
         )
       end
 
@@ -173,7 +173,7 @@ RSpec.describe Credits::AppliedCouponsService do
           coupon:,
           customer: subscription.customer,
           amount_cents: 10,
-          amount_currency: plan.amount_currency,
+          amount_currency: plan.amount_currency
         )
       end
       let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
@@ -185,7 +185,7 @@ RSpec.describe Credits::AppliedCouponsService do
           customer: subscription.customer,
           amount_cents: 20,
           amount_currency: plan.amount_currency,
-          created_at: applied_coupon.created_at + 1.day,
+          created_at: applied_coupon.created_at + 1.day
         )
       end
 
@@ -215,7 +215,7 @@ RSpec.describe Credits::AppliedCouponsService do
           coupon:,
           customer: subscription.customer,
           amount_cents: 10,
-          amount_currency: plan.amount_currency,
+          amount_currency: plan.amount_currency
         )
       end
       let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
@@ -227,7 +227,7 @@ RSpec.describe Credits::AppliedCouponsService do
           customer: subscription.customer,
           amount_cents: 20,
           amount_currency: plan.amount_currency,
-          created_at: applied_coupon.created_at + 1.day,
+          created_at: applied_coupon.created_at + 1.day
         )
       end
 
@@ -257,7 +257,7 @@ RSpec.describe Credits::AppliedCouponsService do
           coupon:,
           customer: subscription.customer,
           amount_cents: 10,
-          amount_currency: plan.amount_currency,
+          amount_currency: plan.amount_currency
         )
       end
       let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
@@ -269,7 +269,7 @@ RSpec.describe Credits::AppliedCouponsService do
           customer: subscription.customer,
           amount_cents: 20,
           amount_currency: plan.amount_currency,
-          created_at: applied_coupon.created_at + 1.day,
+          created_at: applied_coupon.created_at + 1.day
         )
       end
 
@@ -299,7 +299,7 @@ RSpec.describe Credits::AppliedCouponsService do
           coupon:,
           customer: subscription.customer,
           amount_cents: 82,
-          amount_currency: plan.amount_currency,
+          amount_currency: plan.amount_currency
         )
       end
       let(:coupon_middle) { create(:coupon, coupon_type: 'fixed_amount', limited_billable_metrics: true) }
@@ -315,7 +315,7 @@ RSpec.describe Credits::AppliedCouponsService do
           customer: subscription.customer,
           amount_cents: 5,
           amount_currency: plan.amount_currency,
-          created_at: applied_coupon.created_at + 2.hours,
+          created_at: applied_coupon.created_at + 2.hours
         )
       end
       let(:coupon_latest) { create(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
@@ -327,7 +327,7 @@ RSpec.describe Credits::AppliedCouponsService do
           customer: subscription.customer,
           amount_cents: 20,
           amount_currency: plan.amount_currency,
-          created_at: applied_coupon.created_at + 1.day,
+          created_at: applied_coupon.created_at + 1.day
         )
       end
       let(:fee_middle) do
@@ -337,7 +337,7 @@ RSpec.describe Credits::AppliedCouponsService do
           charge:,
           amount_cents: 12,
           amount_currency: 'EUR',
-          taxes_amount_cents: 3,
+          taxes_amount_cents: 3
         )
       end
       let(:fee) do
@@ -347,7 +347,7 @@ RSpec.describe Credits::AppliedCouponsService do
           subscription:,
           amount_cents: 75,
           amount_currency: 'EUR',
-          taxes_amount_cents: 5,
+          taxes_amount_cents: 5
         )
       end
 

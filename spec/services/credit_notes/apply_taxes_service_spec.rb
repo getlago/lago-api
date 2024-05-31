@@ -20,7 +20,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       total_amount_cents: 120,
       payment_status: :succeeded,
       taxes_rate: 20,
-      version_number: 3,
+      version_number: 3
     )
   end
 
@@ -31,7 +31,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       amount_cents: 100,
       taxes_amount_cents: 12,
       taxes_rate: 12,
-      precise_coupons_amount_cents: (20 * 100).fdiv(120),
+      precise_coupons_amount_cents: (20 * 100).fdiv(120)
     )
   end
 
@@ -42,7 +42,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       amount_cents: 20,
       taxes_amount_cents: 4,
       taxes_rate: 20,
-      precise_coupons_amount_cents: (20 * 20).fdiv(120),
+      precise_coupons_amount_cents: (20 * 20).fdiv(120)
     )
   end
 
@@ -54,7 +54,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       :fee_applied_tax,
       tax: tax1,
       fee: fee1,
-      amount_cents: (fee1.sub_total_excluding_taxes_amount_cents * tax1.rate).fdiv(100),
+      amount_cents: (fee1.sub_total_excluding_taxes_amount_cents * tax1.rate).fdiv(100)
     )
   end
 
@@ -63,7 +63,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       :fee_applied_tax,
       tax: tax1,
       fee: fee2,
-      amount_cents: (fee2.sub_total_excluding_taxes_amount_cents * tax1.rate).fdiv(100),
+      amount_cents: (fee2.sub_total_excluding_taxes_amount_cents * tax1.rate).fdiv(100)
     )
   end
 
@@ -72,7 +72,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       :fee_applied_tax,
       tax: tax2,
       fee: fee2,
-      amount_cents: (fee2.sub_total_excluding_taxes_amount_cents * tax2.rate).fdiv(100),
+      amount_cents: (fee2.sub_total_excluding_taxes_amount_cents * tax2.rate).fdiv(100)
     )
   end
 
@@ -84,7 +84,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         fee: fee1,
         amount_cents: 20,
         precise_amount_cents: 20,
-        amount_currency: invoice.currency,
+        amount_currency: invoice.currency
       ),
       build(
         :credit_note_item,
@@ -92,7 +92,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         fee: fee2,
         amount_cents: 50,
         precise_amount_cents: 50,
-        amount_currency: invoice.currency,
+        amount_currency: invoice.currency
       )
     ]
   end
@@ -122,7 +122,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
             tax_name: tax1.name,
             tax_rate: 12,
             amount_currency: invoice.currency,
-            amount_cents: 7,
+            amount_cents: 7
           )
 
           expect(applied_taxes[1]).to have_attributes(
@@ -133,7 +133,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
             tax_name: tax2.name,
             tax_rate: 8,
             amount_currency: invoice.currency,
-            amount_cents: 3,
+            amount_cents: 3
           )
 
           expect(result.taxes_amount_cents.round).to eq(10)

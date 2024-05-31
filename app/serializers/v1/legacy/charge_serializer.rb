@@ -7,7 +7,7 @@ module V1
         ::CollectionSerializer.new(
           model.group_properties,
           ::V1::Legacy::GroupPropertiesSerializer,
-          collection_name: 'group_properties',
+          collection_name: 'group_properties'
         ).serialize
       end
     end

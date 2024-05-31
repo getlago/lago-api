@@ -13,7 +13,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
       ongoing_usage_balance_cents: 200,
       credits_balance: 10.0,
       credits_ongoing_balance: 8.0,
-      credits_ongoing_usage_balance: 2.0,
+      credits_ongoing_usage_balance: 2.0
     )
   end
   let(:usage_credits_amount) { BigDecimal('4.5') }
@@ -94,7 +94,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
             ongoing_usage_balance_cents: 0,
             credits_balance: 2.0,
             credits_ongoing_balance: 2.0,
-            credits_ongoing_usage_balance: 0.0,
+            credits_ongoing_usage_balance: 0.0
           )
         end
         let(:credits_amount) { BigDecimal('0.0') }

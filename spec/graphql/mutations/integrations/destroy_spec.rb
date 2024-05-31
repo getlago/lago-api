@@ -31,7 +31,7 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
         query: mutation,
         variables: {
           input: {id: integration.id}
-        },
+        }
       )
     end.to change(::Integrations::BaseIntegration, :count).by(-1)
   end

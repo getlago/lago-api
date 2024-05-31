@@ -26,7 +26,7 @@ module BillableMetrics
             aggregation,
             options[:is_pay_in_advance],
             target_result: result,
-            aggregation_without_proration:,
+            aggregation_without_proration:
           )
         else
           result.aggregation = aggregation
@@ -78,7 +78,7 @@ module BillableMetrics
               aggregation_value,
               options[:is_pay_in_advance],
               target_result: group_result,
-              aggregation_without_proration: group_result_without_proration,
+              aggregation_without_proration: group_result_without_proration
             )
           else
             group_result.aggregation = aggregation_value
@@ -117,7 +117,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries: {to_datetime: from_datetime},
-          filters:,
+          filters:
         )
 
         event_store.use_from_boundary = false
@@ -139,7 +139,7 @@ module BillableMetrics
       def persisted_sum
         persisted_event_store_instance.prorated_sum(
           period_duration:,
-          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime),
+          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime)
         )
       end
 
@@ -176,7 +176,7 @@ module BillableMetrics
       def grouped_persisted_sums
         persisted_event_store_instance.grouped_prorated_sum(
           period_duration:,
-          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime),
+          persisted_duration: subscription.date_diff_with_timezone(from_datetime, to_datetime)
         )
       end
     end

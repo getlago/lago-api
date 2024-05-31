@@ -56,7 +56,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
           lago_id: String,
           status: 'settled',
           transaction_status: 'voided',
-          lago_wallet_id: wallet.id,
+          lago_wallet_id: wallet.id
         )
         expect(wallet.reload.credits_balance).to eq(10)
       end

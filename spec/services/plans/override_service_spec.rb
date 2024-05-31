@@ -24,9 +24,9 @@ RSpec.describe Plans::OverrideService, type: :service do
           build(
             :group_property,
             group:,
-            values: {amount: '10', amount_currency: 'EUR'},
+            values: {amount: '10', amount_currency: 'EUR'}
           )
-        ],
+        ]
       )
     end
 
@@ -89,7 +89,7 @@ RSpec.describe Plans::OverrideService, type: :service do
         description: 'overridden description',
         invoice_display_name: 'invoice display name',
         name: 'overridden name',
-        trial_period: 20,
+        trial_period: 20
       )
 
       expect(plan.taxes).to contain_exactly(tax)
@@ -97,7 +97,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       expect(plan.minimum_commitment).to have_attributes(
         commitment_type: 'minimum_commitment',
         amount_cents: minimum_commitment_amount_cents,
-        invoice_display_name: minimum_commitment_invoice_display_name,
+        invoice_display_name: minimum_commitment_invoice_display_name
       )
 
       expect(plan.minimum_commitment.taxes.first).to eq(tax)
@@ -125,7 +125,7 @@ RSpec.describe Plans::OverrideService, type: :service do
           nb_package_charges: 0,
           organization_id: plan.organization_id,
           parent_id: plan.parent.id
-        },
+        }
       )
     end
 
@@ -143,7 +143,7 @@ RSpec.describe Plans::OverrideService, type: :service do
               flat_amount: '0.01'
             }
           ]
-        },
+        }
       )
 
       expect { override_service.call }.to change(Plan, :count).by(1)
@@ -155,7 +155,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       expect(graduated).to have_attributes(
         plan_id: plan.id,
         min_amount_cents: charge2.min_amount_cents,
-        properties: charge2.properties,
+        properties: charge2.properties
       )
 
       standard = plan.charges.standard.first
@@ -169,7 +169,7 @@ RSpec.describe Plans::OverrideService, type: :service do
         properties: charge.properties,
         # Overriden attributes
         plan_id: plan.id,
-        min_amount_cents: 1000,
+        min_amount_cents: 1000
       )
     end
 

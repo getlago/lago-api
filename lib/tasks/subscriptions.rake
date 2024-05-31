@@ -24,7 +24,7 @@ namespace :subscriptions do
     result = Invoices::SubscriptionService.call(
       subscriptions:,
       timestamp: args[:timestamp].to_i,
-      recurring: false,
+      recurring: false
     )
     invoice = result.invoice
 

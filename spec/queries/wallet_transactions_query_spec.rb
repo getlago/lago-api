@@ -28,7 +28,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
       wallet_id: wallet.id,
       page: 1,
       limit: 10,
-      filters: {},
+      filters: {}
     )
 
     returned_ids = result.wallet_transactions.pluck(:id)
@@ -50,7 +50,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
         limit: 10,
         filters: {
           ids: [wallet_transaction_second.id]
-        },
+        }
       )
 
       returned_ids = result.wallet_transactions.pluck(:id)
@@ -75,7 +75,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
         limit: 10,
         filters: {
           status: 'pending'
-        },
+        }
       )
 
       returned_ids = result.wallet_transactions.pluck(:id)
@@ -100,7 +100,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
         limit: 10,
         filters: {
           transaction_type: 'outbound'
-        },
+        }
       )
 
       returned_ids = result.wallet_transactions.pluck(:id)
@@ -121,7 +121,7 @@ RSpec.describe WalletTransactionsQuery, type: :query do
         wallet_id: "#{wallet.id}abc",
         page: 1,
         limit: 10,
-        filters: {},
+        filters: {}
       )
 
       aggregate_failures do

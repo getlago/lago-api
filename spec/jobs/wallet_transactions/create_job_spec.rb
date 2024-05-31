@@ -18,7 +18,7 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
         paid_credits: '1.00',
         granted_credits: '1.00',
         source: 'manual'
-      },
+      }
     )
 
     expect(WalletTransactions::CreateService).to have_received(:call).with(
@@ -28,7 +28,7 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
         paid_credits: '1.00',
         granted_credits: '1.00',
         source: 'manual'
-      },
+      }
     )
   end
 end

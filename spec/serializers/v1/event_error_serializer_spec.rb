@@ -8,7 +8,7 @@ RSpec.describe ::V1::EventErrorSerializer do
   let(:event_error) do
     OpenStruct.new(
       error: {transaction_id: ['value_already_exist']},
-      event: create(:received_event),
+      event: create(:received_event)
     )
   end
 
@@ -19,7 +19,7 @@ RSpec.describe ::V1::EventErrorSerializer do
       expect(result['event_error']).to include(
         'status' => 422,
         'error' => 'Unprocessable entity',
-        'message' => '{"transaction_id":["value_already_exist"]}',
+        'message' => '{"transaction_id":["value_already_exist"]}'
       )
 
       expect(result['event_error']['event']).to include(
@@ -32,7 +32,7 @@ RSpec.describe ::V1::EventErrorSerializer do
         'properties' => event_error.event.properties,
         'lago_subscription_id' => nil,
         'external_subscription_id' => event_error.event.external_subscription_id,
-        'created_at' => event_error.event.created_at.iso8601,
+        'created_at' => event_error.event.created_at.iso8601
       )
 
       # NOTE: legacy values
@@ -42,7 +42,7 @@ RSpec.describe ::V1::EventErrorSerializer do
         'external_customer_id' => event_error.event.external_customer_id,
         'timestamp' => event_error.event.timestamp.to_f,
         'code' => event_error.event.code,
-        'properties' => event_error.event.properties,
+        'properties' => event_error.event.properties
       )
     end
   end

@@ -26,8 +26,8 @@ class InvoiceMailer < ApplicationMailer
         subject: I18n.t(
           'email.invoice.finalized.subject',
           organization_name: @organization.name,
-          invoice_number: @invoice.number,
-        ),
+          invoice_number: @invoice.number
+        )
       )
     end
   end

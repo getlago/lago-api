@@ -54,7 +54,7 @@ RSpec.describe PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService, t
           end.to have_enqueued_job(SendWebhookJob).with(
             'invoice.payment_dispute_lost',
             payment.invoice,
-            provider_error: 'fraudulent',
+            provider_error: 'fraudulent'
           )
         end
       end

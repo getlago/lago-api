@@ -47,7 +47,7 @@ RSpec.describe RequiredOrganization, type: :graphql do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: 'new name'}},
-        context: {current_user: membership.user, current_organization: membership.organization},
+        context: {current_user: membership.user, current_organization: membership.organization}
       )
 
       expect(result['data']['renameThing']['name']).to eq 'new name'
@@ -59,7 +59,7 @@ RSpec.describe RequiredOrganization, type: :graphql do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: 'new name'}},
-        context: {current_user: create(:user), permissions: Permission::ADMIN_PERMISSIONS_HASH},
+        context: {current_user: create(:user), permissions: Permission::ADMIN_PERMISSIONS_HASH}
       )
 
       partial_error = {
@@ -76,7 +76,7 @@ RSpec.describe RequiredOrganization, type: :graphql do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: 'new name'}},
-        context: {current_user: create(:user), current_organization: create(:organization)},
+        context: {current_user: create(:user), current_organization: create(:organization)}
       )
 
       partial_error = {

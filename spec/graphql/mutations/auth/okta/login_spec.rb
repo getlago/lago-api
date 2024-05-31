@@ -40,7 +40,7 @@ RSpec.describe Mutations::Auth::Okta::Login, type: :graphql, cache: :memory do
           state:,
           code: 'code'
         }
-      },
+      }
     )
 
     response = result['data']['oktaLogin']
@@ -62,7 +62,7 @@ RSpec.describe Mutations::Auth::Okta::Login, type: :graphql, cache: :memory do
             state:,
             code: 'code'
           }
-        },
+        }
       )
 
       response = result['errors'].first['extensions']

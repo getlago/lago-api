@@ -47,7 +47,7 @@ class FillCachedAggregations < ActiveRecord::Migration[7.0]
                 .where("date_trunc('second', started_at::timestamp) <= ?::timestamp", event.timestamp)
                 .where(
                   "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
-                  event.timestamp,
+                  event.timestamp
                 )
                 .order('terminated_at DESC NULLS FIRST, started_at DESC')
                 .first
@@ -65,13 +65,13 @@ class FillCachedAggregations < ActiveRecord::Migration[7.0]
                     timestamp: event.timestamp,
                     current_aggregation: event.metadata['current_aggregation'],
                     max_aggregation: event.metadata['max_aggregation'],
-                    max_aggregation_with_proration: event.metadata['max_aggregation_with_proration'],
+                    max_aggregation_with_proration: event.metadata['max_aggregation_with_proration']
                   ).find_or_create_by(
                     organization_id:,
                     event_id: event.id,
                     group_id: nil,
                     external_subscription_id: event.external_subscription_id,
-                    charge_id: charge.id,
+                    charge_id: charge.id
                   )
                 else
                   parent_groups.each do |group|
@@ -87,13 +87,13 @@ class FillCachedAggregations < ActiveRecord::Migration[7.0]
                           timestamp: event.timestamp,
                           current_aggregation: event.metadata['current_aggregation'],
                           max_aggregation: event.metadata['max_aggregation'],
-                          max_aggregation_with_proration: event.metadata['max_aggregation_with_proration'],
+                          max_aggregation_with_proration: event.metadata['max_aggregation_with_proration']
                         ).find_or_create_by(
                           organization_id:,
                           event_id: event.id,
                           group_id: child.id,
                           external_subscription_id: event.external_subscription_id,
-                          charge_id: charge.id,
+                          charge_id: charge.id
                         )
                       end
                     else
@@ -101,13 +101,13 @@ class FillCachedAggregations < ActiveRecord::Migration[7.0]
                         timestamp: event.timestamp,
                         current_aggregation: event.metadata['current_aggregation'],
                         max_aggregation: event.metadata['max_aggregation'],
-                        max_aggregation_with_proration: event.metadata['max_aggregation_with_proration'],
+                        max_aggregation_with_proration: event.metadata['max_aggregation_with_proration']
                       ).find_or_create_by(
                         organization_id:,
                         event_id: event.id,
                         group_id: group.id,
                         external_subscription_id: event.external_subscription_id,
-                        charge_id: charge.id,
+                        charge_id: charge.id
                       )
                     end
                   end

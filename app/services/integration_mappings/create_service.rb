@@ -10,7 +10,7 @@ module IntegrationMappings
       integration_mapping = IntegrationMappings::Factory.new_instance(integration:).new(
         integration_id: args[:integration_id],
         mappable_id: args[:mappable_id],
-        mappable_type: args[:mappable_type],
+        mappable_type: args[:mappable_type]
       )
 
       integration_mapping.external_id = args[:external_id] if args.key?(:external_id)

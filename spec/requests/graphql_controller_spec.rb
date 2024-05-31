@@ -52,7 +52,7 @@ RSpec.describe GraphqlController, type: :request do
             exp: Time.now.to_i
           },
           ENV['SECRET_KEY_BASE'],
-          'HS256',
+          'HS256'
         )
       end
 
@@ -112,7 +112,7 @@ RSpec.describe GraphqlController, type: :request do
                 password: 'ILoveLago'
               }
             }
-          },
+          }
         )
 
         expect(response.status).to be(200)
@@ -149,7 +149,7 @@ RSpec.describe GraphqlController, type: :request do
           },
           params: {
             query:
-          },
+          }
         )
 
         expect(response.status).to be(200)

@@ -35,7 +35,7 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
           customer:,
-          currency: plan.amount_currency,
+          currency: plan.amount_currency
         )
 
         return currency_result unless currency_result.success?
@@ -102,7 +102,7 @@ module Subscriptions
         name:,
         external_id:,
         billing_time: billing_time || :calendar,
-        ending_at: params[:ending_at],
+        ending_at: params[:ending_at]
       )
 
       if new_subscription.subscription_at > Time.current
@@ -122,7 +122,7 @@ module Subscriptions
             [new_subscription],
             Time.zone.now.to_i,
             invoicing_reason: :subscription_starting,
-            skip_charges: true,
+            skip_charges: true
           )
         end
       end
@@ -149,7 +149,7 @@ module Subscriptions
         previous_subscription_id: current_subscription.id,
         subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
 
       cancel_pending_subscription if pending_subscription?
@@ -173,7 +173,7 @@ module Subscriptions
           BillSubscriptionJob.perform_later(
             billable_subscriptions,
             Time.zone.now.to_i + 1.second,
-            invoicing_reason: :upgrading,
+            invoicing_reason: :upgrading
           )
         end
       end
@@ -201,7 +201,7 @@ module Subscriptions
         subscription_at: current_subscription.subscription_at,
         status: :pending,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
 
       current_subscription
@@ -236,7 +236,7 @@ module Subscriptions
           subscription_type:,
           organization_id: subscription.organization.id,
           billing_time: subscription.billing_time
-        },
+        }
       )
     end
 

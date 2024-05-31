@@ -25,7 +25,7 @@ RSpec.describe PastUsageQuery, type: :query do
       :invoice_subscription,
       charges_from_datetime: DateTime.parse('2023-08-17T00:00:00'),
       charges_to_datetime: DateTime.parse('2023-09-16T23:59:59'),
-      subscription:,
+      subscription:
     )
   end
 
@@ -34,7 +34,7 @@ RSpec.describe PastUsageQuery, type: :query do
       :invoice_subscription,
       charges_from_datetime: DateTime.parse('2023-07-17T00:00:00'),
       charges_to_datetime: DateTime.parse('2023-08-16T23:59:59'),
-      subscription:,
+      subscription:
     )
   end
 

@@ -45,14 +45,14 @@ module Organizations
       if License.premium? && billing.key?(:invoice_grace_period)
         Organizations::UpdateInvoiceGracePeriodService.call(
           organization:,
-          grace_period: billing[:invoice_grace_period],
+          grace_period: billing[:invoice_grace_period]
         )
       end
 
       if params.key?(:net_payment_term)
         Organizations::UpdateInvoicePaymentDueDateService.call(
           organization:,
-          net_payment_term: params[:net_payment_term],
+          net_payment_term: params[:net_payment_term]
         )
       end
 
@@ -93,7 +93,7 @@ module Organizations
       organization.logo.attach(
         io: StringIO.new(decoded_base_64_data),
         filename: 'logo',
-        content_type:,
+        content_type:
       )
     end
 
@@ -115,7 +115,7 @@ module Organizations
       organization.taxes.create_with(
         rate: vat_rate,
         name: "Tax (#{vat_rate}%)",
-        applied_to_organization: true,
+        applied_to_organization: true
       ).find_or_create_by!(code: "tax_#{vat_rate}")
     end
 

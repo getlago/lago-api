@@ -45,7 +45,7 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
       'credit_amount_currency' => credit_note.credit_amount_currency,
       'refund_amount_currency' => credit_note.refund_amount_currency,
       'vat_amount_cents' => credit_note.taxes_amount_cents,
-      'sub_total_vat_excluded_amount_cents' => credit_note.sub_total_excluding_taxes_amount_cents,
+      'sub_total_vat_excluded_amount_cents' => credit_note.sub_total_excluding_taxes_amount_cents
     )
 
     expect(result['credit_note'].keys).to include('customer', 'items')

@@ -25,7 +25,7 @@ module Sequenced
       result = self.class.with_advisory_lock(
         lock_key_value,
         transaction: true,
-        timeout_seconds: 10.seconds,
+        timeout_seconds: 10.seconds
       ) do
         sequential_id = sequence_scope.with_sequential_id.order(sequential_id: :desc).limit(1).pick(:sequential_id)
         sequential_id ||= 0

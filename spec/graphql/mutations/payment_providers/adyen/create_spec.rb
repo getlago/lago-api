@@ -50,7 +50,7 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create, type: :graphql do
           livePrefix: live_prefix,
           successRedirectUrl: success_redirect_url
         }
-      },
+      }
     )
 
     result_data = result['data']['addAdyenPaymentProvider']

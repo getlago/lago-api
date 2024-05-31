@@ -38,7 +38,7 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     plans_response = result['data']['plans']

@@ -24,7 +24,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
           :charge_filter_value,
           charge_filter:,
           billable_metric_filter: filter,
-          values: [filter.values.first],
+          values: [filter.values.first]
         )
       end
 
@@ -58,13 +58,13 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       filter1 = billable_metric.filters.find_by(key: 'region')
       expect(filter1).to have_attributes(
         key: 'region',
-        values: %w[Europe US],
+        values: %w[Europe US]
       )
 
       filter2 = billable_metric.filters.find_by(key: 'cloud')
       expect(filter2).to have_attributes(
         key: 'cloud',
-        values: %w[aws gcp],
+        values: %w[aws gcp]
       )
     end
   end
@@ -88,7 +88,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
 
       expect(filter.reload).to have_attributes(
         key: 'region',
-        values: %w[Europe US Asia Africa],
+        values: %w[Europe US Asia Africa]
       )
     end
 
@@ -106,7 +106,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         create(
           :charge_filter_value,
           billable_metric_filter: filter,
-          values: ['US'],
+          values: ['US']
         )
       end
 
@@ -115,7 +115,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
 
         expect(filter.reload).to have_attributes(
           key: 'region',
-          values: %w[Europe],
+          values: %w[Europe]
         )
 
         expect(filter_value.reload).to be_discarded

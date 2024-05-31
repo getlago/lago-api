@@ -25,7 +25,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         customer:,
         subscription_at: started_at.to_date,
         started_at:,
-        created_at: started_at,
+        created_at: started_at
       )
     end
     let(:subscriptions) { [subscription] }
@@ -56,7 +56,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
           invoice_type: invoice.invoice_type
-        },
+        }
       )
     end
 
@@ -216,7 +216,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
           :invoice,
           created_at: timestamp + 1.second,
           customer: subscription.customer,
-          organization: plan.organization,
+          organization: plan.organization
         )
       end
 

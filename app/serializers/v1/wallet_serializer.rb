@@ -34,7 +34,7 @@ module V1
 
     def legacy_values
       ::V1::Legacy::WalletSerializer.new(
-        model,
+        model
       ).serialize
     end
 
@@ -42,7 +42,7 @@ module V1
       ::CollectionSerializer.new(
         model.recurring_transaction_rules,
         ::V1::Wallets::RecurringTransactionRuleSerializer,
-        collection_name: 'recurring_transaction_rules',
+        collection_name: 'recurring_transaction_rules'
       ).serialize
     end
   end

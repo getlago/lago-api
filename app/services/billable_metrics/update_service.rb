@@ -31,7 +31,7 @@ module BillableMetrics
           BillableMetricFilters::CreateOrUpdateBatchService.call(
             billable_metric:,
             filters_params: params[:filters].map { |f| f.to_h.with_indifferent_access },
-            legacy_group_params: params[:group],
+            legacy_group_params: params[:group]
           ).raise_if_error!
         end
       end
@@ -64,7 +64,7 @@ module BillableMetrics
     def update_groups(metric, group_params)
       Groups::CreateOrUpdateBatchService.call(
         billable_metric: metric,
-        group_params: group_params.with_indifferent_access,
+        group_params: group_params.with_indifferent_access
       )
     end
   end

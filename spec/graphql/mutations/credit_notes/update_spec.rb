@@ -34,7 +34,7 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
           id: credit_note.id,
           refundStatus: 'succeeded'
         }
-      },
+      }
     )
 
     result_data = result['data']['updateCreditNote']
@@ -56,7 +56,7 @@ RSpec.describe Mutations::CreditNotes::Update, type: :graphql do
             id: 'foo_bar',
             refundStatus: 'succeeded'
           }
-        },
+        }
       )
 
       expect_not_found(result)

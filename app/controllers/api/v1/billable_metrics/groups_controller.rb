@@ -16,8 +16,8 @@ module Api
               groups,
               ::V1::GroupSerializer,
               collection_name: 'groups',
-              meta: pagination_metadata(groups),
-            ),
+              meta: pagination_metadata(groups)
+            )
           )
         end
       end

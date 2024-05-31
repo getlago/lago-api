@@ -15,7 +15,7 @@ RSpec.describe ::V1::IntegrationCustomerSerializer do
       'external_customer_id' => integration_customer.external_customer_id,
       'type' => 'netsuite',
       'sync_with_provider' => integration_customer.sync_with_provider,
-      'subsidiary_id' => integration_customer.subsidiary_id,
+      'subsidiary_id' => integration_customer.subsidiary_id
     )
   end
 end

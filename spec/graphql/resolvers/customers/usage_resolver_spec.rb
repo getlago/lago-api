@@ -44,7 +44,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       :subscription,
       plan:,
       customer:,
-      started_at: Time.zone.now - 2.years,
+      started_at: Time.zone.now - 2.years
     )
   end
   let(:plan) { create(:plan, interval: 'monthly') }
@@ -66,7 +66,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
             flat_amount: '0.01'
           }
         ]
-      },
+      }
     )
   end
   let(:standard_charge) do
@@ -77,7 +77,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       properties: {
         amount: 1.to_s,
         grouped_by: ['agent_name']
-      },
+      }
     )
   end
 
@@ -103,7 +103,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       customer:,
       subscription:,
       code: metric.code,
-      timestamp: Time.zone.now,
+      timestamp: Time.zone.now
     )
 
     create_list(
@@ -118,7 +118,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         agent_name: 'frodo',
         cloud: 'aws',
         item_id: 1
-      },
+      }
     )
   end
 
@@ -134,7 +134,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       variables: {
         customerId: customer.id,
         subscriptionId: subscription.id
-      },
+      }
     )
 
     usage_response = result['data']['customerUsage']
@@ -192,7 +192,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         :charge_filter_value,
         charge_filter: google_filter,
         billable_metric_filter: cloud_bm_filter,
-        values: ['google'],
+        values: ['google']
       )
     end
 
@@ -201,7 +201,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         :standard_charge,
         plan: subscription.plan,
         billable_metric: metric,
-        properties: {amount: '0'},
+        properties: {amount: '0'}
       )
     end
 
@@ -217,7 +217,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
-        properties: {cloud: 'aws'},
+        properties: {cloud: 'aws'}
       )
 
       create(
@@ -227,7 +227,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         subscription:,
         code: metric.code,
         timestamp: Time.zone.now,
-        properties: {cloud: 'google'},
+        properties: {cloud: 'google'}
       )
     end
 
@@ -240,7 +240,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         variables: {
           customerId: customer.id,
           subscriptionId: subscription.id
-        },
+        }
       )
 
       charge_usage = result['data']['customerUsage']['chargesUsage'][0]
@@ -277,7 +277,7 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
               'cloud' => ['google']
             },
             'eventsCount' => 1
-          },
+          }
         )
       end
     end

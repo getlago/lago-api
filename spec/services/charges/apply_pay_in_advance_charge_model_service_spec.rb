@@ -22,7 +22,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
       event_store_class: Events::Stores::PostgresStore,
       charge:,
       subscription: nil,
-      boundaries: nil,
+      boundaries: nil
     )
   end
 
@@ -88,7 +88,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
                 flat_amount: '0.01'
               }
             ]
-          },
+          }
         )
       end
       let(:charge_model_class) { Charges::ChargeModels::GraduatedService }
@@ -124,7 +124,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
                 rate: '2'
               }
             ]
-          },
+          }
         )
       end
 

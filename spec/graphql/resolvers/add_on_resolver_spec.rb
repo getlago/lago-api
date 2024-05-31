@@ -43,7 +43,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query:,
-      variables: {addOnId: add_on.id},
+      variables: {addOnId: add_on.id}
     )
 
     add_on_response = result['data']['addOn']
@@ -63,7 +63,7 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {addOnId: 'invalid'},
+        variables: {addOnId: 'invalid'}
       )
 
       expect_graphql_error(result:, message: 'Resource not found')

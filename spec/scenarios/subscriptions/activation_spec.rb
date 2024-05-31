@@ -13,7 +13,7 @@ describe 'Subscriptions Activation Scenario', :scenarios, type: :request do
       :plan,
       organization:,
       interval: 'monthly',
-      pay_in_advance: false,
+      pay_in_advance: false
     )
   end
 
@@ -31,7 +31,7 @@ describe 'Subscriptions Activation Scenario', :scenarios, type: :request do
           plan_code: plan.code,
           billing_time: 'calendar',
           subscription_at: subscription_at.iso8601
-        },
+        }
       )
 
       subscription = customer.subscriptions.first

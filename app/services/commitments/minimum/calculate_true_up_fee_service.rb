@@ -47,7 +47,7 @@ module Commitments
       def commitment_amount_cents
         result = Commitments::CalculateAmountService.call(
           commitment: minimum_commitment,
-          invoice_subscription:,
+          invoice_subscription:
         )
 
         result.commitment_amount_cents

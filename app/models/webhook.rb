@@ -52,7 +52,7 @@ class Webhook < ApplicationRecord
         iss: issuer
       },
       RsaPrivateKey,
-      'RS256',
+      'RS256'
     )
   end
 

@@ -21,7 +21,7 @@ module Subscriptions
         BillSubscriptionJob.perform_later(
           billing_subscriptions,
           billing_timestamp,
-          invoicing_reason: :subscription_periodic,
+          invoicing_reason: :subscription_periodic
         )
       end
     end
@@ -104,7 +104,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :weekly,
-        conditions: ["EXTRACT(ISODOW FROM (:today#{at_time_zone})) = 1"],
+        conditions: ["EXTRACT(ISODOW FROM (:today#{at_time_zone})) = 1"]
       )
     end
 
@@ -113,7 +113,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :monthly,
-        conditions: ["DATE_PART('day', (:today#{at_time_zone})) = 1"],
+        conditions: ["DATE_PART('day', (:today#{at_time_zone})) = 1"]
       )
     end
 
@@ -130,7 +130,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :calendar,
         interval: :quarterly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 
@@ -142,7 +142,7 @@ module Subscriptions
         conditions: [
           "DATE_PART('day', (:today#{at_time_zone})) = 1",
           "plans.bill_charges_monthly = 't'"
-        ],
+        ]
       )
     end
 
@@ -154,7 +154,7 @@ module Subscriptions
         conditions: [
           "DATE_PART('month', (:today#{at_time_zone})) = 1",
           "DATE_PART('day', (:today#{at_time_zone})) = 1"
-        ],
+        ]
       )
     end
 
@@ -165,7 +165,7 @@ module Subscriptions
         conditions: [
           "EXTRACT(ISODOW FROM (subscriptions.subscription_at#{at_time_zone})) =
           EXTRACT(ISODOW FROM (:today#{at_time_zone}))"
-        ],
+        ]
       )
     end
 
@@ -173,7 +173,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :anniversary,
         interval: :monthly,
-        conditions: [<<-SQL],
+        conditions: [<<-SQL]
           DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
             -- Check if today is the last day of the month
             CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
@@ -224,7 +224,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :anniversary,
         interval: :quarterly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 
@@ -255,7 +255,7 @@ module Subscriptions
       base_subscription_scope(
         billing_time: :anniversary,
         interval: :yearly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 
@@ -280,7 +280,7 @@ module Subscriptions
         conditions: [
           "plans.bill_charges_monthly = 't'",
           billing_day
-        ],
+        ]
       )
     end
 

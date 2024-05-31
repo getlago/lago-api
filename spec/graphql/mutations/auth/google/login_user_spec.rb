@@ -41,7 +41,7 @@ RSpec.describe Mutations::Auth::Google::LoginUser, type: :graphql do
         input: {
           code: 'code'
         }
-      },
+      }
     )
 
     response = result['data']['googleLoginUser']
@@ -68,7 +68,7 @@ RSpec.describe Mutations::Auth::Google::LoginUser, type: :graphql do
           input: {
             code: 'code'
           }
-        },
+        }
       )
 
       response = result['errors'].first

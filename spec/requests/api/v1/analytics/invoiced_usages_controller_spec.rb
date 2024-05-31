@@ -13,7 +13,7 @@ RSpec.describe Api::V1::Analytics::InvoicedUsagesController, type: :request do #
       it 'returns the invoiced usage' do
         get_with_token(
           organization,
-          '/api/v1/analytics/invoiced_usage',
+          '/api/v1/analytics/invoiced_usage'
         )
 
         aggregate_failures do
@@ -28,7 +28,7 @@ RSpec.describe Api::V1::Analytics::InvoicedUsagesController, type: :request do #
       it 'returns forbidden status' do
         get_with_token(
           organization,
-          '/api/v1/analytics/invoiced_usage',
+          '/api/v1/analytics/invoiced_usage'
         )
 
         expect(response).to have_http_status(:forbidden)

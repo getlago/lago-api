@@ -27,7 +27,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries: {to_datetime: from_datetime},
-          filters:,
+          filters:
         )
 
         event_store.use_from_boundary = false
@@ -42,7 +42,7 @@ module BillableMetrics
             action: persisted_sum.negative? ? 'remove' : 'add',
             amount: persisted_sum,
             duration: (to_date_in_customer_timezone + 1.day - from_date_in_customer_timezone).to_i,
-            total_duration: period_duration,
+            total_duration: period_duration
           )
         ]
       end
@@ -54,7 +54,7 @@ module BillableMetrics
             action: aggregation[:value].negative? ? 'remove' : 'add',
             amount: aggregation[:value],
             duration: (to_date_in_customer_timezone + 1.day - aggregation[:date]).to_i,
-            total_duration: period_duration,
+            total_duration: period_duration
           )
         end
       end

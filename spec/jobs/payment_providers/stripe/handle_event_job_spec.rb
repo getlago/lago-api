@@ -21,7 +21,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventJob, type: :job do
   it 'calls the handle event service' do
     described_class.perform_now(
       organization:,
-      event: stripe_event,
+      event: stripe_event
     )
 
     expect(PaymentProviders::StripeService).to have_received(:new)

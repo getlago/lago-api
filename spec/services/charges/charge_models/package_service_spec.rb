@@ -7,7 +7,7 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties,
+      properties: charge.properties
     )
   end
 
@@ -25,7 +25,7 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
         amount: '100',
         package_size: 10,
         free_units: 0
-      },
+      }
     )
   end
 
@@ -38,7 +38,7 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
         paid_units: '121.0',
         per_package_size: 10,
         per_package_unit_amount: 100
-      },
+      }
     )
   end
 
@@ -54,7 +54,7 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
           paid_units: '111.0',
           per_package_size: 10,
           per_package_unit_amount: 100
-        },
+        }
       )
     end
 
@@ -70,7 +70,7 @@ RSpec.describe Charges::ChargeModels::PackageService, type: :service do
             paid_units: '0.0',
             per_package_size: 10,
             per_package_unit_amount: 100
-          },
+          }
         )
       end
     end

@@ -33,7 +33,7 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
           password: 'ILoveLago',
           organizationName: 'FooBar'
         }
-      },
+      }
     )
 
     aggregate_failures do
@@ -56,7 +56,7 @@ RSpec.describe Mutations::RegisterUser, type: :graphql do
             password: 'ILoveLago',
             organizationName: 'FooBar'
           }
-        },
+        }
       )
 
       aggregate_failures do

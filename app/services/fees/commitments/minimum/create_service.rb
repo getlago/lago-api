@@ -32,7 +32,7 @@ module Fees
             invoice_display_name: minimum_commitment.invoice_name,
             units: 1,
             precise_unit_amount:,
-            taxes_amount_cents: 0,
+            taxes_amount_cents: 0
           )
 
           taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)

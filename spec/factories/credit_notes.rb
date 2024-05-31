@@ -23,7 +23,7 @@ FactoryBot.define do
         credit_note.file.attach(
           io: File.open(Rails.root.join('spec/fixtures/blank.pdf')),
           filename: 'blank.pdf',
-          content_type: 'application/pdf',
+          content_type: 'application/pdf'
         )
       end
     end

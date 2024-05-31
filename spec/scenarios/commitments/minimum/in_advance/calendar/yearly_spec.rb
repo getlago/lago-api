@@ -19,7 +19,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       amount_cents: 10_000,
       interval: plan_interval,
       pay_in_advance: true,
-      bill_charges_monthly:,
+      bill_charges_monthly:
     )
   end
 
@@ -34,7 +34,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       code: 'advance_metered',
       aggregation_type: 'sum_agg',
       field_name: 'total',
-      recurring: false,
+      recurring: false
     )
   end
 
@@ -46,7 +46,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       code: 'metered',
       aggregation_type: 'sum_agg',
       field_name: 'total',
-      recurring: false,
+      recurring: false
     )
   end
 
@@ -58,7 +58,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       code: 'recurring_advance',
       aggregation_type: 'sum_agg',
       field_name: 'total',
-      recurring: true,
+      recurring: true
     )
   end
 
@@ -79,7 +79,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_advance_metered,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'},
+      properties: {amount: '1'}
     )
 
     create(
@@ -87,7 +87,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_metered,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'},
+      properties: {amount: '1'}
     )
 
     create(
@@ -96,7 +96,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_recurring_advance,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'},
+      properties: {amount: '1'}
     )
 
     # Create the subscription
@@ -107,7 +107,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           external_id: customer.external_id,
           plan_code: plan.code,
           billing_time:
-        },
+        }
       )
     end
 
@@ -118,7 +118,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {total: '2'}
-        },
+        }
       )
 
       create_event(
@@ -127,7 +127,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {total: '1'}
-        },
+        }
       )
 
       create_event(
@@ -136,7 +136,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
           properties: {total: '30'}
-        },
+        }
       )
 
       Subscriptions::BillingService.new.call
@@ -164,7 +164,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {total: '55'}
-            },
+            }
           )
         end
 
@@ -175,7 +175,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
               transaction_id: SecureRandom.uuid,
               external_customer_id: customer.external_id,
               properties: {total: '1'}
-            },
+            }
           )
         end
 

@@ -13,7 +13,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         to_datetime:,
         charges_duration:
       },
-      filters:,
+      filters:
     )
   end
 
@@ -32,7 +32,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
   let(:charge) do
     create(
       :standard_charge,
-      billable_metric:,
+      billable_metric:
     )
   end
 
@@ -65,7 +65,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
         subscription:,
         customer:,
         timestamp: values[:timestamp],
-        properties:,
+        properties:
       )
     end
   end
@@ -167,7 +167,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
             :subscription,
             :terminated,
             started_at: DateTime.parse('2022-01-01 22:22:22'),
-            terminated_at: DateTime.parse('2023-04-01 22:22:21'),
+            terminated_at: DateTime.parse('2023-04-01 22:22:21')
           )
         end
 
@@ -179,7 +179,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
             started_at: DateTime.parse('2023-04-01 22:22:22'),
             previous_subscription:,
             customer:,
-            external_id: previous_subscription.external_id,
+            external_id: previous_subscription.external_id
           )
         end
 
@@ -193,7 +193,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
             subscription: previous_subscription,
             customer:,
             timestamp: Time.zone.parse('2023-03-01 22:22:22'),
-            properties: {value: 10},
+            properties: {value: 10}
           )
         end
 
@@ -354,7 +354,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime - 1.day,
             current_aggregation: 1000,
-            grouped_by: {'agent_name' => 'frodo'},
+            grouped_by: {'agent_name' => 'frodo'}
           )
         ]
       end
@@ -396,7 +396,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
               :subscription,
               :terminated,
               started_at: DateTime.parse('2022-01-01 22:22:22'),
-              terminated_at: DateTime.parse('2023-04-01 22:22:21'),
+              terminated_at: DateTime.parse('2023-04-01 22:22:21')
             )
           end
 
@@ -408,7 +408,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
               started_at: DateTime.parse('2023-04-01 22:22:22'),
               previous_subscription:,
               customer:,
-              external_id: previous_subscription.external_id,
+              external_id: previous_subscription.external_id
             )
           end
 
@@ -422,7 +422,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
               subscription: previous_subscription,
               customer:,
               timestamp: Time.zone.parse('2023-03-01 22:22:22'),
-              properties: {value: 10, agent_name: 'aragorn'},
+              properties: {value: 10, agent_name: 'aragorn'}
             )
 
             create(
@@ -432,7 +432,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, type: :service
               subscription: previous_subscription,
               customer:,
               timestamp: Time.zone.parse('2023-03-01 22:22:22'),
-              properties: {value: 10, agent_name: 'frodo'},
+              properties: {value: 10, agent_name: 'frodo'}
             )
           end
 

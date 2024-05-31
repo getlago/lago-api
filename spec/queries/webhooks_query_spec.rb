@@ -21,7 +21,7 @@ RSpec.describe WebhooksQuery, type: :query do
     result = webhook_query.call(
       search_term: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.webhooks.pluck(:id)
@@ -39,7 +39,7 @@ RSpec.describe WebhooksQuery, type: :query do
       result = webhook_query.call(
         search_term: 'generated',
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.webhooks.pluck(:id)
@@ -57,7 +57,7 @@ RSpec.describe WebhooksQuery, type: :query do
         search_term: 'created',
         page: 1,
         limit: 10,
-        status: 'succeeded',
+        status: 'succeeded'
       )
 
       returned_ids = result.webhooks.pluck(:id)

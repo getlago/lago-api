@@ -64,7 +64,7 @@ RSpec.describe Customer, type: :model do
     subject(:customer) do
       described_class.new(
         organization:,
-        document_locale: 'en',
+        document_locale: 'en'
       )
     end
 
@@ -233,7 +233,7 @@ RSpec.describe Customer, type: :model do
         :customer,
         organization:,
         timezone: 'Europe/Paris',
-        created_at: DateTime.parse('2022-11-17 23:34:23'),
+        created_at: DateTime.parse('2022-11-17 23:34:23')
       )
     end
 

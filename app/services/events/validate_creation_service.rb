@@ -48,7 +48,7 @@ module Events
       Event.where(
         organization_id: organization.id,
         transaction_id: params[:transaction_id],
-        external_subscription_id: subscriptions.first.external_id,
+        external_subscription_id: subscriptions.first.external_id
       ).none?
     end
 

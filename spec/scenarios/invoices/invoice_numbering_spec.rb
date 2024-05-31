@@ -14,7 +14,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       webhook_url: nil,
       document_numbering: 'per_customer',
       timezone: 'Europe/Paris',
-      email_settings: [],
+      email_settings: []
     )
   end
 
@@ -24,7 +24,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       organization:,
       interval: 'monthly',
       amount_cents: 12_900,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
   let(:yearly_plan) do
@@ -33,7 +33,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       organization:,
       interval: 'yearly',
       amount_cents: 100_000,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -52,7 +52,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           plan_code: monthly_plan.code,
           billing_time: 'anniversary',
           subscription_at: subscription_at.iso8601
-        },
+        }
       )
       create_subscription(
         {
@@ -61,7 +61,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           plan_code: monthly_plan.code,
           billing_time: 'anniversary',
           subscription_at: subscription_at.iso8601
-        },
+        }
       )
       create_subscription(
         {
@@ -70,7 +70,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           plan_code: monthly_plan.code,
           billing_time: 'anniversary',
           subscription_at: subscription_at.iso8601
-        },
+        }
       )
 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
@@ -157,7 +157,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
           plan_code: yearly_plan.code,
           billing_time: 'anniversary',
           subscription_at: time.iso8601
-        },
+        }
       )
 
       invoices = organization.reload.invoices.order(created_at: :desc)
@@ -183,7 +183,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             ORG-11-002-005
             ORG-11-003-005
             ORG-11-002-006
-          ],
+          ]
         )
     end
 
@@ -231,7 +231,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'calendar',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
         create_subscription(
           {
@@ -240,7 +240,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'calendar',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
         create_subscription(
           {
@@ -249,7 +249,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'calendar',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
@@ -329,7 +329,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
         create_subscription(
           {
@@ -338,7 +338,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
         create_subscription(
           {
@@ -347,7 +347,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
@@ -370,7 +370,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: yearly_plan.code,
             billing_time: 'anniversary',
             subscription_at: time.iso8601
-          },
+          }
         )
 
         invoices = organization.reload.invoices.order(created_at: :desc)
@@ -384,7 +384,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-DRAFT
               ORG-1-003-001
               ORG-1-001-002
-            ],
+            ]
           )
       end
 
@@ -398,7 +398,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: yearly_plan.code,
             billing_time: 'anniversary',
             subscription_at: time.iso8601
-          },
+          }
         )
 
         invoices = organization.reload.invoices.order(created_at: :desc)
@@ -413,7 +413,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-003-001
               ORG-1-001-002
               ORG-1-DRAFT
-            ],
+            ]
           )
       end
 
@@ -432,7 +432,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-003-001
               ORG-1-001-002
               ORG-1-DRAFT
-            ],
+            ]
           )
       end
 
@@ -451,7 +451,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-003-001
               ORG-1-001-002
               ORG-1-002-002
-            ],
+            ]
           )
       end
 
@@ -478,7 +478,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-001-003
               ORG-1-DRAFT
               ORG-1-003-002
-            ],
+            ]
           )
       end
 
@@ -508,7 +508,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-001-004
               ORG-1-DRAFT
               ORG-1-003-003
-            ],
+            ]
           )
       end
     end
@@ -523,7 +523,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
         webhook_url: nil,
         document_numbering: 'per_organization',
         timezone: 'Europe/Paris',
-        email_settings: [],
+        email_settings: []
       )
     end
 
@@ -537,7 +537,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
         create_subscription(
           {
@@ -546,7 +546,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
         create_subscription(
           {
@@ -555,7 +555,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: monthly_plan.code,
             billing_time: 'anniversary',
             subscription_at: subscription_at.iso8601
-          },
+          }
         )
 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
@@ -578,7 +578,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: yearly_plan.code,
             billing_time: 'anniversary',
             subscription_at: time.iso8601
-          },
+          }
         )
 
         invoices = organization.reload.invoices.order(created_at: :desc)
@@ -592,7 +592,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-DRAFT
               ORG-1-202307-002
               ORG-1-202307-003
-            ],
+            ]
           )
       end
 
@@ -606,7 +606,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
             plan_code: yearly_plan.code,
             billing_time: 'anniversary',
             subscription_at: time.iso8601
-          },
+          }
         )
 
         invoices = organization.reload.invoices.order(created_at: :desc)
@@ -621,7 +621,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202307-002
               ORG-1-202307-003
               ORG-1-DRAFT
-            ],
+            ]
           )
       end
 
@@ -640,7 +640,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202307-002
               ORG-1-202307-003
               ORG-1-DRAFT
-            ],
+            ]
           )
       end
 
@@ -659,7 +659,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202307-002
               ORG-1-202307-003
               ORG-1-202307-005
-            ],
+            ]
           )
       end
 
@@ -686,7 +686,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202308-006
               ORG-1-DRAFT
               ORG-1-202308-007
-            ],
+            ]
           )
       end
 
@@ -716,7 +716,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202309-008
               ORG-1-DRAFT
               ORG-1-202309-009
-            ],
+            ]
           )
       end
 
@@ -741,7 +741,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
               ORG-1-202309-008
               ORG-1-DRAFT
               ORG-1-202309-009
-            ],
+            ]
           )
       end
     end

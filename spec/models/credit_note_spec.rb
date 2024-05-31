@@ -129,7 +129,7 @@ RSpec.describe CreditNote, type: :model do
     it 'returns the list of subscription ids' do
       expect(credit_note.subscription_ids).to contain_exactly(
         subscription_fee.subscription_id,
-        charge_fee.subscription_id,
+        charge_fee.subscription_id
       )
     end
 
@@ -145,7 +145,7 @@ RSpec.describe CreditNote, type: :model do
         expect(credit_note.subscription_ids).to include(
           subscription_fee.subscription_id,
           charge_fee.subscription_id,
-          nil,
+          nil
         )
       end
     end

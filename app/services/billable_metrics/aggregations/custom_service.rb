@@ -46,7 +46,7 @@ module BillableMetrics
 
           aggregation_result = perform_custom_aggregation(
             target_result: group_result,
-            grouped_by_values: aggregation[:groups],
+            grouped_by_values: aggregation[:groups]
           )
 
           group_result.aggregation = aggregation_result[:total_units]
@@ -122,7 +122,7 @@ module BillableMetrics
             code: billable_metric.code,
             subscription:,
             boundaries:,
-            filters: filters.merge(grouped_by_values:),
+            filters: filters.merge(grouped_by_values:)
           )
         end
 
@@ -189,7 +189,7 @@ module BillableMetrics
         cached_aggregation = find_cached_aggregation(
           with_from_datetime: from_datetime,
           with_to_datetime: to_datetime,
-          grouped_by: grouped_by_values,
+          grouped_by: grouped_by_values
         )
 
         # NOTE: The aggregation was never performed on the period,
@@ -201,7 +201,7 @@ module BillableMetrics
             current_aggregation: state[:total_units],
             max_aggregation: state[:total_units],
             units_applied: state[:total_units],
-            current_amount: state[:amount],
+            current_amount: state[:amount]
           )
 
           return state
@@ -215,7 +215,7 @@ module BillableMetrics
         # NOTE: compute aggregation for the current event, using the previous state
         event_aggregation = sandboxed_aggregation(
           [{timestamp: event.timestamp, properties: event.properties}],
-          {total_units: old_aggregation, amount: old_amount},
+          {total_units: old_aggregation, amount: old_amount}
         )
 
         units_applied = event_aggregation[:total_units] - old_aggregation
@@ -230,7 +230,7 @@ module BillableMetrics
           current_aggregation: event_aggregation[:total_units],
           max_aggregation:,
           units_applied:,
-          current_amount: event_aggregation[:amount],
+          current_amount: event_aggregation[:amount]
         )
 
         # NOTE: Return the amount and units to be charged for the current event

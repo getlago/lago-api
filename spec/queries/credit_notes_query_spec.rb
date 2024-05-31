@@ -27,7 +27,7 @@ RSpec.describe CreditNotesQuery, type: :query do
       search_term: nil,
       customer_id: nil,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.credit_notes.pluck(:id)
@@ -46,7 +46,7 @@ RSpec.describe CreditNotesQuery, type: :query do
       search_term: nil,
       customer_id: customer.id,
       page: 1,
-      limit: 10,
+      limit: 10
     )
 
     returned_ids = result.credit_notes.pluck(:id)
@@ -66,7 +66,7 @@ RSpec.describe CreditNotesQuery, type: :query do
         search_term: 'imthe',
         customer_id: customer.id,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.credit_notes.pluck(:id)
@@ -87,7 +87,7 @@ RSpec.describe CreditNotesQuery, type: :query do
         search_term: 'done',
         customer_id: customer.id,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.credit_notes.pluck(:id)
@@ -108,7 +108,7 @@ RSpec.describe CreditNotesQuery, type: :query do
         search_term: credit_note_second.id.scan(/.{10}/).first,
         customer_id: customer.id,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       returned_ids = result.credit_notes.pluck(:id)
@@ -132,7 +132,7 @@ RSpec.describe CreditNotesQuery, type: :query do
         limit: 10,
         filters: {
           ids: [credit_note_second.id]
-        },
+        }
       )
 
       returned_ids = result.credit_notes.pluck(:id)
@@ -153,7 +153,7 @@ RSpec.describe CreditNotesQuery, type: :query do
         search_term: nil,
         customer_id: create(:customer, organization:).id,
         page: 1,
-        limit: 10,
+        limit: 10
       )
 
       aggregate_failures do

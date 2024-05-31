@@ -44,7 +44,7 @@ RSpec.describe Mutations::AddOns::Create, type: :graphql do
           amountCurrency: 'EUR',
           taxCodes: [tax.code]
         }
-      },
+      }
     )
 
     result_data = result['data']['createAddOn']

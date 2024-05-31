@@ -13,7 +13,7 @@ module Analytics
             [
               "AND am.month >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL ':months months')",
               {months: months_interval}
-            ],
+            ]
           )
         end
 

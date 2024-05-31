@@ -80,7 +80,7 @@ module Plans
           nb_package_charges: count_by_charge_model['package'] || 0,
           organization_id: plan.organization_id,
           parent_id: plan.parent_id
-        },
+        }
       )
     end
   end

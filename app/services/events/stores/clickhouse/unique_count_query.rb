@@ -208,7 +208,7 @@ module Events
                   .select(
                     "toDateTime64(timestamp, 5, 'UTC') as timestamp, \
                     #{sanitized_property_name} AS property, \
-                    coalesce(NULLIF(events_raw.properties['operation_type'], ''), 'add') AS operation_type",
+                    coalesce(NULLIF(events_raw.properties['operation_type'], ''), 'add') AS operation_type"
                   )
                   .group(Events::Stores::ClickhouseStore::DEDUPLICATION_GROUP)
                   .to_sql
@@ -229,7 +229,7 @@ module Events
                   "#{groups.join(", ")}, \
                   toDateTime64(timestamp, 5, 'UTC') as timestamp, \
                   #{sanitized_property_name} AS property, \
-                  coalesce(NULLIF(events_raw.properties['operation_type'], ''), 'add') AS operation_type",
+                  coalesce(NULLIF(events_raw.properties['operation_type'], ''), 'add') AS operation_type"
                 ).to_sql
             })
           SQL

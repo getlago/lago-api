@@ -350,7 +350,7 @@ RSpec.describe Invoice, type: :model do
             organization_sequential_id: 14,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014"
           )
         end
         let(:invoice2) do
@@ -361,7 +361,7 @@ RSpec.describe Invoice, type: :model do
             sequential_id: 5,
             organization_sequential_id: 15,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-015",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-015"
           )
         end
 
@@ -402,7 +402,7 @@ RSpec.describe Invoice, type: :model do
             organization_sequential_id: 0,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-DRAFT",
+            number: "LAG-#{organization.id.last(4).upcase}-DRAFT"
           )
         end
         let(:invoice2) do
@@ -413,7 +413,7 @@ RSpec.describe Invoice, type: :model do
             sequential_id: 4,
             organization_sequential_id: 14,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014",
+            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014"
           )
         end
 
@@ -611,7 +611,7 @@ RSpec.describe Invoice, type: :model do
     it 'returns the fees of the corresponding invoice_subscription' do
       expect(invoice.charge_pay_in_advance_proration_range(fee, event.timestamp)).to include(
         period_duration: 31,
-        number_of_days: 7,
+        number_of_days: 7
       )
     end
   end
@@ -1042,7 +1042,7 @@ RSpec.describe Invoice, type: :model do
           taxes_amount_cents: 36,
           total_amount_cents: 216,
           taxes_rate: 20,
-          version_number: 3,
+          version_number: 3
         )
       end
 
@@ -1071,7 +1071,7 @@ RSpec.describe Invoice, type: :model do
       invoice.file.attach(
         io: StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))),
         filename: 'invoice.pdf',
-        content_type: 'application/pdf',
+        content_type: 'application/pdf'
       )
     end
 

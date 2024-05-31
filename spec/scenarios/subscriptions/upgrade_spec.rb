@@ -13,7 +13,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
       organization:,
       interval: 'monthly',
       amount_cents: 1000,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -23,7 +23,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
       organization:,
       interval: 'yearly',
       amount_cents: 12_000,
-      pay_in_advance: true,
+      pay_in_advance: true
     )
   end
 
@@ -41,7 +41,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
           plan_code: monthly_plan.code,
           billing_time: 'anniversary',
           subscription_at: subscription_at.iso8601
-        },
+        }
       )
 
       subscription = customer.subscriptions.first
@@ -92,7 +92,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
           external_id: customer.external_id,
           plan_code: yearly_plan.code,
           billing_time: 'anniversary'
-        },
+        }
       )
 
       expect(subscription.reload).to be_terminated

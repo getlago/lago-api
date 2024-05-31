@@ -33,7 +33,7 @@ module Resolvers
           ids:,
           status:,
           transaction_type:
-        },
+        }
       )
 
       return result_error(result) unless result.success?

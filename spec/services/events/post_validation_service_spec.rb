@@ -12,14 +12,14 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       :event,
       organization:,
       code: Faker::Name.name.underscore,
-      created_at: Time.current.beginning_of_hour - 25.minutes,
+      created_at: Time.current.beginning_of_hour - 25.minutes
     )
   end
 
   let(:billable_metric) do
     create(
       :sum_billable_metric,
-      organization:,
+      organization:
     )
   end
 
@@ -29,7 +29,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       organization:,
       code: billable_metric.code,
       properties: {},
-      created_at: Time.current.beginning_of_hour - 25.minutes,
+      created_at: Time.current.beginning_of_hour - 25.minutes
     )
   end
 
@@ -39,14 +39,14 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       organization:,
       code: billable_metric.code,
       properties: {billable_metric.field_name => -12},
-      created_at: Time.current.beginning_of_hour - 25.minutes,
+      created_at: Time.current.beginning_of_hour - 25.minutes
     )
   end
 
   let(:billable_metric_with_group) do
     create(
       :sum_billable_metric,
-      organization:,
+      organization:
     )
   end
 
@@ -60,14 +60,14 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       billable_metric: billable_metric_with_group,
       parent: parent_group,
       key: 'provider',
-      value: 'aws',
+      value: 'aws'
     )
   end
 
   let(:billable_metric_with_filter) do
     create(
       :billable_metric,
-      organization:,
+      organization:
     )
   end
 
@@ -76,7 +76,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       :billable_metric_filter,
       billable_metric: billable_metric_with_filter,
       key: 'region',
-      values: %w[eu-west-1 us-east-1],
+      values: %w[eu-west-1 us-east-1]
     )
   end
 
@@ -86,7 +86,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       organization:,
       code: billable_metric_with_group.code,
       properties: {billable_metric_with_group.field_name => 12},
-      created_at: Time.current.beginning_of_hour - 25.minutes,
+      created_at: Time.current.beginning_of_hour - 25.minutes
     )
   end
 
@@ -99,7 +99,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
         parent_group.key => parent_group.value,
         billable_metric_with_group.field_name => 12
       },
-      created_at: Time.current.beginning_of_hour - 25.minutes,
+      created_at: Time.current.beginning_of_hour - 25.minutes
     )
   end
 
@@ -109,7 +109,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       organization:,
       code: billable_metric_with_filter.code,
       properties: {billable_metric_filter.key => 'us-west-4'},
-      created_at: Time.current.beginning_of_hour - 25.minutes,
+      created_at: Time.current.beginning_of_hour - 25.minutes
     )
   end
 
@@ -126,7 +126,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
     Scenic.database.refresh_materialized_view(
       Events::LastHourMv.table_name,
       concurrently: false,
-      cascade: false,
+      cascade: false
     )
   end
 
@@ -153,7 +153,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       expect(result.errors[:missing_group_key])
         .to include(
           missing_parent_group_key_event.transaction_id,
-          missing_child_group_key_event.transaction_id,
+          missing_child_group_key_event.transaction_id
         )
       expect(result.errors[:invalid_filter_values]).to include(invalid_filter_values_event.transaction_id)
     end
@@ -170,7 +170,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
             missing_aggregation_property: [missing_aggregation_property_event.transaction_id],
             missing_group_key: Array,
             invalid_filter_values: [invalid_filter_values_event.transaction_id]
-          },
+          }
         )
     end
   end

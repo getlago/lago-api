@@ -13,7 +13,7 @@ module Wallets
             paid_credits: recurring_transaction_rule.paid_credits.to_s,
             granted_credits: recurring_transaction_rule.granted_credits.to_s,
             source: :interval
-          },
+          }
         )
       end
     end
@@ -80,14 +80,14 @@ module Wallets
         conditions: [
           "EXTRACT(ISODOW FROM (wallets.created_at#{at_time_zone})) =
           EXTRACT(ISODOW FROM (:today#{at_time_zone}))"
-        ],
+        ]
       )
     end
 
     def monthly_anniversary
       base_recurring_transaction_rule_scope(
         interval: :monthly,
-        conditions: [<<-SQL],
+        conditions: [<<-SQL]
           DATE_PART('day', (wallets.created_at#{at_time_zone})) = ANY (
             -- Check if today is the last day of the month
             CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
@@ -137,7 +137,7 @@ module Wallets
 
       base_recurring_transaction_rule_scope(
         interval: :quarterly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 
@@ -167,7 +167,7 @@ module Wallets
 
       base_recurring_transaction_rule_scope(
         interval: :yearly,
-        conditions: [billing_month, billing_day],
+        conditions: [billing_month, billing_day]
       )
     end
 

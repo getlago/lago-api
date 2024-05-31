@@ -20,7 +20,7 @@ module Wallets
           last_balance_sync_at: Time.zone.now,
           consumed_credits: wallet.consumed_credits + credits_amount,
           consumed_amount_cents: wallet.consumed_amount_cents + amount_cents,
-          last_consumed_credit_at: Time.current,
+          last_consumed_credit_at: Time.current
         )
 
         Wallets::Balance::RefreshOngoingService.call(wallet:)

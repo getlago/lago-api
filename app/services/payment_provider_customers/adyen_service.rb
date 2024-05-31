@@ -40,7 +40,7 @@ module PaymentProviderCustomers
         SendWebhookJob.perform_later(
           'customer.checkout_url_generated',
           customer,
-          checkout_url: result.checkout_url,
+          checkout_url: result.checkout_url
         )
       end
 
@@ -94,7 +94,7 @@ module PaymentProviderCustomers
       @client ||= Adyen::Client.new(
         api_key: adyen_payment_provider.api_key,
         env: adyen_payment_provider.environment,
-        live_url_prefix: adyen_payment_provider.live_prefix,
+        live_url_prefix: adyen_payment_provider.live_prefix
       )
     end
 
@@ -134,7 +134,7 @@ module PaymentProviderCustomers
         provider_error: {
           message: adyen_error.request&.dig('msg') || adyen_error.msg,
           error_code: adyen_error.request&.dig('code') || adyen_error.code
-        },
+        }
       )
     end
 

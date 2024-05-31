@@ -56,7 +56,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
                 tax_codes: [organization.taxes.find_by(code: 'sales_tax').code]
               }
             ]
-          },
+          }
         )
         plan = organization.plans.find_by(code: 'plan_code')
 
@@ -65,7 +65,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             external_customer_id: 'customer-1',
             external_id: 'sub_external_id',
             plan_code: plan.code
-          },
+          }
         )
 
         create_coupon(
@@ -79,7 +79,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
             reusable: false
-          },
+          }
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
 
@@ -89,7 +89,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_subscription_id: 'sub_external_id',
             properties: {total: 50}
-          },
+          }
         )
 
         create_event(
@@ -97,7 +97,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             code: cards.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: 'sub_external_id'
-          },
+          }
         )
       end
 
@@ -117,7 +117,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         taxes_amount_cents: 950,
         taxes_rate: 10.0,
         # fee amount cents * coupon amount / total fees amount (100 * 10 / 200)
-        precise_coupons_amount_cents: 500,
+        precise_coupons_amount_cents: 500
       )
 
       fx_transfers = organization.billable_metrics.find_by(code: 'fx_transfers')
@@ -131,7 +131,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         taxes_rate: 0.0,
         precise_coupons_amount_cents: 250, # 50 * 10 / 200
         events_count: 1,
-        units: 50,
+        units: 50
       )
 
       # Cards fee
@@ -142,7 +142,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         taxes_rate: 20.0,
         precise_coupons_amount_cents: 150, # 30 * 10 / 200
         events_count: 1,
-        units: 1,
+        units: 1
       )
 
       # True up - Cards fee
@@ -153,7 +153,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         taxes_rate: 20.0,
         precise_coupons_amount_cents: 100, # 20 * 10 / 200
         events_count: 0,
-        units: 1,
+        units: 1
       )
 
       expect(invoice).to have_attributes(
@@ -162,7 +162,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         taxes_amount_cents: 1900,
         sub_total_excluding_taxes_amount_cents: 19_000,
         sub_total_including_taxes_amount_cents: 20_900,
-        total_amount_cents: 20_900,
+        total_amount_cents: 20_900
       )
     end
   end
@@ -184,7 +184,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             pay_in_advance: false,
             tax_codes: ['banking_rates'],
             charges: []
-          },
+          }
         )
         plan = organization.plans.find_by(code: 'plan_code')
 
@@ -193,7 +193,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             external_customer_id: 'customer-1',
             external_id: 'sub_external_id',
             plan_code: plan.code
-          },
+          }
         )
 
         create_coupon(
@@ -207,7 +207,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
             reusable: false
-          },
+          }
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
 
@@ -222,7 +222,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
             reusable: false
-          },
+          }
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon2_code'})
       end
@@ -243,7 +243,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         taxes_amount_cents: 0,
         taxes_rate: 10.0,
         # fee amount cents * coupon amount / total fees amount (100 * 10 / 100)
-        precise_coupons_amount_cents: 10_000,
+        precise_coupons_amount_cents: 10_000
       )
     end
   end
@@ -265,7 +265,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             pay_in_advance: false,
             tax_codes: ['banking_rates'],
             charges: []
-          },
+          }
         )
         plan = organization.plans.find_by(code: 'plan_code')
 
@@ -274,7 +274,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             external_customer_id: 'customer-1',
             external_id: 'sub_external_id',
             plan_code: plan.code
-          },
+          }
         )
 
         create_plan(
@@ -287,7 +287,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             pay_in_advance: false,
             tax_codes: ['banking_rates'],
             charges: []
-          },
+          }
         )
         plan2 = organization.plans.find_by(code: 'plan_code2')
 
@@ -296,7 +296,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             external_customer_id: 'customer-1',
             external_id: 'sub_external_id2',
             plan_code: plan2.code
-          },
+          }
         )
 
         create_coupon(
@@ -310,7 +310,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
             reusable: false
-          },
+          }
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
 
@@ -325,7 +325,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
             expiration: 'time_limit',
             expiration_at: Time.current + 15.days,
             reusable: false
-          },
+          }
         )
         apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon2_code'})
       end
@@ -348,7 +348,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         taxes_amount_cents: 0,
         taxes_rate: 10.0,
         # fee amount cents * coupon amount / total fees amount (100 * 10 / 100)
-        precise_coupons_amount_cents: 10_000,
+        precise_coupons_amount_cents: 10_000
       )
 
       # Subscription fee2
@@ -357,7 +357,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         taxes_amount_cents: 0,
         taxes_rate: 10.0,
         # fee amount cents * coupon amount / total fees amount (50 * 5 / 50)
-        precise_coupons_amount_cents: 5_000,
+        precise_coupons_amount_cents: 5_000
       )
     end
   end

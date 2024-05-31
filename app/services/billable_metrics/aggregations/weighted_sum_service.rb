@@ -101,7 +101,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries: {to_datetime: from_datetime},
-          filters:,
+          filters:
         )
 
         event_store.use_from_boundary = false
@@ -145,7 +145,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries: {to_datetime: from_datetime},
-          filters:,
+          filters:
         )
 
         event_store.use_from_boundary = false

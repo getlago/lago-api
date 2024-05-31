@@ -49,7 +49,7 @@ RSpec.describe Invites::AcceptService, type: :service do
       it 'sets user, membership and organization' do
         result = accept_service.call(
           password: accept_args[:password],
-          token: new_invite[:token],
+          token: new_invite[:token]
         )
 
         expect(result).to be_success
@@ -66,7 +66,7 @@ RSpec.describe Invites::AcceptService, type: :service do
       it 'returns invite_not_found error' do
         result = accept_service.call(
           password: accept_args[:password],
-          token: accepted_invite[:token],
+          token: accepted_invite[:token]
         )
 
         expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -80,7 +80,7 @@ RSpec.describe Invites::AcceptService, type: :service do
       it 'returns invite_not_found error' do
         result = accept_service.call(
           password: accept_args[:password],
-          token: revoked_invite[:token],
+          token: revoked_invite[:token]
         )
 
         expect(result.error).to be_a(BaseService::NotFoundFailure)

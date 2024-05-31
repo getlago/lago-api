@@ -50,7 +50,7 @@ class Credit < ApplicationRecord
       applied_coupon.amount.format(
         format: I18n.t('money.format'),
         decimal_mark: I18n.t('money.decimal_mark'),
-        thousands_separator: I18n.t('money.thousands_separator'),
+        thousands_separator: I18n.t('money.thousands_separator')
       )
     end
 

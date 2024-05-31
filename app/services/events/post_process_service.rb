@@ -69,7 +69,7 @@ module Events
         .where("date_trunc('second', started_at::timestamp) <= ?::timestamp", event.timestamp)
         .where(
           "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
-          event.timestamp,
+          event.timestamp
         )
         .order('terminated_at DESC NULLS FIRST, started_at DESC')
     end

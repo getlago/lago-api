@@ -14,7 +14,7 @@ module Memberships
       return result.not_allowed_failure!(code: 'last_admin') if changing_role_of_last_admin?
 
       membership.update!(
-        role: params[:role],
+        role: params[:role]
       )
 
       result.membership = membership

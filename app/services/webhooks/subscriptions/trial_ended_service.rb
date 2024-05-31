@@ -11,7 +11,7 @@ module Webhooks
         ::V1::SubscriptionSerializer.new(
           object,
           root_name: 'subscription',
-          includes: %i[plan customer],
+          includes: %i[plan customer]
         )
       end
 

@@ -8,8 +8,8 @@ module Api
           json: ::V1::OrganizationSerializer.new(
             current_organization,
             root_name: 'organization',
-            include: %i[taxes],
-          ),
+            include: %i[taxes]
+          )
         )
       end
 
@@ -21,8 +21,8 @@ module Api
             json: ::V1::OrganizationSerializer.new(
               result.organization,
               root_name: 'organization',
-              includes: %i[taxes],
-            ),
+              includes: %i[taxes]
+            )
           )
         else
           render_error_response(result)
@@ -41,7 +41,7 @@ module Api
             organization: {
               grpc_token:
             }
-          },
+          }
         )
       end
 
@@ -73,7 +73,7 @@ module Api
 
             # NOTE(legacy): vat has been moved to tax model
             :vat_rate
-          ],
+          ]
         )
       end
     end

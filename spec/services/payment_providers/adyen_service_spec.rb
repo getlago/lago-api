@@ -33,7 +33,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
           api_key:,
           code:,
           name:,
-          success_redirect_url:,
+          success_redirect_url:
         )
 
         expect(result).to be_success
@@ -55,7 +55,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
         result = adyen_service.create_or_update(
           organization:,
           api_key: nil,
-          merchant_account: nil,
+          merchant_account: nil
         )
 
         aggregate_failures do
@@ -85,7 +85,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
     it 'checks the webhook' do
       result = adyen_service.handle_incoming_webhook(
         organization_id: organization.id,
-        body:,
+        body:
       )
 
       expect(result).to be_success
@@ -136,7 +136,7 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       it 'returns an error' do
         result = adyen_service.handle_incoming_webhook(
           organization_id: organization.id,
-          body:,
+          body:
         )
 
         aggregate_failures do

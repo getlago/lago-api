@@ -57,7 +57,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
             planIds: [plan.id]
           }
         }
-      },
+      }
     )
 
     result_data = result['data']['createCoupon']
@@ -122,7 +122,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
               billableMetricIds: [billable_metric.id]
             }
           }
-        },
+        }
       )
 
       result_data = result['data']['createCoupon']
@@ -161,7 +161,7 @@ RSpec.describe Mutations::Coupons::Create, type: :graphql do
             expiration: 'time_limit',
             expirationAt: expiration_at.iso8601
           }
-        },
+        }
       )
 
       result_data = result['data']['createCoupon']

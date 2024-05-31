@@ -63,7 +63,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       :billable_metric_filter,
       billable_metric: billable_metrics[0],
       key: 'payment_method',
-      values: %w[card sepa],
+      values: %w[card sepa]
     )
   end
 
@@ -225,7 +225,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
 
         expect(result_data['minimumCommitment']).to include(
           'invoiceDisplayName' => minimum_commitment_invoice_display_name,
-          'amountCents' => minimum_commitment_amount_cents.to_s,
+          'amountCents' => minimum_commitment_amount_cents.to_s
         )
         expect(result_data['minimumCommitment']['taxes'].count).to eq(1)
       end
@@ -239,7 +239,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       aggregate_failures do
         expect(result_data['minimumCommitment']).to include(
           'invoiceDisplayName' => minimum_commitment_invoice_display_name,
-          'amountCents' => minimum_commitment_amount_cents.to_s,
+          'amountCents' => minimum_commitment_amount_cents.to_s
         )
         expect(result_data['minimumCommitment']['taxes'].count).to eq(1)
       end
@@ -300,7 +300,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       aggregate_failures do
         expect(result_data['minimumCommitment']).to include(
           'invoiceDisplayName' => minimum_commitment.invoice_display_name,
-          'amountCents' => minimum_commitment.amount_cents.to_s,
+          'amountCents' => minimum_commitment.amount_cents.to_s
         )
       end
     end

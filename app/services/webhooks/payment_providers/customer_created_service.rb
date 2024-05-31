@@ -12,7 +12,7 @@ module Webhooks
       def object_serializer
         ::V1::CustomerSerializer.new(
           object,
-          root_name: object_type,
+          root_name: object_type
         )
       end
 

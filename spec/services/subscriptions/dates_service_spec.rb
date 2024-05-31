@@ -11,7 +11,7 @@ RSpec.describe Subscriptions::DatesService, type: :service do
       plan:,
       subscription_at:,
       billing_time: :anniversary,
-      started_at:,
+      started_at:
     )
   end
 

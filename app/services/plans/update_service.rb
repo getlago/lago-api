@@ -78,20 +78,20 @@ module Plans
         charge_model: charge_model(params),
         pay_in_advance: params[:pay_in_advance] || false,
         prorated: params[:prorated] || false,
-        group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) },
+        group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) }
       )
 
       properties = params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
       charge.properties = Charges::FilterChargeModelPropertiesService.call(
         charge:,
-        properties:,
+        properties:
       ).properties
 
       if params[:filters].present?
         charge.save!
         ChargeFilters::CreateOrUpdateBatchService.call(
           charge:,
-          filters_params: params[:filters].map(&:with_indifferent_access),
+          filters_params: params[:filters].map(&:with_indifferent_access)
         ).raise_if_error!
       end
 
@@ -130,7 +130,7 @@ module Plans
       if params[:tax_codes]
         taxes_result = Commitments::ApplyTaxesService.call(
           commitment: minimum_commitment,
-          tax_codes: params[:tax_codes],
+          tax_codes: params[:tax_codes]
         )
         taxes_result.raise_if_error!
       end
@@ -152,28 +152,28 @@ module Plans
           if group_properties.present?
             group_result = GroupProperties::CreateOrUpdateBatchService.call(
               charge:,
-              properties_params: group_properties,
+              properties_params: group_properties
             )
             return group_result if group_result.error
           end
 
           properties = payload_charge.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
-            payload_charge[:charge_model],
+            payload_charge[:charge_model]
           )
 
           charge.update!(
             invoice_display_name: payload_charge[:invoice_display_name],
             properties: Charges::FilterChargeModelPropertiesService.call(
               charge:,
-              properties:,
-            ).properties,
+              properties:
+            ).properties
           )
 
           filters = payload_charge.delete(:filters)
           unless filters.nil?
             ChargeFilters::CreateOrUpdateBatchService.call(
               charge:,
-              filters_params: filters.map(&:with_indifferent_access),
+              filters_params: filters.map(&:with_indifferent_access)
             ).raise_if_error!
           end
 

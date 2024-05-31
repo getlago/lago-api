@@ -21,7 +21,7 @@ module WalletTransactions
           status: :settled,
           settled_at: Time.current,
           source: from_source,
-          transaction_status: :voided,
+          transaction_status: :voided
         )
         Wallets::Balance::DecreaseService.new(wallet:, credits_amount:).call
         result.wallet_transaction = wallet_transaction

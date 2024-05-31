@@ -305,7 +305,7 @@ RSpec.describe Plans::UpdateService, type: :service do
                 pay_in_advance: true,
                 invoiceable: false,
                 charge_model: 'graduated_percentage'
-              },
+              }
             )
           end
         end
@@ -504,7 +504,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           amount_currency: 'USD',
           properties: {
             amount: '300'
-          },
+          }
         )
       end
 
@@ -513,7 +513,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           :billable_metric_filter,
           billable_metric: sum_billable_metric,
           key: 'payment_method',
-          values: %w[card physical],
+          values: %w[card physical]
         )
       end
 
@@ -574,20 +574,20 @@ RSpec.describe Plans::UpdateService, type: :service do
 
         expect(existing_charge.reload).to have_attributes(
           prorated: true,
-          properties: {'amount' => '0'},
+          properties: {'amount' => '0'}
         )
         expect(existing_charge.group_properties.first).to have_attributes(
           group_id: group.id,
-          values: {'amount' => '100'},
+          values: {'amount' => '100'}
         )
 
         expect(existing_charge.filters.first).to have_attributes(
           invoice_display_name: 'Card filter',
-          properties: {'amount' => '90'},
+          properties: {'amount' => '90'}
         )
         expect(existing_charge.filters.first.values.first).to have_attributes(
           billable_metric_filter_id: billable_metric_filter.id,
-          values: ['card'],
+          values: ['card']
         )
       end
 
@@ -620,7 +620,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           amount_currency: 'USD',
           properties: {
             amount: '300'
-          },
+          }
         )
       end
 
@@ -659,7 +659,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           :standard_charge,
           plan_id: plan.id,
           billable_metric_id: billable_metric.id,
-          properties: {amount: '300'},
+          properties: {amount: '300'}
         )
       end
 
@@ -716,7 +716,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           billable_metric_id: sum_billable_metric.id,
           properties: {
             amount: '300'
-          },
+          }
         )
       end
 

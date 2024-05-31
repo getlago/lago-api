@@ -10,7 +10,7 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
     create(
       :subscription,
       organization: membership.organization,
-      subscription_at: Time.current + 3.days,
+      subscription_at: Time.current + 3.days
     )
   end
 
@@ -39,7 +39,7 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
           id: subscription.id,
           name: 'New name'
         }
-      },
+      }
     )
 
     result_data = result['data']['updateSubscription']

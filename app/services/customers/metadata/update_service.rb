@@ -42,7 +42,7 @@ module Customers
         customer.metadata.create!(
           key: payload[:key],
           value: payload[:value],
-          display_in_invoice: payload[:display_in_invoice],
+          display_in_invoice: payload[:display_in_invoice]
         )
       end
 

@@ -171,7 +171,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
             [
               :fixed_amount,
               :free_units_per_total_aggregation
-            ],
+            ]
           )
           expect(percentage_service.result.error.messages[:fixed_amount])
             .to include('invalid_fixed_amount')
@@ -198,7 +198,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
             [
               :fixed_amount,
               :free_units_per_total_aggregation
-            ],
+            ]
           )
           expect(percentage_service.result.error.messages[:fixed_amount])
             .to include('invalid_fixed_amount')
@@ -245,7 +245,7 @@ RSpec.describe Charges::Validators::PercentageService, type: :service do
               :fixed_amount,
               :free_units_per_events,
               :free_units_per_total_aggregation
-            ],
+            ]
           )
           expect(percentage_service.result.error.messages[:fixed_amount])
             .to include('invalid_fixed_amount')

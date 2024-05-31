@@ -34,7 +34,7 @@ RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
         input: {
           id: credit_note.id
         }
-      },
+      }
     )
 
     result_data = result['data']['voidCreditNote']
@@ -55,7 +55,7 @@ RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
           input: {
             id: 'foo_bar'
           }
-        },
+        }
       )
 
       expect_not_found(result)

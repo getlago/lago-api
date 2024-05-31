@@ -22,7 +22,7 @@ module Invoices
           date_service = Subscriptions::TerminatedDatesService.new(
             subscription:,
             invoice:,
-            date_service: date_service(subscription),
+            date_service: date_service(subscription)
           ).call
 
           boundaries = {
@@ -76,7 +76,7 @@ module Invoices
       Subscriptions::DatesService.new_instance(
         subscription,
         timestamp,
-        current_usage: subscription.terminated? && subscription.upgraded?,
+        current_usage: subscription.terminated? && subscription.upgraded?
       )
     end
 

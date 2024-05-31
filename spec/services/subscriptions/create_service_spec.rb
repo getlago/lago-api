@@ -66,7 +66,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           subscription_type: 'create',
           organization_id: subscription.organization.id,
           billing_time: 'anniversary'
-        },
+        }
       )
     end
 
@@ -346,7 +346,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           status: :active,
           subscription_at: Time.current,
           started_at: Time.current,
-          external_id:,
+          external_id:
         )
       end
 
@@ -458,7 +458,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               Subscriptions::DatesService.new_instance(
                 subscription,
                 Time.current.beginning_of_month,
-                current_usage: false,
+                current_usage: false
               )
             end
             let(:invoice_subscription) do
@@ -470,7 +470,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 from_datetime: date_service.from_datetime,
                 to_datetime: date_service.to_datetime,
                 charges_from_datetime: date_service.charges_from_datetime,
-                charges_to_datetime: date_service.charges_to_datetime,
+                charges_to_datetime: date_service.charges_to_datetime
               )
             end
             let(:invoice) do
@@ -481,7 +481,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 sub_total_excluding_taxes_amount_cents: 100,
                 fees_amount_cents: 100,
                 taxes_amount_cents: 20,
-                total_amount_cents: 120,
+                total_amount_cents: 120
               )
             end
 
@@ -494,7 +494,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 taxes_amount_cents: 20,
                 invoiceable_type: 'Subscription',
                 invoiceable_id: subscription.id,
-                taxes_rate: 20,
+                taxes_rate: 20
               )
             end
 
@@ -507,7 +507,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 subscription_at: creation_time,
                 started_at: creation_time,
                 external_id:,
-                billing_time: 'anniversary',
+                billing_time: 'anniversary'
               )
             end
 
@@ -538,7 +538,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 :subscription,
                 status: :pending,
                 previous_subscription: subscription,
-                organization: subscription.organization,
+                organization: subscription.organization
               )
             end
 
@@ -634,7 +634,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
                 :subscription,
                 status: :pending,
                 previous_subscription: subscription,
-                organization: subscription.organization,
+                organization: subscription.organization
               )
             end
 

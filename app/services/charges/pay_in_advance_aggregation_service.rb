@@ -21,7 +21,7 @@ module Charges
           to_datetime: boundaries[:charges_to_datetime],
           charges_duration: boundaries[:charges_duration]
         },
-        filters: aggregation_filters,
+        filters: aggregation_filters
       )
 
       aggregator.aggregate(options: aggregation_options)

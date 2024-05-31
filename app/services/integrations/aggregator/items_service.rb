@@ -50,7 +50,7 @@ module Integrations
             external_id: item['id'],
             external_account_code: item['account_code'],
             external_name: item['name'],
-            item_type: :standard,
+            item_type: :standard
           )
 
           integration_item.save!
