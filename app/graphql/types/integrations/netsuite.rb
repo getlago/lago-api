@@ -28,7 +28,6 @@ module Types
       def has_mappings_configured
         object.integration_collection_mappings
           .where(type: 'IntegrationCollectionMappings::NetsuiteCollectionMapping')
-          .where(mapping_type: :fallback_item)
           .any?
       end
     end
