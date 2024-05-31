@@ -6,7 +6,8 @@ module Types
       graphql_name 'Integration'
 
       possible_types Types::Integrations::Netsuite,
-        Types::Integrations::Okta
+        Types::Integrations::Okta,
+        Types::Integrations::Anrok
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -14,6 +15,8 @@ module Types
           Types::Integrations::Netsuite
         when 'Integrations::OktaIntegration'
           Types::Integrations::Okta
+        when 'Integrations::AnrokIntegration'
+          Types::Integrations::Anrok
         else
           raise "Unexpected integration type: #{object.inspect}"
         end
