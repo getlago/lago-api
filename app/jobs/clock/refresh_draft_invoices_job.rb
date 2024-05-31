@@ -2,6 +2,8 @@
 
 module Clock
   class RefreshDraftInvoicesJob < ApplicationJob
+    include SentryCronConcern
+
     queue_as 'clock'
 
     def perform

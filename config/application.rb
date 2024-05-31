@@ -16,9 +16,11 @@ module LagoApi
       #{config.root}/lib/lago_eu_vat
       #{config.root}/app/views/helpers
       #{config.root}/app/support
+      #{config.root}/app/jobs/concerns
     ]
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
+    config.autoload_paths << Rails.root.join("app/jobs/concerns")
 
     # Configuration for active record encryption
     config.active_record.encryption.primary_key = ENV['ENCRYPTION_PRIMARY_KEY']

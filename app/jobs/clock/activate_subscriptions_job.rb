@@ -2,8 +2,9 @@
 
 module Clock
   class ActivateSubscriptionsJob < ApplicationJob
-    queue_as 'clock'
+    include SentryCronConcern
 
+    queue_as 'clock'
     unique :until_executed, on_conflict: :log
 
     def perform
