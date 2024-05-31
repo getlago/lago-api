@@ -13,7 +13,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
       ongoing_usage_balance_cents: 450,
       credits_balance: 10.0,
       credits_ongoing_balance: 5.5,
-      credits_ongoing_usage_balance: 4.0,
+      credits_ongoing_usage_balance: 4.0
     )
   end
 

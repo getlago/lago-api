@@ -28,7 +28,7 @@ module Wallets
         wallet.currency = wallet.customer.currency
         wallet.save!
 
-        if params[:recurring_transaction_rules]
+        if params[:recurring_transaction_rules].present?
           Wallets::RecurringTransactionRules::CreateService.call(wallet:, wallet_params: params)
         end
       end
