@@ -6,9 +6,10 @@ module LagoHttpClient
   class Client
     RESPONSE_SUCCESS_CODES = [200, 201, 202, 204].freeze
 
-    def initialize(url, read_timeout: 60)
+    def initialize(url, read_timeout: nil)
       @uri = URI(url)
-      @http_client = Net::HTTP.new(uri.host, uri.port, read_timeout:)
+      @http_client = Net::HTTP.new(uri.host, uri.port)
+      @http_client.read_timeout = read_timeout if read_timeout.present?
       @http_client.use_ssl = true if uri.scheme == 'https'
     end
 
