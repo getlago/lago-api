@@ -2,8 +2,6 @@
 
 module Clock
   class SubscriptionsToBeTerminatedJob < ApplicationJob
-    include SentryCronConcern
-
     queue_as 'clock'
 
     def perform

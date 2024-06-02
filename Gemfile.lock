@@ -742,14 +742,13 @@ GEM
     scenic (1.7.0)
       activerecord (>= 4.0.0)
       railties (>= 4.0.0)
-    sentry-rails (5.17.3)
+    sentry-rails (5.12.0)
       railties (>= 5.0)
-      sentry-ruby (~> 5.17.3)
-    sentry-ruby (5.17.3)
-      bigdecimal
+      sentry-ruby (~> 5.12.0)
+    sentry-ruby (5.12.0)
       concurrent-ruby (~> 1.0, >= 1.0.2)
-    sentry-sidekiq (5.17.3)
-      sentry-ruby (~> 5.17.3)
+    sentry-sidekiq (5.12.0)
+      sentry-ruby (~> 5.12.0)
       sidekiq (>= 3.0)
     shellany (0.0.1)
     shoulda-matchers (6.2.0)
@@ -909,9 +908,9 @@ DEPENDENCIES
   ruby-lsp-rails
   sass-rails
   scenic
-  sentry-rails (~> 5.17.0)
-  sentry-ruby (~> 5.17.0)
-  sentry-sidekiq (~> 5.17.0)
+  sentry-rails (~> 5.12.0)
+  sentry-ruby (~> 5.12.0)
+  sentry-sidekiq (~> 5.12.0)
   shoulda-matchers
   sidekiq
   simplecov
