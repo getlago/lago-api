@@ -47,7 +47,7 @@ module Utils
         marginBottom: '0.42',
         marginLeft: '0.42',
         marginRight: '0.42',
-        read_timeout: 300,
+        read_timeout: 300
       )
 
       response.body.force_encoding('UTF-8')
