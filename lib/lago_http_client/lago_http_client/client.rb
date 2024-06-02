@@ -6,9 +6,9 @@ module LagoHttpClient
   class Client
     RESPONSE_SUCCESS_CODES = [200, 201, 202, 204].freeze
 
-    def initialize(url, read_timeout: 60)
+    def initialize(url)
       @uri = URI(url)
-      @http_client = Net::HTTP.new(uri.host, uri.port, read_timeout:)
+      @http_client = Net::HTTP.new(uri.host, uri.port)
       @http_client.use_ssl = true if uri.scheme == 'https'
     end
 
@@ -62,12 +62,13 @@ module LagoHttpClient
       response
     end
 
-    def post_multipart_file(params = {})
+    def post_multipart_file(params = {}, read_timeout: nil)
       req = Net::HTTP::Post::Multipart.new(
         uri.path,
         params
       )
-
+      
+      http_client.read_timeout = read_timeout if read_timeout.present?
       response = http_client.request(req)
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
