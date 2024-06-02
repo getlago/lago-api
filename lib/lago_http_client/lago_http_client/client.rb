@@ -67,7 +67,7 @@ module LagoHttpClient
         uri.path,
         params
       )
-      
+
       http_client.read_timeout = read_timeout if read_timeout.present?
       response = http_client.request(req)
 
