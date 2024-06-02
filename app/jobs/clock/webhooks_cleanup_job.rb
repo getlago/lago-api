@@ -2,8 +2,6 @@
 
 module Clock
   class WebhooksCleanupJob < ApplicationJob
-    include SentryCronConcern
-
     queue_as 'clock'
 
     def perform
