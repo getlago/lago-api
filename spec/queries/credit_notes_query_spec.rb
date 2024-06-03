@@ -10,16 +10,19 @@ RSpec.describe CreditNotesQuery, type: :query do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:credit_note_first) { create(:credit_note, organization:, customer:, number: '11imthefirstone') }
-  let(:credit_note_second) { create(:credit_note, organization:, customer:, number: '22imthesecondone') }
-  let(:credit_note_third) { create(:credit_note, organization:, customer:, number: '33imthethirdone') }
-  let(:credit_note_fourth) { create(:credit_note, organization:, number: '44imthefourthone') }
+  let(:other_org_customer) { create(:customer) }
+  let(:credit_note_first) { create(:credit_note, customer:, number: '11imthefirstone') }
+  let(:credit_note_second) { create(:credit_note, customer:, number: '22imthesecondone') }
+  let(:credit_note_third) { create(:credit_note, customer:, number: '33imthethirdone') }
+  let(:credit_note_fourth) { create(:credit_note, customer: create(:customer, organization:), number: '44imthefourthone') }
+  let(:other_org_credit_note) { create(:credit_note, customer: other_org_customer, number: '55imthefifthone') }
 
   before do
     credit_note_first
     credit_note_second
     credit_note_third
     credit_note_fourth
+    other_org_credit_note
   end
 
   it 'returns all credit_notes when no customer is provided' do
@@ -58,6 +61,17 @@ RSpec.describe CreditNotesQuery, type: :query do
       expect(returned_ids).to include(credit_note_third.id)
       expect(returned_ids).not_to include(credit_note_fourth.id)
     end
+  end
+
+  it 'never returns credit_notes from other organizations' do
+    result = credit_notes_query.call(
+      search_term: nil,
+      customer_id: other_org_credit_note.customer.id,
+      page: 1,
+      limit: 10
+    )
+
+    expect(result.credit_notes).to be_empty
   end
 
   context 'when searching for /imthe/ term' do

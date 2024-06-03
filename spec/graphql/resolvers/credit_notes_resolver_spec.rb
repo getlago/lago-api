@@ -19,7 +19,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:, organization:) }
-  let(:credit_note) { create(:credit_note, organization:, customer:) }
+  let(:credit_note) { create(:credit_note, customer:) }
   let(:customer_id) { nil }
   let(:search_term) { nil }
 
@@ -79,7 +79,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
     let(:search_term) { "yolo" }
 
     it 'returns a list of finalized credit_notes matching the terms' do
-      create(:credit_note, number: 'yolo', organization:)
+      create(:credit_note, number: 'yolo', customer: create(:customer, organization:))
 
       result = execute_graphql(
         current_user: membership.user,
