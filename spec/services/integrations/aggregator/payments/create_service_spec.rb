@@ -61,11 +61,11 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
   describe '#call_async' do
     subject(:service_call_async) { described_class.new(payment:).call_async }
 
-    # context 'when payment exists' do
-    #   it 'enqueues payment create job' do
-    #     expect { service_call_async }.to enqueue_job(Integrations::Aggregator::Payments::CreateJob)
-    #   end
-    # end
+    context 'when payment exists' do
+      it 'enqueues payment create job' do
+        expect { service_call_async }.to enqueue_job(Integrations::Aggregator::Payments::CreateJob)
+      end
+    end
 
     context 'when payment does not exist' do
       let(:payment) { nil }
