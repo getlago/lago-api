@@ -12,10 +12,7 @@ module Fees
     def call
       plan_ids = subscriptions.select(&:active?).map(&:plan_id).uniq
 
-      Charge.joins(:billable_metric)
-        .where(plan_id: plan_ids, pay_in_advance: true, invoiceable: false)
-        .where(billable_metrics: {recurring: true})
-        .find_each do |charge|
+      eligible_charges(plan_ids).find_each do |charge|
         last_fee = charge.fees.order(created_at: :desc).first
         event = Event.find_by(id: last_fee&.pay_in_advance_event_id)
 
@@ -23,12 +20,16 @@ module Fees
           Fees::CreatePayInAdvanceJob.perform_later(charge:, event:, billing_at:)
         end
       end
-
-      result
     end
 
     private
 
     attr_reader :subscriptions, :billing_at
+
+    def eligible_charges(plan_ids)
+      Charge.joins(:billable_metric)
+        .where(plan_id: plan_ids, pay_in_advance: true, invoiceable: false)
+        .where(billable_metrics: {recurring: true})
+    end
   end
 end
