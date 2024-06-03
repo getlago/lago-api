@@ -447,8 +447,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             let(:old_plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
 
             it 'enqueues a job to bill the existing subscription' do
-              create_service.call
-              expect(BillSubscriptionJob).to have_been_enqueued.at_least(1).times
+              expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
             end
           end
 
@@ -527,8 +526,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
 
             it 'enqueues a job to bill the existing subscription' do
-              create_service.call
-              expect(BillSubscriptionJob).to have_been_enqueued.at_least(2).times
+              expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
             end
           end
 
