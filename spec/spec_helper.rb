@@ -18,7 +18,7 @@ RSpec.configure do |config|
     DatabaseCleaner.clean_with(:deletion)
   end
 
-  config.before(:each) do
+  config.before do
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
   end
 
