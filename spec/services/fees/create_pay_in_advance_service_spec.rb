@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
-  subject(:fee_service) { described_class.new(charge:, event:, estimate:) }
+  subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp, estimate:) }
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }

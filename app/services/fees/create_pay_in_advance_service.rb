@@ -2,9 +2,10 @@
 
 module Fees
   class CreatePayInAdvanceService < BaseService
-    def initialize(charge:, event:, estimate: false)
+    def initialize(charge:, event:, billing_at: event.timestamp, estimate: false)
       @charge = charge
       @event = event
+      @billing_at = billing_at
       @estimate = estimate
 
       super
@@ -33,7 +34,7 @@ module Fees
 
     private
 
-    attr_reader :charge, :event, :estimate
+    attr_reader :charge, :event, :billing_at, :estimate
 
     delegate :billable_metric, to: :charge
     delegate :subscription, :customer, to: :event
@@ -89,7 +90,7 @@ module Fees
     def date_service
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
-        event.timestamp,
+        billing_at,
         current_usage: true
       )
     end
@@ -101,7 +102,7 @@ module Fees
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         charges_duration: date_service.charges_duration_in_days,
-        timestamp: Time.current
+        timestamp: billing_at
       }
     end
 
@@ -135,7 +136,7 @@ module Fees
       CachedAggregation.create!(
         organization_id: event.organization_id,
         event_id: event.id,
-        timestamp: event.timestamp,
+        timestamp: billing_at,
         external_subscription_id: event.external_subscription_id,
         charge_id: charge.id,
         charge_filter_id: charge_filter&.id,
