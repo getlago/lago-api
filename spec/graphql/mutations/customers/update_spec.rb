@@ -9,6 +9,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
   let(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:tax) { create(:tax, organization:) }
+  let(:external_id) { SecureRandom.uuid }
 
   let(:mutation) do
     <<~GQL
@@ -40,6 +41,33 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     }
   end
 
+  let(:input) do
+    {
+      id: customer.id,
+      name: 'Updated customer',
+      taxIdentificationNumber: '2246',
+      externalId: external_id,
+      paymentProvider: 'stripe',
+      currency: 'USD',
+      netPaymentTerm: 3,
+      providerCustomer: {
+        providerCustomerId: 'cu_12345',
+        providerPaymentMethods: %w[card sepa_debit]
+      },
+      billingConfiguration: {
+        documentLocale: 'fr'
+      },
+      metadata: [
+        {
+          key: 'test-key',
+          value: 'value',
+          displayInInvoice: true
+        }
+      ],
+      taxCodes: [tax.code]
+    }
+  end
+
   before do
     stub_request(:post, 'https://api.stripe.com/v1/checkout/sessions')
       .to_return(status: 200, body: body.to_json, headers: {})
@@ -48,41 +76,23 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
   end
 
   it_behaves_like 'requires current user'
-  it_behaves_like 'requires permission', 'customers:update'
+  it_behaves_like 'requires permission', %w[
+    customers:update
+    customer_settings:update:tax_rates
+    customer_settings:update:payment_terms
+    customer_settings:update:grace_period
+    customer_settings:update:lang
+  ]
 
   it 'updates a customer' do
     stripe_provider
-    external_id = SecureRandom.uuid
 
     result = execute_graphql(
       current_user: membership.user,
       permissions: required_permissions,
       query: mutation,
       variables: {
-        input: {
-          id: customer.id,
-          name: 'Updated customer',
-          taxIdentificationNumber: '2246',
-          externalId: external_id,
-          paymentProvider: 'stripe',
-          currency: 'EUR',
-          netPaymentTerm: 3,
-          providerCustomer: {
-            providerCustomerId: 'cu_12345',
-            providerPaymentMethods: %w[card sepa_debit]
-          },
-          billingConfiguration: {
-            documentLocale: 'fr'
-          },
-          metadata: [
-            {
-              key: 'test-key',
-              value: 'value',
-              displayInInvoice: true
-            }
-          ],
-          taxCodes: [tax.code]
-        }
+        input:
       }
     )
 
@@ -94,7 +104,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['taxIdentificationNumber']).to eq('2246')
       expect(result_data['externalId']).to eq(external_id)
       expect(result_data['paymentProvider']).to eq('stripe')
-      expect(result_data['currency']).to eq('EUR')
+      expect(result_data['currency']).to eq('USD')
       expect(result_data['timezone']).to be_nil
       expect(result_data['netPaymentTerm']).to eq(3)
       expect(result_data['invoiceGracePeriod']).to be_nil
@@ -132,6 +142,50 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       aggregate_failures do
         expect(result_data['timezone']).to eq('TZ_EUROPE_PARIS')
         expect(result_data['invoiceGracePeriod']).to eq(2)
+      end
+    end
+  end
+
+  context 'when user can only update customer settings' do
+    around { |test| lago_premium!(&test) }
+
+    it 'updates a customer' do
+      result = execute_graphql(
+        current_user: membership.user,
+        permissions: %w[
+          customer_settings:update:tax_rates
+          customer_settings:update:payment_terms
+          customer_settings:update:grace_period
+          customer_settings:update:lang
+        ],
+        query: mutation,
+        variables: {
+          input: input.merge({
+            invoiceGracePeriod: 2,
+            timezone: 'TZ_EUROPE_PARIS'
+          })
+        }
+      )
+
+      result_data = result['data']['updateCustomer']
+
+      aggregate_failures do
+        # What should have changed
+        expect(result_data['id']).to be_present
+        expect(result_data['taxes'][0]['code']).to eq(tax.code)
+        expect(result_data['netPaymentTerm']).to eq(3)
+        expect(result_data['invoiceGracePeriod']).to eq 2
+        expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
+
+        # What should not have changed
+        expect(result_data['name']).not_to eq('Updated customer')
+        expect(result_data['taxIdentificationNumber']).to be_nil
+        expect(result_data['externalId']).not_to eq(external_id)
+        expect(result_data['paymentProvider']).to be_nil
+        expect(result_data['currency']).to eq('EUR')
+        expect(result_data['timezone']).to be_nil
+        expect(result_data['providerCustomer']).to be_nil
+        expect(result_data['metadata']).to be_empty
       end
     end
   end

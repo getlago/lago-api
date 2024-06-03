@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'organization:integrations:view'
+    REQUIRED_PERMISSION = %w[organization:integrations:view customers:view]
 
     description "Query organization's payment providers"
 
@@ -26,11 +26,11 @@ module Resolvers
     def provider_type(type)
       case type
       when 'adyen'
-        'PaymentProviders::AdyenProvider'
+        PaymentProviders::AdyenProvider.to_s
       when 'stripe'
-        'PaymentProviders::StripeProvider'
+        PaymentProviders::StripeProvider.to_s
       when 'gocardless'
-        'PaymentProviders::GocardlessProvider'
+        PaymentProviders::GocardlessProvider.to_s
       else
         raise(NotImplementedError)
       end

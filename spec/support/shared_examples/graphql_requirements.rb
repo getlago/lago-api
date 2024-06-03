@@ -14,7 +14,9 @@ end
 
 RSpec.shared_examples 'requires permission' do |permission|
   it "requires #{permission} permission" do
-    expect(described_class::REQUIRED_PERMISSION).to eq(permission)
+    actual = Array.wrap(described_class::REQUIRED_PERMISSION).sort
+    expected = Array.wrap(permission).sort
+    expect(actual).to eq expected
   end
 end
 

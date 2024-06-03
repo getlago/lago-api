@@ -1,11 +1,13 @@
 # frozen_string_literal: true
 
+# TODO: Remove this mutation
+# The Mutations::Customers::Update allows you to modify the customer grace period
 module Mutations
   module Customers
     class UpdateInvoiceGracePeriod < BaseMutation
       include AuthenticableApiUser
 
-      REQUIRED_PERMISSION = 'customers:update'
+      REQUIRED_PERMISSION = %w[customers:update customer_settings:update:grace_period]
 
       graphql_name 'UpdateCustomerInvoiceGracePeriod'
       description 'Assign the invoice grace period to Customers'
