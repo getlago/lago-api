@@ -26,7 +26,7 @@ class FixQuantifiedEventMigration < ActiveRecord::Migration[7.0]
     SQL
 
     QuantifiedEvent.find_by_sql(sql).each do |quantified_event|
-      CachedAggregation.find_or_create!(
+      CachedAggregation.find_or_create_by!(
         organization_id: quantified_event.organization_id,
         charge_id: quantified_event.charge_id,
         timestamp: quantified_event.added_at,
