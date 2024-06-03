@@ -47,6 +47,8 @@ module Invoices
         invoice_payment_status = invoice_payment_status(payment.status)
         update_invoice_payment_status(payment_status: invoice_payment_status)
 
+        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
+
         result.payment = payment
         result
       end

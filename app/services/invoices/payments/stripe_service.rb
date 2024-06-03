@@ -47,6 +47,8 @@ module Invoices
           processing: payment.status == 'processing'
         )
 
+        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
+
         result.payment = payment
         result
       end
