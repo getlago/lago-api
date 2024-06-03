@@ -18,7 +18,7 @@ class CreditNotesQuery < BaseQuery
   attr_reader :search_term
 
   def base_scope
-    CreditNote.finalized.ransack(search_params)
+    CreditNote.joins(:customer).where('customers.organization_id = ?', organization.id).finalized.ransack(search_params)
   end
 
   def search_params
