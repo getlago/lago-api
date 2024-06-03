@@ -48,7 +48,7 @@ RSpec.describe Mutations::Integrations::Anrok::Update, type: :graphql do
           code:,
           apiKey: api_key
         }
-      },
+      }
     )
 
     result_data = result['data']['updateAnrokIntegration']
