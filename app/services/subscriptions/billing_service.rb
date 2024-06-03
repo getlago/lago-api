@@ -18,11 +18,9 @@ module Subscriptions
           end
         end
 
-        BillSubscriptionJob.perform_later(
-          billing_subscriptions,
-          billing_timestamp,
-          invoicing_reason: :subscription_periodic
-        )
+        BillSubscriptionJob.perform_later(billing_subscriptions, billing_timestamp, invoicing_reason: :subscription_periodic)
+
+        BillRecurringPayInAdvanceChargesJob.perform_later(billing_subscriptions, billing_timestamp)
       end
     end
 
