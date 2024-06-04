@@ -2,9 +2,8 @@
 
 module Subscriptions
   class BillingService < BaseService
-    def call
-      # Keep track of billing time for retry and tracking purpose
-      billing_timestamp = today.to_i
+    def call(billing_at: Time.current)
+      @today = billing_at
 
       billable_subscriptions.group_by(&:customer_id).each do |_customer_id, customer_subscriptions|
         billing_subscriptions = []
@@ -12,7 +11,7 @@ module Subscriptions
           if subscription.next_subscription&.pending?
             # NOTE: In case of downgrade, subscription remain active until the end of the period,
             #       a next subscription is pending, the current one must be terminated
-            Subscriptions::TerminateJob.perform_later(subscription, billing_timestamp)
+            Subscriptions::TerminateJob.perform_later(subscription, billing_at.to_i)
           else
             billing_subscriptions << subscription
           end
@@ -20,7 +19,7 @@ module Subscriptions
 
         BillSubscriptionJob.perform_later(
           billing_subscriptions,
-          billing_timestamp,
+          billing_at.to_i,
           invoicing_reason: :subscription_periodic
         )
       end
@@ -28,9 +27,7 @@ module Subscriptions
 
     private
 
-    def today
-      @today ||= Time.current
-    end
+    attr_reader :today
 
     # NOTE: Retrieve list of subscriptions that should be billed today
     def billable_subscriptions
