@@ -20,6 +20,8 @@ module Fees
           Fees::CreatePayInAdvanceJob.perform_later(charge:, event:, billing_at:)
         end
       end
+
+      result
     end
 
     private
