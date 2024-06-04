@@ -125,13 +125,15 @@ module PaymentProviders
 
         result.raise_if_error! || result
       when 'charge.succeeded'
-        Invoices::Payments::StripeService
+        result = Invoices::Payments::StripeService
           .new.update_payment_status(
             organization_id: organization.id,
             provider_payment_id: event.data.object.payment_intent,
             status: 'succeeded',
             metadata: event.data.object.metadata.to_h.symbolize_keys
           )
+
+        result.raise_if_error! || result
       when 'charge.dispute.closed'
         PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService.call(
           organization_id: organization.id,
