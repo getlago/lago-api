@@ -5,4 +5,5 @@ class SendEmailJob < ActionMailer::MailDeliveryJob
 
   retry_on ActiveJob::DeserializationError, wait: :exponentially_longer, attempts: 6
   retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 6
+  retry_on Net::ReadTimeout, wait: :exponentially_longer, attempts: 6
 end
