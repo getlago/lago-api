@@ -11,6 +11,10 @@ describe 'Pay in advance charges Scenarios', :scenarios, type: :request, transac
   let(:field_name) { nil }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name:) }
 
+  before do
+    allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later)
+  end
+
   describe 'with count_agg / standard' do
     it 'creates an pay_in_advance fee' do
       ### 24 january: Create subscription.

@@ -9,7 +9,10 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
   let(:plan) { create(:plan, organization:, amount_cents: 0) }
   let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
 
-  before { charge }
+  before {
+    charge
+    allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later)
+  }
 
   context 'with in advance charge and groups' do
     let(:charge) do

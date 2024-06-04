@@ -61,6 +61,10 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
 
   let(:pay_in_advance) { false }
 
+  before do
+    allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later)
+  end
+
   context 'with first aggregation scenario' do
     let(:standard_charge) do
       create(

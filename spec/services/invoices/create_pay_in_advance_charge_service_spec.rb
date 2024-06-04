@@ -29,6 +29,10 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
     )
   end
 
+  before do
+    allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later)
+  end
+
   before { create(:tax, organization:, applied_to_organization: true) }
 
   describe 'call' do
@@ -151,19 +155,13 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end.to have_enqueued_job(SendWebhookJob).with('fee.created', Fee)
     end
 
-    it 'does not enqueue an SendEmailJob' do
-      expect do
-        invoice_service.call
-      end.not_to have_enqueued_job(SendEmailJob)
-    end
-
     context 'with lago_premium' do
       around { |test| lago_premium!(&test) }
 
       it 'enqueues an SendEmailJob' do
         expect do
           invoice_service.call
-        end.to have_enqueued_job(SendEmailJob)
+        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob)
       end
 
       context 'when organization does not have right email settings' do

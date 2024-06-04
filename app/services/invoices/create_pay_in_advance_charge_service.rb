@@ -40,7 +40,7 @@ module Invoices
       track_invoice_created(invoice)
 
       deliver_webhooks if should_deliver_webhook?
-      InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
+      GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Invoices::Payments::CreateService.new(invoice).call
 
       result

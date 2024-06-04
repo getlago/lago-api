@@ -67,6 +67,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
   before do
+    allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later)
     allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
     allow(pdf_generator).to receive(:call).and_return(pdf_result)
 

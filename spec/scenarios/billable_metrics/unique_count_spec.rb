@@ -12,7 +12,10 @@ describe 'Aggregation - Unique Count Scenarios', :scenarios, type: :request, tra
     create(:standard_charge, plan:, billable_metric:, properties: {amount: '1', grouped_by: %w[key_1 key_2 key_3]})
   end
 
-  before { charge }
+  before {
+    charge
+    allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later)
+  }
 
   it 'creates fees and keeps the units between periods' do
     travel_to(DateTime.new(2024, 2, 6)) do
