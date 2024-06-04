@@ -421,6 +421,23 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           )
         end
       end
+
+      context 'when invoice is not found' do
+        it 'raises a not found failure' do
+          result = stripe_service.update_payment_status(
+            organization_id: organization.id,
+            provider_payment_id: 'ch_123456',
+            status: 'succeeded',
+            metadata: {lago_invoice_id: 'invalid', payment_type: 'one-time'}
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq('invoice_not_found')
+          end
+        end
+      end
     end
 
     context 'when payment is not found' do

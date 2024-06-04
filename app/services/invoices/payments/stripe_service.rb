@@ -101,7 +101,11 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def create_payment(provider_payment_id:, metadata:)
-        @invoice = Invoice.find(metadata[:lago_invoice_id])
+        @invoice = Invoice.find_by(id: metadata[:lago_invoice_id])
+        unless @invoice
+          result.not_found_failure!(resource: 'invoice')
+          return
+        end
 
         increment_payment_attempts
 
