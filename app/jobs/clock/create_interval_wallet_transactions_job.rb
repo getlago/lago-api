@@ -2,9 +2,11 @@
 
 module Clock
   class CreateIntervalWalletTransactionsJob < ApplicationJob
+    prepend SentryCronConcern
+
     queue_as 'clock'
 
-    def perform
+    def perform(*)
       Wallets::CreateIntervalWalletTransactionsService.call
     end
   end

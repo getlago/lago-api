@@ -2,9 +2,11 @@
 
 module Clock
   class TerminateWalletsJob < ApplicationJob
+    prepend SentryCronConcern
+
     queue_as 'clock'
 
-    def perform
+    def perform(*)
       Wallet.active.expired.find_each do |wallet|
         Wallets::TerminateService.call(wallet:)
       end
