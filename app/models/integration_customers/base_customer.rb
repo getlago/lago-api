@@ -20,6 +20,8 @@ module IntegrationCustomers
         'IntegrationCustomers::NetsuiteCustomer'
       when 'okta'
         'IntegrationCustomers::OktaCustomer'
+      when 'anrok'
+        'IntegrationCustomers::AnrokCustomer'
       else
         raise(NotImplementedError)
       end

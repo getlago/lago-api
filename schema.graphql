@@ -115,6 +115,15 @@ enum AggregationTypeEnum {
   weighted_sum_agg
 }
 
+type AnrokCustomer {
+  externalCustomerId: String
+  id: ID!
+  integrationCode: String
+  integrationId: ID
+  integrationType: IntegrationTypeEnum
+  syncWithProvider: Boolean
+}
+
 type AnrokIntegration {
   apiKey: String!
   code: String!
@@ -2902,6 +2911,7 @@ type Customer {
   activeSubscriptionsCount: Int!
   addressLine1: String
   addressLine2: String
+  anrokCustomer: AnrokCustomer
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
@@ -3679,6 +3689,7 @@ enum IntegrationItemTypeEnum {
 }
 
 enum IntegrationTypeEnum {
+  anrok
   netsuite
   okta
 }

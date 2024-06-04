@@ -41,6 +41,7 @@ module Types
       field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
 
+      field :anrok_customer, Types::IntegrationCustomers::Anrok, null: true
       field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true
 
       field :invoices, [Types::Invoices::Object]
