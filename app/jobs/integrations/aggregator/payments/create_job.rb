@@ -6,7 +6,7 @@ module Integrations
       class CreateJob < ApplicationJob
         queue_as 'integrations'
 
-        retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 3
+        retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 5
 
         def perform(payment:)
           result = Integrations::Aggregator::Payments::CreateService.call(payment:)

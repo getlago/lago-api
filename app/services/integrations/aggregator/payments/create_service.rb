@@ -72,7 +72,8 @@ module Integrations
                 'sublistId' => 'apply',
                 'lineItems' => [
                   {
-                    'doc' => integration_invoice.external_id,
+                    # If the invoice is not synced yet, lets raise an error and retry. (doc: nil is an invalid request)
+                    'doc' => integration_invoice&.external_id,
                     'apply' => true,
                     'amount' => amount(payment.amount_cents, resource: invoice)
                   }
