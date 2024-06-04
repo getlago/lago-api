@@ -44,7 +44,7 @@ module Integrations
         def call_async
           return result.not_found_failure!(resource: 'payment') unless payment
 
-          ::Integrations::Aggregator::PAyments::CreateJob.perform_later(payment:)
+          ::Integrations::Aggregator::Payments::CreateJob.perform_later(payment:)
 
           result.payment_id = payment.id
           result
