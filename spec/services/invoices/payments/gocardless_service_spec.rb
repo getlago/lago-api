@@ -75,6 +75,10 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       expect(gocardless_payments_service).to have_received(:create)
     end
 
+    it_behaves_like 'syncs payment' do
+      let(:service_call) { gocardless_service.create }
+    end
+
     context 'with no payment provider' do
       let(:gocardless_payment_provider) { nil }
 

@@ -72,6 +72,10 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       expect(payments_api).to have_received(:payments)
     end
 
+    it_behaves_like 'syncs payment' do
+      let(:service_call) { adyen_service.create }
+    end
+
     context 'with no payment provider' do
       let(:adyen_payment_provider) { nil }
 
