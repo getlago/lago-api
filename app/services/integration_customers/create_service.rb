@@ -26,10 +26,8 @@ module IntegrationCustomers
     attr_reader :customer
 
     def sync_customer!
-      if integration.type == 'Integrations::NetsuiteIntegration'
-        create_result = Integrations::Aggregator::Contacts::CreateService.call(integration:, customer:, subsidiary_id:)
-        return create_result if create_result.error
-      end
+      create_result = Integrations::Aggregator::Contacts::CreateService.call(integration:, customer:, subsidiary_id:)
+      return create_result if create_result.error
 
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
         integration:,

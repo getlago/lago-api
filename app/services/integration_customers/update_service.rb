@@ -15,7 +15,7 @@ module IntegrationCustomers
 
       integration_customer.update!(external_customer_id:) if external_customer_id.present?
 
-      if sync_with_provider && integration.type == 'Integrations::NetsuiteIntegration'
+      if sync_with_provider
         integration_customer.subsidiary_id = subsidiary_id if subsidiary_id.present?
 
         update_result = Integrations::Aggregator::Contacts::UpdateService.call(integration:, integration_customer:)
