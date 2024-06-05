@@ -130,6 +130,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end.to have_enqueued_job(SendEmailJob)
     end
 
+    it_behaves_like 'syncs credit note' do
+      let(:service_call) { create_service.call }
+    end
+
     context 'when organization does not have right email settings' do
       before { invoice.organization.update!(email_settings: []) }
 

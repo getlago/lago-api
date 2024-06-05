@@ -33,3 +33,20 @@ RSpec.shared_examples 'syncs sales order' do
     end
   end
 end
+
+RSpec.shared_examples 'syncs credit note' do
+  context 'when it should sync credit note' do
+    let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+    let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes: true) }
+
+    before do
+      allow(Integrations::Aggregator::CreditNotes::CreateJob).to receive(:perform_later)
+      integration_customer
+      service_call
+    end
+
+    it 'enqueues Integrations::Aggregator::CreditNotes::CreateJob' do
+      expect(Integrations::Aggregator::CreditNotes::CreateJob).to have_received(:perform_later)
+    end
+  end
+end

@@ -60,6 +60,10 @@ module CreditNotes
         deliver_webhook
         deliver_email
         handle_refund if should_handle_refund?
+
+        if credit_note.should_sync_credit_note?
+          Integrations::Aggregator::CreditNotes::CreateJob.perform_later(credit_note:)
+        end
       end
 
       result
