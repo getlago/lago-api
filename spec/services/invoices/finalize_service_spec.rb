@@ -6,10 +6,14 @@ RSpec.describe Invoices::FinalizeService, type: :service do
   subject(:finalize_service) { described_class.new(invoice:) }
 
   describe '#call' do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
     let(:invoice) do
       create(
         :invoice,
         :draft,
+        customer:,
         subscriptions: [subscription],
         currency: 'EUR',
         issuing_date: Time.zone.at(timestamp).to_date
@@ -30,7 +34,7 @@ RSpec.describe Invoices::FinalizeService, type: :service do
     let(:timestamp) { Time.zone.now - 1.year }
     let(:started_at) { Time.zone.now - 2.years }
     let(:fee) { create(:fee, invoice:, subscription:) }
-    let(:plan) { create(:plan, interval: 'monthly') }
+    let(:plan) { create(:plan, organization:, interval: 'monthly') }
     let(:credit_note) { create(:credit_note, :draft, invoice:) }
 
     before do
@@ -66,6 +70,14 @@ RSpec.describe Invoices::FinalizeService, type: :service do
         expect(result.invoice.fees.charge_kind.count).to eq(1)
         expect(result.invoice.fees.subscription_kind.count).to eq(1)
       end
+    end
+
+    it_behaves_like 'syncs invoice' do
+      let(:service_call) { finalize_service.call }
+    end
+
+    it_behaves_like 'syncs sales order' do
+      let(:service_call) { finalize_service.call }
     end
 
     it 'enqueues a SendWebhookJob' do

@@ -10,8 +10,10 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
   let(:timestamp) { Time.current.to_i }
 
   describe 'call' do
-    let(:customer) { create(:customer) }
-    let(:subscription) { create(:subscription, customer:) }
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, plan:, customer:) }
+    let(:plan) { create(:plan, organization:) }
     let(:wallet) { create(:wallet, customer:) }
     let(:wallet_transaction) do
       create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00')
@@ -54,6 +56,14 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       expect do
         invoice_service.call
       end.to have_enqueued_job(SendWebhookJob)
+    end
+
+    it_behaves_like 'syncs invoice' do
+      let(:service_call) { invoice_service.call }
+    end
+
+    it_behaves_like 'syncs sales order' do
+      let(:service_call) { invoice_service.call }
     end
 
     it 'does not enqueue an SendEmailJob' do
