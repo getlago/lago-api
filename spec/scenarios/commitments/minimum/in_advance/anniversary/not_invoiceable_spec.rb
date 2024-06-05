@@ -21,8 +21,8 @@ describe 'Billing scenario', :scenarios, type: :request do
       interval: :monthly,
       pay_in_advance:,
 
-      amount_currency: "EUR",
-      )
+      amount_currency: "EUR"
+    )
   end
 
   let(:invoice) { subscription.reload.invoices.order(sequential_id: :desc).first }
@@ -36,8 +36,8 @@ describe 'Billing scenario', :scenarios, type: :request do
       code: 'seat',
       aggregation_type: 'sum_agg',
       field_name: 'seats',
-      recurring: true,
-      )
+      recurring: true
+    )
   end
 
   let(:subscription_time) { DateTime.new(2024, 6, 5) }
@@ -52,7 +52,7 @@ describe 'Billing scenario', :scenarios, type: :request do
       invoiceable:,
       billable_metric: billable_metric_advance_recurring,
       plan:,
-      properties: { amount: '5' },
+      properties: {amount: '5'},
       prorated:
     )
 
@@ -63,11 +63,10 @@ describe 'Billing scenario', :scenarios, type: :request do
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code,
-          billing_time: :anniversary,
-        },
-        )
+          billing_time: :anniversary
+        }
+      )
     end
-
 
     travel_to(DateTime.new(2024, 6, 25)) do
       create_event(
@@ -75,9 +74,9 @@ describe 'Billing scenario', :scenarios, type: :request do
           code: billable_metric_advance_recurring.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { seats: 10 },
-        },
-        )
+          properties: {seats: 10}
+        }
+      )
     end
 
     travel_to(DateTime.new(2024, 6, 29)) do
@@ -86,9 +85,9 @@ describe 'Billing scenario', :scenarios, type: :request do
           code: billable_metric_advance_recurring.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { seats: -5 },
-        },
-        )
+          properties: {seats: -5}
+        }
+      )
     end
 
     travel_to(DateTime.new(2024, 7, 10)) do
@@ -97,9 +96,9 @@ describe 'Billing scenario', :scenarios, type: :request do
           code: billable_metric_advance_recurring.code,
           transaction_id: SecureRandom.uuid,
           external_customer_id: customer.external_id,
-          properties: { seats: 32 },
-        },
-        )
+          properties: {seats: 32}
+        }
+      )
     end
   end
 
