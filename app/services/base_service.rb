@@ -155,7 +155,7 @@ class BaseService
   def initialize(current_user = nil)
     @result = Result.new
     @source = CurrentContext&.source
-    result.user = current_user
+    result.user = current_user.is_a?(User) ? current_user : nil
   end
 
   def call(**args, &block)
