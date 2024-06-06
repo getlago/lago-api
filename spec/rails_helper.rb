@@ -7,7 +7,6 @@ require_relative '../config/environment'
 require 'spec_helper'
 require 'simplecov'
 
-require 'awesome_print'
 def pp(*args)
   # Uncomment the following line if you can't find where you left a `pp` call
   # ap caller.first

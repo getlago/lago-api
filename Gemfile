@@ -99,7 +99,7 @@ group :development, :test do
   gem 'rspec-rails'
   gem 'simplecov', require: false
   gem 'webmock'
-  gem 'awesome_print', require: false
+  gem 'awesome_print'
 end
 
 group :test do
