@@ -98,7 +98,7 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
                 integration_type: 'anrok',
                 integration_code:,
                 sync_with_provider:,
-                external_customer_id:,
+                external_customer_id:
               }
             end
 

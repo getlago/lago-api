@@ -10,7 +10,7 @@ RSpec.describe IntegrationCustomers::NetsuiteService, type: :service do
   let(:subsidiary_id) { '1' }
 
   describe '#create' do
-    subject(:service_call) { described_class.new(subsidiary_id:, integration:, customer:).create}
+    subject(:service_call) { described_class.new(subsidiary_id:, integration:, customer:).create }
 
     let(:contact_id) { SecureRandom.uuid }
     let(:create_result) do

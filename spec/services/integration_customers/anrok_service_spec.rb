@@ -9,7 +9,7 @@ RSpec.describe IntegrationCustomers::AnrokService, type: :service do
   let(:customer) { create(:customer, organization:) }
 
   describe '#create' do
-    subject(:service_call) { described_class.new(subsidiary_id: nil, integration:, customer:).create}
+    subject(:service_call) { described_class.new(subsidiary_id: nil, integration:, customer:).create }
 
     it 'returns integration customer' do
       result = service_call
