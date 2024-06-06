@@ -18,6 +18,8 @@ RSpec.describe Organization, type: :model do
 
   it { is_expected.to have_many(:webhook_endpoints) }
   it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
+  it { is_expected.to have_many(:netsuite_integrations) }
+  it { is_expected.to have_many(:xero_integrations) }
 
   it { is_expected.to validate_inclusion_of(:default_currency).in_array(described_class.currency_list) }
 
