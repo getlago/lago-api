@@ -41,4 +41,11 @@ FactoryBot.define do
       {api_key: SecureRandom.uuid}.to_json
     end
   end
+
+  factory :xero_integration, class: 'Integrations::XeroIntegration' do
+    organization
+    type { 'Integrations::XeroIntegration' }
+    code { 'xero' }
+    name { 'Xero Integration' }
+  end
 end

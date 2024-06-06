@@ -38,6 +38,7 @@ class Organization < ApplicationRecord
   has_many :adyen_payment_providers, class_name: 'PaymentProviders::AdyenProvider'
 
   has_many :netsuite_integrations, class_name: 'Integrations::NetsuiteIntegration'
+  has_many :xero_integrations, class_name: 'Integrations::XeroIntegration'
 
   has_one_attached :logo
 
