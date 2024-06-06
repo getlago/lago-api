@@ -7,6 +7,15 @@ require_relative '../config/environment'
 require 'spec_helper'
 require 'simplecov'
 
+require 'awesome_print'
+def pp(*args)
+  # Uncomment the following line if you can't find where you left a `pp` call
+  # ap caller.first
+  args.each do |arg|
+    ap arg, {sort_vars: false, sort_keys: false, indent: -2}
+  end
+end
+
 DatabaseCleaner.allow_remote_database_url = true
 
 SimpleCov.start do
