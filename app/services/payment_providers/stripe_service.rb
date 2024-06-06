@@ -142,13 +142,15 @@ module PaymentProviders
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
         status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
 
-        Invoices::Payments::StripeService
+        result = Invoices::Payments::StripeService
           .new.update_payment_status(
             organization_id: organization.id,
             provider_payment_id: event.data.object.id,
             status:,
             metadata: event.data.object.metadata.to_h.symbolize_keys
           )
+
+        result.raise_if_error! || result
       when 'payment_method.detached'
         result = PaymentProviderCustomers::StripeService
           .new
