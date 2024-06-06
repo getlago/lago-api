@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CreateGeneratingService, type: :service do
   subject(:create_service) do
-    described_class.new(customer:, invoice_type:, currency:, datetime:, charge_in_advance:)
+    described_class.new(customer:, invoice_type:, currency:, datetime:)
   end
 
   let(:customer) { create(:customer) }
@@ -97,7 +97,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       end
 
       context 'when charge pay in advance invoice is generated' do
-        let(:charge_in_advance) { true }
+        let(:invoice_type) { :charge_in_advance }
 
         it 'creates an invoice with correct issuing date' do
           result = create_service.call

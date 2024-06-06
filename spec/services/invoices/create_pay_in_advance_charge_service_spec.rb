@@ -71,7 +71,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         expect(result.invoice.payment_due_date.to_date).to eq(timestamp)
         expect(result.invoice.organization_id).to eq(organization.id)
         expect(result.invoice.customer_id).to eq(customer.id)
-        expect(result.invoice.invoice_type).to eq('subscription')
+        expect(result.invoice.invoice_type).to eq('charge_in_advance')
         expect(result.invoice.payment_status).to eq('pending')
 
         expect(result.invoice.fees.where(fee_type: :charge).count).to eq(1)

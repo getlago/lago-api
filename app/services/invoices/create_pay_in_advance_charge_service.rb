@@ -63,10 +63,9 @@ module Invoices
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
-        invoice_type: :subscription,
+        invoice_type: :charge_in_advance,
         currency: customer.currency,
-        datetime: Time.zone.at(timestamp),
-        charge_in_advance: true
+        datetime: Time.zone.at(timestamp)
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)
