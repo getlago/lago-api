@@ -39,12 +39,6 @@ RSpec.configure do |config|
         raise "Unknown cache store: #{example.metadata[:cache]}"
       end
     end
-
-    # if example.metadata[:scenarios]
-    #   WebMock.stub_request(:post, %r{/forms/chromium/convert/html$}).to_return(
-    #     status: 200, body: String.new, headers: {'Content-Type' => 'application/pdf'}
-    #   )
-    # end
   end
 
   config.before(:each, transaction: false) do

@@ -57,6 +57,7 @@ RSpec.configure do |config|
   config.include ApiHelper, type: :request
   config.include ScenariosHelper
   config.include LicenseHelper
+  config.include PdfHelper
   config.include ActiveSupport::Testing::TimeHelpers
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures

@@ -69,7 +69,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
     it 'does not enqueue an SendEmailJob' do
       expect do
         invoice_service.call
-      end.not_to have_enqueued_job(SendEmailJob)
+      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
     context 'with lago_premium' do
@@ -78,7 +78,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       it 'enqueues an SendEmailJob' do
         expect do
           invoice_service.call
-        end.to have_enqueued_job(SendEmailJob)
+        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
       context 'when organization does not have right email settings' do
@@ -87,7 +87,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
         it 'does not enqueue an SendEmailJob' do
           expect do
             invoice_service.call
-          end.not_to have_enqueued_job(SendEmailJob)
+          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
         end
       end
     end

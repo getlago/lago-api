@@ -151,28 +151,28 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end.to have_enqueued_job(SendWebhookJob).with('fee.created', Fee)
     end
 
-    it 'does not enqueue an SendEmailJob' do
+    it 'enqueues GeneratePdfAndNotifyJob with email false' do
       expect do
         invoice_service.call
-      end.not_to have_enqueued_job(SendEmailJob)
+      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
     context 'with lago_premium' do
       around { |test| lago_premium!(&test) }
 
-      it 'enqueues an SendEmailJob' do
+      it 'enqueues GeneratePdfAndNotifyJob with email true' do
         expect do
           invoice_service.call
-        end.to have_enqueued_job(SendEmailJob)
+        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
       context 'when organization does not have right email settings' do
         let(:email_settings) { [] }
 
-        it 'does not enqueue an SendEmailJob' do
+        it 'enqueues GeneratePdfAndNotifyJob with email false' do
           expect do
             invoice_service.call
-          end.not_to have_enqueued_job(SendEmailJob)
+          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
         end
       end
     end
