@@ -2,11 +2,13 @@
 
 module Clock
   class EventsValidationJob < ApplicationJob
+    prepend SentryCronConcern
+
     queue_as 'clock'
 
     unique :until_executed
 
-    def perform
+    def perform(*)
       # NOTE: refresh the last hour events materialized view
       Scenic.database.refresh_materialized_view(
         Events::LastHourMv.table_name,

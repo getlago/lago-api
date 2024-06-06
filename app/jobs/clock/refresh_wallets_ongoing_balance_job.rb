@@ -2,9 +2,11 @@
 
 module Clock
   class RefreshWalletsOngoingBalanceJob < ApplicationJob
+    prepend SentryCronConcern
+
     queue_as 'clock'
 
-    def perform
+    def perform(*)
       return unless License.premium?
 
       Wallet.active.find_each do |wallet|
