@@ -4,7 +4,7 @@ module Api
   module V1
     class InvoicesController < Api::BaseController
       def create
-        result = Invoices::CreateService.new(
+        result = Invoices::CreateOneOffService.new(
           customer:,
           currency: create_params[:currency],
           fees: create_params[:fees],

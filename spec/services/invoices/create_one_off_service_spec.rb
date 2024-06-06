@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::CreateService, type: :service do
+RSpec.describe Invoices::CreateOneOffService, type: :service do
   subject(:create_service) do
     described_class.new(customer:, timestamp: timestamp.to_i, fees:, currency:)
   end

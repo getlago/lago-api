@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Invoices
-  class CreateService < BaseService
+  class CreateOneOffService < BaseService
     def initialize(customer:, currency:, fees:, timestamp:)
       @customer = customer
       @currency = currency || customer&.currency
