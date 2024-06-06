@@ -88,7 +88,25 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
           end
 
           it 'creates integration customer' do
-            expect { service_call }.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
+            expect { service_call }.to change(IntegrationCustomers::NetsuiteCustomer, :count).by(1)
+          end
+
+          context 'with anrok integration' do
+            let(:integration) { create(:anrok_integration, organization:) }
+            let(:params) do
+              {
+                integration_type: 'anrok',
+                integration_code:,
+                sync_with_provider:,
+                external_customer_id:,
+              }
+            end
+
+            before { organization.update!(premium_integrations: ['anrok']) }
+
+            it 'creates integration customer' do
+              expect { service_call }.to change(IntegrationCustomers::AnrokCustomer, :count).by(1)
+            end
           end
         end
       end
