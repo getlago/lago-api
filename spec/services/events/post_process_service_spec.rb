@@ -98,10 +98,7 @@ RSpec.describe Events::PostProcessService, type: :service do
 
     context 'when event matches an pay_in_advance charge that is not invoiceable' do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
-      let(:billable_metric) do
-        create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id')
-      end
-
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id') }
       let(:event_properties) { {billable_metric.field_name => '12'} }
 
       before { charge }

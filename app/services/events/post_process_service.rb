@@ -30,11 +30,11 @@ module Events
       result.event = event
       result
     rescue ActiveRecord::RecordInvalid => e
-      delivor_error_webhook(error: e.record.errors.messages)
+      deliver_error_webhook(error: e.record.errors.messages)
 
       result
     rescue ActiveRecord::RecordNotUnique
-      delivor_error_webhook(error: {transaction_id: ['value_already_exist']})
+      deliver_error_webhook(error: {transaction_id: ['value_already_exist']})
 
       result
     end
@@ -97,15 +97,17 @@ module Events
     def handle_pay_in_advance
       return unless billable_metric
 
-      charges.where(invoiceable: false).find_each do |charge|
-        Fees::CreatePayInAdvanceJob.perform_later(charge:, event:)
-      end
-
-      # NOTE: ensure event is processable
+      # NOTE: `custom_agg` and `count_agg` are the only 2 aggregations
+      #       that don't require a field set in property.
+      #       For other aggregation, if the field isn't set we shouldn't create a fee/invoice.
       processable_event = billable_metric.count_agg? ||
         billable_metric.custom_agg? ||
         event.properties[billable_metric.field_name].present?
       return unless processable_event
+
+      charges.where(invoiceable: false).find_each do |charge|
+        Fees::CreatePayInAdvanceJob.perform_later(charge:, event:)
+      end
 
       charges.where(invoiceable: true).find_each do |charge|
         Invoices::CreatePayInAdvanceChargeJob.perform_later(charge:, event:, timestamp: event.timestamp)
@@ -124,7 +126,7 @@ module Events
         .where(billable_metric: {code: event.code})
     end
 
-    def delivor_error_webhook(error:)
+    def deliver_error_webhook(error:)
       return unless organization.webhook_endpoints.any?
 
       SendWebhookJob.perform_later('event.error', event, {error:})

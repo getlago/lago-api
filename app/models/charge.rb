@@ -90,15 +90,12 @@ class Charge < ApplicationRecord
       .each { |code| errors.add(:properties, code) }
   end
 
-  # NOTE: An pay_in_advance charge cannot be created in the following cases:
-  # - billable metric aggregation type is max_agg or weighted_sum_agg
-  # - charge model is volume
   def validate_pay_in_advance
     return unless pay_in_advance?
 
-    return unless %w[max_agg weighted_sum_agg latest_agg].include?(billable_metric.aggregation_type) || volume?
-
-    errors.add(:pay_in_advance, :invalid_aggregation_type_or_charge_model)
+    if volume? || !billable_metric.payable_in_advance?
+      errors.add(:pay_in_advance, :invalid_aggregation_type_or_charge_model)
+    end
   end
 
   def validate_min_amount_cents
@@ -108,8 +105,8 @@ class Charge < ApplicationRecord
   end
 
   # NOTE: A prorated charge cannot be created in the following cases:
-  # - for pay_in_arrear, price model cannot be package, graduated and percentage
-  # - for pay_in_idvance, price model cannot be package, graduated, percentage and volume
+  # - for pay_in_arrears, price model cannot be package, graduated and percentage
+  # - for pay_in_advance, price model cannot be package, graduated, percentage and volume
   # - for weighted_sum aggregation as it already apply pro-ration logic
   def validate_prorated
     return unless prorated?
