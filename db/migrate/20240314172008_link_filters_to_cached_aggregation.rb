@@ -51,21 +51,21 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
     puts 'Migrate cached aggregations' # rubocop:disable Rails/Output
     CachedAggregation.where.associated(:group)
       .where(charge_filter_id: nil)
-      .includes(charge: :filters, group: :parent)
+      .includes(charge: {filters: {values: :billable_metric_filter}}, group: :parent)
       .find_each { |agg| link_charge_filter(agg) }
 
     # NOTE: Associate fees with charge filters
     puts 'Migrate fees' # rubocop:disable Rails/Output
     Fee.where.associated(:group)
       .where(charge_filter_id: nil)
-      .includes(charge: :filters, group: :parent)
+      .includes(charge: {filters: {values: :billable_metric_filter}}, group: :parent)
       .find_each { |fee| link_charge_filter(fee) }
 
     # NOTE: Associate adjusted fees with charge filters
     puts 'Migrate adjusted fees' # rubocop:disable Rails/Output
     AdjustedFee.where.associated(:group)
       .where(charge_filter_id: nil)
-      .includes(charge: :filters, group: :parent)
+      .includes(charge: {filters: {values: :billable_metric_filter}}, group: :parent)
       .find_each { |fee| link_charge_filter(fee) }
   end
 
@@ -83,7 +83,7 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
       next if f.deleted_at
 
       f_h = f.to_h
-      f_h.keys == object_hash.keys && f_h.all? { |k, v| object_hash[k].sort == v.sort }
+      f_h.keys.sort == object_hash.keys.sort && f_h.keys.all? { |k| object_hash[k].sort == f_h[k].sort }
     end
 
     # If no active filter is found, look for a deleted filter
@@ -91,7 +91,7 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
       next unless f.deleted_at
 
       f_h = f.to_h
-      f_h.keys == object_hash.keys && f_h.all? { |k, v| object_hash[k].sort == v.sort }
+      f_h.keys.sort == object_hash.keys.sort && f_h.keys.all? { |k| object_hash[k].sort == f_h[k].sort }
     end
 
     # If no filter is found, create a new one
