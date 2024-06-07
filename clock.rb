@@ -19,85 +19,57 @@ module Clockwork
   # NOTE: All clocks run every hour to take customer timezones into account
 
   every(5.minutes, 'schedule:activate_subscriptions') do
-    Clock::ActivateSubscriptionsJob.perform_later(
-      slug: 'activate_subscriptions', cron: '*/5 * * * *'
-    )
+    Clock::ActivateSubscriptionsJob.perform_later
   end
 
   every(5.minutes, 'schedule:refresh_draft_invoices') do
-    Clock::RefreshDraftInvoicesJob.perform_later(
-      slug: 'lago_refresh_draft_invoices', cron: '*/5 * * * *'
-    )
+    Clock::RefreshDraftInvoicesJob.perform_later
   end
 
   if ENV['LAGO_MEMCACHE_SERVERS'].present? || ENV['LAGO_REDIS_CACHE_URL'].present?
     every(5.minutes, 'schedule:refresh_wallets_ongoing_balance') do
-      unless ActiveModel::Type::Boolean.new.cast(ENV['LAGO_DISABLE_WALLET_REFRESH'])
-        Clock::RefreshWalletsOngoingBalanceJob.perform_later(
-          slug: 'lago_refresh_wallets_ongoing_balance', cron: '*/5 * * * *'
-        )
-      end
+      Clock::RefreshWalletsOngoingBalanceJob.perform_later unless ENV['LAGO_DISABLE_WALLET_REFRESH'] == 'true'
     end
   end
 
   every(1.hour, 'schedule:terminate_ended_subscriptions', at: '*:05') do
-    Clock::TerminateEndedSubscriptionsJob.perform_later(
-      slug: 'lago_terminate_ended_subscriptions', cron: '5 */1 * * *'
-    )
+    Clock::TerminateEndedSubscriptionsJob.perform_later
   end
 
   every(1.hour, 'schedule:bill_customers', at: '*:10') do
-    Clock::SubscriptionsBillerJob.perform_later(
-      slug: 'lago_bill_customers', cron: '10 */1 * * *'
-    )
+    Clock::SubscriptionsBillerJob.perform_later
   end
 
   every(1.hour, 'schedule:finalize_invoices', at: '*:20') do
-    Clock::FinalizeInvoicesJob.perform_later(
-      slug: 'lago_finalize_invoices', cron: '20 */1 * * *'
-    )
+    Clock::FinalizeInvoicesJob.perform_later
   end
 
   every(1.hour, 'schedule:terminate_coupons', at: '*:30') do
-    Clock::TerminateCouponsJob.perform_later(
-      slug: 'lago_terminate_coupons', cron: '30 */1 * * *'
-    )
+    Clock::TerminateCouponsJob.perform_later
   end
 
   every(1.hour, 'schedule:bill_ended_trial_subscriptions', at: '*:35') do
-    Clock::FreeTrialSubscriptionsBillerJob.perform_later(
-      slug: 'lago_bill_ended_trial_subscriptions', cron: '35 */1 * * *'
-    )
+    Clock::FreeTrialSubscriptionsBillerJob.perform_later
   end
 
   every(1.hour, 'schedule:terminate_wallets', at: '*:45') do
-    Clock::TerminateWalletsJob.perform_later(
-      slug: 'lago_terminate_wallets', cron: '45 */1 * * *'
-    )
+    Clock::TerminateWalletsJob.perform_later
   end
 
   every(1.hour, 'schedule:termination_alert', at: '*:50') do
-    Clock::SubscriptionsToBeTerminatedJob.perform_later(
-      slug: 'lago_termination_alert', cron: '50 */1 * * *'
-    )
+    Clock::SubscriptionsToBeTerminatedJob.perform_later
   end
 
   every(1.hour, 'schedule:top_up_wallet_interval_credits', at: '*:55') do
-    Clock::CreateIntervalWalletTransactionsJob.perform_later(
-      slug: 'lago_top_up_wallet_interval_credits', cron: '55 */1 * * *'
-    )
+    Clock::CreateIntervalWalletTransactionsJob.perform_later
   end
 
   every(1.day, 'schedule:clean_webhooks', at: '01:00') do
-    Clock::WebhooksCleanupJob.perform_later(
-      slug: 'lago_clean_webhooks', cron: '0 1 * * *'
-    )
+    Clock::WebhooksCleanupJob.perform_later
   end
 
   every(1.hour, 'schedule:post_validate_events', at: '*:05') do
-    Clock::EventsValidationJob.perform_later(
-      slug: 'lago_post_validate_events', cron: '5 */1 * * *'
-    )
+    Clock::EventsValidationJob.perform_later
   rescue => e
     Sentry.capture_exception(e)
   end

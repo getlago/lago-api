@@ -2,11 +2,9 @@
 
 module Clock
   class TerminateEndedSubscriptionsJob < ApplicationJob
-    prepend SentryCronConcern
-
     queue_as 'clock'
 
-    def perform(*)
+    def perform
       Subscription
         .joins(customer: :organization)
         .active
