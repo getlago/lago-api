@@ -2,11 +2,9 @@
 
 module Clock
   class SubscriptionsToBeTerminatedJob < ApplicationJob
-    prepend SentryCronConcern
-
     queue_as 'clock'
 
-    def perform(*)
+    def perform
       Subscription
         .joins(customer: :organization)
         .joins('left join webhooks on subscriptions.id = webhooks.object_id and ' \

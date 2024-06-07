@@ -2,11 +2,9 @@
 
 module Clock
   class FinalizeInvoicesJob < ApplicationJob
-    prepend SentryCronConcern
-
     queue_as 'clock'
 
-    def perform(*)
+    def perform
       Invoice.ready_to_be_finalized.each do |invoice|
         Invoices::FinalizeJob.perform_later(invoice)
       end
