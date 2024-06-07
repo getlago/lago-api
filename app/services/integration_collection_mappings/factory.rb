@@ -10,6 +10,8 @@ module IntegrationCollectionMappings
       case integration&.type&.to_s
       when 'Integrations::NetsuiteIntegration'
         IntegrationCollectionMappings::NetsuiteCollectionMapping
+      when 'Integrations::AnrokIntegration'
+        IntegrationCollectionMappings::AnrokCollectionMapping
       else
         raise(NotImplementedError)
       end

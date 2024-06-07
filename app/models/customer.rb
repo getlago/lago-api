@@ -39,6 +39,7 @@ class Customer < ApplicationRecord
   has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'
   has_one :adyen_customer, class_name: 'PaymentProviderCustomers::AdyenCustomer'
   has_one :netsuite_customer, class_name: 'IntegrationCustomers::NetsuiteCustomer'
+  has_one :anrok_customer, class_name: 'IntegrationCustomers::AnrokCustomer'
 
   PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
 

@@ -47,7 +47,7 @@ class Organization < ApplicationRecord
     :per_organization
   ].freeze
 
-  INTEGRATIONS = %w[netsuite okta].freeze
+  INTEGRATIONS = %w[netsuite okta anrok].freeze
 
   enum document_numbering: DOCUMENT_NUMBERINGS
 

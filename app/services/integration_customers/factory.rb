@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-module IntegrationMappings
+module IntegrationCustomers
   class Factory
-    def self.new_instance(integration:)
-      service_class(integration)
+    def self.new_instance(integration:, customer:, subsidiary_id:)
+      service_class(integration).new(integration:, customer:, subsidiary_id:)
     end
 
     def self.service_class(integration)
       case integration&.type&.to_s
       when 'Integrations::NetsuiteIntegration'
-        IntegrationMappings::NetsuiteMapping
+        IntegrationCustomers::NetsuiteService
       when 'Integrations::AnrokIntegration'
-        IntegrationMappings::AnrokMapping
+        IntegrationCustomers::AnrokService
       else
         raise(NotImplementedError)
       end
