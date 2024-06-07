@@ -47,5 +47,9 @@ FactoryBot.define do
     type { 'Integrations::XeroIntegration' }
     code { 'xero' }
     name { 'Xero Integration' }
+
+    secrets do
+      {connection_id: SecureRandom.uuid}.to_json
+    end
   end
 end

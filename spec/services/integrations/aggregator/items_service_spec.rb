@@ -51,4 +51,14 @@ RSpec.describe Integrations::Aggregator::ItemsService do
       end
     end
   end
+
+  describe '#action_path' do
+    subject(:action_path_call) { items_service.action_path }
+
+    let(:action_path) { 'v1/netsuite/items' }
+
+    it 'returns the path' do
+      expect(subject).to eq(action_path)
+    end
+  end
 end
