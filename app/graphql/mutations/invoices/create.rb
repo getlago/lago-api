@@ -21,7 +21,7 @@ module Mutations
           organization_id: current_organization.id
         )
 
-        result = ::Invoices::CreateService.new(
+        result = ::Invoices::CreateOneOffService.new(
           customer:,
           currency: args[:currency],
           fees: args[:fees],
