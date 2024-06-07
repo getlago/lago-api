@@ -19,9 +19,7 @@ module Integrations
 
         integration.save!
 
-        if integration.type == 'Integrations::XeroIntegration'
-          Integrations::Aggregator::PerformSyncJob.set(wait: 2.seconds).perform_later(integration:)
-        end
+        Integrations::Aggregator::PerformSyncJob.set(wait: 2.seconds).perform_later(integration:)
 
         result.integration = integration
         result
