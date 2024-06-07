@@ -56,7 +56,8 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
           pay_in_advance: true,
           invoiceable: charge,
           events_count: 1,
-          pay_in_advance_event_id: nil
+          pay_in_advance_event_id: nil,
+          pay_in_advance_event_transaction_id: String
         )
       end
     end
@@ -147,7 +148,8 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
               pay_in_advance: true,
               invoiceable: charge,
               events_count: 1,
-              pay_in_advance_event_id: nil
+              pay_in_advance_event_id: nil,
+              pay_in_advance_event_transaction_id: String
             )
           end
         end

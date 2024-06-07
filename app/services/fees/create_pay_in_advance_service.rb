@@ -61,6 +61,7 @@ module Fees
           events_count: result.count,
           charge_filter_id: charge_filter&.id,
           pay_in_advance_event_id: event.id,
+          pay_in_advance_event_transaction_id: event.transaction_id,
           payment_status: :pending,
           pay_in_advance: true,
           taxes_amount_cents: 0,
@@ -136,6 +137,7 @@ module Fees
       CachedAggregation.create!(
         organization_id: event.organization_id,
         event_id: event.id,
+        event_transaction_id: event.transaction_id,
         timestamp: billing_at,
         external_subscription_id: event.external_subscription_id,
         charge_id: charge.id,
