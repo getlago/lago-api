@@ -4,7 +4,7 @@ module Invoices
   class CreatePayInAdvanceChargeService < BaseService
     def initialize(charge:, event:, timestamp:, invoice: nil)
       @charge = charge
-      @event = event
+      @event = Events::CommonFactory.new_instance(source: event)
       @timestamp = timestamp
 
       # NOTE: In case of retry when the creation process failed,
@@ -58,7 +58,8 @@ module Invoices
 
     attr_accessor :timestamp, :charge, :event, :invoice
 
-    delegate :subscription, :customer, to: :event
+    delegate :subscription, to: :event
+    delegate :customer, to: :subscription
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(

@@ -21,11 +21,13 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   let(:email_settings) { ['invoice.finalized', 'credit_note.created'] }
 
   let(:event) do
-    create(
-      :event,
-      external_subscription_id: subscription.external_id,
-      external_customer_id: customer.external_id,
-      organization_id: organization.id
+    Events::CommonFactory.new_instance(
+      source: create(
+        :event,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        organization_id: organization.id
+      )
     )
   end
 
