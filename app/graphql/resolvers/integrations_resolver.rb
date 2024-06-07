@@ -31,6 +31,8 @@ module Resolvers
         'Integrations::OktaIntegration'
       when 'anrok'
         'Integrations::AnrokIntegration'
+      when 'xero'
+        'Integrations::XeroIntegration'
       else
         raise(NotImplementedError)
       end
