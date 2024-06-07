@@ -22,6 +22,7 @@ module BillableMetricFilters
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
           filter = billable_metric.filters.find_or_initialize_by(key: filter_param[:key])
+          new_values = (filter_param[:values] || []).uniq
 
           if filter.persisted?
             deleted_values = filter.values - filter_param[:values]
@@ -33,11 +34,11 @@ module BillableMetricFilters
                   *deleted_values
                 )
 
-              filter_values.each { discard_filter_value(_1) }
+              filter_values.each { |filter_value| discard_filter_value(filter_value, new_values:) }
             end
           end
 
-          filter.values = (filter_param[:values] || []).uniq
+          filter.values = new_values
           filter.save!
 
           result.filters << filter
@@ -72,7 +73,18 @@ module BillableMetricFilters
       filter.discard!
     end
 
-    def discard_filter_value(filter_value)
+    def discard_filter_value(filter_value, new_values: [])
+      deleted_values = filter_value.values - new_values
+
+      if deleted_values.any?
+        values = filter_value.values - deleted_values
+
+        if values.any?
+          filter_value.update!(values:)
+          return
+        end
+      end
+
       filter_value.discard!
       return if filter_value.charge_filter.values.where.not(id: filter_value.id).exists?
 
