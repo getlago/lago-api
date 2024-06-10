@@ -36,4 +36,9 @@ class ApplicationController < ActionController::API
   def not_found
     not_found_error(resource: 'resource')
   end
+
+  def append_info_to_payload(payload)
+    super
+    payload[:organization_id] = current_organization&.id if defined? current_organization
+  end
 end
