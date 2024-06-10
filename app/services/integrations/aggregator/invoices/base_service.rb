@@ -119,7 +119,7 @@ module Integrations
             'lines' => [
               {
                 'sublistId' => 'item',
-                'lineItems' => invoice.fees.map { |fee| item(fee) } + discounts
+                'lineItems' => invoice.fees.order(created_at: :asc).map { |fee| item(fee) } + discounts
               }
             ],
             'options' => {
