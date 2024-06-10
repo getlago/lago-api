@@ -123,68 +123,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
     }
   end
 
-  let(:params) do
-    {
-      'type' => 'invoice',
-      'isDynamic' => true,
-      'columns' => {
-        'tranid' => invoice.id,
-        'entity' => integration_customer.external_customer_id,
-        'istaxable' => true,
-        'taxitem' => integration_collection_mapping5.external_id,
-        'taxamountoverride' => 80.0,
-        'otherrefnum' => invoice.number,
-        'custbody_lago_id' => invoice.id,
-        'custbody_ava_disable_tax_calculation' => true
-      },
-      'lines' => [
-        {
-          'sublistId' => 'item',
-          'lineItems' => [
-            {
-              'item' => '3',
-              'account' => '33',
-              'quantity' => 0.0,
-              'rate' => 0.0
-            },
-            {
-              'item' => '4',
-              'account' => '44',
-              'quantity' => 0.0,
-              'rate' => 0.0
-            },
-            {
-              'item' => 'm2',
-              'account' => 'm22',
-              'quantity' => 2,
-              'rate' => 4.12
-            },
-            {
-              'item' => '2',
-              'account' => '22',
-              'quantity' => 1,
-              'rate' => -20.0
-            },
-            {
-              'item' => '6',
-              'account' => '66',
-              'quantity' => 1,
-              'rate' => -40.0
-            },
-            {
-              'item' => '1', # Fallback item instead of credit note
-              'account' => '11',
-              'quantity' => 1,
-              'rate' => -60.0
-            }
-          ]
-        }
-      ],
-      'options' => {
-        'ignoreMandatoryFields' => false
-      }
-    }
-  end
+  let(:params) { described_class.new(invoice:).__send__(:payload, 'invoice') }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
