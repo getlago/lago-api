@@ -39,6 +39,6 @@ class ApplicationController < ActionController::API
 
   def append_info_to_payload(payload)
     super
-    payload[:organization_id] = current_organization&.id
+    payload[:organization_id] = current_organization&.id if defined? current_organization
   end
 end
