@@ -84,6 +84,7 @@ module Api
 
       def index
         metrics = current_organization.billable_metrics
+          .includes(:filters, :groups)
           .order(created_at: :desc)
           .page(params[:page])
           .per(params[:per_page] || PER_PAGE)
