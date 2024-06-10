@@ -163,4 +163,16 @@ RSpec.describe BillableMetric, type: :model do
       end
     end
   end
+
+  describe '#payable_in_advance?' do
+    it do
+      described_class::AGGREGATION_TYPES_PAYABLE_IN_ADVANCE.each do |agg|
+        expect(build(:billable_metric, aggregation_type: agg)).to be_payable_in_advance
+      end
+
+      (described_class::AGGREGATION_TYPES.keys - described_class::AGGREGATION_TYPES_PAYABLE_IN_ADVANCE).each do |agg|
+        expect(build(:billable_metric, aggregation_type: agg)).not_to be_payable_in_advance
+      end
+    end
+  end
 end

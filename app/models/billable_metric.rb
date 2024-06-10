@@ -25,6 +25,7 @@ class BillableMetric < ApplicationRecord
     latest_agg: 6,
     custom_agg: 7
   }.freeze
+  AGGREGATION_TYPES_PAYABLE_IN_ADVANCE = %i[count_agg sum_agg unique_count_agg custom_agg].freeze
 
   WEIGHTED_INTERVAL = {seconds: 'seconds'}.freeze
 
@@ -90,6 +91,10 @@ class BillableMetric < ApplicationRecord
         }
       end
     }
+  end
+
+  def payable_in_advance?
+    AGGREGATION_TYPES_PAYABLE_IN_ADVANCE.include?(aggregation_type.to_sym)
   end
 
   private
