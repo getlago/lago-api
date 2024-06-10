@@ -603,7 +603,7 @@ RSpec.describe Invoice, type: :model do
     let(:timestamp) { DateTime.parse('2023-07-25 00:00:00 UTC') }
     let(:event) { create(:event, subscription_id: subscription.id, timestamp:) }
     let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization, recurring: true) }
-    let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, pay_in_advance_event_id: event.id) }
+    let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, pay_in_advance_event_id: event.id, pay_in_advance_event_transaction_id: event.transaction_id) }
     let(:charge) do
       create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true, prorated: true)
     end

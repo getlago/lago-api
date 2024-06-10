@@ -79,6 +79,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           events_count: 1,
           charge_filter: nil,
           pay_in_advance_event_id: event.id,
+          pay_in_advance_event_transaction_id: event.transaction_id,
           payment_status: 'pending',
           unit_amount_cents: 1,
           precise_unit_amount: 0.01111111111,
@@ -187,6 +188,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           events_count: 1,
           charge_filter:,
           pay_in_advance_event_id: event.id,
+          pay_in_advance_event_transaction_id: event.transaction_id,
           unit_amount_cents: 1,
           precise_unit_amount: 0.01111111111,
 
@@ -227,6 +229,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             events_count: 1,
             charge_filter_id: nil,
             pay_in_advance_event_id: event.id,
+            pay_in_advance_event_transaction_id: event.transaction_id,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
 
@@ -276,6 +279,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             properties: Hash,
             events_count: 1,
             pay_in_advance_event_id: event.id,
+            pay_in_advance_event_transaction_id: event.transaction_id,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
             grouped_by: {'operator' => 'foo'},
@@ -311,6 +315,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             properties: Hash,
             events_count: 1,
             pay_in_advance_event_id: event.id,
+            pay_in_advance_event_transaction_id: event.transaction_id,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
 

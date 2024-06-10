@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_06_04_141208) do
+ActiveRecord::Schema[7.0].define(version: 2024_06_07_095208) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -174,10 +174,12 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_04_141208) do
     t.jsonb "grouped_by", default: {}, null: false
     t.uuid "charge_filter_id"
     t.decimal "current_amount"
+    t.string "event_transaction_id"
     t.index ["charge_id"], name: "index_cached_aggregations_on_charge_id"
     t.index ["event_id"], name: "index_cached_aggregations_on_event_id"
     t.index ["external_subscription_id"], name: "index_cached_aggregations_on_external_subscription_id"
     t.index ["group_id"], name: "index_cached_aggregations_on_group_id"
+    t.index ["organization_id", "event_transaction_id"], name: "index_cached_aggregations_on_event_transaction_id"
     t.index ["organization_id", "timestamp", "charge_id", "charge_filter_id"], name: "index_timestamp_filter_lookup"
     t.index ["organization_id", "timestamp", "charge_id", "group_id"], name: "index_timestamp_group_lookup"
     t.index ["organization_id", "timestamp", "charge_id"], name: "index_timestamp_lookup"
@@ -494,6 +496,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_04_141208) do
     t.jsonb "amount_details", default: {}, null: false
     t.uuid "charge_filter_id"
     t.jsonb "grouped_by", default: {}, null: false
+    t.string "pay_in_advance_event_transaction_id"
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
@@ -705,7 +708,9 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_04_141208) do
     t.boolean "skip_charges", default: false, null: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
+    t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
+    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
