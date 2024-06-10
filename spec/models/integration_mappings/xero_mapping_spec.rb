@@ -2,14 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping, type: :model do
-  subject(:mapping) { build(:netsuite_collection_mapping) }
-
-  let(:mapping_types) do
-    %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account]
-  end
-
-  it { is_expected.to define_enum_for(:mapping_type).with_values(mapping_types) }
+RSpec.describe IntegrationMappings::XeroMapping, type: :model do
+  subject(:mapping) { build(:xero_mapping) }
 
   describe '#external_id' do
     let(:external_id) { SecureRandom.uuid }
@@ -21,7 +15,7 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping, type: :
   end
 
   describe '#external_account_code' do
-    let(:external_account_code) { 'netsuite-code-1' }
+    let(:external_account_code) { 'xero-code-1' }
 
     it 'assigns and retrieve a setting' do
       mapping.external_account_code = external_account_code
