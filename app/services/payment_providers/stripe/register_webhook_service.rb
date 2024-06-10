@@ -24,6 +24,11 @@ module PaymentProviders
       rescue ::Stripe::AuthenticationError => e
         deliver_error_webhook(action: 'payment_provider.register_webhook', error: e)
         result
+      rescue ::Stripe::InvalidRequestError => e
+        raise if e.message != "You have reached the maximum of 16 test webhook endpoints."
+
+        deliver_error_webhook(action: 'payment_provider.register_webhook', error: e)
+        result
       end
 
       private
