@@ -94,6 +94,8 @@ class Invoice < ApplicationRecord
         .where('invoices.created_at < ?', invoice.created_at)
     }
 
+  scope :payment_overdue, -> { where(payment_overdue: true) }
+
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
