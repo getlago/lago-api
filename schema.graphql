@@ -3744,6 +3744,7 @@ type Invoice {
   paymentDisputeLosable: Boolean!
   paymentDisputeLostAt: ISO8601DateTime
   paymentDueDate: ISO8601Date!
+  paymentOverdue: Boolean!
   paymentStatus: InvoicePaymentStatusTypeEnum!
   prepaidCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!
