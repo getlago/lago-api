@@ -10,8 +10,8 @@ module Clockwork
   end
 
   error_handler do |error|
-    Rails.logger.error(e.message)
-    Rails.logger.error(e.backtrace.join("\n"))
+    Rails.logger.error(error.message)
+    Rails.logger.error(error.backtrace.join("\n"))
 
     Sentry.capture_exception(error)
   end
