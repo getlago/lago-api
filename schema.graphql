@@ -1888,7 +1888,7 @@ input CreateIntegrationMappingInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  externalAccountCode: String!
+  externalAccountCode: String
   externalId: String!
   externalName: String
   integrationId: ID!
@@ -3903,7 +3903,7 @@ enum MappableTypeEnum {
 }
 
 type Mapping {
-  externalAccountCode: String!
+  externalAccountCode: String
   externalId: String!
   externalName: String
   id: ID!
