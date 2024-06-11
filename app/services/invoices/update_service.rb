@@ -40,6 +40,7 @@ module Invoices
       end
 
       ActiveRecord::Base.transaction do
+        invoice.payment_overdue = false if invoice.payment_overdue? && invoice.payment_status == 'succeeded'
         invoice.save!
 
         Invoices::Metadata::UpdateService.call(invoice:, params: params[:metadata]) if params[:metadata]
