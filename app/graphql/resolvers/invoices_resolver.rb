@@ -13,6 +13,7 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :payment_dispute_lost, Boolean, required: false
+    argument :payment_overdue, Boolean, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
     argument :search_term, String, required: false
     argument :status, Types::Invoices::StatusTypeEnum, required: false
@@ -26,7 +27,8 @@ module Resolvers
       payment_status: nil,
       status: nil,
       search_term: nil,
-      payment_dispute_lost: nil
+      payment_dispute_lost: nil,
+      payment_overdue: nil
     )
       query = InvoicesQuery.new(organization: current_organization)
       result = query.call(
@@ -35,6 +37,7 @@ module Resolvers
         limit:,
         payment_status:,
         payment_dispute_lost:,
+        payment_overdue:,
         status:,
         filters: {
           ids:

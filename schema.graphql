@@ -5500,6 +5500,7 @@ type Query {
     limit: Int
     page: Int
     paymentDisputeLost: Boolean
+    paymentOverdue: Boolean
     paymentStatus: [InvoicePaymentStatusTypeEnum!]
     searchTerm: String
     status: InvoiceStatusTypeEnum

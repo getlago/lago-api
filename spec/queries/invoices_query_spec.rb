@@ -37,6 +37,7 @@ RSpec.describe InvoicesQuery, type: :query do
       organization:,
       status: 'finalized',
       payment_status: 'failed',
+      payment_overdue: true,
       customer: customer_first,
       number: '3333333333'
     )
@@ -196,6 +197,20 @@ RSpec.describe InvoicesQuery, type: :query do
         expect(returned_ids).not_to include(invoice_fifth.id)
         expect(returned_ids).to include(invoice_sixth.id)
       end
+    end
+  end
+
+  context 'when filtering by payment overdue' do
+    it 'returns expected invoices' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        payment_overdue: true,
+        page: 1,
+        limit: 10
+      )
+
+      expect(result.invoices.pluck(:id)).to eq([invoice_third.id])
     end
   end
 

@@ -55,6 +55,7 @@ module Api
         invoices = invoices.where(status: params[:status]) if valid_status?(params[:status])
         invoices = invoices.where(date_from_criteria) if valid_date?(params[:issuing_date_from])
         invoices = invoices.where(date_to_criteria) if valid_date?(params[:issuing_date_to])
+        invoices = invoices.where(payment_overdue: params[:payment_overdue]) if %w[true false].include?(params[:payment_overdue])
         invoices = invoices.order(created_at: :desc)
           .page(params[:page])
           .per(params[:per_page] || PER_PAGE)
