@@ -88,7 +88,7 @@ module PaymentProviders
 
         if payment_type == 'one-time'
           update_result = update_payment_status(event, payment_type)
-          return update_result.raise_if_error! || update_result
+          return update_result.raise_if_error!
         end
 
         return result if amount != 0
@@ -96,7 +96,7 @@ module PaymentProviders
         service = PaymentProviderCustomers::AdyenService.new
 
         result = service.preauthorise(organization, event)
-        result.raise_if_error! || result
+        result.raise_if_error!
       when 'REFUND'
         service = CreditNotes::Refunds::AdyenService.new
 
@@ -104,7 +104,7 @@ module PaymentProviders
         status = (event['success'] == 'true') ? :succeeded : :failed
 
         result = service.update_status(provider_refund_id:, status:)
-        result.raise_if_error! || result
+        result.raise_if_error!
       when 'CHARGEBACK'
         PaymentProviders::Webhooks::Adyen::ChargebackService.call(
           organization_id: organization.id,
@@ -118,7 +118,7 @@ module PaymentProviders
         provider_refund_id = event['pspReference']
 
         result = service.update_status(provider_refund_id:, status: :failed)
-        result.raise_if_error! || result
+        result.raise_if_error!
       end
     end
 
