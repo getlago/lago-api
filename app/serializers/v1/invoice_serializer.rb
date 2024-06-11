@@ -14,6 +14,7 @@ module V1
         status: model.status,
         payment_status: model.payment_status,
         payment_dispute_lost_at: model.payment_dispute_lost_at,
+        payment_overdue: model.payment_overdue,
         currency: model.currency,
         fees_amount_cents: model.fees_amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
