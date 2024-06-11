@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_06_07_095208) do
+ActiveRecord::Schema[7.0].define(version: 2024_06_11_074215) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -706,11 +706,13 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_07_095208) do
     t.boolean "ready_to_be_refreshed", default: false, null: false
     t.datetime "payment_dispute_lost_at"
     t.boolean "skip_charges", default: false, null: false
+    t.boolean "payment_overdue", default: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
+    t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
