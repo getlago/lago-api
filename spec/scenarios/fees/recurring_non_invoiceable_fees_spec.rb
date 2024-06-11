@@ -23,10 +23,9 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         perform_billing
         expect(customer.invoices.count).to eq(1)
         pp customer.subscriptions.first.fees.charge, '--------------------'
-
       end
 
-      subscription =customer.subscriptions.first
+      subscription = customer.subscriptions.first
 
       travel_to(Time.zone.parse('2024-03-06T10:00:00')) do
         create_event(
@@ -83,7 +82,10 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       travel_to(Time.zone.parse('2024-04-01T00:10:00')) do
         perform_billing
 
-        Fee.where(subscription:, charge:).order(created_at: :desc).each do |fee|
+        expect(Fee.where(subscription:, charge:).count).to eq(3)
+
+        pp "--- RESULT -----"
+        Fee.where(subscription:, charge:, invoice_id: nil).order(created_at: :desc).each do |fee|
           pp fee
         end
       end

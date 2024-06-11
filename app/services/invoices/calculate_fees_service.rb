@@ -143,6 +143,8 @@ module Invoices
     end
 
     def should_create_recurring_non_invoiceable_fees?(subscription)
+      return false if invoice.skip_charges
+
       true
     end
 
@@ -157,16 +159,7 @@ module Invoices
         .find_each do |charge|
         next if should_not_create_charge_fee?(charge, subscription)
 
-        pp :ABOUT_TO_CALCULATE
-        # pp boundaries
         fee_result = Fees::ChargeService.new(invoice: nil, charge:, subscription:, boundaries:, currency: invoice.total_amount.currency).create
-        fee_result.fees.each do |fee|
-          # pp fee
-          if fee.amount_cents.zero?
-            pp :ZERO
-            fee.delete # LOL
-          end
-        end
         fee_result.raise_if_error!
       end
     end
