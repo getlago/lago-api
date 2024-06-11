@@ -39,6 +39,13 @@ module Invoices
         invoice.reload
       end
 
+      # SEND WEBHOOK FOR NON INVOICEABLE FEES
+      if should_deliver_webhook?
+        result.non_invoiceable_fees.each do |fee|
+          SendWebhookJob.perform_later('fee.created', fee)
+        end
+      end
+
       if grace_period?
         SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?
       else

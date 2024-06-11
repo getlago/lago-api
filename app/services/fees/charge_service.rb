@@ -193,6 +193,7 @@ module Fees
       existing_fees = if invoice
         invoice.fees.where(charge_id: charge.id, subscription_id: subscription.id)
       else
+        # TODO: Use boundaries to filter fees
         Fee.where(charge_id: charge.id, subscription_id: subscription.id, invoice_id: nil, pay_in_advance_event_id: nil)
       end
 

@@ -149,6 +149,8 @@ module Invoices
     end
 
     def create_recurring_non_invoiceable_fees(subscription, boundaries)
+      result.non_invoiceable_fees = []
+
       subscription
         .plan
         .charges
@@ -161,6 +163,8 @@ module Invoices
 
         fee_result = Fees::ChargeService.new(invoice: nil, charge:, subscription:, boundaries:, currency: invoice.total_amount.currency).create
         fee_result.raise_if_error!
+
+        result.non_invoiceable_fees.concat(fee_result.fees)
       end
     end
 
