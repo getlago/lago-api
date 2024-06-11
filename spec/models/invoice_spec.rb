@@ -944,13 +944,14 @@ RSpec.describe Invoice, type: :model do
     subject(:mark_as_dispute_lost_call) { invoice.mark_as_dispute_lost! }
 
     context 'when record is new' do
-      let(:invoice) { build(:invoice, payment_dispute_lost_at:) }
+      let(:invoice) { build(:invoice, payment_dispute_lost_at:, payment_overdue: true) }
 
       context 'when payment is not disputed' do
         let(:payment_dispute_lost_at) { nil }
 
         it 'changes payment disputed lost date' do
           expect { mark_as_dispute_lost_call }.to change(invoice, :payment_dispute_lost_at).from(nil)
+            .and change(invoice, :payment_overdue).from(true).to(false)
         end
       end
 

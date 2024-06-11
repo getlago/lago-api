@@ -281,6 +281,7 @@ class Invoice < ApplicationRecord
 
   def mark_as_dispute_lost!(timestamp = Time.current)
     self.payment_dispute_lost_at ||= timestamp
+    self.payment_overdue = false
     save!
   end
 
