@@ -58,8 +58,6 @@ module Invoices
       raise unless invoicing_reason.to_sym == :subscription_periodic
 
       result
-    rescue Sequenced::SequenceError
-      raise
     rescue => e
       result.fail_with_error!(e)
     end
