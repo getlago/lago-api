@@ -36,9 +36,8 @@ module Invoices
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
-          if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
-            create_minimum_commitment_true_up_fee(invoice_subscription)
-          end
+          create_recurring_non_invoiceable_fees(subscription, boundaries) if should_create_recurring_non_invoiceable_fees?(subscription)
+          create_minimum_commitment_true_up_fee(invoice_subscription) if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
         end
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
@@ -141,6 +140,35 @@ module Invoices
       return false if next_subscription_charges.blank?
 
       next_subscription_charges.pluck(:billable_metric_id).include?(charge.billable_metric_id)
+    end
+
+    def should_create_recurring_non_invoiceable_fees?(subscription)
+      true
+    end
+
+    def create_recurring_non_invoiceable_fees(subscription, boundaries)
+      subscription
+        .plan
+        .charges
+        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .joins(:billable_metric)
+        .where(invoiceable: false)
+        .where(pay_in_advance: true, billable_metric: {recurring: true})
+        .find_each do |charge|
+        next if should_not_create_charge_fee?(charge, subscription)
+
+        pp :ABOUT_TO_CALCULATE
+        # pp boundaries
+        fee_result = Fees::ChargeService.new(invoice: nil, charge:, subscription:, boundaries:, currency: invoice.total_amount.currency).create
+        fee_result.fees.each do |fee|
+          # pp fee
+          if fee.amount_cents.zero?
+            pp :ZERO
+            fee.delete # LOL
+          end
+        end
+        fee_result.raise_if_error!
+      end
     end
 
     def should_create_minimum_commitment_true_up_fee?(invoice_subscription)
