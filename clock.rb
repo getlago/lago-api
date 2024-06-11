@@ -44,6 +44,10 @@ module Clockwork
     Clock::FinalizeInvoicesJob.perform_later
   end
 
+  every(1.hour, 'schedule:mark_invoices_as_payment_overdue', at: '*:25') do
+    Clock::MarkInvoicesAsPaymentOverdueJob.perform_later
+  end
+
   every(1.hour, 'schedule:terminate_coupons', at: '*:30') do
     Clock::TerminateCouponsJob.perform_later
   end
