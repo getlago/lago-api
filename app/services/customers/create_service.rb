@@ -77,7 +77,7 @@ module Customers
       IntegrationCustomers::CreateOrUpdateService.call(
         integration_customer_params: params[:integration_customer],
         customer: result.customer,
-        new_customer:,
+        new_customer:
       )
 
       track_customer_created(customer)
@@ -158,7 +158,7 @@ module Customers
       IntegrationCustomers::CreateOrUpdateService.call(
         integration_customer_params: args[:integration_customer]&.to_h,
         customer: result.customer,
-        new_customer: true,
+        new_customer: true
       )
 
       track_customer_created(customer)
