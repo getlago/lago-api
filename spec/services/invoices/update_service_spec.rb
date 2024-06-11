@@ -7,7 +7,7 @@ RSpec.describe Invoices::UpdateService do
     described_class.new(invoice:, params: update_args, webhook_notification:)
   end
 
-  let(:invoice) { create(:invoice) }
+  let(:invoice) { create(:invoice, payment_overdue: true) }
   let(:invoice_id) { invoice.id }
   let(:webhook_notification) { false }
 
@@ -29,7 +29,10 @@ RSpec.describe Invoices::UpdateService do
       aggregate_failures do
         expect(result).to be_success
         expect(result.invoice).to eq(invoice)
-        expect(result.invoice.payment_status).to eq(update_args[:payment_status])
+        expect(result.invoice).to have_attributes(
+          payment_overdue: false,
+          payment_status: update_args[:payment_status]
+        )
       end
     end
 
