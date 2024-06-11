@@ -92,75 +92,65 @@ module PaymentProviders
       when 'setup_intent.succeeded'
         service = PaymentProviderCustomers::StripeService.new
 
-        result = service
+        service
           .update_provider_default_payment_method(
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
             metadata: event.data.object.metadata.to_h.symbolize_keys
-          )
-        result.raise_if_error!
+          ).raise_if_error!
 
-        result = service
+        service
           .update_payment_method(
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.payment_method,
             metadata: event.data.object.metadata.to_h.symbolize_keys
-          )
-
-        result.raise_if_error! || result
+          ).raise_if_error!
       when 'customer.updated'
         payment_method_id = event.data.object.invoice_settings.default_payment_method ||
           event.data.object.default_source
 
-        result = PaymentProviderCustomers::StripeService
+        PaymentProviderCustomers::StripeService
           .new
           .update_payment_method(
             organization_id: organization.id,
             stripe_customer_id: event.data.object.id,
             payment_method_id:,
             metadata: event.data.object.metadata.to_h.symbolize_keys
-          )
-
-        result.raise_if_error! || result
+          ).raise_if_error!
       when 'charge.succeeded'
-        result = Invoices::Payments::StripeService
+        Invoices::Payments::StripeService
           .new.update_payment_status(
             organization_id: organization.id,
             provider_payment_id: event.data.object.payment_intent,
             status: 'succeeded',
             metadata: event.data.object.metadata.to_h.symbolize_keys
-          )
-
-        result.raise_if_error! || result
+          ).raise_if_error!
       when 'charge.dispute.closed'
         PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService.call(
           organization_id: organization.id,
           event_json:
-        )
+        ).raise_if_error!
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
         status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
 
-        result = Invoices::Payments::StripeService
+        Invoices::Payments::StripeService
           .new.update_payment_status(
             organization_id: organization.id,
             provider_payment_id: event.data.object.id,
             status:,
             metadata: event.data.object.metadata.to_h.symbolize_keys
-          )
-
-        result.raise_if_error! || result
+          ).raise_if_error!
       when 'payment_method.detached'
-        result = PaymentProviderCustomers::StripeService
+        PaymentProviderCustomers::StripeService
           .new
           .delete_payment_method(
             organization_id: organization.id,
             stripe_customer_id: event.data.object.customer,
             payment_method_id: event.data.object.id,
             metadata: event.data.object.metadata.to_h.symbolize_keys
-          )
-        result.raise_if_error! || result
+          ).raise_if_error!
       when 'charge.refund.updated'
         CreditNotes::Refunds::StripeService
           .new.update_status(

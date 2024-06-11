@@ -134,7 +134,7 @@ class BaseService
     end
 
     def raise_if_error!
-      return if success?
+      return self if success?
 
       raise(error)
     end
@@ -144,12 +144,12 @@ class BaseService
     attr_accessor :failure
   end
 
-  def self.call(*, **, &block)
-    new(*, **).call(&block)
+  def self.call(*, **, &)
+    new(*, **).call(&)
   end
 
-  def self.call_async(*, **, &block)
-    new(*, **).call_async(&block)
+  def self.call_async(*, **, &)
+    new(*, **).call_async(&)
   end
 
   def initialize(current_user = nil)
