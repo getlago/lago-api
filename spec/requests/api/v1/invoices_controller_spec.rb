@@ -355,6 +355,18 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].first[:lago_id]).to eq(invoice3.id)
       end
     end
+
+    context 'with payment overdue param' do
+      let(:invoice) { create(:invoice, customer:, payment_overdue: true, organization:) }
+
+      it 'returns payment overdue invoices' do
+        create(:invoice, customer:, organization:)
+        get_with_token(organization, '/api/v1/invoices?payment_overdue=true')
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].map { |i| i[:lago_id] }).to eq([invoice.id])
+      end
+    end
   end
 
   describe 'PUT /invoices/:id/refresh' do
