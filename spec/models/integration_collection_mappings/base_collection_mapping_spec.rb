@@ -8,7 +8,13 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping, type: :mode
   let(:mapping_type) { :fallback_item }
   let(:type) { 'IntegrationCollectionMappings::NetsuiteCollectionMapping' }
 
+  let(:mapping_types) do
+    %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account]
+  end
+
   it { is_expected.to belong_to(:integration) }
+
+  it { is_expected.to define_enum_for(:mapping_type).with_values(mapping_types) }
 
   describe 'validations' do
     describe 'of mapping type uniqueness' do
