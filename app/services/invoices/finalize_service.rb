@@ -27,7 +27,7 @@ module Invoices
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
       Invoices::Payments::CreateService.new(invoice).call
-      Utils::Track.invoice_created(invoice)
+      Utils::SegmentTrack.invoice_created(invoice)
 
       invoice.credit_notes.each do |credit_note|
         track_credit_note_created(credit_note)

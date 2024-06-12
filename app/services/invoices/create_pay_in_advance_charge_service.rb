@@ -37,7 +37,7 @@ module Invoices
         invoice.finalized!
       end
 
-      Utils::Track.invoice_created(invoice)
+      Utils::SegmentTrack.invoice_created(invoice)
 
       deliver_webhooks if should_deliver_webhook?
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?

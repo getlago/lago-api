@@ -30,7 +30,7 @@ module CreditNotes
         refund.save!
 
         update_credit_note_status(refund.status)
-        track_refund_status_changed(refund.status)
+        Utils::SegmentTrack.refund_status_changed(refund.status, credit_note.id, organization.id)
 
         result.refund = refund
         result
@@ -46,7 +46,7 @@ module CreditNotes
 
         refund.update!(status:)
         update_credit_note_status(status)
-        track_refund_status_changed(status)
+        Utils::SegmentTrack.refund_status_changed(refund.status, credit_note.id, organization.id)
 
         if status.to_sym == :failed
           deliver_error_webhook(message: 'Payment refund failed', code: nil)
@@ -135,18 +135,6 @@ module CreditNotes
         credit_note.refund_status = status
         credit_note.refunded_at = Time.current if credit_note.succeeded?
         credit_note.save!
-      end
-
-      def track_refund_status_changed(status)
-        SegmentTrackJob.perform_later(
-          membership_id: CurrentContext.membership,
-          event: 'refund_status_changed',
-          properties: {
-            organization_id: organization.id,
-            credit_note_id: credit_note.id,
-            refund_status: status
-          }
-        )
       end
 
       def handle_missing_refund(metadata)

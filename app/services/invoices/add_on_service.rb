@@ -32,7 +32,7 @@ module Invoices
         result.invoice = invoice
       end
 
-      track_invoice_created(result.invoice)
+      Utils::SegmentTrack.invoice_created(result.invoice)
       SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
 
