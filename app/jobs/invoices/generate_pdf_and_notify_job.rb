@@ -2,7 +2,13 @@
 
 module Invoices
   class GeneratePdfAndNotifyJob < ApplicationJob
-    queue_as 'pdf'
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_PDFS'])
+        :pdfs
+      else
+        :default
+      end
+    end
 
     def perform(invoice:, email:)
       result = Invoices::GeneratePdfService.call(invoice:)

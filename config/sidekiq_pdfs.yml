@@ -2,15 +2,7 @@ concurrency: 10
 timeout: 25
 retry: 1
 queues:
-  - default
-  - mailers
-  - clock
-  - providers
-  - billing
-  - webhook
-  - invoices
-  - wallets
-  - integrations
+  - pdfs
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
