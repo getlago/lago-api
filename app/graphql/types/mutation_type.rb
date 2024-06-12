@@ -123,6 +123,9 @@ module Types
     field :create_anrok_integration, mutation: Mutations::Integrations::Anrok::Create
     field :update_anrok_integration, mutation: Mutations::Integrations::Anrok::Update
 
+    field :create_xero_integration, mutation: Mutations::Integrations::Xero::Create
+    field :update_xero_integration, mutation: Mutations::Integrations::Xero::Update
+
     field :okta_accept_invite, mutation: Mutations::Auth::Okta::AcceptInvite
     field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize
     field :okta_login, mutation: Mutations::Auth::Okta::Login
