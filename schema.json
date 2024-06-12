@@ -16858,6 +16858,11 @@
               "kind": "OBJECT",
               "name": "OktaIntegration",
               "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "XeroIntegration",
+              "ofType": null
             }
           ],
           "fields": null,
@@ -17232,6 +17237,12 @@
             },
             {
               "name": "anrok",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "xero",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

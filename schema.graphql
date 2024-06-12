@@ -3680,7 +3680,7 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
 
-union Integration = AnrokIntegration | NetsuiteIntegration | OktaIntegration
+union Integration = AnrokIntegration | NetsuiteIntegration | OktaIntegration | XeroIntegration
 
 type IntegrationCollection {
   collection: [Integration!]!
@@ -3720,6 +3720,7 @@ enum IntegrationTypeEnum {
   anrok
   netsuite
   okta
+  xero
 }
 
 type Invite {
