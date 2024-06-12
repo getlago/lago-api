@@ -12,6 +12,8 @@ module IntegrationCustomers
         IntegrationCustomers::NetsuiteService
       when 'Integrations::AnrokIntegration'
         IntegrationCustomers::AnrokService
+      when 'Integrations::XeroIntegration'
+        IntegrationCustomers::XeroService
       else
         raise(NotImplementedError)
       end

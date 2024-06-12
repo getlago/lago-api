@@ -12,6 +12,8 @@ module IntegrationMappings
         IntegrationMappings::NetsuiteMapping
       when 'Integrations::AnrokIntegration'
         IntegrationMappings::AnrokMapping
+      when 'Integrations::XeroIntegration'
+        IntegrationMappings::XeroMapping
       else
         raise(NotImplementedError)
       end
