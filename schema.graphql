@@ -15,6 +15,17 @@ input AcceptInviteInput {
   token: String!
 }
 
+type Account {
+  externalAccountCode: String!
+  externalId: String!
+  externalName: String
+}
+
+type AccountCollection {
+  collection: [Account!]!
+  metadata: CollectionMetadata!
+}
+
 """
 Adyen input arguments
 """
@@ -5396,6 +5407,11 @@ type Query {
     """
     id: ID
   ): Integration
+
+  """
+  Query integration accounts
+  """
+  integrationAccounts(integrationId: ID): AccountCollection
 
   """
   Query a single integration collection mapping
