@@ -86,18 +86,6 @@ module Invoices
       Invoices::Payments::CreateService.new(invoice).call
     end
 
-    def track_invoice_created(invoice)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'invoice_created',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     # NOTE: accounting date must be in customer timezone
     def issuing_date
       datetime.in_time_zone(customer.applicable_timezone).to_date

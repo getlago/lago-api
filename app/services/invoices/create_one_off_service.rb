@@ -28,7 +28,7 @@ module Invoices
         invoice.finalized!
       end
 
-      track_invoice_created(invoice)
+      Utils::Track.invoice_created(invoice)
       SendWebhookJob.perform_later('invoice.one_off_created', invoice) if should_deliver_webhook?
       InvoiceMailer.with(invoice:).finalized.deliver_later if should_deliver_email?
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
@@ -68,18 +68,6 @@ module Invoices
 
     def should_deliver_webhook?
       customer.organization.webhook_endpoints.any?
-    end
-
-    def track_invoice_created(invoice)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'invoice_created',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
     end
 
     def should_deliver_email?

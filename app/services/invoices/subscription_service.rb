@@ -47,7 +47,7 @@ module Invoices
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
         Invoices::Payments::CreateService.new(invoice).call
-        track_invoice_created(invoice)
+        Utils::Track.invoice_created(invoice)
       end
 
       result
@@ -112,18 +112,6 @@ module Invoices
     def should_deliver_finalized_email?
       License.premium? &&
         customer.organization.email_settings.include?('invoice.finalized')
-    end
-
-    def track_invoice_created(invoice)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'invoice_created',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
     end
   end
 end
