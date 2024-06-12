@@ -9,7 +9,9 @@ module IntegrationCollectionMappings
 
     belongs_to :integration, class_name: 'Integrations::BaseIntegration'
 
-    MAPPING_TYPES = %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note].freeze
+    MAPPING_TYPES = %i[
+      fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account
+    ].freeze
 
     enum mapping_type: MAPPING_TYPES
 

@@ -13,4 +13,17 @@ FactoryBot.define do
       }
     end
   end
+
+  factory :xero_mapping, class: 'IntegrationMappings::XeroMapping' do
+    association :integration, factory: :xero_integration
+    association :mappable, factory: :add_on
+
+    settings do
+      {
+        external_id: 'xero-123',
+        external_account_code: 'xero-code-1',
+        external_name: 'Credits and Discounts'
+      }
+    end
+  end
 end
