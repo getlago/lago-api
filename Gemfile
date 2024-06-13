@@ -12,7 +12,8 @@ gem 'bootsnap', require: false
 gem 'clockwork', require: false
 gem 'parallel'
 gem 'puma', '~> 6.4'
-gem 'rails', '~> 7.0.8'
+gem 'rails', '~> 7.1.3.4'
+gem 'redis'
 gem 'sidekiq'
 
 # Security
@@ -27,9 +28,9 @@ gem 'after_commit_everywhere'
 gem 'clickhouse-activerecord', git: 'https://github.com/getlago/clickhouse-activerecord.git'
 gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
-gem 'paper_trail'
+gem 'paper_trail', '~> 15.1'
 gem 'pg'
-gem 'ransack', '~> 4.0.0'
+gem 'ransack', '~> 4.1.0'
 gem 'scenic'
 gem 'with_advisory_lock'
 

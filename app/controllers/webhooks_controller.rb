@@ -43,7 +43,7 @@ class WebhooksController < ApplicationController
     result = PaymentProviders::AdyenService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],
       code: params[:code].presence,
-      body: adyen_params
+      body: adyen_params.to_h
     )
 
     unless result.success?

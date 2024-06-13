@@ -16,7 +16,7 @@ module Fees
         fees.each do |fee|
           add_on = add_on(identifier: fee[add_on_identifier])
 
-          return result.not_found_failure!(resource: 'add_on') unless add_on
+          result.not_found_failure!(resource: 'add_on').raise_if_error! unless add_on
 
           unit_amount_cents = fee[:unit_amount_cents] || add_on.amount_cents
           units = fee[:units]&.to_f || 1
@@ -52,6 +52,8 @@ module Fees
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
