@@ -31700,6 +31700,12 @@
               "deprecationReason": null
             },
             {
+              "name": "TZ_AUSTRALIA_CANBERRA",
+              "description": "Australia/Canberra",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "TZ_AUSTRALIA_DARWIN",
               "description": "Australia/Darwin",
               "isDeprecated": false,

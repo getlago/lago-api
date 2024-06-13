@@ -39,7 +39,7 @@ module CreditNotes
         )
 
         create_items
-        return result unless result.success?
+        result.raise_if_error!
 
         compute_amounts_and_taxes
 
@@ -71,8 +71,8 @@ module CreditNotes
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
       result.single_validation_failure!(field: :reason, error_code: 'value_is_invalid')
-    rescue BaseService::ValidationFailure
-      result
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

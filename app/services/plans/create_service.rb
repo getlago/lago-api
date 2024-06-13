@@ -30,7 +30,7 @@ module Plans
 
         if args[:tax_codes]
           taxes_result = Plans::ApplyTaxesService.call(plan:, tax_codes: args[:tax_codes])
-          return taxes_result unless taxes_result.success?
+          taxes_result.raise_if_error!
         end
 
         if args[:charges].present?
@@ -39,7 +39,7 @@ module Plans
 
             if charge[:tax_codes].present?
               taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
-              return taxes_result unless taxes_result.success?
+              taxes_result.raise_if_error!
             end
           end
         end
@@ -52,7 +52,7 @@ module Plans
               commitment: new_commitment,
               tax_codes: minimum_commitment[:tax_codes]
             )
-            return taxes_result unless taxes_result.success?
+            taxes_result.raise_if_error!
           end
         end
       end
@@ -62,6 +62,8 @@ module Plans
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
