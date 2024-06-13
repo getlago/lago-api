@@ -10,8 +10,5 @@ class AddNumberToInvoices < ActiveRecord::Migration[7.0]
       t.string :number, null: false, index: true, default: ''
       t.integer :sequential_id, index: true
     end
-
-    LagoApi::Application.load_tasks
-    Rake::Task['invoices:generate_number'].invoke
   end
 end
