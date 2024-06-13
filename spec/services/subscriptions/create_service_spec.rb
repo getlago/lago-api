@@ -96,6 +96,35 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       end
     end
 
+    context 'when customer is invalid in an api context' do
+      let(:customer) do
+        build(:customer, organization:, currency: 'EUR', external_id: nil)
+      end
+
+      let(:params) do
+        {
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:
+        }
+      end
+
+      before { CurrentContext.source = 'api' }
+
+      it 'returns an error' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:external_customer_id]).to eq(['value_is_mandatory'])
+        end
+      end
+    end
+
     context 'when external_id is not given in an api context' do
       let(:external_id) { nil }
 

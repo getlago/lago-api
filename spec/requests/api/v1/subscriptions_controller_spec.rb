@@ -93,6 +93,23 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
+    context 'without external_customer_id', :aggregate_failures do
+      let(:params) do
+        {
+          plan_code:,
+          name: 'subscription name',
+          external_id: SecureRandom.uuid
+        }
+      end
+
+      it 'returns an unprocessable_entity error' do
+        post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq({external_customer_id: %w[value_is_mandatory]})
+      end
+    end
+
     context 'with invalid plan code' do
       let(:plan_code) { "#{plan.code}-invalid" }
 
