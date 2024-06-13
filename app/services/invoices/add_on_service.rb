@@ -32,7 +32,7 @@ module Invoices
         result.invoice = invoice
       end
 
-      track_invoice_created(result.invoice)
+      Utils::SegmentTrack.invoice_created(result.invoice)
       SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
       GeneratePdfAndNotifyJob.perform_later(invoice: result.invoice, email: should_deliver_email?)
 
@@ -84,18 +84,6 @@ module Invoices
 
     def create_payment(invoice)
       Invoices::Payments::CreateService.new(invoice).call
-    end
-
-    def track_invoice_created(invoice)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'invoice_created',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
     end
 
     # NOTE: accounting date must be in customer timezone

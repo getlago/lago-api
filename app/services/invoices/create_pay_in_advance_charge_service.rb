@@ -37,7 +37,7 @@ module Invoices
         invoice.finalized!
       end
 
-      track_invoice_created(invoice)
+      Utils::SegmentTrack.invoice_created(invoice)
 
       deliver_webhooks if should_deliver_webhook?
       GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
@@ -90,18 +90,6 @@ module Invoices
     def deliver_webhooks
       invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
       SendWebhookJob.perform_later('invoice.created', invoice)
-    end
-
-    def track_invoice_created(invoice)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'invoice_created',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
     end
 
     def should_deliver_email?

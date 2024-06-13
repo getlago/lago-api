@@ -27,7 +27,7 @@ module Invoices
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
       Invoices::Payments::CreateService.new(invoice).call
-      track_invoice_created(invoice)
+      Utils::SegmentTrack.invoice_created(invoice)
 
       invoice.credit_notes.each do |credit_note|
         track_credit_note_created(credit_note)
@@ -47,18 +47,6 @@ module Invoices
 
     def payment_due_date
       @payment_due_date ||= issuing_date + invoice.customer.applicable_net_payment_term.days
-    end
-
-    def track_invoice_created(invoice)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'invoice_created',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
     end
 
     def track_credit_note_created(credit_note)
