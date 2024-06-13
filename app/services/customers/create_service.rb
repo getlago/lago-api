@@ -15,6 +15,13 @@ module Customers
         )
       end
 
+      unless valid_integration_customers_count?(integration_customers: params[:integration_customers])
+        return result.single_validation_failure!(
+          field: :integration_customers,
+          error_code: 'invalid_count_per_integration_type'
+        )
+      end
+
       ActiveRecord::Base.transaction do
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
@@ -172,6 +179,16 @@ module Customers
     def valid_metadata_count?(metadata:)
       return true if metadata.blank?
       return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
+
+      false
+    end
+
+    def valid_integration_customers_count?(integration_customers:)
+      return true if integration_customers.blank?
+
+      input_types = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }&.map { |c| c[:integration_type] }
+
+      return true if input_types.length == input_types.uniq.length
 
       false
     end
