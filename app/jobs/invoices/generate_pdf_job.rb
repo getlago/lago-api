@@ -2,7 +2,13 @@
 
 module Invoices
   class GeneratePdfJob < ApplicationJob
-    queue_as 'invoices'
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_PDFS'])
+        :pdfs
+      else
+        :invoices
+      end
+    end
 
     retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 6
 

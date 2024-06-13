@@ -6,9 +6,11 @@ module Invoices
       if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_PDFS'])
         :pdfs
       else
-        :default
+        :invoices
       end
     end
+
+    retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 6
 
     def perform(invoice:, email:)
       result = Invoices::GeneratePdfService.call(invoice:)
