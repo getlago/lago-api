@@ -260,5 +260,34 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
         end
       end
     end
+
+    context 'when invoicing reason is upgrading' do
+      let(:invoicing_reason) { :upgrading }
+      let(:status) { :terminated }
+      let(:timestamp) { Time.zone.parse('2023-10-01T00:00:00') }
+      let(:terminated_at) { timestamp }
+
+      it 'creates an invoice subscription' do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.invoice_subscriptions.count).to eq(1)
+
+          invoice_subscription = result.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            invoice:,
+            subscription:,
+            timestamp: match_datetime(timestamp),
+            from_datetime: match_datetime(Time.zone.parse('2023-09-06T00:00:00')),
+            to_datetime: match_datetime(timestamp),
+            charges_from_datetime: match_datetime(Time.zone.parse('2023-09-06T00:00:00')),
+            charges_to_datetime: match_datetime(timestamp),
+            recurring: false,
+            invoicing_reason: 'subscription_terminating'
+          )
+        end
+      end
+    end
   end
 end
