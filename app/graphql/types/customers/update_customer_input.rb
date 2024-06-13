@@ -32,7 +32,7 @@ module Types
       argument :payment_provider_code, String, required: false, permission: 'customers:update'
       argument :provider_customer, Types::PaymentProviderCustomers::ProviderInput, required: false, permission: 'customers:update'
 
-      argument :integration_customer, Types::IntegrationCustomers::Input, required: false, permission: 'customers:update'
+      argument :integration_customers, [Types::IntegrationCustomers::Input], required: false, permission: 'customers:update'
 
       # Customer settings
       argument :invoice_grace_period, Integer, required: false, permissions: %w[customer_settings:update:grace_period customers:update]

@@ -1813,7 +1813,7 @@ input CreateCustomerInput {
   email: String
   externalId: String!
   externalSalesforceId: String
-  integrationCustomer: IntegrationCustomerInput
+  integrationCustomers: [IntegrationCustomerInput!]
   invoiceGracePeriod: Int
   legalName: String
   legalNumber: String
@@ -6838,7 +6838,7 @@ input UpdateCustomerInput {
   externalId: String!
   externalSalesforceId: String
   id: ID!
-  integrationCustomer: IntegrationCustomerInput
+  integrationCustomers: [IntegrationCustomerInput!]
   invoiceGracePeriod: Int
   legalName: String
   legalNumber: String

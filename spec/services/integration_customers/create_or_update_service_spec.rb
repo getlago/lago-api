@@ -8,18 +8,20 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization:) }
   let(:subsidiary_id) { '1' }
-  let(:integration_customer_params) do
-    {
-      integration_type: 'netsuite',
-      integration_code:,
-      sync_with_provider:,
-      external_customer_id:,
-      subsidiary_id:
-    }
+  let(:integration_customers) do
+    [
+      {
+        integration_type: 'netsuite',
+        integration_code:,
+        sync_with_provider:,
+        external_customer_id:,
+        subsidiary_id:
+      }
+    ]
   end
 
   describe '#call' do
-    subject(:service_call) { described_class.call(integration_customer_params:, customer:, new_customer:) }
+    subject(:service_call) { described_class.call(integration_customers:, customer:, new_customer:) }
 
     context 'without integration' do
       let(:integration_code) { 'not_exists' }
@@ -79,6 +81,31 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
 
       it 'calls create job' do
         expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob)
+      end
+
+      context 'with multiple integration customers' do
+        let(:integration_anrok) { create(:anrok_integration, organization:) }
+        let(:integration_customers) do
+          [
+            {
+              integration_type: 'netsuite',
+              integration_code:,
+              sync_with_provider:,
+              external_customer_id:,
+              subsidiary_id:
+            },
+            {
+              integration_type: 'anrok',
+              integration_code: integration_anrok.code,
+              sync_with_provider: true,
+              external_customer_id: nil
+            }
+          ]
+        end
+
+        it 'calls create job' do
+          expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob).exactly(:twice)
+        end
       end
 
       context 'with updating mode' do

@@ -7021,12 +7021,20 @@
               "deprecationReason": null
             },
             {
-              "name": "integrationCustomer",
+              "name": "integrationCustomers",
               "description": null,
               "type": {
-                "kind": "INPUT_OBJECT",
-                "name": "IntegrationCustomerInput",
-                "ofType": null
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "IntegrationCustomerInput",
+                    "ofType": null
+                  }
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -32886,12 +32894,20 @@
               "deprecationReason": null
             },
             {
-              "name": "integrationCustomer",
+              "name": "integrationCustomers",
               "description": null,
               "type": {
-                "kind": "INPUT_OBJECT",
-                "name": "IntegrationCustomerInput",
-                "ofType": null
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "IntegrationCustomerInput",
+                    "ofType": null
+                  }
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,
