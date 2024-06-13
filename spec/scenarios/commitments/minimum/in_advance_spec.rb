@@ -6,9 +6,6 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:timezone) { 'UTC' }
   let(:customer) { create(:customer, organization:, timezone:, currency: 'EUR') }
-  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
-  let(:pdf_file) { StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))) }
-  let(:pdf_result) { OpenStruct.new(io: pdf_file) }
 
   let(:plan) do
     create(
@@ -27,9 +24,6 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
   let(:subscription) { customer.subscriptions.first.reload }
 
   before do
-    allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
-    allow(pdf_generator).to receive(:call).and_return(pdf_result)
-
     minimum_commitment
 
     # Create the subscription

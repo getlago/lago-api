@@ -8,10 +8,6 @@ RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
   let(:organization) { credit_note.organization }
   let(:membership) { create(:membership, organization:) }
 
-  let(:pdf_response) do
-    File.read(Rails.root.join('spec/fixtures/blank.pdf'))
-  end
-
   let(:mutation) do
     <<~GQL
       mutation($input: DownloadCreditNoteInput!) {
@@ -23,10 +19,7 @@ RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
     GQL
   end
 
-  before do
-    stub_request(:post, "#{ENV["LAGO_PDF_URL"]}/forms/chromium/convert/html")
-      .to_return(body: pdf_response, status: 200)
-  end
+  before { stub_pdf_generation }
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'

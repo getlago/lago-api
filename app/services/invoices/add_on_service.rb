@@ -34,7 +34,7 @@ module Invoices
 
       track_invoice_created(result.invoice)
       SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
-      InvoiceMailer.with(invoice: result.invoice).finalized.deliver_later if should_deliver_email?
+      GeneratePdfAndNotifyJob.perform_later(invoice: result.invoice, email: should_deliver_email?)
 
       if result.invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: result.invoice)
