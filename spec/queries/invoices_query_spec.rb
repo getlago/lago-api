@@ -166,7 +166,7 @@ RSpec.describe InvoicesQuery, type: :query do
         page: 1,
         limit: 10,
         filters: {
-          payment_dispute_lost: true,
+          payment_dispute_lost: true
         }
       )
 
