@@ -22,10 +22,12 @@ module Resolvers
         query = InvoicesQuery.new(organization: current_organization)
         result = query.call(
           search_term:,
-          customer_id:,
           page:,
           limit:,
-          status:
+          filters: {
+            customer_id:,
+            status:
+          }
         )
 
         result.invoices

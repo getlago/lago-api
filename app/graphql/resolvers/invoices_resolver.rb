@@ -43,16 +43,16 @@ module Resolvers
         search_term:,
         page:,
         limit:,
-        payment_status:,
-        payment_dispute_lost:,
         payment_overdue:,
-        status:,
         filters: {
           currency:,
           customer_external_id:,
           invoice_type:,
           issuing_date_from:,
-          issuing_date_to:
+          issuing_date_to:,
+          payment_dispute_lost:,
+          payment_status:,
+          status:
         }
       )
 

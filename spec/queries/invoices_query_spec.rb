@@ -90,10 +90,12 @@ RSpec.describe InvoicesQuery, type: :query do
   it 'returns all invoices' do
     result = invoice_query.call(
       search_term: nil,
-      status: nil,
-      payment_status: nil,
       page: 1,
-      limit: 10
+      limit: 10,
+      filters: {
+        payment_status: nil,
+        status: nil
+      }
     )
 
     returned_ids = result.invoices.pluck(:id)
@@ -113,10 +115,11 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 2 invoices' do
       result = invoice_query.call(
         search_term: nil,
-        status: 'draft',
-        payment_status: nil,
         page: 1,
-        limit: 10
+        limit: 10,
+        filters: {
+          status: 'draft'
+        }
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -136,10 +139,11 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 1 invoices' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
-        payment_status: 'failed',
         page: 1,
-        limit: 10
+        limit: 10,
+        filters: {
+          payment_status: 'failed'
+        }
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -159,10 +163,11 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 1 invoices' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
-        payment_dispute_lost: true,
         page: 1,
-        limit: 10
+        limit: 10,
+        filters: {
+          payment_dispute_lost: true,
+        }
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -371,8 +376,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 1 invoices' do
       result = invoice_query.call(
         search_term: invoice_fourth.id.scan(/.{10}/).first,
-        status: nil,
-        payment_status: nil,
         page: 1,
         limit: 10
       )
@@ -394,8 +397,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 1 invoices' do
       result = invoice_query.call(
         search_term: invoice_first.number,
-        status: nil,
-        payment_status: nil,
         page: 1,
         limit: 10
       )
@@ -417,8 +418,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 2 invoices' do
       result = invoice_query.call(
         search_term: customer_second.external_id,
-        status: nil,
-        payment_status: nil,
         page: 1,
         limit: 10
       )
@@ -440,8 +439,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 3 invoices' do
       result = invoice_query.call(
         search_term: 'rick',
-        status: nil,
-        payment_status: nil,
         page: 1,
         limit: 10
       )
@@ -464,8 +461,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 2 invoices' do
       result = invoice_query.call(
         search_term: 'gmail',
-        status: nil,
-        payment_status: nil,
         page: 1,
         limit: 10
       )
@@ -486,11 +481,12 @@ RSpec.describe InvoicesQuery, type: :query do
   context 'when searching for /44444444/ term' do
     it 'returns 1 invoices' do
       result = invoice_query.call(
-        customer_id: customer_second.id,
         search_term: '44444444',
-        status: nil,
         page: 1,
-        limit: 10
+        limit: 10,
+        filters: {
+          customer_id: customer_second.id
+        }
       )
 
       returned_ids = result.invoices.pluck(:id)
@@ -509,11 +505,12 @@ RSpec.describe InvoicesQuery, type: :query do
   context 'when searching for another customer with no invoice' do
     it 'returns 0 invoices' do
       result = invoice_query.call(
-        customer_id: create(:customer, organization:).id,
         search_term: nil,
-        status: nil,
         page: 1,
-        limit: 10
+        limit: 10,
+        filters: {
+          customer_id: create(:customer, organization:).id
+        }
       )
 
       returned_ids = result.invoices.pluck(:id)
