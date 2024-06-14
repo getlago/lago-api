@@ -2,10 +2,6 @@
 
 require 'open3'
 
-require_relative 'sandbox_error'
-require_relative 'sanitizer'
-require_relative 'safe_environment'
-
 module LagoUtils
   module RubySandbox
     class Runner

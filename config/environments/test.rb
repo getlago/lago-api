@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
-require 'active_support/core_ext/integer/time'
+require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
-  config.cache_classes = true
+  config.enable_reloading = false
   config.eager_load = ENV['CI'].present?
+
   config.public_file_server.enabled = true
   config.public_file_server.headers = {
-    'Cache-Control' => "public, max-age=#{1.hour.to_i}"
+    "Cache-Control" => "public, max-age=#{1.hour.to_i}"
   }
 
   config.logger = Logger.new(nil)
@@ -15,7 +16,7 @@ Rails.application.configure do
 
   config.consider_all_requests_local = true
   config.action_controller.perform_caching = false
-  config.action_dispatch.show_exceptions = false
+  config.action_dispatch.show_exceptions = :rescuable
   config.action_controller.allow_forgery_protection = false
   config.active_storage.service = :test
 
@@ -27,13 +28,14 @@ Rails.application.configure do
   config.active_record.encryption.key_derivation_salt = 'test'
 
   config.active_support.deprecation = :stderr
+
   config.active_support.disallowed_deprecation = :raise
   config.active_support.disallowed_deprecation_warnings = []
 
-  Dotenv.load
-
   config.active_job.queue_adapter = :test
   config.license_url = 'http://license.lago'
+
+  Dotenv.load
 
   # Configure the redis cache store but always set the null_store by default
   # Use `context '...', cache: :redis` to enable the redis cache store in specs
@@ -45,4 +47,6 @@ Rails.application.configure do
     config.cache_store = :redis_cache_store, redis_store_config
   end
   config.cache_store = :null_store
+
+  config.action_controller.raise_on_missing_callback_actions = true
 end
