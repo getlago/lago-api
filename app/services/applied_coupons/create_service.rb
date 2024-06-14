@@ -35,7 +35,7 @@ module AppliedCoupons
             customer:,
             currency: params[:amount_currency] || coupon.amount_currency
           )
-          return currency_result unless currency_result.success?
+          currency_result.raise_if_error!
 
           applied_coupon.save!
         end
@@ -48,6 +48,8 @@ module AppliedCoupons
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

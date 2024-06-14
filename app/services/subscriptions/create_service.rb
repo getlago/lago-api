@@ -38,8 +38,7 @@ module Subscriptions
           customer:,
           currency: plan.amount_currency
         )
-
-        return currency_result unless currency_result.success?
+        currency_result.raise_if_error!
 
         result.subscription = handle_subscription
       end

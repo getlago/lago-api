@@ -67,13 +67,15 @@ module Invoices
           CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:)
         end
 
-        return calculate_result unless calculate_result.success?
+        calculate_result.raise_if_error!
 
         # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
       end
 
       result
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
