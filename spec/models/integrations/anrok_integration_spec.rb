@@ -19,4 +19,11 @@ RSpec.describe Integrations::AnrokIntegration, type: :model do
       expect(anrok_integration.api_key).to eq('123abc456')
     end
   end
+
+  describe '.connection_id' do
+    it 'assigns and retrieve a secret pair' do
+      anrok_integration.connection_id = 'connection_id'
+      expect(anrok_integration.connection_id).to eq('connection_id')
+    end
+  end
 end

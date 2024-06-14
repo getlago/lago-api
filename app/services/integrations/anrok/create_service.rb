@@ -14,6 +14,7 @@ module Integrations
           organization:,
           name: args[:name],
           code: args[:code],
+          connection_id: args[:connection_id],
           api_key: args[:api_key]
         )
 

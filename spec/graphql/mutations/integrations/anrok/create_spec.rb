@@ -39,7 +39,8 @@ RSpec.describe Mutations::Integrations::Anrok::Create, type: :graphql do
         input: {
           code:,
           name:,
-          apiKey: '123456789'
+          apiKey: '123456789',
+          connectionId: 'this-is-random-uuid'
         }
       }
     )
@@ -51,6 +52,7 @@ RSpec.describe Mutations::Integrations::Anrok::Create, type: :graphql do
       expect(result_data['code']).to eq(code)
       expect(result_data['name']).to eq(name)
       expect(result_data['apiKey']).to eq('••••••••…789')
+      expect(Integrations::AnrokIntegration.order(:created_at).last.connection_id).to eq('this-is-random-uuid')
     end
   end
 end

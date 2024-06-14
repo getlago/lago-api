@@ -1714,6 +1714,7 @@ input CreateAnrokIntegrationInput {
   """
   clientMutationId: String
   code: String!
+  connectionId: String!
   name: String!
 }
 

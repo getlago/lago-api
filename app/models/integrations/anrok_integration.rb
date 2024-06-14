@@ -2,8 +2,8 @@
 
 module Integrations
   class AnrokIntegration < BaseIntegration
-    validates :api_key, presence: true
+    validates :connection_id, :api_key, presence: true
 
-    secrets_accessors :api_key
+    secrets_accessors :connection_id, :api_key
   end
 end
