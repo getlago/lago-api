@@ -18,6 +18,8 @@ module V1
       case model.type
       when 'IntegrationCustomers::NetsuiteCustomer'
         'netsuite'
+      when 'IntegrationCustomers::AnrokCustomer'
+        'anrok'
       end
     end
   end

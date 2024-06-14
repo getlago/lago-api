@@ -111,7 +111,7 @@ module Api
           :timezone,
           :net_payment_term,
           :external_salesforce_id,
-          integration_customer: [
+          integration_customers: [
             :external_customer_id,
             :integration_type,
             :integration_code,

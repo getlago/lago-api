@@ -2,8 +2,8 @@
 
 module IntegrationCustomers
   class CreateOrUpdateService < ::BaseService
-    def initialize(integration_customer_params:, customer:, new_customer:)
-      @integration_customer_params = integration_customer_params
+    def initialize(integration_customers:, customer:, new_customer:)
+      @integration_customers = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }
       @customer = customer
       @new_customer = new_customer
 
@@ -11,24 +11,34 @@ module IntegrationCustomers
     end
 
     def call
-      return unless integration
-      return if skip_creating_integration_customer?
+      return unless integration_customers
 
-      if remove_integration_customer?
-        integration_customer.destroy!
-        return
-      end
+      integration_customers.each do |int_customer_params|
+        @integration_customer_params = int_customer_params
 
-      if create_integration_customer?
-        IntegrationCustomers::CreateJob.perform_later(integration_customer_params:, integration:, customer:)
-      elsif update_integration_customer?
-        IntegrationCustomers::UpdateJob.perform_later(integration_customer_params:, integration:, integration_customer:)
+        next unless integration
+        next if skip_creating_integration_customer?
+
+        if remove_integration_customer?
+          integration_customer.destroy!
+          next
+        end
+
+        if create_integration_customer?
+          IntegrationCustomers::CreateJob.perform_later(integration_customer_params:, integration:, customer:)
+        elsif update_integration_customer?
+          IntegrationCustomers::UpdateJob.perform_later(
+            integration_customer_params:,
+            integration:,
+            integration_customer:
+          )
+        end
       end
     end
 
     private
 
-    attr_reader :integration_customer_params, :customer, :new_customer
+    attr_reader :integration_customer_params, :customer, :new_customer, :integration_customers
 
     def create_integration_customer?
       (new_customer && integration_customer_params[:sync_with_provider]) ||
@@ -49,9 +59,7 @@ module IntegrationCustomers
 
     def skip_creating_integration_customer?
       integration_customer.nil? &&
-        integration_customer_params.blank? &&
-        integration_customer_params[:sync_with_provider].blank? &&
-        integration_customer_params[:external_customer_id].blank?
+        integration_customer_params.blank?
     end
 
     def integration

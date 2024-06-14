@@ -355,6 +355,90 @@ RSpec.describe Customers::CreateService, type: :service do
         end
       end
 
+      context 'with integration customers' do
+        let(:create_args) do
+          {
+            external_id:,
+            name: 'Foo Bar',
+            currency: 'EUR',
+            billing_configuration: {
+              vat_rate: 20,
+              document_locale: 'fr'
+            },
+            integration_customers:
+          }
+        end
+
+        context 'when there are netusite and anrok customer sent' do
+          let(:integration_customers) do
+            [
+              {
+                external_customer_id: '12345',
+                integration_type: 'netsuite',
+                integration_code: 'code1',
+                subsidiary_id: '1',
+                sync_with_provider: true
+              },
+              {
+                external_customer_id: '65432',
+                integration_type: 'anrok',
+                integration_code: 'code3',
+                sync_with_provider: true
+              }
+            ]
+          end
+
+          it 'creates customer with integration customers' do
+            result = customers_service.create_from_api(
+              organization:,
+              params: create_args
+            )
+
+            expect(result).to be_success
+          end
+        end
+
+        context 'when there are multiple integration customers of the same type' do
+          let(:integration_customers) do
+            [
+              {
+                external_customer_id: '12345',
+                integration_type: 'netsuite',
+                integration_code: 'code1',
+                subsidiary_id: '1',
+                sync_with_provider: true
+              },
+              {
+                external_customer_id: '02346',
+                integration_type: 'netsuite',
+                integration_code: 'code2',
+                subsidiary_id: '1',
+                sync_with_provider: true
+              },
+              {
+                external_customer_id: '65432',
+                integration_type: 'anrok',
+                integration_code: 'code3',
+                sync_with_provider: true
+              }
+            ]
+          end
+
+          it 'fails to create customer with integration customers' do
+            result = customers_service.create_from_api(
+              organization:,
+              params: create_args
+            )
+
+            aggregate_failures do
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages.keys).to include(:integration_customers)
+              expect(result.error.messages[:integration_customers]).to include('invalid_count_per_integration_type')
+            end
+          end
+        end
+      end
+
       context 'when attached to a subscription' do
         let(:create_args) do
           {

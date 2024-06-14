@@ -44,9 +44,12 @@ module IntegrationCustomers
         customer:,
         external_customer_id: params[:external_customer_id],
         type: customer_type,
-        subsidiary_id:,
         sync_with_provider: false
       )
+
+      if integration&.type&.to_s == 'Integrations::NetsuiteIntegration'
+        new_integration_customer.subsidiary_id = subsidiary_id
+      end
 
       result.integration_customer = new_integration_customer
       result

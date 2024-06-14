@@ -112,7 +112,7 @@ module Customers
       result.customer = customer
 
       IntegrationCustomers::CreateOrUpdateService.call(
-        integration_customer_params: args[:integration_customer]&.to_h,
+        integration_customers: args[:integration_customers],
         customer: result.customer,
         new_customer: false
       )
