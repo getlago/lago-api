@@ -45,6 +45,7 @@ module Events
 
       Karafka.producer.produce_async(
         topic: ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'],
+        key: "#{organization.id}-#{event.external_subscription_id}",
         payload: {
           organization_id: organization.id,
           external_customer_id: event.external_customer_id,
