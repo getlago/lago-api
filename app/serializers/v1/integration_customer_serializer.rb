@@ -21,7 +21,6 @@ module V1
       when 'IntegrationCustomers::AnrokCustomer'
         'anrok'
       end
-      end
     end
   end
 end
