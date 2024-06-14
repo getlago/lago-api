@@ -16,7 +16,7 @@ module AddOns
 
         if args[:tax_codes]
           taxes_result = AddOns::ApplyTaxesService.call(add_on:, tax_codes: args[:tax_codes])
-          return taxes_result unless taxes_result.success?
+          taxes_result.raise_if_error!
         end
 
         result.add_on = add_on
@@ -26,6 +26,8 @@ module AddOns
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

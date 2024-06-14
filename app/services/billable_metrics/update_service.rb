@@ -24,7 +24,7 @@ module BillableMetrics
       ActiveRecord::Base.transaction do
         if params.key?(:group)
           group_result = update_groups(billable_metric, params[:group])
-          return group_result if group_result.error
+          group_result.raise_if_error!
         end
 
         if params.key?(:filters)
@@ -53,6 +53,8 @@ module BillableMetrics
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

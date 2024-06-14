@@ -21,7 +21,7 @@ module Customers
         billing_configuration = args[:billing_configuration]&.to_h || {}
         if args.key?(:currency)
           update_currency(customer:, currency: args[:currency], customer_update: true)
-          return result unless result.success?
+          result.raise_if_error!
         end
 
         customer.name = args[:name] if args.key?(:name)
@@ -120,6 +120,8 @@ module Customers
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     def update_currency(customer:, currency:, customer_update: false)

@@ -41,7 +41,7 @@ module Plans
 
         if params[:tax_codes]
           taxes_result = Plans::ApplyTaxesService.call(plan:, tax_codes: params[:tax_codes])
-          return taxes_result unless taxes_result.success?
+          taxes_result.raise_if_error!
         end
 
         process_charges(plan, params[:charges]) if params[:charges]
@@ -56,6 +56,8 @@ module Plans
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
