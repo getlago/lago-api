@@ -17,6 +17,7 @@ RSpec.describe Integrations::Anrok::CreateService, type: :service do
         name:,
         code: 'anrok1',
         organization_id: organization.id,
+        connection_id: 'conn1',
         api_key: '123456789'
       }
     end
@@ -61,6 +62,7 @@ RSpec.describe Integrations::Anrok::CreateService, type: :service do
 
             integration = Integrations::AnrokIntegration.order(:created_at).last
             expect(integration.name).to eq(name)
+            expect(integration.connection_id).to eq('conn1')
           end
 
           it 'returns an integration in result object' do

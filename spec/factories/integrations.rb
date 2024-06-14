@@ -38,7 +38,7 @@ FactoryBot.define do
     name { 'Anrok Integration' }
 
     secrets do
-      {api_key: SecureRandom.uuid}.to_json
+      {connection_id: SecureRandom.uuid, api_key: SecureRandom.uuid}.to_json
     end
   end
 

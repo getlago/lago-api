@@ -10,6 +10,7 @@ module Types
         argument :name, String, required: true
 
         argument :api_key, String, required: true
+        argument :connection_id, String, required: true
       end
     end
   end
