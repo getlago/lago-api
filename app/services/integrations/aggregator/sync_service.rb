@@ -32,6 +32,12 @@ module Integrations
             contacts: 'netsuite-contacts-sync',
             tax_items: 'netsuite-tax-items-sync'
           }
+        when 'Integrations::XeroIntegration'
+          {
+            accounts: 'xero-accounts-sync',
+            items: 'xero-items-sync',
+            contacts: 'xero-contacts-sync'
+          }
         end
 
         return [list[:items]] if options[:only_items]

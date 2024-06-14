@@ -27,6 +27,8 @@ module Integrations
         case integration.type
         when 'Integrations::NetsuiteIntegration'
           'netsuite'
+        when 'Integrations::XeroIntegration'
+          'xero'
         end
       end
 

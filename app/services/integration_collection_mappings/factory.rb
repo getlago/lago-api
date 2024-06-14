@@ -12,6 +12,8 @@ module IntegrationCollectionMappings
         IntegrationCollectionMappings::NetsuiteCollectionMapping
       when 'Integrations::AnrokIntegration'
         IntegrationCollectionMappings::AnrokCollectionMapping
+      when 'Integrations::XeroIntegration'
+        IntegrationCollectionMappings::XeroCollectionMapping
       else
         raise(NotImplementedError)
       end
