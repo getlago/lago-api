@@ -6,6 +6,7 @@ RSpec.describe Integrations::AnrokIntegration, type: :model do
   subject(:anrok_integration) { build(:anrok_integration) }
 
   it { is_expected.to validate_presence_of(:name) }
+  it { is_expected.to validate_presence_of(:connection_id) }
 
   describe 'validations' do
     it 'validates uniqueness of the code' do
