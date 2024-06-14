@@ -188,9 +188,7 @@ module Customers
 
       input_types = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }&.map { |c| c[:integration_type] }
 
-      return true if input_types.length == input_types.uniq.length
-
-      false
+      input_types.length == input_types.uniq.length
     end
 
     def create_metadata(customer:, args:)
