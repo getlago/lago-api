@@ -14,7 +14,7 @@ module Mutations
       type Types::Invoices::Object.collection_type
 
       def resolve
-        result = ::Invoices::Payments::RetryBatchService.new(organization_id: current_organization.id).call_later
+        result = ::Invoices::Payments::RetryBatchService.new(organization_id: current_organization.id).call_async
 
         result.success? ? result.invoices : result_error(result)
       end
