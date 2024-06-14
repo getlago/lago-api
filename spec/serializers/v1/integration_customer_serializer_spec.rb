@@ -18,4 +18,32 @@ RSpec.describe ::V1::IntegrationCustomerSerializer do
       'subsidiary_id' => integration_customer.subsidiary_id
     )
   end
+
+  describe '#type' do
+    subject(:type_call) { serializer.__send__(:type) }
+
+    let(:integration_customer) { create(:netsuite_customer) }
+
+    context 'when customer is a netsuite customer' do
+      it 'returns netsuite' do
+        expect(subject).to eq('netsuite')
+      end
+    end
+
+    context 'when customer is an anrok customer' do
+      let(:integration_customer) { create(:anrok_customer) }
+
+      it 'returns anrok' do
+        expect(subject).to eq('anrok')
+      end
+    end
+
+    context 'when customer is a xero customer' do
+      let(:integration_customer) { create(:xero_customer) }
+
+      it 'returns xero' do
+        expect(subject).to eq('xero')
+      end
+    end
+  end
 end

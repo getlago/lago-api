@@ -20,6 +20,8 @@ module V1
         'netsuite'
       when 'IntegrationCustomers::AnrokCustomer'
         'anrok'
+      when 'IntegrationCustomers::XeroCustomer'
+        'xero'
       end
     end
   end

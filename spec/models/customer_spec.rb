@@ -11,6 +11,8 @@ RSpec.describe Customer, type: :model do
 
   it { is_expected.to have_many(:integration_customers).dependent(:destroy) }
   it { is_expected.to have_one(:netsuite_customer) }
+  it { is_expected.to have_one(:anrok_customer) }
+  it { is_expected.to have_one(:xero_customer) }
 
   describe 'validations' do
     subject(:customer) do

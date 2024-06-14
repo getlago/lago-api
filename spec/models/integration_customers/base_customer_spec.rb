@@ -13,6 +13,54 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
   it { is_expected.to belong_to(:integration) }
   it { is_expected.to belong_to(:customer) }
 
+  describe '.customer_type' do
+    subject(:customer_type_call) { described_class.customer_type(type) }
+
+    context 'when type is netsuite' do
+      let(:type) { 'netsuite' }
+      let(:customer_type) { 'IntegrationCustomers::NetsuiteCustomer' }
+
+      it 'returns customer type' do
+        expect(subject).to eq(customer_type)
+      end
+    end
+
+    context 'when type is okta' do
+      let(:type) { 'okta' }
+      let(:customer_type) { 'IntegrationCustomers::OktaCustomer' }
+
+      it 'returns customer type' do
+        expect(subject).to eq(customer_type)
+      end
+    end
+
+    context 'when type is anrok' do
+      let(:type) { 'anrok' }
+      let(:customer_type) { 'IntegrationCustomers::AnrokCustomer' }
+
+      it 'returns customer type' do
+        expect(subject).to eq(customer_type)
+      end
+    end
+
+    context 'when type is xero' do
+      let(:type) { 'xero' }
+      let(:customer_type) { 'IntegrationCustomers::XeroCustomer' }
+
+      it 'returns customer type' do
+        expect(subject).to eq(customer_type)
+      end
+    end
+
+    context 'when type is not supported' do
+      let(:type) { 'n/a' }
+
+      it 'raises an error' do
+        expect { subject }.to raise_error(NotImplementedError)
+      end
+    end
+  end
+
   describe '#push_to_settings' do
     it 'push the value into settings' do
       integration_customer.push_to_settings(key: 'key1', value: 'val1')
