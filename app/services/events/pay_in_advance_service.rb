@@ -10,6 +10,7 @@ module Events
     def call
       return unless billable_metric
       return unless can_create_fee?
+      return if already_processed?
 
       # NOTE: Temporary condition to support both Postgres and Clickhouse (via kafka)
       if kafka_producer_enabled?
@@ -47,6 +48,10 @@ module Events
         .pay_in_advance
         .joins(:billable_metric)
         .where(billable_metrics: {id: event.billable_metric.id})
+    end
+
+    def already_processed?
+      Fee.from_organization(event.organization).where(pay_in_advance_event_transaction_id: event.transaction_id).exists?
     end
 
     def can_create_fee?

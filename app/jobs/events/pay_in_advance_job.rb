@@ -10,8 +10,15 @@ module Events
       end
     end
 
+    unique :until_executed, on_conflict: :log
+
     def perform(event)
       Events::PayInAdvanceService.call(event:).raise_if_error!
+    end
+
+    def lock_key_arguments
+      event = Events::CommonFactory.new_instance(source: arguments.first)
+      [event.organization_id, event.external_subscription_id, event.transaction_id]
     end
   end
 end

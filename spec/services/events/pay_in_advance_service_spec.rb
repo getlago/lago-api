@@ -8,7 +8,8 @@ RSpec.describe Events::PayInAdvanceService, type: :service do
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, plan:, started_at:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:, plan:, started_at:) }
   let(:event_properties) { {} }
   let(:timestamp) { Time.current - 1.second }
   let(:code) { billable_metric&.code }
@@ -104,6 +105,23 @@ RSpec.describe Events::PayInAdvanceService, type: :service do
           expect { in_advance_service.call }
             .not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
+      end
+    end
+
+    context 'when fees exists with the same transaction_id' do
+      before do
+        create(
+          :fee,
+          subscription:,
+          invoice: nil,
+          pay_in_advance_event_transaction_id: event.transaction_id
+        )
+      end
+
+      it 'does not enqueue a job' do
+        expect do
+          expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
       end
     end
 
