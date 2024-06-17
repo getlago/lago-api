@@ -22,6 +22,8 @@ module IntegrationCustomers
         'IntegrationCustomers::OktaCustomer'
       when 'anrok'
         'IntegrationCustomers::AnrokCustomer'
+      when 'xero'
+        'IntegrationCustomers::XeroCustomer'
       else
         raise(NotImplementedError)
       end
