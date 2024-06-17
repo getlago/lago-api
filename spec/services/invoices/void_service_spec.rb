@@ -50,7 +50,7 @@ RSpec.describe Invoices::VoidService, type: :service do
     end
 
     context 'when the invoice is finalized' do
-      let(:invoice) { create(:invoice, status: :finalized, payment_status:) }
+      let(:invoice) { create(:invoice, status: :finalized, payment_status:, payment_overdue: true) }
 
       context 'when the payment status is succeeded' do
         let(:payment_status) { :succeeded }
@@ -78,6 +78,10 @@ RSpec.describe Invoices::VoidService, type: :service do
             expect(result.invoice.voided_at).to be_present
             # expect(result.invoice.balance_amount_cents).to eq(0)
           end
+        end
+
+        it "marks the invoice's payment overdue as false" do
+          expect { void_service.call }.to change(invoice, :payment_overdue).from(true).to(false)
         end
       end
     end

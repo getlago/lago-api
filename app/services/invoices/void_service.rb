@@ -12,7 +12,10 @@ module Invoices
 
       result.invoice = invoice
 
-      invoice.void!
+      ActiveRecord::Base.transaction do
+        invoice.payment_overdue = false if invoice.payment_overdue?
+        invoice.void!
+      end
 
       invoice.credits.each do |credit|
         res = CreditNotes::RecreditService.call(credit:)
