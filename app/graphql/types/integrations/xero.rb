@@ -6,7 +6,6 @@ module Types
       graphql_name 'XeroIntegration'
 
       field :code, String, null: false
-      field :connection_id, ID, null: false
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
       field :name, String, null: false

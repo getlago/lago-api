@@ -4932,7 +4932,6 @@ type NetsuiteIntegration {
   clientId: String
   clientSecret: String
   code: String!
-  connectionId: ID!
   hasMappingsConfigured: Boolean
   id: ID!
   name: String!
@@ -7317,7 +7316,6 @@ enum WeightedIntervalEnum {
 
 type XeroIntegration {
   code: String!
-  connectionId: ID!
   hasMappingsConfigured: Boolean
   id: ID!
   name: String!
