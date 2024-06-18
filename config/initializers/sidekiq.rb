@@ -35,15 +35,13 @@ Sidekiq.configure_server do |config|
       loop do
         Thread.start(server.accept) do |socket|
           request = socket.gets
-          ::Sidekiq.redis do |r|
-            sidekiq_response = r.ping
-          end
+          sidekiq_response = ::Sidekiq.redis { |r| r.ping }
 
-          if !sidekiq_response.eql? "PONG"
+          if sidekiq_response.eql?("PONG")
+            response = "Live!\n"
+          else
             response = "Sidekiq is not ready: Sidekiq.redis.ping returned #{res.inspect} instead of PONG\n"
             Sidekiq.logger.error response
-          else
-            response = "Live!\n"
           end
           socket.print "HTTP/1.1 200 OK\r\n" +
                         "Content-Type: text/plain\r\n" +
