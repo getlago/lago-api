@@ -192,8 +192,16 @@ module Fees
       existing_fees = if invoice
         invoice.fees.where(charge_id: charge.id, subscription_id: subscription.id)
       else
-        # TODO: Use boundaries to filter fees
-        Fee.where(charge_id: charge.id, subscription_id: subscription.id, invoice_id: nil, pay_in_advance_event_id: nil)
+        Fee.where(
+          charge_id: charge.id,
+          subscription_id: subscription.id,
+          invoice_id: nil,
+          pay_in_advance_event_id: nil
+        ).where(
+          "(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3)
+        ).where(
+          "(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)
+        )
       end
 
       return false if existing_fees.blank?

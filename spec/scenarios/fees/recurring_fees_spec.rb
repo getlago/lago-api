@@ -18,6 +18,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       properties: {amount: '30', grouped_by:}
     })
   end
+  let(:subscription) { customer.subscriptions.first }
 
   def send_event!(item_id)
     create_event(
@@ -54,8 +55,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           expect(customer.invoices.count).to eq(1)
         end
 
-        subscription = customer.subscriptions.first
-
         (1..5).each do |i|
           travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
             send_event! "user_#{i}"
@@ -73,13 +72,29 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
-            subscription = customer.subscriptions.first
             expect(subscription.invoices.count).to eq 2
 
             recurring_fee = Fee.where(subscription:, charge:, created_at: Time.current.to_date..).sole
             expect(recurring_fee.units).to eq 5
             expect(recurring_fee.invoice_id).to be_nil
             expect(recurring_fee.amount_cents).to eq(30 * 5 * 100)
+          end
+
+          travel_to(Time.zone.parse('2024-07-12T01:10:00')) do
+            send_event! "user_july_1"
+            send_event! "user_july_2"
+          end
+
+          travel_to(Time.zone.parse('2024-08-01T01:10:00')) do # August BILLING DAY !
+            expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
+
+            perform_billing
+            expect(subscription.invoices.count).to eq 3
+
+            recurring_fee = Fee.where(subscription:, charge:, created_at: Time.current.to_date..).sole
+            expect(recurring_fee.units).to eq 7
+            expect(recurring_fee.invoice_id).to be_nil
+            expect(recurring_fee.amount_cents).to eq(30 * 7 * 100)
           end
         end
       end
@@ -88,14 +103,30 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         let(:grouped_by) { ['item_id'] }
 
         it 'creates one fee for all events' do
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
-            perform_billing
+          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # July BILLING DAY !
+            expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
-            subscription = customer.subscriptions.first
+            perform_billing
             expect(subscription.invoices.count).to eq 2
 
             recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
             expect(recurring_fees.count).to eq 5
+            expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, amount_cents: 30 * 100))
+          end
+
+          travel_to(Time.zone.parse('2024-07-12T01:10:00')) do
+            send_event! "user_july_1"
+            send_event! "user_july_2"
+          end
+
+          travel_to(Time.zone.parse('2024-08-01T01:10:00')) do # August BILLING DAY !
+            expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
+
+            perform_billing
+            expect(subscription.invoices.count).to eq 3
+
+            recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
+            expect(recurring_fees.count).to eq 7
             expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, amount_cents: 30 * 100))
           end
         end
@@ -119,8 +150,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           expect(customer.invoices.count).to eq(1)
         end
 
-        subscription = customer.subscriptions.first
-
         (1..5).each do |i|
           travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
             send_event! "user_#{i}"
@@ -138,7 +167,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
-            subscription = customer.subscriptions.first
             expect(subscription.invoices.count).to eq 7
 
             renewal_invoice = subscription.invoices.order(created_at: :desc).first
@@ -156,7 +184,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
-            subscription = customer.subscriptions.first
             expect(subscription.invoices.count).to eq 7
 
             recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
@@ -208,7 +235,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
-            subscription = customer.subscriptions.first
             expect(subscription.invoices.count).to eq 2
 
             expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq(0)
@@ -228,7 +254,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
-            subscription = customer.subscriptions.first
             expect(subscription.invoices.count).to eq 2
 
             expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
@@ -259,8 +284,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           expect(customer.invoices.count).to eq(1)
         end
 
-        subscription = customer.subscriptions.first
-
         (1..5).each do |i|
           travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
             send_event! "user_#{i}"
@@ -277,7 +300,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
-            subscription = customer.subscriptions.first
             expect(subscription.invoices.count).to eq 2
 
             renewal_invoice = subscription.invoices.order(created_at: :desc).first
@@ -295,7 +317,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
-            subscription = customer.subscriptions.first
             expect(subscription.invoices.count).to eq 2
 
             recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
