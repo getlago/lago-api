@@ -6,6 +6,8 @@ module Clock
 
     def perform
       Invoice.ready_to_be_refreshed.find_each do |invoice|
+        next unless invoice.subscriptions.pluck(:status).include?('active')
+
         Invoices::RefreshDraftJob.perform_later(invoice)
       end
     end
