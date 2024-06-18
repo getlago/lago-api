@@ -8,17 +8,17 @@ module Events
     end
 
     def call
-      return unless billable_metric
-      return unless can_create_fee?
-      return if already_processed?
+      return result unless billable_metric
+      return result unless can_create_fee?
+      return result if already_processed?
 
       # NOTE: Temporary condition to support both Postgres and Clickhouse (via kafka)
       if kafka_producer_enabled?
         # NOTE: when clickhouse, ignore event coming from postgres (Rest API)
-        return if event.id.present? && event.organization.clickhouse_aggregation?
+        return result if event.id.present? && event.organization.clickhouse_aggregation?
 
         # NOTE: without clickhouse, ignore events coming from kafka
-        return if event.id.nil? && !event.organization.clickhouse_aggregation?
+        return result if event.id.nil? && !event.organization.clickhouse_aggregation?
       end
 
       charges.where(invoiceable: false).find_each do |charge|
