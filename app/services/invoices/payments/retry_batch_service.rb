@@ -9,7 +9,7 @@ module Invoices
         super
       end
 
-      def call_later
+      def call_async
         Invoices::Payments::RetryAllJob.perform_later(organization_id:, invoice_ids: invoices.ids)
 
         result.invoices = invoices

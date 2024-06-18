@@ -8,10 +8,10 @@ RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
   let(:customer) { create(:customer, payment_provider: 'stripe') }
   let(:organization) { customer.organization }
 
-  describe '#call_later' do
+  describe '#call_async' do
     it 'enqueues a job to retry all payments' do
       expect do
-        retry_batch_service.call_later
+        retry_batch_service.call_async
       end.to have_enqueued_job(Invoices::Payments::RetryAllJob)
     end
   end
