@@ -18,12 +18,14 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   let(:estimate) { false }
 
   let(:event) do
-    create(
-      :event,
-      external_subscription_id: subscription.external_id,
-      external_customer_id: customer.external_id,
-      organization_id: organization.id,
-      properties: event_properties
+    Events::CommonFactory.new_instance(
+      source: create(
+        :event,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        organization_id: organization.id,
+        properties: event_properties
+      )
     )
   end
 
@@ -252,11 +254,13 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       end
 
       let(:event) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          properties: {'operator' => 'foo'}
+        Events::CommonFactory.new_instance(
+          source: create(
+            :event,
+            organization:,
+            external_subscription_id: subscription.external_id,
+            properties: {'operator' => 'foo'}
+          )
         )
       end
 

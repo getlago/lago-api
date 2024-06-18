@@ -122,7 +122,7 @@ module BillableMetrics
           .where(grouped_by: grouped_by.presence || {})
           .order(timestamp: :desc, created_at: :desc)
 
-        query = query.where.not(event_id: event.id) if event.present?
+        query = query.where.not(event_transaction_id: event.transaction_id) if event.present?
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter
 
         query.first

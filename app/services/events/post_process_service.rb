@@ -66,9 +66,9 @@ module Events
       return unless subscriptions
 
       @subscriptions = subscriptions
-        .where("date_trunc('second', started_at::timestamp) <= ?::timestamp", event.timestamp)
+        .where("date_trunc('millisecond', started_at::timestamp) <= ?::timestamp", event.timestamp)
         .where(
-          "terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?",
+          "terminated_at IS NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?",
           event.timestamp
         )
         .order('terminated_at DESC NULLS FIRST, started_at DESC')
@@ -96,22 +96,9 @@ module Events
 
     def handle_pay_in_advance
       return unless billable_metric
+      return unless charges.any?
 
-      # NOTE: `custom_agg` and `count_agg` are the only 2 aggregations
-      #       that don't require a field set in property.
-      #       For other aggregation, if the field isn't set we shouldn't create a fee/invoice.
-      processable_event = billable_metric.count_agg? ||
-        billable_metric.custom_agg? ||
-        event.properties[billable_metric.field_name].present?
-      return unless processable_event
-
-      charges.where(invoiceable: false).find_each do |charge|
-        Fees::CreatePayInAdvanceJob.perform_later(charge:, event:)
-      end
-
-      charges.where(invoiceable: true).find_each do |charge|
-        Invoices::CreatePayInAdvanceChargeJob.perform_later(charge:, event:, timestamp: event.timestamp)
-      end
+      Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json)
     end
 
     def charges

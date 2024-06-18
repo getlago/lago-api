@@ -4,7 +4,9 @@ module Fees
   class CreatePayInAdvanceJob < ApplicationJob
     queue_as :default
 
-    def perform(charge:, event:, billing_at: event.timestamp)
+    unique :until_executed, on_conflict: :log
+
+    def perform(charge:, event:, billing_at: nil)
       result = Fees::CreatePayInAdvanceService.call(charge:, event:, billing_at:)
 
       result.raise_if_error!

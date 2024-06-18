@@ -8,20 +8,13 @@ RSpec.describe Fees::CreatePayInAdvanceJob, type: :job do
 
   let(:result) { BaseService::Result.new }
 
-  let(:instant_service) do
-    instance_double(Fees::CreatePayInAdvanceService)
-  end
-
   it 'delegates to the pay_in_advance aggregation service' do
-    allow(Fees::CreatePayInAdvanceService).to receive(:new)
-      .with(charge:, event:, billing_at: event.timestamp)
-      .and_return(instant_service)
-    allow(instant_service).to receive(:call)
+    allow(Fees::CreatePayInAdvanceService).to receive(:call)
+      .with(charge:, event:, billing_at: nil)
       .and_return(result)
 
     described_class.perform_now(charge:, event:)
 
-    expect(Fees::CreatePayInAdvanceService).to have_received(:new)
-    expect(instant_service).to have_received(:call)
+    expect(Fees::CreatePayInAdvanceService).to have_received(:call)
   end
 end

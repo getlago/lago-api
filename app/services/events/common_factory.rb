@@ -8,6 +8,7 @@ module Events
         source
       when 'Hash'
         Events::Common.new(
+          id: source['id'],
           organization_id: source['organization_id'],
           transaction_id: source['transaction_id'],
           external_subscription_id: source['external_subscription_id'],
@@ -27,6 +28,7 @@ module Events
         )
       when 'Clickhouse::EventsRaw'
         Events::Common.new(
+          id: nil,
           organization_id: source.organization_id,
           transaction_id: source.transaction_id,
           external_subscription_id: source.external_subscription_id,
