@@ -96,6 +96,12 @@ class Invoice < ApplicationRecord
 
   scope :payment_overdue, -> { where(payment_overdue: true) }
 
+  scope :with_active_subscriptions, -> {
+    joins(:subscriptions)
+      .where(subscriptions: {status: 'active'})
+      .distinct
+  }
+
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
