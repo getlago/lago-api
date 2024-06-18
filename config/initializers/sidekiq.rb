@@ -27,11 +27,11 @@ Sidekiq.configure_server do |config|
   config.logger = Sidekiq::Logger.new($stdout)
   config.logger.formatter = Sidekiq::Logger::Formatters::JSON.new
   config[:max_retries] = 0
-  config[:dead_max_jobs] = ENV.fetch('LAGO_SIDEKIQ_MAX_DEAD_JOBS', 100_000).to_i
+  config[:dead_max_jobs] = ENV.fetch("LAGO_SIDEKIQ_MAX_DEAD_JOBS", 100_000).to_i
   config.on(:startup) do
-    Sidekiq::Logging.logger.info "Starting liveness server on #{LIVENESS_PORT}"
+    Sidekiq.logger.info "Starting liveness server on #{LIVENESS_PORT}"
     Thread.start do
-      server = TCPServer.new('localhost', LIVENESS_PORT)
+      server = TCPServer.new("localhost", LIVENESS_PORT)
       loop do
         Thread.start(server.accept) do |socket|
           request = socket.gets
@@ -39,9 +39,9 @@ Sidekiq.configure_server do |config|
             sidekiq_response = r.ping
           end
 
-          if !sidekiq_response.eql? 'PONG'
+          if !sidekiq_response.eql? "PONG"
             response = "Sidekiq is not ready: Sidekiq.redis.ping returned #{res.inspect} instead of PONG\n"
-            Sidekiq::Logging.logger.error response
+            Sidekiq.logger.error response
           else
             response = "Live!\n"
           end
