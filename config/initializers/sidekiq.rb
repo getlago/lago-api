@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+require 'socket'
+
+LIVENESS_PORT = 8080
+
 redis_config = {
   url: ENV['REDIS_URL'],
   pool_timeout: 5,
@@ -24,6 +28,34 @@ Sidekiq.configure_server do |config|
   config.logger.formatter = Sidekiq::Logger::Formatters::JSON.new
   config[:max_retries] = 0
   config[:dead_max_jobs] = ENV.fetch('LAGO_SIDEKIQ_MAX_DEAD_JOBS', 100_000).to_i
+  config.on(:startup) do
+    Sidekiq::Logging.logger.info "Starting liveness server on #{LIVENESS_PORT}"
+    Thread.start do
+      server = TCPServer.new('localhost', LIVENESS_PORT)
+      loop do
+        Thread.start(server.accept) do |socket|
+          request = socket.gets
+          ::Sidekiq.redis do |r|
+            sidekiq_response = r.ping
+          end
+
+          if !sidekiq_response.eql? 'PONG'
+            response = "Sidekiq is not ready: Sidekiq.redis.ping returned #{res.inspect} instead of PONG\n"
+            Sidekiq::Logging.logger.error response
+          else
+            response = "Live!\n"
+          end
+          socket.print "HTTP/1.1 200 OK\r\n" +
+                        "Content-Type: text/plain\r\n" +
+                        "Content-Length: #{response.bytesize}\r\n" +
+                        "Connection: close\r\n"
+          socket.print "\r\n"
+          socket.print response
+          socket.close
+        end
+      end
+    end
+  end
 end
 
 Sidekiq.configure_client do |config|
