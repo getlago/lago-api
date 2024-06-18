@@ -40,13 +40,13 @@ Sidekiq.configure_server do |config|
           if sidekiq_response.eql?("PONG")
             response = "Live!\n"
           else
-            response = "Sidekiq is not ready: Sidekiq.redis.ping returned #{res.inspect} instead of PONG\n"
+            response = "Sidekiq is not ready: Sidekiq.redis.ping returned #{request.inspect} instead of PONG\n"
             Sidekiq.logger.error response
           end
-          socket.print "HTTP/1.1 200 OK\r\n" +
-                        "Content-Type: text/plain\r\n" +
-                        "Content-Length: #{response.bytesize}\r\n" +
-                        "Connection: close\r\n"
+          socket.print "HTTP/1.1 200 OK\r\n" \
+                       "Content-Type: text/plain\r\n" \
+                       "Content-Length: #{response.bytesize}\r\n" \
+                       "Connection: close\r\n"
           socket.print "\r\n"
           socket.print response
           socket.close
