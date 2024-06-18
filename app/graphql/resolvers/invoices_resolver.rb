@@ -33,11 +33,11 @@ module Resolvers
         search_term:,
         page:,
         limit:,
-        payment_status:,
-        payment_dispute_lost:,
-        status:,
         filters: {
-          ids:
+          ids:,
+          payment_dispute_lost:,
+          payment_status:,
+          status:
         }
       )
 

@@ -17,11 +17,13 @@ module Resolvers
       def resolve(status: nil, page: nil, limit: nil, search_term: nil)
         query = InvoicesQuery.new(organization: context[:customer_portal_user].organization)
         result = query.call(
-          customer_id: context[:customer_portal_user].id,
           search_term:,
           page:,
           limit:,
-          status:
+          filters: {
+            customer_id: context[:customer_portal_user].id,
+            status:
+          }
         )
 
         result.invoices
