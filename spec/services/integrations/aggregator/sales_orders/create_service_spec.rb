@@ -212,7 +212,7 @@ RSpec.describe Integrations::Aggregator::SalesOrders::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       let(:body) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/success_response.json')
+        path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/success_string_response.json')
         File.read(path)
       end
 

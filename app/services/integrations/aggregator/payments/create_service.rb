@@ -61,6 +61,9 @@ module Integrations
         end
 
         def payload
+          # TODO: Refactor with Xero payments
+          base_payload = Integrations::Aggregator::BasePayload.new(integration: integration_customer.integration)
+
           {
             'type' => 'customerpayment',
             'isDynamic' => true,
@@ -75,7 +78,7 @@ module Integrations
                     # If the invoice is not synced yet, lets raise an error and retry. (doc: nil is an invalid request)
                     'doc' => integration_invoice&.external_id,
                     'apply' => true,
-                    'amount' => amount(payment.amount_cents, resource: invoice)
+                    'amount' => base_payload.amount(payment.amount_cents, resource: invoice)
                   }
                 ]
               }
