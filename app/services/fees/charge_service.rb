@@ -126,7 +126,8 @@ module Fees
         precise_unit_amount: amount_result.unit_amount,
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
-        charge_filter_id: charge_filter&.id
+        charge_filter_id: charge_filter&.id,
+        pay_in_advance: charge.pay_in_advance?
       )
 
       if (adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?

@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization, webhook_url: 'http://fees.test/wh') }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, code: 'seats') }
   let(:plan) { create(:plan, organization:, amount_cents: 49.99, pay_in_advance: true) }
@@ -33,6 +33,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
 
   before do
     charge
+    WebMock.stub_request(:post, 'http://fees.test/wh').to_return(status: 200, body: '', headers: {})
   end
 
   context 'when charge is pay in advance' do
@@ -89,7 +90,16 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
             perform_billing
+
             expect(subscription.invoices.count).to eq 3
+
+            expect(a_request(:post, "http://fees.test/wh").with(
+              body: hash_including(webhook_type: 'fee.created', fee: hash_including({
+                'units' => '7.0',
+                'from_date' => "2024-07-01T00:00:00+00:00",
+                'to_date' => "2024-07-31T23:59:59+00:00",
+              }))
+            )).to have_been_made.once
 
             recurring_fee = Fee.where(subscription:, charge:, created_at: Time.current.to_date..).sole
             expect(recurring_fee.units).to eq 7
@@ -124,6 +134,15 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
 
             perform_billing
             expect(subscription.invoices.count).to eq 3
+
+            expect(a_request(:post, "http://fees.test/wh").with(
+              body: hash_including(webhook_type: 'fee.created', fee: hash_including({
+                'lago_invoice_id' => nil,
+                'units' => '1.0',
+                'from_date' => "2024-07-01T00:00:00+00:00",
+                'to_date' => "2024-07-31T23:59:59+00:00",
+              }))
+            )).to have_been_made.times(7)
 
             recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
             expect(recurring_fees.count).to eq 7
