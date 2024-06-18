@@ -98,7 +98,7 @@ class Invoice < ApplicationRecord
 
   scope :with_active_subscriptions, -> {
     joins(:subscriptions)
-      .where(subscriptions: { status: 'active' })
+      .where(subscriptions: {status: 'active'})
       .distinct
   }
 
