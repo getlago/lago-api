@@ -50,6 +50,9 @@ Sidekiq.configure_server do |config|
           socket.print "\r\n"
           socket.print response
           socket.close
+        rescue
+          response = "Sidekiq is not ready\n"
+          Sidekiq.logger.error response
         end
       end
     end
