@@ -49,7 +49,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         create_subscription(
           {
             external_customer_id: customer.external_id,
-            external_id: customer.external_id,
+            external_id: external_subscription_id,
             plan_code: plan.code,
             billing_time: 'calendar',
           }
@@ -64,8 +64,8 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       (1..3).each do |i|
         travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
           send_event! "user_#{i}"
-          #expect(subscription.fees.charge.count).to eq(i)
-          #expect(subscription.fees.charge.order(created_at: :desc).first.amount_cents).to eq((21 - i) * 100)
+          expect(subscription.fees.charge.count).to eq(i)
+          expect(subscription.fees.charge.order(created_at: :desc).first.amount_cents).to eq((21 - i) * 100)
         end
       end
 
