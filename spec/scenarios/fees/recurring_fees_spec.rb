@@ -36,6 +36,57 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
     WebMock.stub_request(:post, 'http://fees.test/wh').to_return(status: 200, body: '', headers: {})
   end
 
+  context 'termination case' do
+    let(:creation_time) { DateTime.new(2024, 6, 1, 0, 0) }
+    let(:termination_time) { DateTime.new(2024, 6, 15, 0, 0) }
+    let(:invoiceable) { false }
+    let(:pay_in_advance) { true }
+    let(:grouped_by) { ['item_id'] }
+
+    it 'test 1' do # TODO change name
+      subscription = nil
+      travel_to(creation_time) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: 'calendar',
+          }
+        )
+
+        subscription = customer.subscriptions.first
+        perform_billing
+        expect(subscription).to be_active
+        expect(customer.invoices.count).to eq(1)
+      end
+
+      (1..3).each do |i|
+        travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
+          send_event! "user_#{i}"
+          #expect(subscription.fees.charge.count).to eq(i)
+          #expect(subscription.fees.charge.order(created_at: :desc).first.amount_cents).to eq((21 - i) * 100)
+        end
+      end
+
+      travel_to(termination_time + 15.minutes) do
+        terminate_subscription(subscription)
+        perform_billing
+        expect(subscription.reload).to be_terminated
+        expect(subscription.invoices.count).to eq 2
+      end
+    end
+  end
+
+  context 'upgrade case' do
+    let(:creation_time) { DateTime.new(2024, 6, 1, 0, 0) }
+    let(:termination_time) { DateTime.new(2024, 6, 15, 0, 0) }
+    let(:invoiceable) { false }
+    let(:pay_in_advance) { true }
+    let(:grouped_by) { ['item_id'] }
+
+  end
+
   context 'when charge is pay in advance' do
     let(:pay_in_advance) { true }
 
@@ -97,7 +148,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               body: hash_including(webhook_type: 'fee.created', fee: hash_including({
                 'units' => '7.0',
                 'from_date' => "2024-07-01T00:00:00+00:00",
-                'to_date' => "2024-07-31T23:59:59+00:00",
+                'to_date' => "2024-07-31T23:59:59+00:00"
               }))
             )).to have_been_made.once
 
@@ -140,7 +191,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
                 'lago_invoice_id' => nil,
                 'units' => '1.0',
                 'from_date' => "2024-07-01T00:00:00+00:00",
-                'to_date' => "2024-07-31T23:59:59+00:00",
+                'to_date' => "2024-07-31T23:59:59+00:00"
               }))
             )).to have_been_made.times(7)
 
