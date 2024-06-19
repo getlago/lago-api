@@ -43,7 +43,7 @@ module Invoices
 
       # non-invoiceable fees are created the first time, regardless of grace period.
       # Whenever the invoice is refreshed, the fees are not created again. (see `Fees::ChargeService.already_billed?`)
-      # The webhook are sent whenver non-invoiceable fees are found in result.
+      # The webhook are sent whenever non-invoiceable fees are found in result.
       if should_deliver_webhook?
         result.non_invoiceable_fees&.each do |fee|
           SendWebhookJob.perform_later('fee.created', fee)

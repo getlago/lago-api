@@ -127,8 +127,11 @@ module Fees
         amount_details: amount_result.amount_details,
         grouped_by: amount_result.grouped_by || {},
         charge_filter_id: charge_filter&.id,
-        pay_in_advance: charge.pay_in_advance? # TODO this breaks other specs we need to check
       )
+
+      unless charge.invoiceable?
+        new_fee.pay_in_advance = charge.pay_in_advance?
+      end
 
       if (adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?
         new_fee.invoice_display_name = adjusted.invoice_display_name

@@ -199,7 +199,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
 
             recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
             expect(recurring_fees.count).to eq 5
-            expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, amount_cents: 30 * 100))
+            expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
           end
 
           travel_to(Time.zone.parse('2024-07-12T01:10:00')) do
@@ -209,6 +209,8 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
 
           travel_to(Time.zone.parse('2024-08-01T01:10:00')) do # August BILLING DAY !
             expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
+
+            WebMock.reset_executed_requests!
 
             perform_billing
             expect(subscription.invoices.count).to eq 3
@@ -224,7 +226,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
 
             recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
             expect(recurring_fees.count).to eq 7
-            expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, amount_cents: 30 * 100))
+            expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
           end
         end
       end
@@ -269,6 +271,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             renewal_invoice = subscription.invoices.order(created_at: :desc).first
             recurring_fee = renewal_invoice.fees.charge.sole
             expect(recurring_fee.units).to eq 5
+            expect(recurring_fee.pay_in_advance).to be_falsey
             expect(recurring_fee.amount_cents).to eq(30 * 5 * 100)
           end
         end
@@ -289,7 +292,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             renewal_invoice = subscription.invoices.order(created_at: :desc).first
             recurring_fees = renewal_invoice.fees.charge
             expect(recurring_fees.count).to eq 5
-            expect(recurring_fees).to all(have_attributes(units: 1, amount_cents: 30 * 100))
+            expect(recurring_fees).to all(have_attributes(units: 1, pay_in_advance: false, amount_cents: 30 * 100))
           end
         end
       end
@@ -338,6 +341,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             # NOTE: This is should what happen if the feature was supported ⤵️
             # recurring_fee = Fee.where(subscription:, charge:, created_at: Time.current.to_date..).sole
             # expect(recurring_fee.units).to eq 5
+            # expect(recurring_fee.pay_in_advance).to be_falsey
             # expect(recurring_fee.invoice_id).to be_nil
             # expect(recurring_fee.amount_cents).to eq((20 + 19 + 18 + 17 + 16) * 100)
           end
@@ -354,10 +358,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             expect(subscription.invoices.count).to eq 2
 
             expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
-            # NOTE: This is should what happen if the feature was supported ⤵️
+            # NOTE: This is what should happen if the feature was supported ⤵️
             # recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
             # expect(recurring_fees.count).to eq 5
-            # expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil))
+            # expect(recurring_fee.pay_in_advance).to be_falsey
+            # expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil)) pay_in_advance: true,
             # expect(recurring_fees.map(&:amount_cents).sort).to eq([20, 19, 18, 17, 16].sort.map { |i| i * 100 })
           end
         end
@@ -402,6 +407,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             renewal_invoice = subscription.invoices.order(created_at: :desc).first
             recurring_fee = renewal_invoice.fees.charge.sole
             expect(recurring_fee.units).to eq 5
+            expect(recurring_fee.pay_in_advance).to be_falsey
             expect(recurring_fee.amount_cents).to eq((20 + 19 + 18 + 17 + 16) * 100)
           end
         end
@@ -422,8 +428,8 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             renewal_invoice = subscription.invoices.order(created_at: :desc).first
             recurring_fees = renewal_invoice.fees.charge
             expect(recurring_fees.count).to eq 5
-            expect(recurring_fees).to all(have_attributes(units: 1))
-            expect(recurring_fees.map(&:amount_cents).sort).to eq([20, 19, 18, 17, 16].sort.map { |i| i * 100 })
+            expect(recurring_fees).to all(have_attributes(units: 1, pay_in_advance: false))
+            expect(recurring_fees .map(&:amount_cents).sort).to eq([20, 19, 18, 17, 16].sort.map { |i| i * 100 })
           end
         end
       end
