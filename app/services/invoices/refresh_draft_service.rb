@@ -16,12 +16,10 @@ module Invoices
       #       one subscription starting and a second one terminating
       @invoicing_reason = if @recurring
         :subscription_periodic
+      elsif invoice_subscriptions.count == 1
+        invoice_subscriptions.first&.invoicing_reason&.to_sym || :upgrading
       else
-        if invoice_subscriptions.count == 1
-          invoice_subscriptions.first&.invoicing_reason&.to_sym || :upgrading
-        else
-          :upgrading
-        end
+        :upgrading
       end
 
       super
