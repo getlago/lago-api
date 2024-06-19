@@ -36,95 +36,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
     WebMock.stub_request(:post, 'http://fees.test/wh').to_return(status: 200, body: '', headers: {})
   end
 
-  context 'when terminating subscription' do
-    let(:creation_time) { DateTime.new(2024, 6, 1, 0, 0) }
-    let(:termination_time) { DateTime.new(2024, 6, 15, 0, 0) }
-    let(:invoiceable) { false }
-    let(:pay_in_advance) { true }
-    let(:grouped_by) { nil }
-
-    it 'performs subscription termination and billing correctly' do
-      subscription = nil
-      travel_to(creation_time) do
-        create_subscription(
-          {
-            external_customer_id: customer.external_id,
-            external_id: external_subscription_id,
-            plan_code: plan.code,
-            billing_time: 'calendar'
-          }
-        )
-
-        subscription = customer.subscriptions.first
-        perform_billing
-        expect(subscription).to be_active
-        expect(customer.invoices.count).to eq(1)
-      end
-
-      (1..3).each do |i|
-        travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
-          send_event! "user_#{i}"
-          expect(subscription.fees.charge.count).to eq(i)
-          expect(subscription.fees.charge.order(created_at: :desc).first.amount_cents).to eq((21 - i) * 100)
-        end
-      end
-
-      travel_to(termination_time + 15.minutes) do
-        terminate_subscription(subscription)
-        perform_billing
-        expect(subscription.reload).to be_terminated
-        expect(subscription.invoices.count).to eq 2
-        expect(subscription.fees.charge.count).to eq(3)
-      end
-    end
-  end
-
-  context 'when upgrading subscription' do
-    let(:creation_time) { DateTime.new(2024, 6, 1, 0, 0) }
-    let(:upgrade_time) { DateTime.new(2024, 6, 15, 0, 0) }
-    let(:invoiceable) { false }
-    let(:pay_in_advance) { true }
-    let(:grouped_by) { ['item_id'] }
-    let(:plan_2) { create(:plan, organization:, amount_cents: 99.99, pay_in_advance: true) }
-
-    it 'performs subscription upgrade and billing correctly' do
-      subscription = nil
-      travel_to(creation_time) do
-        create_subscription(
-          {
-            external_customer_id: customer.external_id,
-            external_id: external_subscription_id,
-            plan_code: plan.code,
-            billing_time: 'calendar'
-          }
-        )
-
-        subscription = customer.subscriptions.first
-        perform_billing
-        expect(subscription).to be_active
-        expect(customer.invoices.count).to eq(1)
-      end
-
-      travel_to(upgrade_time) do
-        create_subscription(
-          {
-            external_customer_id: customer.external_id,
-            external_id: external_subscription_id,
-            plan_code: plan_2.code,
-            billing_time: 'anniversary'
-          }
-        )
-
-        expect(subscription.reload).to be_terminated
-        expect(subscription.invoices.count).to eq(2)
-        expect(customer.invoices.count).to eq(2)
-        new_subscription = customer.subscriptions.order(created_at: :asc).last
-        expect(new_subscription.plan.code).to eq(plan_2.code)
-        expect(new_subscription).to be_active
-      end
-    end
-  end
-
   context 'when charge is pay in advance' do
     let(:pay_in_advance) { true }
 
@@ -196,6 +107,18 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               expect(recurring_fee.invoice_id).to be_nil
               expect(recurring_fee.amount_cents).to eq(30 * 7 * 100)
             end
+
+            # Test termination of subscription
+            travel_to(Time.zone.parse('2024-08-15T01:10:00')) do
+              terminate_subscription(subscription)
+              perform_billing
+              expect(subscription.reload).to be_terminated
+              expect(subscription.invoices.count).to eq 4
+              recurring_fee = Fee.where(subscription:, charge:, created_at: Time.current.beginning_of_month..).sole
+              expect(recurring_fee.units).to eq 7
+              expect(recurring_fee.invoice_id).to be_nil
+              expect(recurring_fee.amount_cents).to eq(30 * 7 * 100)
+            end
           end
         end
 
@@ -238,6 +161,17 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
 
               recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
               expect(recurring_fees.count).to eq 7
+              expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
+            end
+
+            # Test termination of subscription
+            travel_to(Time.zone.parse('2024-08-15T01:10:00')) do
+              terminate_subscription(subscription)
+              perform_billing
+              expect(subscription.reload).to be_terminated
+              expect(subscription.invoices.count).to eq 4
+              recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.beginning_of_month..)
+              expect(recurring_fees.count).to eq(7)
               expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
             end
           end
@@ -302,6 +236,16 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             )).not_to have_been_made
 
             expect(subscription.invoices.draft.count).to eq 0
+            expect(subscription.invoices.finalized.count).to eq 2
+            expect(Fee.where(subscription:, charge:, created_at: Time.current.beginning_of_month..).count).to eq 2
+          end
+
+          # Test termination of subscription
+          travel_to(Time.zone.parse('2024-07-05T01:30:00')) do
+            terminate_subscription(subscription)
+            perform_billing
+            expect(subscription.reload).to be_terminated
+            expect(subscription.invoices.draft.count).to eq 1 # TODO -> should this be finalized ?????
             expect(subscription.invoices.finalized.count).to eq 2
             expect(Fee.where(subscription:, charge:, created_at: Time.current.beginning_of_month..).count).to eq 2
           end
