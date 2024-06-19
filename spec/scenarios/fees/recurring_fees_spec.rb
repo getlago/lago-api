@@ -36,7 +36,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
     WebMock.stub_request(:post, 'http://fees.test/wh').to_return(status: 200, body: '', headers: {})
   end
 
-  context 'termination case' do
+  context 'when terminating subscription' do
     let(:creation_time) { DateTime.new(2024, 6, 1, 0, 0) }
     let(:termination_time) { DateTime.new(2024, 6, 15, 0, 0) }
     let(:invoiceable) { false }
@@ -79,7 +79,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
     end
   end
 
-  context 'upgrade case' do
+  context 'when upgrading subscription' do
     let(:creation_time) { DateTime.new(2024, 6, 1, 0, 0) }
     let(:upgrade_time) { DateTime.new(2024, 6, 15, 0, 0) }
     let(:invoiceable) { false }
