@@ -17,9 +17,11 @@ module Invoices
       @invoicing_reason = if @recurring
         :subscription_periodic
       else
-        invoice_subscriptions.first&.invoicing_reason&.to_sym || :upgrading if invoice_subscriptions.count == 1
-
-        :upgrading
+        if invoice_subscriptions.count == 1
+          invoice_subscriptions.first&.invoicing_reason&.to_sym || :upgrading
+        else
+          :upgrading
+        end
       end
 
       super
