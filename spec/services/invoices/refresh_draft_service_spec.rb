@@ -125,7 +125,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         refresh_service.call
 
         expect(invoice.reload.invoice_subscriptions.pluck(:invoicing_reason))
-          .to match_array(%w(subscription_terminating subscription_starting))
+          .to match_array(%w[subscription_terminating subscription_starting])
       end
     end
 
