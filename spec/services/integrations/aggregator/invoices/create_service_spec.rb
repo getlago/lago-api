@@ -349,9 +349,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         let(:error_code) { Faker::Number.between(from: 400, to: 499) }
 
         it 'does not return an error' do
-          expect do
-            service_call
-          end.not_to raise_error(http_error)
+          expect { service_call }.not_to raise_error
         end
 
         it 'enqueues a SendWebhookJob' do

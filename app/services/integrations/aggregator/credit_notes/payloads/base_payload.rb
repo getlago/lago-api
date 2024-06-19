@@ -5,37 +5,26 @@ module Integrations
     module CreditNotes
       module Payloads
         class BasePayload < Integrations::Aggregator::BasePayload
-          def initialize(integration:, integration_customer:, credit_note:)
-            super(integration:)
+          def initialize(integration_customer:, credit_note:)
+            super(integration: integration_customer.integration)
 
             @credit_note = credit_note
             @integration_customer = integration_customer
           end
 
           def body
-            {
-              'type' => 'creditmemo',
-              'isDynamic' => true,
-              'columns' => {
-                'tranid' => credit_note.number,
-                'entity' => integration_customer.external_customer_id,
-                'istaxable' => true,
-                'taxitem' => tax_item.external_id,
-                'taxamountoverride' => amount(credit_note.taxes_amount_cents, resource: credit_note),
-                'otherrefnum' => credit_note.number,
-                'custbody_lago_id' => credit_note.id,
-                'tranId' => credit_note.id
-              },
-              'lines' => [
-                {
-                  'sublistId' => 'item',
-                  'lineItems' => credit_note.items.map { |credit_note_item| item(credit_note_item) } + coupons
-                }
-              ],
-              'options' => {
-                'ignoreMandatoryFields' => false
+            [
+              {
+                'external_contact_id' => integration_customer.external_customer_id,
+                'status' => 'AUTHORISED',
+                'issuing_date' => credit_note.issuing_date.to_time.utc.iso8601,
+                'payment_due_date' => credit_note.payment_due_date.to_time.utc.iso8601,
+                'number' => credit_note.number,
+                'currency' => credit_note.currency,
+                'type' => 'ACCRECCREDIT',
+                'fees' => credit_note.items.map { |credit_note_item| item(credit_note_item) } + coupons
               }
-            }
+            ]
           end
 
           private
@@ -60,10 +49,13 @@ module Integrations
             return {} unless mapped_item
 
             {
-              'item' => mapped_item.external_id,
-              'account' => mapped_item.external_account_code,
-              'quantity' => 1,
-              'rate' => amount(credit_note_item.amount_cents, resource: credit_note_item.credit_note)
+              'external_id' => mapped_item.external_id,
+              'description' => fee.invoice_name,
+              'units' => fee.units,
+              'precise_unit_amount' => fee.precise_unit_amount,
+              'account_code' => mapped_item.external_account_code,
+              'amount_cents' => fee.amount_cents,
+              'taxes_amount_cents' => fee.taxes_amount_cents
             }
           end
 
@@ -72,10 +64,13 @@ module Integrations
 
             if credit_note.coupons_adjustment_amount_cents > 0
               output << {
-                'item' => coupon_item&.external_id,
-                'account' => coupon_item&.external_account_code,
-                'quantity' => 1,
-                'rate' => -amount(credit_note.coupons_adjustment_amount_cents, resource: credit_note)
+                'external_id' => mapped_item.external_id,
+                'description' => fee.invoice_name,
+                'units' => 1,
+                'precise_unit_amount' => fee.precise_unit_amount,
+                'account_code' => mapped_item.external_account_code,
+                'amount_cents' => credit_note.coupons_adjustment_amount_cents,
+                'taxes_amount_cents' => 0
               }
             end
 
