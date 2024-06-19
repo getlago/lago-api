@@ -54,6 +54,7 @@ module Invoices
         invoice.save!
 
         result.invoice = invoice.reload
+        result.non_invoiceable_fees ||= []
       end
 
       result
