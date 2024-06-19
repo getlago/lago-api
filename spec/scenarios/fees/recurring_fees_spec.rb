@@ -303,7 +303,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             expect(subscription.reload).to be_terminated
             renewal_invoice = subscription.invoices.order(created_at: :desc).first
             recurring_fees = renewal_invoice.fees.charge
-            expect(recurring_fees.count).to eq 0 #TODO should we create credit note for the unused time ?
+            expect(recurring_fees.count).to eq 0 # TODO should we create credit note for the unused time ?
           end
         end
       end
