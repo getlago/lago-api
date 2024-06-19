@@ -43,7 +43,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
     let(:pay_in_advance) { true }
     let(:grouped_by) { ['item_id'] }
 
-    it 'test 1' do # TODO change name
+    it 'performs subscription termination and billing correctly' do
       subscription = nil
       travel_to(creation_time) do
         create_subscription(
@@ -80,11 +80,38 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
 
   context 'upgrade case' do
     let(:creation_time) { DateTime.new(2024, 6, 1, 0, 0) }
-    let(:termination_time) { DateTime.new(2024, 6, 15, 0, 0) }
+    let(:upgrade_time) { DateTime.new(2024, 6, 15, 0, 0) }
     let(:invoiceable) { false }
     let(:pay_in_advance) { true }
     let(:grouped_by) { ['item_id'] }
+    let(:yearly_plan) do
+      create(
+        :plan,
+        organization:,
+        interval: 'yearly',
+        amount_cents: 100.00,
+        pay_in_advance: true
+      )
+    end
 
+    it 'performs subscription upgrade and billing correctly' do
+      subscription = nil
+      travel_to(creation_time) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: external_subscription_id,
+            plan_code: plan.code,
+            billing_time: 'calendar',
+          }
+        )
+
+        subscription = customer.subscriptions.first
+        perform_billing
+        expect(subscription).to be_active
+        expect(customer.invoices.count).to eq(1)
+      end
+    end
   end
 
   context 'when charge is pay in advance' do
