@@ -22,6 +22,8 @@ module Subscriptions
           billing_at.to_i,
           invoicing_reason: :subscription_periodic
         )
+
+        BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, billing_at)
       end
     end
 
