@@ -41,7 +41,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
     let(:termination_time) { DateTime.new(2024, 6, 15, 0, 0) }
     let(:invoiceable) { false }
     let(:pay_in_advance) { true }
-    let(:grouped_by) { ['item_id'] }
+    let(:grouped_by) { nil }
 
     it 'performs subscription termination and billing correctly' do
       subscription = nil
@@ -51,7 +51,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: external_subscription_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           }
         )
 
@@ -74,6 +74,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         perform_billing
         expect(subscription.reload).to be_terminated
         expect(subscription.invoices.count).to eq 2
+        expect(subscription.fees.charge.count).to eq(3)
       end
     end
   end
@@ -84,15 +85,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
     let(:invoiceable) { false }
     let(:pay_in_advance) { true }
     let(:grouped_by) { ['item_id'] }
-    let(:yearly_plan) do
-      create(
-        :plan,
-        organization:,
-        interval: 'yearly',
-        amount_cents: 100.00,
-        pay_in_advance: true
-      )
-    end
+    let(:plan_2) { create(:plan, organization:, amount_cents: 99.99, pay_in_advance: true) }
 
     it 'performs subscription upgrade and billing correctly' do
       subscription = nil
@@ -102,7 +95,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: external_subscription_id,
             plan_code: plan.code,
-            billing_time: 'calendar',
+            billing_time: 'calendar'
           }
         )
 
@@ -110,6 +103,24 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         perform_billing
         expect(subscription).to be_active
         expect(customer.invoices.count).to eq(1)
+      end
+
+      travel_to(upgrade_time) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: external_subscription_id,
+            plan_code: plan_2.code,
+            billing_time: 'anniversary'
+          }
+        )
+
+        expect(subscription.reload).to be_terminated
+        expect(subscription.invoices.count).to eq(2)
+        expect(customer.invoices.count).to eq(2)
+        new_subscription = customer.subscriptions.order(created_at: :asc).last
+        expect(new_subscription.plan.code).to eq(plan_2.code)
+        expect(new_subscription).to be_active
       end
     end
   end
@@ -189,48 +200,48 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         end
 
         context 'with grouped_by on unique field_name' do
-        let(:grouped_by) { ['item_id'] }
+          let(:grouped_by) { ['item_id'] }
 
-        it 'creates one fee for all events' do
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # July BILLING DAY !
-            expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
+          it 'creates one fee for all events' do
+            travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # July BILLING DAY !
+              expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
-            perform_billing
-            expect(subscription.invoices.count).to eq 2
+              perform_billing
+              expect(subscription.invoices.count).to eq 2
 
-            recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
-            expect(recurring_fees.count).to eq 5
-            expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
-          end
+              recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
+              expect(recurring_fees.count).to eq 5
+              expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
+            end
 
-          travel_to(Time.zone.parse('2024-07-12T01:10:00')) do
-            send_event! "user_july_1"
-            send_event! "user_july_2"
-          end
+            travel_to(Time.zone.parse('2024-07-12T01:10:00')) do
+              send_event! "user_july_1"
+              send_event! "user_july_2"
+            end
 
-          travel_to(Time.zone.parse('2024-08-01T01:10:00')) do # August BILLING DAY !
-            expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
+            travel_to(Time.zone.parse('2024-08-01T01:10:00')) do # August BILLING DAY !
+              expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
-            WebMock.reset_executed_requests!
+              WebMock.reset_executed_requests!
 
-            perform_billing
-            expect(subscription.invoices.count).to eq 3
+              perform_billing
+              expect(subscription.invoices.count).to eq 3
 
-            expect(a_request(:post, "http://fees.test/wh").with(
-              body: hash_including(webhook_type: 'fee.created', fee: hash_including({
-                'lago_invoice_id' => nil,
-                'units' => '1.0',
-                'from_date' => "2024-07-01T00:00:00+00:00",
-                'to_date' => "2024-07-31T23:59:59+00:00"
-              }))
-            )).to have_been_made.times(7)
+              expect(a_request(:post, "http://fees.test/wh").with(
+                body: hash_including(webhook_type: 'fee.created', fee: hash_including({
+                  'lago_invoice_id' => nil,
+                  'units' => '1.0',
+                  'from_date' => "2024-07-01T00:00:00+00:00",
+                  'to_date' => "2024-07-31T23:59:59+00:00"
+                }))
+              )).to have_been_made.times(7)
 
-            recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
-            expect(recurring_fees.count).to eq 7
-            expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
+              recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.to_date..)
+              expect(recurring_fees.count).to eq 7
+              expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
+            end
           end
         end
-      end
       end
 
       context 'with grace period' do
@@ -286,7 +297,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
 
             expect(a_request(:post, "http://fees.test/wh").with(
               body: hash_including(webhook_type: 'fee.created', fee: hash_including({
-                'lago_invoice_id' => nil,
+                'lago_invoice_id' => nil
               }))
             )).not_to have_been_made
 
@@ -495,7 +506,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             recurring_fees = renewal_invoice.fees.charge
             expect(recurring_fees.count).to eq 5
             expect(recurring_fees).to all(have_attributes(units: 1, pay_in_advance: false))
-            expect(recurring_fees .map(&:amount_cents).sort).to eq([20, 19, 18, 17, 16].sort.map { |i| i * 100 })
+            expect(recurring_fees.map(&:amount_cents).sort).to eq([20, 19, 18, 17, 16].sort.map { |i| i * 100 })
           end
         end
       end
