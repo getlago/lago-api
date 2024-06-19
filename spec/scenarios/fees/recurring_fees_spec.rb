@@ -125,7 +125,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         context 'with grouped_by on unique field_name' do
           let(:grouped_by) { ['item_id'] }
 
-          it 'creates one fee for all events' do
+          it 'creates a fee per event' do
             travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # July BILLING DAY !
               expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
@@ -295,13 +295,23 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             expect(recurring_fee.pay_in_advance).to be_falsey
             expect(recurring_fee.amount_cents).to eq(30 * 5 * 100)
           end
+
+          # Test termination of subscription
+          travel_to(Time.zone.parse('2024-07-15T01:10:00')) do
+            terminate_subscription(subscription)
+            perform_billing
+            expect(subscription.reload).to be_terminated
+            renewal_invoice = subscription.invoices.order(created_at: :desc).first
+            recurring_fees = renewal_invoice.fees.charge
+            expect(recurring_fees.count).to eq 0 #TODO should we create credit note for the unused time ?
+          end
         end
       end
 
       context 'with grouped_by on unique field_name' do
         let(:grouped_by) { ['item_id'] }
 
-        it 'creates one fee for all events' do
+        it 'creates a fee per event' do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
@@ -314,6 +324,16 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             recurring_fees = renewal_invoice.fees.charge
             expect(recurring_fees.count).to eq 5
             expect(recurring_fees).to all(have_attributes(units: 1, pay_in_advance: false, amount_cents: 30 * 100))
+          end
+
+          # Test termination of subscription
+          travel_to(Time.zone.parse('2024-07-15T01:10:00')) do
+            terminate_subscription(subscription)
+            perform_billing
+            expect(subscription.reload).to be_terminated
+            renewal_invoice = subscription.invoices.order(created_at: :desc).first
+            recurring_fees = renewal_invoice.fees.charge
+            expect(recurring_fees.count).to eq 0 # #TODO should we create credit note for the unused time ?
           end
         end
       end
@@ -372,7 +392,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       context 'with grouped_by on unique field_name' do
         let(:grouped_by) { ['item_id'] }
 
-        it 'creates one fee for all events' do
+        it 'creates a fee per event' do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
@@ -431,13 +451,25 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             expect(recurring_fee.pay_in_advance).to be_falsey
             expect(recurring_fee.amount_cents).to eq((20 + 19 + 18 + 17 + 16) * 100)
           end
+
+          # Test termination of subscription
+          travel_to(Time.zone.parse('2024-07-15T01:10:00')) do
+            terminate_subscription(subscription)
+            perform_billing
+            expect(subscription.reload).to be_terminated
+            renewal_invoice = subscription.invoices.order(created_at: :desc).first
+            recurring_fee = renewal_invoice.fees.charge.sole
+            expect(recurring_fee.units).to eq 5
+            expect(recurring_fee.pay_in_advance).to be_falsey
+            expect(recurring_fee.amount_cents).to eq(7258)
+          end
         end
       end
 
       context 'with grouped_by on unique field_name' do
         let(:grouped_by) { ['item_id'] }
 
-        it 'creates one fee for all events' do
+        it 'creates a fee per event' do
           travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
             perform_billing
 
@@ -451,6 +483,19 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             expect(recurring_fees.count).to eq 5
             expect(recurring_fees).to all(have_attributes(units: 1, pay_in_advance: false))
             expect(recurring_fees.map(&:amount_cents).sort).to eq([20, 19, 18, 17, 16].sort.map { |i| i * 100 })
+          end
+
+          # Test termination of subscription
+          travel_to(Time.zone.parse('2024-07-15T01:10:00')) do
+            terminate_subscription(subscription)
+            perform_billing
+            expect(subscription.reload).to be_terminated
+            expect(subscription.invoices.count).to eq 3
+            renewal_invoice = subscription.invoices.order(created_at: :desc).first
+            recurring_fees = renewal_invoice.fees.charge
+            expect(recurring_fees.count).to eq 5
+            expect(recurring_fees).to all(have_attributes(units: 1, pay_in_advance: false))
+            expect(recurring_fees.map(&:amount_cents).sort).to eq([1452, 1452, 1452, 1452, 1452])
           end
         end
       end
