@@ -70,7 +70,7 @@ RSpec.describe Invoices::RegroupFeesService, type: :service do
           expect(paid_invoice.total_amount_cents).to eq(100 * 3 * (100 + tax_rate) / 100)
 
           expect(result.invoices).to all(be_finalized).and(all(have_attributes({
-            invoice_type: 'grouped_in_advance_charges',
+            invoice_type: 'advance_charges',
             currency: 'EUR',
             issuing_date: billing_at.to_date,
             skip_charges: true,

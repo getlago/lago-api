@@ -15,7 +15,7 @@ module Invoices
 
     def call
       # TODO: Implement organization settings if we choose the org setting approach
-      # return result unless organization&.grouped_in_advance_charges_invoice?
+      # return result unless organization&.advance_charges_invoice?
 
       return result if subscriptions.empty?
 
@@ -78,7 +78,7 @@ module Invoices
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
-        invoice_type: :grouped_in_advance_charges,
+        invoice_type: :advance_charges,
         currency:,
         datetime: billing_at, # this is an int we need to convert it
         skip_charges: true
