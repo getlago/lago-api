@@ -245,7 +245,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             terminate_subscription(subscription)
             perform_billing
             expect(subscription.reload).to be_terminated
-            expect(subscription.invoices.draft.count).to eq 1 # TODO -> should this be finalized ?????
+            expect(subscription.invoices.draft.count).to eq 1
             expect(subscription.invoices.finalized.count).to eq 2
             expect(Fee.where(subscription:, charge:, created_at: Time.current.beginning_of_month..).count).to eq 2
           end
@@ -303,7 +303,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             expect(subscription.reload).to be_terminated
             renewal_invoice = subscription.invoices.order(created_at: :desc).first
             recurring_fees = renewal_invoice.fees.charge
-            expect(recurring_fees.count).to eq 0 # TODO should we create credit note for the unused time ?
+            expect(recurring_fees.count).to eq 0 # waiting for mike
           end
         end
       end
@@ -491,8 +491,8 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             perform_billing
             expect(subscription.reload).to be_terminated
             expect(subscription.invoices.count).to eq 3
-            renewal_invoice = subscription.invoices.order(created_at: :desc).first
-            recurring_fees = renewal_invoice.fees.charge
+            termination_invoice = subscription.invoices.order(created_at: :desc).first
+            recurring_fees = termination_invoice.fees.charge
             expect(recurring_fees.count).to eq 5
             expect(recurring_fees).to all(have_attributes(units: 1, pay_in_advance: false))
             expect(recurring_fees.map(&:amount_cents).sort).to eq([1452, 1452, 1452, 1452, 1452])
