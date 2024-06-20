@@ -30,6 +30,7 @@ module Types
     field :google_auth_url, resolver: Resolvers::Auth::Google::AuthUrlResolver
     field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
     field :integration, resolver: Resolvers::IntegrationResolver
+    field :integration_accounts, resolver: Resolvers::Integrations::AccountsResolver
     field :integration_collection_mapping, resolver: Resolvers::IntegrationCollectionMappingResolver
     field :integration_collection_mappings, resolver: Resolvers::IntegrationCollectionMappingsResolver
     field :integration_items, resolver: Resolvers::IntegrationItemsResolver

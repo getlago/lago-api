@@ -14,7 +14,10 @@ module Integrations
           organization:,
           name: args[:name],
           code: args[:code],
-          connection_id: args[:connection_id]
+          connection_id: args[:connection_id],
+          sync_credit_notes: ActiveModel::Type::Boolean.new.cast(args[:sync_credit_notes]),
+          sync_invoices: ActiveModel::Type::Boolean.new.cast(args[:sync_invoices]),
+          sync_payments: ActiveModel::Type::Boolean.new.cast(args[:sync_payments])
         )
 
         integration.save!

@@ -7,7 +7,8 @@ module Types
 
       possible_types Types::Integrations::Netsuite,
         Types::Integrations::Okta,
-        Types::Integrations::Anrok
+        Types::Integrations::Anrok,
+        Types::Integrations::Xero
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -17,6 +18,8 @@ module Types
           Types::Integrations::Okta
         when 'Integrations::AnrokIntegration'
           Types::Integrations::Anrok
+        when 'Integrations::XeroIntegration'
+          Types::Integrations::Xero
         else
           raise "Unexpected integration type: #{object.inspect}"
         end

@@ -19,6 +19,9 @@ module Integrations
 
         integration.name = params[:name] if params.key?(:name)
         integration.code = params[:code] if params.key?(:code)
+        integration.sync_credit_notes = params[:sync_credit_notes] if params.key?(:sync_credit_notes)
+        integration.sync_invoices = params[:sync_invoices] if params.key?(:sync_invoices)
+        integration.sync_payments = params[:sync_payments] if params.key?(:sync_payments)
 
         integration.save!
 

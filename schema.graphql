@@ -15,6 +15,17 @@ input AcceptInviteInput {
   token: String!
 }
 
+type Account {
+  externalAccountCode: String!
+  externalId: String!
+  externalName: String
+}
+
+type AccountCollection {
+  collection: [Account!]!
+  metadata: CollectionMetadata!
+}
+
 """
 Adyen input arguments
 """
@@ -3669,7 +3680,7 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime
 
-union Integration = AnrokIntegration | NetsuiteIntegration | OktaIntegration
+union Integration = AnrokIntegration | NetsuiteIntegration | OktaIntegration | XeroIntegration
 
 type IntegrationCollection {
   collection: [Integration!]!
@@ -3709,6 +3720,7 @@ enum IntegrationTypeEnum {
   anrok
   netsuite
   okta
+  xero
 }
 
 type Invite {
@@ -5396,6 +5408,11 @@ type Query {
     """
     id: ID
   ): Integration
+
+  """
+  Query integration accounts
+  """
+  integrationAccounts(integrationId: ID): AccountCollection
 
   """
   Query a single integration collection mapping
