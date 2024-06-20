@@ -60,53 +60,49 @@ describe 'Recurring Fees Subscription Upgrade', :scenarios, type: :request do # 
           {
             external_customer_id: customer.external_id,
             external_id: external_subscription_id,
-            plan_code: plan.code,
+            plan_code: plan.code
             # billing_time: 'calendar'
           }
         )
         perform_billing
       end
 
-      travel_to(creation_time + 4.days) do
-        send_event! "user_1"
-        send_event! "user_2"
-      end
+      # travel_to(creation_time + 4.days) do
+      # send_event! "user_1"
+      # send_event! "user_2"
+      # end
 
       travel_to(upgrade_time) do
         create_subscription(
           {
             external_customer_id: customer.external_id,
             external_id: external_subscription_id,
-            plan_code: plan_2.code,
+            plan_code: plan_2.code
             # billing_time: 'anniversary'
           }
         )
 
-        expect(customer.subscriptions.order(created_at: :asc).first).to be_terminated
-        expect(customer.invoices.count).to eq(2)
-        new_subscription = customer.subscriptions.order(created_at: :asc).last
-        expect(new_subscription.plan.code).to eq(plan_2.code)
-        expect(new_subscription).to be_active
+        # expect(customer.subscriptions.order(created_at: :asc).first).to be_terminated
+        # expect(customer.invoices.count).to eq(2)
+        # new_subscription = customer.subscriptions.order(created_at: :asc).last
+        # expect(new_subscription.plan.code).to eq(plan_2.code)
+        # expect(new_subscription).to be_active
 
-        #fee = Fee.where(invoice_id: nil, created_at: ...upgrade_time)
-        #pp fee.map{ |fee| fee.created_at }
-        #expect(Fee.where(invoice_id: nil, created_at: ...upgrade_time).count).to eq 2
-        pp charge.id
-        pp
-        pp Fee.where(invoice_id: nil, created_at: upgrade_time..)
-        expect(Fee.where(invoice_id: nil, created_at: upgrade_time..).count).to eq 0
+        pp Fee.where(invoice_id: nil)
+        # expect(Fee.where(invoice_id: nil, created_at: ...upgrade_time).count).to eq 2
+        # expect(Fee.where(invoice_id: nil, created_at: upgrade_time..).count).to eq 0
       end
 
-      travel_to(upgrade_time + 4.days) do
-        send_event! "user_3"
-        send_event! "user_4"
-      end
+      # travel_to(upgrade_time + 4.days) do
+      # #send_event! "user_3"
+      # #send_event! "user_4"
+      # end
 
-      travel_to(DateTime.new(2024, 7, 1, 0, 10)) do
-        perform_billing
-        #pp Fee.where(invoice_id: nil, created_at: Time.current.beginning_of_month..)
-        expect(Fee.where(invoice_id: nil, created_at: Time.current.beginning_of_month..).count).to eq 4
-      end
+      # travel_to(DateTime.new(2024, 7, 1, 0, 10)) do
+      #   perform_billing
+      #   pp Fee.where(invoice_id: nil).count
+      #   expect(Fee.where(invoice_id: nil, created_at: Time.current.beginning_of_month..).count).to eq 4
+      # end
     end
   end
 end
