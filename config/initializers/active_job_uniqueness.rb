@@ -7,7 +7,7 @@ ActiveJob::Uniqueness.configure do |config|
     uri = URI(ENV['REDIS_URL'])
     host = [uri.host, uri.path].join('')
     
-    if !uri.query.nil? && !uri.query.empty?
+    if uri.query.present?
       host = [host, uri.query].join('?')
     end
 
