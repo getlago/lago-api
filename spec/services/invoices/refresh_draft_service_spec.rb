@@ -55,6 +55,80 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       end
     end
 
+    context 'when refreshing upgrading invoice' do
+      let(:invoice2) do
+        create(:invoice, status:, organization:, customer:)
+      end
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          invoice:,
+          subscription:,
+          recurring: false,
+          invoicing_reason: 'subscription_terminating'
+        )
+      end
+      let(:invoice_subscription2) do
+        create(
+          :invoice_subscription,
+          invoice:,
+          subscription: subscription2,
+          recurring: false,
+          invoicing_reason: 'subscription_starting'
+        )
+      end
+      let(:invoice_subscription3) do
+        create(
+          :invoice_subscription,
+          invoice: invoice2,
+          subscription: subscription2,
+          recurring: false,
+          invoicing_reason: 'subscription_terminating'
+        )
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          organization:,
+          subscription_at: started_at - 1.month,
+          started_at: started_at - 1.month,
+          created_at: started_at - 1.month,
+          terminated_at: started_at,
+          status: :terminated
+        )
+      end
+      let(:subscription2) do
+        create(
+          :subscription,
+          customer:,
+          organization:,
+          subscription_at: started_at,
+          started_at:,
+          created_at: started_at,
+          previous_subscription_id: subscription.id
+        )
+      end
+
+      before do
+        invoice_subscription2
+        invoice_subscription3
+
+        subscription2.mark_as_terminated!
+
+        allow(Invoices::CalculateFeesService).to receive(:call).and_return(BaseService::Result.new)
+
+        invoice.update!(created_at: started_at)
+      end
+
+      it 'correctly creates invoice_subscriptions without duplicating invoicing reason' do
+        refresh_service.call
+
+        expect(invoice.reload.invoice_subscriptions.pluck(:invoicing_reason))
+          .to match_array(%w[subscription_terminating subscription_starting])
+      end
+    end
+
     it 'regenerates fees' do
       fee = create(:fee, invoice:)
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')

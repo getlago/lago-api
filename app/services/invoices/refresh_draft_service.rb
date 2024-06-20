@@ -6,17 +6,20 @@ module Invoices
       @invoice = invoice
       @subscription_ids = invoice.subscriptions.pluck(:id)
       @context = context
+      @invoice_subscriptions = invoice.invoice_subscriptions
 
       # NOTE: Recurring status (meaning billed automatically from the recurring billing process)
       #       should be kept to prevent double billing on billing day
-      @recurring = invoice.invoice_subscriptions.first&.recurring || false
+      @recurring = invoice_subscriptions.first&.recurring || false
 
       # NOTE: upgrading is used as a not persisted reasong as it means
       #       one subscription starting and a second one terminating
       @invoicing_reason = if @recurring
         :subscription_periodic
+      elsif invoice_subscriptions.count == 1
+        invoice_subscriptions.first&.invoicing_reason&.to_sym || :upgrading
       else
-        invoice.invoice_subscriptions.first&.invoicing_reason&.to_sym || :upgrading
+        :upgrading
       end
 
       super
@@ -41,7 +44,7 @@ module Invoices
 
         invoice.fees.destroy_all
 
-        invoice.invoice_subscriptions.destroy_all
+        invoice_subscriptions.destroy_all
         invoice.applied_taxes.destroy_all
 
         Invoices::CreateInvoiceSubscriptionService.call(
@@ -75,7 +78,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context
+    attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context, :invoice_subscriptions
 
     def fetch_timestamp
       fee = invoice.fees.first
