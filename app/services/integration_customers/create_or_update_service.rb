@@ -66,7 +66,7 @@ module IntegrationCustomers
     def integration
       type = Integrations::BaseIntegration.integration_type(integration_customer_params[:integration_type])
 
-      return @integration if defined?(@integration) &&  @integration&.type == type
+      return @integration if defined?(@integration) && @integration&.type == type
 
       return nil unless integration_customer_params &&
         integration_customer_params[:integration_type] &&
