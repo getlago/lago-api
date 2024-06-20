@@ -66,9 +66,7 @@ module IntegrationCustomers
     def integration
       type = Integrations::BaseIntegration.integration_type(integration_customer_params[:integration_type])
 
-      if defined? @integration
-        return @integration if @integration&.type == type
-      end
+      return @integration if defined?(@integration) &&  @integration&.type == type
 
       return nil unless integration_customer_params &&
         integration_customer_params[:integration_type] &&
@@ -82,9 +80,7 @@ module IntegrationCustomers
     def integration_customer
       type = IntegrationCustomers::BaseCustomer.customer_type(integration_customer_params[:integration_type])
 
-      if defined? @integration_customer
-        return @integration_customer if @integration_customer&.type == type
-      end
+      return @integration_customer if defined?(@integration_customer) && @integration_customer&.type == type
 
       @integration_customer = IntegrationCustomers::BaseCustomer.find_by(integration:, customer:)
     end
