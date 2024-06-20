@@ -86,7 +86,7 @@
         .invoice-resume.overflow-auto
           table.invoice-resume-table width="100%"
             tr
-              - pay_in_advance_interval = charge_pay_in_advance_interval(invoice_subscription(subscription.id).timestamp, subscription)
+              - pay_in_advance_interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(invoice_subscription(subscription.id).timestamp, subscription)
               td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(pay_in_advance_interval[:charges_from_date], format: :default), to_date: I18n.l(pay_in_advance_interval[:charges_to_date], format: :default))
               td.body-2 = I18n.t('invoice.unit')
               td.body-2 = I18n.t('invoice.tax_rate')

@@ -19,6 +19,23 @@ module Subscriptions
       klass.new(subscription, billing_at, current_usage)
     end
 
+    # Note: For context, the notion of `(from|to)_datetime` vs `charges_(from|to)_datetime` was introduced BEFORE
+    #       pay in advance charges were introduced. Pay in Advance charges should mostly use `(from|to)_datetime` range.
+    #       The boundaries might need a third range, like `in_advance_charges_(from|to)_datetime` for instance.
+    #       Ideally, we should also store the dates on EACH FEE.
+    def self.charge_pay_in_advance_interval(timestamp, subscription)
+      date_service = new_instance(
+        subscription,
+        Time.zone.at(timestamp) + 1.day,
+        current_usage: true
+      )
+
+      {
+        charges_from_date: date_service.charges_from_datetime&.to_date,
+        charges_to_date: date_service.charges_to_datetime&.to_date
+      }
+    end
+
     def initialize(subscription, billing_at, current_usage)
       @subscription = subscription
 
