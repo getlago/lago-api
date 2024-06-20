@@ -54,6 +54,7 @@ module IntegrationCustomers
     def remove_integration_customer?
       !new_customer &&
         integration_customer &&
+        integration_customer.external_customer_id &&
         integration_customer_params[:external_customer_id].blank?
     end
 
@@ -63,19 +64,25 @@ module IntegrationCustomers
     end
 
     def integration
-      return @integration if defined? @integration
+      type = Integrations::BaseIntegration.integration_type(integration_customer_params[:integration_type])
+
+      return @integration if defined?(@integration) && @integration&.type == type
+
       return nil unless integration_customer_params &&
         integration_customer_params[:integration_type] &&
         integration_customer_params[:integration_code]
 
-      type = Integrations::BaseIntegration.integration_type(integration_customer_params[:integration_type])
       code = integration_customer_params[:integration_code]
 
       @integration = Integrations::BaseIntegration.find_by(type:, code:)
     end
 
     def integration_customer
-      @integration_customer ||= IntegrationCustomers::BaseCustomer.find_by(integration:, customer:)
+      type = IntegrationCustomers::BaseCustomer.customer_type(integration_customer_params[:integration_type])
+
+      return @integration_customer if defined?(@integration_customer) && @integration_customer&.type == type
+
+      @integration_customer = IntegrationCustomers::BaseCustomer.find_by(integration:, customer:)
     end
   end
 end

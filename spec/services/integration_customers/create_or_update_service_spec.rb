@@ -108,6 +108,42 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
         end
       end
 
+      context 'when adding one new integration customer' do
+        let(:integration_anrok) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
+        let(:new_customer) { false }
+
+        let(:integration_customers) do
+          [
+            {
+              integration_type: 'netsuite',
+              integration_code:,
+              sync_with_provider:,
+              external_customer_id:,
+              subsidiary_id:
+            },
+            {
+              integration_type: 'anrok',
+              integration_code: integration_anrok.code,
+              sync_with_provider: true,
+              external_customer_id: nil
+            }
+          ]
+        end
+
+        before do
+          integration_anrok
+
+          IntegrationCustomers::BaseCustomer.destroy_all
+
+          integration_customer
+        end
+
+        it 'calls create job' do
+          expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob).exactly(:once)
+        end
+      end
+
       context 'with updating mode' do
         let(:new_customer) { false }
 
