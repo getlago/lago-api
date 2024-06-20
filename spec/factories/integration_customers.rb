@@ -13,7 +13,7 @@ FactoryBot.define do
   end
 
   factory :anrok_customer, class: 'IntegrationCustomers::AnrokCustomer' do
-    association :integration, factory: :netsuite_integration
+    association :integration, factory: :anrok_integration
     customer
     type { 'IntegrationCustomers::AnrokCustomer' }
     external_customer_id { SecureRandom.uuid }

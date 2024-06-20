@@ -60,44 +60,6 @@ module Integrations
         )
       end
 
-      def tax_item
-        @tax_item ||= collection_mapping(:tax) || fallback_item
-      end
-
-      def commitment_item
-        @commitment_item ||= collection_mapping(:minimum_commitment) || fallback_item
-      end
-
-      def subscription_item
-        @subscription_item ||= collection_mapping(:subscription_fee) || fallback_item
-      end
-
-      def coupon_item
-        @coupon_item ||= collection_mapping(:coupon) || fallback_item
-      end
-
-      def credit_item
-        @credit_item ||= collection_mapping(:prepaid_credit) || fallback_item
-      end
-
-      def credit_note_item
-        @credit_note_item ||= collection_mapping(:credit_note) || fallback_item
-      end
-
-      def fallback_item
-        @fallback_item ||= collection_mapping(:fallback_item)
-      end
-
-      def amount(amount_cents, resource:)
-        currency = resource.total_amount.currency
-
-        amount_cents.round.fdiv(currency.subunit_to_unit)
-      end
-
-      def collection_mapping(type)
-        integration.integration_collection_mappings.where(mapping_type: type)&.first
-      end
-
       def secret_key
         ENV['NANGO_SECRET_KEY']
       end
