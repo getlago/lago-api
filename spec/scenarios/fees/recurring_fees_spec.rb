@@ -97,8 +97,8 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               expect(a_request(:post, "http://fees.test/wh").with(
                 body: hash_including(webhook_type: 'fee.created', fee: hash_including({
                   'units' => '7.0',
-                  'from_date' => "2024-07-01T00:00:00+00:00",
-                  'to_date' => "2024-07-31T23:59:59+00:00"
+                  'from_date' => "2024-08-01T00:00:00+00:00",
+                  'to_date' => "2024-08-31T23:59:59+00:00"
                 }))
               )).to have_been_made.once
 
@@ -154,8 +154,8 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
                 body: hash_including(webhook_type: 'fee.created', fee: hash_including({
                   'lago_invoice_id' => nil,
                   'units' => '1.0',
-                  'from_date' => "2024-07-01T00:00:00+00:00",
-                  'to_date' => "2024-07-31T23:59:59+00:00"
+                  'from_date' => "2024-08-01T00:00:00+00:00",
+                  'to_date' => "2024-08-31T23:59:59+00:00"
                 }))
               )).to have_been_made.times(7)
 
@@ -212,8 +212,8 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               body: hash_including(webhook_type: 'fee.created', fee: hash_including({
                 'lago_invoice_id' => nil,
                 'units' => '1.0',
-                'from_date' => "2024-06-05T12:12:00+00:00",
-                'to_date' => "2024-06-30T23:59:59+00:00"
+                'from_date' => "2024-07-01T00:00:00+00:00",
+                'to_date' => "2024-07-31T23:59:59+00:00"
               }))
             )).to have_been_made.times(2)
 
