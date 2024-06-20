@@ -220,19 +220,6 @@ class Invoice < ApplicationRecord
     }
   end
 
-  def charge_pay_in_advance_interval(timestamp, subscription)
-    date_service = Subscriptions::DatesService.new_instance(
-      subscription,
-      Time.zone.at(timestamp) + 1.day,
-      current_usage: true
-    )
-
-    {
-      charges_from_date: date_service.charges_from_datetime&.to_date,
-      charges_to_date: date_service.charges_to_datetime&.to_date
-    }
-  end
-
   def creditable_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft?
 

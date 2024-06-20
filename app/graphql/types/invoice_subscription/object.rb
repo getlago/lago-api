@@ -46,7 +46,7 @@ module Types
 
       def charge_pay_in_advance_interval
         @charge_pay_in_advance_interval ||=
-          object.invoice.charge_pay_in_advance_interval(object.timestamp, object.subscription)
+          ::Subscriptions::DatesService.charge_pay_in_advance_interval(object.timestamp, object.subscription)
       end
     end
   end
