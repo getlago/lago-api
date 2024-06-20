@@ -6,7 +6,7 @@ ActiveJob::Uniqueness.configure do |config|
   if ENV['REDIS_PASSWORD'].present? && !ENV['REDIS_PASSWORD'].empty?
     uri = URI(ENV['REDIS_URL'])
     host = [uri.host, uri.path].join('')
-    
+
     if uri.query.present?
       host = [host, uri.query].join('?')
     end
