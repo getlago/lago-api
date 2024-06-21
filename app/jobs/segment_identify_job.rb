@@ -26,6 +26,6 @@ class SegmentIdentifyJob < ApplicationJob
   end
 
   def version
-    Utils::VersionService.new.version.version.number
+    Utils::VersionService.call.version.number
   end
 end

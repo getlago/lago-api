@@ -20,6 +20,6 @@ class SegmentTrackJob < ApplicationJob
   end
 
   def version
-    {version: Utils::VersionService.new.version.version.number}
+    {version: Utils::VersionService.call.version.number}
   end
 end

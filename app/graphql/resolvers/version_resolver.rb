@@ -7,7 +7,7 @@ module Resolvers
     type Types::Utils::CurrentVersion, null: false
 
     def resolve
-      result = Utils::VersionService.new.version
+      result = Utils::VersionService.call
       result.version
     end
   end
