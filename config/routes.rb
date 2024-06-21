@@ -18,6 +18,7 @@ Rails.application.routes.draw do
         get :invoiced_usage, to: 'invoiced_usages#index', as: :invoiced_usage
         get :invoice_collection, to: 'invoice_collections#index', as: :invoice_collection
         get :mrr, to: 'mrrs#index', as: :mrr
+        get :overdue_balance, to: 'overdue_balances#index', as: :overdue_balance
       end
 
       resources :customers, param: :external_id, only: %i[create index show destroy] do
