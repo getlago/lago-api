@@ -167,6 +167,7 @@ module Invoices
         )
         .find_each do |charge|
         next if should_not_create_charge_fee?(charge, subscription)
+        next if subscription.previous_subscription&.terminated_at&.today?
 
         fee_result = Fees::ChargeService.new(invoice: nil, charge:, subscription:, boundaries:, currency: invoice.total_amount.currency).create
         fee_result.raise_if_error!
