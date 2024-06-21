@@ -48,6 +48,7 @@ module Types
     field :memberships, resolver: Resolvers::MembershipsResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
     field :organization, resolver: Resolvers::OrganizationResolver
+    field :overdue_balances, resolver: Resolvers::Analytics::OverdueBalancesResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :payment_provider, resolver: Resolvers::PaymentProviderResolver
     field :payment_providers, resolver: Resolvers::PaymentProvidersResolver

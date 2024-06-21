@@ -5028,6 +5028,18 @@ input OrganizationBillingConfigurationInput {
   invoiceGracePeriod: Int
 }
 
+type OverdueBalance {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
+  lagoInvoiceIds: [String!]!
+  month: ISO8601DateTime!
+}
+
+type OverdueBalanceCollection {
+  collection: [OverdueBalance!]!
+  metadata: CollectionMetadata!
+}
+
 union PaymentProvider = AdyenProvider | GocardlessProvider | StripeProvider
 
 type PaymentProviderCollection {
@@ -5537,6 +5549,11 @@ type Query {
   Query the current organization
   """
   organization: CurrentOrganization
+
+  """
+  Query overdue balances of an organization
+  """
+  overdueBalances(currency: CurrencyEnum, externalCustomerId: String, months: Int): OverdueBalanceCollection!
 
   """
   Query a password reset by token
