@@ -20,7 +20,15 @@ module Integrations
           return result unless invoice.finalized?
 
           response = http_client.post_with_response(payload, headers)
-          result.external_id = JSON.parse(response.body)
+          body = JSON.parse(response.body)
+
+          if body.is_a?(Hash)
+            process_hash_result(body)
+          else
+            process_string_result(body)
+          end
+
+          return result unless result.external_id
 
           IntegrationResource.create!(
             integration:,
@@ -38,7 +46,7 @@ module Integrations
 
           deliver_error_webhook(customer:, code:, message:)
 
-          raise e
+          raise e if e.error_code.to_i >= 500
         end
 
         def call_async
@@ -56,37 +64,25 @@ module Integrations
 
         delegate :customer, :invoice, to: :payment, allow_nil: true
 
-        def integration_invoice
-          invoice.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').first
+        def payload
+          Integrations::Aggregator::Payments::Payloads::Factory.new_instance(integration:, payment:).body
         end
 
-        def payload
-          # TODO: Refactor with Xero payments
-          base_payload = Integrations::Aggregator::BasePayload.new(integration: integration_customer.integration)
+        def process_hash_result(body)
+          external_id = body['succeededPayment']&.first.try(:[], 'id')
 
-          {
-            'type' => 'customerpayment',
-            'isDynamic' => true,
-            'columns' => {
-              'customer' => integration_customer.external_customer_id
-            },
-            'lines' => [
-              {
-                'sublistId' => 'apply',
-                'lineItems' => [
-                  {
-                    # If the invoice is not synced yet, lets raise an error and retry. (doc: nil is an invalid request)
-                    'doc' => integration_invoice&.external_id,
-                    'apply' => true,
-                    'amount' => base_payload.amount(payment.amount_cents, resource: invoice)
-                  }
-                ]
-              }
-            ],
-            'options' => {
-              'ignoreMandatoryFields' => false
-            }
-          }
+          if external_id
+            result.external_id = external_id
+          else
+            message = body['failedPayments'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
+            code = 'Validation error'
+
+            deliver_error_webhook(customer:, code:, message:)
+          end
+        end
+
+        def process_string_result(body)
+          result.external_id = body
         end
       end
     end

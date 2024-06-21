@@ -19,6 +19,10 @@ module Integrations
           .find_by(mappable_type: 'AddOn', mappable_id: fee.add_on_id) || fallback_item
       end
 
+      def account_item
+        @account_item ||= collection_mapping(:account) || fallback_item
+      end
+
       def tax_item
         @tax_item ||= collection_mapping(:tax) || fallback_item
       end
