@@ -7,6 +7,7 @@ LIVENESS_PORT = 8080
 redis_config = {
   url: ENV['REDIS_URL'],
   pool_timeout: 5,
+  timeout: 5,
   ssl_params: {
     verify_mode: OpenSSL::SSL::VERIFY_NONE
   }
