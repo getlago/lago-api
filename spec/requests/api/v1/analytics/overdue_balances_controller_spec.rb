@@ -23,13 +23,13 @@ RSpec.describe Api::V1::Analytics::OverdueBalancesController, type: :request do
               month: "2023-11-01T00:00:00.000Z",
               amount_cents: "1000.0",
               currency: "EUR",
-              invoice_ids: [i1.id]
+              lago_invoice_ids: [i1.id]
             },
             {
               month: "2024-01-01T00:00:00.000Z",
               amount_cents: "5000.0",
               currency: "EUR",
-              invoice_ids: match_array([i2.id, i3.id])
+              lago_invoice_ids: match_array([i2.id, i3.id])
             }
           ]
         )
