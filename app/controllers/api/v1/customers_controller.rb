@@ -112,6 +112,7 @@ module Api
           :net_payment_term,
           :external_salesforce_id,
           integration_customers: [
+            :id,
             :external_customer_id,
             :integration_type,
             :integration_code,

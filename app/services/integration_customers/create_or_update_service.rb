@@ -11,18 +11,15 @@ module IntegrationCustomers
     end
 
     def call
-      return unless integration_customers
+      return if integration_customers.nil?
+
+      sanitize_integration_customers
 
       integration_customers.each do |int_customer_params|
         @integration_customer_params = int_customer_params
 
         next unless integration
         next if skip_creating_integration_customer?
-
-        if remove_integration_customer?
-          integration_customer.destroy!
-          next
-        end
 
         if create_integration_customer?
           IntegrationCustomers::CreateJob.perform_later(integration_customer_params:, integration:, customer:)
@@ -51,16 +48,17 @@ module IntegrationCustomers
       !new_customer && integration_customer
     end
 
-    def remove_integration_customer?
-      !new_customer &&
-        integration_customer &&
-        integration_customer.external_customer_id &&
-        integration_customer_params[:external_customer_id].blank?
+    def sanitize_integration_customers
+      updated_int_customers = integration_customers.reject { |m| m[:id].nil? }.map { |m| m[:id] }
+      not_needed_ids = customer.integration_customers.pluck(:id) - updated_int_customers
+
+      customer.integration_customers.where(id: not_needed_ids).destroy_all
     end
 
     def skip_creating_integration_customer?
       integration_customer.nil? &&
-        integration_customer_params.blank?
+        integration_customer_params[:sync_with_provider].blank? &&
+        integration_customer_params[:external_customer_id].blank?
     end
 
     def integration
