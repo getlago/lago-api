@@ -4,7 +4,7 @@ module Integrations
   module Aggregator
     class SyncService < BaseService
       def action_path
-        'sync/start'
+        'sync/trigger'
       end
 
       def call

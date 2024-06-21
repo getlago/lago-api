@@ -9,7 +9,7 @@ RSpec.describe Integrations::Aggregator::SyncService do
 
   describe '.call' do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:sync_endpoint) { 'https://api.nango.dev/sync/start' }
+    let(:sync_endpoint) { 'https://api.nango.dev/sync/trigger' }
     let(:syncs_list) do
       %w[
         netsuite-accounts-sync
