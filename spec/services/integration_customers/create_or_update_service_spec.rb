@@ -55,7 +55,7 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
 
     context 'when removing integration customer' do
       let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
-      let(:integration_customers) {[]}
+      let(:integration_customers) { [] }
       let(:new_customer) { false }
 
       before do
