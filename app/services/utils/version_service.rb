@@ -5,7 +5,7 @@ module Utils
     VERSION_FILE = Rails.root.join('LAGO_VERSION')
     GITHUB_BASE_URL = 'https://github.com/getlago/lago-api'
 
-    def version
+    def call
       result.version = OpenStruct.new(
         number: version_number,
         github_url:

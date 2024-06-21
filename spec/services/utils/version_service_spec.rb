@@ -13,7 +13,7 @@ RSpec.describe Utils::VersionService, type: :service do
         allow(File).to receive(:read)
           .and_return(version)
 
-        result = version_service.version
+        result = version_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -34,7 +34,7 @@ RSpec.describe Utils::VersionService, type: :service do
         allow(File).to receive(:ctime)
           .and_return(release_date)
 
-        result = version_service.version
+        result = version_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -50,7 +50,7 @@ RSpec.describe Utils::VersionService, type: :service do
         allow(File).to receive(:read)
           .and_raise(Errno::ENOENT)
 
-        result = version_service.version
+        result = version_service.call
 
         aggregate_failures do
           expect(result).to be_success

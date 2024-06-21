@@ -9,13 +9,13 @@ class ApplicationController < ActionController::API
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
 
   def health
-    result = Utils::VersionService.new.version
+    result = Utils::VersionService.call.version
     begin
       ActiveRecord::Base.connection.execute('')
       render(
         json: {
-          version: result.version.number,
-          github_url: result.version.github_url,
+          version: result.number,
+          github_url: result.github_url,
           message: 'Success'
         },
         status: :ok
@@ -23,8 +23,8 @@ class ApplicationController < ActionController::API
     rescue ActiveRecord::ActiveRecordError => e
       render(
         json: {
-          version: result.version.number,
-          github_url: result.version.github_url,
+          version: result.number,
+          github_url: result.github_url,
           message: 'Unhealthy',
           details: e.message
         },
