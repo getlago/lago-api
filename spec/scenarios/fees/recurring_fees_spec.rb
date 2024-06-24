@@ -106,8 +106,6 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               expect(recurring_fee.units).to eq 7
               expect(recurring_fee.invoice_id).to be_nil
               expect(recurring_fee.amount_cents).to eq(30 * 7 * 100)
-
-              pp recurring_fee
             end
 
             # Test termination of subscription
