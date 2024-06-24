@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class InvoicesQuery < BaseQuery
-  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil, payment_overdue: nil, customer_external_id: nil) # rubocop:disable Metrics/ParameterLists
+  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil, payment_overdue: nil) # rubocop:disable Metrics/ParameterLists
     @search_term = search_term
     @customer_id = customer_id
     @filters = filters
@@ -9,7 +9,7 @@ class InvoicesQuery < BaseQuery
     invoices = base_scope.result.includes(:customer)
     invoices = invoices.where(id: filters[:ids]) if filters[:ids].present?
     invoices = invoices.where(currency: filters[:currency]) if filters[:currency]
-    invoices = with_customer_external_id(invoices, customer_external_id) if customer_external_id
+    invoices = with_customer_external_id(invoices) if filters[:customer_external_id]
     invoices = invoices.where(customer_id:) if customer_id.present?
     invoices = invoices.where(invoice_type: filters[:invoice_type]) if filters[:invoice_type]
     invoices = with_issuing_date_range(invoices) if filters[:issuing_date_from] || filters[:issuing_date_to]
@@ -51,8 +51,8 @@ class InvoicesQuery < BaseQuery
     )
   end
 
-  def with_customer_external_id(scope, external_id)
-    scope.joins(:customer).where(customer: { external_id: })
+  def with_customer_external_id(scope)
+    scope.joins(:customer).where(customer: { external_id: filters[:customer_external_id] })
   end
 
   def with_issuing_date_range(scope)

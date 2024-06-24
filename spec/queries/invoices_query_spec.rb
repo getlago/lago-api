@@ -264,7 +264,9 @@ RSpec.describe InvoicesQuery, type: :query do
       result = invoice_query.call(
         search_term: nil,
         status: nil,
-        customer_external_id: customer_second.external_id,
+        filters: {
+          customer_external_id: customer_second.external_id
+        },
         page: 1,
         limit: 10
       )
