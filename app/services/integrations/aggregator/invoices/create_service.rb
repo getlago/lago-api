@@ -41,6 +41,8 @@ module Integrations
           deliver_error_webhook(customer:, code:, message:)
 
           raise e if e.error_code.to_i >= 500
+
+          result
         end
 
         def call_async
