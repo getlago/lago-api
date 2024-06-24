@@ -20,6 +20,6 @@ class SegmentTrackJob < ApplicationJob
   end
 
   def version
-    {version: Utils::VersionService.call.version.number}
+    {version: LAGO_VERSION.number}
   end
 end

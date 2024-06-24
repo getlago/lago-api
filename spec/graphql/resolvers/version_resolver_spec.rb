@@ -18,7 +18,7 @@ RSpec.describe Resolvers::VersionResolver, type: :graphql do
 
     aggregate_failures do
       expect(version_response['number']).to be_present
-      expect(version_response['githubUrl']).to start_with(Utils::VersionService::GITHUB_BASE_URL)
+      expect(version_response['githubUrl']).to start_with('https://github.com/getlago/lago-api')
     end
   end
 end
