@@ -55,6 +55,7 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:invoice_fifth) do
     create(
       :invoice,
+      :credit,
       organization:,
       status: 'draft',
       payment_status: 'pending',
@@ -211,6 +212,25 @@ RSpec.describe InvoicesQuery, type: :query do
       )
 
       expect(result.invoices.pluck(:id)).to eq([invoice_third.id])
+    end
+  end
+
+
+  context 'when filtering by credit invoice_type' do
+    it 'returns 1 invoice' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        invoice_type: 'credit',
+        page: 1,
+        limit: 10
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids).to eq [invoice_fifth.id]
+      end
     end
   end
 
