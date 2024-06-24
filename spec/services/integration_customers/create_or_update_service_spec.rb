@@ -55,9 +55,7 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
 
     context 'when removing integration customer' do
       let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
-      let(:integration_code) { integration.code }
-      let(:sync_with_provider) { true }
-      let(:external_customer_id) { nil }
+      let(:integration_customers) { [] }
       let(:new_customer) { false }
 
       before do
@@ -71,6 +69,81 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
 
         expect(IntegrationCustomers::BaseCustomer.count).to eq(0)
       end
+
+      context 'with existing integration customers that should be removed and updating ones' do
+        let(:integration_anrok) { create(:anrok_integration, organization:) }
+        let(:anrok_customer) { create(:anrok_customer, customer:, integration: integration_anrok) }
+        let(:integration_customers) do
+          [
+            {
+              id: anrok_customer.id,
+              integration_type: 'anrok',
+              integration_code: integration_anrok.code,
+              sync_with_provider: true,
+              external_customer_id: nil
+            }
+          ]
+        end
+
+        before { anrok_customer }
+
+        it 'calls update job' do
+          expect { service_call }.to have_enqueued_job(IntegrationCustomers::UpdateJob)
+        end
+
+        it 'removes netsuite integration customer' do
+          service_call
+
+          expect(IntegrationCustomers::BaseCustomer.count).to eq(1)
+        end
+      end
+
+      context 'with existing integration customers that should be removed and new ones' do
+        let(:integration_anrok) { create(:anrok_integration, organization:) }
+        let(:integration_customers) do
+          [
+            {
+              integration_type: 'anrok',
+              integration_code: integration_anrok.code,
+              sync_with_provider: true,
+              external_customer_id: nil
+            }
+          ]
+        end
+
+        it 'calls create job' do
+          expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob)
+        end
+
+        it 'removes netsuite integration customer' do
+          service_call
+
+          expect(IntegrationCustomers::BaseCustomer.count).to eq(0)
+        end
+      end
+    end
+
+    context 'when updating integration customer' do
+      let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
+      let(:integration_code) { integration.code }
+      let(:sync_with_provider) { true }
+      let(:external_customer_id) { '12345' }
+      let(:new_customer) { false }
+
+      before do
+        integration_customer
+        integration_customers.first[:id] = integration_customer.id
+      end
+
+      it 'calls update job' do
+        expect { service_call }.to have_enqueued_job(IntegrationCustomers::UpdateJob)
+      end
+
+      it 'does not remove any integration customers' do
+        service_call
+
+        expect(IntegrationCustomers::BaseCustomer.count).to eq(1)
+      end
     end
 
     context 'when creating integration customer' do
@@ -81,6 +154,14 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
 
       it 'calls create job' do
         expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob)
+      end
+
+      context 'when updating existing customer without integration customer' do
+        let(:new_customer) { false }
+
+        it 'calls create job' do
+          expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob)
+        end
       end
 
       context 'with multiple integration customers' do
@@ -116,6 +197,7 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
         let(:integration_customers) do
           [
             {
+              id: integration_customer.id,
               integration_type: 'netsuite',
               integration_code:,
               sync_with_provider:,
@@ -142,28 +224,6 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
         it 'calls create job' do
           expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob).exactly(:once)
         end
-      end
-
-      context 'with updating mode' do
-        let(:new_customer) { false }
-
-        it 'calls create job' do
-          expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob)
-        end
-      end
-    end
-
-    context 'when updating integration customer' do
-      let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
-      let(:integration_code) { integration.code }
-      let(:sync_with_provider) { true }
-      let(:external_customer_id) { '12345' }
-      let(:new_customer) { false }
-
-      before { integration_customer }
-
-      it 'calls update job' do
-        expect { service_call }.to have_enqueued_job(IntegrationCustomers::UpdateJob)
       end
     end
   end
