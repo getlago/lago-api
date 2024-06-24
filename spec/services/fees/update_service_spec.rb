@@ -37,9 +37,8 @@ RSpec.describe Fees::UpdateService, type: :service do
       end
     end
 
-    context 'when fee charge is invoiceable' do
-      let(:charge) { create(:standard_charge, invoiceable: true) }
-      let(:fee) { create(:charge_fee, fee_type: 'charge', pay_in_advance: true, invoice: nil, charge:) }
+    context 'when fee is part of an invoice' do
+      let(:fee) { create(:charge_fee, fee_type: 'charge', invoice: create(:invoice)) }
 
       it 'returns a not allowed failure' do
         result = update_service.call
@@ -47,7 +46,7 @@ RSpec.describe Fees::UpdateService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq('invoiceable_fee')
+          expect(result.error.code).to eq('invoiced_fee')
         end
       end
     end
