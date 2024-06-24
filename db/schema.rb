@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_06_11_074215) do
+ActiveRecord::Schema[7.0].define(version: 2024_06_24_093019) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -419,6 +419,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_11_074215) do
     t.string "payment_provider_code"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["external_id"], name: "index_customers_on_external_id"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
     t.check_constraint "invoice_grace_period >= 0", name: "check_customers_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_customers_on_net_payment_term"

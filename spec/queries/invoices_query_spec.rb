@@ -253,6 +253,27 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
+  context 'when filtering by customer_external_id' do
+    it 'returns 2 invoices' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        customer_external_id: customer_second.external_id,
+        page: 1,
+        limit: 10
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids).to contain_exactly(
+          invoice_second.id,
+          invoice_fourth.id
+        )
+      end
+    end
+  end
+
   context 'when searching for a part of an invoice id' do
     it 'returns 1 invoices' do
       result = invoice_query.call(
