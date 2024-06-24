@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::RegroupFeesService, type: :service do
+RSpec.describe Invoices::AdvanceChargesService, type: :service do
   subject(:invoice_service) { described_class.new(subscriptions:, billing_at:) }
 
   let(:organization) { create(:organization) }
