@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_06_24_093019) do
+ActiveRecord::Schema[7.0].define(version: 2024_06_24_115536) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -708,12 +708,18 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_24_093019) do
     t.datetime "payment_dispute_lost_at"
     t.boolean "skip_charges", default: false, null: false
     t.boolean "payment_overdue", default: false
+    t.index ["currency"], name: "index_invoices_on_currency"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
+    t.index ["invoice_type"], name: "index_invoices_on_invoice_type"
+    t.index ["issuing_date"], name: "index_invoices_on_issuing_date"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
+    t.index ["payment_dispute_lost_at"], name: "index_invoices_on_payment_dispute_lost_at"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
+    t.index ["payment_status"], name: "index_invoices_on_payment_status"
+    t.index ["status"], name: "index_invoices_on_status"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
