@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-describe 'Grouped In Advance Charges Invoices Scenarios', :scenarios, type: :request do
+describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax_rate) { 20 }
@@ -44,7 +44,7 @@ describe 'Grouped In Advance Charges Invoices Scenarios', :scenarios, type: :req
       (1..5).each do |i|
         travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
           send_card_event! "card_#{i}"
-          expect(subscription.fees.charge.count).to eq(i)
+          expect(subscription.fees.charge.where(invoice_id: nil).count).to eq(i)
           expect(subscription.fees.charge.order(created_at: :desc).first.amount_cents).to eq((21 - i) * 100)
         end
       end
@@ -54,15 +54,28 @@ describe 'Grouped In Advance Charges Invoices Scenarios', :scenarios, type: :req
 
       travel_to(DateTime.new(2024, 7, 1, 0, 10)) do
         perform_billing
-        expect(customer.invoices.count).to eq(4)
-        expect(subscription.fees.charge.where(invoice_id: nil, created_at: ..Time.current.beginning_of_month).count).to eq 0
+        expect(customer.invoices.count).to eq(3)
+        # The 2 pending fees are not attached to the invoice
+        expect(subscription.fees.charge.where(invoice_id: nil, created_at: ..Time.current.beginning_of_month).count).to eq 2
         expect(subscription.fees.charge.where(invoice_id: nil, created_at: Time.current.beginning_of_month..).count).to eq 1 # recurring fee
 
-        paid = customer.invoices.where(invoice_type: :advance_charges, payment_status: :succeeded).sole
-        expect(paid.fees_amount_cents).to eq((20 + 19 + 18) * 100)
+        advance_charges_invoice = customer.invoices.where(invoice_type: :advance_charges).sole
+        expect(advance_charges_invoice.fees_amount_cents).to eq((20 + 19 + 18) * 100)
+      end
 
-        unpaid = customer.invoices.where(invoice_type: :advance_charges, payment_status: :pending).sole
-        expect(unpaid.fees_amount_cents).to eq((17 + 16) * 100)
+      travel_to(DateTime.new(2024, 7, 10, 10)) do
+        # Mark fees created in June + recurring fee for July as payment succeeded
+        Fee.where(invoice_id: nil).update(payment_status: :succeeded)
+      end
+
+      travel_to(DateTime.new(2024, 8, 1, 0, 10)) do
+        perform_billing
+        expect(customer.invoices.count).to eq(5)
+
+        advance_charges_invoice = customer.invoices.where(invoice_type: :advance_charges).order(created_at: :desc).first
+        expect(advance_charges_invoice.fees.count).to eq 3
+        expect(advance_charges_invoice.fees.charge.where(created_at: ..DateTime.new(2024, 7, 1)).count).to eq 2
+        expect(advance_charges_invoice.fees_amount_cents).to eq(((5 * 30) + 17 + 16) * 100)
       end
     end
   end
