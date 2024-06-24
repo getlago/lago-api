@@ -224,7 +224,9 @@ RSpec.describe InvoicesQuery, type: :query do
       result = invoice_query.call(
         search_term: nil,
         status: nil,
-        invoice_type: 'credit',
+        filters: {
+          invoice_type: 'credit'
+        },
         page: 1,
         limit: 10
       )

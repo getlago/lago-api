@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class InvoicesQuery < BaseQuery
-  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil, payment_overdue: nil, invoice_type: nil, currency: nil, customer_external_id: nil) # rubocop:disable Metrics/ParameterLists
+  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil, payment_overdue: nil, currency: nil, customer_external_id: nil) # rubocop:disable Metrics/ParameterLists
     @search_term = search_term
     @customer_id = customer_id
     @filters = filters
@@ -11,7 +11,7 @@ class InvoicesQuery < BaseQuery
     invoices = invoices.where(currency:) if currency.present?
     invoices = with_customer_external_id(invoices, customer_external_id) if customer_external_id
     invoices = invoices.where(customer_id:) if customer_id.present?
-    invoices = invoices.where(invoice_type:) if invoice_type.present?
+    invoices = invoices.where(invoice_type: filters[:invoice_type]) if filters[:invoice_type]
     invoices = with_issuing_date_range(invoices) if filters[:issuing_date_from] || filters[:issuing_date_to]
     invoices = invoices.where(status:) if status.present?
     invoices = invoices.where(payment_status:) if payment_status.present?
