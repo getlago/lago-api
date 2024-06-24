@@ -262,7 +262,7 @@ RSpec.describe InvoicesQuery, type: :query do
         search_term: nil,
         status: nil,
         filters: {
-          issuing_date_from: (2.days.ago).iso8601
+          issuing_date_from: 2.days.ago.iso8601
         },
         page: 1,
         limit: 10
@@ -305,9 +305,9 @@ RSpec.describe InvoicesQuery, type: :query do
       result = invoice_query.call(
         search_term: nil,
         status: nil,
-          filters: {
-            issuing_date_to: (2.weeks.ago).iso8601
-          },
+        filters: {
+          issuing_date_to: 2.weeks.ago.iso8601
+        },
         page: 1,
         limit: 10
       )
@@ -349,8 +349,8 @@ RSpec.describe InvoicesQuery, type: :query do
         search_term: nil,
         status: nil,
         filters: {
-          issuing_date_from: (2.weeks.ago).iso8601,
-          issuing_date_to: (1.week.ago).iso8601
+          issuing_date_from: 2.weeks.ago.iso8601,
+          issuing_date_to: 1.week.ago.iso8601
         },
         page: 1,
         limit: 10
