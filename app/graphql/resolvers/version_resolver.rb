@@ -7,8 +7,7 @@ module Resolvers
     type Types::Utils::CurrentVersion, null: false
 
     def resolve
-      result = Utils::VersionService.call
-      result.version
+      LAGO_VERSION
     end
   end
 end

@@ -26,6 +26,6 @@ class SegmentIdentifyJob < ApplicationJob
   end
 
   def version
-    Utils::VersionService.call.version.number
+    LAGO_VERSION.number
   end
 end

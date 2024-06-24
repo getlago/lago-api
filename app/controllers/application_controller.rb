@@ -9,28 +9,25 @@ class ApplicationController < ActionController::API
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
 
   def health
-    result = Utils::VersionService.call.version
-    begin
-      ActiveRecord::Base.connection.execute('')
-      render(
-        json: {
-          version: result.number,
-          github_url: result.github_url,
-          message: 'Success'
-        },
-        status: :ok
-      )
-    rescue ActiveRecord::ActiveRecordError => e
-      render(
-        json: {
-          version: result.number,
-          github_url: result.github_url,
-          message: 'Unhealthy',
-          details: e.message
-        },
-        status: :internal_server_error
-      )
-    end
+    ActiveRecord::Base.connection.execute('')
+    render(
+      json: {
+        version: LAGO_VERSION.number,
+        github_url: LAGO_VERSION.github_url,
+        message: 'Success'
+      },
+      status: :ok
+    )
+  rescue ActiveRecord::ActiveRecordError => e
+    render(
+      json: {
+        version: LAGO_VERSION.number,
+        github_url: LAGO_VERSION.github_url,
+        message: 'Unhealthy',
+        details: e.message
+      },
+      status: :internal_server_error
+    )
   end
 
   def not_found

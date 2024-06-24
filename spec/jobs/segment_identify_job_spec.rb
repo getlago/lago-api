@@ -24,7 +24,7 @@ describe SegmentIdentifyJob, job: true do
           traits: {
             created_at: membership.created_at,
             hosting_type: 'self',
-            version: Utils::VersionService.call.version.number,
+            version: 'test',
             organization_name: membership.organization.name,
             email: membership.user.email
           }
