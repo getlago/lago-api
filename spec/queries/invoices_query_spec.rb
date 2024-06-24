@@ -244,7 +244,9 @@ RSpec.describe InvoicesQuery, type: :query do
       result = invoice_query.call(
         search_term: nil,
         status: nil,
-        currency: 'USD',
+        filters: {
+          currency: 'USD'
+        },
         page: 1,
         limit: 10
       )
