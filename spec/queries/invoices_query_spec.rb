@@ -109,32 +109,6 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when filtering by id' do
-    it 'returns only invoices specified' do
-      result = invoice_query.call(
-        search_term: nil,
-        status: nil,
-        payment_status: nil,
-        page: 1,
-        limit: 10,
-        filters: {
-          ids: [invoice_second.id, invoice_fifth.id]
-        }
-      )
-
-      returned_ids = result.invoices.pluck(:id)
-
-      aggregate_failures do
-        expect(result.invoices.count).to eq(2)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).to include(invoice_fifth.id)
-      end
-    end
-  end
-
   context 'when filtering by draft status' do
     it 'returns 2 invoices' do
       result = invoice_query.call(

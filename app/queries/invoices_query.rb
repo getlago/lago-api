@@ -7,7 +7,6 @@ class InvoicesQuery < BaseQuery
     @filters = filters
 
     invoices = base_scope.result.includes(:customer)
-    invoices = invoices.where(id: filters[:ids]) if filters[:ids].present?
     invoices = invoices.where(currency: filters[:currency]) if filters[:currency]
     invoices = with_customer_external_id(invoices) if filters[:customer_external_id]
     invoices = invoices.where(customer_id:) if customer_id.present?
