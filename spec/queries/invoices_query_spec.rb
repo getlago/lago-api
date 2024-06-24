@@ -18,7 +18,8 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'finalized',
       payment_status: 'succeeded',
       customer: customer_first,
-      number: '1111111111'
+      number: '1111111111',
+      issuing_date: 1.week.ago
     )
   end
   let(:invoice_second) do
@@ -28,7 +29,8 @@ RSpec.describe InvoicesQuery, type: :query do
       status: 'finalized',
       payment_status: 'pending',
       customer: customer_second,
-      number: '2222222222'
+      number: '2222222222',
+      issuing_date: 2.weeks.ago
     )
   end
   let(:invoice_third) do
@@ -39,7 +41,8 @@ RSpec.describe InvoicesQuery, type: :query do
       payment_status: 'failed',
       payment_overdue: true,
       customer: customer_first,
-      number: '3333333333'
+      number: '3333333333',
+      issuing_date: 3.weeks.ago
     )
   end
   let(:invoice_fourth) do
@@ -216,7 +219,6 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-
   context 'when filtering by credit invoice_type' do
     it 'returns 1 invoice' do
       result = invoice_query.call(
@@ -269,6 +271,117 @@ RSpec.describe InvoicesQuery, type: :query do
         expect(returned_ids).to contain_exactly(
           invoice_second.id,
           invoice_fourth.id
+        )
+      end
+    end
+  end
+
+  context 'when filtering by issuing_date_from' do
+    it 'returns 4 invoices' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        filters: {
+          issuing_date_from: (2.days.ago).iso8601
+        },
+        page: 1,
+        limit: 10
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids).to contain_exactly(
+          invoice_fourth.id,
+          invoice_fifth.id,
+          invoice_sixth.id
+        )
+      end
+    end
+
+    context 'with invalid date' do
+      it 'returns a failed result' do
+        result = invoice_query.call(
+          search_term: nil,
+          status: nil,
+          filters: {
+            issuing_date_from: 'invalid_date_value'
+          },
+          page: 1,
+          limit: 10
+        )
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:issuing_date_from]).to include('invalid_date')
+        end
+      end
+    end
+  end
+
+  context 'when filtering by issuing_date_to' do
+    it 'returns 2 invoices' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+          filters: {
+            issuing_date_to: (2.weeks.ago).iso8601
+          },
+        page: 1,
+        limit: 10
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids).to contain_exactly(
+          invoice_second.id,
+          invoice_third.id
+        )
+      end
+    end
+
+    context 'with invalid date' do
+      it 'returns a failed result' do
+        result = invoice_query.call(
+          search_term: nil,
+          status: nil,
+          filters: {
+            issuing_date_to: 'invalid_date_value'
+          },
+          page: 1,
+          limit: 10
+        )
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:issuing_date_to]).to include('invalid_date')
+        end
+      end
+    end
+  end
+
+  context 'when filtering by issuing_date from and to' do
+    it 'returns 2 invoices' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        filters: {
+          issuing_date_from: (2.weeks.ago).iso8601,
+          issuing_date_to: (1.week.ago).iso8601
+        },
+        page: 1,
+        limit: 10
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids).to contain_exactly(
+          invoice_first.id,
+          invoice_second.id
         )
       end
     end

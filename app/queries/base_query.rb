@@ -31,7 +31,7 @@ class BaseQuery < BaseService
     value = filters[field_name]
     return value if [Time, ActiveSupport::TimeWithZone, Date, DateTime].include?(value.class)
 
-    DateTime.strptime(filters[field_name])
+    DateTime.strptime(value)
   rescue Date::Error
     result.single_validation_failure!(field: field_name.to_sym, error_code: 'invalid_date')
       .raise_if_error!
