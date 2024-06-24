@@ -59,40 +59,28 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         aggregate_failures do
           expect(result).to be_success
 
-          expect(result.invoices.count).to eq(2)
+          expect(result.invoice.fees.count).to eq 3
 
-          paid_invoice = result.invoices.find { |i| i.payment_status == 'succeeded' }
-          pending_invoice = result.invoices.find { |i| i.payment_status == 'pending' }
+          expect(result.invoice.total_amount_cents).to eq(100 * 3 * (100 + tax_rate) / 100)
 
-          expect(paid_invoice.fees.count).to eq 3
-          expect(pending_invoice.fees.count).to eq 2
-
-          expect(paid_invoice.total_amount_cents).to eq(100 * 3 * (100 + tax_rate) / 100)
-
-          expect(result.invoices).to all(be_finalized).and(all(have_attributes({
+          expect(result.invoice).to be_finalized.and(have_attributes({
             invoice_type: 'advance_charges',
             currency: 'EUR',
             issuing_date: billing_at.to_date,
             skip_charges: true,
             taxes_rate: tax_rate
-          })))
+          }))
 
-          result.invoices.each do |i|
-            expect(i.invoice_subscriptions.count).to eq(1)
-            sub = i.invoice_subscriptions.first
-            expect(sub.charges_to_datetime).to match_datetime fee_boundaries[:charges_to_datetime]
-            expect(sub.charges_from_datetime).to match_datetime fee_boundaries[:charges_from_datetime]
-            expect(sub.invoicing_reason).to eq 'in_advance_charge_periodic'
+          expect(result.invoice.invoice_subscriptions.count).to eq(1)
+          sub = result.invoice.invoice_subscriptions.first
+          expect(sub.charges_to_datetime).to match_datetime fee_boundaries[:charges_to_datetime]
+          expect(sub.charges_from_datetime).to match_datetime fee_boundaries[:charges_from_datetime]
+          expect(sub.invoicing_reason).to eq 'in_advance_charge_periodic'
 
-            expect(SendWebhookJob).to have_been_enqueued.with('invoice.created', i)
-            expect(Invoices::GeneratePdfAndNotifyJob).to have_been_enqueued.with(invoice: i, email: false)
-            expect(SendWebhookJob).to have_been_enqueued.with('invoice.created', i)
-          end
-
-          expect(Invoices::Payments::CreateService).to have_received(:call).once
-          expect(SegmentTrackJob).to have_been_enqueued.twice
-
-          # TODO: Add expectations around webhook, PDF, sync, and segment track
+          expect(SendWebhookJob).to have_been_enqueued.with('invoice.created', result.invoice)
+          expect(Invoices::GeneratePdfAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
+          expect(SendWebhookJob).to have_been_enqueued.with('invoice.created', result.invoice)
+          expect(SegmentTrackJob).to have_been_enqueued.once
         end
       end
     end
@@ -102,7 +90,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         result = invoice_service.call
 
         expect(result).to be_success
-        expect(result.invoices).to be_empty
+        expect(result.invoice).to be_nil
       end
     end
 
@@ -112,17 +100,15 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         charge = create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
         create(:charge_fee, :succeeded, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
 
-        allow_any_instance_of(Invoice).to receive(:should_sync_invoice?).and_return(true)
-        allow_any_instance_of(Invoice).to receive(:should_sync_sales_order?).and_return(true)
+        allow_any_instance_of(Invoice).to receive(:should_sync_invoice?).and_return(true) # rubocop:disable RSpec/AnyInstance
+        allow_any_instance_of(Invoice).to receive(:should_sync_sales_order?).and_return(true) # rubocop:disable RSpec/AnyInstance
       end
 
       it 'creates invoices' do
         result = invoice_service.call
 
-        result.invoices.each do |i|
-          expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice: i)
-          expect(Integrations::Aggregator::SalesOrders::CreateJob).to have_been_enqueued.with(invoice: i)
-        end
+        expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
+        expect(Integrations::Aggregator::SalesOrders::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
       end
     end
   end
