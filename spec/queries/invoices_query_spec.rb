@@ -45,6 +45,7 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:invoice_fourth) do
     create(
       :invoice,
+      :usd,
       organization:,
       status: 'draft',
       payment_status: 'pending',
@@ -230,6 +231,24 @@ RSpec.describe InvoicesQuery, type: :query do
 
       aggregate_failures do
         expect(returned_ids).to eq [invoice_fifth.id]
+      end
+    end
+  end
+
+  context 'when filtering by USD currency' do
+    it 'returns 1 invoice' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        currency: 'USD',
+        page: 1,
+        limit: 10
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids).to eq [invoice_fourth.id]
       end
     end
   end

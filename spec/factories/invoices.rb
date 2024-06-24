@@ -12,6 +12,10 @@ FactoryBot.define do
 
     organization_sequential_id { rand(1_000_000) }
 
+    trait :usd do
+      currency { 'USD' }
+    end
+
     trait :draft do
       status { :draft }
     end

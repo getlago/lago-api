@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
 class InvoicesQuery < BaseQuery
-  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil, payment_overdue: nil, invoice_type: nil) # rubocop:disable Metrics/ParameterLists
+  def call(search_term:, status:, page:, limit:, filters: {}, customer_id: nil, payment_status: nil, payment_dispute_lost: nil, payment_overdue: nil, invoice_type: nil, currency: nil) # rubocop:disable Metrics/ParameterLists
     @search_term = search_term
     @customer_id = customer_id
 
     invoices = base_scope.result.includes(:customer)
     invoices = invoices.where(id: filters[:ids]) if filters[:ids].present?
+    invoices = invoices.where(currency:) if currency.present?
     invoices = invoices.where(customer_id:) if customer_id.present?
     invoices = invoices.where(invoice_type:) if invoice_type.present?
     invoices = invoices.where(status:) if status.present?
