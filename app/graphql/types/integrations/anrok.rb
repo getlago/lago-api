@@ -23,9 +23,9 @@ module Types
       end
 
       def external_account_id
-        return nil unless object.api_key&.include?('/')
+        return nil unless object.api_key.include?('/')
 
-        object.api_key&.split('/')[0]
+        object.api_key.split('/')[0]
       end
     end
   end
