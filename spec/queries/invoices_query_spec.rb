@@ -48,12 +48,12 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:invoice_fourth) do
     create(
       :invoice,
-      :usd,
       organization:,
       status: 'draft',
       payment_status: 'pending',
       customer: customer_second,
-      number: '4444444444'
+      number: '4444444444',
+      currency: 'USD'
     )
   end
   let(:invoice_fifth) do
