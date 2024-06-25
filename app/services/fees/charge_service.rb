@@ -2,13 +2,13 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:, currency: nil)
+    def initialize(invoice:, charge:, subscription:, boundaries:)
       @invoice = invoice
       @charge = charge
       @subscription = subscription
       @is_current_usage = false
       @boundaries = OpenStruct.new(boundaries)
-      @currency = currency || invoice.total_amount.currency
+      @currency = subscription.plan.amount.currency
 
       super(nil)
     end

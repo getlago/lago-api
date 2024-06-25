@@ -177,7 +177,7 @@ module Invoices
         .find_each do |charge|
         next if should_not_create_charge_fee?(charge, subscription)
 
-        fee_result = Fees::ChargeService.new(invoice: nil, charge:, subscription:, boundaries:, currency: invoice.total_amount.currency).create
+        fee_result = Fees::ChargeService.new(invoice: nil, charge:, subscription:, boundaries:).create
         fee_result.raise_if_error!
 
         result.non_invoiceable_fees.concat(fee_result.fees)
