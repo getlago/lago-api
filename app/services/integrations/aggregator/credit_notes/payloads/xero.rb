@@ -2,12 +2,9 @@
 
 module Integrations
   module Aggregator
-    module Invoices
+    module CreditNotes
       module Payloads
         class Xero < BasePayload
-          def initialize(integration_customer:, invoice:)
-            super(integration_customer:, invoice:)
-          end
         end
       end
     end
