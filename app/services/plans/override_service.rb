@@ -26,7 +26,7 @@ module Plans
 
         if params[:tax_codes]
           taxes_result = Plans::ApplyTaxesService.call(plan: new_plan, tax_codes: params[:tax_codes])
-          return taxes_result unless taxes_result.success?
+          taxes_result.raise_if_error!
         end
 
         plan.charges.includes(:group_properties).find_each do |charge|
@@ -41,7 +41,7 @@ module Plans
           minimum_commitment_params = params[:minimum_commitment].merge(plan_id: new_plan.id)
 
           commitment_override_result = Commitments::OverrideService.call(commitment:, params: minimum_commitment_params)
-          return commitment_override_result unless commitment_override_result.success?
+          commitment_override_result.raise_if_error!
         end
 
         result.plan = new_plan
@@ -52,6 +52,8 @@ module Plans
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

@@ -10,7 +10,7 @@ module Invoices
       end
     end
 
-    retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 6
+    retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 6
 
     def perform(invoice)
       result = Invoices::GeneratePdfService.call(invoice:, context: 'api')

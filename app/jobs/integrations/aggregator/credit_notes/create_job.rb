@@ -6,7 +6,7 @@ module Integrations
       class CreateJob < ApplicationJob
         queue_as 'integrations'
 
-        retry_on LagoHttpClient::HttpError, wait: :exponentially_longer, attempts: 3
+        retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 3
 
         def perform(credit_note:)
           result = Integrations::Aggregator::CreditNotes::CreateService.call(credit_note:)

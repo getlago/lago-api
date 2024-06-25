@@ -23,7 +23,7 @@ module Wallets
           customer: result.current_customer,
           currency: params[:currency]
         )
-        return currency_result unless currency_result.success?
+        currency_result.raise_if_error!
 
         wallet.currency = wallet.customer.currency
         wallet.save!
@@ -48,6 +48,8 @@ module Wallets
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

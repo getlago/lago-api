@@ -26,7 +26,7 @@ module BillableMetrics
             billable_metric: metric,
             group_params: args[:group].with_indifferent_access
           )
-          return group_result if group_result.error
+          group_result.raise_if_error!
         end
 
         if args[:filters].present?
@@ -42,6 +42,8 @@ module BillableMetrics
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

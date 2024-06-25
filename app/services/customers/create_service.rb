@@ -50,29 +50,27 @@ module Customers
             currency: params[:currency],
             customer_update: true
           )
-          return currency_result unless currency_result.success?
+          currency_result.raise_if_error!
         end
 
-        ActiveRecord::Base.transaction do
-          customer.save!
+        customer.save!
 
-          if customer.organization.eu_tax_management
-            eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
+        if customer.organization.eu_tax_management
+          eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
 
-            params[:tax_codes] ||= []
-            params[:tax_codes] = (params[:tax_codes] + [eu_tax_code]).uniq
-          end
+          params[:tax_codes] ||= []
+          params[:tax_codes] = (params[:tax_codes] + [eu_tax_code]).uniq
+        end
 
-          if params[:tax_codes].present?
-            taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: params[:tax_codes])
-            taxes_result.raise_if_error!
-          end
+        if params[:tax_codes].present?
+          taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: params[:tax_codes])
+          taxes_result.raise_if_error!
+        end
 
-          if new_customer && params[:metadata]
-            params[:metadata].each { |m| create_metadata(customer:, args: m) }
-          elsif params[:metadata]
-            Customers::Metadata::UpdateService.call(customer:, params: params[:metadata])
-          end
+        if new_customer && params[:metadata]
+          params[:metadata].each { |m| create_metadata(customer:, args: m) }
+        elsif params[:metadata]
+          Customers::Metadata::UpdateService.call(customer:, params: params[:metadata])
         end
       end
 

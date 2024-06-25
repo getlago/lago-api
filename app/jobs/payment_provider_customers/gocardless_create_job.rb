@@ -4,9 +4,9 @@ module PaymentProviderCustomers
   class GocardlessCreateJob < ApplicationJob
     queue_as :providers
 
-    retry_on GoCardlessPro::GoCardlessError, wait: :exponentially_longer, attempts: 6
-    retry_on GoCardlessPro::ApiError, wait: :exponentially_longer, attempts: 6
-    retry_on GoCardlessPro::RateLimitError, wait: :exponentially_longer, attempts: 6
+    retry_on GoCardlessPro::GoCardlessError, wait: :polynomially_longer, attempts: 6
+    retry_on GoCardlessPro::ApiError, wait: :polynomially_longer, attempts: 6
+    retry_on GoCardlessPro::RateLimitError, wait: :polynomially_longer, attempts: 6
     retry_on ActiveJob::DeserializationError
 
     def perform(gocardless_customer)
