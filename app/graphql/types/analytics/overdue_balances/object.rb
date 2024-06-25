@@ -10,6 +10,10 @@ module Types
         field :currency, Types::CurrencyEnum, null: false
         field :lago_invoice_ids, [String], null: false
         field :month, GraphQL::Types::ISO8601DateTime, null: false
+
+        def lago_invoice_ids
+          JSON.parse(object["lago_invoice_ids"]).flatten
+        end
       end
     end
   end
