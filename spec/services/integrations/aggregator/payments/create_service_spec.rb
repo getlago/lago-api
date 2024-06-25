@@ -198,6 +198,10 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
           expect { service_call }.not_to raise_error
         end
 
+        it 'returns result' do
+          expect(service_call).to be_a(BaseService::Result)
+        end
+
         it 'enqueues a SendWebhookJob' do
           expect { service_call }.to have_enqueued_job(SendWebhookJob)
         end
