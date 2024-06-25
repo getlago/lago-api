@@ -10,8 +10,7 @@ module Integrations
       def call
         payload = {
           provider_config_key: provider,
-          syncs: sync_list,
-          full_resync: true
+          syncs: sync_list
         }
 
         response = http_client.post_with_response(payload, headers)
