@@ -138,6 +138,7 @@ type AnrokCustomer {
 type AnrokIntegration {
   apiKey: String!
   code: String!
+  externalAccountId: String
   hasMappingsConfigured: Boolean
   id: ID!
   name: String!
