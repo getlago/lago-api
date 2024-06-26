@@ -8,6 +8,8 @@ module Fees
       @subscription = subscription
       @is_current_usage = false
       @boundaries = OpenStruct.new(boundaries)
+      @currency = subscription.plan.amount.currency
+
       super(nil)
     end
 
@@ -22,7 +24,7 @@ module Fees
         result.fees.each do |fee|
           fee.save!
 
-          next unless invoice.draft? && fee.true_up_parent_fee.nil? && adjusted_fee(
+          next unless invoice&.draft? && fee.true_up_parent_fee.nil? && adjusted_fee(
             charge_filter: fee.charge_filter,
             grouped_by: fee.grouped_by
           )
@@ -45,9 +47,8 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :is_current_usage
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :is_current_usage, :currency
 
-    delegate :customer, to: :invoice
     delegate :billable_metric, to: :charge
     delegate :plan, to: :subscription
 
@@ -77,7 +78,7 @@ module Fees
     def init_fee(amount_result, properties:, charge_filter:)
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
-      if invoice.draft? && (adjusted = adjusted_fee(
+      if invoice&.draft? && (adjusted = adjusted_fee(
         charge_filter:,
         grouped_by: amount_result.grouped_by
       )) && !adjusted.adjusted_display_name?
@@ -94,7 +95,6 @@ module Fees
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
       # to the currency decimals and transform it into currency cents
-      currency = invoice.total_amount.currency
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
@@ -128,6 +128,10 @@ module Fees
         grouped_by: amount_result.grouped_by || {},
         charge_filter_id: charge_filter&.id
       )
+
+      unless charge.invoiceable?
+        new_fee.pay_in_advance = charge.pay_in_advance?
+      end
 
       if (adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?
         new_fee.invoice_display_name = adjusted.invoice_display_name
@@ -189,7 +193,21 @@ module Fees
     end
 
     def already_billed?
-      existing_fees = invoice.fees.where(charge_id: charge.id, subscription_id: subscription.id)
+      existing_fees = if invoice
+        invoice.fees.where(charge_id: charge.id, subscription_id: subscription.id)
+      else
+        Fee.where(
+          charge_id: charge.id,
+          subscription_id: subscription.id,
+          invoice_id: nil,
+          pay_in_advance_event_id: nil
+        ).where(
+          "(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3)
+        ).where(
+          "(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)
+        )
+      end
+
       return false if existing_fees.blank?
 
       result.fees = existing_fees

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class FillCachedAggregations < ActiveRecord::Migration[7.0]
+  class Organization < ApplicationRecord; end
+
   class Subscription < ApplicationRecord; end
 
   class Event < ApplicationRecord; end

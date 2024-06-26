@@ -725,8 +725,8 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_25_090742) do
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
-    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
+    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 

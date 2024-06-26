@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 class AddCreditAmountToInvoices < ActiveRecord::Migration[7.0]
+  class WalletTransaction < ApplicationRecord
+    belongs_to :wallet
+  end
+
+  class Wallet < ApplicationRecord
+  end
+
   def up
     change_table :invoices, bulk: true do |t|
       t.bigint :credit_amount_cents, null: false, default: 0

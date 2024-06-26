@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 unless defined?(ENHANCED_TASKS)
-  ENHANCED_TASKS = %w[db:migrate db:migrate:primary db:rollback db:rollback:primary db:schema:dump:clickhouse].freeze
+  ENHANCED_TASKS = %w[db:migrate db:migrate:primary db:rollback db:rollback:primary db:schema:dump db:schema:dump:clickhouse].freeze
 
   ENHANCED_TASKS.each do |task|
     next unless Rake::Task.task_defined?(task)

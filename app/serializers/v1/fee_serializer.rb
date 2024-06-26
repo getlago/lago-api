@@ -65,6 +65,16 @@ module V1
         }
       end
 
+      if model.charge? && !model.charge.invoiceable? && model.pay_in_advance?
+        timestamp = Time.parse(model.properties['timestamp']).to_i
+        interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, model.subscription)
+
+        return {
+          from_date: interval[:charges_from_date]&.to_datetime&.iso8601,
+          to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601
+        }
+      end
+
       {
         from_date:,
         to_date:

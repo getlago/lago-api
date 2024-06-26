@@ -18,7 +18,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(customer:, currency:)
-        return currency_result unless currency_result.success?
+        currency_result.raise_if_error!
 
         create_generating_invoice
         create_one_off_fees(invoice)
@@ -41,6 +41,8 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue Sequenced::SequenceError
       raise
+    rescue BaseService::FailedResult => e
+      e.result
     rescue => e
       result.fail_with_error!(e)
     end

@@ -161,7 +161,55 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
 
-      context 'when charge is pay_in_arrear and not invoiceable' do
+      context 'when charge is pay_in_advance, not recurring and not invoiceable' do
+        let(:charge) do
+          create(
+            :standard_charge,
+            :pay_in_advance,
+            plan: subscription.plan,
+            charge_model: 'standard',
+            invoiceable: false
+          )
+        end
+
+        it 'does not create a charge fee' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(Fee.charge_kind.count).to eq(0)
+          end
+        end
+      end
+
+      context 'when charge is pay_in_advance, recurring and not invoiceable' do
+        let(:billable_metric) do
+          create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
+        end
+        let(:charge) do
+          create(
+            :standard_charge,
+            :pay_in_advance,
+            plan: subscription.plan,
+            charge_model: 'standard',
+            invoiceable: false,
+            billable_metric:
+          )
+        end
+
+        it 'creates a charge fee' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(Fee.charge_kind.where(invoice_id: nil).count).to eq(1)
+          end
+        end
+      end
+
+      context 'when charge is pay_in_arrears and not invoiceable' do
         let(:charge) do
           create(
             :standard_charge,
@@ -177,7 +225,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            expect(invoice.fees.charge_kind.count).to eq(0)
+            expect(Fee.charge_kind.count).to eq(0)
           end
         end
       end
@@ -187,7 +235,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:timestamp) { Time.zone.now.beginning_of_month }
       let(:started_at) { timestamp - 3.days }
 
-      context 'when plan has no minimum commitment' do
+      context 'when plan has no other requirements' do
         it 'creates subscription and charge fees' do
           result = invoice_service.call
 
@@ -223,6 +271,30 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(invoice.fees.subscription_kind.count).to eq(1)
             expect(invoice.fees.charge_kind.count).to eq(1)
             expect(invoice.fees.commitment_kind.count).to eq(1)
+          end
+        end
+      end
+
+      context 'when plan has non invoiceable, recurring, pay in advance charge' do
+        before do
+          create(
+            :standard_charge,
+            :pay_in_advance,
+            plan: subscription.plan,
+            charge_model: 'standard',
+            invoiceable: false,
+            billable_metric: create(:billable_metric, aggregation_type: 'unique_count_agg', recurring: true, field_name: 'item_id')
+          )
+        end
+
+        it 'creates subscription, charge and commitment fees' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(Fee.where(invoice_id: nil).count).to eq(1)
           end
         end
       end

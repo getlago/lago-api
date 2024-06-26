@@ -6464,6 +6464,11 @@ enum TimezoneEnum {
   TZ_AUSTRALIA_BRISBANE
 
   """
+  Australia/Canberra
+  """
+  TZ_AUSTRALIA_CANBERRA
+
+  """
   Australia/Darwin
   """
   TZ_AUSTRALIA_DARWIN

@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 class AddPrepaidCreditAmountCentsToInvoices < ActiveRecord::Migration[7.0]
+  class WalletTransaction < ApplicationRecord
+    belongs_to :wallet
+  end
+
+  class Wallet < ApplicationRecord
+  end
+
   def change
     add_column :invoices, :prepaid_credit_amount_cents, :bigint, null: false, default: 0
 

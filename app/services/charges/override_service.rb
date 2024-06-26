@@ -32,7 +32,7 @@ module Charges
             charge: new_charge,
             properties_params: params[:group_properties]
           )
-          return group_result if group_result.error
+          group_result.raise_if_error!
         end
 
         if params.key?(:filters)
@@ -40,7 +40,7 @@ module Charges
             charge: new_charge,
             filters_params: params[:filters]
           )
-          return filters_result if filters_result.error
+          filters_result.raise_if_error!
         end
 
         if params.key?(:tax_codes)
@@ -54,6 +54,8 @@ module Charges
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
