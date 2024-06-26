@@ -7,6 +7,7 @@ module Customers
     def create_from_api(organization:, params:)
       customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
       new_customer = customer.new_record?
+      shipping_address = params.key?(:shipping_address) ? params[:shipping_address] : {}
 
       unless valid_metadata_count?(metadata: params[:metadata])
         return result.single_validation_failure!(
@@ -31,6 +32,12 @@ module Customers
         customer.zipcode = params[:zipcode] if params.key?(:zipcode)
         customer.email = params[:email] if params.key?(:email)
         customer.city = params[:city] if params.key?(:city)
+        customer.shipping_address_line1 = shipping_address[:address_line1] if shipping_address.key?(:address_line1)
+        customer.shipping_address_line2 = shipping_address[:address_line2] if shipping_address.key?(:address_line2)
+        customer.shipping_city = shipping_address[:city] if shipping_address.key?(:city)
+        customer.shipping_zipcode = shipping_address[:zipcode] if shipping_address.key?(:zipcode)
+        customer.shipping_state = shipping_address[:state] if shipping_address.key?(:state)
+        customer.shipping_country = shipping_address[:country]&.upcase if shipping_address.key?(:country)
         customer.url = params[:url] if params.key?(:url)
         customer.phone = params[:phone] if params.key?(:phone)
         customer.logo_url = params[:logo_url] if params.key?(:logo_url)
