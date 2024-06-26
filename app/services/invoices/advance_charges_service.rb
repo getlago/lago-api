@@ -14,8 +14,8 @@ module Invoices
     end
 
     def call
-      # TODO: Implement organization settings if we choose the org setting approach
-      # return result unless organization&.advance_charges_invoice?
+      # TODO: This disable this feature until the `invoiceable_strategy` is implemented
+      return result if true
 
       return result if subscriptions.empty?
 
