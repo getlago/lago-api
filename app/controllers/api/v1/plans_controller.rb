@@ -105,6 +105,7 @@ module Api
             :pay_in_advance,
             :prorated,
             :invoiceable,
+            :invoicing_strategy,
             :min_amount_cents,
             {
               properties: {}

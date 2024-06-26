@@ -11,6 +11,7 @@ module Types
       field :billable_metric, Types::BillableMetrics::Object, null: false
       field :charge_model, Types::Charges::ChargeModelEnum, null: false
       field :invoiceable, Boolean, null: false
+      field :invoicing_strategy, Types::Charges::InvoicingStrategyEnum, null: false
       field :min_amount_cents, GraphQL::Types::BigInt, null: false
       field :pay_in_advance, Boolean, null: false
       field :properties, Types::Charges::Properties, null: true

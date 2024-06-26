@@ -12,6 +12,7 @@ module Charges
     def call
       return result unless License.premium?
 
+      # TODO: No need to deal with invoiceable vs invoicing_strategy because it's overriding a valid plan... right?
       ActiveRecord::Base.transaction do
         new_charge = charge.dup.tap do |c|
           c.properties = params[:properties] if params.key?(:properties)

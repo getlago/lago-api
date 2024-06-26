@@ -14,8 +14,7 @@ module Invoices
     end
 
     def call
-      # TODO: check if related charges have correct `invoicing_strategy`
-      # return result unless has_charges_to_invoice?
+      return result unless has_charges_to_invoice?
 
       return result if subscriptions.empty?
 
@@ -85,6 +84,11 @@ module Invoices
       invoice_result.raise_if_error!
 
       invoice_result.invoice
+    end
+
+    def has_charges_to_invoice?
+      plan_ids = subscriptions.pluck(:plan_id)
+      Charge.where(plan_id: plan_ids, invoicing_strategy: :in_arrears, pay_in_advance: true).any?
     end
   end
 end

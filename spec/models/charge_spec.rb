@@ -424,6 +424,32 @@ RSpec.describe Charge, type: :model do
     end
   end
 
+  describe '#validate_invoicing_strategy' do
+    it 'ensures subscription is only compatible with pay in arrears' do
+      expect(build(:standard_charge, pay_in_advance: false, invoicing_strategy: 'subscription')).to be_valid
+
+      charge = build(:standard_charge, pay_in_advance: true, invoicing_strategy: 'subscription')
+
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:invoicing_strategy]).to include('not_compatible_with_pay_in_advance')
+      end
+    end
+
+    it 'ensures other strategies are only compatible with pay in advance' do
+      %w[never in_advance in_arrears].each do |strategy|
+        expect(build(:standard_charge, pay_in_advance: true, invoicing_strategy: strategy)).to be_valid
+
+        charge = build(:standard_charge, pay_in_advance: false, invoicing_strategy: strategy)
+
+        aggregate_failures do
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:invoicing_strategy]).to include('not_compatible_with_pay_in_arrears')
+        end
+      end
+    end
+  end
+
   describe '#validate_min_amount_cents' do
     it 'does not return an error' do
       expect(build(:standard_charge)).to be_valid

@@ -27,7 +27,15 @@ class Charge < ApplicationRecord
     custom
   ].freeze
 
+  INVOICING_STRATEGIES = %i[
+    subscription
+    in_advance
+    in_arrears
+    never
+  ].freeze
+
   enum charge_model: CHARGE_MODELS
+  enum invoicing_strategy: INVOICING_STRATEGIES
 
   validate :validate_amount, if: -> { standard? && group_properties.empty? }
   validate :validate_graduated, if: -> { graduated? && group_properties.empty? }
@@ -40,6 +48,7 @@ class Charge < ApplicationRecord
   validates :charge_model, presence: true
 
   validate :validate_pay_in_advance
+  validate :validate_invoicing_strategy
   validate :validate_prorated
   validate :validate_min_amount_cents
   validate :validate_uniqueness_group_properties
@@ -53,6 +62,10 @@ class Charge < ApplicationRecord
 
   def properties(group_id: nil)
     group_properties.find_by(group_id:)&.values || read_attribute(:properties)
+  end
+
+  def pay_in_arrears?
+    !pay_in_advance?
   end
 
   private
@@ -95,6 +108,18 @@ class Charge < ApplicationRecord
 
     if volume? || !billable_metric.payable_in_advance?
       errors.add(:pay_in_advance, :invalid_aggregation_type_or_charge_model)
+    end
+  end
+
+  def validate_invoicing_strategy
+    return if pay_in_arrears? && invoicing_strategy == 'subscription'
+
+    if pay_in_advance?
+      if invoicing_strategy == 'subscription'
+        errors.add(:invoicing_strategy, :not_compatible_with_pay_in_advance)
+      end
+    else
+      errors.add(:invoicing_strategy, :not_compatible_with_pay_in_arrears)
     end
   end
 
