@@ -26,7 +26,7 @@ module Invoices
       create_generating_invoice unless invoice
       result.invoice = invoice
 
-      ActiveRecord::Base.transaction do
+      fee_result = ActiveRecord::Base.transaction do
         invoice.status = invoice_status
         invoice.save!
 
@@ -37,6 +37,17 @@ module Invoices
 
         fee_result.raise_if_error!
         invoice.reload
+        fee_result
+      end
+      result.non_invoiceable_fees = fee_result.non_invoiceable_fees
+
+      # non-invoiceable fees are created the first time, regardless of grace period.
+      # Whenever the invoice is refreshed, the fees are not created again. (see `Fees::ChargeService.already_billed?`)
+      # The webhook are sent whenever non-invoiceable fees are found in result.
+      if should_deliver_webhook?
+        result.non_invoiceable_fees&.each do |fee|
+          SendWebhookJob.perform_later('fee.created', fee)
+        end
       end
 
       if grace_period?

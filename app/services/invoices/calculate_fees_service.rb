@@ -36,9 +36,8 @@ module Invoices
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
-          if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
-            create_minimum_commitment_true_up_fee(invoice_subscription)
-          end
+          create_recurring_non_invoiceable_fees(subscription, boundaries) if should_create_recurring_non_invoiceable_fees?(subscription)
+          create_minimum_commitment_true_up_fee(invoice_subscription) if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
         end
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
@@ -55,6 +54,7 @@ module Invoices
         invoice.save!
 
         result.invoice = invoice.reload
+        result.non_invoiceable_fees ||= []
       end
 
       result
@@ -141,6 +141,47 @@ module Invoices
       return false if next_subscription_charges.blank?
 
       next_subscription_charges.pluck(:billable_metric_id).include?(charge.billable_metric_id)
+    end
+
+    def should_create_recurring_non_invoiceable_fees?(subscription)
+      return false if invoice.skip_charges
+
+      # NOTE: The subscription was just updated, we do not want to create the recurring fees.
+      # The fees paid in advance in the previous plan are valid until the next renewal, even if there is an upgrade
+      # Without this condition, it will simply create a zero-fee.
+      # See: spec/scenarios/fees/recurring_fee_upgrade_spec.rb
+      if subscription.previous_subscription&.terminated_at&.to_date == timestamp.to_date &&
+          subscription.started_at&.to_date == timestamp.to_date
+        return false
+      end
+
+      true
+    end
+
+    def create_recurring_non_invoiceable_fees(subscription, boundaries)
+      result.non_invoiceable_fees = []
+
+      subscription
+        .plan
+        .charges
+        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .joins(:billable_metric)
+        .where(
+          charges: {
+            invoiceable: false, pay_in_advance: true
+          },
+          billable_metrics: {
+            recurring: true
+          }
+        )
+        .find_each do |charge|
+        next if should_not_create_charge_fee?(charge, subscription)
+
+        fee_result = Fees::ChargeService.new(invoice: nil, charge:, subscription:, boundaries:).create
+        fee_result.raise_if_error!
+
+        result.non_invoiceable_fees.concat(fee_result.fees)
+      end
     end
 
     def should_create_minimum_commitment_true_up_fee?(invoice_subscription)

@@ -129,4 +129,9 @@ module ScenariosHelper
     Clock::RefreshDraftInvoicesJob.perform_later
     perform_all_enqueued_jobs
   end
+
+  def perform_finalize_refresh
+    Clock::FinalizeInvoicesJob.perform_later
+    perform_all_enqueued_jobs
+  end
 end
