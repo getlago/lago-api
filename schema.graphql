@@ -1837,6 +1837,7 @@ input CreateCustomerInput {
   paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomerInput
+  shippingAddress: CustomerShippingAddressInput
   state: String
   taxCodes: [String!]
   taxIdentificationNumber: String
@@ -2993,6 +2994,7 @@ type Customer {
   phone: String
   providerCustomer: ProviderCustomer
   sequentialId: String!
+  shippingAddress: CustomerShippingAddress
   slug: String!
   state: String
 
@@ -3041,6 +3043,24 @@ input CustomerMetadataInput {
   id: ID
   key: String!
   value: String!
+}
+
+type CustomerShippingAddress {
+  addressLine1: String
+  addressLine2: String
+  city: String
+  country: String
+  state: String
+  zipcode: String
+}
+
+input CustomerShippingAddressInput {
+  addressLine1: String
+  addressLine2: String
+  city: String
+  country: String
+  state: String
+  zipcode: String
 }
 
 type CustomerUsage {
@@ -6891,6 +6911,7 @@ input UpdateCustomerInput {
   paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomerInput
+  shippingAddress: CustomerShippingAddressInput
   state: String
   taxCodes: [String!]
   taxIdentificationNumber: String

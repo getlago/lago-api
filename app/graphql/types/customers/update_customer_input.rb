@@ -26,6 +26,8 @@ module Types
       argument :url, String, required: false, permission: 'customers:update'
       argument :zipcode, String, required: false, permission: 'customers:update'
 
+      argument :shipping_address, Types::Customers::ShippingAddressInput, required: false, permission: 'customers:update'
+
       argument :metadata, [Types::Customers::Metadata::Input], required: false, permission: 'customers:update'
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false, permission: 'customers:update'

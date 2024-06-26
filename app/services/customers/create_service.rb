@@ -104,6 +104,7 @@ module Customers
 
     def create(**args)
       billing_configuration = args[:billing_configuration]&.to_h || {}
+      shipping_address = args[:shipping_address]&.to_h || {}
 
       unless valid_metadata_count?(metadata: args[:metadata])
         return result.single_validation_failure!(
@@ -121,6 +122,12 @@ module Customers
         address_line2: args[:address_line2],
         state: args[:state],
         zipcode: args[:zipcode],
+        shipping_address_line1: shipping_address[:address_line1],
+        shipping_address_line2: shipping_address[:address_line2],
+        shipping_country: shipping_address[:country]&.upcase,
+        shipping_state: shipping_address[:state],
+        shipping_zipcode: shipping_address[:zipcode],
+        shipping_city: shipping_address[:city],
         email: args[:email],
         city: args[:city],
         url: args[:url],

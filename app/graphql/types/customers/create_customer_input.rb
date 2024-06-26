@@ -27,6 +27,8 @@ module Types
       argument :url, String, required: false
       argument :zipcode, String, required: false
 
+      argument :shipping_address, Types::Customers::ShippingAddressInput, required: false
+
       argument :metadata, [Types::Customers::Metadata::Input], required: false
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false

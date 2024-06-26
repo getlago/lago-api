@@ -19,6 +19,8 @@ module Customers
       old_provider_customer = customer.provider_customer
       ActiveRecord::Base.transaction do
         billing_configuration = args[:billing_configuration]&.to_h || {}
+        shipping_address = args[:shipping_address]&.to_h || {}
+
         if args.key?(:currency)
           update_currency(customer:, currency: args[:currency], customer_update: true)
           result.raise_if_error!
@@ -40,6 +42,12 @@ module Customers
         customer.legal_number = args[:legal_number] if args.key?(:legal_number)
         customer.net_payment_term = args[:net_payment_term] if args.key?(:net_payment_term)
         customer.external_salesforce_id = args[:external_salesforce_id] if args.key?(:external_salesforce_id)
+        customer.shipping_address_line1 = shipping_address[:address_line1] if shipping_address.key?(:address_line1)
+        customer.shipping_address_line2 = shipping_address[:address_line2] if shipping_address.key?(:address_line2)
+        customer.shipping_city = shipping_address[:city] if shipping_address.key?(:city)
+        customer.shipping_zipcode = shipping_address[:zipcode] if shipping_address.key?(:zipcode)
+        customer.shipping_state = shipping_address[:state] if shipping_address.key?(:state)
+        customer.shipping_country = shipping_address[:country]&.upcase if shipping_address.key?(:country)
 
         assign_premium_attributes(customer, args)
 
