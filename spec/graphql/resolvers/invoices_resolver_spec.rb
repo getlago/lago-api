@@ -225,4 +225,49 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       end
     end
   end
+
+  context 'when filtering by currency' do
+    let(:invoice_third) do
+      create(
+        :invoice,
+        customer: customer_second,
+        organization:,
+        currency: 'USD'
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5, currency: USD) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      invoice_third
+    end
+
+    it 'returns all invoices with currency USD' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      invoices_response = result['data']['invoices']
+
+      aggregate_failures do
+        expect(invoices_response['collection'].count).to eq(1)
+        expect(invoices_response['collection'].first['id']).to eq(invoice_third.id)
+
+        expect(invoices_response['metadata']['currentPage']).to eq(1)
+        expect(invoices_response['metadata']['totalCount']).to eq(1)
+      end
+    end
+  end
 end

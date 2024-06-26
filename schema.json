@@ -28100,6 +28100,18 @@
               "deprecationReason": null,
               "args": [
                 {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CurrencyEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "invoiceType",
                   "description": null,
                   "type": {

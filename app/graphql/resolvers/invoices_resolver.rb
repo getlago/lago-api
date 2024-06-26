@@ -9,6 +9,7 @@ module Resolvers
 
     description 'Query invoices'
 
+    argument :currency, Types::CurrencyEnum, required: false
     argument :invoice_type, Types::Invoices::InvoiceTypeEnum, required: false
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
@@ -21,6 +22,7 @@ module Resolvers
     type Types::Invoices::Object.collection_type, null: false
 
     def resolve( # rubocop:disable Metrics/ParameterLists
+      currency: nil,
       invoice_type: nil,
       page: nil,
       limit: nil,
@@ -40,6 +42,7 @@ module Resolvers
         payment_overdue:,
         status:,
         filters: {
+          currency:,
           invoice_type:
         }
       )

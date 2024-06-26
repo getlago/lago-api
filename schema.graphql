@@ -5521,7 +5521,7 @@ type Query {
   """
   Query invoices
   """
-  invoices(invoiceType: InvoiceTypeEnum, limit: Int, page: Int, paymentDisputeLost: Boolean, paymentOverdue: Boolean, paymentStatus: [InvoicePaymentStatusTypeEnum!], searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
+  invoices(currency: CurrencyEnum, invoiceType: InvoiceTypeEnum, limit: Int, page: Int, paymentDisputeLost: Boolean, paymentOverdue: Boolean, paymentStatus: [InvoicePaymentStatusTypeEnum!], searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
 
   """
   Query memberships of an organization
