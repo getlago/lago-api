@@ -28112,6 +28112,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "customerExternalId",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "invoiceType",
                   "description": null,
                   "type": {
