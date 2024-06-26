@@ -138,6 +138,14 @@ module Api
             :value,
             :display_in_invoice
           ],
+          shipping_address: [
+            :address_line1,
+            :address_line2,
+            :city,
+            :zipcode,
+            :state,
+            :country,
+          ],
           tax_codes: []
         )
       end
