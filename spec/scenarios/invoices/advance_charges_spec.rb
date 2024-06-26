@@ -50,8 +50,10 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
       end
 
       expect(subscription.fees.charge.where(invoice_id: nil).count).to eq 5
-      subscription.fees.charge.order(created_at: :asc).limit(3).update!(payment_status: :succeeded)
-
+      subscription.fees.charge.order(created_at: :asc).limit(3).update!(
+        payment_status: :succeeded,
+        succeeded_at: Time.current
+      )
       travel_to(DateTime.new(2024, 7, 1, 0, 10)) do
         perform_billing
         expect(customer.invoices.count).to eq(3)
@@ -65,7 +67,10 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
 
       travel_to(DateTime.new(2024, 7, 10, 10)) do
         # Mark fees created in June + recurring fee for July as payment succeeded
-        Fee.where(invoice_id: nil).update(payment_status: :succeeded)
+        Fee.where(invoice_id: nil).update!(
+          payment_status: :succeeded,
+          succeeded_at: Time.current
+        )
       end
 
       travel_to(DateTime.new(2024, 8, 1, 0, 10)) do
@@ -107,7 +112,10 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
         send_card_event! 'card_2'
         send_card_event! 'card_3'
         expect(subscription.fees.charge.where(invoice_id: nil).count).to eq(3)
-        subscription.fees.charge.where(invoice_id: nil).update!(payment_status: :succeeded)
+        subscription.fees.charge.where(invoice_id: nil).update!(
+          payment_status: :succeeded,
+          succeeded_at: Time.current
+        )
       end
 
       upgraded_subscription = nil
@@ -132,7 +140,10 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
       travel_to(DateTime.new(2024, 6, 20, 10)) do
         send_card_event! 'card_4'
         expect(upgraded_subscription.fees.charge.where(invoice_id: nil).count).to eq(1)
-        upgraded_subscription.fees.charge.where(invoice_id: nil).update!(payment_status: :succeeded)
+        upgraded_subscription.fees.charge.where(invoice_id: nil).update!(
+          payment_status: :succeeded,
+          succeeded_at: Time.current
+        )
       end
 
       travel_to(DateTime.new(2024, 7, 1, 0, 10)) do
@@ -191,7 +202,10 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
         send_card_event! 'card_2'
         send_card_event! 'card_3'
         expect(subscription.fees.charge.where(invoice_id: nil).count).to eq(3)
-        subscription.fees.charge.where(invoice_id: nil).update!(payment_status: :succeeded)
+        subscription.fees.charge.where(invoice_id: nil).update!(
+          payment_status: :succeeded,
+          succeeded_at: Time.current
+        )
       end
 
       downgraded_subscription = nil
@@ -218,7 +232,10 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
         send_card_event! 'card_4'
         expect(downgraded_subscription.fees.charge.where(invoice_id: nil).count).to eq(0)
         expect(subscription.fees.charge.where(invoice_id: nil).count).to eq 4
-        subscription.fees.charge.where(invoice_id: nil).update!(payment_status: :succeeded)
+        subscription.fees.charge.where(invoice_id: nil).update!(
+          payment_status: :succeeded,
+          succeeded_at: Time.current
+        )
       end
 
       travel_to(DateTime.new(2024, 7, 1, 0, 10)) do
