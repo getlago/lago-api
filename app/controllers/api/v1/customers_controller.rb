@@ -144,7 +144,7 @@ module Api
             :city,
             :zipcode,
             :state,
-            :country,
+            :country
           ],
           tax_codes: []
         )
