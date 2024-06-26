@@ -4,6 +4,8 @@ module Clock
   class RefreshWalletsOngoingBalanceJob < ApplicationJob
     queue_as 'clock'
 
+    unique :until_executed
+
     def perform
       return unless License.premium?
 
