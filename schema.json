@@ -28100,20 +28100,12 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "ids",
-                  "description": "List of invoice IDs to fetch",
+                  "name": "invoiceType",
+                  "description": null,
                   "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
+                    "kind": "ENUM",
+                    "name": "InvoiceTypeEnum",
+                    "ofType": null
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
