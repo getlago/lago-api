@@ -5,7 +5,7 @@ module Invoices
     class StripeCreateJob < ApplicationJob
       queue_as 'providers'
 
-      unique :until_executed
+      unique :until_executed, on_conflict: :log
 
       retry_on Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6
       retry_on Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
