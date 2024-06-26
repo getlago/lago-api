@@ -2,8 +2,9 @@
 
 module IntegrationCustomers
   class XeroService < ::BaseService
-    def initialize(integration:, customer:)
+    def initialize(integration:, customer:, subsidiary_id:)
       @customer = customer
+      @subsidiary_id = subsidiary_id
       @integration = integration
 
       super(nil)
