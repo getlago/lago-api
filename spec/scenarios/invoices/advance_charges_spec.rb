@@ -163,4 +163,78 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
       # end
     end
   end
+
+  context 'when subscription is downgraded' do
+    let(:plan_downgrade) { create(:plan, organization:, pay_in_advance: true, amount_cents: 19) }
+
+    before do
+      create(:standard_charge, pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan: plan_downgrade, properties: {amount: '15', grouped_by: nil})
+    end
+
+    it 'generates an invoice with the correct charges' do
+      travel_to(DateTime.new(2024, 6, 5, 10)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: external_subscription_id,
+            plan_code: plan.code
+          }
+        )
+        perform_billing
+        expect(customer.invoices.count).to eq(1)
+      end
+
+      subscription = customer.subscriptions.sole
+
+      travel_to(DateTime.new(2024, 6, 10, 10)) do
+        send_card_event! 'card_1'
+        send_card_event! 'card_2'
+        send_card_event! 'card_3'
+        expect(subscription.fees.charge.where(invoice_id: nil).count).to eq(3)
+        subscription.fees.charge.where(invoice_id: nil).update!(payment_status: :succeeded)
+      end
+
+      downgraded_subscription = nil
+
+      travel_to(DateTime.new(2024, 6, 15, 10)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: external_subscription_id,
+            plan_code: plan_downgrade.code
+          }
+        )
+        perform_billing
+
+        downgraded_subscription = customer.subscriptions.where.not(id: subscription.id).sole
+        expect(customer.invoices.count).to eq(1)
+        expect(subscription.fees.charge.where(invoice_id: nil).count).to eq 3
+        expect(downgraded_subscription.fees.charge.where(invoice_id: nil).count).to eq 0
+        expect(subscription).to be_active
+        expect(downgraded_subscription).to be_pending
+      end
+
+      travel_to(DateTime.new(2024, 6, 20, 10)) do
+        send_card_event! 'card_4'
+        expect(downgraded_subscription.fees.charge.where(invoice_id: nil).count).to eq(0)
+        expect(subscription.fees.charge.where(invoice_id: nil).count).to eq 4
+        subscription.fees.charge.where(invoice_id: nil).update!(payment_status: :succeeded)
+      end
+
+      travel_to(DateTime.new(2024, 7, 1, 0, 10)) do
+        perform_billing
+
+        expect(customer.invoices.count).to eq(3)
+        recurring_fee = subscription.fees.charge.where(invoice_id: nil, created_at: Time.current.all_day).sole
+        expect(recurring_fee.units).to eq 4
+
+        recurring_fee = downgraded_subscription.fees.charge.where(invoice_id: nil, created_at: Time.current.all_day)
+        expect(recurring_fee.count).to eq 0
+
+        advance_charges_invoice = customer.invoices.where(invoice_type: :advance_charges, created_at: Time.current.all_day).order(created_at: :desc).first
+        expect(advance_charges_invoice.fees.count).to eq(4)
+        expect(Fee.where(invoice_id: nil).excluding(recurring_fee).count).to eq 1
+      end
+    end
+  end
 end
