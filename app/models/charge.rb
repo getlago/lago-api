@@ -28,10 +28,9 @@ class Charge < ApplicationRecord
   ].freeze
 
   INVOICING_STRATEGIES = %i[
-    subscription
+    never
     in_advance
     in_arrears
-    never
   ].freeze
 
   enum charge_model: CHARGE_MODELS
@@ -112,14 +111,10 @@ class Charge < ApplicationRecord
   end
 
   def validate_invoicing_strategy
-    return if pay_in_arrears? && invoicing_strategy == 'subscription'
+    return if pay_in_arrears?
 
-    if pay_in_advance?
-      if invoicing_strategy == 'subscription'
-        errors.add(:invoicing_strategy, :not_compatible_with_pay_in_advance)
-      end
-    else
-      errors.add(:invoicing_strategy, :not_compatible_with_pay_in_arrears)
+    if pay_in_advance? && !invoiceable? && invoicing_strategy.nil?
+      errors.add(:invoicing_strategy, :missing_invoicing_strategy)
     end
   end
 

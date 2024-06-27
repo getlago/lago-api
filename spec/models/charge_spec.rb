@@ -425,27 +425,23 @@ RSpec.describe Charge, type: :model do
   end
 
   describe '#validate_invoicing_strategy' do
-    it 'ensures subscription is only compatible with pay in arrears' do
-      expect(build(:standard_charge, pay_in_advance: false, invoicing_strategy: 'subscription')).to be_valid
-
-      charge = build(:standard_charge, pay_in_advance: true, invoicing_strategy: 'subscription')
-
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages[:invoicing_strategy]).to include('not_compatible_with_pay_in_advance')
+    it 'ensures strategy is ignored with pay in arrears' do
+      expect(build(:standard_charge, pay_in_advance: false, invoicing_strategy: nil)).to be_valid
+      described_class::INVOICING_STRATEGIES.each do |strategy|
+        expect(build(:standard_charge, pay_in_advance: false, invoicing_strategy: strategy)).to be_valid
       end
     end
 
-    it 'ensures other strategies are only compatible with pay in advance' do
-      %w[never in_advance in_arrears].each do |strategy|
+    it 'ensures strategy must be set with pay in advance' do
+      described_class::INVOICING_STRATEGIES.each do |strategy|
         expect(build(:standard_charge, pay_in_advance: true, invoicing_strategy: strategy)).to be_valid
+      end
 
-        charge = build(:standard_charge, pay_in_advance: false, invoicing_strategy: strategy)
+      charge = build(:standard_charge, pay_in_advance: true, invoicing_strategy: nil)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:invoicing_strategy]).to include('not_compatible_with_pay_in_arrears')
-        end
+      aggregate_failures do
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:invoicing_strategy]).to include('missing_invoicing_strategy')
       end
     end
   end

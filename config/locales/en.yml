@@ -30,10 +30,10 @@ en:
         language_code_invalid: not_a_valid_language_code
         less_than_or_equal_to: value_is_out_of_range
         missing_graduated_ranges: missing_graduated_ranges
+        missing_invoicing_strategy: missing_invoicing_strategy
         missing_volume_ranges: missing_volume_ranges
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
-        not_compatible_with_pay_in_arrears: not_compatible_with_pay_in_arrears
         required: relation_must_exist
         taken: value_already_exist
         too_long: value_is_too_long
