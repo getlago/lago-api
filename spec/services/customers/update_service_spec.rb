@@ -25,6 +25,9 @@ RSpec.describe Customers::UpdateService, type: :service do
         external_id:,
         billing_configuration: {
           vat_rate: 20
+        },
+        shipping_address: {
+          city: 'Paris'
         }
       }
     end
@@ -39,6 +42,9 @@ RSpec.describe Customers::UpdateService, type: :service do
 
         billing = update_args[:billing_configuration]
         expect(updated_customer.vat_rate).to eq(billing[:vat_rate])
+
+        shipping_address = update_args[:shipping_address]
+        expect(updated_customer.shipping_city).to eq(shipping_address[:city])
       end
     end
 

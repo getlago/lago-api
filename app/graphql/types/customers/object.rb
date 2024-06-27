@@ -34,6 +34,8 @@ module Types
       field :url, String, null: true
       field :zipcode, String, null: true
 
+      field :shipping_address, Types::Customers::Address, null: true
+
       field :metadata, [Types::Customers::Metadata::Object], null: true
 
       field :billing_configuration, Types::Customers::BillingConfiguration, null: true
@@ -123,6 +125,17 @@ module Types
         {
           id: "#{object&.id}-c0nf",
           document_locale: object&.document_locale
+        }
+      end
+
+      def shipping_address
+        {
+          address_line1: object.shipping_address_line1,
+          address_line2: object.shipping_address_line2,
+          city: object.shipping_city,
+          zipcode: object.shipping_zipcode,
+          state: object.shipping_state,
+          country: object.shipping_country
         }
       end
     end

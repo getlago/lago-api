@@ -932,7 +932,15 @@ RSpec.describe Customers::CreateService, type: :service do
         organization_id: organization.id,
         currency: 'EUR',
         timezone: 'Europe/Paris',
-        invoice_grace_period: 2
+        invoice_grace_period: 2,
+        shipping_address: {
+          address_line1: 'line1',
+          address_line2: 'line2',
+          city: 'Paris',
+          zipcode: '123456',
+          state: 'foobar',
+          country: 'FR'
+        }
       }
     end
 
@@ -955,6 +963,14 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.currency).to eq('EUR')
         expect(customer.timezone).to be_nil
         expect(customer.invoice_grace_period).to be_nil
+
+        shipping_address = create_args[:shipping_address]
+        expect(customer.shipping_address_line1).to eq(shipping_address[:address_line1])
+        expect(customer.shipping_address_line2).to eq(shipping_address[:address_line2])
+        expect(customer.shipping_city).to eq(shipping_address[:city])
+        expect(customer.shipping_zipcode).to eq(shipping_address[:zipcode])
+        expect(customer.shipping_state).to eq(shipping_address[:state])
+        expect(customer.shipping_country).to eq(shipping_address[:country])
       end
     end
 
