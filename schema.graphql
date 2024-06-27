@@ -100,6 +100,15 @@ input AddStripePaymentProviderInput {
   successRedirectUrl: String
 }
 
+interface Address {
+  addressLine1: String
+  addressLine2: String
+  city: String
+  country: CountryCode
+  state: String
+  zipcode: String
+}
+
 enum AdjustedFeeTypeEnum {
   adjusted_amount
   adjusted_units
@@ -2933,7 +2942,7 @@ type CurrentVersion {
   number: String!
 }
 
-type Customer {
+type Customer implements Address {
   """
   Number of active subscriptions per customer
   """
@@ -3045,11 +3054,11 @@ input CustomerMetadataInput {
   value: String!
 }
 
-type CustomerShippingAddress {
+type CustomerShippingAddress implements Address {
   addressLine1: String
   addressLine2: String
   city: String
-  country: String
+  country: CountryCode
   state: String
   zipcode: String
 }
@@ -3058,7 +3067,7 @@ input CustomerShippingAddressInput {
   addressLine1: String
   addressLine2: String
   city: String
-  country: String
+  country: CountryCode
   state: String
   zipcode: String
 }
