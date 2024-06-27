@@ -12,6 +12,7 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
             month
             amountCents
             currency
+            invoicesCount
           }
         }
       }

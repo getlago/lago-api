@@ -8,6 +8,7 @@ module Types
 
         field :amount_cents, GraphQL::Types::BigInt, null: true
         field :currency, Types::CurrencyEnum, null: true
+        field :invoices_count, GraphQL::Types::BigInt, null: false
         field :month, GraphQL::Types::ISO8601DateTime, null: false
       end
     end

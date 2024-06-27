@@ -5,9 +5,10 @@ module V1
     class GrossRevenueSerializer < ModelSerializer
       def serialize
         {
-          month: model['month'],
-          amount_cents: model['amount_cents'],
-          currency: model['currency']
+          month: model["month"],
+          amount_cents: model["amount_cents"],
+          currency: model["currency"],
+          invoices_count: model["invoices_count"]
         }
       end
     end
