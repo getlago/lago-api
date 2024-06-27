@@ -2,7 +2,11 @@
 
 class AddRateToPercentageAmountDetails < ActiveRecord::Migration[7.0]
   class Fee < ApplicationRecord
-    belongs_to :charge, -> { with_discarded }, optional: true
+    belongs_to :charge, optional: true
+  end
+
+  class Charge < ApplicationRecord
+    enum charge_model: %i[percentage graduated_percentage].freeze
   end
 
   def up

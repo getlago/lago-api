@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+class Charge
+  attribute :invoicing_strategy, :integer, default: nil
+end
+
 class RefreshCachedAggregations < ActiveRecord::Migration[7.0]
   def change
     # NOTE: All subscriptions having a recurring weighted sum metric in the plan

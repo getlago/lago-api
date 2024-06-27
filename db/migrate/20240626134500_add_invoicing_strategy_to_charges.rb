@@ -2,7 +2,7 @@ class AddInvoicingStrategyToCharges < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
 
   def change
-    add_column :charges, :invoicing_strategy, :integer
+    add_column :charges, :invoicing_strategy, :integer, default: nil
 
     reversible do |dir|
       dir.up do
