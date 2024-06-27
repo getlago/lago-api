@@ -425,13 +425,13 @@ html
             td.body-2 = I18n.t('invoice.amount')
           - fees.each do |fee|
             tr
-              - if !fee.charge.invoiceable?
+              - if !fee.charge.invoiceable? # TODO: edit with `invoicing_strategy`
                 td
                   .body-1
                     = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
                     - if fee.charge_filter_id?
                       = ' • ' + fee.filter_display_name(separator: ' • ')
-                  .body-3 = I18n.l(fee.succeeded_at, format: :default)
+                  .body-3 = I18n.l(fee.succeeded_at.in_time_zone(customer.applicable_timezone).to_date, format: :default)
               - elsif fee.charge.prorated?
                 - pay_in_advance_range = charge_pay_in_advance_proration_range(fee, invoice_subscription(fee.subscription.id).timestamp)
                 td
