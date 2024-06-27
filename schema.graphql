@@ -3676,6 +3676,7 @@ input GraduatedRangeInput {
 type GrossRevenue {
   amountCents: BigInt
   currency: CurrencyEnum
+  invoicesCount: BigInt!
   month: ISO8601DateTime!
 }
 
