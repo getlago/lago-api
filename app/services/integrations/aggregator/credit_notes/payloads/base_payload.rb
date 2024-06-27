@@ -18,7 +18,6 @@ module Integrations
                 'external_contact_id' => integration_customer.external_customer_id,
                 'status' => 'AUTHORISED',
                 'issuing_date' => credit_note.issuing_date.to_time.utc.iso8601,
-                'payment_due_date' => credit_note.payment_due_date.to_time.utc.iso8601,
                 'number' => credit_note.number,
                 'currency' => credit_note.currency,
                 'type' => 'ACCRECCREDIT',
@@ -50,12 +49,12 @@ module Integrations
 
             {
               'external_id' => mapped_item.external_id,
-              'description' => fee.invoice_name,
+              'description' => fee.subscription? ? 'Subscription' : fee.invoice_name,
               'units' => fee.units,
-              'precise_unit_amount' => fee.precise_unit_amount,
+              'precise_unit_amount' => amount(credit_note_item.amount_cents, resource: credit_note_item.credit_note),
               'account_code' => mapped_item.external_account_code,
-              'amount_cents' => fee.amount_cents,
-              'taxes_amount_cents' => fee.taxes_amount_cents
+              'amount_cents' => credit_note_item.amount_cents,
+              'taxes_amount_cents' => credit_note_item.credit_note.taxes_amount_cents
             }
           end
 
