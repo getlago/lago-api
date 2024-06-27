@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_06_11_074215) do
+ActiveRecord::Schema[7.0].define(version: 2024_06_25_090742) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -432,6 +432,20 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_11_074215) do
     t.index ["customer_id", "tax_id"], name: "index_customers_taxes_on_customer_id_and_tax_id", unique: true
     t.index ["customer_id"], name: "index_customers_taxes_on_customer_id"
     t.index ["tax_id"], name: "index_customers_taxes_on_tax_id"
+  end
+
+  create_table "data_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.integer "format"
+    t.string "resource_type", null: false
+    t.jsonb "resource_query", default: {}, null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "expires_at", precision: nil
+    t.datetime "started_at", precision: nil
+    t.datetime "completed_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_data_exports_on_user_id"
   end
 
   create_table "events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1088,6 +1102,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_11_074215) do
   add_foreign_key "customers", "organizations"
   add_foreign_key "customers_taxes", "customers"
   add_foreign_key "customers_taxes", "taxes"
+  add_foreign_key "data_exports", "users"
   add_foreign_key "fees", "add_ons"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
