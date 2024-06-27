@@ -34,18 +34,12 @@ RSpec.describe Integrations::Aggregator::PerformSyncJob, type: :job do
       end
     end
 
-    it 'calls the aggregator items service' do
-      aggregate_failures do
-        expect(Integrations::Aggregator::ItemsService).to have_received(:new)
-        expect(items_service).to have_received(:call)
-      end
+    it 'enqueues the aggregator fetch items job' do
+      expect(Integrations::Aggregator::FetchItemsJob).to have_been_enqueued
     end
 
-    it 'calls the aggregator tax items service' do
-      aggregate_failures do
-        expect(Integrations::Aggregator::TaxItemsService).to have_received(:new)
-        expect(tax_items_service).to have_received(:call)
-      end
+    it 'enqueues the aggregator fetch tax items job' do
+      expect(Integrations::Aggregator::FetchTaxItemsJob).to have_been_enqueued
     end
   end
 
@@ -59,18 +53,12 @@ RSpec.describe Integrations::Aggregator::PerformSyncJob, type: :job do
       end
     end
 
-    it 'calls the aggregator items service' do
-      aggregate_failures do
-        expect(Integrations::Aggregator::ItemsService).to have_received(:new)
-        expect(items_service).to have_received(:call)
-      end
+    it 'enqueues the aggregator fetch items job' do
+      expect(Integrations::Aggregator::FetchItemsJob).to have_been_enqueued
     end
 
-    it 'does not call the aggregator tax items service' do
-      aggregate_failures do
-        expect(Integrations::Aggregator::TaxItemsService).not_to have_received(:new)
-        expect(tax_items_service).not_to have_received(:call)
-      end
+    it 'does not enqueue the aggregator fetch tax items job' do
+      expect(Integrations::Aggregator::FetchTaxItemsJob).not_to have_been_enqueued
     end
   end
 end
