@@ -16,7 +16,7 @@ module Resolvers
     type Types::Wallets::Object.collection_type, null: false
 
     def resolve(customer_id: nil, ids: nil, page: nil, limit: nil, status: nil)
-      current_customer = Customer.find(customer_id)
+      current_customer = current_organization.customers.find(customer_id)
 
       wallets = current_customer
         .wallets
