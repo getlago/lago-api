@@ -33,6 +33,6 @@ module IntegrationCustomers
 
     private
 
-    attr_reader :integration, :customer
+    attr_reader :integration, :customer, :subsidiary_id
   end
 end

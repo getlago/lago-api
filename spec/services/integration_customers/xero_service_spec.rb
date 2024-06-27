@@ -9,7 +9,7 @@ RSpec.describe IntegrationCustomers::XeroService, type: :service do
   let(:customer) { create(:customer, organization:) }
 
   describe '#create' do
-    subject(:service_call) { described_class.new(integration:, customer:).create }
+    subject(:service_call) { described_class.new(integration:, customer:, subsidiary_id: nil).create }
 
     let(:contact_id) { SecureRandom.uuid }
     let(:create_result) do
