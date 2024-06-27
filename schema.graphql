@@ -3901,6 +3901,7 @@ type InvoiceSubscription {
 
 enum InvoiceTypeEnum {
   add_on
+  advance_charges
   credit
   one_off
   subscription
