@@ -5,9 +5,9 @@ module Types
     class Object < Types::BaseObject
       graphql_name 'Customer'
 
-      implements Types::Customers::Address
-
       field :id, ID, null: false
+
+      implements Types::Customers::Address
 
       field :external_id, String, null: false
       field :name, String
