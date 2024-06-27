@@ -11,12 +11,10 @@ module Integrations
         sync_result = Integrations::Aggregator::SyncService.call(integration:)
         sync_result.raise_if_error!
 
-        items_result = Integrations::Aggregator::ItemsService.call(integration:)
-        items_result.raise_if_error!
+        Integrations::Aggregator::FetchItemsJob.set(wait: 5.seconds).perform_later(integration:)
 
         if sync_tax_items
-          tax_items_result = Integrations::Aggregator::TaxItemsService.call(integration:)
-          tax_items_result.raise_if_error!
+          Integrations::Aggregator::FetchTaxItemsJob.set(wait: 5.seconds).perform_later(integration:)
         end
       end
     end
