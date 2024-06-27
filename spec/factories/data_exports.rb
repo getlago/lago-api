@@ -7,8 +7,20 @@ FactoryBot.define do
     resource_query { {filters: {currency: 'EUR'}} }
     status { 'pending' }
     file { nil }
-    expires_at { 7.days.from_now }
-    started_at { 2.hours.ago }
-    completed_at { 30.minutes.ago }
+
+    trait :processing do
+      status { 'processing' }
+      started_at { 2.hours.ago }
+    end
+
+    trait :completed do
+      status { 'completed' }
+      expires_at { 7.days.from_now }
+      completed_at { 30.minutes.ago }
+    end
+
+    trait :failed do
+      status { 'failed' }
+    end
   end
 end
