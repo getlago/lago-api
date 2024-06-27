@@ -14,8 +14,9 @@ module Invoices
     end
 
     def call
-      # TODO: This disable this feature until the `invoiceable_strategy` is implemented
-      return result if true
+      # This is only here to feature flag this feature until the `invoicing_strategy` is implemented
+      # TODO: check if related charges have correct `invoicing_strategy`
+      return result if Rails.env.production?
 
       return result if subscriptions.empty?
 
