@@ -3011,6 +3011,7 @@ type Customer {
   timezone: TimezoneEnum
   updatedAt: ISO8601DateTime!
   url: String
+  xeroCustomer: XeroCustomer
   zipcode: String
 }
 
@@ -7342,6 +7343,15 @@ enum WebhookStatusEnum {
 
 enum WeightedIntervalEnum {
   seconds
+}
+
+type XeroCustomer {
+  externalCustomerId: String
+  id: ID!
+  integrationCode: String
+  integrationId: ID
+  integrationType: IntegrationTypeEnum
+  syncWithProvider: Boolean
 }
 
 type XeroIntegration {

@@ -43,6 +43,7 @@ module Types
 
       field :anrok_customer, Types::IntegrationCustomers::Anrok, null: true
       field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true
+      field :xero_customer, Types::IntegrationCustomers::Xero, null: true
 
       field :invoices, [Types::Invoices::Object]
 

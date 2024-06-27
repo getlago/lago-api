@@ -13,10 +13,18 @@ module Integrations
 
         def call
           response = http_client.post_with_response(params, headers)
+          body = JSON.parse(response.body)
+
+          if body.is_a?(Hash)
+            process_hash_result(body)
+          else
+            process_string_result(body)
+          end
+
+          return result unless result.contact_id
 
           deliver_success_webhook(customer:)
 
-          result.contact_id = JSON.parse(response.body)
           result
         rescue LagoHttpClient::HttpError => e
           error = e.json_message
@@ -33,22 +41,12 @@ module Integrations
         attr_reader :customer, :subsidiary_id
 
         def params
-          {
-            'type' => 'customer', # Fixed value
-            'isDynamic' => false, # Fixed value
-            'columns' => {
-              'companyname' => customer.name,
-              'subsidiary' => subsidiary_id,
-              'custentity_lago_id' => customer.id,
-              'custentity_lago_sf_id' => customer.external_salesforce_id,
-              'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
-              'email' => customer.email,
-              'phone' => customer.phone
-            },
-            'options' => {
-              'ignoreMandatoryFields' => false # Fixed value
-            }
-          }
+          Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
+            integration:,
+            integration_customer: nil,
+            customer:,
+            subsidiary_id:
+          ).create_body
         end
       end
     end
