@@ -2,6 +2,8 @@
 
 module Clock
   class RefreshDraftInvoicesJob < ApplicationJob
+    include SentryCronConcern
+
     queue_as 'clock'
 
     unique :until_executed, on_conflict: :log
