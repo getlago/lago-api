@@ -2,8 +2,8 @@
 
 module Types
   module Customers
-    class ShippingAddressInput < BaseInputObject
-      graphql_name 'CustomerShippingAddressInput'
+    class AddressInput < BaseInputObject
+      graphql_name 'CustomerAddressInput'
 
       argument :address_line1, String, required: false
       argument :address_line2, String, required: false

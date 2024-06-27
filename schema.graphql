@@ -100,15 +100,6 @@ input AddStripePaymentProviderInput {
   successRedirectUrl: String
 }
 
-interface Address {
-  addressLine1: String
-  addressLine2: String
-  city: String
-  country: CountryCode
-  state: String
-  zipcode: String
-}
-
 enum AdjustedFeeTypeEnum {
   adjusted_amount
   adjusted_units
@@ -1846,7 +1837,7 @@ input CreateCustomerInput {
   paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomerInput
-  shippingAddress: CustomerShippingAddressInput
+  shippingAddress: CustomerAddressInput
   state: String
   taxCodes: [String!]
   taxIdentificationNumber: String
@@ -2942,7 +2933,7 @@ type CurrentVersion {
   number: String!
 }
 
-type Customer implements Address {
+type Customer {
   """
   Number of active subscriptions per customer
   """
@@ -3003,7 +2994,7 @@ type Customer implements Address {
   phone: String
   providerCustomer: ProviderCustomer
   sequentialId: String!
-  shippingAddress: CustomerShippingAddress
+  shippingAddress: CustomerAddress
   slug: String!
   state: String
 
@@ -3021,6 +3012,24 @@ type Customer implements Address {
   timezone: TimezoneEnum
   updatedAt: ISO8601DateTime!
   url: String
+  zipcode: String
+}
+
+type CustomerAddress {
+  addressLine1: String
+  addressLine2: String
+  city: String
+  country: CountryCode
+  state: String
+  zipcode: String
+}
+
+input CustomerAddressInput {
+  addressLine1: String
+  addressLine2: String
+  city: String
+  country: CountryCode
+  state: String
   zipcode: String
 }
 
@@ -3052,24 +3061,6 @@ input CustomerMetadataInput {
   id: ID
   key: String!
   value: String!
-}
-
-type CustomerShippingAddress implements Address {
-  addressLine1: String
-  addressLine2: String
-  city: String
-  country: CountryCode
-  state: String
-  zipcode: String
-}
-
-input CustomerShippingAddressInput {
-  addressLine1: String
-  addressLine2: String
-  city: String
-  country: CountryCode
-  state: String
-  zipcode: String
 }
 
 type CustomerUsage {
@@ -6920,7 +6911,7 @@ input UpdateCustomerInput {
   paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomerInput
-  shippingAddress: CustomerShippingAddressInput
+  shippingAddress: CustomerAddressInput
   state: String
   taxCodes: [String!]
   taxIdentificationNumber: String

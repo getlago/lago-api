@@ -7,15 +7,16 @@ module Types
 
       field :id, ID, null: false
 
-      implements Types::Customers::Address
-
       field :external_id, String, null: false
       field :name, String
       field :sequential_id, String, null: false
       field :slug, String, null: false
 
+      field :address_line1, String, null: true
+      field :address_line2, String, null: true
       field :applicable_timezone, Types::TimezoneEnum, null: false
-
+      field :city, String, null: true
+      field :country, Types::CountryCodeEnum, null: true
       field :currency, Types::CurrencyEnum, null: true
       field :email, String, null: true
       field :external_salesforce_id, String, null: true
@@ -27,11 +28,13 @@ module Types
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
       field :payment_provider_code, String, null: true
       field :phone, String, null: true
+      field :state, String, null: true
       field :tax_identification_number, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
       field :url, String, null: true
+      field :zipcode, String, null: true
 
-      field :shipping_address, Types::Customers::ShippingAddress, null: true
+      field :shipping_address, Types::Customers::Address, null: true
 
       field :metadata, [Types::Customers::Metadata::Object], null: true
 
@@ -121,6 +124,17 @@ module Types
         {
           id: "#{object&.id}-c0nf",
           document_locale: object&.document_locale
+        }
+      end
+
+      def shipping_address
+        {
+          address_line1: object.shipping_address_line1,
+          address_line2: object.shipping_address_line2,
+          city: object.shipping_city,
+          zipcode: object.shipping_zipcode,
+          state: object.shipping_state,
+          country: object.shipping_country
         }
       end
     end
