@@ -49,7 +49,7 @@ module Integrations
 
             {
               'external_id' => mapped_item.external_id,
-              'description' => fee.invoice_name,
+              'description' => fee.subscription? ? 'Subscription' : fee.invoice_name,
               'units' => fee.units,
               'precise_unit_amount' => fee.precise_unit_amount,
               'account_code' => mapped_item.external_account_code,
@@ -68,7 +68,7 @@ module Integrations
                 'units' => 1,
                 'precise_unit_amount' => -amount(invoice.coupons_amount_cents, resource: invoice),
                 'account_code' => coupon_item.external_account_code,
-                'amount_cents' => invoice.coupons_amount_cents
+                'amount_cents' => -invoice.coupons_amount_cents
               }
             end
 
@@ -79,18 +79,18 @@ module Integrations
                 'units' => 1,
                 'precise_unit_amount' => -amount(invoice.prepaid_credit_amount_cents, resource: invoice),
                 'account_code' => credit_item.external_account_code,
-                'amount_cents' => invoice.prepaid_credit_amount_cents
+                'amount_cents' => -invoice.prepaid_credit_amount_cents
               }
             end
 
             if credit_note_item && invoice.credit_notes_amount_cents > 0
               output << {
                 'external_id' => credit_note_item.external_id,
-                'description' => 'Credit notes',
+                'description' => 'Credit note',
                 'units' => 1,
                 'precise_unit_amount' => -amount(invoice.credit_notes_amount_cents, resource: invoice),
                 'account_code' => credit_note_item.external_account_code,
-                'amount_cents' => invoice.credit_notes_amount_cents
+                'amount_cents' => -invoice.credit_notes_amount_cents
               }
             end
 
