@@ -72,7 +72,7 @@ module IntegrationCustomers
 
       code = integration_customer_params[:integration_code]
 
-      @integration = Integrations::BaseIntegration.find_by(type:, code:)
+      @integration = Integrations::BaseIntegration.find_by(type:, code:, organization: customer.organization)
     end
 
     def integration_customer

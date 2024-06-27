@@ -152,8 +152,15 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
       let(:external_customer_id) { nil }
       let(:new_customer) { true }
 
+      let(:integration_two) { create(:netsuite_integration, organization: organization_two, code: integration.code) }
+      let(:organization_two) { create(:organization) }
+
+      before { integration_two }
+
       it 'calls create job' do
-        expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob)
+        expect do
+          service_call
+        end.to have_enqueued_job(IntegrationCustomers::CreateJob).with(hash_including(integration:))
       end
 
       context 'when updating existing customer without integration customer' do
