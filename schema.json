@@ -12477,6 +12477,18 @@
               "deprecationReason": null
             },
             {
+              "name": "city",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "country",
               "description": null,
               "type": {
@@ -12490,18 +12502,6 @@
             },
             {
               "name": "state",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "city",
               "description": null,
               "type": {
                 "kind": "SCALAR",
