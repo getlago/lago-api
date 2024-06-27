@@ -7,6 +7,7 @@ module Types
 
       field :api_key, String, null: false
       field :code, String, null: false
+      field :external_account_id, String, null: true
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
       field :name, String, null: false
@@ -19,6 +20,12 @@ module Types
 
       def has_mappings_configured
         object.integration_collection_mappings.where(type: 'IntegrationCollectionMappings::AnrokCollectionMapping').any?
+      end
+
+      def external_account_id
+        return nil unless object.api_key.include?('/')
+
+        object.api_key.split('/')[0]
       end
     end
   end
