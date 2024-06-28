@@ -1838,6 +1838,7 @@ input CreateCustomerInput {
   paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomerInput
+  shippingAddress: CustomerAddressInput
   state: String
   taxCodes: [String!]
   taxIdentificationNumber: String
@@ -2994,6 +2995,7 @@ type Customer {
   phone: String
   providerCustomer: ProviderCustomer
   sequentialId: String!
+  shippingAddress: CustomerAddress
   slug: String!
   state: String
 
@@ -3012,6 +3014,24 @@ type Customer {
   updatedAt: ISO8601DateTime!
   url: String
   xeroCustomer: XeroCustomer
+  zipcode: String
+}
+
+type CustomerAddress {
+  addressLine1: String
+  addressLine2: String
+  city: String
+  country: CountryCode
+  state: String
+  zipcode: String
+}
+
+input CustomerAddressInput {
+  addressLine1: String
+  addressLine2: String
+  city: String
+  country: CountryCode
+  state: String
   zipcode: String
 }
 
@@ -6881,6 +6901,7 @@ input UpdateCustomerInput {
   paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomerInput
+  shippingAddress: CustomerAddressInput
   state: String
   taxCodes: [String!]
   taxIdentificationNumber: String

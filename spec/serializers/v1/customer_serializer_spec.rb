@@ -15,6 +15,7 @@ RSpec.describe ::V1::CustomerSerializer do
   before do
     metadata
     customer_applied_tax
+    customer.update!(shipping_city: 'Paris', shipping_address_line1: 'test1', shipping_zipcode: '002')
   end
 
   it 'serializes the object' do
@@ -49,6 +50,9 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['billing_configuration']['invoice_grace_period']).to eq(customer.invoice_grace_period)
       expect(result['customer']['billing_configuration']['vat_rate']).to eq(customer.vat_rate)
       expect(result['customer']['billing_configuration']['document_locale']).to eq(customer.document_locale)
+      expect(result['customer']['shipping_address']['address_line1']).to eq('test1')
+      expect(result['customer']['shipping_address']['city']).to eq('Paris')
+      expect(result['customer']['shipping_address']['zipcode']).to eq('002')
       expect(result['customer']['metadata'].first['lago_id']).to eq(metadata.id)
       expect(result['customer']['metadata'].first['key']).to eq(metadata.key)
       expect(result['customer']['metadata'].first['value']).to eq(metadata.value)

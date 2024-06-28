@@ -34,6 +34,8 @@ module Types
       field :url, String, null: true
       field :zipcode, String, null: true
 
+      field :shipping_address, Types::Customers::Address, null: true
+
       field :metadata, [Types::Customers::Metadata::Object], null: true
 
       field :billing_configuration, Types::Customers::BillingConfiguration, null: true

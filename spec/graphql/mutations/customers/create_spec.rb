@@ -27,6 +27,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           canEditAttributes
           invoiceGracePeriod
           billingConfiguration { documentLocale }
+          shippingAddress { addressLine1 city state }
           metadata { id, key, value, displayInInvoice }
           taxes { code }
         }
@@ -75,6 +76,12 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           billingConfiguration: {
             documentLocale: 'fr'
           },
+          shippingAddress: {
+            addressLine1: 'Test 12',
+            zipcode: '102030',
+            state: 'test state',
+            city: 'Paris'
+          },
           metadata: [
             {
               key: 'manager',
@@ -102,6 +109,9 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
       expect(result_data['providerCustomer']['providerPaymentMethods']).to eq(['card'])
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
+      expect(result_data['shippingAddress']['addressLine1']).to eq('Test 12')
+      expect(result_data['shippingAddress']['city']).to eq('Paris')
+      expect(result_data['shippingAddress']['state']).to eq('test state')
       expect(result_data['netPaymentTerm']).to eq(30)
       expect(result_data['metadata'].count).to eq(1)
       expect(result_data['metadata'][0]['value']).to eq('John Doe')

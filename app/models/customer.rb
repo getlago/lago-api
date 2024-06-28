@@ -116,6 +116,17 @@ class Customer < ApplicationRecord
     end
   end
 
+  def shipping_address
+    {
+      address_line1: shipping_address_line1,
+      address_line2: shipping_address_line2,
+      city: shipping_city,
+      zipcode: shipping_zipcode,
+      state: shipping_state,
+      country: shipping_country
+    }
+  end
+
   private
 
   def ensure_slug

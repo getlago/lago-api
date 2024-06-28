@@ -29,7 +29,8 @@ module V1
         applicable_timezone: model.applicable_timezone,
         net_payment_term: model.net_payment_term,
         external_salesforce_id: model.external_salesforce_id,
-        billing_configuration:
+        billing_configuration:,
+        shipping_address: model.shipping_address
       }.merge(legacy_values.except(:billing_configuration))
 
       payload = payload.merge(metadata)
