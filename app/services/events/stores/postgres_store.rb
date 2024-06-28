@@ -103,7 +103,7 @@ module Events
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
-            query.prorated_query,
+            sanitize_colon(query.prorated_query),
             {
               from_datetime:,
               to_datetime:,
@@ -120,7 +120,7 @@ module Events
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
-            query.prorated_breakdown_query(with_remove:),
+            sanitize_colon(query.prorated_breakdown_query(with_remove:)),
             {
               from_datetime:,
               to_datetime:,
@@ -146,7 +146,7 @@ module Events
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
-            query.grouped_prorated_query,
+            sanitize_colon(query.grouped_prorated_query),
             {
               from_datetime:,
               to_datetime:,
@@ -260,7 +260,7 @@ module Events
 
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
-            query.query,
+            sanitize_colon(query.query),
             {
               from_datetime:,
               to_datetime: to_datetime.ceil,
@@ -295,7 +295,7 @@ module Events
 
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
-            query.grouped_query(initial_values: formated_initial_values),
+            sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
             {
               from_datetime:,
               to_datetime: to_datetime.ceil
@@ -312,7 +312,7 @@ module Events
         ActiveRecord::Base.connection.select_all(
           ActiveRecord::Base.sanitize_sql_for_conditions(
             [
-              query.breakdown_query,
+              sanitize_colon(query.breakdown_query),
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,

@@ -105,6 +105,11 @@ module Events
         boundaries[:charges_duration]
       end
 
+      def sanitize_colon(query)
+        # NOTE: escape ':' to avoid ActiveRecord::PreparedStatementInvalid,
+        query.gsub("'#{code}'", "'#{code.gsub(":", "\\:")}'")
+      end
+
       attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by
 
       protected

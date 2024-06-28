@@ -17,7 +17,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     )
   end
 
-  let(:billable_metric) { create(:billable_metric, field_name: 'value') }
+  let(:billable_metric) { create(:billable_metric, field_name: 'value', code: 'bm:code') }
   let(:organization) { billable_metric.organization }
 
   let(:customer) { create(:customer, organization:) }
