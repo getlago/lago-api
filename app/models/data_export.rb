@@ -2,7 +2,8 @@ class DataExport < ApplicationRecord
   EXPORT_FORMATS = %w[csv].freeze
   STATUSES = %w[pending processing completed failed].freeze
 
-  belongs_to :user
+  belongs_to :organization
+  belongs_to :membership
   has_one_attached :file
 
   validates :resource_type, :resource_query, presence: true
@@ -11,4 +12,6 @@ class DataExport < ApplicationRecord
 
   enum format: EXPORT_FORMATS
   enum status: STATUSES
+
+  delegate :user, to: :membership
 end

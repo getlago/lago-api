@@ -2,10 +2,12 @@ require 'rails_helper'
 
 RSpec.describe DataExports::CreateService, type: :service do
   subject(:result) do
-    described_class.call(user:, format:, resource_type:, resource_query:)
+    described_class.call(organization:, user:, format:, resource_type:, resource_query:)
   end
 
+  let(:organization) { create(:organization) }
   let(:user) { create(:user) }
+  let(:membership) { create(:membership, user:, organization:) }
 
   let(:format) { "csv" }
   let(:resource_type) { "invoices" }
@@ -19,6 +21,7 @@ RSpec.describe DataExports::CreateService, type: :service do
   end
 
   before do
+    membership
     allow(DataExports::ExportResourcesJob).to receive(:perform_later)
   end
 
@@ -28,7 +31,8 @@ RSpec.describe DataExports::CreateService, type: :service do
 
       data_export = result.data_export
       expect(data_export.id).to be_present
-      expect(data_export.user_id).to eq(user.id)
+      expect(data_export.organization_id).to eq(organization.id)
+      expect(data_export.membership_id).to eq(membership.id)
       expect(data_export.format).to eq("csv")
       expect(data_export.resource_type).to eq("invoices")
       expect(data_export.resource_query).to match(resource_query)

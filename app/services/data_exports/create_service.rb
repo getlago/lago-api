@@ -1,6 +1,7 @@
 module DataExports
   class CreateService < BaseService
-    def initialize(user:, format:, resource_type:, resource_query:)
+    def initialize(organization:, user:, format:, resource_type:, resource_query:)
+      @organization = organization
       @user = user
       @format = format
       @resource_type = resource_type
@@ -10,7 +11,14 @@ module DataExports
     end
 
     def call
-      data_export = DataExport.create!(user:, format:, resource_type:, resource_query:)
+      data_export = DataExport.create(
+        organization:,
+        membership:,
+        format:,
+        resource_type:,
+        resource_query:
+      )
+
       ExportResourcesJob.perform_later(data_export)
 
       result.data_export = data_export
@@ -19,6 +27,10 @@ module DataExports
 
     private
 
-    attr_reader :user, :format, :resource_type, :resource_query
+    attr_reader :organization, :user, :format, :resource_type, :resource_query
+
+    def membership
+      user.memberships.find_by(organization: organization)
+    end
   end
 end

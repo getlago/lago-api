@@ -1,6 +1,7 @@
 FactoryBot.define do
   factory :data_export do
-    user
+    organization
+    membership { association :membership, organization: organization }
 
     format { 'csv' }
     resource_type { "invoices" }
@@ -15,12 +16,14 @@ FactoryBot.define do
 
     trait :completed do
       status { 'completed' }
-      expires_at { 7.days.from_now }
+      started_at { 2.hours.ago }
       completed_at { 30.minutes.ago }
+      expires_at { 7.days.from_now }
     end
 
-    trait :failed do
-      status { 'failed' }
+    trait :expired do
+      completed
+      expires_at { 1.day.ago }
     end
   end
 end
