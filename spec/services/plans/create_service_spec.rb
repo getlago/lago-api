@@ -242,6 +242,120 @@ RSpec.describe Plans::CreateService, type: :service do
           }
         )
       end
+
+      context 'when only invoiceable is set' do
+        let(:charges_args) do
+          [{
+            invoiceable:,
+            pay_in_advance:,
+            billable_metric_id: billable_metric.id,
+            charge_model: 'standard',
+          }]
+        end
+
+        context 'when charge is pay in arrears' do
+          let(:pay_in_advance) { false }
+
+          context 'when invoiceable is true' do
+            let(:invoiceable) { true }
+
+            it 'sets invoicing_strategy to nil' do
+              plan = plans_service.create(**create_args).plan
+              expect(plan.charges.first.invoicing_strategy).to be_nil
+            end
+          end
+
+          context 'when invoiceable is false' do
+            let(:invoiceable) { false }
+
+            it 'sets invoicing_strategy to nil' do
+              plan = plans_service.create(**create_args).plan
+              expect(plan.charges.first.invoicing_strategy).to be_nil
+            end
+          end
+        end
+
+        context 'when charge is pay in advance' do
+          let(:pay_in_advance) { true }
+
+          context 'when invoiceable is true' do
+            let(:invoiceable) { true }
+
+            it 'sets invoicing_strategy to in_advance' do
+              plan = plans_service.create(**create_args).plan
+              expect(plan.charges.first.invoicing_strategy).to eq 'in_advance'
+            end
+          end
+
+          context 'when invoiceable is false' do
+            let(:invoiceable) { false }
+
+            it 'sets invoicing_strategy to never' do
+              plan = plans_service.create(**create_args).plan
+              expect(plan.charges.first.invoicing_strategy).to eq 'never'
+            end
+          end
+        end
+
+      end
+
+      context 'when only invoicing_strategy is set' do
+        let(:charges_args) do
+          [{
+            invoicing_strategy:,
+            pay_in_advance:,
+            billable_metric_id: billable_metric.id,
+            charge_model: 'standard',
+          }]
+        end
+
+        context 'when charge is pay in arrears' do
+          let(:pay_in_advance) { false }
+          let(:invoicing_strategy) { 'in_advance'}
+
+          it 'returns an error' do
+            result = plans_service.create(**create_args)
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages[:charges_invoicing_strategy]).to eq(['not_compatible_with_pay_in_arrears'])
+            end
+          end
+        end
+
+        context 'when charge is pay in advance' do
+          let(:pay_in_advance) { true }
+
+          context 'when invoicing_strategy is never' do
+            let(:invoicing_strategy) { 'never' }
+
+            it 'sets invoiceable to false' do
+              plan = plans_service.create(**create_args).plan
+              expect(plan.charges.first.invoiceable).to be false
+            end
+          end
+
+          context 'when invoicing_strategy is in_advance' do
+            let(:invoicing_strategy) { 'in_advance' }
+
+            it 'sets invoiceable to true' do
+              plan = plans_service.create(**create_args).plan
+              expect(plan.charges.first.invoiceable).to be true
+            end
+          end
+
+          context 'when invoicing_strategy is in_arrears' do
+            let(:invoicing_strategy) { 'in_arrears' }
+
+            it 'sets invoiceable to true' do
+              plan = plans_service.create(**create_args).plan
+              expect(plan.charges.first.invoiceable).to be true
+            end
+          end
+        end
+
+      end
     end
 
     context 'with code already used by a deleted plan' do
@@ -266,6 +380,37 @@ RSpec.describe Plans::CreateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+        end
+      end
+
+      context 'when invoiceable and invoicing_strategy are both present' do
+        let(:charges_args) do
+          [
+            {
+              billable_metric_id: billable_metric.id,
+              charge_model: 'standard',
+              min_amount_cents: 100,
+              tax_codes: [charge_tax.code],
+              group_properties: [
+                {
+                  group_id: group.id,
+                  values: {amount: '100'}
+                }
+              ],
+              invoiceable: false,
+              invoicing_strategy: 'in_advance'
+            }
+          ]
+        end
+
+        it 'returns an error' do
+          result = plans_service.create(**create_args)
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:charges]).to all match /Prefer invoicing_strategy/
+          end
         end
       end
 

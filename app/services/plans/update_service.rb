@@ -101,7 +101,7 @@ module Plans
         charge.min_amount_cents = params[:min_amount_cents] || 0
 
         # Legacy support for invoiceable, setting invoicing_strategy is recommended
-        if params[:invoiceable].present? && params[:invoicing_strategy].blank?
+        if params.has_key?(:invoiceable) && !params.has_key?(:invoicing_strategy)
           charge.invoiceable = params[:invoiceable]
           charge.invoicing_strategy = if charge.pay_in_arrears?
             :subscription
@@ -112,7 +112,7 @@ module Plans
           end
         end
 
-        if params[:invoicing_strategy].present? && params[:invoiceable].blank?
+        if params.has_key?(:invoicing_strategy) && !params.has_key?(:invoiceable)
           charge.invoicing_strategy = params[:invoicing_strategy]
           charge.invoiceable = params[:invoicing_strategy] != 'never'
         end
