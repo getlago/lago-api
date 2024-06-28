@@ -4,6 +4,7 @@ class DataExport < ApplicationRecord
 
   belongs_to :organization
   belongs_to :membership
+
   has_one_attached :file
 
   validates :resource_type, :resource_query, presence: true
