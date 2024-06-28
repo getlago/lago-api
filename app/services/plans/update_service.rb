@@ -98,24 +98,9 @@ module Plans
       end
 
       if License.premium?
+        charge.invoiceable = params[:invoiceable] unless params[:invoiceable].nil?
+        charge.invoicing_strategy = params[:invoicing_strategy] unless params[:invoicing_strategy].nil?
         charge.min_amount_cents = params[:min_amount_cents] || 0
-
-        # Legacy support for invoiceable, setting invoicing_strategy is recommended
-        if params.has_key?(:invoiceable) && !params.has_key?(:invoicing_strategy)
-          charge.invoiceable = params[:invoiceable]
-          charge.invoicing_strategy = if charge.pay_in_arrears?
-            :subscription
-          elsif charge.pay_in_advance? && params[:invoiceable]
-            :pay_in_advance
-          elsif charge.pay_in_advance? && !params[:invoiceable]
-            :never
-          end
-        end
-
-        if params.has_key?(:invoicing_strategy) && !params.has_key?(:invoiceable)
-          charge.invoicing_strategy = params[:invoicing_strategy]
-          charge.invoiceable = params[:invoicing_strategy] != 'never'
-        end
       end
 
       charge.save!

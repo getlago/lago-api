@@ -36,6 +36,8 @@ class Charge < ApplicationRecord
   enum charge_model: CHARGE_MODELS
   enum invoicing_strategy: INVOICING_STRATEGIES
 
+  before_validation :set_invoicing_attributes
+
   validate :validate_amount, if: -> { standard? && group_properties.empty? }
   validate :validate_graduated, if: -> { graduated? && group_properties.empty? }
   validate :validate_package, if: -> { package? && group_properties.empty? }
@@ -68,6 +70,27 @@ class Charge < ApplicationRecord
   end
 
   private
+
+  def set_invoicing_attributes
+    if pay_in_arrears?
+      self.invoiceable = true if invoiceable.nil? # Database default
+      self.invoicing_strategy = nil
+      return
+    end
+
+    if invoiceable.nil? && invoicing_strategy.nil?
+      self.invoiceable = true # Database default
+      self.invoicing_strategy = :in_advance
+    elsif invoiceable && invoicing_strategy.nil?
+      self.invoicing_strategy = :in_advance
+    elsif !invoiceable && invoicing_strategy.nil?
+      self.invoicing_strategy = :never
+    elsif invoiceable.nil? && invoicing_strategy.to_sym == :never
+      self.invoiceable = false
+    elsif invoiceable.nil? && invoicing_strategy.present?
+      self.invoiceable = true
+    end
+  end
 
   def validate_amount
     validate_charge_model(Charges::Validators::StandardService)
@@ -113,7 +136,7 @@ class Charge < ApplicationRecord
   def validate_invoicing_strategy
     return if pay_in_arrears?
 
-    if pay_in_advance? && !invoiceable? && invoicing_strategy.nil?
+    if pay_in_advance? && invoicing_strategy.nil?
       errors.add(:invoicing_strategy, :missing_invoicing_strategy)
     end
   end

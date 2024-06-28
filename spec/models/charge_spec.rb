@@ -440,8 +440,8 @@ RSpec.describe Charge, type: :model do
       charge = build(:standard_charge, pay_in_advance: true, invoicing_strategy: nil)
 
       aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages[:invoicing_strategy]).to include('missing_invoicing_strategy')
+        expect(charge).to be_valid
+        expect(charge.invoicing_strategy).to eq 'in_advance'
       end
     end
   end

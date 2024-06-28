@@ -28,7 +28,7 @@ module Plans
       # Validate invoicing strategy
       # `charge.invoiceable` is being replaced by `charge.invoicing_strategy`, you can only pass one
       # in the args, but both attributes are being populated in the model
-      args[:charges].each do |c|
+      args[:charges]&.each do |c|
         if c.has_key?(:invoicing_strategy) && c.has_key?(:invoiceable)
           return result.validation_failure!(errors: {charges: ['invoiceable cannot be set with invoicing_strategy. Prefer invoicing_strategy.']})
         elsif c.has_key?(:invoicing_strategy) && c[:pay_in_advance] == false
@@ -104,33 +104,18 @@ module Plans
         properties:
       ).properties
 
+      if License.premium?
+        charge.invoiceable = args[:invoiceable]
+        charge.invoicing_strategy = args[:invoicing_strategy] unless args[:invoicing_strategy].nil?
+        charge.min_amount_cents = args[:min_amount_cents] || 0
+      end
+
       if args[:filters].present?
         charge.save!
         ChargeFilters::CreateOrUpdateBatchService.call(
           charge:,
           filters_params: args[:filters].map(&:with_indifferent_access)
         ).raise_if_error!
-      end
-
-      if License.premium?
-        charge.min_amount_cents = args[:min_amount_cents] || 0
-
-        # Legacy support for invoiceable, setting invoicing_strategy is recommended
-        if args.has_key?(:invoiceable)
-          charge.invoiceable = args[:invoiceable]
-          charge.invoicing_strategy = if charge.pay_in_arrears?
-            nil
-          elsif charge.pay_in_advance? && args[:invoiceable]
-            :in_advance
-          elsif charge.pay_in_advance? && !args[:invoiceable]
-            :never
-          end
-        end
-
-        if args.has_key?(:invoicing_strategy)
-          charge.invoicing_strategy = args[:invoicing_strategy]
-          charge.invoiceable = args[:invoicing_strategy] != 'never'
-        end
       end
 
       charge.save!
