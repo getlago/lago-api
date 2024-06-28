@@ -5257,6 +5257,7 @@ input ProviderCustomerInput {
 enum ProviderPaymentMethodsEnum {
   bacs_debit
   card
+  link
   sepa_debit
   us_bank_account
 }
