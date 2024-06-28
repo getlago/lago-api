@@ -2,6 +2,8 @@
 
 module Clock
   class TerminateWalletsJob < ApplicationJob
+    include SentryCronConcern
+
     queue_as 'clock'
 
     def perform
