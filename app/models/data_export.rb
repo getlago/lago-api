@@ -14,4 +14,10 @@ class DataExport < ApplicationRecord
   enum status: STATUSES
 
   delegate :user, to: :membership
+
+  def expired?
+    return false unless expires_at
+
+    expires_at < Time.zone.now
+  end
 end
