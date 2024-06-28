@@ -7,7 +7,7 @@ module Customers
     def create_from_api(organization:, params:)
       customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
       new_customer = customer.new_record?
-      shipping_address = params.key?(:shipping_address) ? params[:shipping_address] : {}
+      shipping_address = params[:shipping_address] ||= {}
 
       unless valid_metadata_count?(metadata: params[:metadata])
         return result.single_validation_failure!(

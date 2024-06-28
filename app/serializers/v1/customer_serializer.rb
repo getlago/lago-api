@@ -30,7 +30,7 @@ module V1
         net_payment_term: model.net_payment_term,
         external_salesforce_id: model.external_salesforce_id,
         billing_configuration:,
-        shipping_address:
+        shipping_address: model.shipping_address
       }.merge(legacy_values.except(:billing_configuration))
 
       payload = payload.merge(metadata)
@@ -74,17 +74,6 @@ module V1
       end
 
       configuration
-    end
-
-    def shipping_address
-      {
-        address_line1: model.shipping_address_line1,
-        address_line2: model.shipping_address_line2,
-        city: model.shipping_city,
-        zipcode: model.shipping_zipcode,
-        state: model.shipping_state,
-        country: model.shipping_country
-      }
     end
 
     def legacy_values

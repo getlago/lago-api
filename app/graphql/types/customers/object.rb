@@ -127,17 +127,6 @@ module Types
           document_locale: object&.document_locale
         }
       end
-
-      def shipping_address
-        {
-          address_line1: object.shipping_address_line1,
-          address_line2: object.shipping_address_line2,
-          city: object.shipping_city,
-          zipcode: object.shipping_zipcode,
-          state: object.shipping_state,
-          country: object.shipping_country
-        }
-      end
     end
   end
 end
