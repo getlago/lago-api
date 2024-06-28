@@ -249,7 +249,7 @@ RSpec.describe Plans::CreateService, type: :service do
             invoiceable:,
             pay_in_advance:,
             billable_metric_id: billable_metric.id,
-            charge_model: 'standard',
+            charge_model: 'standard'
           }]
         end
 
@@ -296,7 +296,6 @@ RSpec.describe Plans::CreateService, type: :service do
             end
           end
         end
-
       end
 
       context 'when only invoicing_strategy is set' do
@@ -305,13 +304,13 @@ RSpec.describe Plans::CreateService, type: :service do
             invoicing_strategy:,
             pay_in_advance:,
             billable_metric_id: billable_metric.id,
-            charge_model: 'standard',
+            charge_model: 'standard'
           }]
         end
 
         context 'when charge is pay in arrears' do
           let(:pay_in_advance) { false }
-          let(:invoicing_strategy) { 'in_advance'}
+          let(:invoicing_strategy) { 'in_advance' }
 
           it 'returns an error' do
             result = plans_service.create(**create_args)
@@ -354,7 +353,6 @@ RSpec.describe Plans::CreateService, type: :service do
             end
           end
         end
-
       end
     end
 
@@ -409,7 +407,7 @@ RSpec.describe Plans::CreateService, type: :service do
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:charges]).to all match /Prefer invoicing_strategy/
+            expect(result.error.messages[:charges]).to all match(/Prefer invoicing_strategy/)
           end
         end
       end
