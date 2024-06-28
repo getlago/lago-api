@@ -172,7 +172,8 @@ module Subscriptions
         after_commit do
           billing_at = Time.current + 1.second
           BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
-          BillNonInvoiceableFeesJob.perform_later(billable_subscriptions, billing_at)
+          # NOTE: Commented until feature is fully released
+          # BillNonInvoiceableFeesJob.perform_later(billable_subscriptions, billing_at)
         end
       end
 
