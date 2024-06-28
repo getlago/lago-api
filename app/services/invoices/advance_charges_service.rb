@@ -14,9 +14,8 @@ module Invoices
     end
 
     def call
-      # This is only here to feature flag this feature until the `invoicing_strategy` is implemented
       # TODO: check if related charges have correct `invoicing_strategy`
-      return result if Rails.env.production?
+      # return result unless has_charges_to_invoice?
 
       return result if subscriptions.empty?
 
