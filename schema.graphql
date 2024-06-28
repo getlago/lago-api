@@ -253,6 +253,7 @@ type Charge {
   id: ID!
   invoiceDisplayName: String
   invoiceable: Boolean!
+  invoicingStrategy: InvoicingStrategyEnum!
   minAmountCents: BigInt!
   payInAdvance: Boolean!
   properties: Properties
@@ -3890,6 +3891,12 @@ type InvoicedUsage {
 type InvoicedUsageCollection {
   collection: [InvoicedUsage!]!
   metadata: CollectionMetadata!
+}
+
+enum InvoicingStrategyEnum {
+  in_advance
+  in_arrears
+  never
 }
 
 """
