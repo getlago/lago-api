@@ -2472,6 +2472,11 @@ enum CurrencyEnum {
   ISK
 
   """
+  Iranian Rial
+  """
+  IRR
+
+  """
   Jamaican Dollar
   """
   JMD
