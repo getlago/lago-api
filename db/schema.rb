@@ -451,8 +451,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_28_083830) do
     t.datetime "completed_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "membership_id", null: false
-    t.uuid "organization_id", null: false
+    t.uuid "membership_id"
+    t.uuid "organization_id"
     t.index ["membership_id"], name: "index_data_exports_on_membership_id"
     t.index ["organization_id"], name: "index_data_exports_on_organization_id"
   end

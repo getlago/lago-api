@@ -63,7 +63,7 @@ Rails.application.configure do
     address: 'mailhog',
     port: 1025
   }
-  config.action_mailer.preview_paths << "#{Rails.root}/spec/mailers/previews"
+  config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews").to_s
 
   Dotenv.load
 end

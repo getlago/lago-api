@@ -25,7 +25,7 @@ class DataExport < ApplicationRecord
   def filename
     return if file.blank?
 
-    "#{created_at.strftime('%Y%m%d%H%M%S')}_#{resource_type}.#{format}"
+    "#{created_at.strftime("%Y%m%d%H%M%S")}_#{resource_type}.#{format}"
   end
 
   def file_url

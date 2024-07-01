@@ -19,7 +19,7 @@ FactoryBot.define do
       started_at { 2.hours.ago }
       completed_at { 30.minutes.ago }
       expires_at { 7.days.from_now }
-      file { Rack::Test::UploadedFile.new(Rails.root.join('spec', 'fixtures', 'export.csv')) }
+      file { Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/export.csv")) }
     end
 
     trait :expired do
