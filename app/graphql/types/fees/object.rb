@@ -23,6 +23,7 @@ module Types
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :taxes_rate, GraphQL::Types::Float, null: true
       field :units, GraphQL::Types::Float, null: false
+      field :succeeded_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :applied_taxes, [Types::Fees::AppliedTaxes::Object]
 
