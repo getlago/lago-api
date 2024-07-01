@@ -132,6 +132,22 @@ RSpec.describe Api::V1::FeesController, type: :request do
     end
   end
 
+  describe 'DELETE /fees/:id' do
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:) }
+    let(:update_params) { {payment_status: 'succeeded'} }
+    let(:fee) do
+      create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice: nil)
+    end
+
+    context 'when fee exist' do
+      it 'deletes the fee' do
+        delete_with_token(organization, "/api/v1/fees/#{fee.id}")
+        expect(response).to have_http_status(:ok)
+      end
+    end
+  end
+
   describe 'GET /fees' do
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
