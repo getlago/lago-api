@@ -10405,6 +10405,12 @@
               "deprecationReason": null
             },
             {
+              "name": "IRR",
+              "description": "Iranian Rial",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "ISK",
               "description": "Icelandic Króna",
               "isDeprecated": false,

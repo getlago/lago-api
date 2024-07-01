@@ -2467,6 +2467,11 @@ enum CurrencyEnum {
   INR
 
   """
+  Iranian Rial
+  """
+  IRR
+
+  """
   Icelandic Króna
   """
   ISK

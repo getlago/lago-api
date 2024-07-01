@@ -61,6 +61,7 @@ module Currencies
     IDR: 'Indonesian Rupiah',
     ILS: 'Israeli New Sheqel',
     INR: 'Indian Rupee',
+    IRR: 'Iranian Rial',
     ISK: 'Icelandic Króna',
     JMD: 'Jamaican Dollar',
     JOD: 'Jordanian Dinar',
