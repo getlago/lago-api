@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_01_083355) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -226,7 +226,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
     t.boolean "prorated", default: false, null: false
     t.string "invoice_display_name"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
-    t.index ["charge_model"], name: "index_charges_on_charge_model"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
@@ -511,8 +510,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
     t.bigint "unit_amount_cents", default: 0, null: false
     t.boolean "pay_in_advance", default: false, null: false
     t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
-    t.string "invoice_display_name"
     t.decimal "total_aggregated_units"
+    t.string "invoice_display_name"
     t.decimal "precise_unit_amount", precision: 30, scale: 15, default: "0.0", null: false
     t.jsonb "amount_details", default: {}, null: false
     t.uuid "charge_filter_id"
@@ -522,11 +521,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
-    t.index ["fee_type"], name: "index_fees_on_fee_type"
     t.index ["group_id"], name: "index_fees_on_group_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
-    t.index ["payment_status"], name: "index_fees_on_payment_status"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
     t.index ["true_up_parent_fee_id"], name: "index_fees_on_true_up_parent_fee_id"
   end
@@ -732,8 +729,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
     t.boolean "payment_overdue", default: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
+    t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
+    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
@@ -792,9 +791,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
     t.string "tax_identification_number"
     t.integer "net_payment_term", default: 0, null: false
     t.string "default_currency", default: "USD", null: false
-    t.boolean "eu_tax_management", default: false
     t.integer "document_numbering", default: 0, null: false
     t.string "document_number_prefix"
+    t.boolean "eu_tax_management", default: false
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.string "premium_integrations", default: [], null: false, array: true
     t.boolean "custom_aggregation", default: false
@@ -873,7 +872,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
     t.string "invoice_display_name"
     t.index ["created_at"], name: "index_plans_on_created_at"
     t.index ["deleted_at"], name: "index_plans_on_deleted_at"
-    t.index ["interval"], name: "index_plans_on_interval"
     t.index ["organization_id", "code"], name: "index_plans_on_organization_id_and_code", unique: true, where: "((deleted_at IS NULL) AND (parent_id IS NULL))"
     t.index ["organization_id"], name: "index_plans_on_organization_id"
     t.index ["parent_id"], name: "index_plans_on_parent_id"
@@ -961,9 +959,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
     t.datetime "subscription_at"
     t.datetime "ending_at"
     t.datetime "trial_ended_at"
-    t.index ["billing_time"], name: "index_subscriptions_on_billing_time"
     t.index ["customer_id"], name: "index_subscriptions_on_customer_id"
-    t.index ["ending_at"], name: "index_subscriptions_on_ending_at"
     t.index ["external_id"], name: "index_subscriptions_on_external_id"
     t.index ["plan_id"], name: "index_subscriptions_on_plan_id"
     t.index ["started_at", "ending_at"], name: "index_subscriptions_on_started_at_and_ending_at"
@@ -1216,4 +1212,46 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_26_094521) do
   SQL
   add_index "last_hour_events_mv", ["organization_id"], name: "index_last_hour_events_mv_on_organization_id"
 
+  create_view "events_post_processing_fields", sql_definition: <<-SQL
+      SELECT billable_metrics.organization_id,
+      billable_metrics.code,
+      billable_metrics.aggregation_type,
+      billable_metrics.field_name,
+      charges.plan_id,
+      charges.id AS charge_id,
+      charge_filters.id AS charge_filter_id,
+      json_object_agg(billable_metric_filters.key, COALESCE(charge_filter_values."values", '{}'::character varying[]) ORDER BY billable_metric_filters.key) FILTER (WHERE (billable_metric_filters.key IS NOT NULL)) AS filters,
+          CASE
+              WHEN (charges.charge_model = 0) THEN (charges.properties -> 'grouped_by'::text)
+              ELSE NULL::jsonb
+          END AS grouped_by
+     FROM ((((billable_metrics
+       JOIN charges ON ((charges.billable_metric_id = billable_metrics.id)))
+       LEFT JOIN charge_filters ON ((charge_filters.charge_id = charges.id)))
+       LEFT JOIN charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
+       LEFT JOIN billable_metric_filters ON ((charge_filter_values.billable_metric_filter_id = billable_metric_filters.id)))
+    WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charges.pay_in_advance = false) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
+    GROUP BY billable_metrics.organization_id, billable_metrics.code, billable_metrics.aggregation_type, billable_metrics.field_name, charges.plan_id, charges.id, charge_filters.id;
+  SQL
+  create_view "billable_metrics_grouped_charges", sql_definition: <<-SQL
+      SELECT billable_metrics.organization_id,
+      billable_metrics.code,
+      billable_metrics.aggregation_type,
+      billable_metrics.field_name,
+      charges.plan_id,
+      charges.id AS charge_id,
+      charge_filters.id AS charge_filter_id,
+      json_object_agg(billable_metric_filters.key, COALESCE(charge_filter_values."values", '{}'::character varying[]) ORDER BY billable_metric_filters.key) FILTER (WHERE (billable_metric_filters.key IS NOT NULL)) AS filters,
+          CASE
+              WHEN (charges.charge_model = 0) THEN COALESCE((charge_filters.properties -> 'grouped_by'::text), (charges.properties -> 'grouped_by'::text))
+              ELSE NULL::jsonb
+          END AS grouped_by
+     FROM ((((billable_metrics
+       JOIN charges ON ((charges.billable_metric_id = billable_metrics.id)))
+       LEFT JOIN charge_filters ON ((charge_filters.charge_id = charges.id)))
+       LEFT JOIN charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
+       LEFT JOIN billable_metric_filters ON ((charge_filter_values.billable_metric_filter_id = billable_metric_filters.id)))
+    WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charges.pay_in_advance = false) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
+    GROUP BY billable_metrics.organization_id, billable_metrics.code, billable_metrics.aggregation_type, billable_metrics.field_name, charges.plan_id, charges.id, charge_filters.id;
+  SQL
 end
