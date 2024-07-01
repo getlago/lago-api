@@ -2467,14 +2467,14 @@ enum CurrencyEnum {
   INR
 
   """
-  Icelandic Króna
-  """
-  ISK
-
-  """
   Iranian Rial
   """
   IRR
+
+  """
+  Icelandic Króna
+  """
+  ISK
 
   """
   Jamaican Dollar
