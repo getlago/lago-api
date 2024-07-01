@@ -27,16 +27,11 @@ table style='margin-bottom: 32px' width="100%" cellspacing="0" cellpadding="0"
       table cellspacing="0" cellpadding="0"
         tr
           td style="border-radius: 12px;" bgcolor="#006CFA"
-            a href="#{@download_url}" download="#{@export_filename}" style="padding: 10px 16px;font-size: 16px; color: #ffffff;text-decoration: none;font-weight:bold;display: inline-block;font-weight: 400;font-style: normal;line-height: 24px;"
+            a href="#{@data_export.file_url}" download="#{@data_export.filename}" style="padding: 10px 16px;font-size: 16px; color: #ffffff;text-decoration: none;font-weight:bold;display: inline-block;font-weight: 400;font-style: normal;line-height: 24px;"
               = I18n.t('email.data_export.main_cta_label')
 div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
   = I18n.t('email.data_export.fallback_text')
-  a href="#{@forgot_url}" target="_blank" style="color: #006CFA;text-decoration: none;"
-    = @forgot_url
 div style='font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;'
   = I18n.t('email.data_export.thanks')
 div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
   = I18n.t('email.data_export.lago_team')
-div style='width: 100%;height: 1px;background-color: #D9DEE7;margin-bottom: 32px;'
-div style="color: #66758F;font-style: normal;font-weight: 400;font-size: 14px;line-height: 20px;"
-  = I18n.t('email.data_export.email_info')

@@ -1,8 +1,6 @@
 class DataExportMailer < ApplicationMailer
   def completed
     @data_export = params[:data_export]
-    @download_url = "https://google.com"
-    @export_filename = "filename"
     user = @data_export.user
 
     return if @data_export.file.blank?

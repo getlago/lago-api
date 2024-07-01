@@ -23,7 +23,7 @@ RSpec.describe DataExportMailer, type: :mailer do
     context 'when data export is not completed' do
       let(:data_export) { create(:data_export, :processing) }
 
-      it 'does something' do
+      it 'returns a mailer with nil values' do
         expect(mailer.to).to be_nil
       end
     end
@@ -31,7 +31,7 @@ RSpec.describe DataExportMailer, type: :mailer do
     context 'when data export has no attached file' do
       let(:data_export) { create(:data_export, :completed, file: nil) }
 
-      it 'does something' do
+      it 'returns a mailer with nil values' do
         expect(mailer.to).to be_nil
       end
     end

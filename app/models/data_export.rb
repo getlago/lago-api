@@ -21,4 +21,22 @@ class DataExport < ApplicationRecord
 
     expires_at < Time.zone.now
   end
+
+  def filename
+    return if file.blank?
+
+    "#{created_at.strftime('%Y%m%d%H%M%S')}_#{resource_type}.#{format}"
+  end
+
+  def file_url
+    return if file.blank?
+
+    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
+      file,
+      host: 'void',
+      expires_in: 7.days
+    )
+
+    File.join(ENV['LAGO_API_URL'], blob_path)
+  end
 end
