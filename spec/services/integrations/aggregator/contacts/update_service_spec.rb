@@ -14,7 +14,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
     {
       'Connection-Id' => integration.connection_id,
       'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-      'Provider-Config-Key' => integration_type
+      'Provider-Config-Key' => integration_type_key
     }
   end
 
@@ -31,6 +31,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         let(:integration) { create(:netsuite_integration, organization:) }
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration_type) { 'netsuite' }
+        let(:integration_type_key) { 'netsuite-tba' }
 
         let(:params) do
           {
@@ -74,6 +75,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         let(:integration) { create(:xero_integration, organization:) }
         let(:integration_customer) { create(:xero_customer, integration:, customer:) }
         let(:integration_type) { 'xero' }
+        let(:integration_type_key) { 'xero' }
 
         let(:params) do
           [
@@ -115,6 +117,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
       let(:integration) { create(:netsuite_integration, organization:) }
       let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
       let(:integration_type) { 'netsuite' }
+      let(:integration_type_key) { 'netsuite-tba' }
 
       let(:params) do
         {

@@ -15,7 +15,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
     {
       'Connection-Id' => integration.connection_id,
       'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-      'Provider-Config-Key' => integration_type
+      'Provider-Config-Key' => integration_type_key
     }
   end
 
@@ -35,6 +35,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
       context 'when response is a string' do
         let(:integration) { create(:netsuite_integration, organization:) }
         let(:integration_type) { 'netsuite' }
+        let(:integration_type_key) { 'netsuite-tba' }
 
         let(:params) do
           {
@@ -81,6 +82,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
       context 'when response is a hash' do
         let(:integration) { create(:xero_integration, organization:) }
         let(:integration_type) { 'xero' }
+        let(:integration_type_key) { 'xero' }
 
         let(:params) do
           [
@@ -145,6 +147,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
     context 'when service call is not successful' do
       let(:integration) { create(:netsuite_integration, organization:) }
       let(:integration_type) { 'netsuite' }
+      let(:integration_type_key) { 'netsuite-tba' }
 
       let(:params) do
         {
