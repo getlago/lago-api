@@ -51,7 +51,7 @@ module Analytics
               i.issuing_date,
               i.total_amount_cents::float AS amount_cents,
               i.currency,
-              COALESCE(COUNT(i.id), 0) AS invoices_count,
+              COALESCE(COUNT(DISTINCT i.id), 0) AS invoices_count,
               COALESCE(SUM(refund_amount_cents::float),0) AS total_refund_amount_cents
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.id
@@ -83,7 +83,7 @@ module Analytics
             SELECT
               DATE_TRUNC('month', issuing_date) AS month,
               currency,
-              COALESCE(invoices_count, 0) AS invoices_count,
+              COALESCE(SUM(invoices_count), 0) AS invoices_count,
               COALESCE(SUM(amount_cents), 0) AS amount_cents,
               COALESCE(SUM(total_refund_amount_cents), 0) AS total_refund_amount_cents
             FROM (
@@ -91,12 +91,12 @@ module Analytics
               UNION ALL
               SELECT * FROM instant_charges
             ) AS gross_revenue
-            GROUP BY month, currency, total_refund_amount_cents, invoices_count
+            GROUP BY month, currency, total_refund_amount_cents
           )
           SELECT
             am.month,
             #{select_currency_sql},
-            COALESCE(cd.invoices_count, 0) AS invoices_count,
+            COALESCE(SUM(invoices_count), 0) AS invoices_count,
             SUM(cd.amount_cents - cd.total_refund_amount_cents) AS amount_cents
           FROM all_months am
           LEFT JOIN combined_data cd ON am.month = cd.month
@@ -104,7 +104,7 @@ module Analytics
           #{and_months_sql}
           #{and_currency_sql}
           AND cd.amount_cents IS NOT NULL
-          GROUP BY am.month, cd.currency, invoices_count
+          GROUP BY am.month, cd.currency
           ORDER BY am.month;
         SQL
 

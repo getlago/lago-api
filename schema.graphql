@@ -5504,6 +5504,11 @@ type Query {
   customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
 
   """
+  Query invoice collections of a customer portal user
+  """
+  customerPortalInvoiceCollections(months: Int): FinalizedInvoiceCollectionCollection!
+
+  """
   Query invoices of a customer
   """
   customerPortalInvoices(limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
@@ -5512,6 +5517,11 @@ type Query {
   Query customer portal organization
   """
   customerPortalOrganization: Organization
+
+  """
+  Query overdue balances of a customer portal user
+  """
+  customerPortalOverdueBalances(months: Int): OverdueBalanceCollection!
 
   """
   Query a customer portal user
