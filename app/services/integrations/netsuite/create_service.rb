@@ -17,6 +17,8 @@ module Integrations
           client_id: args[:client_id],
           client_secret: args[:client_secret],
           account_id: args[:account_id],
+          token_id: args[:token_id],
+          token_secret: args[:token_secret],
           connection_id: args[:connection_id],
           script_endpoint_url: args[:script_endpoint_url],
           sync_credit_notes: ActiveModel::Type::Boolean.new.cast(args[:sync_credit_notes]),

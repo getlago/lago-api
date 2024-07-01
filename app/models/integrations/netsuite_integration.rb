@@ -9,8 +9,9 @@ module Integrations
       :sync_invoices,
       :sync_payments,
       :sync_sales_orders,
-      :script_endpoint_url
-    secrets_accessors :connection_id, :client_secret
+      :script_endpoint_url,
+      :token_id
+    secrets_accessors :connection_id, :client_secret, :token_secret
 
     def account_id=(value)
       push_to_settings(key: 'account_id', value: value&.downcase&.strip&.split(' ')&.join('-'))
