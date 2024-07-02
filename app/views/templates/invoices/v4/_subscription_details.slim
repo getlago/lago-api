@@ -97,7 +97,7 @@
             td.body-2 == TaxHelper.applied_taxes(commitment_fee)
             td.body-2 = MoneyHelper.format(commitment_fee.amount)
 
-      / Charges payed in advance on payed in arrears plan
+      / Charges payed in advance on paid in arrears plan
       - if subscription.plan.charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance? && existing_fees_in_interval?(subscription_id: subscription.id, charge_in_advance: true)
         .invoice-resume.overflow-auto class="mt-24"
           table.invoice-resume-table width="100%"

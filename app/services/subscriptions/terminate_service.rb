@@ -69,6 +69,8 @@ module Subscriptions
         [subscription]
       end
       BillSubscriptionJob.perform_later(billable_subscriptions, timestamp, invoicing_reason: :upgrading)
+      # NOTE: Commented until feature is fully released
+      # BillNonInvoiceableFeesJob.perform_later([subscription], rotation_date) # Ignore next subscription since there can't be events
 
       SendWebhookJob.perform_later('subscription.terminated', subscription)
       SendWebhookJob.perform_later('subscription.started', next_subscription)
@@ -93,12 +95,16 @@ module Subscriptions
           subscription.terminated_at,
           invoicing_reason: :subscription_terminating
         )
+        # NOTE: Commented until feature is fully released
+        # BillNonInvoiceableFeesJob.set(wait: 2.seconds).perform_later([subscription], subscription.terminated_at)
       else
         BillSubscriptionJob.perform_now(
           [subscription],
           subscription.terminated_at,
           invoicing_reason: :subscription_terminating
         )
+        # NOTE: Commented until feature is fully released
+        # BillNonInvoiceableFeesJob.perform_now([subscription], subscription.terminated_at)
       end
     end
 
