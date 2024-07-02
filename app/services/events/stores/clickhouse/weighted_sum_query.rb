@@ -60,7 +60,7 @@ module Events
         delegate :events, :charges_duration, :sanitized_property_name, :sanitized_numeric_property, to: :store
 
         def events_cte_sql
-          <<-SQL
+          <<~SQL
             WITH events_data AS (
               (#{initial_value_sql})
               UNION ALL
