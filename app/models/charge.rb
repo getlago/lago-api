@@ -40,6 +40,7 @@ class Charge < ApplicationRecord
   validates :charge_model, presence: true
 
   validate :validate_pay_in_advance
+  validate :validate_regroup_paid_fees
   validate :validate_prorated
   validate :validate_min_amount_cents
   validate :validate_uniqueness_group_properties
@@ -96,6 +97,14 @@ class Charge < ApplicationRecord
     if volume? || !billable_metric.payable_in_advance?
       errors.add(:pay_in_advance, :invalid_aggregation_type_or_charge_model)
     end
+  end
+
+  # NOTE: regroup_paid_fees only works with pay_in_advance and non-invoiceable charges
+  def validate_regroup_paid_fees
+    return if regroup_paid_fees.nil?
+    return if pay_in_advance? && !invoiceable?
+
+    errors.add(:regroup_paid_fees, :only_compatible_with_pay_in_advance_and_non_invoiceable)
   end
 
   def validate_min_amount_cents

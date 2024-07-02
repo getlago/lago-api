@@ -33,6 +33,7 @@ en:
         missing_volume_ranges: missing_volume_ranges
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
+        only_compatible_with_pay_in_advance_and_non_invoiceable: only_compatible_with_pay_in_advance_and_non_invoiceable
         required: relation_must_exist
         taken: value_already_exist
         too_long: value_is_too_long

@@ -48,7 +48,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
     context 'with existing standalone fees' do
       before do
         tax
-        charge = create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+        charge = create(:standard_charge, :regroup_paid_fees, plan: subscription.plan)
         create_list(:charge_fee, 3, :succeeded, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
         create_list(:charge_fee, 2, :failed, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
       end
@@ -97,7 +97,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
     context 'with integration requiring sync' do
       before do
         tax
-        charge = create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+        charge = create(:standard_charge, :regroup_paid_fees, plan: subscription.plan)
         create(:charge_fee, :succeeded, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
 
         allow_any_instance_of(Invoice).to receive(:should_sync_invoice?).and_return(true) # rubocop:disable RSpec/AnyInstance

@@ -28,6 +28,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
           {
             billable_metric_id: billable_metric.id,
             charge_model: 'standard',
+            pay_in_advance: true,
+            invoiceable: false,
+            regroup_paid_fees: 'invoice',
             properties: {
               amount: '0.22'
             },
@@ -49,6 +52,30 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(json[:plan][:invoice_display_name]).to eq(create_params[:invoice_display_name])
       expect(json[:plan][:created_at]).to be_present
       expect(json[:plan][:charges].first[:lago_id]).to be_present
+    end
+
+    context 'when license is not premium' do
+      it 'ignores premium fields' do
+        post_with_token(organization, '/api/v1/plans', {plan: create_params})
+
+        expect(response).to have_http_status(:success)
+        charge = json[:plan][:charges].first
+        expect(charge[:invoiceable]).to be true
+        expect(charge[:regroup_paid_fees]).to be_nil
+      end
+    end
+
+    context 'when license is premium' do
+      around { |test| lago_premium!(&test) }
+
+      it 'updates premium fields' do
+        post_with_token(organization, '/api/v1/plans', {plan: create_params})
+
+        expect(response).to have_http_status(:success)
+        charge = json[:plan][:charges].first
+        expect(charge[:invoiceable]).to be false
+        expect(charge[:regroup_paid_fees]).to eq 'invoice'
+      end
     end
 
     context 'with minimum commitment' do
