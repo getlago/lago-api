@@ -12,6 +12,15 @@ en:
         issue_date: Issue date
         refunded_notice: Refunded on %{date}
         subject: 'Your credit note from %{organization_name} #%{credit_note_number}'
+    data_export:
+      completed:
+        fallback_text: If the link has expired, please generate a new one from your Dashboard.
+        greetings: Hello
+        intro: Your invoices export is ready! You can download it using the link below, which will be available for 7 days.
+        lago_team: The Lago Team
+        main_cta_label: Download export
+        subject: Your Lago %{resource_type} export in ready!
+        thanks: Thanks,
     invoice:
       finalized:
         download: Download invoice for details

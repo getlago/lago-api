@@ -5,6 +5,8 @@ require 'rails_helper'
 RSpec.describe Membership, type: :model do
   subject(:membership) { create(:membership) }
 
+  it { is_expected.to have_many(:data_exports) }
+
   it_behaves_like 'paper_trail traceable'
 
   describe '#mark_as_revoked' do
