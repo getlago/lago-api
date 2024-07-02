@@ -257,6 +257,7 @@ type Charge {
   payInAdvance: Boolean!
   properties: Properties
   prorated: Boolean!
+  regroupPaidFees: String
   taxes: [Tax!]
   updatedAt: ISO8601DateTime!
 }

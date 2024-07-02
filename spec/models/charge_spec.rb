@@ -424,6 +424,36 @@ RSpec.describe Charge, type: :model do
     end
   end
 
+  describe '#validate_regroup_paid_fees' do
+    context 'when regroup_paid_fees is nil' do
+      it 'does not return an error when' do
+        expect(build(:standard_charge, pay_in_advance: true, invoiceable: true, regroup_paid_fees: nil)).to be_valid
+        expect(build(:standard_charge, pay_in_advance: true, invoiceable: false, regroup_paid_fees: nil)).to be_valid
+        expect(build(:standard_charge, pay_in_advance: false, invoiceable: true, regroup_paid_fees: nil)).to be_valid
+        expect(build(:standard_charge, pay_in_advance: false, invoiceable: false, regroup_paid_fees: nil)).to be_valid
+      end
+    end
+
+    context 'when regroup_paid_fees is `invoice`' do
+      it 'requires charge to be pay_in_advance and non invoiceable' do
+        expect(build(:standard_charge, pay_in_advance: true, invoiceable: false, regroup_paid_fees: 'invoice')).to be_valid
+
+        [
+          {pay_in_advance: true, invoiceable: true},
+          {pay_in_advance: false, invoiceable: true},
+          {pay_in_advance: false, invoiceable: false}
+        ].each do |params|
+          charge = build(:standard_charge, regroup_paid_fees: 'invoice', **params)
+
+          aggregate_failures do
+            expect(charge).not_to be_valid
+            expect(charge.errors.messages[:regroup_paid_fees]).to include('only_compatible_with_pay_in_advance_and_non_invoiceable')
+          end
+        end
+      end
+    end
+  end
+
   describe '#validate_min_amount_cents' do
     it 'does not return an error' do
       expect(build(:standard_charge)).to be_valid

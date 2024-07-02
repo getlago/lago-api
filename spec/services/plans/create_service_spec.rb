@@ -196,6 +196,7 @@ RSpec.describe Plans::CreateService, type: :service do
             charge_model: 'graduated_percentage',
             pay_in_advance: true,
             invoiceable: false,
+            regroup_paid_fees: 'invoice',
             properties: {
               graduated_percentage_ranges: [
                 {
@@ -238,6 +239,7 @@ RSpec.describe Plans::CreateService, type: :service do
           {
             pay_in_advance: true,
             invoiceable: false,
+            regroup_paid_fees: 'invoice',
             charge_model: 'graduated_percentage'
           }
         )
