@@ -49,10 +49,30 @@ module Api
         end
       end
 
+      def destroy
+        fee = Fee.from_organization(current_organization).find_by(id: params[:id])
+        result = ::Fees::DestroyService.call(fee:)
+
+        if result.success?
+          render_fee(result.fee)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def update_params
         params.require(:fee).permit(:payment_status)
+      end
+
+      def render_fee(fee)
+        render(
+          json: ::V1::FeeSerializer.new(
+            fee,
+            root_name: 'fee'
+          )
+        )
       end
 
       def index_filters

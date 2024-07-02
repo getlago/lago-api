@@ -2,6 +2,8 @@
 
 class Fee < ApplicationRecord
   include Currencies
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   belongs_to :invoice, optional: true
   belongs_to :charge, -> { with_discarded }, optional: true
