@@ -63,9 +63,9 @@ module Analytics
             am.month,
             #{select_currency_sql},
             SUM(invs.total_amount_cents) AS amount_cents,
-            jsonb_agg(DISTINCT invoice_id) AS invoice_ids
+            jsonb_agg(DISTINCT invs.ids) AS lago_invoice_ids
           FROM all_months am
-          LEFT JOIN payment_overdue_invoices invs ON am.month = invs.month, UNNEST(invs.ids) invoice_id
+          LEFT JOIN payment_overdue_invoices invs ON am.month = invs.month
           WHERE am.month <= DATE_TRUNC('month', CURRENT_DATE)
           #{and_months_sql}
           #{and_currency_sql}
