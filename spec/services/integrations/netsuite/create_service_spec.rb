@@ -21,6 +21,8 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
         connection_id: 'conn1',
         client_id: 'cl1',
         client_secret: 'secret',
+        token_id: 'xyz',
+        token_secret: 'zyx',
         account_id: 'acc1',
         script_endpoint_url:
       }
@@ -70,6 +72,8 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
 
             integration = Integrations::NetsuiteIntegration.order(:created_at).last
             expect(integration.name).to eq(name)
+            expect(integration.token_id).to eq('xyz')
+            expect(integration.token_secret).to eq('zyx')
             expect(integration.script_endpoint_url).to eq(script_endpoint_url)
           end
 

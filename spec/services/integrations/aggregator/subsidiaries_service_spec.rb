@@ -14,7 +14,7 @@ RSpec.describe Integrations::Aggregator::SubsidiariesService do
       {
         'Connection-Id' => integration.connection_id,
         'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-        'Provider-Config-Key' => 'netsuite'
+        'Provider-Config-Key' => 'netsuite-tba'
       }
     end
 

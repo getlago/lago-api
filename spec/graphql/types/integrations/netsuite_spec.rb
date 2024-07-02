@@ -13,6 +13,8 @@ RSpec.describe Types::Integrations::Netsuite do
   it { is_expected.to have_field(:has_mappings_configured).of_type('Boolean') }
   it { is_expected.to have_field(:name).of_type('String!') }
   it { is_expected.to have_field(:script_endpoint_url).of_type('String!') }
+  it { is_expected.to have_field(:token_id).of_type('String') }
+  it { is_expected.to have_field(:token_secret).of_type('String') }
 
   it { is_expected.to have_field(:sync_credit_notes).of_type('Boolean') }
   it { is_expected.to have_field(:sync_invoices).of_type('Boolean') }

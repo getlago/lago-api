@@ -32,6 +32,15 @@ module Integrations
         end
       end
 
+      def provider_key
+        case integration.type
+        when 'Integrations::NetsuiteIntegration'
+          'netsuite-tba'
+        when 'Integrations::XeroIntegration'
+          'xero'
+        end
+      end
+
       def http_client
         LagoHttpClient::Client.new(endpoint_url)
       end

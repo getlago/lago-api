@@ -25,7 +25,7 @@ module Integrations
 
       def headers
         {
-          'Provider-Config-Key' => 'netsuite',
+          'Provider-Config-Key' => 'netsuite-tba',
           'Authorization' => "Bearer #{secret_key}"
         }
       end
