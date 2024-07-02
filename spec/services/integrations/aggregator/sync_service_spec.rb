@@ -33,7 +33,7 @@ RSpec.describe Integrations::Aggregator::SyncService do
       expect(LagoHttpClient::Client).to have_received(:new)
         .with(sync_endpoint)
       expect(lago_client).to have_received(:post_with_response) do |payload|
-        expect(payload[:provider_config_key]).to eq('netsuite')
+        expect(payload[:provider_config_key]).to eq('netsuite-tba')
         expect(payload[:syncs]).to eq(syncs_list)
       end
     end
@@ -45,7 +45,7 @@ RSpec.describe Integrations::Aggregator::SyncService do
         expect(LagoHttpClient::Client).to have_received(:new)
           .with(sync_endpoint)
         expect(lago_client).to have_received(:post_with_response) do |payload|
-          expect(payload[:provider_config_key]).to eq('netsuite')
+          expect(payload[:provider_config_key]).to eq('netsuite-tba')
           expect(payload[:syncs]).to eq(%w[netsuite-items-sync])
         end
       end

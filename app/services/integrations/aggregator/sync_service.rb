@@ -9,7 +9,7 @@ module Integrations
 
       def call
         payload = {
-          provider_config_key: provider,
+          provider_config_key: provider_key,
           syncs: sync_list
         }
 
