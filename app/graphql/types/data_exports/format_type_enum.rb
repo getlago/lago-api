@@ -8,4 +8,4 @@ module Types
       end
     end
   end
-e
+end
