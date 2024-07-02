@@ -9,6 +9,7 @@ module Invoices
 
       retry_on Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6
       retry_on Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
+      discard_on Stripe::AuthenticationError
 
       def perform(invoice)
         result = Invoices::Payments::StripeService.new(invoice).create
