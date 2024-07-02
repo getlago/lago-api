@@ -1,6 +1,6 @@
 module DataExports
   class ExportResourcesJob < ApplicationJob
-    queue_as :data_export
+    queue_as :default
 
     def perform(data_export)
       ExportResourcesService.call(data_export:).raise_if_error!
