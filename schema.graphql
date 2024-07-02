@@ -3450,6 +3450,7 @@ type Fee implements InvoiceItem {
   itemType: String!
   preciseUnitAmount: Float!
   subscription: Subscription
+  succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
   taxesRate: Float
   trueUpFee: Fee
