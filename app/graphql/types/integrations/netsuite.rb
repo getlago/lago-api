@@ -28,6 +28,8 @@ module Types
       end
 
       def token_secret
+        return nil unless object.token_secret
+
         "#{"•" * 8}…#{object.token_secret[-3..]}"
       end
 
