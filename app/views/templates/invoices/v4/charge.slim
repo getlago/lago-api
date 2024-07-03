@@ -431,7 +431,9 @@ html
                     = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
                     - if fee.charge_filter_id?
                       = ' • ' + fee.filter_display_name(separator: ' • ')
-                  .body-3 = I18n.l(fee.succeeded_at.in_time_zone(customer.applicable_timezone).to_date, format: :default)
+                  - succeeded_at_date = fee.succeeded_at&.in_time_zone(customer.applicable_timezone)&.to_date
+                  - if succeeded_at_date
+                    .body-3 = I18n.l(succeeded_at_date, format: :default)
               - elsif fee.charge.prorated?
                 - pay_in_advance_range = charge_pay_in_advance_proration_range(fee, invoice_subscription(fee.subscription.id).timestamp)
                 td
