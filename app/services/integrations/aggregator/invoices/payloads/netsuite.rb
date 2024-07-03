@@ -52,7 +52,7 @@ module Integrations
               'item' => mapped_item.external_id,
               'account' => mapped_item.external_account_code,
               'quantity' => fee.units,
-              'rate' => fee.precise_unit_amount
+              'rate' => limited_rate(fee.precise_unit_amount)
             }
           end
 
@@ -87,6 +87,18 @@ module Integrations
             end
 
             output
+          end
+
+          def limited_rate(precise_unit_amount)
+            unit_amount_str = precise_unit_amount.to_s
+
+            return precise_unit_amount if unit_amount_str.length <= 15
+
+            decimal_position = unit_amount_str.index('.')
+
+            return precise_unit_amount unless decimal_position
+
+            precise_unit_amount.round(14 - decimal_position)
           end
         end
       end
