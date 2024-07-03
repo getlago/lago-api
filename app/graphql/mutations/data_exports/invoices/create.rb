@@ -12,9 +12,7 @@ module Mutations
         graphql_name 'CreateInvoicesDataExport'
         description 'Request data export of invoices'
 
-        argument :filters, Types::DataExports::InvoiceFiltersInput
-        argument :format, Types::DataExports::FormatTypeEnum
-        argument :resource_type, Types::DataExports::InvoicesExportTypeEnum
+        input_object_class Types::DataExports::Invoices::CreateInput
 
         type Types::DataExports::Object
 

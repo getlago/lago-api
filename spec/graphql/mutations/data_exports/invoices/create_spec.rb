@@ -10,7 +10,7 @@ RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
 
   let(:mutation) do
     <<-GQL
-      mutation($input: CreateInvoicesDataExportInput!) {
+      mutation($input: CreateDataExportsInvoicesInput!) {
         createInvoicesDataExport(input: $input) {
           id,
           status,
