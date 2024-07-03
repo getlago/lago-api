@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Types::DataExports::InvoiceFiltersInput do
+RSpec.describe Types::DataExports::Invoices::FiltersInput do
   subject { described_class }
 
   it { is_expected.to accept_argument(:currency).of_type('CurrencyEnum') }
