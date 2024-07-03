@@ -1,0 +1,36 @@
+# frozen_string_literal: true
+
+module Mutations
+  module DataExports
+    module Invoices
+      class Create < BaseMutation
+        include AuthenticableApiUser
+        include RequiredOrganization
+
+        REQUIRED_PERMISSION = 'invoices:create'
+
+        graphql_name 'CreateInvoicesDataExport'
+        description 'Request data export of invoices'
+
+        argument :filters, Types::DataExports::InvoiceFiltersInput
+        argument :format, Types::DataExports::FormatTypeEnum
+        argument :resource_type, Types::DataExports::InvoicesExportTypeEnum
+
+        type Types::DataExports::Object
+
+        def resolve(format:, filters:, resource_type:)
+          result = ::DataExports::CreateService
+            .call(
+              organization: current_organization,
+              user: context[:current_user],
+              format:,
+              resource_type:,
+              resource_query: filters
+            )
+
+          result.success? ? result.data_export : result_error(result)
+        end
+      end
+    end
+  end
+end
