@@ -29,6 +29,8 @@ module Integrations
           'netsuite'
         when 'Integrations::XeroIntegration'
           'xero'
+        when 'Integrations::AnrokIntegration'
+          'anrok'
         end
       end
 
@@ -38,6 +40,8 @@ module Integrations
           'netsuite-tba'
         when 'Integrations::XeroIntegration'
           'xero'
+        when 'Integrations::AnrokIntegration'
+          'anrok'
         end
       end
 
