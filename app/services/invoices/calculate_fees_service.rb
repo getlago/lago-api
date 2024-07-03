@@ -34,7 +34,7 @@ module Invoices
             charges_duration: date_service.charges_duration_in_days
           }
 
-          create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription)
+          create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription, boundaries)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
           create_recurring_non_invoiceable_fees(subscription, boundaries) if should_create_recurring_non_invoiceable_fees?(subscription)
           create_minimum_commitment_true_up_fee(invoice_subscription) if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
@@ -206,7 +206,7 @@ module Invoices
         )
     end
 
-    def should_create_subscription_fee?(subscription)
+    def should_create_subscription_fee?(subscription, boundaries)
       # NOTE: When plan is pay in advance we generate an invoice upon subscription creation
       # We want to prevent creating subscription fee if subscription creation already happened on billing day
       fee_exists = subscription.fees
@@ -217,7 +217,7 @@ module Invoices
 
       return false if subscription.plan.pay_in_advance? && fee_exists
       return false unless should_create_yearly_subscription_fee?(subscription)
-      return false if subscription.in_trial_period? && !subscription.trial_end_datetime&.today?
+      return false if in_trial_period_not_ending_today?(subscription, boundaries[:timestamp])
 
       # NOTE: When a subscription is terminated we still need to charge the subscription
       #       fee if the plan is in pay in arrears, otherwise this fee will never
@@ -307,6 +307,14 @@ module Invoices
 
     def not_in_finalizing_process?
       (invoice.draft? || invoice.voided?) && context != :finalize
+    end
+
+    def in_trial_period_not_ending_today?(subscription, timestamp)
+      return false unless subscription.in_trial_period?
+
+      tz = subscription.customer.applicable_timezone
+
+      timestamp.in_time_zone(tz).to_date != subscription.trial_end_datetime.in_time_zone(tz).to_date
     end
   end
 end
