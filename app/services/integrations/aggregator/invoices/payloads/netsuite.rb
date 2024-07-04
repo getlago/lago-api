@@ -5,6 +5,8 @@ module Integrations
     module Invoices
       module Payloads
         class Netsuite < BasePayload
+          MAX_DECIMALS = 15
+
           def body
             {
               'type' => type,
@@ -92,13 +94,13 @@ module Integrations
           def limited_rate(precise_unit_amount)
             unit_amount_str = precise_unit_amount.to_s
 
-            return precise_unit_amount if unit_amount_str.length <= 15
+            return precise_unit_amount if unit_amount_str.length <= MAX_DECIMALS
 
             decimal_position = unit_amount_str.index('.')
 
             return precise_unit_amount unless decimal_position
 
-            precise_unit_amount.round(14 - decimal_position)
+            precise_unit_amount.round(MAX_DECIMALS - 1 - decimal_position)
           end
         end
       end
