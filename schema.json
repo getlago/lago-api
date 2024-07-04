@@ -14934,6 +14934,20 @@
               ]
             },
             {
+              "name": "succeededAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "taxesAmountCents",
               "description": null,
               "type": {
@@ -19368,6 +19382,12 @@
             },
             {
               "name": "one_off",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "advance_charges",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

@@ -3452,6 +3452,7 @@ type Fee implements InvoiceItem {
   itemType: String!
   preciseUnitAmount: Float!
   subscription: Subscription
+  succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
   taxesRate: Float
   trueUpFee: Fee
@@ -3901,6 +3902,7 @@ type InvoiceSubscription {
 
 enum InvoiceTypeEnum {
   add_on
+  advance_charges
   credit
   one_off
   subscription
