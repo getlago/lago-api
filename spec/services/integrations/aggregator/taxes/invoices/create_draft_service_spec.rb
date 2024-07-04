@@ -53,7 +53,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       :fee,
       invoice:,
       add_on: add_on_two,
-      created_at: current_time - 3.seconds
+      created_at: current_time - 2.seconds
     )
   end
 
