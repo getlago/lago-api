@@ -9,6 +9,34 @@ RSpec.describe DataExport, type: :model do
   it { is_expected.to validate_presence_of(:resource_query) }
   it { is_expected.to validate_presence_of(:status) }
 
+  describe '#processing!' do
+    subject(:processing!) { data_export.processing! }
+
+    let(:data_export) { create :data_export }
+
+    it 'updates status and started_at timestamp' do
+      freeze_time do
+        expect { processing! }
+          .to change { data_export.status }.to('processing')
+          .and change { data_export.started_at }.to(Time.zone.now)
+      end
+    end
+  end
+
+  describe '#completed!' do
+    subject(:completed!) { data_export.completed! }
+
+    let(:data_export) { create :data_export }
+
+    it 'updates status and started_at timestamp' do
+      freeze_time do
+        expect { completed! }
+          .to change { data_export.status }.to('completed')
+          .and change { data_export.completed_at }.to(Time.zone.now)
+      end
+    end
+  end
+
   describe '#expired?' do
     subject(:expired?) { data_export.expired? }
 

@@ -16,6 +16,14 @@ class DataExport < ApplicationRecord
 
   delegate :user, to: :membership
 
+  def processing!
+    update!(status: 'processing', started_at: Time.zone.now)
+  end
+
+  def completed!
+    update!(status: 'completed', completed_at: Time.zone.now)
+  end
+
   def expired?
     return false unless expires_at
 
