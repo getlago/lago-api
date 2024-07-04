@@ -1,6 +1,7 @@
 class DataExport < ApplicationRecord
   EXPORT_FORMATS = %w[csv].freeze
   STATUSES = %w[pending processing completed failed].freeze
+  EXPIRATION_PERIOD = 7.days
 
   belongs_to :organization
   belongs_to :membership
@@ -21,7 +22,11 @@ class DataExport < ApplicationRecord
   end
 
   def completed!
-    update!(status: 'completed', completed_at: Time.zone.now)
+    update!(
+      status: 'completed',
+      completed_at: Time.zone.now,
+      expires_at: EXPIRATION_PERIOD.from_now
+    )
   end
 
   def expired?

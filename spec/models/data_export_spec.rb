@@ -33,6 +33,7 @@ RSpec.describe DataExport, type: :model do
         expect { completed! }
           .to change { data_export.status }.to('completed')
           .and change { data_export.completed_at }.to(Time.zone.now)
+          .and change { data_export.expires_at }.to(7.days.from_now)
       end
     end
   end
