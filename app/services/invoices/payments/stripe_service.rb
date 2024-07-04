@@ -51,6 +51,14 @@ module Invoices
 
         result.payment = payment
         result
+      rescue Stripe::AuthenticationError, Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
+        deliver_error_webhook(e)
+        # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
+        #       For now we keep it as pending, the user can still update it manually
+        return if e.code == 'amount_too_small'
+
+        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
+        nil
       end
 
       def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
@@ -175,9 +183,6 @@ module Invoices
         if (payment_method_id = result.invoice_settings.default_payment_method || result.default_source)
           customer.stripe_customer.update!(payment_method_id:)
         end
-      rescue Stripe::StripeError => e
-        deliver_error_webhook(e)
-        raise
       end
 
       def create_stripe_payment
@@ -190,14 +195,6 @@ module Invoices
             idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}"
           }
         )
-      rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
-        # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
-        #       For now we keep it as pending, the user can still update it manually
-        return if e.code == 'amount_too_small'
-
-        deliver_error_webhook(e)
-        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
-        nil
       end
 
       def stripe_payment_payload
