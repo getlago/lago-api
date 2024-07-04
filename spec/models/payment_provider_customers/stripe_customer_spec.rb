@@ -89,6 +89,24 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer, type: :model do
           expect(errors.where(:provider_payment_methods, :invalid)).not_to be_present
         end
       end
+
+      context 'when it contains link type' do
+        let(:provider_payment_methods) { %w[link] }
+
+        context 'when required provider payment method card is missing' do
+          it 'adds error on provider payment methods' do
+            expect(errors.where(:provider_payment_methods, :invalid)).to be_present
+          end
+        end
+
+        context 'when required provider payment method card exists' do
+          let(:provider_payment_methods) { %w[link card] }
+
+          it 'does not add error on provider payment methods' do
+            expect(errors.where(:provider_payment_methods, :invalid)).not_to be_present
+          end
+        end
+      end
     end
   end
 end
