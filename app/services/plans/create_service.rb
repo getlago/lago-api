@@ -103,6 +103,7 @@ module Plans
 
       if License.premium?
         charge.invoiceable = args[:invoiceable] unless args[:invoiceable].nil?
+        charge.regroup_paid_fees = args[:regroup_paid_fees] if args.has_key?(:regroup_paid_fees)
         charge.min_amount_cents = args[:min_amount_cents] || 0
       end
 

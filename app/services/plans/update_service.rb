@@ -99,6 +99,7 @@ module Plans
 
       if License.premium?
         charge.invoiceable = params[:invoiceable] unless params[:invoiceable].nil?
+        charge.regroup_paid_fees = params[:regroup_paid_fees] if params.has_key?(:regroup_paid_fees)
         charge.min_amount_cents = params[:min_amount_cents] || 0
       end
 

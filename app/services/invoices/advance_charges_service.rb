@@ -14,8 +14,7 @@ module Invoices
     end
 
     def call
-      # TODO: check if related charges have correct `invoicing_strategy`
-      # return result unless has_charges_to_invoice?
+      return result unless has_charges_with_statement?
 
       return result if subscriptions.empty?
 
@@ -39,6 +38,11 @@ module Invoices
     private
 
     attr_accessor :subscriptions, :billing_at, :customer, :organization, :currency
+
+    def has_charges_with_statement?
+      plan_ids = subscriptions.pluck(:plan_id)
+      Charge.where(plan_id: plan_ids, pay_in_advance: true, invoiceable: false, regroup_paid_fees: :invoice).any?
+    end
 
     def create_group_invoice
       invoice = nil
