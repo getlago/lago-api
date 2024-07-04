@@ -59,6 +59,9 @@ module Invoices
 
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
         nil
+      rescue Stripe::RateLimitError, Stripe::APIConnectionError => e
+        deliver_error_webhook(e)
+        raise
       end
 
       def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
