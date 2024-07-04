@@ -28,8 +28,7 @@ module DataExports
 
       result.data_export = data_export
       result
-
-    rescue StandardError => e
+    rescue => e
       data_export.failed!
       result.service_failure!(code: e.message, message: e.full_message)
     end

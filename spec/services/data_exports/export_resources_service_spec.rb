@@ -13,14 +13,14 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
     allow(DataExports::Csv::Invoices)
       .to receive(:call)
       .and_return(csv_content)
-
-    allow(DataExportMailer).to receive_message_chain(:with, :completed, :deliver_later)
   end
 
   describe '#call' do
     it 'updates the data export status to processing' do
-      expect(data_export).to receive(:processing!)
+      allow(data_export).to receive(:processing!)
+
       result
+      expect(data_export).to have_received(:processing!)
     end
 
     it 'attaches the generated file to the data export' do
@@ -29,13 +29,16 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
     end
 
     it 'updates the data export status to completed' do
-      expect(data_export).to receive(:completed!)
+      allow(data_export).to receive(:completed!)
+
       result
+      expect(data_export).to have_received(:completed!)
     end
 
     it 'sends a completion email' do
-      expect(DataExportMailer).to receive_message_chain(:with, :completed, :deliver_later)
-      result
+      expect { result }
+        .to have_enqueued_mail(DataExportMailer, :completed)
+        .with(params: {data_export:}, args: [])
     end
 
     it 'retunrs the data export result' do

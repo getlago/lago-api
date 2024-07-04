@@ -17,8 +17,8 @@ RSpec.describe DataExport, type: :model do
     it 'updates status and started_at timestamp' do
       freeze_time do
         expect { processing! }
-          .to change { data_export.status }.to('processing')
-          .and change { data_export.started_at }.to(Time.zone.now)
+          .to change(data_export, :status).to('processing')
+          .and change(data_export, :started_at).to(Time.zone.now)
       end
     end
   end
@@ -31,9 +31,9 @@ RSpec.describe DataExport, type: :model do
     it 'updates status and started_at timestamp' do
       freeze_time do
         expect { completed! }
-          .to change { data_export.status }.to('completed')
-          .and change { data_export.completed_at }.to(Time.zone.now)
-          .and change { data_export.expires_at }.to(7.days.from_now)
+          .to change(data_export, :status).to('completed')
+          .and change(data_export, :completed_at).to(Time.zone.now)
+          .and change(data_export, :expires_at).to(7.days.from_now)
       end
     end
   end
