@@ -4,9 +4,9 @@ module Integrations
   module Aggregator
     module Taxes
       module Invoices
-        class CreateDraftService < BaseService
+        class CreateService < BaseService
           def action_path
-            "v1/#{provider}/draft_invoices"
+            "v1/#{provider}/finalized_invoices"
           end
 
           def call
@@ -30,12 +30,17 @@ module Integrations
           private
 
           def payload
-            Integrations::Aggregator::Taxes::Invoices::Payload.new(
+            payload = Integrations::Aggregator::Taxes::Invoices::Payload.new(
               integration:,
               invoice:,
               customer:,
               fees:
             ).body
+
+            invoice_data = payload.first
+            invoice_data['id'] = invoice.id
+
+            [invoice_data]
           end
         end
       end

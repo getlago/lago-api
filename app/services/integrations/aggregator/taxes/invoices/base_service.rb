@@ -44,10 +44,8 @@ module Integrations
             fees = body['succeededInvoices']&.first.try(:[], 'fees')
 
             if fees
-              puts "\n1\n"
               result.fees = fees
             else
-              puts "\n2: #{ body['failedInvoices'].first.inspect}\n"
               code = body['failedInvoices'].first['validation_errors']['type']
               message = 'Service failure'
 

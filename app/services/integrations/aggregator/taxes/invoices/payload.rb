@@ -13,7 +13,7 @@ module Integrations
             @fees = fees
           end
 
-          def draft_body
+          def body
             [
               {
                 'issuing_date' => invoice.issuing_date,
