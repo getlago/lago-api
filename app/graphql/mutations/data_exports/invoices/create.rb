@@ -7,7 +7,7 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'invoices:create'
+        REQUIRED_PERMISSION = 'invoices:export'
 
         graphql_name 'CreateInvoicesDataExport'
         description 'Request data export of invoices'

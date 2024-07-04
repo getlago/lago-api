@@ -43,6 +43,7 @@ invoices:
   update: true
   void: true
   create:
+  export: true
 draft_invoices:
   update: true
 credit_notes:

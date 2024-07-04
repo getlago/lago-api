@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
-  let(:required_permission) { 'invoices:create' }
+  let(:required_permission) { 'invoices:export' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:currency) { 'EUR' }
@@ -23,7 +23,7 @@ RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:create'
+  it_behaves_like 'requires permission', 'invoices:export'
 
   it 'creates data export' do
     result = execute_graphql(
