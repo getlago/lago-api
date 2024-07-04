@@ -9,6 +9,9 @@ development:
     password: changeme
     database: lago
     port: 5432
+    <% if ENV['DATABASE_SCHEMA_SEARCH_PATH'].present? %>
+    schema_search_path: <%= ENV['DATABASE_SCHEMA_SEARCH_PATH'] %>
+    <% end %>
   events:
     <<: *default
     host: db
@@ -16,6 +19,9 @@ development:
     password: changeme
     database: lago
     port: 5432
+    <% if ENV['DATABASE_SCHEMA_SEARCH_PATH'].present? %>
+    schema_search_path: <%= ENV['DATABASE_SCHEMA_SEARCH_PATH'] %>
+    <% end %>
   clickhouse:
     adapter: clickhouse
     database: default
@@ -32,10 +38,16 @@ test:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
     schema_dump: <% if ENV['LAGO_DISABLE_SCHEMA_DUMP'].present? %> false <% else %> schema.rb <% end %>
+    <% if ENV['DATABASE_SCHEMA_SEARCH_PATH'].present? %>
+    schema_search_path: <%= ENV['DATABASE_SCHEMA_SEARCH_PATH'] %>
+    <% end %>
   events:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
     schema_dump: false
+    <% if ENV['DATABASE_SCHEMA_SEARCH_PATH'].present? %>
+    schema_search_path: <%= ENV['DATABASE_SCHEMA_SEARCH_PATH'] %>
+    <% end %>
   clickhouse:
     adapter: clickhouse
     database: <%= ENV.fetch('LAGO_CLICKHOUSE_DATABASE', 'default_test') %>
@@ -52,10 +64,16 @@ staging:
   primary:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
+    <% if ENV['DATABASE_SCHEMA_SEARCH_PATH'].present? %>
+    schema_search_path: <%= ENV['DATABASE_SCHEMA_SEARCH_PATH'] %>
+    <% end %>
   events:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
     database_tasks: false
+    <% if ENV['DATABASE_SCHEMA_SEARCH_PATH'].present? %>
+    schema_search_path: <%= ENV['DATABASE_SCHEMA_SEARCH_PATH'] %>
+    <% end %>
   clickhouse:
     adapter: clickhouse
     database: <%= ENV['LAGO_CLICKHOUSE_DATABASE'] %>
@@ -73,12 +91,18 @@ production:
     url: <%= ENV['DATABASE_URL'] %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
     prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
+    <% if ENV['DATABASE_SCHEMA_SEARCH_PATH'].present? %>
+    schema_search_path: <%= ENV['DATABASE_SCHEMA_SEARCH_PATH'] %>
+    <% end %>
   events:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
     prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
     database_tasks: false
+    <% if ENV['DATABASE_SCHEMA_SEARCH_PATH'].present? %>
+    schema_search_path: <%= ENV['DATABASE_SCHEMA_SEARCH_PATH'] %>
+    <% end %>
   clickhouse:
     adapter: clickhouse
     database: <%= ENV['LAGO_CLICKHOUSE_DATABASE'] %>
