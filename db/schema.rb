@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_06_28_083830) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_01_083355) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1215,4 +1215,25 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_28_083830) do
   SQL
   add_index "last_hour_events_mv", ["organization_id"], name: "index_last_hour_events_mv_on_organization_id"
 
+  create_view "billable_metrics_grouped_charges", sql_definition: <<-SQL
+      SELECT billable_metrics.organization_id,
+      billable_metrics.code,
+      billable_metrics.aggregation_type,
+      billable_metrics.field_name,
+      charges.plan_id,
+      charges.id AS charge_id,
+      charge_filters.id AS charge_filter_id,
+      json_object_agg(billable_metric_filters.key, COALESCE(charge_filter_values."values", '{}'::character varying[]) ORDER BY billable_metric_filters.key) FILTER (WHERE (billable_metric_filters.key IS NOT NULL)) AS filters,
+          CASE
+              WHEN (charges.charge_model = 0) THEN COALESCE((charge_filters.properties -> 'grouped_by'::text), (charges.properties -> 'grouped_by'::text))
+              ELSE NULL::jsonb
+          END AS grouped_by
+     FROM ((((billable_metrics
+       JOIN charges ON ((charges.billable_metric_id = billable_metrics.id)))
+       LEFT JOIN charge_filters ON ((charge_filters.charge_id = charges.id)))
+       LEFT JOIN charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
+       LEFT JOIN billable_metric_filters ON ((charge_filter_values.billable_metric_filter_id = billable_metric_filters.id)))
+    WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charges.pay_in_advance = false) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
+    GROUP BY billable_metrics.organization_id, billable_metrics.code, billable_metrics.aggregation_type, billable_metrics.field_name, charges.plan_id, charges.id, charge_filters.id;
+  SQL
 end
