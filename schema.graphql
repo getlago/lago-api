@@ -5167,6 +5167,7 @@ type Permissions {
   developersManage: Boolean!
   draftInvoicesUpdate: Boolean!
   invoicesCreate: Boolean!
+  invoicesExport: Boolean!
   invoicesSend: Boolean!
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
