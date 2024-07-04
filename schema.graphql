@@ -257,6 +257,7 @@ type Charge {
   payInAdvance: Boolean!
   properties: Properties
   prorated: Boolean!
+  regroupPaidFees: RegroupPaidFeesEnum
   taxes: [Tax!]
   updatedAt: ISO8601DateTime!
 }
@@ -5806,6 +5807,10 @@ input RegisterUserInput {
   email: String!
   organizationName: String!
   password: String!
+}
+
+enum RegroupPaidFeesEnum {
+  invoice
 }
 
 """

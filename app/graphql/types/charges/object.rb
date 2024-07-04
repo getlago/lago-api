@@ -15,6 +15,7 @@ module Types
       field :pay_in_advance, Boolean, null: false
       field :properties, Types::Charges::Properties, null: true
       field :prorated, Boolean, null: false
+      field :regroup_paid_fees, Types::Charges::RegroupPaidFeesEnum, null: true
 
       field :filters, [Types::ChargeFilters::Object], null: true
 
