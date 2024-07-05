@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_03_061352) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_05_125619) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1224,12 +1224,16 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_03_061352) do
       billable_metrics.field_name,
       charges.plan_id,
       charges.id AS charge_id,
+          CASE
+              WHEN (charges.charge_model = 0) THEN (charges.properties -> 'grouped_by'::text)
+              ELSE NULL::jsonb
+          END AS grouped_by,
       charge_filters.id AS charge_filter_id,
       json_object_agg(billable_metric_filters.key, COALESCE(charge_filter_values."values", '{}'::character varying[]) ORDER BY billable_metric_filters.key) FILTER (WHERE (billable_metric_filters.key IS NOT NULL)) AS filters,
           CASE
-              WHEN (charges.charge_model = 0) THEN COALESCE((charge_filters.properties -> 'grouped_by'::text), (charges.properties -> 'grouped_by'::text))
+              WHEN (charges.charge_model = 0) THEN (charge_filters.properties -> 'grouped_by'::text)
               ELSE NULL::jsonb
-          END AS grouped_by
+          END AS filters_grouped_by
      FROM ((((billable_metrics
        JOIN charges ON ((charges.billable_metric_id = billable_metrics.id)))
        LEFT JOIN charge_filters ON ((charge_filters.charge_id = charges.id)))
