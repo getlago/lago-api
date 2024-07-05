@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class DataExport < ApplicationRecord
   EXPORT_FORMATS = %w[csv].freeze
   STATUSES = %w[pending processing completed failed].freeze

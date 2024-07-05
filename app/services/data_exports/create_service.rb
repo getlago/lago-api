@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module DataExports
   class CreateService < BaseService
     def initialize(organization:, user:, format:, resource_type:, resource_query:)

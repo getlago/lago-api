@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddIntegrationIdToIntegrationResources < ActiveRecord::Migration[7.0]
   def up
     remove_index :integration_items, [:external_id, :integration_id]
