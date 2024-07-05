@@ -59,12 +59,11 @@ module Invoices
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
         nil
-      rescue Stripe::RateLimitError, Stripe::APIConnectionError => e
+      rescue Stripe::RateLimitError, Stripe::APIConnectionError
         raise # Let the auto-retry process do its own job
       rescue Stripe::StripeError => e
         deliver_error_webhook(e)
         raise
-       end
       end
 
       def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
