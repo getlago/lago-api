@@ -9,7 +9,6 @@ module Mutations
 
         REQUIRED_PERMISSION = 'invoices:create'
 
-        graphql_name 'FetchDraftInvoiceTaxes'
         description 'Fetches taxes for one-off invoice'
 
         input_object_class Types::Invoices::CreateInvoiceInput
@@ -24,7 +23,7 @@ module Mutations
 
           result = ::Integrations::Aggregator::Taxes::Invoices::CreateDraftService.new(
             invoice: invoice(customer, args),
-            fees: fees(args),
+            fees: fees(args)
           ).call
 
           result.success? ? result.fees : result_error(result)
@@ -39,7 +38,7 @@ module Mutations
           OpenStruct.new(
             issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
             currency: args[:currency],
-            customer:,
+            customer:
           )
         end
 
