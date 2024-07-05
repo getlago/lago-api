@@ -43,32 +43,36 @@ module Api
       end
 
       def index
-        invoices = current_organization.invoices.not_generating
-        if params[:external_customer_id]
-          invoices = invoices.joins(:customer).where(customers: {external_id: params[:external_customer_id]})
-        end
-
-        if valid_payment_status?(params[:payment_status])
-          invoices = invoices.where(payment_status: params[:payment_status])
-        end
-
-        invoices = invoices.where(status: params[:status]) if valid_status?(params[:status])
-        invoices = invoices.where(date_from_criteria) if valid_date?(params[:issuing_date_from])
-        invoices = invoices.where(date_to_criteria) if valid_date?(params[:issuing_date_to])
-        invoices = invoices.where(payment_overdue: params[:payment_overdue]) if %w[true false].include?(params[:payment_overdue])
-        invoices = invoices.order(created_at: :desc)
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            invoices,
-            ::V1::InvoiceSerializer,
-            collection_name: 'invoices',
-            meta: pagination_metadata(invoices),
-            includes: %i[customer metadata applied_taxes]
-          )
+        result = InvoicesQuery.new(organization: current_organization).call(
+          page: params[:page],
+          limit: params[:per_page] || PER_PAGE,
+          search_term: params[:search_term],
+          payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
+          payment_dispute_lost: params[:payment_dispute_lost],
+          payment_overdue: (params[:payment_overdue] if %w[true false].include?(params[:payment_overdue])),
+          status: (params[:status] if valid_status?(params[:status])),
+          filters: {
+            currency: params[:currency],
+            customer_external_id: params[:external_customer_id],
+            invoice_type: params[:invoice_type],
+            issuing_date_from: (Date.strptime(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
+            issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to]))
+          }
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.invoices,
+              ::V1::InvoiceSerializer,
+              collection_name: 'invoices',
+              meta: pagination_metadata(result.invoices),
+              includes: %i[customer metadata applied_taxes]
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       def download
@@ -205,14 +209,6 @@ module Api
             includes: %i[customer subscriptions fees credits metadata applied_taxes]
           )
         )
-      end
-
-      def date_from_criteria
-        {issuing_date: Date.strptime(params[:issuing_date_from])..}
-      end
-
-      def date_to_criteria
-        {issuing_date: ..Date.strptime(params[:issuing_date_to])}
       end
 
       def valid_payment_status?(status)
