@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateEventsRaw < ActiveRecord::Migration[7.0]
   def change
     options = <<-SQL

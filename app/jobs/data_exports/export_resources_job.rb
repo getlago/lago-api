@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module DataExports
   class ExportResourcesJob < ApplicationJob
     queue_as :default

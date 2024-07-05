@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class BasePreviewMailer < ActionMailer::Preview
   def self.call(...)
     message = nil

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddInAdvanceChargePeriodicInvoicingReason < ActiveRecord::Migration[7.0]
   def up
     execute <<-SQL

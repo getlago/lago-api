@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class DataExportMailer < ApplicationMailer
   def completed
     @data_export = params[:data_export]
