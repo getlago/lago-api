@@ -16,7 +16,6 @@ RSpec.describe Plans::CreateService, type: :service do
     let(:billable_metric_filter) do
       create(:billable_metric_filter, billable_metric:, key: 'payment_method', values: %w[card physical])
     end
-    let(:group) { create(:group, billable_metric:) }
     let(:plan_tax) { create(:tax, organization:) }
     let(:charge_tax) { create(:tax, organization:) }
     let(:create_args) do
@@ -53,12 +52,6 @@ RSpec.describe Plans::CreateService, type: :service do
           charge_model: 'standard',
           min_amount_cents: 100,
           tax_codes: [charge_tax.code],
-          group_properties: [
-            {
-              group_id: group.id,
-              values: {amount: '100'}
-            }
-          ],
           filters: [
             {
               values: {billable_metric_filter.key => ['card']},
@@ -130,12 +123,6 @@ RSpec.describe Plans::CreateService, type: :service do
         properties: {'amount' => '0'}
       )
       expect(standard_charge.taxes.pluck(:code)).to eq([charge_tax.code])
-      expect(standard_charge.group_properties.first).to have_attributes(
-        {
-          group_id: group.id,
-          values: {'amount' => '100'}
-        }
-      )
       expect(standard_charge.filters.first).to have_attributes(
         invoice_display_name: 'Card filter',
         properties: {'amount' => '90'}
@@ -183,13 +170,7 @@ RSpec.describe Plans::CreateService, type: :service do
             billable_metric_id: billable_metric.id,
             charge_model: 'standard',
             min_amount_cents: 100,
-            tax_codes: [charge_tax.code],
-            group_properties: [
-              {
-                group_id: group.id,
-                values: {amount: '100'}
-              }
-            ]
+            tax_codes: [charge_tax.code]
           },
           {
             billable_metric_id: sum_billable_metric.id,

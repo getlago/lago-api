@@ -170,13 +170,6 @@ module Api
                   }
                 ]
               },
-              {
-                group_properties: [
-                  :group_id,
-                  {values: {}},
-                  :invoice_display_name
-                ]
-              },
               {tax_codes: []}
             ]
           }

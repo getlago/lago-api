@@ -79,8 +79,7 @@ module Plans
         amount_currency: params[:amount_currency],
         charge_model: charge_model(params),
         pay_in_advance: params[:pay_in_advance] || false,
-        prorated: params[:prorated] || false,
-        group_properties: (params[:group_properties] || []).map { |gp| GroupProperty.new(gp) }
+        prorated: params[:prorated] || false
       )
 
       properties = params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
@@ -151,15 +150,6 @@ module Plans
         if charge
           charge.charge_model = payload_charge[:charge_model] unless plan.attached_to_subscriptions?
 
-          group_properties = payload_charge.delete(:group_properties)
-          if group_properties.present?
-            group_result = GroupProperties::CreateOrUpdateBatchService.call(
-              charge:,
-              properties_params: group_properties
-            )
-            return group_result if group_result.error
-          end
-
           properties = payload_charge.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
             payload_charge[:charge_model]
           )
@@ -220,7 +210,6 @@ module Plans
         .where(charges: {id: charge.id}).distinct.pluck(:id)
 
       charge.discard!
-      charge.group_properties.discard_all
 
       charge.filter_values.discard_all
       charge.filters.discard_all

@@ -46,7 +46,6 @@ class Charge < ApplicationRecord
   validate :validate_regroup_paid_fees
   validate :validate_prorated
   validate :validate_min_amount_cents
-  validate :validate_uniqueness_group_properties
   validate :validate_custom_model
 
   monetize :min_amount_cents, with_currency: ->(charge) { charge.plan.amount_currency }
@@ -54,10 +53,6 @@ class Charge < ApplicationRecord
   default_scope -> { kept }
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
-
-  def properties(group_id: nil)
-    group_properties.find_by(group_id:)&.values || read_attribute(:properties)
-  end
 
   private
 
@@ -129,11 +124,6 @@ class Charge < ApplicationRecord
     end
 
     errors.add(:prorated, :invalid_billable_metric_or_charge_model)
-  end
-
-  def validate_uniqueness_group_properties
-    group_ids = group_properties.map(&:group_id)
-    errors.add(:group_properties, :taken) if group_ids.size > group_ids.uniq.size
   end
 
   def validate_custom_model

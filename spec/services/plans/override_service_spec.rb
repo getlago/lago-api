@@ -11,7 +11,7 @@ RSpec.describe Plans::OverrideService, type: :service do
   describe '#call' do
     let(:parent_plan) { create(:plan, organization:) }
     let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:group) { create(:group, billable_metric:) }
+    let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
     let(:tax) { create(:tax, organization:) }
 
     let(:charge) do
@@ -19,14 +19,24 @@ RSpec.describe Plans::OverrideService, type: :service do
         :standard_charge,
         plan: parent_plan,
         billable_metric:,
-        properties: {amount: '300'},
-        group_properties: [
-          build(
-            :group_property,
-            group:,
-            values: {amount: '10', amount_currency: 'EUR'}
-          )
-        ]
+        properties: {amount: '300'}
+      )
+    end
+
+    let(:filter) do
+      create(
+        :charge_filter,
+        charge:,
+        properties: {amount: '10'}
+      )
+    end
+
+    let(:filter_value) do
+      create(
+        :charge_filter_value,
+        charge_filter: filter,
+        billable_metric_filter:,
+        values: [billable_metric_filter.values.first]
       )
     end
 
@@ -69,6 +79,7 @@ RSpec.describe Plans::OverrideService, type: :service do
     before do
       charge
       allow(SegmentTrackJob).to receive(:perform_later)
+      filter_value
     end
 
     it 'creates a plan based from the parent plan', :aggregate_failures do

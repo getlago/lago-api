@@ -10,7 +10,6 @@ RSpec.describe Plans::UpdateService, type: :service do
   let(:plan) { create(:plan, organization:) }
   let(:plan_name) { 'Updated plan name' }
   let(:plan_invoice_display_name) { 'Updated plan invoice display name' }
-  let(:group) { create(:group, billable_metric: sum_billable_metric) }
   let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:tax1) { create(:tax, organization:) }
@@ -49,12 +48,6 @@ RSpec.describe Plans::UpdateService, type: :service do
         charge_model: 'standard',
         invoice_display_name: 'charge1',
         min_amount_cents: 100,
-        group_properties: [
-          {
-            group_id: group.id,
-            values: {amount: '100'}
-          }
-        ],
         tax_codes: [tax1.code]
       },
       {
@@ -534,12 +527,6 @@ RSpec.describe Plans::UpdateService, type: :service do
               pay_in_advance: true,
               prorated: true,
               invoiceable: false,
-              group_properties: [
-                {
-                  group_id: group.id,
-                  values: {amount: '100'}
-                }
-              ],
               filters: [
                 {
                   invoice_display_name: 'Card filter',
@@ -569,16 +556,11 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
 
       it 'updates existing charge' do
-        expect { plans_service.call }
-          .to change(GroupProperty, :count).by(1)
+        plans_service.call
 
         expect(existing_charge.reload).to have_attributes(
           prorated: true,
           properties: {'amount' => '0'}
-        )
-        expect(existing_charge.group_properties.first).to have_attributes(
-          group_id: group.id,
-          values: {'amount' => '100'}
         )
 
         expect(existing_charge.filters.first).to have_attributes(
@@ -677,26 +659,16 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
 
       let(:billable_metric) { sum_billable_metric }
-      let(:group_property) { create(:group_property, group:, charge:) }
-      let(:group) { create(:group, billable_metric:) }
 
       before do
         subscription
         charge
-        group_property
       end
 
       it 'discards the charge' do
         freeze_time do
           expect { plans_service.call }
             .to change { charge.reload.deleted_at }.from(nil).to(Time.current)
-        end
-      end
-
-      it 'discards group properties related to the charge' do
-        freeze_time do
-          expect { plans_service.call }
-            .to change { group_property.reload.deleted_at }.from(nil).to(Time.current)
         end
       end
 

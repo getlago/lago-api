@@ -22,16 +22,10 @@ module BillableMetrics
       billable_metric.description = params[:description] if params.key?(:description)
 
       ActiveRecord::Base.transaction do
-        if params.key?(:group)
-          group_result = update_groups(billable_metric, params[:group])
-          group_result.raise_if_error!
-        end
-
         if params.key?(:filters)
           BillableMetricFilters::CreateOrUpdateBatchService.call(
             billable_metric:,
-            filters_params: params[:filters].map { |f| f.to_h.with_indifferent_access },
-            legacy_group_params: params[:group]
+            filters_params: params[:filters].map { |f| f.to_h.with_indifferent_access }
           ).raise_if_error!
         end
       end
@@ -62,12 +56,5 @@ module BillableMetrics
     attr_reader :billable_metric, :params
 
     delegate :organization, to: :billable_metric
-
-    def update_groups(metric, group_params)
-      Groups::CreateOrUpdateBatchService.call(
-        billable_metric: metric,
-        group_params: group_params.with_indifferent_access
-      )
-    end
   end
 end

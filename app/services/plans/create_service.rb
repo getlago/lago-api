@@ -83,8 +83,7 @@ module Plans
         invoice_display_name: args[:invoice_display_name],
         charge_model: charge_model(args),
         pay_in_advance: args[:pay_in_advance] || false,
-        prorated: args[:prorated] || false,
-        group_properties: (args[:group_properties] || []).map { |gp| GroupProperty.new(gp) }
+        prorated: args[:prorated] || false
       )
 
       properties = args[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(args))

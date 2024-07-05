@@ -16,10 +16,6 @@ module BillableMetrics
       ActiveRecord::Base.transaction do
         metric.discard!
         metric.charges.discard_all
-        metric.groups.each do |group|
-          group.properties.discard_all
-          group.discard!
-        end
 
         discard_filters
 

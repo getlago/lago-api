@@ -45,8 +45,7 @@ RSpec.describe ::V1::PlanSerializer do
       )
 
       expect(result['plan']['charges'].first).to include(
-        'lago_id' => charge.id,
-        'group_properties' => []
+        'lago_id' => charge.id
       )
 
       expect(result['plan']['minimum_commitment']).to include(
@@ -94,8 +93,7 @@ RSpec.describe ::V1::PlanSerializer do
       )
 
       expect(result['plan']['charges'].first).to include(
-        'lago_id' => charge.id,
-        'group_properties' => []
+        'lago_id' => charge.id
       )
 
       expect(result['plan']['minimum_commitment']).to be_nil

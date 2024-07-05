@@ -13,5 +13,4 @@ RSpec.describe Types::BillableMetrics::CreateInput do
   it { is_expected.to accept_argument(:recurring).of_type('Boolean') }
   it { is_expected.to accept_argument(:weighted_interval).of_type('WeightedIntervalEnum') }
   it { is_expected.to accept_argument(:filters).of_type('[BillableMetricFiltersInput!]') }
-  it { is_expected.to accept_argument(:group).of_type('JSON') }
 end

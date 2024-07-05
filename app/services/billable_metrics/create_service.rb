@@ -21,14 +21,6 @@ module BillableMetrics
           weighted_interval: args[:weighted_interval]&.to_sym
         )
 
-        if args[:group].present?
-          group_result = Groups::CreateOrUpdateBatchService.call(
-            billable_metric: metric,
-            group_params: args[:group].with_indifferent_access
-          )
-          group_result.raise_if_error!
-        end
-
         if args[:filters].present?
           BillableMetricFilters::CreateOrUpdateBatchService.call(
             billable_metric: metric,

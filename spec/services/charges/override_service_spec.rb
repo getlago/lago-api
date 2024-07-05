@@ -10,30 +10,15 @@ RSpec.describe Charges::OverrideService, type: :service do
 
   describe '#call' do
     let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:group) { create(:group, billable_metric:) }
-    let(:group2) { create(:group, billable_metric:) }
     let(:tax) { create(:tax, organization:) }
 
     let(:charge) do
       create(
         :standard_charge,
         billable_metric:,
-        properties: {amount: '300'},
-        group_properties: [
-          build(
-            :group_property,
-            group:,
-            values: {amount: '10', amount_currency: 'EUR'}
-          ),
-          build(
-            :group_property,
-            group: group2,
-            values: {amount: '20', amount_currency: 'EUR'}
-          )
-        ]
+        properties: {amount: '300'}
       )
     end
-
     let(:plan) { create(:plan, organization:) }
     let(:params) do
       {
@@ -42,13 +27,7 @@ RSpec.describe Charges::OverrideService, type: :service do
         # invoice_display_name: 'invoice display name',
         min_amount_cents: 1000,
         properties: {amount: '200'},
-        tax_codes: [tax.code],
-        group_properties: [
-          {
-            group_id: group.id,
-            values: {amount: '100'}
-          }
-        ]
+        tax_codes: [tax.code]
       }
     end
 
@@ -66,7 +45,6 @@ RSpec.describe Charges::OverrideService, type: :service do
       it 'creates a charge based on the given charge', :aggregate_failures do
         applied_tax = create(:charge_applied_tax, charge:)
 
-        expect(charge.group_properties.count).to eq(2)
         expect(charge.taxes).to contain_exactly(applied_tax.tax)
 
         expect { override_service.call }.to change(Charge, :count).by(1)
@@ -84,14 +62,6 @@ RSpec.describe Charges::OverrideService, type: :service do
           # invoice_display_name: 'invoice display name',
           min_amount_cents: 1000,
           properties: {'amount' => '200'}
-        )
-        expect(charge.group_properties.count).to eq(1)
-        expect(charge.group_properties.with_discarded.discarded.count).to eq(1)
-        expect(charge.group_properties.first).to have_attributes(
-          {
-            group_id: group.id,
-            values: {'amount' => '100'}
-          }
         )
         expect(charge.taxes).to contain_exactly(tax)
       end

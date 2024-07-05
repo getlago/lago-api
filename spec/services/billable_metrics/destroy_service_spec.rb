@@ -10,8 +10,6 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:subscription) { create(:subscription) }
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
-  let(:group) { create(:group, billable_metric:) }
-  let(:group_property) { create(:group_property, group:, charge:) }
 
   let(:filters) { create_list(:billable_metric_filter, 2, billable_metric:) }
   let(:charge_filter) { create(:charge_filter, charge:) }
@@ -21,7 +19,6 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
 
   before do
     charge
-    group_property
 
     filter_value
 
@@ -41,13 +38,6 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
     it 'soft deletes all the related charges' do
       freeze_time do
         expect { destroy_service.call }.to change { charge.reload.deleted_at }.from(nil).to(Time.current)
-      end
-    end
-
-    it 'soft deletes all the related groups' do
-      freeze_time do
-        expect { destroy_service.call }.to change { group.reload.deleted_at }.from(nil).to(Time.current)
-          .and change { group_property.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 

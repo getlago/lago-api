@@ -9,21 +9,6 @@ RSpec.describe Charge, type: :model do
 
   it { is_expected.to have_many(:filters).dependent(:destroy) }
 
-  describe '#properties' do
-    context 'with group properties' do
-      it 'returns the group properties' do
-        property = create(:group_property, charge:, values: {foo: 'bar'})
-        expect(charge.properties(group_id: property.group_id)).to eq(property.values)
-      end
-    end
-
-    context 'without group properties' do
-      it 'returns the charge properties' do
-        expect(charge.properties).to eq(charge.properties)
-      end
-    end
-  end
-
   describe '#validate_graduated' do
     subject(:charge) do
       build(:graduated_charge, properties: charge_properties)
@@ -523,21 +508,6 @@ RSpec.describe Charge, type: :model do
           expect(charge).not_to be_valid
           expect(charge.errors.messages[:prorated]).to include('invalid_billable_metric_or_charge_model')
         end
-      end
-    end
-  end
-
-  describe '#validate_uniqueness_group_properties' do
-    subject(:charge) do
-      build(:standard_charge, group_properties: [build(:group_property, group:), build(:group_property, group:)])
-    end
-
-    let(:group) { create(:group) }
-
-    it 'returns an error for a duplicate' do
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages[:group_properties]).to include('is duplicated')
       end
     end
   end

@@ -16,7 +16,7 @@ module V1
         active_subscriptions_count:,
         draft_invoices_count:,
         plans_count:
-      }.merge(legacy_values)
+      }
 
       payload.merge!(filters)
 
@@ -48,10 +48,6 @@ module V1
         ::V1::BillableMetricFilterSerializer,
         collection_name: 'filters'
       ).serialize
-    end
-
-    def legacy_values
-      V1::Legacy::BillableMetricSerializer.new(model).serialize
     end
   end
 end

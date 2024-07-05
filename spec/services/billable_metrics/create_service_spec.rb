@@ -42,34 +42,6 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
       end
     end
 
-    context 'with group parameter' do
-      let(:group) do
-        {
-          key: 'cloud',
-          values: [
-            {name: 'AWS', key: 'region', values: %w[usa europe]},
-            {name: 'Google', key: 'region', values: ['usa']}
-          ]
-        }
-      end
-
-      it 'creates billable metric\'s groups' do
-        expect do
-          create_service.create(**create_args.merge(group:))
-        end.to change(Group, :count).by(5)
-      end
-
-      it 'returns an error if group is invalid' do
-        result = create_service.create(**create_args.merge(group: {key: 'foo'}))
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:group]).to eq(['value_is_invalid'])
-        end
-      end
-    end
-
     context 'with filters arguments' do
       let(:filters) do
         [

@@ -16,7 +16,6 @@ module Types
       argument :weighted_interval, Types::BillableMetrics::WeightedIntervalEnum, required: false
 
       argument :filters, [Types::BillableMetricFilters::Input], required: false
-      argument :group, GraphQL::Types::JSON, required: false
     end
   end
 end

@@ -23,7 +23,6 @@ RSpec.describe ::V1::BillableMetricSerializer do
       expect(result['billable_metric']['plans_count']).to eq(0)
 
       expect(result['billable_metric']['filters']).to eq([])
-      expect(result['billable_metric']['group']).to eq({})
     end
   end
 
