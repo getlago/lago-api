@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes, type: :graphql do
+RSpec.describe Mutations::Integrations::Anrok::FetchDraftInvoiceTaxes, type: :graphql do
   let(:required_permission) { 'invoices:create' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
