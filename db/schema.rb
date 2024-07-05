@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_02_081109) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_03_061352) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -999,6 +999,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_02_081109) do
     t.jsonb "object"
     t.jsonb "object_changes"
     t.datetime "created_at"
+    t.string "lago_version"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
