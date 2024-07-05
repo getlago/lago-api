@@ -10,7 +10,7 @@ module Integrations
 
             @customer = customer
             @invoice = invoice
-            @fees = fees
+            @fees = fees.is_a?(Array) ? fees : fees.order(created_at: :asc)
           end
 
           def body
@@ -28,7 +28,7 @@ module Integrations
                   'taxable' => customer.tax_identification_number.present?,
                   'tax_number' => customer.tax_identification_number
                 },
-                'fees' => fees.order(created_at: :asc).map { |fee| fee_item(fee) }
+                'fees' => fees.map { |fee| fee_item(fee) }
               }
             ]
           end

@@ -44,12 +44,31 @@ module Integrations
             fees = body['succeededInvoices']&.first.try(:[], 'fees')
 
             if fees
-              result.fees = fees
+              result.fees = fees.map do |fee|
+                OpenStruct.new(
+                  item_id: fee['item_id'],
+                  item_code: fee['item_code'],
+                  amount_cents: fee['amount_cents'],
+                  tax_amount_cents: fee['tax_amount_cents'],
+                  tax_breakdown: tax_breakdown(fee['tax_breakdown'])
+                )
+              end
             else
               code = body['failedInvoices'].first['validation_errors']['type']
               message = 'Service failure'
 
               result.service_failure!(code:, message:)
+            end
+          end
+
+          def tax_breakdown(breakdown)
+            breakdown.map do |b|
+              OpenStruct.new(
+                name: b['name'],
+                rate: b['rate'],
+                tax_amount: b['tax_amount'],
+                type: b['type']
+              )
             end
           end
         end
