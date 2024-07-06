@@ -8,7 +8,7 @@ class DataExport < ApplicationRecord
 
   has_one_attached :file
 
-  validates :resource_type, :resource_query, presence: true
+  validates :resource_type, presence: true
   validates :format, presence: true, inclusion: {in: EXPORT_FORMATS}
   validates :status, presence: true, inclusion: {in: STATUSES}
 

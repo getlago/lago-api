@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_06_28_083830) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -443,7 +443,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_28_083830) do
   create_table "data_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.integer "format"
     t.string "resource_type", null: false
-    t.jsonb "resource_query", default: {}, null: false
+    t.jsonb "resource_query", default: {}
     t.integer "status", default: 0, null: false
     t.datetime "expires_at", precision: nil
     t.datetime "started_at", precision: nil
@@ -731,10 +731,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_06_28_083830) do
     t.boolean "payment_overdue", default: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
-    t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
-    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 

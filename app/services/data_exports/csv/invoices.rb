@@ -11,7 +11,7 @@ module DataExports
         @serializer_klass = serializer_klass
       end
 
-      def generate_csv
+      def call
         ::CSV.generate(headers: true) do |csv|
           csv << headers
 

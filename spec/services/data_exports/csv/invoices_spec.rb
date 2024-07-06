@@ -106,12 +106,12 @@ RSpec.describe DataExports::Csv::Invoices do
       .and_return(query_results)
   end
 
-  describe '#generate_csv' do
-    subject(:generate_csv) do
+  describe '#call' do
+    subject(:call) do
       described_class.new(
         data_export: data_export,
         serializer_klass: serializer_klass
-      ).generate_csv
+      ).call
     end
 
     it 'generates the correct CSV output' do
@@ -120,7 +120,7 @@ RSpec.describe DataExports::Csv::Invoices do
         1,SEQ123,2023-01-01,,CUST123,US,123456789,INV123,1000,USD,credit,pending,finalized,http://api.lago.com/invoice.pdf,200,100,50,25,2023-02-01,,false
       CSV
 
-      expect(generate_csv).to eq(expected_csv)
+      expect(call).to eq(expected_csv)
     end
   end
 end
