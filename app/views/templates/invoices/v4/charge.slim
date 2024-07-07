@@ -423,9 +423,18 @@ html
             td.body-2 = I18n.t('invoice.unit_price')
             td.body-2 = I18n.t('invoice.tax_rate')
             td.body-2 = I18n.t('invoice.amount')
-          - fees.each do |fee|
+          - fees.order(:succeeded_at, :created_at).each do |fee|
             tr
-              - if fee.charge.prorated?
+              - if !fee.charge.invoiceable? # TODO: edit with `invoicing_strategy`
+                td
+                  .body-1
+                    = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
+                    - if fee.charge_filter_id?
+                      = ' • ' + fee.filter_display_name(separator: ' • ')
+                  - succeeded_at_date = fee.succeeded_at&.in_time_zone(customer.applicable_timezone)&.to_date
+                  - if succeeded_at_date
+                    .body-3 = I18n.l(succeeded_at_date, format: :default)
+              - elsif fee.charge.prorated?
                 - pay_in_advance_range = charge_pay_in_advance_proration_range(fee, invoice_subscription(fee.subscription.id).timestamp)
                 td
                   .body-1

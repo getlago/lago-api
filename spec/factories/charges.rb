@@ -85,5 +85,11 @@ FactoryBot.define do
     trait :pay_in_advance do
       pay_in_advance { true }
     end
+
+    trait :regroup_paid_fees do
+      pay_in_advance { true }
+      invoiceable { false }
+      regroup_paid_fees { 'invoice' }
+    end
   end
 end

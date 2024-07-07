@@ -367,6 +367,66 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].map { |i| i[:lago_id] }).to eq([invoice.id])
       end
     end
+
+    context 'with invoice type param' do
+      let(:invoice) { create(:invoice, customer:, invoice_type: :add_on, organization:) }
+      let(:invoice2) { create(:invoice, customer:, invoice_type: :advance_charges, organization:) }
+
+      before { invoice2 }
+
+      it 'returns invoices with correct invoice type' do
+        get_with_token(organization, '/api/v1/invoices?invoice_type=advance_charges')
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice2.id)
+      end
+    end
+
+    context 'with currency param' do
+      let(:invoice) { create(:invoice, customer:, currency: 'EUR', organization:) }
+      let(:invoice2) { create(:invoice, customer:, currency: 'USD', organization:) }
+
+      before { invoice2 }
+
+      it 'returns invoices with correct currency' do
+        get_with_token(organization, '/api/v1/invoices?currency=USD')
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice2.id)
+      end
+    end
+
+    context 'with payment dispute lost param' do
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:invoice2) { create(:invoice, :dispute_lost, customer:, organization:) }
+
+      before { invoice2 }
+
+      it 'returns invoices with payment dispute lost' do
+        get_with_token(organization, '/api/v1/invoices?payment_dispute_lost=true')
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice2.id)
+      end
+    end
+
+    context 'with search term param' do
+      let(:invoice) { create(:invoice, customer:, number: "111", organization:) }
+      let(:invoice2) { create(:invoice, customer:, number: "222", organization:) }
+
+      before { invoice2 }
+
+      it 'returns invoices matching the search terms' do
+        get_with_token(organization, "/api/v1/invoices?search_term=#{invoice2.number}")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(invoice2.id)
+      end
+    end
   end
 
   describe 'PUT /invoices/:id/refresh' do

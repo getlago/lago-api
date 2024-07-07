@@ -19,7 +19,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "billable_metric_weighted_interval", ["seconds"]
-  create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge"]
+  create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic"]
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
@@ -225,6 +225,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
     t.boolean "invoiceable", default: true, null: false
     t.boolean "prorated", default: false, null: false
     t.string "invoice_display_name"
+    t.integer "regroup_paid_fees"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
@@ -996,6 +997,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
     t.jsonb "object"
     t.jsonb "object_changes"
     t.datetime "created_at"
+    t.string "lago_version"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
@@ -1213,4 +1215,29 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
   SQL
   add_index "last_hour_events_mv", ["organization_id"], name: "index_last_hour_events_mv_on_organization_id"
 
+  create_view "billable_metrics_grouped_charges", sql_definition: <<-SQL
+      SELECT billable_metrics.organization_id,
+      billable_metrics.code,
+      billable_metrics.aggregation_type,
+      billable_metrics.field_name,
+      charges.plan_id,
+      charges.id AS charge_id,
+          CASE
+              WHEN (charges.charge_model = 0) THEN (charges.properties -> 'grouped_by'::text)
+              ELSE NULL::jsonb
+          END AS grouped_by,
+      charge_filters.id AS charge_filter_id,
+      json_object_agg(billable_metric_filters.key, COALESCE(charge_filter_values."values", '{}'::character varying[]) ORDER BY billable_metric_filters.key) FILTER (WHERE (billable_metric_filters.key IS NOT NULL)) AS filters,
+          CASE
+              WHEN (charges.charge_model = 0) THEN (charge_filters.properties -> 'grouped_by'::text)
+              ELSE NULL::jsonb
+          END AS filters_grouped_by
+     FROM ((((billable_metrics
+       JOIN charges ON ((charges.billable_metric_id = billable_metrics.id)))
+       LEFT JOIN charge_filters ON ((charge_filters.charge_id = charges.id)))
+       LEFT JOIN charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
+       LEFT JOIN billable_metric_filters ON ((charge_filter_values.billable_metric_filter_id = billable_metric_filters.id)))
+    WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charges.pay_in_advance = false) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
+    GROUP BY billable_metrics.organization_id, billable_metrics.code, billable_metrics.aggregation_type, billable_metrics.field_name, charges.plan_id, charges.id, charge_filters.id;
+  SQL
 end

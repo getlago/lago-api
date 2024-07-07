@@ -1,6 +1,20 @@
 # frozen_string_literal: true
 
 class RefreshCachedAggregations < ActiveRecord::Migration[7.0]
+  class Subscription < ApplicationRecord
+    belongs_to :plan
+  end
+
+  class Plan < ApplicationRecord
+    has_many :charges
+    has_many :subscriptions
+  end
+
+  class Charge < ApplicationRecord
+    belongs_to :plan
+    belongs_to :billable_metric
+  end
+
   def change
     # NOTE: All subscriptions having a recurring weighted sum metric in the plan
     #       that started before the QuantifiedEvent migration

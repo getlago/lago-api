@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module DataExports
   class ExportResourcesService < BaseService
     EXPIRED_FAILURE_MESSAGE = 'Data Export already expired'

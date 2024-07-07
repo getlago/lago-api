@@ -11,6 +11,7 @@ module V1
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,
         invoiceable: model.invoiceable,
+        regroup_paid_fees: model.regroup_paid_fees,
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,

@@ -21,6 +21,9 @@ AllCops:
 Style/StringLiterals:
   Enabled: false
 
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
 Performance/CaseWhenSplat:
   Enabled: true
 

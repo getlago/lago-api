@@ -114,7 +114,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       invoice:,
       charge:,
       units: 2,
-      precise_unit_amount: 4.12,
+      precise_unit_amount: 4.12121212123337777,
       created_at: current_time
     )
   end
@@ -161,7 +161,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               'item' => 'm2',
               'account' => 'm22',
               'quantity' => 2,
-              'rate' => 4.12
+              'rate' => 4.1212121212334
             },
             {
               'item' => '2',

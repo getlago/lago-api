@@ -26,6 +26,8 @@ module Types
     field :download_customer_portal_invoice, mutation: Mutations::CustomerPortal::DownloadInvoice
     field :generate_customer_portal_url, mutation: Mutations::CustomerPortal::GenerateUrl
 
+    field :create_invoices_data_export, mutation: Mutations::DataExports::Invoices::Create
+
     field :create_subscription, mutation: Mutations::Subscriptions::Create
     field :terminate_subscription, mutation: Mutations::Subscriptions::Terminate
     field :update_subscription, mutation: Mutations::Subscriptions::Update
