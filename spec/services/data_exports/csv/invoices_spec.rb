@@ -57,10 +57,11 @@ RSpec.describe DataExports::Csv::Invoices do
   let(:invoice) { create :invoice }
   let(:serialized_invoice) do
     {
-      lago_id: '1',
+      lago_id: 'invoice-lago-id-123',
       sequential_id: 'SEQ123',
       issuing_date: '2023-01-01',
       customer: {
+        lago_id: 'customer-lago-id-456',
         external_id: 'CUST123',
         country: 'US',
         tax_identification_number: '123456789'
@@ -117,7 +118,7 @@ RSpec.describe DataExports::Csv::Invoices do
     it 'generates the correct CSV output' do
       expected_csv = <<~CSV
         lago_id,sequential_id,issuing_date,customer_lago_id,customer_external_id,customer_country,customer_tax_identification_number,invoince_number,total_amount_cents,currency,invoice_type,payment_status,status,file_url,taxes_amount_cents,credit_notes_amount_cents,prepaid_credit_amount_cents,coupons_amount_cents,payment_due_date,payment_dispute_lost_at,payment_overdue
-        1,SEQ123,2023-01-01,,CUST123,US,123456789,INV123,1000,USD,credit,pending,finalized,http://api.lago.com/invoice.pdf,200,100,50,25,2023-02-01,,false
+       invoice-lago-id-123,SEQ123,2023-01-01,customer-lago-id-456,CUST123,US,123456789,INV123,1000,USD,credit,pending,finalized,http://api.lago.com/invoice.pdf,200,100,50,25,2023-02-01,,false
       CSV
 
       expect(call).to eq(expected_csv)

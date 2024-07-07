@@ -24,7 +24,7 @@ module DataExports
               serialized_invoice[:lago_id],
               serialized_invoice[:sequential_id],
               serialized_invoice[:issuing_date],
-              serialized_invoice[:customer_id],
+              serialized_invoice[:customer][:lago_id],
               serialized_invoice[:customer][:external_id],
               serialized_invoice[:customer][:country],
               serialized_invoice[:customer][:tax_identification_number],
