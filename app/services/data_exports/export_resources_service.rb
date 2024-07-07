@@ -18,7 +18,7 @@ module DataExports
       data_export.file.attach(
         io: StringIO.new(file_data),
         filename:,
-        key: data_export.membership_id,
+        key: "data_exports/#{data_export.id}.#{data_export.format}",
         content_type:
       )
 
