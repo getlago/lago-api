@@ -21,7 +21,7 @@ RSpec.describe Subscriptions::TerminateService do
     it 'enqueues a BillSubscriptionJob' do
       expect do
         terminate_service.call
-      end.to have_enqueued_job(BillSubscriptionJob)
+      end.to have_enqueued_job(BillSubscriptionJob).and have_enqueued_job(BillNonInvoiceableFeesJob)
     end
 
     it 'enqueues a SendWebhookJob' do
@@ -213,7 +213,7 @@ RSpec.describe Subscriptions::TerminateService do
       it 'enqueues a job to bill the existing subscription' do
         expect do
           terminate_service.terminate_and_start_next(timestamp:)
-        end.to have_enqueued_job(BillSubscriptionJob)
+        end.to have_enqueued_job(BillSubscriptionJob).and have_enqueued_job(BillNonInvoiceableFeesJob)
       end
     end
 
