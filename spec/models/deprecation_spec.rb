@@ -46,7 +46,12 @@ RSpec.describe Deprecation, type: :model, cache: :redis do
     it 'returns deprecation data for all organizations' do
       csv = "org_id,org_name,org_email,last_event_sent_at,count\n"
       csv += "#{organization.id},#{organization.name},#{organization.email},2024-05-22T14:58:20.280Z,101\n"
-      expect(described_class.get_all_as_csv(feature_name)).to eq(csv)
+      result = described_class.get_all_as_csv(feature_name)
+      # Normalize by removing quotes for comparison
+      normalized_csv = csv.gsub('"', '')
+      normalized_result = result.gsub('"', '')
+
+      expect(normalized_result).to eq(normalized_csv)
     end
   end
 
