@@ -51,7 +51,7 @@ Rails.application.routes.draw do
         post :estimate_fees, on: :collection
       end
       resources :applied_coupons, only: %i[create index]
-      resources :fees, only: %i[show update index]
+      resources :fees, only: %i[show update index destroy]
       resources :invoices, only: %i[create update show index] do
         post :download, on: :member
         post :void, on: :member

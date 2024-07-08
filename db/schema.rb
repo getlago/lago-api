@@ -520,10 +520,12 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
     t.uuid "charge_filter_id"
     t.jsonb "grouped_by", default: {}, null: false
     t.string "pay_in_advance_event_transaction_id"
+    t.datetime "deleted_at"
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
+    t.index ["deleted_at"], name: "index_fees_on_deleted_at"
     t.index ["group_id"], name: "index_fees_on_group_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
