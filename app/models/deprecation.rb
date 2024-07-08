@@ -35,6 +35,17 @@ class Deprecation
       {organization_id:, last_seen_at:, count:}
     end
 
+    def reset_all(feature_name)
+      Organization.pluck(:id).each do |organization_id|
+        reset(feature_name, organization_id)
+      end
+    end
+
+    def reset(feature_name, organization_id)
+      Rails.cache.delete(cache_key(feature_name, organization_id, 'count'))
+      Rails.cache.delete(cache_key(feature_name, organization_id, 'last_seen_at'))
+    end
+
     private
 
     def cache_key(feature_name, organization_id, suffix)

@@ -49,4 +49,22 @@ RSpec.describe Deprecation, type: :model, cache: :redis do
       expect(described_class.get_all_as_csv(feature_name)).to eq(csv)
     end
   end
+
+  describe '.reset' do
+    it 'deletes deprecation data for an organization' do
+      described_class.reset(feature_name, organization.id)
+
+      expect(Rails.cache.read("deprecation:#{feature_name}:#{organization.id}:last_seen_at")).to be_nil
+      expect(Rails.cache.read("deprecation:#{feature_name}:#{organization.id}:count")).to be_nil
+    end
+  end
+
+  describe '.reset_all' do
+    it 'deletes deprecation data for all organizations' do
+      described_class.reset_all(feature_name)
+
+      expect(Rails.cache.read("deprecation:#{feature_name}:#{organization.id}:last_seen_at")).to be_nil
+      expect(Rails.cache.read("deprecation:#{feature_name}:#{organization.id}:count")).to be_nil
+    end
+  end
 end
