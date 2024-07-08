@@ -16,7 +16,7 @@ module Integrations
       def add_on_item(fee)
         integration
           .integration_mappings
-          .find_by(mappable_type: 'AddOn', mappable_id: fee.add_on.id) || fallback_item
+          .find_by(mappable_type: 'AddOn', mappable_id: fee.add_on_id) || fallback_item
       end
 
       def tax_item
