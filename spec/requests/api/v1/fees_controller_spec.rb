@@ -146,6 +146,18 @@ RSpec.describe Api::V1::FeesController, type: :request do
         expect(response).to have_http_status(:ok)
       end
     end
+
+    context 'when fee exist but is attached to an invoice' do
+      let(:invoice) { create(:invoice, organization:, customer:) }
+      let(:fee) do
+        create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice:)
+      end
+
+      it 'dont delete the fee' do
+        delete_with_token(organization, "/api/v1/fees/#{fee.id}")
+        expect(response).to have_http_status(:method_not_allowed)
+      end
+    end
   end
 
   describe 'GET /fees' do
