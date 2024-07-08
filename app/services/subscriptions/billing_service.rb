@@ -23,8 +23,7 @@ module Subscriptions
           invoicing_reason: :subscription_periodic
         )
 
-        # NOTE: Commented until feature is fully released
-        # BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, billing_at)
+        BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, billing_at)
       end
     end
 

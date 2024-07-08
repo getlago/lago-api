@@ -75,8 +75,16 @@ RSpec.describe Subscriptions::BillingService, type: :service do
               invoicing_reason: :subscription_periodic
             )
 
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date
+            )
+
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription3], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription3], current_date)
         end
       end
 
@@ -101,6 +109,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription], current_date)
         end
       end
 
@@ -131,6 +141,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
             expect(BillSubscriptionJob).not_to have_been_enqueued
               .with([subscription], billing_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillNonInvoiceableFeesJob).not_to have_been_enqueued
+              .with([subscription], billing_date)
           end
         end
       end
@@ -148,6 +160,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription], current_date)
         end
       end
 
@@ -159,6 +173,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(BillSubscriptionJob).not_to have_been_enqueued
             .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).not_to have_been_enqueued
+            .with([subscription], current_date)
         end
       end
     end
@@ -175,6 +191,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription], current_date)
         end
       end
 
@@ -197,6 +215,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
             expect(BillSubscriptionJob).to have_been_enqueued
               .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+              .with([subscription], current_date)
           end
         end
       end
@@ -216,6 +236,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription], current_date)
         end
       end
 
@@ -237,6 +259,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription], current_date)
         end
       end
 
@@ -256,6 +280,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
             expect(BillSubscriptionJob).to have_been_enqueued
               .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+              .with([subscription], current_date)
           end
         end
       end
@@ -272,6 +298,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription], current_date)
         end
       end
 
@@ -291,6 +319,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
             expect(BillSubscriptionJob).to have_been_enqueued
               .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+              .with([subscription], current_date)
           end
         end
       end
@@ -305,6 +335,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
             expect(BillSubscriptionJob).to have_been_enqueued
               .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+              .with([subscription], current_date)
           end
         end
       end
@@ -322,6 +354,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+            .with([subscription], current_date)
         end
       end
 
@@ -341,6 +375,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
             expect(BillSubscriptionJob).to have_been_enqueued
               .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+              .with([subscription], current_date)
           end
         end
       end
@@ -355,6 +391,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
             expect(BillSubscriptionJob).to have_been_enqueued
               .with([subscription], current_date.next_month.to_i, invoicing_reason: :subscription_periodic)
+            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+              .with([subscription], current_date.next_month)
           end
         end
 
@@ -368,6 +406,8 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
               expect(BillSubscriptionJob).to have_been_enqueued
                 .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+              expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+                .with([subscription], current_date)
             end
           end
         end

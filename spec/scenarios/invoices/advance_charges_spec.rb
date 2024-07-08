@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 # NOTE: Skipped until feature is fully released
-xdescribe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
+describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax_rate) { 20 }
@@ -23,7 +23,7 @@ xdescribe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
 
   before do
     create(:tax, organization:, rate: tax_rate)
-    create(:standard_charge, pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan:, properties: {amount: '30', grouped_by: nil})
+    create(:standard_charge, regroup_paid_fees: 'invoice', pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan:, properties: {amount: '30', grouped_by: nil})
   end
 
   context 'when subscription is renewed' do
@@ -90,7 +90,7 @@ xdescribe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
     let(:plan_upgrade) { create(:plan, organization:, pay_in_advance: true, amount_cents: 259) }
 
     before do
-      create(:standard_charge, pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan: plan_upgrade, properties: {amount: '60', grouped_by: nil})
+      create(:standard_charge, regroup_paid_fees: 'invoice', pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan: plan_upgrade, properties: {amount: '60', grouped_by: nil})
     end
 
     it 'generates an invoice with the correct charges' do
@@ -180,7 +180,7 @@ xdescribe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
     let(:plan_downgrade) { create(:plan, organization:, pay_in_advance: true, amount_cents: 19) }
 
     before do
-      create(:standard_charge, pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan: plan_downgrade, properties: {amount: '15', grouped_by: nil})
+      create(:standard_charge, regroup_paid_fees: 'invoice', pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan: plan_downgrade, properties: {amount: '15', grouped_by: nil})
     end
 
     it 'generates an invoice with the correct charges' do
