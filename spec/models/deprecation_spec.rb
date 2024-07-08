@@ -48,8 +48,8 @@ RSpec.describe Deprecation, type: :model, cache: :redis do
       csv += "#{organization.id},#{organization.name},#{organization.email},2024-05-22T14:58:20.280Z,101\n"
       result = described_class.get_all_as_csv(feature_name)
       # Normalize by removing quotes for comparison
-      normalized_csv = csv.gsub('"', '')
-      normalized_result = result.gsub('"', '')
+      normalized_csv = csv.delete('"')
+      normalized_result = result.delete('"')
 
       expect(normalized_result).to eq(normalized_csv)
     end
