@@ -19,11 +19,15 @@ class Deprecation
     end
 
     def get_all_as_csv(feature_name)
-      CSV.generate do |csv|
-        csv << %w[organization_id last_seen_at count]
+      lines = get_all(feature_name)
+      orgs = Organization.find(lines.pluck(:organization_id)).index_by(&:id)
 
-        get_all(feature_name).each do |d|
-          csv << [d[:organization_id], d[:last_seen_at], d[:count]]
+      CSV.generate do |csv|
+        csv << %w[org_id org_name org_email last_event_sent_at count]
+
+        lines.each do |d|
+          o = orgs[d[:organization_id]]
+          csv << [d[:organization_id], o.name, o.email, d[:last_seen_at], d[:count]]
         end
       end
     end
