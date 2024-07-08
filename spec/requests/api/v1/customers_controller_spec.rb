@@ -65,7 +65,6 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             payment_provider: 'stripe',
             payment_provider_code: stripe_provider.code,
             provider_customer_id: 'stripe_id',
-            vat_rate: 20,
             document_locale: 'fr',
             provider_payment_methods:
           }
@@ -98,7 +97,6 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
             expect(billing[:provider_customer_id]).to eq('stripe_id')
             expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:vat_rate]).to eq(20)
             expect(billing[:document_locale]).to eq('fr')
             expect(billing[:provider_payment_methods]).to eq(%w[card])
           end
@@ -121,7 +119,6 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
             expect(billing[:provider_customer_id]).to eq('stripe_id')
             expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:vat_rate]).to eq(20)
             expect(billing[:document_locale]).to eq('fr')
             expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
           end
@@ -144,7 +141,6 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
             expect(billing[:provider_customer_id]).to eq('stripe_id')
             expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:vat_rate]).to eq(20)
             expect(billing[:document_locale]).to eq('fr')
             expect(billing[:provider_payment_methods]).to eq(%w[card])
           end
@@ -167,7 +163,6 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
             expect(billing[:provider_customer_id]).to eq('stripe_id')
             expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:vat_rate]).to eq(20)
             expect(billing[:document_locale]).to eq('fr')
             expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
           end

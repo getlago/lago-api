@@ -38,12 +38,10 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
           invoice_number: invoice.number,
           credit_status: credit_note.credit_status,
           reason: credit_note.reason,
+          currency: credit_note.currency,
           total_amount_cents: credit_note.total_amount_cents,
-          total_amount_currency: credit_note.total_amount_currency,
           credit_amount_cents: credit_note.credit_amount_cents,
-          credit_amount_currency: credit_note.credit_amount_currency,
           balance_amount_cents: credit_note.balance_amount_cents,
-          balance_amount_currency: credit_note.balance_amount_currency,
           created_at: credit_note.created_at.iso8601,
           updated_at: credit_note.updated_at.iso8601,
           applied_taxes: []
@@ -276,14 +274,11 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
           refund_status: 'pending',
           reason: 'duplicated_charge',
           description: 'Duplicated charge',
+          currency: 'EUR',
           total_amount_cents: 15,
-          total_amount_currency: 'EUR',
           credit_amount_cents: 10,
-          credit_amount_currency: 'EUR',
           balance_amount_cents: 10,
-          balance_amount_currency: 'EUR',
           refund_amount_cents: 5,
-          refund_amount_currency: 'EUR',
           applied_taxes: []
         )
 

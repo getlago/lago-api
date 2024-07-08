@@ -45,7 +45,7 @@ RSpec.describe Resolvers::OrganizationResolver, type: :graphql do
             taxIdentificationNumber
             apiKey
             webhookUrl
-            billingConfiguration { invoiceFooter vatRate }
+            billingConfiguration { invoiceFooter }
             emailSettings
             taxes { id code }
           }
@@ -68,7 +68,6 @@ RSpec.describe Resolvers::OrganizationResolver, type: :graphql do
         expect(data['taxIdentificationNumber']).to eq(organization.tax_identification_number)
         expect(data['apiKey']).to eq(organization.api_key)
         expect(data['webhookUrl']).to eq(organization.webhook_endpoints.first.webhook_url)
-        expect(data['billingConfiguration']['vatRate']).to eq(organization.vat_rate)
         expect(data['billingConfiguration']['invoiceFooter']).to eq(organization.invoice_footer)
         expect(data['emailSettings']).to eq(organization.email_settings.map { _1.tr('.', '_') })
         expect(data['taxes']).to eq []

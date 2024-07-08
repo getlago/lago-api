@@ -26,7 +26,7 @@ module V1
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         file_url: model.file_url
-      }.merge(legacy_values)
+      }
 
       payload.merge!(customer) if include?(:customer)
       payload.merge!(items) if include?(:items)
@@ -57,10 +57,6 @@ module V1
         ::V1::CreditNotes::AppliedTaxSerializer,
         collection_name: 'applied_taxes'
       ).serialize
-    end
-
-    def legacy_values
-      ::V1::Legacy::CreditNoteSerializer.new(model).serialize
     end
   end
 end

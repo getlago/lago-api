@@ -17,10 +17,7 @@ module Api
         result = Subscriptions::CreateService.call(
           customer:,
           plan:,
-          params: SubscriptionLegacyInput.new(
-            current_organization,
-            create_params
-          ).create_input
+          params: create_params.to_h
         )
 
         if result.success?
@@ -64,10 +61,7 @@ module Api
 
         result = Subscriptions::UpdateService.call(
           subscription:,
-          params: SubscriptionLegacyInput.new(
-            current_organization,
-            update_params
-          ).update_input
+          params: update_params.to_h
         )
 
         if result.success?

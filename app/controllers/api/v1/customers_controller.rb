@@ -127,9 +127,6 @@ module Api
             :sync,
             :sync_with_provider,
             :document_locale,
-
-            # NOTE(legacy): vat has been moved to tax model
-            :vat_rate,
             provider_payment_methods: []
           ],
           metadata: [

@@ -67,7 +67,6 @@ class Organization < ApplicationRecord
     if: :logo?
   validates :name, presence: true
   validates :timezone, timezone: true
-  validates :vat_rate, numericality: {less_than_or_equal_to: 100, greater_than_or_equal_to: 0}
   validates :webhook_url, url: true, allow_nil: true
 
   validate :validate_email_settings

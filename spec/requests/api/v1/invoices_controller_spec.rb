@@ -43,7 +43,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         lago_id: String,
         issuing_date: Time.current.to_date.to_s,
         invoice_type: 'one_off',
-        amount_cents: 2800,
+        fees_amount_cents: 2800,
         taxes_amount_cents: 560,
         total_amount_cents: 3360,
         currency: 'EUR'

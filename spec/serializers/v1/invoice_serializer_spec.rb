@@ -36,19 +36,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         'sub_total_including_taxes_amount_cents' => invoice.sub_total_including_taxes_amount_cents,
         'total_amount_cents' => invoice.total_amount_cents,
         'file_url' => invoice.file_url,
-        'version_number' => 4,
-
-        # NOTE: deprecated fields
-        'legacy' => false,
-        'amount_currency' => invoice.currency,
-        'vat_amount_currency' => invoice.currency,
-        'credit_amount_currency' => invoice.currency,
-        'total_amount_currency' => invoice.currency,
-        'amount_cents' => invoice.fees.sum(:amount_cents),
-        'credit_amount_cents' => invoice.credits.sum(:amount_cents),
-        'vat_amount_cents' => invoice.taxes_amount_cents,
-        'sub_total_vat_excluded_amount_cents' => invoice.sub_total_excluding_taxes_amount_cents,
-        'sub_total_vat_included_amount_cents' => invoice.sub_total_including_taxes_amount_cents
+        'version_number' => 4
       )
 
       expect(result['invoice']['metadata'].first).to include(

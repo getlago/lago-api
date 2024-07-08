@@ -138,7 +138,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           name: 'subscription name',
           external_id: SecureRandom.uuid,
           billing_time: 'anniversary',
-          subscription_date: subscription_at.to_date
+          subscription_at: subscription_at
         }
       end
 
@@ -156,8 +156,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(json[:subscription][:name]).to eq('subscription name')
         expect(json[:subscription][:started_at]).to be_present
         expect(json[:subscription][:billing_time]).to eq('anniversary')
-        expect(json[:subscription][:subscription_at]).to eq(Time.current.beginning_of_day.iso8601)
-        expect(json[:subscription][:subscription_date].to_s).to eq(Time.current.to_date.to_s)
+        expect(json[:subscription][:subscription_at]).to eq(Time.zone.parse(subscription_at).iso8601)
         expect(json[:subscription][:previous_plan_code]).to be_nil
         expect(json[:subscription][:next_plan_code]).to be_nil
         expect(json[:subscription][:downgrade_plan_date]).to be_nil

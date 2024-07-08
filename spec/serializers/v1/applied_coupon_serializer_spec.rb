@@ -38,7 +38,6 @@ RSpec.describe ::V1::AppliedCouponSerializer do
       expect(result['applied_coupon']['credits'].first['lago_id']).to eq(credit.id)
       expect(result['applied_coupon']['credits'].first['amount_cents']).to eq(credit.amount_cents)
       expect(result['applied_coupon']['credits'].first['amount_currency']).to eq(credit.amount_currency)
-      expect(result['applied_coupon']['credits'].first['item']['lago_id']).to eq(credit.item_id)
       expect(result['applied_coupon']['credits'].first['item']['type']).to eq(credit.item_type)
       expect(result['applied_coupon']['credits'].first['item']['code']).to eq(credit.item_code)
       expect(result['applied_coupon']['credits'].first['item']['name']).to eq(credit.item_name)

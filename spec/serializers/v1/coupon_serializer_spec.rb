@@ -30,10 +30,4 @@ RSpec.describe ::V1::CouponSerializer do
       expect(result['coupon']['billable_metric_codes']).to eq([])
     end
   end
-
-  it 'serializes the legacy fields' do
-    result = JSON.parse(serializer.to_json)
-
-    expect(result['coupon']['expiration_date']).to eq(coupon.expiration_at&.to_date&.iso8601)
-  end
 end

@@ -35,17 +35,7 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
       'coupons_adjustment_amount_cents' => credit_note.coupons_adjustment_amount_cents,
       'created_at' => credit_note.created_at.iso8601,
       'updated_at' => credit_note.updated_at.iso8601,
-      'file_url' => credit_note.file_url,
-
-      # NOTE: deprecated fields
-      'total_amount_currency' => credit_note.total_amount_currency,
-      'vat_amount_currency' => credit_note.currency,
-      'sub_total_vat_excluded_amount_currency' => credit_note.currency,
-      'balance_amount_currency' => credit_note.balance_amount_currency,
-      'credit_amount_currency' => credit_note.credit_amount_currency,
-      'refund_amount_currency' => credit_note.refund_amount_currency,
-      'vat_amount_cents' => credit_note.taxes_amount_cents,
-      'sub_total_vat_excluded_amount_cents' => credit_note.sub_total_excluding_taxes_amount_cents
+      'file_url' => credit_note.file_url
     )
 
     expect(result['credit_note'].keys).to include('customer', 'items')

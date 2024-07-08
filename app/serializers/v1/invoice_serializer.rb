@@ -26,7 +26,7 @@ module V1
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
         version_number: model.version_number
-      }.merge(legacy_values)
+      }
 
       payload.merge!(customer) if include?(:customer)
       payload.merge!(subscriptions) if include?(:subscriptions)
@@ -88,10 +88,6 @@ module V1
         ::V1::Invoices::AppliedTaxSerializer,
         collection_name: 'applied_taxes'
       ).serialize
-    end
-
-    def legacy_values
-      ::V1::Legacy::InvoiceSerializer.new(model).serialize
     end
   end
 end

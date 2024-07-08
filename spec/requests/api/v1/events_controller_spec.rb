@@ -160,8 +160,6 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect(fee[:pay_in_advance]).to eq(true)
         expect(fee[:amount_cents]).to be_an(Integer)
         expect(fee[:amount_currency]).to eq('EUR')
-        expect(fee[:vat_amount_cents]).to be_an(Integer)
-        expect(fee[:vat_amount_currency]).to eq('EUR')
         expect(fee[:units]).to eq('1.0')
         expect(fee[:events_count]).to eq(1)
       end

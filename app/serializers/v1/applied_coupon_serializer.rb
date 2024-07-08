@@ -23,7 +23,6 @@ module V1
         terminated_at: model.terminated_at&.iso8601
       }
 
-      payload = payload.merge(legacy_values)
       payload = payload.merge(credits) if include?(:credits)
 
       payload
@@ -40,12 +39,6 @@ module V1
 
     def credits
       ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: 'credits').serialize
-    end
-
-    def legacy_values
-      ::V1::Legacy::AppliedCouponSerializer.new(
-        model
-      ).serialize
     end
   end
 end

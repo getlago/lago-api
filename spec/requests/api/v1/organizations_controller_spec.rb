@@ -26,7 +26,6 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         billing_configuration: {
           invoice_footer: 'footer',
           invoice_grace_period: 3,
-          vat_rate: 20,
           document_locale: 'fr'
         }
       }
@@ -46,7 +45,6 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         expect(json[:organization][:default_currency]).to eq('EUR')
         expect(json[:organization][:webhook_url]).to eq(webhook_url)
         expect(json[:organization][:webhook_urls]).to eq([webhook_url])
-        expect(json[:organization][:vat_rate]).to eq(update_params[:vat_rate])
         expect(json[:organization][:document_numbering]).to eq('per_customer')
         expect(json[:organization][:document_number_prefix]).to eq('ORG-2')
         # TODO(:timezone): Timezone update is turned off for now
@@ -55,7 +53,6 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
         billing = json[:organization][:billing_configuration]
         expect(billing[:invoice_footer]).to eq('footer')
         expect(billing[:document_locale]).to eq('fr')
-        expect(billing[:vat_rate]).to eq(20)
 
         expect(json[:organization][:taxes]).not_to be_nil
       end

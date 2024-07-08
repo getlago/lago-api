@@ -23,9 +23,6 @@ RSpec.describe Customers::UpdateService, type: :service do
         tax_identification_number: '2246',
         net_payment_term: 8,
         external_id:,
-        billing_configuration: {
-          vat_rate: 20
-        },
         shipping_address: {
           city: 'Paris'
         }
@@ -39,9 +36,6 @@ RSpec.describe Customers::UpdateService, type: :service do
       aggregate_failures do
         expect(updated_customer.name).to eq('Updated customer name')
         expect(updated_customer.tax_identification_number).to eq('2246')
-
-        billing = update_args[:billing_configuration]
-        expect(updated_customer.vat_rate).to eq(billing[:vat_rate])
 
         shipping_address = update_args[:shipping_address]
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
@@ -71,24 +65,6 @@ RSpec.describe Customers::UpdateService, type: :service do
           billing = update_args[:billing_configuration]
           expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
         end
-      end
-    end
-
-    context 'without billing configuration namespace' do
-      let(:update_args) do
-        {
-          id: customer.id,
-          name: 'Updated customer name',
-          external_id:,
-          invoice_grace_period: 3,
-          vat_rate: 20
-        }
-      end
-
-      it 'updates billing information' do
-        result = customers_service.update(**update_args)
-
-        expect(result.customer.vat_rate).to eq(update_args[:vat_rate])
       end
     end
 

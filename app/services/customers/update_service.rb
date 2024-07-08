@@ -51,8 +51,6 @@ module Customers
 
         assign_premium_attributes(customer, args)
 
-        # TODO: delete this when GraphQL will use billing_configuration.
-        customer.vat_rate = args[:vat_rate] if args.key?(:vat_rate)
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
         customer.payment_provider_code = args[:payment_provider_code] if args.key?(:payment_provider_code)
         customer.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
@@ -69,7 +67,6 @@ module Customers
       if args.key?(:billing_configuration)
         billing = args[:billing_configuration]
         customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
-        customer.vat_rate = billing[:vat_rate] if billing.key?(:vat_rate)
 
         if License.premium? && billing.key?(:invoice_grace_period)
           Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])

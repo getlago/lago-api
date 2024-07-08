@@ -5,12 +5,9 @@ module Api
     class WalletsController < Api::BaseController
       def create
         result = Wallets::CreateService.call(
-          params: WalletLegacyInput.new(
-            current_organization,
-            input_params
-              .merge(organization_id: current_organization.id)
-              .merge(customer:).to_h.deep_symbolize_keys
-          ).create_input
+          params: input_params
+            .merge(organization_id: current_organization.id)
+            .merge(customer:).to_h.deep_symbolize_keys
         )
 
         if result.success?
@@ -23,10 +20,7 @@ module Api
       def update
         result = Wallets::UpdateService.call(
           wallet: current_organization.wallets.find_by(id: params[:id]),
-          params: WalletLegacyInput.new(
-            current_organization,
-            update_params.merge(id: params[:id]).to_h.deep_symbolize_keys
-          ).update_input
+          params: update_params.merge(id: params[:id]).to_h.deep_symbolize_keys
         )
 
         if result.success?
@@ -86,7 +80,6 @@ module Api
           :paid_credits,
           :granted_credits,
           :expiration_at,
-          :expiration_date, # NOTE: Legacy field
           recurring_transaction_rules: [
             :granted_credits,
             :interval,
@@ -108,7 +101,6 @@ module Api
         params.require(:wallet).permit(
           :name,
           :expiration_at,
-          :expiration_date, # NOTE: Legacy field
           recurring_transaction_rules: [
             :lago_id,
             :interval,
