@@ -32,7 +32,7 @@ module Types
         def filters
           return [] unless object.first.has_charge_filters?
 
-          object.sort_by { |f| f.charge_filter&.display_name }
+          object.sort_by { |f| f.charge_filter&.display_name.to_s }
         end
       end
     end
