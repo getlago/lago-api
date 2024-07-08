@@ -7,13 +7,13 @@ module DataExports
       @user = user
       @format = format
       @resource_type = resource_type
-      @resource_query = resource_query
+      @resource_query = resource_query || {}
 
       super(user)
     end
 
     def call
-      data_export = DataExport.create(
+      data_export = DataExport.create!(
         organization:,
         membership:,
         format:,
