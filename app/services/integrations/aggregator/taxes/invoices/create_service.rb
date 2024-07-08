@@ -30,14 +30,14 @@ module Integrations
           private
 
           def payload
-            payload = Integrations::Aggregator::Taxes::Invoices::Payload.new(
+            payload_body = Integrations::Aggregator::Taxes::Invoices::Payload.new(
               integration:,
               invoice:,
               customer:,
               fees:
             ).body
 
-            invoice_data = payload.first
+            invoice_data = payload_body.first
             invoice_data['id'] = invoice.id
 
             [invoice_data]
