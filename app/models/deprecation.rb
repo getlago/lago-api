@@ -19,11 +19,15 @@ class Deprecation
     end
 
     def get_all_as_csv(feature_name)
-      CSV.generate do |csv|
-        csv << %w[organization_id last_seen_at count]
+      lines = get_all(feature_name)
+      orgs = Organization.find(lines.pluck(:organization_id)).index_by(&:id)
 
-        get_all(feature_name).each do |d|
-          csv << [d[:organization_id], d[:last_seen_at], d[:count]]
+      CSV.generate do |csv|
+        csv << %w[org_id org_name org_email last_event_sent_at count]
+
+        lines.each do |d|
+          o = orgs[d[:organization_id]]
+          csv << [d[:organization_id], o.name, o.email, d[:last_seen_at], d[:count]]
         end
       end
     end
@@ -33,6 +37,17 @@ class Deprecation
       count = Rails.cache.read(cache_key(feature_name, organization_id, 'count'), raw: true).to_i
 
       {organization_id:, last_seen_at:, count:}
+    end
+
+    def reset_all(feature_name)
+      Organization.pluck(:id).each do |organization_id|
+        reset(feature_name, organization_id)
+      end
+    end
+
+    def reset(feature_name, organization_id)
+      Rails.cache.delete(cache_key(feature_name, organization_id, 'count'))
+      Rails.cache.delete(cache_key(feature_name, organization_id, 'last_seen_at'))
     end
 
     private
