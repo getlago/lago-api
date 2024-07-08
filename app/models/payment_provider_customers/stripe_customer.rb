@@ -2,10 +2,11 @@
 
 module PaymentProviderCustomers
   class StripeCustomer < BaseCustomer
-    PAYMENT_METHODS = %w[card sepa_debit us_bank_account bacs_debit].freeze
+    PAYMENT_METHODS = %w[card sepa_debit us_bank_account bacs_debit link].freeze
 
     validates :provider_payment_methods, presence: true
     validate :allowed_provider_payment_methods
+    validate :link_payment_method_can_exist_only_with_card
 
     settings_accessors :payment_method_id
 
@@ -21,6 +22,12 @@ module PaymentProviderCustomers
 
     def allowed_provider_payment_methods
       return if (provider_payment_methods - PAYMENT_METHODS).blank?
+
+      errors.add(:provider_payment_methods, :invalid)
+    end
+
+    def link_payment_method_can_exist_only_with_card
+      return if provider_payment_methods.exclude?('link') || provider_payment_methods.include?('card')
 
       errors.add(:provider_payment_methods, :invalid)
     end
