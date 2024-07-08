@@ -58,11 +58,11 @@ RSpec.describe UsersService, type: :service do
 
     context 'when signup is disabled' do
       before do
-        ENV['LAGO_SIGNUP_DISABLED'] = 'true'
+        ENV['LAGO_DISABLE_SIGNUP'] = 'true'
       end
 
       after do
-        ENV['LAGO_SIGNUP_DISABLED'] = nil
+        ENV['LAGO_DISABLE_SIGNUP'] = nil
       end
 
       it 'returns a not allowed error' do
@@ -70,7 +70,7 @@ RSpec.describe UsersService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.message).to eq('signup disabled')
+          expect(result.error.message).to eq('signup_disabled')
         end
       end
     end
