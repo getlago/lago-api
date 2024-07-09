@@ -7,7 +7,7 @@ class Invoice
     include PaperTrailTraceable
 
     belongs_to :invoice
-    belongs_to :tax
+    belongs_to :tax, optional: true
 
     monetize :amount_cents,
       :fees_amount_cents,

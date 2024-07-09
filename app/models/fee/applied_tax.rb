@@ -7,6 +7,6 @@ class Fee
     include PaperTrailTraceable
 
     belongs_to :fee
-    belongs_to :tax
+    belongs_to :tax, optional: true
   end
 end

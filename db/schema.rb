@@ -536,7 +536,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_12_090133) do
 
   create_table "fees_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "fee_id", null: false
-    t.uuid "tax_id", null: false
+    t.uuid "tax_id"
     t.string "tax_description"
     t.string "tax_code", null: false
     t.string "tax_name", null: false
@@ -744,7 +744,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_12_090133) do
 
   create_table "invoices_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "invoice_id", null: false
-    t.uuid "tax_id", null: false
+    t.uuid "tax_id"
     t.string "tax_description"
     t.string "tax_code", null: false
     t.string "tax_name", null: false
