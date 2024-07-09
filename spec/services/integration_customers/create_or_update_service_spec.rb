@@ -38,6 +38,22 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
       end
     end
 
+    context 'without customer' do
+      let(:integration_code) { integration.code }
+      let(:sync_with_provider) { true }
+      let(:external_customer_id) { nil }
+      let(:new_customer) { true }
+      let(:customer) { nil }
+
+      it 'does not call create job' do
+        expect { service_call }.not_to have_enqueued_job(IntegrationCustomers::CreateJob)
+      end
+
+      it 'does not call update job' do
+        expect { service_call }.not_to have_enqueued_job(IntegrationCustomers::UpdateJob)
+      end
+    end
+
     context 'without external fields set' do
       let(:integration_code) { integration.code }
       let(:sync_with_provider) { false }
