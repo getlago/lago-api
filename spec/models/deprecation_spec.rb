@@ -45,7 +45,7 @@ RSpec.describe Deprecation, type: :model, cache: :redis do
   describe '.get_all_as_csv' do
     it 'returns deprecation data for all organizations' do
       csv = "org_id,org_name,org_email,last_event_sent_at,count\n"
-      csv += "#{organization.id},#{organization.name},#{organization.email},2024-05-22T14:58:20.280Z,101\n"
+      csv += "#{organization.id},#{csv_safe(organization.name)},#{organization.email},2024-05-22T14:58:20.280Z,101\n"
       expect(described_class.get_all_as_csv(feature_name)).to eq(csv)
     end
   end
@@ -65,6 +65,16 @@ RSpec.describe Deprecation, type: :model, cache: :redis do
 
       expect(Rails.cache.read("deprecation:#{feature_name}:#{organization.id}:last_seen_at")).to be_nil
       expect(Rails.cache.read("deprecation:#{feature_name}:#{organization.id}:count")).to be_nil
+    end
+  end
+
+  def csv_safe(value)
+    # Enclose the value in double quotes if it contains a comma or double quote
+    if value.include?(',') || value.include?('"')
+      value = value.gsub('"', '""') # Escape double quotes by doubling them
+      "\"#{value}\""
+    else
+      value
     end
   end
 end
