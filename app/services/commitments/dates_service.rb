@@ -31,7 +31,8 @@ module Commitments
       Subscriptions::TerminatedDatesService.new(
         subscription: invoice_subscription.subscription,
         invoice: invoice_subscription.invoice,
-        date_service: ds
+        date_service: ds,
+        match_invoice_subscription: invoice_subscription.subscription.plan.pay_in_advance?
       ).call
     end
 

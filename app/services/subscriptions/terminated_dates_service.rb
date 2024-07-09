@@ -2,10 +2,11 @@
 
 module Subscriptions
   class TerminatedDatesService
-    def initialize(subscription:, invoice:, date_service:)
+    def initialize(subscription:, invoice:, date_service:, match_invoice_subscription: true)
       @subscription = subscription
       @timestamp = invoice.invoice_subscriptions.first&.timestamp
       @date_service = date_service
+      @match_invoice_subscription = match_invoice_subscription
     end
 
     def call
@@ -26,12 +27,14 @@ module Subscriptions
       # We should calculate boundaries as if subscription was not terminated
       new_dates_service = Subscriptions::DatesService.new_instance(duplicate, timestamp, current_usage: false)
 
+      return new_dates_service unless match_invoice_subscription
+
       matching_invoice_subscription?(subscription, new_dates_service) ? date_service : new_dates_service
     end
 
     private
 
-    attr_reader :subscription, :timestamp, :date_service
+    attr_reader :subscription, :timestamp, :date_service, :match_invoice_subscription
 
     def matching_invoice_subscription?(subscription, date_service)
       base_query = InvoiceSubscription
