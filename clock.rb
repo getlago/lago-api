@@ -100,11 +100,13 @@ module Clockwork
       .perform_later
   end
 
-  every(1.hour, 'schedule:post_validate_events', at: '*:05') do
-    Clock::EventsValidationJob
-      .set(sentry: {"slug" => 'lago_post_validate_events', "cron" => '5 */1 * * *'})
-      .perform_later
-  rescue => e
-    Sentry.capture_exception(e)
+  unless ActiveModel::Type::Boolean.new.cast(ENV['LAGO_DISABLE_EVENTS_VALIDATION'])
+    every(1.hour, 'schedule:post_validate_events', at: '*:05') do
+      Clock::EventsValidationJob
+        .set(sentry: {"slug" => 'lago_post_validate_events', "cron" => '5 */1 * * *'})
+        .perform_later
+    rescue => e
+      Sentry.capture_exception(e)
+    end
   end
 end
