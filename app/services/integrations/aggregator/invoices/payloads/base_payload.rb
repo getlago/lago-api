@@ -53,24 +53,17 @@ module Integrations
               'units' => fee.units,
               'precise_unit_amount' => fee.precise_unit_amount,
               'account_code' => mapped_item.external_account_code,
-              'amount_cents' => fee.amount_cents,
-              'taxes_amount_cents' => fee.taxes_amount_cents
+              'taxes_amount_cents' => amount(taxes_amount_cents(fee), resource: invoice),
+              'precise_coupons_amount_cents' => fee.precise_coupons_amount_cents
             }
+          end
+
+          def taxes_amount_cents(fee)
+            (fee.amount_cents - fee.precise_coupons_amount_cents) * fee.taxes_rate
           end
 
           def discounts
             output = []
-
-            if coupon_item && invoice.coupons_amount_cents > 0
-              output << {
-                'external_id' => coupon_item.external_id,
-                'description' => 'Coupon',
-                'units' => 1,
-                'precise_unit_amount' => -amount(invoice.coupons_amount_cents, resource: invoice),
-                'account_code' => coupon_item.external_account_code,
-                'amount_cents' => -invoice.coupons_amount_cents
-              }
-            end
 
             if credit_item && invoice.prepaid_credit_amount_cents > 0
               output << {
@@ -78,8 +71,7 @@ module Integrations
                 'description' => 'Prepaid credit',
                 'units' => 1,
                 'precise_unit_amount' => -amount(invoice.prepaid_credit_amount_cents, resource: invoice),
-                'account_code' => credit_item.external_account_code,
-                'amount_cents' => -invoice.prepaid_credit_amount_cents
+                'account_code' => credit_item.external_account_code
               }
             end
 
@@ -89,8 +81,7 @@ module Integrations
                 'description' => 'Credit note',
                 'units' => 1,
                 'precise_unit_amount' => -amount(invoice.credit_notes_amount_cents, resource: invoice),
-                'account_code' => credit_note_item.external_account_code,
-                'amount_cents' => -invoice.credit_notes_amount_cents
+                'account_code' => credit_note_item.external_account_code
               }
             end
 

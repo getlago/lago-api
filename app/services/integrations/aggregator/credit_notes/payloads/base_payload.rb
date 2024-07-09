@@ -21,7 +21,7 @@ module Integrations
                 'number' => credit_note.number,
                 'currency' => credit_note.currency,
                 'type' => 'ACCRECCREDIT',
-                'fees' => credit_note.items.map { |credit_note_item| item(credit_note_item) } + coupons
+                'fees' => credit_note.items.map { |credit_note_item| item(credit_note_item) }
               }
             ]
           end
@@ -53,27 +53,8 @@ module Integrations
               'units' => fee.units,
               'precise_unit_amount' => amount(credit_note_item.amount_cents, resource: credit_note_item.credit_note),
               'account_code' => mapped_item.external_account_code,
-              'amount_cents' => credit_note_item.amount_cents,
               'taxes_amount_cents' => credit_note_item.credit_note.taxes_amount_cents
             }
-          end
-
-          def coupons
-            output = []
-
-            if credit_note.coupons_adjustment_amount_cents > 0
-              output << {
-                'external_id' => mapped_item.external_id,
-                'description' => fee.invoice_name,
-                'units' => 1,
-                'precise_unit_amount' => fee.precise_unit_amount,
-                'account_code' => mapped_item.external_account_code,
-                'amount_cents' => credit_note.coupons_adjustment_amount_cents,
-                'taxes_amount_cents' => 0
-              }
-            end
-
-            output
           end
         end
       end
