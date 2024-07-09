@@ -26,7 +26,7 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
     [
       OpenStruct.new(
         tax_breakdown: [
-          OpenStruct.new(name: 'tax 1', type: 'type1', rate: '0.10'),
+          OpenStruct.new(name: 'tax 1', type: 'type1', rate: '0.10')
         ]
       ),
       OpenStruct.new(

@@ -124,7 +124,7 @@ module Invoices
     def calculate_key(tax)
       tax_rate = tax.rate.is_a?(String) ? tax.rate.to_f * 100 : tax.rate
 
-      "#{tax.type}-#{tax.name.parameterize(separator: '_')}-#{tax_rate.to_s}"
+      "#{tax.type}-#{tax.name.parameterize(separator: "_")}-#{tax_rate}"
     end
   end
 end
