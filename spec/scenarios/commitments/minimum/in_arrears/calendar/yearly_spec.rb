@@ -110,7 +110,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
         {
           code: billable_metric_advance_metered.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
+          external_subscription_id: customer.external_id,
           properties: {total: '2'}
         }
       )
@@ -119,7 +119,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
         {
           code: billable_metric_metered.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
+          external_subscription_id: customer.external_id,
           properties: {total: '1'}
         }
       )
@@ -128,7 +128,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
         {
           code: billable_metric_advance_metered.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
+          external_subscription_id: customer.external_id,
           properties: {total: '30'}
         }
       )
@@ -158,7 +158,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
             {
               code: billable_metric_advance_metered.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {total: '55'}
             }
           )
@@ -169,7 +169,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
             {
               code: billable_metric_metered.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {total: '1'}
             }
           )

@@ -13,7 +13,6 @@ FactoryBot.define do
     code { Faker::Alphanumeric.alphanumeric(number: 10) }
     timestamp { Time.current }
 
-    external_customer_id { customer.external_id }
     external_subscription_id { subscription.external_id }
   end
 
@@ -31,7 +30,6 @@ FactoryBot.define do
     end
 
     organization_id { source_organization.id }
-    external_customer_id { source_customer.external_id }
     external_subscription_id { source_subscription.external_id }
 
     transaction_id { "tr_#{SecureRandom.hex}" }

@@ -44,7 +44,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {
               'item_id' => 10,
@@ -67,7 +66,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {
               'item_id' => -5,
@@ -90,7 +88,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {
               'item_id' => 2,
@@ -155,7 +152,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription1.external_id,
             properties: {
               'item_id' => 10,
@@ -178,7 +174,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription1.external_id,
             properties: {
               'item_id' => -5,
@@ -201,7 +196,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription1.external_id,
             properties: {
               'item_id' => 2,
@@ -224,7 +218,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription2.external_id,
             properties: {
               'item_id' => 10,
@@ -245,7 +238,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription2.external_id,
             properties: {
               'item_id' => -5,
@@ -266,7 +258,6 @@ describe 'Aggregation - Sum Scenarios', :scenarios, type: :request, transaction:
           {
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription2.external_id,
             properties: {
               'item_id' => 2,

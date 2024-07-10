@@ -40,7 +40,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10'}
             }
           )
@@ -53,7 +53,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10'}
             }
           )
@@ -65,7 +65,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10'}
             }
           )
@@ -77,7 +77,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10'}
             }
           )
@@ -113,7 +113,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '4'}
             }
           )
@@ -128,7 +128,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '4'}
             }
           )
@@ -142,7 +142,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '4'}
             }
           )
@@ -156,7 +156,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '4'}
             }
           )
@@ -171,7 +171,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10'}
             }
           )
@@ -212,7 +212,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '1'}
             }
           )
@@ -225,7 +225,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '1'}
             }
           )
@@ -237,7 +237,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '1'}
             }
           )
@@ -249,7 +249,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '1'}
             }
           )
@@ -290,7 +290,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10'}
             }
           )
@@ -303,7 +303,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10'}
             }
           )
@@ -316,7 +316,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10'}
             }
           )
@@ -359,7 +359,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '100'}
             }
           )
@@ -373,7 +373,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '1000'}
             }
           )
@@ -387,7 +387,7 @@ describe 'Charge Models - Percentage Scenarios', :scenarios, type: :request do
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: customer.external_id,
               properties: {amount: '10000'}
             }
           )

@@ -24,7 +24,6 @@ RSpec.describe ::V1::EventSerializer do
         'lago_id' => event.id,
         'transaction_id' => event.transaction_id,
         'lago_customer_id' => event.customer_id,
-        'external_customer_id' => event.external_customer_id,
         'code' => event.code,
         'timestamp' => event.timestamp.iso8601(3),
         'properties' => event.properties,

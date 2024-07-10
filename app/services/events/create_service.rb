@@ -15,7 +15,6 @@ module Events
       event.organization_id = organization.id
       event.code = params[:code]
       event.transaction_id = params[:transaction_id]
-      event.external_customer_id = params[:external_customer_id]
       event.external_subscription_id = params[:external_subscription_id]
       event.properties = params[:properties] || {}
       event.metadata = metadata || {}

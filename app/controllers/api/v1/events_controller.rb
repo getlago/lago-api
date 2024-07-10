@@ -67,7 +67,7 @@ module Api
 
         result = Fees::EstimatePayInAdvanceService.call(
           organization: current_organization,
-          params: create_params
+          params: estimate_fees_params
         )
 
         if result.success?
@@ -91,9 +91,21 @@ module Api
           .require(:event)
           .permit(
             :transaction_id,
-            :external_customer_id,
             :code,
             :timestamp,
+            :external_subscription_id,
+            properties: {}
+          )
+      end
+
+      def estimate_fees_params
+        params
+          .require(:event)
+          .permit(
+            :transaction_id,
+            :code,
+            :timestamp,
+            :external_customer_id,
             :external_subscription_id,
             properties: {}
           )
@@ -104,7 +116,6 @@ module Api
           .permit(
             events: [
               :transaction_id,
-              :external_customer_id,
               :code,
               :timestamp,
               :external_subscription_id,

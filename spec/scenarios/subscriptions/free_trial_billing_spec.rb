@@ -30,7 +30,11 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
   def create_usage_event!
     create_event(
-      {code: billable_metric.code, transaction_id: SecureRandom.uuid, external_customer_id: customer.external_id}
+      {
+        code: billable_metric.code,
+        transaction_id: SecureRandom.uuid,
+        external_subscription_id: customer.external_id
+      }
     )
   end
 

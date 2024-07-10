@@ -20,7 +20,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
           event: {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             timestamp: Time.current.to_i,
             properties: {
               foo: 'bar'
@@ -30,7 +30,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       end.to change(Event, :count).by(1)
 
       expect(response).to have_http_status(:success)
-      expect(json[:event][:external_customer_id]).to eq(customer.external_id)
+      expect(json[:event][:external_subscription_id]).to eq(subscription.external_id)
     end
 
     context 'with duplicated transaction_id' do
@@ -46,7 +46,6 @@ RSpec.describe Api::V1::EventsController, type: :request do
             event: {
               code: metric.code,
               transaction_id: event.transaction_id,
-              external_customer_id: customer.external_id,
               external_subscription_id: subscription.external_id,
               timestamp: Time.current.to_i,
               properties: {
@@ -71,7 +70,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
             {
               code: metric.code,
               transaction_id: SecureRandom.uuid,
-              external_customer_id: customer.external_id,
+              external_subscription_id: subscription.external_id,
               timestamp: Time.current.to_i,
               properties: {
                 foo: 'bar'
@@ -82,7 +81,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       end.to change(Event, :count).by(1)
 
       expect(response).to have_http_status(:ok)
-      expect(json[:events].first[:external_customer_id]).to eq(customer.external_id)
+      expect(json[:events].first[:external_subscription_id]).to eq(subscription.external_id)
     end
   end
 

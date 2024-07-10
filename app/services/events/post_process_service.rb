@@ -48,11 +48,7 @@ module Events
     def customer
       return @customer if defined? @customer
 
-      @customer = if event.external_subscription_id
-        organization.subscriptions.find_by(external_id: event.external_subscription_id)&.customer
-      else
-        Customer.find_by(external_id: event.external_customer_id, organization_id: organization.id)
-      end
+      @customer = organization.subscriptions.find_by(external_id: event.external_subscription_id)&.customer
     end
 
     def subscriptions
