@@ -11,7 +11,7 @@ module IntegrationCustomers
     end
 
     def call
-      return if integration_customers.nil?
+      return if integration_customers.nil? || customer.nil?
 
       sanitize_integration_customers
 
