@@ -44,6 +44,7 @@ module DataExports
     def file_data
       case data_export.resource_type
       when "invoices" then Csv::Invoices.call(data_export:)
+      when "invoice_fees" then Csv::InvoiceFees.call(data_export:)
       else
         raise ResourceTypeNotSupportedError.new(
           "'#{data_export.resource_type}' resource not supported"
