@@ -58,7 +58,7 @@ module Types
       end
 
       def external_integration_id
-        integration_customer = object.customer&.integration_customers&.first
+        integration_customer = object.customer&.integration_customers&.accounting_kind&.first
 
         return nil unless integration_customer
 

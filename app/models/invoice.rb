@@ -279,11 +279,11 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_invoice?
-    finalized? && customer.integration_customers.any? { |c| c.integration.sync_invoices }
+    finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
   end
 
   def should_sync_sales_order?
-    finalized? && customer.integration_customers.any? { |c| c.integration.sync_sales_orders }
+    finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_sales_orders }
   end
 
   private

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_08_195226) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -535,7 +535,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
 
   create_table "fees_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "fee_id", null: false
-    t.uuid "tax_id", null: false
+    t.uuid "tax_id"
     t.string "tax_description"
     t.string "tax_code", null: false
     t.string "tax_name", null: false
@@ -741,7 +741,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_06_204557) do
 
   create_table "invoices_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "invoice_id", null: false
-    t.uuid "tax_id", null: false
+    t.uuid "tax_id"
     t.string "tax_description"
     t.string "tax_code", null: false
     t.string "tax_name", null: false
