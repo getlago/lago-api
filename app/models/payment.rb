@@ -13,6 +13,6 @@ class Payment < ApplicationRecord
   delegate :customer, to: :invoice
 
   def should_sync_payment?
-    invoice.finalized? && customer.integration_customers.any? { |c| c.integration.sync_payments }
+    invoice.finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
   end
 end

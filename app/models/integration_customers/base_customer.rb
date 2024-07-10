@@ -12,6 +12,10 @@ module IntegrationCustomers
 
     validates :customer_id, uniqueness: {scope: :type}
 
+    scope :accounting_kind, -> do
+      where(type: %w[IntegrationCustomers::NetsuiteCustomer IntegrationCustomers::XeroCustomer])
+    end
+
     settings_accessors :sync_with_provider
 
     def self.customer_type(type)
