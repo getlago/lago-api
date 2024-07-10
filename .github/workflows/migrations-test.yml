@@ -54,3 +54,12 @@ jobs:
         run: bin/rails db:migrate:primary
       - name: Perform Clickhouse database migrations
         run: bin/rails db:migrate:clickhouse
+      - name: Compare schema.rb with database
+        run: |
+          if git diff-index --quiet HEAD -- db/schema.rb; then
+            echo "The schema.rb is clean!"
+          else
+            echo "The schema.rb seems out of sync."
+            echo "Please run `lago exec api bin/rails db:drop db:create db:migrate:primary db:schema:dump RAILS_ENV=test` locally and commit the changes."
+            exit 1
+          fi
