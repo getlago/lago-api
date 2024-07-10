@@ -13,7 +13,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
 
   before { subscription }
 
-  context 'without external_customer_id and external_subscription_id' do
+  context 'without external_subscription_id' do
     it 'returns the created event' do
       result = create_event params
 
@@ -26,87 +26,18 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       expect(event).to have_attributes(
         code: billable_metric.code,
         customer_id: nil,
-        external_customer_id: nil,
         subscription_id: nil,
         external_subscription_id: nil
       )
     end
   end
 
-  context 'with unknown external_customer_id' do
+  context 'with unknown external_subscription_id' do
     it 'returns the created event' do
-      result = create_event(params.merge(external_customer_id: 'unknown'))
+      result = create_event(params.merge(external_subscription_id: 'unknown'))
 
       expect(result['event']).to be_present
       expect(result['event']['code']).to eq(billable_metric.code)
-      expect(result['event']['external_customer_id']).to eq('unknown')
-
-      perform_all_enqueued_jobs
-
-      event = organization.events.order(created_at: :asc).last
-      expect(event).to have_attributes(
-        code: billable_metric.code,
-        customer_id: nil,
-        external_customer_id: 'unknown',
-        subscription_id: nil,
-        external_subscription_id: nil
-      )
-    end
-  end
-
-  context 'with external_customer_id from another organization' do
-    let(:organization2) { create(:organization, webhook_url: nil) }
-    let(:customer2) { create(:customer, organization: organization2) }
-
-    it 'returns the created event' do
-      result = create_event(params.merge(external_customer_id: customer2.external_id))
-
-      expect(result['event']).to be_present
-      expect(result['event']['code']).to eq(billable_metric.code)
-      expect(result['event']['external_customer_id']).to eq(customer2.external_id)
-
-      perform_all_enqueued_jobs
-
-      event = organization.events.order(created_at: :asc).last
-      expect(event).to have_attributes(
-        code: billable_metric.code,
-        customer_id: nil,
-        external_customer_id: customer2.external_id,
-        subscription_id: nil,
-        external_subscription_id: nil
-      )
-    end
-  end
-
-  context 'with unknown external_customer_id but valid external_subscription_id' do
-    it 'creates the event successfully' do
-      expect do
-        create_event(
-          params.merge(
-            external_customer_id: 'unknown',
-            external_subscription_id: subscription.external_id
-          )
-        )
-      end.to change(Event, :count)
-
-      perform_all_enqueued_jobs
-
-      event = organization.events.order(created_at: :asc).last
-      expect(event).to have_attributes(
-        code: billable_metric.code,
-        external_customer_id: 'unknown',
-        external_subscription_id: subscription.external_id
-      )
-    end
-  end
-
-  context 'with unknown external_customer_id and unknown external_subscription_id' do
-    it 'returns the created event' do
-      result = create_event(params.merge(external_customer_id: 'unknown', external_subscription_id: 'unknown'))
-
-      expect(result['event']).to be_present
-      expect(result['event']['code']).to eq(billable_metric.code)
-      expect(result['event']['external_customer_id']).to eq('unknown')
       expect(result['event']['external_subscription_id']).to eq('unknown')
 
       perform_all_enqueued_jobs
@@ -114,7 +45,6 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_customer_id: 'unknown',
         external_subscription_id: 'unknown'
       )
     end
@@ -137,7 +67,6 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_customer_id: nil,
         external_subscription_id: subscription2.external_id
       )
     end
@@ -154,7 +83,6 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_customer_id: subscription.customer.external_id,
         external_subscription_id: subscription.external_id
       )
     end
@@ -174,7 +102,6 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_customer_id: subscription.customer.external_id,
         external_subscription_id: subscription.external_id
       )
     end
@@ -193,7 +120,6 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_customer_id: subscription.customer.external_id,
         external_subscription_id: subscription.external_id
       )
     end
@@ -213,7 +139,6 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_customer_id: subscription.customer.external_id,
         external_subscription_id: subscription.external_id
       )
     end
@@ -232,7 +157,6 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_customer_id: subscription.customer.external_id,
         external_subscription_id: subscription.external_id
       )
     end
@@ -256,48 +180,8 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_customer_id: subscription.customer.external_id,
         external_subscription_id: subscription.external_id
       )
-    end
-  end
-
-  context 'with external_customer_id but multiple subscriptions' do
-    let(:subscription2) { create(:subscription, customer:, started_at: subscription.started_at - 1.day) }
-
-    before { subscription2 }
-
-    it 'returns the created event' do
-      result = create_event(params.merge(external_customer_id: customer.external_id))
-
-      expect(result['event']).to be_present
-      expect(result['event']['external_customer_id']).to eq(customer.external_id)
-
-      perform_all_enqueued_jobs
-
-      event = organization.events.order(created_at: :asc).last
-      expect(event).to have_attributes(
-        code: billable_metric.code,
-        external_customer_id: customer.external_id,
-        external_subscription_id: nil
-      )
-    end
-  end
-
-  context 'with external_customer_id and external_subscription_id and multiple subscriptions' do
-    let(:subscription2) { create(:subscription, customer:, started_at: subscription.started_at - 1.day) }
-
-    before { subscription2 }
-
-    it 'creates the event on the corresponding subscription' do
-      expect do
-        create_event(
-          params.merge(
-            external_customer_id: customer.external_id,
-            external_subscription_id: subscription2.external_id
-          )
-        )
-      end.to change { Event.where(external_subscription_id: subscription2.external_id).count }
     end
   end
 

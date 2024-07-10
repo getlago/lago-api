@@ -12,7 +12,6 @@ RSpec.describe Events::PostProcessService, type: :service do
   let(:billable_metric) { create(:billable_metric, organization:) }
 
   let(:started_at) { Time.current - 3.days }
-  let(:external_customer_id) { customer.external_id }
   let(:external_subscription_id) { subscription.external_id }
   let(:code) { billable_metric&.code }
   let(:timestamp) { Time.current - 1.second }
@@ -22,7 +21,6 @@ RSpec.describe Events::PostProcessService, type: :service do
     create(
       :event,
       organization_id: organization.id,
-      external_customer_id:,
       external_subscription_id:,
       timestamp:,
       code:,
@@ -31,68 +29,12 @@ RSpec.describe Events::PostProcessService, type: :service do
   end
 
   describe '#call' do
-    context 'without external customer id' do
-      let(:external_customer_id) { nil }
+    it 'assigns the customer external_id' do
+      result = process_service.call
 
-      it 'assigns the customer external_id' do
-        result = process_service.call
-
-        aggregate_failures do
-          expect(result).to be_success
-
-          expect(event.external_customer_id).to eq(customer.external_id)
-        end
-      end
-
-      context 'with multiple active subscription' do
-        let(:second_subscription) { create(:subscription, organization:, customer:, started_at:) }
-
-        before { second_subscription }
-
-        it 'assigns the subscription external_id' do
-          result = process_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-
-            expect(event.external_customer_id).to eq(customer.external_id)
-          end
-        end
-      end
-    end
-
-    context 'without external subscription id' do
-      let(:external_subscription_id) { nil }
-
-      before { subscription }
-
-      context 'with a single customer subscription' do
-        it 'assigns the subscription external_id' do
-          result = process_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-
-            expect(event.external_subscription_id).to eq(subscription.external_id)
-          end
-        end
-      end
-
-      context 'with multiple active subscription' do
-        let(:second_subscription) { create(:subscription, organization:, customer:, started_at:) }
-
-        before { second_subscription }
-
-        it 'does not assigns the subscription external_id' do
-          result = process_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-
-            expect(event.external_customer_id).to eq(customer.external_id)
-            expect(event.external_subscription_id).to be_nil
-          end
-        end
+      aggregate_failures do
+        expect(result).to be_success
+        expect(event.external_customer_id).to eq(customer.external_id)
       end
     end
 

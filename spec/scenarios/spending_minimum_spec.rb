@@ -53,7 +53,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id
+            external_subscription_id: subscription.external_id
           }
         )
 
@@ -173,7 +173,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             properties: {
               region: 'usa'
             }
@@ -184,7 +184,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             properties: {
               region: 'europe'
             }

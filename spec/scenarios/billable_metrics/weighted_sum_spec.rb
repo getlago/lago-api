@@ -30,7 +30,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           properties: {value: '2500'}
         }
       )
@@ -64,7 +64,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           properties: {value: '-2000'}
         }
       )
@@ -75,7 +75,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
-          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           properties: {value: '-200'}
         }
       )

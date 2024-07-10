@@ -7,7 +7,6 @@ module V1
         lago_id: model.id,
         transaction_id: model.transaction_id,
         lago_customer_id: model.customer_id,
-        external_customer_id: model.external_customer_id,
         code: model.code,
         timestamp: model.timestamp.iso8601(3),
         properties: model.properties,

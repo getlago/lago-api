@@ -15,7 +15,6 @@ RSpec.describe Events::CreateService, type: :service do
   let(:organization) { create(:organization) }
 
   let(:code) { 'sum_agg' }
-  let(:external_customer_id) { SecureRandom.uuid }
   let(:external_subscription_id) { SecureRandom.uuid }
   let(:timestamp) { Time.current.to_f }
   let(:transaction_id) { SecureRandom.uuid }
@@ -24,7 +23,6 @@ RSpec.describe Events::CreateService, type: :service do
 
   let(:create_args) do
     {
-      external_customer_id:,
       external_subscription_id:,
       code:,
       transaction_id:,
@@ -44,7 +42,6 @@ RSpec.describe Events::CreateService, type: :service do
 
         expect(result).to be_success
         expect(result.event).to have_attributes(
-          external_customer_id:,
           external_subscription_id:,
           transaction_id:,
           code:,

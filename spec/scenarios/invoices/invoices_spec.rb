@@ -572,7 +572,6 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {amount: '5'}
           }
@@ -662,7 +661,6 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {amount: '5'}
           }
@@ -750,7 +748,6 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {amount: '10'}
           }
@@ -794,7 +791,6 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: active_subscription.external_id,
             properties: {amount: '10000'}
           }
@@ -879,7 +875,6 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {amount: '5'}
           }
@@ -969,7 +964,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
               code: metric.code,
               transaction_id: SecureRandom.uuid,
               organization_id: organization.id,
-              external_customer_id: customer.external_id
+              external_subscription_id: subscription.external_id
             }
           )
         end
@@ -1039,7 +1034,6 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {amount: '5'}
           }
@@ -1305,7 +1299,6 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           {
             code: metric.code,
             transaction_id: SecureRandom.uuid,
-            external_customer_id: customer.external_id,
             external_subscription_id: subscription.external_id,
             properties: {amount: '5'}
           }

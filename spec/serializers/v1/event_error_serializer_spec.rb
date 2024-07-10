@@ -26,7 +26,6 @@ RSpec.describe ::V1::EventErrorSerializer do
         'lago_id' => event_error.event.id,
         'transaction_id' => event_error.event.transaction_id,
         'lago_customer_id' => nil,
-        'external_customer_id' => event_error.event.external_customer_id,
         'code' => event_error.event.code,
         'timestamp' => event_error.event.timestamp.iso8601(3),
         'properties' => event_error.event.properties,
