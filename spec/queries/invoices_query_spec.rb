@@ -188,7 +188,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns expected invoices' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
         payment_overdue: true,
         page: 1,
         limit: 10
@@ -202,7 +201,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 1 invoice' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
         filters: {
           invoice_type: 'credit'
         },
@@ -222,7 +220,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 1 invoice' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
         filters: {
           currency: 'USD'
         },
@@ -242,7 +239,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 2 invoices' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
         filters: {
           customer_external_id: customer_second.external_id
         },
@@ -265,7 +261,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 4 invoices' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
         filters: {
           issuing_date_from: 2.days.ago.iso8601
         },
@@ -288,7 +283,6 @@ RSpec.describe InvoicesQuery, type: :query do
       it 'returns a failed result' do
         result = invoice_query.call(
           search_term: nil,
-          status: nil,
           filters: {
             issuing_date_from: 'invalid_date_value'
           },
@@ -309,7 +303,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 2 invoices' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
         filters: {
           issuing_date_to: 2.weeks.ago.iso8601
         },
@@ -331,7 +324,6 @@ RSpec.describe InvoicesQuery, type: :query do
       it 'returns a failed result' do
         result = invoice_query.call(
           search_term: nil,
-          status: nil,
           filters: {
             issuing_date_to: 'invalid_date_value'
           },
@@ -352,7 +344,6 @@ RSpec.describe InvoicesQuery, type: :query do
     it 'returns 2 invoices' do
       result = invoice_query.call(
         search_term: nil,
-        status: nil,
         filters: {
           issuing_date_from: 2.weeks.ago.iso8601,
           issuing_date_to: 1.week.ago.iso8601
