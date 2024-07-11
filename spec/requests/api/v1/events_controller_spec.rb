@@ -126,7 +126,6 @@ RSpec.describe Api::V1::EventsController, type: :request do
     before do
       charge
       tax
-      allow(Deprecation).to receive(:report)
     end
 
     it 'returns a success' do
@@ -135,7 +134,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         '/api/v1/events/estimate_fees',
         event: {
           code: metric.code,
-          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           transaction_id: SecureRandom.uuid,
           properties: {
             foo: 'bar'
@@ -147,8 +146,6 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect(response).to have_http_status(:success)
 
         expect(json[:fees].count).to eq(1)
-
-        expect(Deprecation).to have_received(:report).with('estimate_fees_missing_external_subscription_id', organization.id)
 
         fee = json[:fees].first
         expect(fee[:lago_id]).to be_nil
@@ -178,31 +175,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
           }
         )
 
-        aggregate_failures do
-          expect(Deprecation).to have_received(:report).with('estimate_fees_missing_external_subscription_id', organization.id)
-          expect(response).to have_http_status(:not_found)
-        end
-      end
-    end
-
-    context 'with external_subscription_id' do
-      it 'returns a success' do
-        post_with_token(
-          organization,
-          '/api/v1/events/estimate_fees',
-          event: {
-            code: metric.code,
-            external_subscription_id: subscription.external_id,
-            properties: {
-              foo: 'bar'
-            }
-          }
-        )
-
-        aggregate_failures do
-          expect(Deprecation).not_to have_received(:report)
-          expect(response).to have_http_status(:success)
-        end
+        expect(response).to have_http_status(:not_found)
       end
     end
 
@@ -215,17 +188,14 @@ RSpec.describe Api::V1::EventsController, type: :request do
           '/api/v1/events/estimate_fees',
           event: {
             code: metric.code,
-            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             properties: {
               foo: 'bar'
             }
           }
         )
 
-        aggregate_failures do
-          expect(Deprecation).to have_received(:report).with('estimate_fees_missing_external_subscription_id', organization.id)
-          expect(response).to have_http_status(:unprocessable_entity)
-        end
+        expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
