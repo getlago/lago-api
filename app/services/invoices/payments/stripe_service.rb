@@ -54,7 +54,7 @@ module Invoices
       rescue Stripe::AuthenticationError, Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
         #       For now we keep it as pending, the user can still update it manually
-        return if e.code == 'amount_too_small'
+        return result if e.code == 'amount_too_small'
 
         deliver_error_webhook(e)
         update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
