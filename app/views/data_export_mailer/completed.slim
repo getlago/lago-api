@@ -20,7 +20,7 @@ div style='margin-bottom: 32px;width: 80px;height: 24px;'
 div style='margin-bottom: 24px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
   = I18n.t('email.data_export.completed.greetings')
 div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
-  = I18n.t('email.data_export.completed.intro')
+  = I18n.t('email.data_export.completed.intro', resource_type: @resource_type)
 table style='margin-bottom: 32px' width="100%" cellspacing="0" cellpadding="0"
   tr
     td

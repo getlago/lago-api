@@ -5,6 +5,8 @@ module DataExports
     EXPIRED_FAILURE_MESSAGE = 'Data Export already expired'
     PROCESSED_FAILURE_MESSAGE = 'Data Export already processed'
 
+    ResourceTypeNotSupportedError = Class.new(StandardError)
+
     def initialize(data_export:)
       @data_export = data_export
 
@@ -42,6 +44,11 @@ module DataExports
     def file_data
       case data_export.resource_type
       when "invoices" then Csv::Invoices.call(data_export:)
+      when "invoice_fees" then Csv::InvoiceFees.call(data_export:)
+      else
+        raise ResourceTypeNotSupportedError.new(
+          "'#{data_export.resource_type}' resource not supported"
+        )
       end
     end
 

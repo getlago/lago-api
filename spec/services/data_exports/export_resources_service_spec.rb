@@ -89,5 +89,35 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
         end
       end
     end
+
+    context "when resource type is not supported" do
+      let(:data_export) { create :data_export, resource_type: 'unknown' }
+
+      it "returns a service failure result" do
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.code).to eq(
+            "'unknown' resource not supported"
+          )
+          expect(data_export).to be_failed
+        end
+      end
+    end
+
+    context "when resource type is invoice_fees" do
+      let(:data_export) { create :data_export, resource_type: 'invoice_fees', format: 'csv' }
+
+      before do
+        allow(DataExports::Csv::InvoiceFees).to receive(:call).and_return(:csv_content)
+      end
+
+      it "calls the Csv::InvoiceFees exporter" do
+        result
+
+        expect(DataExports::Csv::InvoiceFees)
+          .to have_received(:call)
+          .with(data_export:)
+      end
+    end
   end
 end
