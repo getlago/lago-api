@@ -734,8 +734,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_11_094255) do
     t.boolean "payment_overdue", default: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
+    t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
+    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
@@ -1171,52 +1173,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_11_094255) do
   add_foreign_key "webhook_endpoints", "organizations"
   add_foreign_key "webhooks", "webhook_endpoints"
 
-  create_view "last_hour_events_mv", materialized: true, sql_definition: <<-SQL
-      WITH billable_metric_groups AS (
-           SELECT billable_metrics_1.organization_id AS bm_organization_id,
-              billable_metrics_1.id AS bm_id,
-              billable_metrics_1.code AS bm_code,
-              count(parent_groups.id) AS parent_group_count,
-              array_agg(parent_groups.key) AS parent_group_keys,
-              count(child_groups.id) AS child_group_count,
-              array_agg(child_groups.key) AS child_group_keys
-             FROM ((billable_metrics billable_metrics_1
-               LEFT JOIN groups parent_groups ON (((parent_groups.billable_metric_id = billable_metrics_1.id) AND (parent_groups.parent_group_id IS NULL) AND (parent_groups.deleted_at IS NULL))))
-               LEFT JOIN groups child_groups ON (((child_groups.billable_metric_id = billable_metrics_1.id) AND (child_groups.parent_group_id IS NOT NULL) AND (child_groups.deleted_at IS NULL))))
-            WHERE (billable_metrics_1.deleted_at IS NULL)
-            GROUP BY billable_metrics_1.id, billable_metrics_1.code
-          ), billable_metric_filters AS (
-           SELECT billable_metrics_1.organization_id AS bm_organization_id,
-              billable_metrics_1.id AS bm_id,
-              billable_metrics_1.code AS bm_code,
-              filters.key AS filter_key,
-              filters."values" AS filter_values
-             FROM (billable_metrics billable_metrics_1
-               JOIN public.billable_metric_filters filters ON ((filters.billable_metric_id = billable_metrics_1.id)))
-            WHERE ((billable_metrics_1.deleted_at IS NULL) AND (filters.deleted_at IS NULL))
-          )
-   SELECT events.organization_id,
-      events.transaction_id,
-      events.properties,
-      billable_metrics.code AS billable_metric_code,
-      (billable_metrics.aggregation_type <> 0) AS field_name_mandatory,
-      (billable_metrics.aggregation_type = ANY (ARRAY[1, 2, 5, 6])) AS numeric_field_mandatory,
-      (events.properties ->> (billable_metrics.field_name)::text) AS field_value,
-      ((events.properties ->> (billable_metrics.field_name)::text) ~ '^-?\\d+(\\.\\d+)?$'::text) AS is_numeric_field_value,
-      (COALESCE(billable_metric_groups.parent_group_count, (0)::bigint) > 0) AS parent_group_mandatory,
-      (events.properties ?| (billable_metric_groups.parent_group_keys)::text[]) AS has_parent_group_key,
-      (COALESCE(billable_metric_groups.child_group_count, (0)::bigint) > 0) AS child_group_mandatory,
-      (events.properties ?| (billable_metric_groups.child_group_keys)::text[]) AS has_child_group_key,
-      (events.properties ? (billable_metric_filters.filter_key)::text) AS has_filter_keys,
-      ((events.properties ->> (billable_metric_filters.filter_key)::text) = ANY ((billable_metric_filters.filter_values)::text[])) AS has_valid_filter_values
-     FROM (((events
-       LEFT JOIN billable_metrics ON ((((billable_metrics.code)::text = (events.code)::text) AND (events.organization_id = billable_metrics.organization_id))))
-       LEFT JOIN billable_metric_groups ON ((billable_metrics.id = billable_metric_groups.bm_id)))
-       LEFT JOIN billable_metric_filters ON ((billable_metrics.id = billable_metric_filters.bm_id)))
-    WHERE ((events.deleted_at IS NULL) AND (events.created_at >= (date_trunc('hour'::text, now()) - 'PT1H'::interval)) AND (events.created_at < date_trunc('hour'::text, now())) AND (billable_metrics.deleted_at IS NULL));
-  SQL
-  add_index "last_hour_events_mv", ["organization_id"], name: "index_last_hour_events_mv_on_organization_id"
-
   create_view "billable_metrics_grouped_charges", sql_definition: <<-SQL
       SELECT billable_metrics.organization_id,
       billable_metrics.code,
@@ -1241,5 +1197,31 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_11_094255) do
        LEFT JOIN billable_metric_filters ON ((charge_filter_values.billable_metric_filter_id = billable_metric_filters.id)))
     WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charges.pay_in_advance = false) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
     GROUP BY billable_metrics.organization_id, billable_metrics.code, billable_metrics.aggregation_type, billable_metrics.field_name, charges.plan_id, charges.id, charge_filters.id;
+  SQL
+  create_view "last_hour_events_mv", materialized: true, sql_definition: <<-SQL
+      WITH billable_metric_filters AS (
+           SELECT billable_metrics_1.organization_id AS bm_organization_id,
+              billable_metrics_1.id AS bm_id,
+              billable_metrics_1.code AS bm_code,
+              filters.key AS filter_key,
+              filters."values" AS filter_values
+             FROM (billable_metrics billable_metrics_1
+               JOIN public.billable_metric_filters filters ON ((filters.billable_metric_id = billable_metrics_1.id)))
+            WHERE ((billable_metrics_1.deleted_at IS NULL) AND (filters.deleted_at IS NULL))
+          )
+   SELECT events.organization_id,
+      events.transaction_id,
+      events.properties,
+      billable_metrics.code AS billable_metric_code,
+      (billable_metrics.aggregation_type <> 0) AS field_name_mandatory,
+      (billable_metrics.aggregation_type = ANY (ARRAY[1, 2, 5, 6])) AS numeric_field_mandatory,
+      (events.properties ->> (billable_metrics.field_name)::text) AS field_value,
+      ((events.properties ->> (billable_metrics.field_name)::text) ~ '^-?\\d+(\\.\\d+)?$'::text) AS is_numeric_field_value,
+      (events.properties ? (billable_metric_filters.filter_key)::text) AS has_filter_keys,
+      ((events.properties ->> (billable_metric_filters.filter_key)::text) = ANY ((billable_metric_filters.filter_values)::text[])) AS has_valid_filter_values
+     FROM ((events
+       LEFT JOIN billable_metrics ON ((((billable_metrics.code)::text = (events.code)::text) AND (events.organization_id = billable_metrics.organization_id))))
+       LEFT JOIN billable_metric_filters ON ((billable_metrics.id = billable_metric_filters.bm_id)))
+    WHERE ((events.deleted_at IS NULL) AND (events.created_at >= (date_trunc('hour'::text, now()) - 'PT1H'::interval)) AND (events.created_at < date_trunc('hour'::text, now())) AND (billable_metrics.deleted_at IS NULL));
   SQL
 end
