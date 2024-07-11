@@ -7714,7 +7714,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "FormatTypeEnum",
+                  "name": "DataExportFormatTypeEnum",
                   "ofType": null
                 }
               },
@@ -13412,7 +13412,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "StatusEnum",
+                  "name": "DataExportStatusEnum",
                   "ofType": null
                 }
               },
@@ -13425,6 +13425,58 @@
           ],
           "inputFields": null,
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "DataExportFormatTypeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "csv",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
+          "kind": "ENUM",
+          "name": "DataExportStatusEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "pending",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "processing",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "completed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "failed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "INPUT_OBJECT",
@@ -16729,23 +16781,6 @@
           "fields": null,
           "inputFields": null,
           "enumValues": null
-        },
-        {
-          "kind": "ENUM",
-          "name": "FormatTypeEnum",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "csv",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
         },
         {
           "kind": "INPUT_OBJECT",
@@ -31052,41 +31087,6 @@
             }
           ],
           "enumValues": null
-        },
-        {
-          "kind": "ENUM",
-          "name": "StatusEnum",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "pending",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "processing",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "completed",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "failed",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
         },
         {
           "kind": "ENUM",

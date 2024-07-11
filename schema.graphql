@@ -1909,7 +1909,7 @@ input CreateDataExportsInvoicesInput {
   """
   clientMutationId: String
   filters: FiltersInput!
-  format: FormatTypeEnum!
+  format: DataExportFormatTypeEnum!
   resourceType: ExportTypeEnum!
 }
 
@@ -3119,7 +3119,18 @@ type CustomerUsage {
 
 type DataExport {
   id: ID!
-  status: StatusEnum!
+  status: DataExportStatusEnum!
+}
+
+enum DataExportFormatTypeEnum {
+  csv
+}
+
+enum DataExportStatusEnum {
+  completed
+  failed
+  pending
+  processing
 }
 
 """
@@ -3651,10 +3662,6 @@ type FinalizedInvoiceCollection {
 type FinalizedInvoiceCollectionCollection {
   collection: [FinalizedInvoiceCollection!]!
   metadata: CollectionMetadata!
-}
-
-enum FormatTypeEnum {
-  csv
 }
 
 """
@@ -5985,13 +5992,6 @@ input RevokeMembershipInput {
   """
   clientMutationId: String
   id: ID!
-}
-
-enum StatusEnum {
-  completed
-  failed
-  pending
-  processing
 }
 
 enum StatusTypeEnum {
