@@ -1,11 +1,8 @@
 # frozen_string_literal: true
 
 class AddPaymentOverdueToInvoices < ActiveRecord::Migration[7.0]
-  disable_ddl_transaction!
-
   def change
     add_column :invoices, :payment_overdue, :boolean, default: false
-    add_index :invoices, :payment_overdue, algorithm: :concurrently
 
     reversible do |dir|
       dir.up do
