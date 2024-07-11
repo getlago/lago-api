@@ -9,7 +9,7 @@ namespace :lago do
       schema_version: ApplicationRecord.connection.migration_context.current_version
     }
 
-    if ENV['LAGO_CLICKHOUSE_ENABLED'] == "true"
+    if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'] == "true"
       output[:clickhouse_schema_version] = Clickhouse::BaseRecord.connection.migration_context.current_version
     end
 

@@ -26,7 +26,7 @@ development:
     password: default
     migrations_paths: db/clickhouse_migrate
     debug: true
-    database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
 
 test:
   primary:
@@ -46,7 +46,7 @@ test:
     password: <%= ENV.fetch('LAGO_CLICKHOUSE_PASSWORD', 'default') %>
     migrations_paths: db/clickhouse_migrate
     debug: true
-    database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
     schema_dump: <% if ENV['LAGO_DISABLE_SCHEMA_DUMP'].present? %> false <% else %> clickhouse_schema.rb <% end %>
 
 staging:
@@ -66,7 +66,7 @@ staging:
     password: <%= ENV['LAGO_CLICKHOUSE_PASSWORD'] %>
     migrations_paths: db/clickhouse_migrate
     debug: false
-    database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
 
 production:
   primary:
@@ -92,4 +92,4 @@ production:
     ssl: <%= ENV.fetch('LAGO_CLICKHOUSE_SSL', false) %>
     migrations_paths: db/clickhouse_migrate
     debug: false
-    database_tasks: <% if ENV['LAGO_CLICKHOUSE_ENABLED'].present? %> true <% else %> false <% end %>
+    database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>

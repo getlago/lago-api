@@ -39,6 +39,7 @@ jobs:
       SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
       LAGO_FROM_EMAIL: noreply@getlago.com
       LAGO_CLICKHOUSE_ENABLED: true
+      LAGO_CLICKHOUSE_MIGRATIONS_ENABLED: true
       LAGO_CLICKHOUSE_HOST: localhost
       LAGO_CLICKHOUSE_DATABASE: default
       LAGO_CLICKHOUSE_USERNAME: ""
