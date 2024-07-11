@@ -212,7 +212,7 @@ module Invoices
           confirm: true,
           off_session: true,
           error_on_requires_action: true,
-          description: "#{organization.name} - Invoice #{invoice.number}",
+          description:,
           metadata: {
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,
@@ -241,6 +241,7 @@ module Invoices
           customer: customer.stripe_customer.provider_customer_id,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
           payment_intent_data: {
+            description:,
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
@@ -250,6 +251,10 @@ module Invoices
             }
           }
         }
+      end
+
+      def description
+        "#{organization.name} - Invoice #{invoice.number}"
       end
 
       def invoice_payment_status(payment_status)
