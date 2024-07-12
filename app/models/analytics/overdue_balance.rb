@@ -8,7 +8,7 @@ module Analytics
       def query(organization_id, **args)
         if args[:external_customer_id].present?
           and_external_customer_id_sql = sanitize_sql(
-            ["AND c.external_id = :external_customer_id", args[:external_customer_id]]
+            ["AND c.external_id = :external_customer_id AND c.deleted_at IS NULL", args[:external_customer_id]]
           )
         end
 
