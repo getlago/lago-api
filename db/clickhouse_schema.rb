@@ -13,8 +13,8 @@
 ClickhouseActiverecord::Schema.define(version: 2024_07_09_135535) do
 
   # TABLE: events_count_agg
-  # SQL: CREATE TABLE default.events_count_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` Nullable(Decimal(26, 0)), `timestamp` DateTime64(3), `filters` Map(String, Array(String)), `grouped_by` Map(String, String) ) ENGINE = SummingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp) SETTINGS index_granularity = 8192
-  create_table "events_count_agg", id: false, options: "SummingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp) SETTINGS index_granularity = 8192", force: :cascade do |t|
+  # SQL: CREATE TABLE default.events_count_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` Nullable(Decimal(26, 0)), `timestamp` DateTime64(3), `filters` Map(String, Array(String)), `grouped_by` Map(String, String) ) ENGINE = SummingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) SETTINGS index_granularity = 8192
+  create_table "events_count_agg", id: false, options: "SummingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) SETTINGS index_granularity = 8192", force: :cascade do |t|
     t.string "organization_id", null: false
     t.string "external_subscription_id", null: false
     t.string "code", null: false
@@ -58,8 +58,8 @@ ClickhouseActiverecord::Schema.define(version: 2024_07_09_135535) do
   end
 
   # TABLE: events_max_agg
-  # SQL: CREATE TABLE default.events_max_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `timestamp` DateTime64(3), `filters` Map(String, Array(String)), `grouped_by` Map(String, String), `value` AggregateFunction(max, Decimal(38, 26)) ) ENGINE = AggregatingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp) SETTINGS index_granularity = 8192
-  create_table "events_max_agg", id: false, options: "AggregatingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp) SETTINGS index_granularity = 8192", force: :cascade do |t|
+  # SQL: CREATE TABLE default.events_max_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `timestamp` DateTime64(3), `filters` Map(String, Array(String)), `grouped_by` Map(String, String), `value` AggregateFunction(max, Decimal(38, 26)) ) ENGINE = AggregatingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) SETTINGS index_granularity = 8192
+  create_table "events_max_agg", id: false, options: "AggregatingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) SETTINGS index_granularity = 8192", force: :cascade do |t|
     t.string "organization_id", null: false
     t.string "external_subscription_id", null: false
     t.string "code", null: false
@@ -95,8 +95,8 @@ ClickhouseActiverecord::Schema.define(version: 2024_07_09_135535) do
   end
 
   # TABLE: events_sum_agg
-  # SQL: CREATE TABLE default.events_sum_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` Nullable(Decimal(26, 0)), `timestamp` DateTime64(3), `filters` Map(String, Array(String)), `grouped_by` Map(String, String) ) ENGINE = SummingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp) SETTINGS index_granularity = 8192
-  create_table "events_sum_agg", id: false, options: "SummingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp) SETTINGS index_granularity = 8192", force: :cascade do |t|
+  # SQL: CREATE TABLE default.events_sum_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` Nullable(Decimal(26, 0)), `timestamp` DateTime64(3), `filters` Map(String, Array(String)), `grouped_by` Map(String, String) ) ENGINE = SummingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) SETTINGS index_granularity = 8192
+  create_table "events_sum_agg", id: false, options: "SummingMergeTree PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) ORDER BY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by) SETTINGS index_granularity = 8192", force: :cascade do |t|
     t.string "organization_id", null: false
     t.string "external_subscription_id", null: false
     t.string "code", null: false
@@ -108,8 +108,8 @@ ClickhouseActiverecord::Schema.define(version: 2024_07_09_135535) do
   end
 
   # TABLE: events_sum_agg_mv
-  # SQL: CREATE MATERIALIZED VIEW default.events_sum_agg_mv TO default.events_sum_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` Nullable(Decimal(38, 26)), `timestamp` DateTime ) AS SELECT organization_id, external_subscription_id, code, charge_id, sum(toDecimal128(value, 26)) AS value, toStartOfHour(timestamp) AS timestamp FROM default.events_enriched WHERE aggregation_type = 'sum_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp
-  create_table "events_sum_agg_mv", view: true, materialized: true, id: false, as: "SELECT organization_id, external_subscription_id, code, charge_id, sum(toDecimal128(value, 26)) AS value, toStartOfHour(timestamp) AS timestamp FROM default.events_enriched WHERE aggregation_type = 'sum_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp", force: :cascade do |t|
+  # SQL: CREATE MATERIALIZED VIEW default.events_sum_agg_mv TO default.events_sum_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` Nullable(Decimal(38, 26)), `timestamp` DateTime, `filters` Map(String, Array(String)), `grouped_by` Map(String, String) ) AS SELECT organization_id, external_subscription_id, code, charge_id, sum(toDecimal128(value, 26)) AS value, toStartOfHour(timestamp) AS timestamp, filters, grouped_by FROM default.events_enriched WHERE aggregation_type = 'sum_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by
+  create_table "events_sum_agg_mv", view: true, materialized: true, id: false, as: "SELECT organization_id, external_subscription_id, code, charge_id, sum(toDecimal128(value, 26)) AS value, toStartOfHour(timestamp) AS timestamp, filters, grouped_by FROM default.events_enriched WHERE aggregation_type = 'sum_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by", force: :cascade do |t|
   end
 
   # TABLE: events_raw_mv
@@ -118,8 +118,8 @@ ClickhouseActiverecord::Schema.define(version: 2024_07_09_135535) do
   end
 
   # TABLE: events_max_agg_mv
-  # SQL: CREATE MATERIALIZED VIEW default.events_max_agg_mv TO default.events_max_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` AggregateFunction(max, Decimal(38, 26)), `timestamp` DateTime ) AS SELECT organization_id, external_subscription_id, code, charge_id, maxState(toDecimal128(coalesce(value, '0'), 26)) AS value, toStartOfHour(timestamp) AS timestamp FROM default.events_enriched WHERE aggregation_type = 'max_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp
-  create_table "events_max_agg_mv", view: true, materialized: true, id: false, as: "SELECT organization_id, external_subscription_id, code, charge_id, maxState(toDecimal128(coalesce(value, '0'), 26)) AS value, toStartOfHour(timestamp) AS timestamp FROM default.events_enriched WHERE aggregation_type = 'max_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp", force: :cascade do |t|
+  # SQL: CREATE MATERIALIZED VIEW default.events_max_agg_mv TO default.events_max_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` AggregateFunction(max, Decimal(38, 26)), `timestamp` DateTime, `filters` Map(String, Array(String)), `grouped_by` Map(String, String) ) AS SELECT organization_id, external_subscription_id, code, charge_id, maxState(toDecimal128(coalesce(value, '0'), 26)) AS value, toStartOfHour(timestamp) AS timestamp, filters, grouped_by FROM default.events_enriched WHERE aggregation_type = 'max_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by
+  create_table "events_max_agg_mv", view: true, materialized: true, id: false, as: "SELECT organization_id, external_subscription_id, code, charge_id, maxState(toDecimal128(coalesce(value, '0'), 26)) AS value, toStartOfHour(timestamp) AS timestamp, filters, grouped_by FROM default.events_enriched WHERE aggregation_type = 'max_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by", force: :cascade do |t|
   end
 
   # TABLE: events_enriched_mv
@@ -128,8 +128,8 @@ ClickhouseActiverecord::Schema.define(version: 2024_07_09_135535) do
   end
 
   # TABLE: events_count_agg_mv
-  # SQL: CREATE MATERIALIZED VIEW default.events_count_agg_mv TO default.events_count_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` Nullable(Decimal(38, 26)), `timestamp` DateTime ) AS SELECT organization_id, external_subscription_id, code, charge_id, sum(toDecimal128(value, 26)) AS value, toStartOfHour(timestamp) AS timestamp FROM default.events_enriched WHERE aggregation_type = 'count_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp
-  create_table "events_count_agg_mv", view: true, materialized: true, id: false, as: "SELECT organization_id, external_subscription_id, code, charge_id, sum(toDecimal128(value, 26)) AS value, toStartOfHour(timestamp) AS timestamp FROM default.events_enriched WHERE aggregation_type = 'count_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp", force: :cascade do |t|
+  # SQL: CREATE MATERIALIZED VIEW default.events_count_agg_mv TO default.events_count_agg ( `organization_id` String, `external_subscription_id` String, `code` String, `charge_id` String, `value` Nullable(Decimal(38, 26)), `timestamp` DateTime, `filters` Map(String, Array(String)), `grouped_by` Map(String, String) ) AS SELECT organization_id, external_subscription_id, code, charge_id, sum(toDecimal128(value, 26)) AS value, toStartOfHour(timestamp) AS timestamp, filters, grouped_by FROM default.events_enriched WHERE aggregation_type = 'count_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by
+  create_table "events_count_agg_mv", view: true, materialized: true, id: false, as: "SELECT organization_id, external_subscription_id, code, charge_id, sum(toDecimal128(value, 26)) AS value, toStartOfHour(timestamp) AS timestamp, filters, grouped_by FROM default.events_enriched WHERE aggregation_type = 'count_agg' GROUP BY organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by", force: :cascade do |t|
   end
 
 end

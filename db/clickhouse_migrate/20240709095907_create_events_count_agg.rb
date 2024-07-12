@@ -4,7 +4,7 @@ class CreateEventsCountAgg < ActiveRecord::Migration[7.1]
   def change
     options = <<-SQL
       SummingMergeTree
-      PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp)
+      PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by)
     SQL
 
     create_table :events_count_agg, id: false, options: do |t|

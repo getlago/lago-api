@@ -4,7 +4,7 @@ class CreateEventsMaxAgg < ActiveRecord::Migration[7.1]
   def change
     options = <<-SQL
       AggregatingMergeTree()
-      PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp)
+      PRIMARY KEY (organization_id, external_subscription_id, code, charge_id, timestamp, filters, grouped_by)
     SQL
 
     create_table :events_max_agg, id: false, options: do |t|
