@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_11_094255) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_12_090133) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -524,6 +524,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_11_094255) do
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
+    t.index ["charge_id", "invoice_id"], name: "index_fees_on_charge_id_and_invoice_id", where: "(deleted_at IS NULL)"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
     t.index ["deleted_at"], name: "index_fees_on_deleted_at"
     t.index ["group_id"], name: "index_fees_on_group_id"
