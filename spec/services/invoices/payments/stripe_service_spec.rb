@@ -321,6 +321,68 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
   end
 
+  describe '#payment_url_payload' do
+    subject(:payment_url_payload_call) { stripe_service.__send__(:payment_url_payload) }
+
+    let(:payload) do
+      {
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: invoice.currency.downcase,
+              unit_amount: invoice.total_amount_cents,
+              product_data: {
+                name: invoice.number
+              }
+            }
+          }
+        ],
+        mode: 'payment',
+        success_url:,
+        customer: customer.stripe_customer.provider_customer_id,
+        payment_method_types: customer.stripe_customer.provider_payment_methods,
+        payment_intent_data: {
+          description:,
+          metadata: {
+            lago_customer_id: customer.id,
+            lago_invoice_id: invoice.id,
+            invoice_issuing_date: invoice.issuing_date.iso8601,
+            invoice_type: invoice.invoice_type,
+            payment_type: 'one-time'
+          }
+        }
+      }
+    end
+
+    let(:success_url) { stripe_service.__send__(:success_redirect_url) }
+    let(:description) { stripe_service.__send__(:description) }
+
+    before do
+      stripe_payment_provider
+      stripe_customer
+    end
+
+    it 'returns payload' do
+      expect(subject).to eq(payload)
+    end
+  end
+
+  describe '#description' do
+    subject(:description_call) { stripe_service.__send__(:description) }
+
+    let(:description) { "#{organization.name} - Invoice #{invoice.number}" }
+
+    before do
+      stripe_payment_provider
+      stripe_customer
+    end
+
+    it 'returns description' do
+      expect(subject).to eq(description)
+    end
+  end
+
   describe '.update_payment_status' do
     let(:payment) do
       create(
