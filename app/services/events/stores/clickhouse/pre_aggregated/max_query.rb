@@ -12,7 +12,7 @@ module Events
           end
 
           def pre_aggregated_model
-            @pre_aggregated_model ||= Clickhouse::EventsMaxAgg
+            @pre_aggregated_model ||= ::Clickhouse::EventsMaxAgg
           end
 
           def clickhouse_aggregation
@@ -20,7 +20,7 @@ module Events
           end
 
           def assign_units(bucket, units)
-            hash[:units] = value if value > hash[:units]
+            bucket[:units] = units if units > bucket[:units]
           end
         end
       end

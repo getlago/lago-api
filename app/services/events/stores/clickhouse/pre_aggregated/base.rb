@@ -4,17 +4,19 @@ module Events
   module Stores
     module Clickhouse
       module PreAggregated
-        class Base
+        class Base < BaseService
           def initialize(subscription:, boundaries:)
             @subscription = subscription
             @boundaries = boundaries
+
+            super
           end
 
           def call
-            result.charge_results = {}
+            result.charges_units = {}
 
-            append_to_result(pre_aggregated_query, initial_result: result.charge_results)
-            append_to_result(enriched_events_query, initial_result: result.charge_results)
+            append_to_result(pre_aggregated_query, initial_result: result.charges_units) if pre_aggregated_model.present?
+            append_to_result(enriched_events_query, initial_result: result.charges_units)
 
             result
           end
@@ -62,7 +64,7 @@ module Events
               .pluck(:id)
           end
 
-          def pre_aggregated_counts_query
+          def pre_aggregated_query
             sql = pre_aggregated_model.where(organization_id: organization.id)
               .where(external_subscription_id: subscription.external_id)
               .where(charge_id: charge_ids)
@@ -78,22 +80,23 @@ module Events
           def enriched_events_query
             return [] if !check_before_boundaries? && !check_after_to_boundaries?
 
-            base_scope = Clickhouse::EventsEnriched
+            base_scope = ::Clickhouse::EventsEnriched
               .where(organization_id: organization.id)
               .where(external_subscription_id: subscription.external_id)
               .where(charge_id: charge_ids)
               .group(:charge_id, :grouped_by, :filters)
               .select("#{clickhouse_aggregation}(toDecimal128(value, #{ClickhouseStore::DECIMAL_SCALE})) as units, charge_id, grouped_by, filters")
 
+            sub_scope = ::Clickhouse::EventsEnriched.all
             if check_before_boundaries?
-              base_scope = base_scope.where(timestamp: from_datetime...from_datetime.end_of_hour)
+              sub_scope = sub_scope.where(timestamp: from_datetime...from_datetime.end_of_hour)
             end
 
             if check_after_boundaries?
-              base_scope = base_scope.or(Clickhouse::EventsEnriched.where(timestamp: to_datetime.beginning_of_hour...to_datetime.end_of_hour))
+              sub_scope = sub_scope.or(::Clickhouse::EventsEnriched.where(timestamp: to_datetime.beginning_of_hour...to_datetime))
             end
 
-            Clickhouse::EventsEnriched.connection.select_all(base_scope.to_sql)
+            ::Clickhouse::EventsEnriched.connection.select_all(base_scope.merge(sub_scope).to_sql)
           end
 
           # NOTE: Build a list of units indexed by charge_id, filters and or grouped_by
@@ -118,20 +121,22 @@ module Events
               result[charge_id] ||= {filters: {}, grouped_by: {}, units: 0}
 
               if row['filters'].present?
-                result[charge_id][:filters][row['filters'].to_s] ||= {grouped_by: {}, units: 0}
+                result[charge_id][:filters][row['filters'].to_json] ||= {grouped_by: {}, units: 0}
 
                 if row['grouped_by'].present?
-                  result[charge_id][:filters][row['filters'].to_s][:grouped_by][row['grouped_by'].to_s] || {units: 0}
-                  assign_units(result[charge_id][:filters][row['filters'].to_s][:grouped_by][row['grouped_by'].to_s][:units], units)
+                  result[charge_id][:filters][row['filters'].to_json][:grouped_by][row['grouped_by'].to_json] ||= {units: 0}
+                  assign_units(result[charge_id][:filters][row['filters'].to_json][:grouped_by][row['grouped_by'].to_json], units)
                 else
-                  assign_units(result[charge_id][:filters][row['filters'].to_s][:units], units)
+                  assign_units(result[charge_id][:filters][row['filters'].to_json], units)
                 end
               elsif row['grouped_by'].present?
-                result[charge_id][:grouped_by][row['grouped_by'].to_s] ||= {units: 0}
-                assign_units(result[charge_id][:grouped_by][row['grouped_by'].to_s], units)
+                result[charge_id][:grouped_by][row['grouped_by'].to_json] ||= {units: 0}
+                assign_units(result[charge_id][:grouped_by][row['grouped_by'].to_json], units)
               else
-                assign_units(result[charge_id][:units], units)
+                assign_units(result[charge_id], units)
               end
+
+              result
             end
           end
 

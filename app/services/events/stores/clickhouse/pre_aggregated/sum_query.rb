@@ -12,7 +12,7 @@ module Events
           end
 
           def pre_aggregated_model
-            @pre_aggregated_model ||= Clickhouse::EventsSumAgg
+            @pre_aggregated_model ||= ::Clickhouse::EventsSumAgg
           end
 
           def clickhouse_aggregation
