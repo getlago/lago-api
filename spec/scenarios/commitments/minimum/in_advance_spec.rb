@@ -131,7 +131,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
                 expect(invoices.third.fees.commitment_kind.count).to eq(1)
                 expect(invoices.fourth.fees.commitment_kind.count).to eq(1)
 
-                expect(commitment_fees.sort).to eq([328_571, 642_857, 900_000])
+                expect(commitment_fees).to contain_exactly(328_571, 642_857, 900_000)
               end
             end
           end
