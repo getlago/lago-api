@@ -35,6 +35,18 @@ module ApiErrors
     )
   end
 
+  def unprocessable_errors(errors:)
+    render(
+      json: {
+        status: 422,
+        error: 'Unprocessable Entity',
+        code: 'unprocessable_entity',
+        error_details: errors
+      },
+      status: :unprocessable_entity
+    )
+  end
+
   def forbidden_error(code:)
     render(
       json: {
@@ -65,6 +77,8 @@ module ApiErrors
       method_not_allowed_error(code: error_result.error.code)
     when BaseService::ValidationFailure
       validation_errors(errors: error_result.error.messages)
+    when BaseService::ServiceFailure
+      unprocessable_errors(errors: error_result.error.messages)
     when BaseService::ForbiddenFailure
       forbidden_error(code: error_result.error.code)
     when BaseService::UnauthorizedFailure
