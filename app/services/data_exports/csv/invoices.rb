@@ -83,12 +83,10 @@ module DataExports
 
       def query
         search_term = resource_query["search_term"]
-        status = resource_query["status"]
-        filters = resource_query.except("search_term", "status")
+        filters = resource_query.except("search_term")
 
         InvoicesQuery.new(organization: organization).call(
           search_term:,
-          status:,
           page: nil,
           limit: nil,
           filters:

@@ -40,7 +40,8 @@ RSpec.describe DataExports::Csv::Invoices do
       "issuing_date_to" => issuing_date_to,
       "payment_dispute_lost" => payment_dispute_lost,
       "payment_overdue" => payment_overdue,
-      "payment_status" => payment_status
+      "payment_status" => payment_status,
+      "status" => status
     }
   end
 
@@ -101,7 +102,6 @@ RSpec.describe DataExports::Csv::Invoices do
       .to receive(:call)
       .with(
         search_term:,
-        status:,
         page: nil,
         limit: nil,
         filters:
