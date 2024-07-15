@@ -76,6 +76,16 @@ module Integrations
       def secret_key
         ENV['NANGO_SECRET_KEY']
       end
+
+      def code(error)
+        json = error.json_message
+        json['type'].presence || json.dig('error', 'code')
+      end
+
+      def message(error)
+        json = error.json_message
+        json.dig('payload', 'message').presence || json.dig('error', 'message')
+      end
     end
   end
 end
