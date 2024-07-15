@@ -7,7 +7,6 @@ module Types
       description 'Invoice Item'
 
       field :id, ID, null: false
-      field :group, Types::Groups::Object
 
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :amount_currency, Types::CurrencyEnum, null: false

@@ -6,13 +6,7 @@ module Api
       def create
         service = ::Plans::CreateService.new
         result = service.create(
-          PlanLegacyInput.new(
-            current_organization,
-            input_params
-              .merge(organization_id: current_organization.id)
-              .to_h
-              .deep_symbolize_keys
-          ).create_input
+          input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys
         )
 
         if result.success?
@@ -24,13 +18,7 @@ module Api
 
       def update
         plan = current_organization.plans.parents.find_by(code: params[:code])
-        result = ::Plans::UpdateService.call(
-          plan:,
-          params: PlanLegacyInput.new(
-            current_organization,
-            input_params.to_h.deep_symbolize_keys
-          ).update_input
-        )
+        result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
 
         if result.success?
           render_plan(result.plan)
@@ -117,13 +105,6 @@ module Api
                   properties: {},
                   values: {}
                 }
-              ]
-            },
-            {
-              group_properties: [
-                :group_id,
-                :invoice_display_name,
-                {values: {}}
               ]
             },
             {tax_codes: []}

@@ -149,68 +149,6 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context 'with group properties on charges' do
-      let(:group) { create(:group, billable_metric:) }
-      let(:billable_metric_filter) do
-        create(:billable_metric_filter, billable_metric:, key: group.key, values: [group.value])
-      end
-      let(:create_params) do
-        {
-          name: 'P1',
-          code: 'plan_code',
-          interval: 'weekly',
-          description: 'description',
-          amount_cents: 100,
-          amount_currency: 'EUR',
-          trial_period: 1,
-          pay_in_advance: false,
-          charges: [
-            {
-              billable_metric_id: billable_metric.id,
-              charge_model: 'standard',
-              group_properties: [
-                {
-                  group_id: group.id,
-                  invoice_display_name: 'Europe',
-                  values: {amount: '0.22'}
-                }
-              ]
-            }
-          ]
-        }
-      end
-
-      before { billable_metric_filter }
-
-      it 'creates a plan' do
-        post_with_token(organization, '/api/v1/plans', {plan: create_params})
-
-        expect(response).to have_http_status(:success)
-
-        expect(json[:plan][:lago_id]).to be_present
-        expect(json[:plan][:code]).to eq(create_params[:code])
-        expect(json[:plan][:charges].first[:group_properties]).to eq(
-          [
-            {
-              group_id: group.id,
-              invoice_display_name: 'Europe',
-              values: {amount: '0.22'}
-            }
-          ]
-        )
-
-        expect(json[:plan][:charges].first[:filters]).to eq(
-          [
-            {
-              invoice_display_name: 'Europe',
-              properties: {amount: '0.22'},
-              values: {group.key.to_sym => [group.value]}
-            }
-          ]
-        )
-      end
-    end
-
     context 'without charges' do
       let(:create_params) do
         {
@@ -512,68 +450,6 @@ RSpec.describe Api::V1::PlansController, type: :request do
             expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
           end
         end
-      end
-    end
-
-    context 'with group properties on charges' do
-      let(:group) { create(:group, billable_metric:) }
-      let(:billable_metric_filter) do
-        create(:billable_metric_filter, billable_metric:, key: group.key, values: [group.value])
-      end
-      let(:update_params) do
-        {
-          name: 'P1',
-          code: 'plan_code',
-          interval: 'weekly',
-          description: 'description',
-          amount_cents: 100,
-          amount_currency: 'EUR',
-          trial_period: 1,
-          pay_in_advance: false,
-          charges: [
-            {
-              billable_metric_id: billable_metric.id,
-              charge_model: 'standard',
-              group_properties: [
-                {
-                  group_id: group.id,
-                  invoice_display_name: 'Europe',
-                  values: {amount: '0.22'}
-                }
-              ]
-            }
-          ]
-        }
-      end
-
-      before { billable_metric_filter }
-
-      it 'creates a plan' do
-        put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: update_params})
-
-        expect(response).to have_http_status(:success)
-
-        expect(json[:plan][:lago_id]).to be_present
-        expect(json[:plan][:code]).to eq(update_params[:code])
-        expect(json[:plan][:charges].first[:group_properties]).to eq(
-          [
-            {
-              group_id: group.id,
-              invoice_display_name: 'Europe',
-              values: {amount: '0.22'}
-            }
-          ]
-        )
-
-        expect(json[:plan][:charges].first[:filters]).to eq(
-          [
-            {
-              invoice_display_name: 'Europe',
-              properties: {amount: '0.22'},
-              values: {group.key.to_sym => [group.value]}
-            }
-          ]
-        )
       end
     end
   end

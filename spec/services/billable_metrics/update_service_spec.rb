@@ -17,11 +17,9 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       aggregation_type: 'sum_agg',
       field_name: 'field_value'
     }.tap do |p|
-      p[:group] = group unless group.nil?
       p[:filters] = filters unless filters.nil?
     end
   end
-  let(:group) { nil }
   let(:filters) { nil }
 
   describe '#call' do
@@ -36,46 +34,6 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         expect(metric.name).to eq('New Metric')
         expect(metric.code).to eq('new_metric')
         expect(metric.aggregation_type).to eq('sum_agg')
-      end
-    end
-
-    context 'with group parameter' do
-      let(:group) do
-        {
-          key: 'cloud',
-          values: [
-            {name: 'AWS', key: 'region', values: %w[usa europe]},
-            {name: 'Google', key: 'region', values: ['usa']}
-          ]
-        }
-      end
-
-      it 'updates billable metric\'s group' do
-        expect { update_service.call }.to change { billable_metric.active_groups.reload.count }.from(0).to(5)
-      end
-
-      context 'with empty group' do
-        let(:group) { {} }
-
-        before { create(:group, billable_metric:) }
-
-        it 'updates billable metric\'s group' do
-          expect { update_service.call }.to change { billable_metric.active_groups.reload.count }.from(1).to(0)
-        end
-      end
-
-      context 'with invalid group' do
-        let(:group) { {key: 1} }
-
-        it 'returns an error if group is invalid' do
-          result = update_service.call
-
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:group]).to eq(['value_is_invalid'])
-          end
-        end
       end
     end
 

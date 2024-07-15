@@ -1783,7 +1783,6 @@ input CreateBillableMetricInput {
   description: String!
   fieldName: String
   filters: [BillableMetricFiltersInput!]
-  group: JSON
   name: String!
   recurring: Boolean
   weightedInterval: WeightedIntervalEnum
@@ -3497,7 +3496,6 @@ type Fee implements InvoiceItem {
   description: String
   eventsCount: BigInt
   feeType: FeeTypesEnum!
-  group: Group
   groupedBy: JSON!
   id: ID!
   invoiceDisplayName: String
@@ -3770,13 +3768,6 @@ type GrossRevenueCollection {
   metadata: CollectionMetadata!
 }
 
-type Group {
-  deletedAt: ISO8601DateTime
-  id: ID!
-  key: String
-  value: String!
-}
-
 type GroupedChargeUsage {
   amountCents: BigInt!
   eventsCount: Int!
@@ -3931,7 +3922,6 @@ Invoice Item
 interface InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
-  group: Group
   id: ID!
   itemCode: String!
   itemName: String!
@@ -6958,7 +6948,6 @@ input UpdateBillableMetricInput {
   description: String!
   fieldName: String
   filters: [BillableMetricFiltersInput!]
-  group: JSON
   id: String!
   name: String!
   recurring: Boolean

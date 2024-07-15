@@ -16,7 +16,7 @@ module V1
         prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,
         properties: model.properties
-      }.merge(legacy_values)
+      }
 
       payload.merge!(charge_filters)
 
@@ -41,10 +41,6 @@ module V1
         ::V1::ChargeFilterSerializer,
         collection_name: 'filters'
       ).serialize
-    end
-
-    def legacy_values
-      V1::Legacy::ChargeSerializer.new(model).serialize
     end
   end
 end

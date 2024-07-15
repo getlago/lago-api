@@ -6,10 +6,7 @@ module Api
       def create
         service = ::BillableMetrics::CreateService.new
         result = service.create(
-          BillableMetricInput.new(
-            current_organization,
-            input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys
-          ).create_input
+          input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys
         )
 
         if result.success?
@@ -32,10 +29,7 @@ module Api
 
         result = ::BillableMetrics::UpdateService.call(
           billable_metric:,
-          params: BillableMetricInput.new(
-            current_organization,
-            input_params.to_h.deep_symbolize_keys
-          ).update_input
+          params: input_params.to_h.deep_symbolize_keys
         )
 
         if result.success?
@@ -84,7 +78,7 @@ module Api
 
       def index
         metrics = current_organization.billable_metrics
-          .includes(:filters, :groups)
+          .includes(:filters)
           .order(created_at: :desc)
           .page(params[:page])
           .per(params[:per_page] || PER_PAGE)
@@ -110,8 +104,7 @@ module Api
           :weighted_interval,
           :recurring,
           :field_name,
-          filters: [:key, {values: []}],
-          group: {}
+          filters: [:key, {values: []}]
         )
       end
     end

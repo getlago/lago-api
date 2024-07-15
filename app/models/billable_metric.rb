@@ -59,40 +59,6 @@ class BillableMetric < ApplicationRecord
     AGGREGATION_TYPES.key?(value&.to_sym) ? super : nil
   end
 
-  def active_groups
-    scope = groups
-    scope = scope.with_discarded if discarded?
-    scope
-  end
-
-  # NOTE: 1 dimension: all groups, 2 dimensions: all children.
-  def selectable_groups
-    groups = active_groups.children.exists? ? active_groups.children : active_groups
-    groups.includes(:parent).reorder('parent.value', 'groups.value')
-  end
-
-  def active_groups_as_tree
-    return {} if active_groups.blank?
-
-    unless active_groups.children.exists?
-      return {
-        key: active_groups.pluck(:key).uniq.first,
-        values: active_groups.pluck(:value)
-      }
-    end
-
-    {
-      key: active_groups.parents.pluck(:key).uniq.first,
-      values: active_groups.parents.map do |p|
-        {
-          name: p.value,
-          key: p.children.first.key,
-          values: p.children.pluck(:value)
-        }
-      end
-    }
-  end
-
   def payable_in_advance?
     AGGREGATION_TYPES_PAYABLE_IN_ADVANCE.include?(aggregation_type.to_sym)
   end
