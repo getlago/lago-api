@@ -18,7 +18,6 @@ RSpec.describe Customers::CreateService, type: :service do
         currency: 'EUR',
         tax_identification_number: '123456789',
         billing_configuration: {
-          vat_rate: 20,
           document_locale: 'fr'
         },
         shipping_address: {
@@ -52,7 +51,6 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.timezone).to be_nil
 
         billing = create_args[:billing_configuration]
-        expect(customer.vat_rate).to eq(billing[:vat_rate])
         expect(customer.document_locale).to eq(billing[:document_locale])
         expect(customer.invoice_grace_period).to be_nil
 
@@ -83,7 +81,6 @@ RSpec.describe Customers::CreateService, type: :service do
         name: create_args[:name],
         currency: create_args[:currency],
         timezone: nil,
-        vat_rate: billing[:vat_rate],
         document_locale: billing[:document_locale],
         invoice_grace_period: nil
       )
@@ -129,7 +126,6 @@ RSpec.describe Customers::CreateService, type: :service do
           name: 'Foo Bar',
           currency: 'EUR',
           billing_configuration: {
-            vat_rate: 20,
             document_locale: 'fr'
           },
           metadata: [
@@ -256,7 +252,6 @@ RSpec.describe Customers::CreateService, type: :service do
             expect(result.customer).to eq(customer)
             expect(result.customer.name).to eq(create_args[:name])
             expect(result.customer.external_id).to eq(create_args[:external_id])
-            expect(result.customer.vat_rate).to eq(create_args[:billing_configuration][:vat_rate])
             expect(result.customer.document_locale).to eq(create_args[:billing_configuration][:document_locale])
           end
         end
@@ -271,7 +266,6 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             currency: 'EUR',
             billing_configuration: {
-              vat_rate: 20,
               document_locale: 'fr'
             },
             metadata: [
@@ -317,7 +311,6 @@ RSpec.describe Customers::CreateService, type: :service do
               name: 'Foo Bar',
               currency: 'EUR',
               billing_configuration: {
-                vat_rate: 20,
                 document_locale: 'fr'
               },
               metadata: [
@@ -378,7 +371,6 @@ RSpec.describe Customers::CreateService, type: :service do
             name: 'Foo Bar',
             currency: 'EUR',
             billing_configuration: {
-              vat_rate: 20,
               document_locale: 'fr'
             },
             integration_customers:
@@ -582,7 +574,6 @@ RSpec.describe Customers::CreateService, type: :service do
             external_id: SecureRandom.uuid,
             name: 'Foo Bar',
             billing_configuration: {
-              vat_rate: 28,
               payment_provider:,
               payment_provider_code:,
               provider_customer_id: 'stripe_id'
@@ -613,7 +604,6 @@ RSpec.describe Customers::CreateService, type: :service do
             expect(result.customer).to eq(customer)
 
             # NOTE: It should not erase exsting properties
-            expect(result.customer.vat_rate).to eq(28)
             expect(result.customer.payment_provider).to eq('stripe')
             expect(result.customer.stripe_customer).to be_present
 
@@ -637,7 +627,6 @@ RSpec.describe Customers::CreateService, type: :service do
               expect(result.customer).to eq(customer)
 
               # NOTE: It should not erase existing properties
-              expect(result.customer.vat_rate).to eq(28)
               expect(result.customer.payment_provider).to eq(nil)
               expect(result.customer.stripe_customer).not_to be_present
               expect(result.customer.gocardless_customer).not_to be_present
@@ -651,7 +640,6 @@ RSpec.describe Customers::CreateService, type: :service do
               external_id: SecureRandom.uuid,
               name: 'Foo Bar',
               billing_configuration: {
-                vat_rate: 28,
                 sync_with_provider: true
               }
             }
@@ -668,7 +656,6 @@ RSpec.describe Customers::CreateService, type: :service do
               expect(result.customer).to eq(customer)
 
               # NOTE: It should not erase existing properties
-              expect(result.customer.vat_rate).to eq(28)
               expect(result.customer.payment_provider).to eq(nil)
               expect(result.customer.stripe_customer).not_to be_present
             end
@@ -802,96 +789,6 @@ RSpec.describe Customers::CreateService, type: :service do
             expect(customer.payment_provider).to be_nil
             expect(customer.stripe_customer).not_to be_present
             expect(customer.gocardless_customer).not_to be_present
-          end
-        end
-      end
-    end
-
-    context 'with legacy vat_rate' do
-      let(:vat_rate) { 12.5 }
-      let(:params) do
-        {
-          external_id:,
-          name: 'Foo Bar',
-          currency: 'EUR',
-          billing_configuration: {
-            vat_rate:,
-            document_locale: 'fr'
-          }
-        }
-      end
-
-      it 'assigns the vat_rate and creates a tax' do
-        result = customers_service.create_from_api(organization:, params:)
-
-        aggregate_failures do
-          expect(result.customer.vat_rate).to eq(vat_rate)
-          expect(result.customer.taxes.count).to eq(1)
-
-          tax = result.customer.taxes.first
-          expect(tax.rate).to eq(vat_rate)
-        end
-      end
-
-      context 'when customer has multiple taxes' do
-        let(:customer) { create(:customer, organization:, external_id:) }
-
-        before do
-          first_tax = create(:tax, organization:, rate: 14)
-          second_tax = create(:tax, organization:, rate: 15)
-          create(:customer_applied_tax, customer:, tax: first_tax)
-          create(:customer_applied_tax, customer:, tax: second_tax)
-        end
-
-        it 'raises a validation error' do
-          result = customers_service.create_from_api(organization:, params:)
-
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:vat_rate]).to eq(['multiple_taxes'])
-          end
-        end
-      end
-
-      context 'when customer already has a tax' do
-        let(:customer) { create(:customer, organization:, external_id:) }
-
-        before do
-          tax = create(:tax, organization:, rate: 14)
-          create(:customer_applied_tax, customer:, tax:)
-        end
-
-        it 'creates a new tax' do
-          result = customers_service.create_from_api(organization:, params:)
-
-          aggregate_failures do
-            expect(result.customer.vat_rate).to eq(vat_rate)
-            expect(result.customer.organization.taxes.count).to eq(2)
-            expect(result.customer.reload.taxes.count).to eq(1)
-          end
-        end
-      end
-
-      context 'when tax exists but is not applied yet to the customer' do
-        let(:customer) { create(:customer, organization:, external_id:) }
-        let(:vat_rate) { 20 }
-
-        before do
-          create(:tax, organization:, rate: 10, code: 'tax_10')
-          initial_tax = create(:tax, organization:, rate: 15, code: 'tax_15')
-          create(:tax, organization:, rate: 20, code: 'tax_20')
-
-          create(:customer_applied_tax, customer:, tax: initial_tax)
-        end
-
-        it 'updates the customer\'s tax' do
-          result = customers_service.create_from_api(organization:, params:)
-
-          aggregate_failures do
-            expect(result.customer.vat_rate).to eq(vat_rate)
-            expect(result.customer.taxes.count).to eq(1)
-            expect(result.customer.taxes.first.code).to eq('tax_20')
           end
         end
       end

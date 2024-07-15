@@ -18,13 +18,7 @@ module V1
           lago_id: model.invoice_id,
           payment_status: model.invoice.payment_status
         }
-      }.deep_merge(legacy_values)
-    end
-
-    private
-
-    def legacy_values
-      ::V1::Legacy::CreditSerializer.new(model).serialize
+      }
     end
   end
 end

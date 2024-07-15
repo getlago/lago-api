@@ -39,23 +39,6 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       expect(json[:coupon][:limited_billable_metrics]).to eq(true)
       expect(json[:coupon][:billable_metric_codes].first).to eq(billable_metric.code)
     end
-
-    context 'with expiration date input' do
-      before do
-        create_params.except!(:expiration_at)
-        create_params[:expiration_date] = expiration_at.to_date
-      end
-
-      it 'creates a coupon' do
-        post_with_token(organization, '/api/v1/coupons', {coupon: create_params})
-
-        expect(response).to have_http_status(:success)
-        expect(json[:coupon][:lago_id]).to be_present
-        expect(json[:coupon][:code]).to eq(create_params[:code])
-        expect(json[:coupon][:name]).to eq(create_params[:name])
-        expect(json[:coupon][:expiration_at]).to eq(expiration_at.end_of_day.iso8601)
-      end
-    end
   end
 
   describe 'update' do
@@ -86,26 +69,6 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       expect(json[:coupon][:lago_id]).to eq(coupon.id)
       expect(json[:coupon][:code]).to eq(update_params[:code])
       expect(json[:coupon][:expiration_at]).to eq(expiration_at.iso8601)
-    end
-
-    context 'with expiration date input' do
-      before do
-        update_params.except!(:expiration_at)
-        update_params[:expiration_date] = expiration_at.to_date
-      end
-
-      it 'creates a coupon' do
-        put_with_token(
-          organization,
-          "/api/v1/coupons/#{coupon.code}",
-          {coupon: update_params}
-        )
-
-        expect(response).to have_http_status(:success)
-        expect(json[:coupon][:lago_id]).to eq(coupon.id)
-        expect(json[:coupon][:code]).to eq(update_params[:code])
-        expect(json[:coupon][:expiration_at]).to eq(expiration_at.end_of_day.iso8601)
-      end
     end
 
     context 'when coupon does not exist' do

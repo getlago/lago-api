@@ -70,15 +70,12 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
-        expect(json[:customer_usage][:from_date]).to eq(Time.zone.today.beginning_of_month.iso8601)
-        expect(json[:customer_usage][:to_date]).to eq(Time.zone.today.end_of_month.iso8601)
+        expect(json[:customer_usage][:from_datetime]).to eq(Time.zone.today.beginning_of_month.beginning_of_day.iso8601)
+        expect(json[:customer_usage][:to_datetime]).to eq(Time.zone.today.end_of_month.end_of_day.iso8601)
         expect(json[:customer_usage][:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
         expect(json[:customer_usage][:amount_cents]).to eq(5)
-        expect(json[:customer_usage][:amount_currency]).to eq('EUR')
+        expect(json[:customer_usage][:currency]).to eq('EUR')
         expect(json[:customer_usage][:total_amount_cents]).to eq(6)
-        expect(json[:customer_usage][:total_amount_currency]).to eq('EUR')
-        expect(json[:customer_usage][:vat_amount_cents]).to eq(1)
-        expect(json[:customer_usage][:vat_amount_currency]).to eq('EUR')
 
         charge_usage = json[:customer_usage][:charges_usage].first
         expect(charge_usage[:billable_metric][:name]).to eq(metric.name)

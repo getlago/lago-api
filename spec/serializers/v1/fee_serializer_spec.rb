@@ -22,7 +22,6 @@ RSpec.describe ::V1::FeeSerializer do
     aggregate_failures do
       expect(result['fee']).to include(
         'lago_id' => fee.id,
-        'lago_group_id' => fee.group_id,
         'lago_charge_filter_id' => fee.charge_filter_id,
         'lago_invoice_id' => fee.invoice_id,
         'lago_true_up_fee_id' => fee.true_up_fee&.id,
@@ -35,11 +34,9 @@ RSpec.describe ::V1::FeeSerializer do
         'amount_currency' => fee.amount_currency,
         'taxes_amount_cents' => fee.taxes_amount_cents,
         'taxes_rate' => fee.taxes_rate,
-        'vat_amount_cents' => fee.taxes_amount_cents,
         'total_amount_cents' => fee.total_amount_cents,
         'total_amount_currency' => fee.amount_currency,
         'units' => fee.units.to_s,
-        'unit_amount_cents' => fee.unit_amount_cents,
         'precise_unit_amount' => fee.precise_unit_amount.to_s,
         'pay_in_advance' => fee.subscription.plan.pay_in_advance,
         'invoiceable' => true,
@@ -137,7 +134,7 @@ RSpec.describe ::V1::FeeSerializer do
           'code' => fee.item_code,
           'name' => fee.item_name,
           'invoice_display_name' => fee.invoice_name,
-          'group_invoice_display_name' => fee.filter_display_name,
+          'filter_invoice_display_name' => fee.filter_display_name,
           'lago_item_id' => fee.item_id,
           'item_type' => fee.item_type
         )

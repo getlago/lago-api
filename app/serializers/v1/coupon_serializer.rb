@@ -23,15 +23,7 @@ module V1
         expiration: model.expiration,
         expiration_at: model.expiration_at&.iso8601,
         terminated_at: model.terminated_at&.iso8601
-      }.merge(legacy_values)
-    end
-
-    private
-
-    def legacy_values
-      ::V1::Legacy::CouponSerializer.new(
-        model
-      ).serialize
+      }
     end
   end
 end

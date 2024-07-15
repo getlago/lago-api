@@ -18,7 +18,6 @@ RSpec.describe Api::V1::FeesController, type: :request do
 
         expect(json[:fee]).to include(
           lago_id: fee.id,
-          lago_group_id: fee.group_id,
           amount_cents: fee.amount_cents,
           amount_currency: fee.amount_currency,
           taxes_amount_cents: fee.taxes_amount_cents,
@@ -46,7 +45,6 @@ RSpec.describe Api::V1::FeesController, type: :request do
 
           expect(json[:fee]).to include(
             lago_id: fee.id,
-            lago_group_id: fee.group_id,
             amount_cents: fee.amount_cents,
             amount_currency: fee.amount_currency,
             taxes_amount_cents: fee.taxes_amount_cents,
@@ -100,11 +98,9 @@ RSpec.describe Api::V1::FeesController, type: :request do
 
         expect(json[:fee]).to include(
           lago_id: fee.reload.id,
-          lago_group_id: fee.group_id,
           amount_cents: fee.amount_cents,
           amount_currency: fee.amount_currency,
           taxes_amount_cents: fee.taxes_amount_cents,
-          vat_amount_cents: fee.taxes_amount_cents,
           units: fee.units.to_s,
           events_count: fee.events_count,
           payment_status: fee.payment_status,

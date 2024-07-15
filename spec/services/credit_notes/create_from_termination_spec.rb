@@ -374,8 +374,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         )
       end
 
-      before { organization.vat_rate = 0 }
-
       it 'creates a credit note' do
         travel_to(terminated_at) do
           result = create_service.call

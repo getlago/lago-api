@@ -11,6 +11,6 @@ RSpec.describe Webhooks::Invoices::GeneratedService do
   let(:organization) { create(:organization) }
 
   describe '.call' do
-    it_behaves_like 'creates webhook', 'invoice.generated', 'invoice', {'amount_cents' => Integer}
+    it_behaves_like 'creates webhook', 'invoice.generated', 'invoice', {'fees_amount_cents' => Integer}
   end
 end

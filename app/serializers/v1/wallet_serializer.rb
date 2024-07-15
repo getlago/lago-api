@@ -23,7 +23,7 @@ module V1
         last_balance_sync_at: model.last_balance_sync_at&.iso8601,
         last_consumed_credit_at: model.last_consumed_credit_at&.iso8601,
         terminated_at: model.terminated_at
-      }.merge(legacy_values)
+      }
 
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
 
@@ -31,12 +31,6 @@ module V1
     end
 
     private
-
-    def legacy_values
-      ::V1::Legacy::WalletSerializer.new(
-        model
-      ).serialize
-    end
 
     def recurring_transaction_rules
       ::CollectionSerializer.new(

@@ -72,7 +72,7 @@ RSpec.describe Coupons::CreateService, type: :service do
           frequency: 'once',
           percentage_rate: 20.00,
           expiration: 'time_limit',
-          expiration_date: (Time.current + 3.days).to_date
+          expiration_at: (Time.current + 3.days).iso8601
         }
       end
 

@@ -35,7 +35,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
         expect(json[:applied_coupon][:external_customer_id]).to eq(customer.external_id)
         expect(json[:applied_coupon][:amount_cents]).to eq(coupon.amount_cents)
         expect(json[:applied_coupon][:amount_currency]).to eq(coupon.amount_currency)
-        expect(json[:applied_coupon][:expiration_date]).to be_nil
+        expect(json[:applied_coupon][:expiration_at]).to be_nil
         expect(json[:applied_coupon][:created_at]).to be_present
         expect(json[:applied_coupon][:terminated_at]).to be_nil
       end

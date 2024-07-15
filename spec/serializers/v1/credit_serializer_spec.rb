@@ -21,10 +21,6 @@ RSpec.describe ::V1::CreditSerializer do
       expect(result['credit']['item']['name']).to eq(credit.item_name)
       expect(result['credit']['invoice']['payment_status']).to eq(credit.invoice.payment_status)
       expect(result['credit']['invoice']['lago_id']).to eq(credit.invoice.id)
-
-      # NOTE: legacy fields
-      expect(result['credit']['before_vat']).to eq(false)
-      expect(result['credit']['item']['lago_id']).to eq(credit.item_id)
     end
   end
 end

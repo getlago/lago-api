@@ -31,7 +31,7 @@ module V1
         external_salesforce_id: model.external_salesforce_id,
         billing_configuration:,
         shipping_address: model.shipping_address
-      }.merge(legacy_values.except(:billing_configuration))
+      }
 
       payload = payload.merge(metadata)
       payload = payload.merge(taxes) if include?(:taxes)
@@ -56,9 +56,8 @@ module V1
         invoice_grace_period: model.invoice_grace_period,
         payment_provider: model.payment_provider,
         payment_provider_code: model.payment_provider_code,
-        vat_rate: model.vat_rate,
         document_locale: model.document_locale
-      }.merge(legacy_values[:billing_configuration])
+      }
 
       case model.payment_provider&.to_sym
       when :stripe
@@ -74,10 +73,6 @@ module V1
       end
 
       configuration
-    end
-
-    def legacy_values
-      @legacy_values ||= ::V1::Legacy::CustomerSerializer.new(model).serialize
     end
 
     def taxes

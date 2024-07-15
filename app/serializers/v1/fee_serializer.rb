@@ -42,7 +42,7 @@ module V1
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
         amount_details: model.amount_details
-      }.deep_merge(legacy_values)
+      }
 
       payload.merge!(date_boundaries) if model.charge? || model.subscription?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
@@ -108,10 +108,6 @@ module V1
         ::V1::Fees::AppliedTaxSerializer,
         collection_name: 'applied_taxes'
       ).serialize
-    end
-
-    def legacy_values
-      ::V1::Legacy::FeeSerializer.new(model).serialize
     end
 
     def pay_in_advance

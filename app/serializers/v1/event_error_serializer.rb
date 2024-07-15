@@ -10,16 +10,9 @@ module V1
       }
 
       payload.merge!(event)
-      payload.merge(legacy_values)
     end
 
     private
-
-    def legacy_values
-      ::V1::Legacy::EventErrorSerializer.new(
-        model.event
-      ).serialize
-    end
 
     def event
       {event: ::V1::EventSerializer.new(model.event).serialize}

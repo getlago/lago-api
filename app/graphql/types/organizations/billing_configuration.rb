@@ -9,7 +9,6 @@ module Types
       field :id, ID, null: false
       field :invoice_footer, String
       field :invoice_grace_period, Integer, null: false
-      field :vat_rate, Float, null: false
     end
   end
 end
