@@ -50,11 +50,31 @@ module Integrations
             {
               'external_id' => mapped_item.external_id,
               'description' => fee.subscription? ? 'Subscription' : fee.invoice_name,
-              'units' => fee.units,
-              'precise_unit_amount' => amount(credit_note_item.amount_cents, resource: credit_note_item.credit_note),
+              'units' => 1,
+              'precise_unit_amount' => calculated_amount_cents(credit_note_item),
               'account_code' => mapped_item.external_account_code,
-              'taxes_amount_cents' => credit_note_item.credit_note.taxes_amount_cents
+              'taxes_amount_cents' => calculated_taxes_amount_cents(credit_note_item),
+              'precise_coupons_amount_cents' => credit_note_item.precise_coupons_amount_cents
             }
+          end
+
+          def calculated_amount_cents(credit_note_item)
+            amount(
+              credit_note_item.amount_cents - credit_note_item.precise_coupons_amount_cents,
+              resource: credit_note_item.credit_note
+            )
+          end
+
+          def calculated_taxes_amount_cents(credit_note_item)
+            amount(
+              taxes_amount_cents(credit_note_item),
+              resource: credit_note_item.credit_note
+            )
+          end
+
+          def taxes_amount_cents(credit_note_item)
+            (credit_note_item.amount_cents - credit_note_item.precise_coupons_amount_cents) *
+              credit_note_item.credit_note.taxes_rate
           end
         end
       end
