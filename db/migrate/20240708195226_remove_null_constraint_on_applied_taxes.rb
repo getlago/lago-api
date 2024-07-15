@@ -11,13 +11,15 @@ class RemoveNullConstraintOnAppliedTaxes < ActiveRecord::Migration[7.1]
     remove_index :invoices_taxes, %i[invoice_id tax_id]
 
     add_index :fees_taxes,
-              %i[fee_id tax_id],
-              unique: true,
-              where: "tax_id IS NOT NULL AND created_at >= '2023-09-12'"
+      %i[fee_id tax_id],
+      unique: true,
+      where: "tax_id IS NOT NULL AND created_at >= '2023-09-12'",
+      algorithm: :concurrently
 
     add_index :invoices_taxes,
-              %i[invoice_id tax_id],
-              unique: true,
-              where: "tax_id IS NOT NULL AND created_at >= '2023-09-12'"
+      %i[invoice_id tax_id],
+      unique: true,
+      where: "tax_id IS NOT NULL AND created_at >= '2023-09-12'",
+      algorithm: :concurrently
   end
 end
