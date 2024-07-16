@@ -67,6 +67,7 @@ module Types
     field :destroy_integration_collection_mapping, mutation: Mutations::IntegrationCollectionMappings::Destroy
     field :destroy_integration_mapping, mutation: Mutations::IntegrationMappings::Destroy
 
+    field :fetch_integration_accounts, mutation: Mutations::IntegrationItems::FetchAccounts
     field :fetch_integration_items, mutation: Mutations::IntegrationItems::FetchItems
     field :fetch_integration_tax_items, mutation: Mutations::IntegrationItems::FetchTaxItems
 
