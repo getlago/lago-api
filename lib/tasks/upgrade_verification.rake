@@ -1,56 +1,100 @@
-namespace :upgrade_verification do
+# frozen_string_literal: true
+
+require 'net/http'
+require 'yaml'
+
+namespace :upgrade do
   desc "Verifies the current system's readiness for an upgrade and outlines necessary migration paths"
-  task :verify_and_guide => :environment do
-    current_version = fetch_current_version('config/versions.yml')
-    target_versions_data = load_versions_data('config/to_versions.yml')
+  task verify: [:check_migrations] do
+    current_version = fetch_current_version
+    versions_data = load_versions_data
+    verify_upgrade_path(current_version, versions_data)
+  end
 
-    target_versions = target_versions_data['versions']
-
-    if can_upgrade_directly?(current_version, target_versions)
-      puts "Direct upgrade possible to version #{latest_version(target_versions)}"
-    else
-      migration_path = determine_migration_path(current_version, target_versions)
-      puts "Upgrade path needed: #{migration_path.join(' -> ')}"
+  desc "Checks if all migrations for the current version have been run and if the system is ready to upgrade"
+  task check_migrations: :environment do
+    current_version = fetch_current_version
+    versions_data = load_versions_data
+    ready_to_upgrade = check_migrations_status(current_version, versions_data)
+    unless ready_to_upgrade
+      puts "System is not ready to upgrade. Please ensure all migrations for the current version have been run."
+      exit 1
     end
   end
 
   private
 
-  def fetch_current_version(file_path)
-    yaml_data = YAML.load_file(file_path)
-    yaml_data['versions'].last['version']
+  def check_migrations_status(current_version, versions_data)
+    versions = versions_data['versions']
+    current_version_data = versions.find { |version_data| version_data['version'] == current_version }
+
+    if current_version_data.nil?
+      puts "Current version #{current_version} not found in versions data."
+      return false
+    end
+
+    migrations = current_version_data['migrations']
+    if migrations.empty?
+      puts "No migrations required for current version #{current_version}. System is ready to upgrade."
+      return true
+    end
+
+    missing_migrations = migrations.reject { |migration| migration_already_run?(migration) }
+
+    if missing_migrations.empty?
+      puts "All migrations for version #{current_version} have been run. System is ready to upgrade."
+      true
+    else
+      puts "The following migrations for version #{current_version} have not been run:"
+      missing_migrations.each { |migration| puts "  - #{migration}" }
+      false
+    end
   end
 
-  def load_versions_data(file_path)
-    YAML.load_file(file_path)
+  def fetch_current_version
+    Gem::Version.new(LAGO_VERSION.number)
   end
 
-  def latest_version(versions)
-    versions.last['version']
+  def load_versions_data
+    uri = URI("https://raw.githubusercontent.com/getlago/lago-api/ca9a4af8dadf12fd41f574517ae7d49d2f15d100/config/to_versions.yml")
+    response = Net::HTTP.get(uri)
+    YAML.load(response)
   end
 
-  def can_upgrade_directly?(current_version, target_versions)
-    current_index = target_versions.find_index { |v| v['version'] == current_version }
-    return false if current_index.nil?
+  def verify_upgrade_path(current_version, versions_data)
+    versions = versions_data['versions']
+    latest_version = Gem::Version.new(versions.last['version'])
 
-    target_versions[current_index + 1..-1].all? { |v| v['migrations'].empty? }
-  end
+    if current_version >= latest_version
+      puts "Your system is already up-to-date with version #{latest_version}."
+      return
+    end
 
-  def determine_migration_path(current_version, target_versions)
-    path = []
-    version_found = false
+    puts "Your current version is #{current_version}. The latest version is #{latest_version}."
+    puts "You need to upgrade. Here is the migration path:"
 
-    target_versions.each do |version|
-      version_found = true if version['version'] == current_version
+    migration_path = []
 
-      if version_found && version['migrations'].any?
-        path << version['version']
+    versions.each do |version_data|
+      version = Gem::Version.new(version_data['version'])
+      next if version <= current_version
+
+      migrations = version_data['migrations']
+      unless migrations.empty?
+        migration_path << {version: version, migrations: migrations}
       end
     end
 
-    # Ensure the last version is included in the path if it has migrations
-    path << latest_version(target_versions) if path.empty? || path.last != latest_version(target_versions)
+    migration_path.each do |upgrade|
+      puts "To upgrade to version #{upgrade[:version]}, you need to run the following migrations:"
+      upgrade[:migrations].each do |migration|
+        puts "  - #{migration}"
+      end
+    end
+  end
 
-    path
+  def migration_already_run?(migration)
+    ActiveRecord::Base.connection.table_exists?('schema_migrations') &&
+      ActiveRecord::Base.connection.select_values("SELECT version FROM schema_migrations").include?(migration.to_s)
   end
 end
