@@ -24,6 +24,10 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts, type: :graphql do
     GQL
   end
 
+  let(:account_ids) do
+    %w[12ec4c59-ad56-4a4f-93eb-fb0a7740f4e2 6317441d-6547-417c-89e2-6e43ece791d8 80701036-73b5-4468-a4b3-a139262035b4]
+  end
+
   before do
     allow(Integrations::Aggregator::SyncService).to receive(:new).and_return(sync_service)
     allow(sync_service).to receive(:call).and_return(true)
@@ -54,8 +58,8 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts, type: :graphql do
     ids = result_data['collection'].map { |value| value['externalId'] }
 
     aggregate_failures do
-      expect(ids).to eq(%w[755 745 753 484 828])
-      expect(integration.integration_accounts.where(item_type: :standard).count).to eq(5)
+      expect(ids).to eq(account_ids)
+      expect(integration.integration_items.where(item_type: :account).count).to eq(3)
     end
   end
 end
