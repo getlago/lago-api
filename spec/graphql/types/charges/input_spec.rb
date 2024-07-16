@@ -13,6 +13,7 @@ RSpec.describe Types::Charges::Input do
   it { is_expected.to accept_argument(:min_amount_cents).of_type('BigInt') }
   it { is_expected.to accept_argument(:pay_in_advance).of_type('Boolean') }
   it { is_expected.to accept_argument(:prorated).of_type('Boolean') }
+  it { is_expected.to accept_argument(:regroup_paid_fees).of_type('RegroupPaidFeesEnum') }
 
   it { is_expected.to accept_argument(:filters).of_type('[ChargeFilterInput!]') }
   it { is_expected.to accept_argument(:properties).of_type('PropertiesInput') }

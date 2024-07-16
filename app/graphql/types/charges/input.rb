@@ -13,6 +13,7 @@ module Types
       argument :min_amount_cents, GraphQL::Types::BigInt, required: false
       argument :pay_in_advance, Boolean, required: false
       argument :prorated, Boolean, required: false
+      argument :regroup_paid_fees, Types::Charges::RegroupPaidFeesEnum, required: false
 
       argument :filters, [Types::ChargeFilters::Input], required: false
       argument :properties, Types::Charges::PropertiesInput, required: false
