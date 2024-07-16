@@ -6,6 +6,8 @@ class WalletTransaction < ApplicationRecord
   belongs_to :wallet
   belongs_to :invoice, optional: true
 
+  serialize :config, coder: ::Wallet::Config
+
   STATUSES = [
     :pending,
     :settled

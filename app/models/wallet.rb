@@ -1,6 +1,24 @@
 # frozen_string_literal: true
 
 class Wallet < ApplicationRecord
+  class Config < ::Config
+    def invoice_require_successful_payment?
+      @hash["invoice.require_successful_payment"]
+    end
+
+    def invoice_require_successful_payment=(value)
+      @hash["invoice.require_successful_payment"] = value
+    end
+
+    def default
+      {
+        invoice: {
+          require_successful_payment: false
+        }
+      }
+    end
+  end
+
   include PaperTrailTraceable
 
   belongs_to :customer, -> { with_discarded }
@@ -9,6 +27,8 @@ class Wallet < ApplicationRecord
 
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
+
+  serialize :config, coder: ::Wallet::Config
 
   monetize :balance_cents, :ongoing_balance_cents, :ongoing_usage_balance_cents
   monetize :consumed_amount_cents

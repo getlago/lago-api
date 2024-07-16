@@ -5,6 +5,8 @@ class RecurringTransactionRule < ApplicationRecord
 
   belongs_to :wallet
 
+  serialize :config, coder: ::Wallet::Config
+
   INTERVALS = [
     :weekly,
     :monthly,

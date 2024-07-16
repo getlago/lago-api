@@ -85,7 +85,8 @@ module WalletTransactions
           status: :settled,
           settled_at: Time.current,
           source:,
-          transaction_status: :granted
+          transaction_status: :granted,
+          config: {invoice: {require_successful_payment: wallet.config.invoice_require_successful_payment?}}
         )
 
         Wallets::Balance::IncreaseService.new(
