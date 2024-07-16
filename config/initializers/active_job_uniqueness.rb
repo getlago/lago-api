@@ -12,5 +12,9 @@ ActiveJob::Uniqueness.configure do |config|
     end
 
     config.redlock_servers = ["#{uri.scheme}://:#{ENV["REDIS_PASSWORD"]}@#{host}:#{uri.port}"]
+    config.redlock_options = {
+      retry_count: 0,
+      redis_timeout: 5
+    }
   end
 end
