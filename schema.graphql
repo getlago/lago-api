@@ -323,6 +323,7 @@ input ChargeInput {
   payInAdvance: Boolean
   properties: PropertiesInput
   prorated: Boolean
+  regroupPaidFees: RegroupPaidFeesEnum
   taxCodes: [String!]
 }
 

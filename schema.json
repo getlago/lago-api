@@ -3234,6 +3234,18 @@
               "deprecationReason": null
             },
             {
+              "name": "regroupPaidFees",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "RegroupPaidFeesEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "filters",
               "description": null,
               "type": {
