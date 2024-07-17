@@ -95,10 +95,14 @@ namespace :upgrade do
       end
     end
 
-    migration_path.each do |upgrade|
-      puts "To upgrade to version #{upgrade[:version]}, you need to run the following migrations:"
-      upgrade[:migrations].each do |migration|
-        puts "  - #{migration}"
+    if migration_path.empty?
+      puts "You can upgrade to the latest version #{latest_version}."
+    else
+      migration_path.each do |upgrade|
+        puts "To upgrade to version #{upgrade[:version]}, you need to run the following migrations:"
+        upgrade[:migrations].each do |migration|
+          puts "  - #{migration}"
+        end
       end
     end
   end
