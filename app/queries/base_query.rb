@@ -1,19 +1,13 @@
 # frozen_string_literal: true
 
 class BaseQuery < BaseService
-  PER_PAGE = 100
-
-  Pagination = Struct.new(:page, :limit, keyword_init: true) do
-    def initialize(page: 0, limit: PER_PAGE)
-      super
-    end
-  end
+  Pagination = Struct.new(:page, :limit, keyword_init: true)
 
   class Filters < OpenStruct; end
 
-  def initialize(organization:, pagination: Pagination.new, filters: Filters.new)
+  def initialize(organization:, pagination: nil, filters: Filters.new)
     @organization = organization
-    @pagination = pagination
+    @pagination_params = pagination
     @filters = filters
 
     super
@@ -21,9 +15,20 @@ class BaseQuery < BaseService
 
   private
 
-  attr_reader :organization, :pagination, :filters
+  attr_reader :organization, :pagination_params, :filters
+
+  def pagination
+    return if pagination_params.blank?
+
+    @pagination ||= Pagination.new(
+      page: pagination_params[:page],
+      limit: pagination_params[:limit]
+    )
+  end
 
   def paginate(scope)
+    return scope unless pagination
+
     scope.page(pagination.page).per(pagination.limit)
   end
 

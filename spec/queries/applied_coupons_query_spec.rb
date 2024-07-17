@@ -8,7 +8,7 @@ RSpec.describe AppliedCouponsQuery, type: :query do
   end
 
   let(:organization) { create(:organization) }
-  let(:pagination) { BaseQuery::Pagination.new }
+  let(:pagination) { nil }
   let(:filters) { BaseQuery::Filters.new(query_filters) }
 
   let(:query_filters) { {} }
@@ -40,7 +40,7 @@ RSpec.describe AppliedCouponsQuery, type: :query do
   end
 
   context 'with pagination' do
-    let(:pagination) { BaseQuery::Pagination.new(page: 2, limit: 10) }
+    let(:pagination) { {page: 2, limit: 10} }
 
     it 'applies the pagination' do
       aggregate_failures do

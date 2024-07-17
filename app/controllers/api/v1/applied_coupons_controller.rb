@@ -31,10 +31,10 @@ module Api
       def index
         result = AppliedCouponsQuery.call(
           organization: current_organization,
-          pagination: BaseQuery::Pagination.new(
+          pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
-          ),
+          },
           filters: BaseQuery::Filters.new(index_filters)
         )
 

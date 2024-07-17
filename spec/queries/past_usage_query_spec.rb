@@ -6,7 +6,7 @@ RSpec.describe PastUsageQuery, type: :query do
   subject(:usage_query) { described_class.new(organization:, pagination:, filters:) }
 
   let(:organization) { create(:organization) }
-  let(:pagination) { BaseQuery::Pagination.new }
+  let(:pagination) { nil }
   let(:filters) { BaseQuery::Filters.new(query_filters) }
 
   let(:customer) { create(:customer, organization:) }
@@ -50,6 +50,32 @@ RSpec.describe PastUsageQuery, type: :query do
       aggregate_failures do
         expect(result).to be_success
         expect(result.usage_periods.count).to eq(2)
+      end
+    end
+
+    context 'with pagination' do
+      let(:pagination) { {page: 2, limit: 2} }
+
+      before do
+        create(
+          :invoice_subscription,
+          charges_from_datetime: DateTime.parse('2023-06-17T00:00:00'),
+          charges_to_datetime: DateTime.parse('2023-07-16T23:59:59'),
+          subscription:
+        )
+      end
+
+      it 'applies the pagination' do
+        result = usage_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.current_page).to eq(2)
+          expect(result.prev_page).to eq(1)
+          expect(result.next_page).to be_nil
+          expect(result.total_pages).to eq(2)
+          expect(result.total_count).to eq(3)
+        end
       end
     end
 
