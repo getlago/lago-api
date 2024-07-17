@@ -3957,6 +3957,7 @@ enum InvoicePaymentStatusTypeEnum {
 
 enum InvoiceStatusTypeEnum {
   draft
+  failed
   finalized
   voided
 }
