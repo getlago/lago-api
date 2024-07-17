@@ -530,6 +530,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_16_154636) do
     t.index ["group_id"], name: "index_fees_on_group_id"
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
+    t.index ["pay_in_advance_event_transaction_id"], name: "index_fees_on_pay_in_advance_event_transaction_id", where: "(deleted_at IS NULL)"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
     t.index ["true_up_parent_fee_id"], name: "index_fees_on_true_up_parent_fee_id"
   end
