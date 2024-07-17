@@ -89,7 +89,6 @@ namespace :upgrade do
     end
 
     puts "Your current version is #{current_version}. The latest version is #{latest_version}."
-    puts "You need to upgrade. Here is the migration path:"
 
     migration_path = []
 
@@ -106,6 +105,7 @@ namespace :upgrade do
     if migration_path.empty?
       puts "You can upgrade to the latest version #{latest_version}."
     else
+      puts "You need to upgrade. Here is the migration path:"
       migration_path.each do |upgrade|
         puts "To upgrade to version #{upgrade[:version]}, you need to run the following migrations:"
         upgrade[:migrations].each do |migration|
