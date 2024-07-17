@@ -100,7 +100,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       let(:refund_amount_cents) { 200 }
 
       before do
-        invoice.succeeded!
+        invoice.payment_succeeded!
         create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
       end
 
@@ -131,7 +131,7 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
 
     context 'when reaching invoice refundable amount' do
       before do
-        invoice.succeeded!
+        invoice.payment_succeeded!
         create(:credit_note, invoice:, total_amount_cents: 119, refund_amount_cents: 199, credit_amount_cents: 0)
       end
 

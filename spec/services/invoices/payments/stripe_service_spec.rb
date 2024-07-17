@@ -254,7 +254,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         stripe_service.create
         invoice.reload
 
-        expect(invoice).to be_pending
+        expect(invoice).to be_payment_pending
       end
     end
 
@@ -267,7 +267,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result).to be_success
 
         aggregate_failures do
-          expect(result.invoice).to be_pending
+          expect(result.invoice).to be_payment_pending
           expect(result.invoice.payment_attempts).to eq(1)
           expect(result.invoice.ready_for_payment_processing).to eq(false)
 

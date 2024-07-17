@@ -943,7 +943,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice).to be_pending
+              expect(invoice).to be_payment_pending
               expect(invoice.fees.subscription_kind.count).to eq(1)
               expect(invoice).to have_empty_charge_fees
 
@@ -977,7 +977,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice).to be_pending
+              expect(invoice).to be_payment_pending
               expect(invoice.fees.subscription_kind.count).to eq(1)
               expect(invoice).to have_empty_charge_fees
 
