@@ -40,7 +40,7 @@ namespace :upgrade do
 
     if current_version_data.nil?
       puts "Current version #{current_version} not found in versions data."
-      return false
+      return true
     end
 
     migrations = current_version_data['migrations']
