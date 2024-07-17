@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe AddOnsQuery, type: :query do
   subject(:result) do
-    described_class.call(organization:, pagination:, filters:, search_term:)
+    described_class.call(organization:, pagination:, search_term:)
   end
 
   let(:membership) { create(:membership) }
@@ -13,7 +13,6 @@ RSpec.describe AddOnsQuery, type: :query do
   let(:add_on_second) { create(:add_on, organization:, name: 'abcde', code: '22') }
   let(:add_on_third) { create(:add_on, organization:, name: 'presuv', code: '33') }
   let(:pagination) { {page: 1, limit: 10} }
-  let(:filters) { {} }
   let(:search_term) { nil }
 
   before do
@@ -58,22 +57,6 @@ RSpec.describe AddOnsQuery, type: :query do
       aggregate_failures do
         expect(result.add_ons.count).to eq(2)
         expect(returned_ids).to include(add_on_first.id)
-        expect(returned_ids).to include(add_on_second.id)
-        expect(returned_ids).not_to include(add_on_third.id)
-      end
-    end
-  end
-
-  context 'when searching for /de/ term and filtering by id' do
-    let(:search_term) { 'de' }
-    let(:filters) { {ids: [add_on_second.id]} }
-
-    it 'returns only one add_on' do
-      returned_ids = result.add_ons.pluck(:id)
-
-      aggregate_failures do
-        expect(result.add_ons.count).to eq(1)
-        expect(returned_ids).not_to include(add_on_first.id)
         expect(returned_ids).to include(add_on_second.id)
         expect(returned_ids).not_to include(add_on_third.id)
       end

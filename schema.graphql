@@ -5423,15 +5423,7 @@ type Query {
   """
   Query add-ons of an organization
   """
-  addOns(
-    """
-    List of add-ons IDs to fetch
-    """
-    ids: [ID!]
-    limit: Int
-    page: Int
-    searchTerm: String
-  ): AddOnCollection!
+  addOns(limit: Int, page: Int, searchTerm: String): AddOnCollection!
 
   """
   Query a single billable metric of an organization

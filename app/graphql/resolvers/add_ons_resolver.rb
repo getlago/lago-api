@@ -9,7 +9,6 @@ module Resolvers
 
     description 'Query add-ons of an organization'
 
-    argument :ids, [ID], required: false, description: 'List of add-ons IDs to fetch'
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false
@@ -20,10 +19,7 @@ module Resolvers
       result = ::AddOnsQuery.call(
         organization: current_organization,
         search_term:,
-        pagination: {page:, limit:},
-        filters: {
-          ids:
-        }
+        pagination: {page:, limit:}
       )
 
       result.add_ons

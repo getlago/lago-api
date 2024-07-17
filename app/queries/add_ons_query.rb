@@ -6,8 +6,6 @@ class AddOnsQuery < BaseQuery
     add_ons = paginate(add_ons)
     add_ons = add_ons.order(created_at: :desc)
 
-    add_ons = add_ons.where(id: filters[:ids]) if filters[:ids].present?
-
     result.add_ons = add_ons
     result
   end
