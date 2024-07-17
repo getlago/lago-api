@@ -1,14 +1,13 @@
 versions:
-  - version: 1.0
+  - version: 1.5.0
     migrations: []
-  - version: 1.1
+  - version: 1.5.1
+    migrations: []
+  - version: 1.6.0
+    migrations: []
+  - version: 1.6.1
     migrations:
-      - 20240625090742
-      - 20240626094521
-  - version: 1.2
-    migrations:
-      - 20240702081109
-  - version: 1.3
-    migrations:
-      - 20240708195226
-      - 20240712090133
+      - 20240603095841
+      - 20240628083830
+  - version: 1.7.0
+    migrations: []
