@@ -17,11 +17,10 @@ module Resolvers
     type Types::AddOns::Object.collection_type, null: false
 
     def resolve(ids: nil, page: nil, limit: nil, search_term: nil)
-      query = ::AddOnsQuery.new(organization: current_organization)
-      result = query.call(
+      result = ::AddOnsQuery.call(
+        organization: current_organization,
         search_term:,
-        page:,
-        limit:,
+        pagination: {page:, limit:},
         filters: {
           ids:
         }
