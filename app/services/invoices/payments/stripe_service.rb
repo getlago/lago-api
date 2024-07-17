@@ -76,7 +76,7 @@ module Invoices
 
         result.payment = payment
         result.invoice = payment.invoice
-        return result if payment.invoice.succeeded?
+        return result if payment.invoice.payment_succeeded?
 
         payment.update!(status:)
 
@@ -140,7 +140,7 @@ module Invoices
       end
 
       def should_process_payment?
-        return false if invoice.succeeded? || invoice.voided?
+        return false if invoice.payment_succeeded? || invoice.voided?
         return false if stripe_payment_provider.blank?
 
         customer&.stripe_customer&.provider_customer_id
@@ -305,8 +305,8 @@ module Invoices
         invoice = Invoice.find_by(id: metadata[:lago_invoice_id], organization_id:)
         return result if invoice.nil?
 
-        # NOTE: Invoice exists but status is failed
-        return result if invoice.failed?
+        # NOTE: Invoice exists but payment status is failed
+        return result if invoice.payment_failed?
 
         result.not_found_failure!(resource: 'stripe_payment')
       end

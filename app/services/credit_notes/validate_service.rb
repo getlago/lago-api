@@ -51,7 +51,7 @@ module CreditNotes
 
     def valid_invoice_status?
       if credit_note.refund_amount_cents.positive?
-        return true if invoice.succeeded?
+        return true if invoice.payment_succeeded?
 
         add_error(field: :refund_amount_cents, error_code: 'cannot_refund_unpaid_invoice')
         return false

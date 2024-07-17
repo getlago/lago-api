@@ -15,7 +15,7 @@ module Invoices
         return result.single_validation_failure!(error_code: 'no_linked_payment_provider') unless provider
         return result.single_validation_failure!(error_code: 'invalid_payment_provider') if provider == 'gocardless'
 
-        if invoice.succeeded? || invoice.voided? || invoice.draft?
+        if invoice.payment_succeeded? || invoice.voided? || invoice.draft?
           return result.single_validation_failure!(error_code: 'invalid_invoice_status_or_payment_status')
         end
 

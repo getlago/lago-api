@@ -9,7 +9,7 @@ module Clock
     def perform
       Invoice
         .finalized
-        .not_succeeded
+        .not_payment_succeeded
         .where(payment_overdue: false)
         .where(payment_dispute_lost_at: nil)
         .where(payment_due_date: ...Time.current)

@@ -19,7 +19,7 @@ module Invoices
       def call
         return result.not_found_failure!(resource: 'invoice') if invoice.blank?
 
-        if invoice.draft? || invoice.voided? || invoice.succeeded?
+        if invoice.draft? || invoice.voided? || invoice.payment_succeeded?
           return result.not_allowed_failure!(code: 'invalid_status')
         end
 
