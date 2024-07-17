@@ -62,10 +62,18 @@ namespace :upgrade do
   end
 
   def fetch_current_version
-    Gem::Version.new(LAGO_VERSION.number)
+    if Rails.env.development?
+      # Load the version from versions.yml file in development
+      versions = YAML.load_file(Rails.root.join('config', 'versions.yml'))
+      Gem::Version.new(versions['versions'].last['version'])
+    else
+      # Use the LAGO_VERSION constant in other environments
+      Gem::Version.new(LAGO_VERSION.number)
+    end
   end
 
   def load_versions_data
+    # todo check were we can store this
     uri = URI("https://raw.githubusercontent.com/getlago/lago-api/ca9a4af8dadf12fd41f574517ae7d49d2f15d100/config/to_versions.yml")
     response = Net::HTTP.get(uri)
     YAML.load(response)
