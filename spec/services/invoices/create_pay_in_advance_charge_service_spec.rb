@@ -179,16 +179,6 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
     end
 
-    context 'when organization does not have a webhook endpoint' do
-      before { organization.webhook_endpoints.destroy_all }
-
-      it 'does not enqueues a SendWebhookJob' do
-        expect do
-          invoice_service.call
-        end.not_to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
-      end
-    end
-
     context 'with customer timezone' do
       let(:customer) { create(:customer, organization:, timezone: 'America/Los_Angeles') }
       let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }

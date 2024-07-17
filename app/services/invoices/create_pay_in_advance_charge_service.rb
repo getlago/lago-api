@@ -39,7 +39,7 @@ module Invoices
 
       Utils::SegmentTrack.invoice_created(invoice)
 
-      deliver_webhooks if should_deliver_webhook?
+      deliver_webhooks
       GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
@@ -82,10 +82,6 @@ module Invoices
       fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
       fee_result.raise_if_error!
       fee_result.fees
-    end
-
-    def should_deliver_webhook?
-      customer.organization.webhook_endpoints.any?
     end
 
     def deliver_webhooks

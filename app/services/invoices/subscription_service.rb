@@ -44,16 +44,14 @@ module Invoices
       # non-invoiceable fees are created the first time, regardless of grace period.
       # Whenever the invoice is refreshed, the fees are not created again. (see `Fees::ChargeService.already_billed?`)
       # The webhook are sent whenever non-invoiceable fees are found in result.
-      if should_deliver_webhook?
-        result.non_invoiceable_fees&.each do |fee|
-          SendWebhookJob.perform_later('fee.created', fee)
-        end
+      result.non_invoiceable_fees&.each do |fee|
+        SendWebhookJob.perform_later('fee.created', fee)
       end
 
       if grace_period?
-        SendWebhookJob.perform_later('invoice.drafted', invoice) if should_deliver_webhook?
+        SendWebhookJob.perform_later('invoice.drafted', invoice)
       else
-        SendWebhookJob.perform_later('invoice.created', invoice) if should_deliver_webhook?
+        SendWebhookJob.perform_later('invoice.created', invoice)
         GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_finalized_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
@@ -112,10 +110,6 @@ module Invoices
 
     def invoice_status
       grace_period? ? :draft : :finalized
-    end
-
-    def should_deliver_webhook?
-      customer.organization.webhook_endpoints.any?
     end
 
     def should_deliver_finalized_email?

@@ -13,10 +13,6 @@ RSpec.describe Webhooks::BaseService, type: :service do
   let(:previous_webhook) { nil }
 
   describe '.call' do
-    before do
-      allow(SendHttpWebhookJob).to receive(:perform_later)
-    end
-
     it 'creates a pending webhook' do
       webhook_service.call
 
@@ -39,7 +35,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
       it 'enqueues one http job' do
         webhook_service.call
 
-        expect(SendHttpWebhookJob).to have_received(:perform_later).once
+        expect(SendHttpWebhookJob).to have_been_enqueued.once
       end
     end
 
@@ -49,7 +45,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
         object.reload
         webhook_service.call
 
-        expect(SendHttpWebhookJob).to have_received(:perform_later).twice
+        expect(SendHttpWebhookJob).to have_been_enqueued.twice
       end
     end
 
@@ -63,6 +59,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
       it 'does not create the webhook model' do
         webhook_service.call
 
+        expect(SendHttpWebhookJob).not_to have_been_enqueued
         expect(Webhook.where(object: invoice)).not_to exist
       end
     end

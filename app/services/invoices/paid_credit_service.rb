@@ -27,7 +27,7 @@ module Invoices
       end
 
       Utils::SegmentTrack.invoice_created(result.invoice)
-      SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice) if should_deliver_webhook?
+      SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice)
       GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
@@ -81,10 +81,6 @@ module Invoices
         .new(invoice:, wallet_transaction:, customer:).create
 
       fee_result.raise_if_error!
-    end
-
-    def should_deliver_webhook?
-      customer.organization.webhook_endpoints.any?
     end
 
     def create_payment(invoice)

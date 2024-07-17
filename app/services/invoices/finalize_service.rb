@@ -22,7 +22,7 @@ module Invoices
         invoice.credit_notes.each(&:finalized!)
       end
 
-      SendWebhookJob.perform_later('invoice.created', result.invoice) if invoice.organization.webhook_endpoints.any?
+      SendWebhookJob.perform_later('invoice.created', result.invoice)
       GeneratePdfAndNotifyJob.perform_later(invoice: invoice.reload, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?

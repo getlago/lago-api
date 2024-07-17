@@ -30,7 +30,7 @@ module Invoices
         end
       end
 
-      SendWebhookJob.perform_later('invoice.voided', result.invoice) if invoice.organization.webhook_endpoints.any?
+      SendWebhookJob.perform_later('invoice.voided', result.invoice)
 
       result
     rescue AASM::InvalidTransition => _e
