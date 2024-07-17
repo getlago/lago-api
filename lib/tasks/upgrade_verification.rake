@@ -64,7 +64,7 @@ namespace :upgrade do
   def fetch_current_version
     if Rails.env.development?
       # Load the version from versions.yml file in development
-      versions = YAML.load_file(Rails.root.join('config', 'versions.yml'))
+      versions = YAML.load_file(Rails.root.join("config/versions.yml"))
       Gem::Version.new(versions['versions'].last['version'])
     else
       # Use the LAGO_VERSION constant in other environments
