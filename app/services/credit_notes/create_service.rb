@@ -170,7 +170,7 @@ module CreditNotes
 
     def should_handle_refund?
       return false unless credit_note.refunded?
-      return false unless credit_note.invoice.succeeded?
+      return false unless credit_note.invoice.payment_succeeded?
 
       invoice_payment.present?
     end

@@ -120,7 +120,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         ]
       end
 
-      it 'creates an succeeded invoice' do
+      it 'creates a payment_succeeded invoice' do
         result = create_service.call
 
         aggregate_failures do

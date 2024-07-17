@@ -58,7 +58,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       expect(result).to be_success
 
       aggregate_failures do
-        expect(result.invoice).to be_succeeded
+        expect(result.invoice).to be_payment_succeeded
         expect(result.invoice.payment_attempts).to eq(1)
         expect(result.invoice.reload.ready_for_payment_processing).to eq(false)
 
@@ -116,7 +116,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           expect(result.invoice).to eq(invoice)
           expect(result.payment).to be_nil
 
-          expect(result.invoice).to be_succeeded
+          expect(result.invoice).to be_payment_succeeded
 
           expect(gocardless_payments_service).not_to have_received(:create)
         end
@@ -221,8 +221,8 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       end
     end
 
-    context 'when invoice is already succeeded' do
-      before { invoice.succeeded! }
+    context 'when invoice is already payment_succeeded' do
+      before { invoice.payment_succeeded! }
 
       it 'does not update the status of invoice and payment' do
         result = gocardless_service.update_payment_status(

@@ -3,7 +3,8 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::UpdateFeesPaymentStatusJob, type: :job do
-  let(:invoice) { create(:invoice, payment_status: 'succeeded') }
+  # Still investigating why this trait didn't get renamed
+  let(:invoice) { create(:invoice, :succeeded) }
   let(:fee) { create(:fee, invoice:) }
 
   before { fee }

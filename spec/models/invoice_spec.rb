@@ -630,7 +630,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is finalized' do
           let(:status) { :finalized }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns false' do
@@ -638,7 +638,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns false' do
@@ -646,7 +646,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -664,7 +664,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is finalized' do
           let(:status) { :finalized }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns false' do
@@ -672,7 +672,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns false' do
@@ -680,7 +680,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -696,7 +696,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is not finalized' do
           let(:status) { :draft }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns false' do
@@ -704,7 +704,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns false' do
@@ -712,7 +712,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -724,7 +724,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is finalized' do
           let(:status) { :finalized }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns false' do
@@ -732,7 +732,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns false' do
@@ -740,7 +740,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -762,7 +762,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is not finalized' do
           let(:status) { [:draft, :voided].sample }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns false' do
@@ -770,7 +770,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns false' do
@@ -778,7 +778,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -790,7 +790,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is finalized' do
           let(:status) { :finalized }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns true' do
@@ -798,7 +798,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns true' do
@@ -806,7 +806,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -824,7 +824,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is not finalized' do
           let(:status) { [:draft, :voided].sample }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns false' do
@@ -832,7 +832,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns false' do
@@ -840,7 +840,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -852,7 +852,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is finalized' do
           let(:status) { :finalized }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns false' do
@@ -860,7 +860,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns false' do
@@ -868,7 +868,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -884,7 +884,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is not finalized' do
           let(:status) { [:draft, :voided].sample }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns false' do
@@ -892,7 +892,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns false' do
@@ -900,7 +900,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
@@ -912,7 +912,7 @@ RSpec.describe Invoice, type: :model do
         context 'when invoice is finalized' do
           let(:status) { :finalized }
 
-          context 'when invoice is pending' do
+          context 'when invoice is payment_pending' do
             let(:payment_status) { :pending }
 
             it 'returns true' do
@@ -920,7 +920,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is failed' do
+          context 'when invoice is payment_failed' do
             let(:payment_status) { :failed }
 
             it 'returns true' do
@@ -928,7 +928,7 @@ RSpec.describe Invoice, type: :model do
             end
           end
 
-          context 'when invoice is succeeded' do
+          context 'when invoice is payment_succeeded' do
             let(:payment_status) { :succeeded }
 
             it 'returns false' do
