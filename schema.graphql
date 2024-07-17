@@ -5438,18 +5438,7 @@ type Query {
   """
   Query billable metrics of an organization
   """
-  billableMetrics(
-    aggregationTypes: [AggregationTypeEnum!]
-
-    """
-    List of plan ID to fetch
-    """
-    ids: [String!]
-    limit: Int
-    page: Int
-    recurring: Boolean
-    searchTerm: String
-  ): BillableMetricCollection!
+  billableMetrics(aggregationTypes: [AggregationTypeEnum!], limit: Int, page: Int, recurring: Boolean, searchTerm: String): BillableMetricCollection!
 
   """
   Query a single coupon of an organization
