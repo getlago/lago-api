@@ -6,8 +6,7 @@ RSpec.describe IntegrationMappingsQuery, type: :query do
   subject(:integration_mappings_query) { described_class.new(organization:, pagination:, filters:) }
 
   let(:pagination) { nil }
-  let(:filters) { BaseQuery::Filters.new(query_filters) }
-  let(:query_filters) { {} }
+  let(:filters) { {} }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -46,7 +45,7 @@ RSpec.describe IntegrationMappingsQuery, type: :query do
   end
 
   context 'when filtering by integration id' do
-    let(:query_filters) { {integration_id: integration.id} }
+    let(:filters) { {integration_id: integration.id} }
 
     it 'returns two mappings' do
       result = integration_mappings_query.call
@@ -64,7 +63,7 @@ RSpec.describe IntegrationMappingsQuery, type: :query do
   end
 
   context 'when filtering by mappable type' do
-    let(:query_filters) { {mappable_type: 'BillableMetric'} }
+    let(:filters) { {mappable_type: 'BillableMetric'} }
 
     it 'returns one mapping' do
       result = integration_mappings_query.call

@@ -7,18 +7,16 @@ RSpec.describe PastUsageQuery, type: :query do
 
   let(:organization) { create(:organization) }
   let(:pagination) { nil }
-  let(:filters) { BaseQuery::Filters.new(query_filters) }
-
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, customer:, plan:) }
-
-  let(:query_filters) do
+  let(:filters) do
     {
       external_customer_id: customer.external_id,
       external_subscription_id: subscription.external_id
     }
   end
+
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:subscription) { create(:subscription, customer:, plan:) }
 
   let(:invoice_subscription1) do
     create(
@@ -80,7 +78,7 @@ RSpec.describe PastUsageQuery, type: :query do
     end
 
     context 'when external_customer_id is missing' do
-      let(:query_filters) { {external_subscription_id: subscription.external_id} }
+      let(:filters) { {external_subscription_id: subscription.external_id} }
 
       it 'returns a validation failure' do
         result = usage_query.call
@@ -95,7 +93,7 @@ RSpec.describe PastUsageQuery, type: :query do
     end
 
     context 'when external_subscription_id is missing' do
-      let(:query_filters) { {external_customer_id: customer.external_id} }
+      let(:filters) { {external_customer_id: customer.external_id} }
 
       it 'returns a validation failure' do
         result = usage_query.call
@@ -121,7 +119,7 @@ RSpec.describe PastUsageQuery, type: :query do
       let(:fee1) { create(:charge_fee, charge: charge1, invoice: invoice_subscription1.invoice) }
       let(:fee2) { create(:charge_fee, charge: charge2, invoice: invoice_subscription1.invoice) }
 
-      let(:query_filters) do
+      let(:filters) do
         {
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,
@@ -161,7 +159,7 @@ RSpec.describe PastUsageQuery, type: :query do
 
     context 'with periods_count filter' do
       let(:periods_count) { 1 }
-      let(:query_filters) do
+      let(:filters) do
         {
           external_customer_id: customer.external_id,
           external_subscription_id: subscription.external_id,

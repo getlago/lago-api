@@ -8,10 +8,10 @@ class BaseQuery < BaseService
 
   class Filters < OpenStruct; end
 
-  def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: Filters.new)
+  def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {})
     @organization = organization
     @pagination_params = pagination
-    @filters = filters
+    @filters = Filters.new(filters)
 
     super
   end

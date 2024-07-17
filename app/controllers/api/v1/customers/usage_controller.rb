@@ -33,7 +33,7 @@ module Api
               page: params[:page],
               limit: params[:per_page] || PER_PAGE
             },
-            filters: BaseQuery::Filters.new(past_usage_filters)
+            filters: past_usage_filters
           )
 
           if result.success?

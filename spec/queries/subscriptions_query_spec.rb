@@ -7,9 +7,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
   let(:organization) { create(:organization) }
   let(:pagination) { nil }
-  let(:filters) { BaseQuery::Filters.new(query_filters) }
-
-  let(:query_filters) { {} }
+  let(:filters) { {} }
 
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
@@ -43,7 +41,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
     end
 
     context 'with customer filter' do
-      let(:query_filters) { {external_customer_id: customer.external_id} }
+      let(:filters) { {external_customer_id: customer.external_id} }
 
       it 'applies the filter' do
         result = subscriptions_query.call
@@ -56,7 +54,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
     end
 
     context 'with plan filter' do
-      let(:query_filters) { {plan_code: plan.code} }
+      let(:filters) { {plan_code: plan.code} }
 
       it 'applies the filter' do
         result = subscriptions_query.call
@@ -69,7 +67,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
     end
 
     context 'with multiple status filter' do
-      let(:query_filters) { {status: [:active, :pending]} }
+      let(:filters) { {status: [:active, :pending]} }
 
       it 'returns correct subscriptions' do
         create(:subscription, :pending, customer:, plan:)
@@ -89,7 +87,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
     end
 
     context 'with pending status filter' do
-      let(:query_filters) { {status: [:pending]} }
+      let(:filters) { {status: [:pending]} }
 
       it 'returns only pending subscriptions' do
         create(:subscription, :pending, customer:, plan:)
@@ -110,7 +108,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
     end
 
     context 'with canceled status filter' do
-      let(:query_filters) { {status: [:canceled]} }
+      let(:filters) { {status: [:canceled]} }
 
       it 'returns only pending subscriptions' do
         create(:subscription, :pending, customer:, plan:)
@@ -131,7 +129,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
     end
 
     context 'with terminated status filter' do
-      let(:query_filters) { {status: [:terminated]} }
+      let(:filters) { {status: [:terminated]} }
 
       it 'returns only pending subscriptions' do
         create(:subscription, :pending, customer:, plan:)
