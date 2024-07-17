@@ -5,7 +5,7 @@ require 'yaml'
 
 namespace :upgrade do
   desc "Verifies the current system's readiness for an upgrade and outlines necessary migration paths"
-  task verify: [:check_migrations] do
+  task verify: [:check_migrations, :check_background_jobs] do
     current_version = fetch_current_version
     versions_data = load_versions_data
     verify_upgrade_path(current_version, versions_data)
@@ -22,11 +22,21 @@ namespace :upgrade do
     end
   end
 
+  desc "Checks if all jobs on the 'background_migration' queue have been run"
+  task check_background_jobs: :environment do
+    unless background_jobs_cleared?
+      puts "System is not ready to upgrade. There are pending jobs in the 'background_migration' queue."
+      exit 1
+    end
+  end
+
   private
 
   def check_migrations_status(current_version, versions_data)
     versions = versions_data['versions']
-    current_version_data = versions.find { |version_data| version_data['version'] == current_version }
+    current_version_data = versions.find do |version_data|
+      Gem::Version.new(version_data['version']) == Gem::Version.new(current_version)
+    end
 
     if current_version_data.nil?
       puts "Current version #{current_version} not found in versions data."
@@ -96,5 +106,10 @@ namespace :upgrade do
   def migration_already_run?(migration)
     ActiveRecord::Base.connection.table_exists?('schema_migrations') &&
       ActiveRecord::Base.connection.select_values("SELECT version FROM schema_migrations").include?(migration.to_s)
+  end
+
+  def background_jobs_cleared?
+    queue = Sidekiq::Queue.new('background_migration')
+    queue.size == 0
   end
 end
