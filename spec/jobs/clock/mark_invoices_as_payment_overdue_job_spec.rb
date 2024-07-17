@@ -14,8 +14,7 @@ describe Clock::MarkInvoicesAsPaymentOverdueJob, job: true do
 
     it "marks expected invoices as payment overdue" do
       create(:invoice, :draft, payment_due_date: 1.day.ago)
-      # This shouldn't work after adding the prefix :thinking: - play with this later
-      create(:invoice, :succeeded, payment_due_date: 1.day.ago)
+      create(:invoice, payment_status: :succeeded, payment_due_date: 1.day.ago)
       create(:invoice, payment_due_date: 1.day.ago, payment_dispute_lost_at: 1.day.ago)
       create(:invoice, payment_due_date: nil)
       create(:invoice, payment_due_date: 1.day.from_now)
