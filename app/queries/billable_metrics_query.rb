@@ -2,6 +2,8 @@
 
 class BillableMetricsQuery < BaseQuery
   def call
+    return result unless validate_filters.success?
+
     metrics = base_scope.result
     metrics = paginate(metrics)
     metrics = metrics.order(created_at: :desc)
