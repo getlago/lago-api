@@ -11,6 +11,8 @@ RSpec.describe Invoice, type: :model do
 
   it { is_expected.to have_many(:integration_resources) }
 
+  it { is_expected.to have_many(:integration_error_details) }
+
   describe 'validation' do
     describe 'of payment dispute lost absence' do
       context 'when invoice is not voided' do
