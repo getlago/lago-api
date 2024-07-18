@@ -6,8 +6,8 @@ RSpec.describe Resolvers::Analytics::OverdueBalancesResolver, type: :graphql do
   let(:required_permission) { 'analytics:view' }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum, $externalCustomerId: String, $months: Int) {
-        overdueBalances(currency: $currency, externalCustomerId: $externalCustomerId, months: $months) {
+      query($currency: CurrencyEnum, $externalCustomerId: String, $months: Int, $expireCache: Boolean) {
+        overdueBalances(currency: $currency, externalCustomerId: $externalCustomerId, months: $months, expireCache: $expireCache) {
           collection {
             amountCents
             currency
