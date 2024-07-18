@@ -53,7 +53,7 @@ class Invoice < ApplicationRecord
   STATUS = %i[draft finalized voided generating].freeze
 
   enum invoice_type: INVOICE_TYPES
-  enum payment_status: PAYMENT_STATUS
+  enum payment_status: PAYMENT_STATUS, _prefix: :payment
   enum status: STATUS
 
   aasm column: 'status', timestamps: true do
@@ -260,7 +260,7 @@ class Invoice < ApplicationRecord
   def voidable?
     return false if payment_dispute_lost_at? || credit_notes.where.not(credit_status: :voided).any?
 
-    finalized? && (pending? || failed?)
+    finalized? && (payment_pending? || payment_failed?)
   end
 
   def different_boundaries_for_subscription_and_charges(subscription)
