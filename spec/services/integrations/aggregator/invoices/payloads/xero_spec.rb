@@ -160,7 +160,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
             },
             {
               'account_code' => '22',
-              'description' => 'Coupon',
+              'description' => 'Coupons',
               'external_id' => '2',
               'precise_unit_amount' => -20.0,
               'taxes_amount_cents' => -4,

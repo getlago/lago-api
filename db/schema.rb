@@ -308,7 +308,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_18_080929) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "precise_amount_cents", precision: 30, scale: 5, null: false
-    t.decimal "precise_coupons_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
     t.index ["credit_note_id"], name: "index_credit_note_items_on_credit_note_id"
     t.index ["fee_id"], name: "index_credit_note_items_on_fee_id"
   end

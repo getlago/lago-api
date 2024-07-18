@@ -92,13 +92,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(item1.fee).to eq(fee1)
         expect(item1.amount_cents).to eq(10)
         expect(item1.amount_currency).to eq(invoice.currency)
-        expect(item1.precise_coupons_amount_cents).to eq(0.0)
 
         item2 = credit_note.items.order(created_at: :asc).last
         expect(item2.fee).to eq(fee2)
         expect(item2.amount_cents).to eq(5)
         expect(item2.amount_currency).to eq(invoice.currency)
-        expect(item2.precise_coupons_amount_cents).to eq(0.0)
       end
     end
 
@@ -428,16 +426,14 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           expect(item1).to have_attributes(
             fee: fee1,
             amount_cents: 10,
-            amount_currency: invoice.currency,
-            precise_coupons_amount_cents: 8
+            amount_currency: invoice.currency
           )
 
           item2 = credit_note.items.order(created_at: :asc).last
           expect(item2).to have_attributes(
             fee: fee2,
             amount_cents: 5,
-            amount_currency: invoice.currency,
-            precise_coupons_amount_cents: 5
+            amount_currency: invoice.currency
           )
         end
       end

@@ -43,10 +43,6 @@ module CreditNotes
 
         compute_amounts_and_taxes
 
-        @remaining_coupons_amount_cents = credit_note.coupons_adjustment_amount_cents || 0
-
-        compute_coupons
-
         valid_credit_note?
         result.raise_if_error!
 
@@ -127,27 +123,6 @@ module CreditNotes
 
         item.save!
       end
-    end
-
-    def compute_coupons
-      credit_note.items.reload.each do |item|
-        item.precise_coupons_amount_cents = precise_coupons_amount_cents(item)
-        item.save!
-      end
-    end
-
-    def precise_coupons_amount_cents(item)
-      return 0 if remaining_coupons_amount_cents <= 0
-
-      if remaining_coupons_amount_cents > item.precise_amount_cents
-        precise_coupons_amount_cents = item.precise_amount_cents
-
-        @remaining_coupons_amount_cents = remaining_coupons_amount_cents - item.precise_amount_cents
-      else
-        precise_coupons_amount_cents = remaining_coupons_amount_cents
-      end
-
-      precise_coupons_amount_cents
     end
 
     def valid_item?(item)
