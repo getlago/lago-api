@@ -89,7 +89,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
         coupons_amount_cents: 2000,
         prepaid_credit_amount_cents: 4000,
         credit_notes_amount_cents: 6000,
-        taxes_amount_cents: 8000,
+        taxes_amount_cents: 200,
         issuing_date: DateTime.new(2024, 7, 8)
       )
     end
@@ -140,8 +140,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
               'units' => 0.0,
               'precise_unit_amount' => 0.0,
               'account_code' => '33',
-              'taxes_amount_cents' => 0.0,
-              'precise_coupons_amount_cents' => 2000
+              'taxes_amount_cents' => 200
             },
             {
               'external_id' => '4',
@@ -149,8 +148,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
               'units' => 0.0,
               'precise_unit_amount' => 0.0,
               'account_code' => '44',
-              'taxes_amount_cents' => 0.0,
-              'precise_coupons_amount_cents' => 0.0
+              'taxes_amount_cents' => 2
             },
             {
               'external_id' => 'm2',
@@ -158,14 +156,22 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
               'units' => 2.0,
               'precise_unit_amount' => 4.121212121233378,
               'account_code' => 'm22',
-              'taxes_amount_cents' => 0.0,
-              'precise_coupons_amount_cents' => 0.0
+              'taxes_amount_cents' => 2
+            },
+            {
+              'account_code' => '22',
+              'description' => 'Coupon',
+              'external_id' => '2',
+              'precise_unit_amount' => -20.0,
+              'taxes_amount_cents' => -4,
+              'units' => 1
             },
             {
               'external_id' => '6',
               'description' => 'Prepaid credit',
               'units' => 1,
               'precise_unit_amount' => -40.0,
+              'taxes_amount_cents' => 0,
               'account_code' => '66'
             },
             {
@@ -173,6 +179,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
               'description' => 'Credit note',
               'units' => 1,
               'precise_unit_amount' => -60.0,
+              'taxes_amount_cents' => 0,
               'account_code' => '11'
             }
           ]

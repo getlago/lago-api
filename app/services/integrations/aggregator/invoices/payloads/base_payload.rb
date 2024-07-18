@@ -11,7 +11,6 @@ module Integrations
             @invoice = invoice
             @integration_customer = integration_customer
             @type = type
-            @remaining_taxes_amount_cents = invoice.taxes_amount_cents - (invoice.fees.sum(:taxes_amount_cents).round)
           end
 
           def body
@@ -24,7 +23,7 @@ module Integrations
                 'number' => invoice.number,
                 'currency' => invoice.currency,
                 'type' => 'ACCREC',
-                'fees' => (fees + discounts)
+                'fees' => (tax_adjusted_fees + discounts)
               }
             ]
           end
@@ -36,6 +35,22 @@ module Integrations
 
           def fees
             @fees ||= invoice.fees.order(created_at: :asc).map { |fee| item(fee) }
+          end
+
+          def tax_adjusted_fees
+            remaining_taxes_amount_cents = invoice.taxes_amount_cents - fees.sum { |f| f['taxes_amount_cents'] }.round
+
+            fees.map do |fee|
+              # TODO: if no coupon fix the tax rounding issue here:
+              if remaining_taxes_amount_cents.to_i.abs > 0 &&
+                  invoice.coupons_amount_cents == 0 &&
+                  fee['taxes_amount_cents'] > remaining_taxes_amount_cents.to_i.abs
+                fee['taxes_amount_cents'] = fee['taxes_amount_cents'] + remaining_taxes_amount_cents.to_i
+                remaining_taxes_amount_cents = 0
+              end
+
+              fee
+            end
           end
 
           def item(fee)
@@ -53,21 +68,13 @@ module Integrations
 
             return {} unless mapped_item
 
-            # TODO: if no coupon fix the tax rounding issue here:
-            adjusted_taxes_amount_cents = amount(taxes_amount_cents(fee), resource: invoice).round
-
-            if remaining_taxes_amount_cents.to_i.abs > 0 && invoice.coupons_amount_cents == 0 && adjusted_taxes_amount_cents > remaining_taxes_amount_cents.to_i.abs
-              adjusted_taxes_amount_cents += remaining_taxes_amount_cents.to_i
-              @remaining_taxes_amount_cents = 0
-            end
-
             {
               'external_id' => mapped_item.external_id,
               'description' => fee.subscription? ? 'Subscription' : fee.charge_filter&.display_name || fee.invoice_name,
               'units' => fee.units,
               'precise_unit_amount' => fee.precise_unit_amount,
               'account_code' => mapped_item.external_account_code,
-              'taxes_amount_cents' => adjusted_taxes_amount_cents
+              'taxes_amount_cents' => fee.taxes_amount_cents
             }
           end
 
@@ -79,12 +86,14 @@ module Integrations
             output = []
 
             if invoice.coupons_amount_cents > 0
+              tax_diff_amount_cents = invoice.taxes_amount_cents - fees.sum { |f| f['taxes_amount_cents'] }
+
               output << {
                 'external_id' => coupon_item.external_id,
                 'description' => 'Coupon',
                 'units' => 1,
                 'precise_unit_amount' => -amount(invoice.coupons_amount_cents, resource: invoice),
-                'taxes_amount_cents' => -(remaining_taxes_amount_cents || 0).abs,
+                'taxes_amount_cents' => -(tax_diff_amount_cents || 0).abs,
                 'account_code' => coupon_item.external_account_code
               }
             end
