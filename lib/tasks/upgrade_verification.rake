@@ -73,7 +73,7 @@ namespace :upgrade do
   end
 
   def load_versions_data
-    uri = URI("https://github.com/getlago/lago-api/tree/main/config/versions.yml")
+    uri = URI("https://raw.githubusercontent.com/getlago/lago-api/main/config/versions.yml")
     response = Net::HTTP.get(uri)
     YAML.load(response)
   end
