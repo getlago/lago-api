@@ -102,8 +102,6 @@ RSpec.describe DataExports::Csv::Invoices do
       .with(
         search_term:,
         status:,
-        page: nil,
-        limit: nil,
         filters:
       )
       .and_return(query_results)

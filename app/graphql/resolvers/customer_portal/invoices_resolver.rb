@@ -15,12 +15,14 @@ module Resolvers
       type Types::Invoices::Object.collection_type, null: false
 
       def resolve(status: nil, page: nil, limit: nil, search_term: nil)
-        query = InvoicesQuery.new(organization: context[:customer_portal_user].organization)
+        query = InvoicesQuery.new(
+          organization: context[:customer_portal_user],
+          pagination: {page:, limit:}
+        )
+
         result = query.call(
           customer_id: context[:customer_portal_user].id,
           search_term:,
-          page:,
-          limit:,
           status:
         )
 

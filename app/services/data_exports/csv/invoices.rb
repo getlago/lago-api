@@ -89,8 +89,6 @@ module DataExports
         InvoicesQuery.new(organization: organization).call(
           search_term:,
           status:,
-          page: nil,
-          limit: nil,
           filters:
         )
       end

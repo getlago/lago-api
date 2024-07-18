@@ -19,12 +19,10 @@ module Resolvers
       type Types::Invoices::Object.collection_type, null: false
 
       def resolve(customer_id: nil, status: nil, page: nil, limit: nil, search_term: nil)
-        query = InvoicesQuery.new(organization: current_organization)
+        query = InvoicesQuery.new(organization: current_organization, pagination: {page:, limit:})
         result = query.call(
           search_term:,
           customer_id:,
-          page:,
-          limit:,
           status:
         )
 

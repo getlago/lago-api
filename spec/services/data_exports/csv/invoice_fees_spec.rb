@@ -213,8 +213,6 @@ RSpec.describe DataExports::Csv::InvoiceFees do
       .with(
         search_term:,
         status:,
-        page: nil,
-        limit: nil,
         filters:
       )
       .and_return(query_results)
