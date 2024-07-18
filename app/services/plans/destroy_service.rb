@@ -20,7 +20,7 @@ module Plans
 
       # NOTE: Finalize all draft invoices.
       invoices = Invoice.draft.joins(:plans).where(plans: {id: plan.id}).distinct
-      invoices.find_each { |invoice| Invoices::FinalizeService.call(invoice:) }
+      invoices.find_each { |invoice| Invoices::RefreshDraftAndFinalizeService.call(invoice:) }
 
       plan.pending_deletion = false
       plan.discard!

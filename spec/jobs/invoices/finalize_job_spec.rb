@@ -8,11 +8,11 @@ RSpec.describe Invoices::FinalizeJob, type: :job do
   let(:result) { BaseService::Result.new }
 
   let(:finalize_service) do
-    instance_double(Invoices::FinalizeService)
+    instance_double(Invoices::RefreshDraftAndFinalizeService)
   end
 
   it 'delegates to the Generate service' do
-    allow(Invoices::FinalizeService).to receive(:new)
+    allow(Invoices::RefreshDraftAndFinalizeService).to receive(:new)
       .with(invoice:)
       .and_return(finalize_service)
     allow(finalize_service).to receive(:call)
@@ -20,7 +20,7 @@ RSpec.describe Invoices::FinalizeJob, type: :job do
 
     described_class.perform_now(invoice)
 
-    expect(Invoices::FinalizeService).to have_received(:new)
+    expect(Invoices::RefreshDraftAndFinalizeService).to have_received(:new)
     expect(finalize_service).to have_received(:call)
   end
 end

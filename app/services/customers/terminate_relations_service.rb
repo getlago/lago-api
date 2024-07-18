@@ -19,7 +19,7 @@ module Customers
       customer.subscriptions.pending.find_each(&:mark_as_canceled!)
 
       # NOTE: Finalize all draft invoices.
-      customer.invoices.draft.find_each { |invoice| Invoices::FinalizeService.call(invoice:) }
+      customer.invoices.draft.find_each { |invoice| Invoices::RefreshDraftAndFinalizeService.call(invoice:) }
 
       # NOTE: Terminate applied coupons
       customer.applied_coupons.active.find_each do |applied_coupon|

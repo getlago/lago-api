@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Invoices
-  class FinalizeService < BaseService
+  class RefreshDraftAndFinalizeService < BaseService
     def initialize(invoice:)
       @invoice = invoice
       super
