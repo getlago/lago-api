@@ -245,7 +245,7 @@ class Invoice < ApplicationRecord
   end
 
   def refundable_amount_cents
-    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !succeeded?
+    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !payment_succeeded?
 
     amount = creditable_amount_cents -
       credits.where(before_taxes: false).sum(:amount_cents) -
