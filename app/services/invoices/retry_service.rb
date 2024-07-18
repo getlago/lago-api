@@ -18,13 +18,12 @@ module Invoices
         return result.service_failure!(code: 'taxes', message: 'fetching failed')
       end
 
-      @taxes_fees = taxes_result.fees
+      provider_taxes = taxes_result.fees
 
       ActiveRecord::Base.transaction do
         invoice.status = :finalized
 
-        # TODO: pass provider taxes
-        Invoices::ComputeAmountsFromFees.call(invoice:)
+        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes:)
 
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
@@ -55,7 +54,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :taxes_fees
+    attr_accessor :invoice
 
     def should_deliver_email?
       License.premium? &&
