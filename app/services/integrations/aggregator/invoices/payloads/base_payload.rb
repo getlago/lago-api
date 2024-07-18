@@ -11,7 +11,7 @@ module Integrations
             @invoice = invoice
             @integration_customer = integration_customer
             @type = type
-            @remaining_taxes_amount_cents = invoice.taxes_amount_cents - (invoice.fees.sum(:taxes_amount_cents).round + discounts.sum { |f| f['taxes_amount_cents'] }.round)
+            @remaining_taxes_amount_cents = invoice.taxes_amount_cents - (invoice.fees.sum(:taxes_amount_cents).round)
           end
 
           def body
