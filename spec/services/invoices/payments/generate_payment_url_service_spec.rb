@@ -75,7 +75,7 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService, type: :service do
     end
 
     context 'when invoice payment status is invalid' do
-      before { invoice.succeeded! }
+      before { invoice.payment_succeeded! }
 
       it 'returns an error' do
         result = generate_payment_url_service.call

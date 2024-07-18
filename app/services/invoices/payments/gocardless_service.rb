@@ -55,7 +55,7 @@ module Invoices
 
         result.payment = payment
         result.invoice = payment.invoice
-        return result if payment.invoice.succeeded?
+        return result if payment.invoice.payment_succeeded?
 
         payment.update!(status:)
 
@@ -74,7 +74,7 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def should_process_payment?
-        return false if invoice.succeeded? || invoice.voided?
+        return false if invoice.payment_succeeded? || invoice.voided?
         return false if gocardless_payment_provider.blank?
 
         customer&.gocardless_customer&.provider_customer_id

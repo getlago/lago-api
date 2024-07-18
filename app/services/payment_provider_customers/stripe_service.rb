@@ -252,7 +252,7 @@ module PaymentProviderCustomers
 
     def reprocess_pending_invoices(customer)
       invoices = customer.invoices
-        .pending
+        .payment_pending
         .where(ready_for_payment_processing: true)
         .where(status: 'finalized')
 

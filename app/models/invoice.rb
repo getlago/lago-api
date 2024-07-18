@@ -53,7 +53,7 @@ class Invoice < ApplicationRecord
   STATUS = %i[draft finalized voided generating].freeze
 
   enum invoice_type: INVOICE_TYPES
-  enum payment_status: PAYMENT_STATUS
+  enum payment_status: PAYMENT_STATUS, _prefix: :payment
   enum status: STATUS
 
   aasm column: 'status', timestamps: true do
@@ -245,7 +245,7 @@ class Invoice < ApplicationRecord
   end
 
   def refundable_amount_cents
-    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !succeeded?
+    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !payment_succeeded?
 
     amount = creditable_amount_cents -
       credits.where(before_taxes: false).sum(:amount_cents) -
@@ -260,7 +260,7 @@ class Invoice < ApplicationRecord
   def voidable?
     return false if payment_dispute_lost_at? || credit_notes.where.not(credit_status: :voided).any?
 
-    finalized? && (pending? || failed?)
+    finalized? && (payment_pending? || payment_failed?)
   end
 
   def different_boundaries_for_subscription_and_charges(subscription)

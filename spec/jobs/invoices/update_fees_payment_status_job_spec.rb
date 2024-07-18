@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::UpdateFeesPaymentStatusJob, type: :job do
-  let(:invoice) { create(:invoice, payment_status: 'succeeded') }
+  let(:invoice) { create(:invoice, payment_status: :succeeded) }
   let(:fee) { create(:fee, invoice:) }
 
   before { fee }
