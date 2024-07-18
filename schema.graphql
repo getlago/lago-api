@@ -5496,7 +5496,7 @@ type Query {
   """
   Query invoice collections of a customer portal user
   """
-  customerPortalInvoiceCollections(months: Int): FinalizedInvoiceCollectionCollection!
+  customerPortalInvoiceCollections(expireCache: Boolean, months: Int): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoices of a customer
@@ -5511,7 +5511,7 @@ type Query {
   """
   Query overdue balances of a customer portal user
   """
-  customerPortalOverdueBalances(months: Int): OverdueBalanceCollection!
+  customerPortalOverdueBalances(expireCache: Boolean, months: Int): OverdueBalanceCollection!
 
   """
   Query a customer portal user

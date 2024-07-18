@@ -88,6 +88,12 @@ module Analytics
           args[:months]
         ].join('/')
       end
+
+      def expire_cache_for_customer(organization_id, external_customer_id)
+        Rails.cache.delete_matched(
+          "invoice-collection/#{Date.current.strftime("%Y-%m-%d")}/#{organization_id}*#{external_customer_id}*"
+        )
+      end
     end
   end
 end
