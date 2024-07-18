@@ -10,6 +10,8 @@ module Resolvers
 
         argument :months, Integer, required: false
 
+        argument :expire_cache, Boolean, required: false
+
         type Types::Analytics::OverdueBalances::Object.collection_type, null: false
 
         def resolve(**args)

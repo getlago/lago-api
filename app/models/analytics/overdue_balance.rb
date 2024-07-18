@@ -5,19 +5,6 @@ module Analytics
     self.abstract_class = true
 
     class << self
-      def find_all_by(organization_id, **args)
-        if args[:expire_cache] == true && args[:external_customer_id].present?
-          expire_cache_for_customer(organization_id, args[:external_customer_id])
-        end
-
-        Rails.cache.fetch(cache_key(organization_id, **args), expires_in: cache_expiration) do
-          sql = query(organization_id, **args)
-
-          result = ActiveRecord::Base.connection.exec_query(sql)
-          result.to_a
-        end
-      end
-
       def query(organization_id, **args)
         if args[:external_customer_id].present?
           and_external_customer_id_sql = sanitize_sql(
@@ -102,7 +89,9 @@ module Analytics
       end
 
       def expire_cache_for_customer(organization_id, external_customer_id)
-        Rails.cache.delete_matched("overdue-balance*#{organization_id}*#{external_customer_id}*")
+        Rails.cache.delete_matched(
+          "overdue-balance/#{Date.current.strftime("%Y-%m-%d")}/#{organization_id}*#{external_customer_id}*"
+        )
       end
     end
   end
