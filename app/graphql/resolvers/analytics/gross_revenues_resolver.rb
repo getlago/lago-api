@@ -13,6 +13,8 @@ module Resolvers
       argument :currency, Types::CurrencyEnum, required: false
       argument :external_customer_id, String, required: false
 
+      argument :expire_cache, Boolean, required: false
+
       type Types::Analytics::GrossRevenues::Object.collection_type, null: false
 
       def resolve(**args)

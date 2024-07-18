@@ -6,8 +6,8 @@ RSpec.describe Resolvers::Analytics::GrossRevenuesResolver, type: :graphql do
   let(:required_permission) { 'analytics:view' }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum, $externalCustomerId: String) {
-        grossRevenues(currency: $currency, externalCustomerId: $externalCustomerId) {
+      query($currency: CurrencyEnum, $externalCustomerId: String, $expireCache: Boolean) {
+        grossRevenues(currency: $currency, externalCustomerId: $externalCustomerId, expireCache: $expireCache) {
           collection {
             month
             amountCents
