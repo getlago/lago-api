@@ -63,12 +63,21 @@ module Integrations
 
           def tax_breakdown(breakdown)
             breakdown.map do |b|
-              OpenStruct.new(
-                name: b['name'],
-                rate: b['rate'],
-                tax_amount: b['tax_amount'],
-                type: b['type']
-              )
+              if b['type'] == 'exempt'
+                OpenStruct.new(
+                  name: b['reason'],
+                  rate: '0.00',
+                  tax_amount: 0,
+                  type: b['type']
+                )
+              else
+                OpenStruct.new(
+                  name: b['name'],
+                  rate: b['rate'],
+                  tax_amount: b['tax_amount'],
+                  type: b['type']
+                )
+              end
             end
           end
         end

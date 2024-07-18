@@ -127,6 +127,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           aggregate_failures do
             expect(result).to be_success
             expect(result.fees.first['tax_breakdown'].first['rate']).to eq('0.10')
+            expect(result.fees.first['tax_breakdown'].first['name']).to eq('GST/HST')
+            expect(result.fees.first['tax_breakdown'].last['name']).to eq('reverseCharge')
+            expect(result.fees.first['tax_breakdown'].last['type']).to eq('exempt')
+            expect(result.fees.first['tax_breakdown'].last['rate']).to eq('0.00')
           end
         end
       end

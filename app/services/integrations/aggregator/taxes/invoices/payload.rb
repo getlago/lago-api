@@ -34,8 +34,15 @@ module Integrations
           end
 
           def fee_item(fee)
-            # TODO: Update later with other fee types
-            mapped_item = add_on_item(fee)
+            mapped_item = if fee.charge?
+              billable_metric_item(fee)
+            elsif fee.add_on_id.present?
+              add_on_item(fee)
+            elsif fee.commitment?
+              commitment_item
+            elsif fee.subscription?
+              subscription_item
+            end
 
             {
               'item_id' => fee.item_id,

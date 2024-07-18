@@ -62,4 +62,44 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
   it 'sets total_amount_cents' do
     expect { compute_amounts.call }.to change(invoice, :total_amount_cents).from(0).to(559)
   end
+
+  context 'when taxes are fetched from external provider' do
+    let(:integration) { create(:anrok_integration, organization:) }
+    let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+    let(:fee2) { create(:fee, invoice: nil) }
+
+    let(:fee_taxes) do
+      OpenStruct.new(
+        item_id: fee1.subscription.id,
+        item_code: "lago_default_b2b",
+        tax_breakdown: [
+          OpenStruct.new(name: 'tax 1', type: 'type1', rate: '0.50', tax_amount: 75.5),
+          OpenStruct.new(name: 'tax 2', type: 'type2', rate: '0.30', tax_amount: 45.3)
+        ]
+      )
+    end
+
+    before do
+      integration_customer
+
+      invoice.credits.destroy_all
+    end
+
+    it 'creates fee and invoice applied taxes and calculate totals' do
+      described_class.new(invoice:, provider_taxes: [fee_taxes]).call
+
+      aggregate_failures do
+        expect(fee1.reload.applied_taxes.count).to eq(2)
+        expect(fee1.taxes_rate).to eq(80)
+        expect(fee1.taxes_amount_cents).to eq(121) # 75 + 45
+
+        expect(invoice.fees_amount_cents).to eq(151)
+        expect(invoice.sub_total_excluding_taxes_amount_cents).to eq(151)
+        expect(invoice.taxes_amount_cents).to eq(121)
+        expect(invoice.sub_total_including_taxes_amount_cents).to eq(272)
+        expect(invoice.taxes_rate).to eq(80)
+        expect(invoice.total_amount_cents).to eq(272)
+      end
+    end
+  end
 end
