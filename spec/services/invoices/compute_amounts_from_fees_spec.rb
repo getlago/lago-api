@@ -91,7 +91,7 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
       aggregate_failures do
         expect(fee1.reload.applied_taxes.count).to eq(2)
         expect(fee1.taxes_rate).to eq(80)
-        expect(fee1.taxes_amount_cents).to eq(121) # 75 + 45
+        expect(fee1.taxes_amount_cents).to eq(121)
 
         expect(invoice.fees_amount_cents).to eq(151)
         expect(invoice.sub_total_excluding_taxes_amount_cents).to eq(151)
