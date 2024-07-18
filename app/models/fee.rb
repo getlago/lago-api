@@ -38,7 +38,7 @@ class Fee < ApplicationRecord
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum fee_type: FEE_TYPES
-  enum payment_status: PAYMENT_STATUS
+  enum payment_status: PAYMENT_STATUS, _prefix: :payment
 
   validates :amount_currency, inclusion: {in: currency_list}
   validates :units, numericality: {greated_than_or_equal_to: 0}
