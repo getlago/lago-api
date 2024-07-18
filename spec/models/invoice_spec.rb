@@ -18,6 +18,8 @@ RSpec.describe Invoice, type: :model do
     expect(described_class::STATUS).to match(draft: 0, finalized: 1, voided: 2, generating: 3, failed: 4, open: 5)
   end
 
+  it { is_expected.to have_many(:integration_error_details) }
+
   describe 'validation' do
     describe 'of payment dispute lost absence' do
       context 'when invoice is not voided' do
