@@ -95,7 +95,7 @@ module Customers
       track_customer_created(customer)
       result
     rescue BaseService::ServiceFailure => e
-      result.fail_with_error!(e)
+      result.validation_failure!(errors: e.message)
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
