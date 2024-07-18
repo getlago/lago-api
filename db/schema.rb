@@ -619,6 +619,17 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150221) do
     t.index ["integration_id"], name: "index_integration_customers_on_integration_id"
   end
 
+  create_table "integration_error_details", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.uuid "owner_id", null: false
+    t.uuid "integration_id", null: false
+    t.jsonb "details", default: {}, null: false
+    t.datetime "deleted_at"
+    t.index ["deleted_at"], name: "index_integration_error_details_on_deleted_at"
+    t.index ["integration_id"], name: "index_integration_error_details_on_integration_id"
+    t.index ["owner_type", "owner_id"], name: "index_integration_error_details_on_owner"
+  end
+
   create_table "integration_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "integration_id", null: false
     t.integer "item_type", null: false
@@ -1151,6 +1162,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150221) do
   add_foreign_key "integration_collection_mappings", "integrations"
   add_foreign_key "integration_customers", "customers"
   add_foreign_key "integration_customers", "integrations"
+  add_foreign_key "integration_error_details", "integrations"
   add_foreign_key "integration_items", "integrations"
   add_foreign_key "integration_mappings", "integrations"
   add_foreign_key "integration_resources", "integrations"
