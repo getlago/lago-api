@@ -11,8 +11,7 @@ module Invoices
       return result.not_found_failure!(resource: 'invoice') if invoice.nil?
 
       ActiveRecord::Base.transaction do
-        self.result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
-        result.raise_if_error!
+        Invoices::RefreshDraftService.call(invoice:, context: :finalize).raise_if_error!
 
         invoice.status = :finalized
         invoice.issuing_date = issuing_date
@@ -22,8 +21,10 @@ module Invoices
         invoice.credit_notes.each(&:finalized!)
       end
 
-      SendWebhookJob.perform_later('invoice.created', result.invoice)
-      GeneratePdfAndNotifyJob.perform_later(invoice: invoice.reload, email: should_deliver_email?)
+      result.invoice = invoice.reload
+
+      SendWebhookJob.perform_later('invoice.created', invoice)
+      GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
       Invoices::Payments::CreateService.new(invoice).call
