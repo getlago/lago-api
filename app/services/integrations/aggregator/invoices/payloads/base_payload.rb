@@ -90,7 +90,7 @@ module Integrations
 
               output << {
                 'external_id' => coupon_item.external_id,
-                'description' => 'Coupon',
+                'description' => 'Coupons',
                 'units' => 1,
                 'precise_unit_amount' => -amount(invoice.coupons_amount_cents, resource: invoice),
                 'taxes_amount_cents' => -(tax_diff_amount_cents || 0).abs,

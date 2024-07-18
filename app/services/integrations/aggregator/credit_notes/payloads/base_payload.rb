@@ -10,7 +10,6 @@ module Integrations
 
             @credit_note = credit_note
             @integration_customer = integration_customer
-            @remaining_coupons_amount_cents = credit_note.coupons_adjustment_amount_cents
           end
 
           def body
@@ -22,14 +21,14 @@ module Integrations
                 'number' => credit_note.number,
                 'currency' => credit_note.currency,
                 'type' => 'ACCRECCREDIT',
-                'fees' => credit_note_items_with_adjusted_taxes(credit_note_items)
+                'fees' => credit_note_items_with_adjusted_taxes(credit_note_items) + coupons
               }
             ]
           end
 
           private
 
-          attr_reader :integration_customer, :credit_note, :remaining_coupons_amount_cents
+          attr_reader :integration_customer, :credit_note
 
           def credit_note_items
             @credit_note_items ||= credit_note.items.map { |credit_note_item| item(credit_note_item) }
@@ -52,21 +51,6 @@ module Integrations
             end
           end
 
-          def coupons_amount_cents(item)
-            return 0 if remaining_coupons_amount_cents <= 0
-
-            if remaining_coupons_amount_cents > item.amount_cents
-              coupons_amount_cents = item.amount_cents
-
-              @remaining_coupons_amount_cents = remaining_coupons_amount_cents - item.amount_cents
-            else
-              coupons_amount_cents = remaining_coupons_amount_cents
-              @remaining_coupons_amount_cents = 0
-            end
-
-            coupons_amount_cents
-          end
-
           def item(credit_note_item)
             fee = credit_note_item.fee
 
@@ -84,22 +68,39 @@ module Integrations
 
             return {} unless mapped_item
 
-            precise_unit_amount = credit_note_item.amount_cents - coupons_amount_cents(credit_note_item)
+            precise_unit_amount = credit_note_item.amount_cents
 
             {
               'external_id' => mapped_item.external_id,
               'description' => fee.subscription? ? 'Subscription' : fee.invoice_name,
               'units' => (precise_unit_amount > 0) ? 1 : 0,
-              'precise_unit_amount' => amount(credit_note_item.amount_cents - coupons_amount_cents(credit_note_item), resource: credit_note_item.credit_note),
-              # 'amount_cents' => credit_note_item.amount_cents - coupons_amount_cents(credit_note_item)
+              'precise_unit_amount' => amount(precise_unit_amount, resource: credit_note_item.credit_note),
               'account_code' => mapped_item.external_account_code,
               'taxes_amount_cents' => amount(taxes_amount_cents(credit_note_item), resource: credit_note_item.credit_note)
             }
           end
 
           def taxes_amount_cents(credit_note_item)
-            (credit_note_item.amount_cents - credit_note_item.precise_coupons_amount_cents) *
-              credit_note_item.credit_note.taxes_rate
+            credit_note_item.amount_cents * credit_note_item.credit_note.taxes_rate
+          end
+
+          def coupons
+            output = []
+
+            coupons_amount_cents = credit_note.coupons_adjustment_amount_cents
+            if coupons_amount_cents > 0
+
+              output << {
+                'external_id' => coupon_item.external_id,
+                'description' => 'Coupons',
+                'units' => 1,
+                'precise_unit_amount' => -amount(coupons_amount_cents, resource: credit_note),
+                'taxes_amount_cents' => 0,
+                'account_code' => coupon_item.external_account_code
+              }
+            end
+
+            output
           end
         end
       end
