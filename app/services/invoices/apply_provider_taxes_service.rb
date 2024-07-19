@@ -2,16 +2,14 @@
 
 module Invoices
   class ApplyProviderTaxesService < BaseService
-    def initialize(invoice:)
+    def initialize(invoice:, provider_taxes: nil)
       @invoice = invoice
-      @provider_taxes = fetch_provider_taxes_result
+      @provider_taxes = provider_taxes || fetch_provider_taxes_result.fees
 
       super
     end
 
     def call
-      provider_taxes.raise_if_error!
-
       result.applied_taxes = []
       applied_taxes_amount_cents = 0
       taxes_rate = 0
@@ -59,7 +57,7 @@ module Invoices
       return @applicable_taxes if defined? @applicable_taxes
 
       output = {}
-      provider_taxes.fees.each do |fee_taxes|
+      provider_taxes.each do |fee_taxes|
         fee_taxes.tax_breakdown.each do |tax|
           key = calculate_key(tax)
 
@@ -118,7 +116,8 @@ module Invoices
     end
 
     def fetch_provider_taxes_result
-      Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:)
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:)
+      taxes_result.raise_if_error!
     end
 
     def calculate_key(tax)

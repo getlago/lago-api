@@ -23,6 +23,10 @@
               "rate": "0.10",
               "tax_amount": 990,
               "type": "tax_exempt"
+            },
+            {
+              "reason": "reverseCharge",
+              "type": "exempt"
             }
           ]
         }

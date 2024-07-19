@@ -114,12 +114,19 @@ RSpec.describe Mutations::Integrations::Anrok::FetchDraftInvoiceTaxes, type: :gr
       expect(fee['amountCents']).to eq('9900')
       expect(fee['taxAmountCents']).to eq('990')
 
-      breakdown = fee['taxBreakdown'].first
+      breakdown1 = fee['taxBreakdown'].first
 
-      expect(breakdown['name']).to eq('GST/HST')
-      expect(breakdown['rate']).to eq(0.1)
-      expect(breakdown['taxAmount']).to eq('990')
-      expect(breakdown['type']).to eq('tax_exempt')
+      expect(breakdown1['name']).to eq('GST/HST')
+      expect(breakdown1['rate']).to eq(0.1)
+      expect(breakdown1['taxAmount']).to eq('990')
+      expect(breakdown1['type']).to eq('tax_exempt')
+
+      breakdown2 = fee['taxBreakdown'].last
+
+      expect(breakdown2['name']).to eq('reverseCharge')
+      expect(breakdown2['rate']).to eq(0.0)
+      expect(breakdown2['taxAmount']).to eq('0')
+      expect(breakdown2['type']).to eq('exempt')
     end
   end
 end
