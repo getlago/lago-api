@@ -1,13 +1,12 @@
 # frozen_string_literal: true
 
 class CouponsQuery < BaseQuery
-  def call(search_term:, page:, limit:, status:, filters: {})
-    @search_term = search_term
-
+  def call
     coupons = base_scope.result
-    coupons = coupons.where(id: filters[:ids]) if filters[:ids].present?
-    coupons = coupons.where(status:) if status.present?
-    coupons = coupons.order_by_status_and_expiration.page(page).per(limit)
+    coupons = paginate(coupons)
+    coupons = coupons.order_by_status_and_expiration
+
+    coupons = with_status(coupons) if filters.status.present?
 
     result.coupons = coupons
     result
@@ -15,19 +14,21 @@ class CouponsQuery < BaseQuery
 
   private
 
-  attr_reader :search_term
-
   def base_scope
     Coupon.where(organization:).ransack(search_params)
   end
 
   def search_params
-    return nil if search_term.blank?
+    return if search_term.blank?
 
     {
       m: 'or',
       name_cont: search_term,
       code_cont: search_term
     }
+  end
+
+  def with_status(scope)
+    scope.where(status: filters.status)
   end
 end
