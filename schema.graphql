@@ -5533,15 +5533,7 @@ type Query {
   """
   Query customers of an organization
   """
-  customers(
-    """
-    List of customer Lago ID to fetch
-    """
-    ids: [String!]
-    limit: Int
-    page: Int
-    searchTerm: String
-  ): CustomerCollection!
+  customers(limit: Int, page: Int, searchTerm: String): CustomerCollection!
 
   """
   Query events of an organization
