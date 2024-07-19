@@ -1897,7 +1897,7 @@ input CreateDataExportsInvoicesInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  filters: FiltersInput!
+  filters: DataExportInvoiceFiltersInput!
   format: DataExportFormatTypeEnum!
   resourceType: ExportTypeEnum!
 }
@@ -3115,6 +3115,22 @@ enum DataExportFormatTypeEnum {
   csv
 }
 
+"""
+Export Invoices search query and filters input argument
+"""
+input DataExportInvoiceFiltersInput {
+  currency: CurrencyEnum
+  customerExternalId: String
+  invoiceType: [InvoiceTypeEnum!]
+  issuingDateFrom: ISO8601Date
+  issuingDateTo: ISO8601Date
+  paymentDisputeLost: Boolean
+  paymentOverdue: Boolean
+  paymentStatus: [InvoicePaymentStatusTypeEnum!]
+  searchTerm: String
+  status: [InvoiceStatusTypeEnum!]
+}
+
 enum DataExportStatusEnum {
   completed
   failed
@@ -3621,22 +3637,6 @@ input FetchIntegrationTaxItemsInput {
   """
   clientMutationId: String
   integrationId: ID!
-}
-
-"""
-Export Invoices search query and filters input argument
-"""
-input FiltersInput {
-  currency: CurrencyEnum
-  customerExternalId: String
-  invoiceType: InvoiceTypeEnum
-  issuingDateFrom: ISO8601Date
-  issuingDateTo: ISO8601Date
-  paymentDisputeLost: Boolean
-  paymentOverdue: Boolean
-  paymentStatus: [InvoicePaymentStatusTypeEnum!]
-  searchTerm: String
-  status: InvoiceStatusTypeEnum
 }
 
 """
@@ -5668,7 +5668,7 @@ type Query {
   """
   Query invoices
   """
-  invoices(currency: CurrencyEnum, customerExternalId: String, invoiceType: InvoiceTypeEnum, issuingDateFrom: ISO8601Date, issuingDateTo: ISO8601Date, limit: Int, page: Int, paymentDisputeLost: Boolean, paymentOverdue: Boolean, paymentStatus: [InvoicePaymentStatusTypeEnum!], searchTerm: String, status: InvoiceStatusTypeEnum): InvoiceCollection!
+  invoices(currency: CurrencyEnum, customerExternalId: String, invoiceType: [InvoiceTypeEnum!], issuingDateFrom: ISO8601Date, issuingDateTo: ISO8601Date, limit: Int, page: Int, paymentDisputeLost: Boolean, paymentOverdue: Boolean, paymentStatus: [InvoicePaymentStatusTypeEnum!], searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
 
   """
   Query memberships of an organization

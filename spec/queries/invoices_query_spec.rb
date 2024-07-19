@@ -155,6 +155,29 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
+  context 'when filtering by succeeded and failed payment_status' do
+    it 'returns 1 invoices' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        payment_status: ['succeeded', 'failed'],
+        page: 1,
+        limit: 10
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(result.invoices.count).to eq(2)
+        expect(returned_ids).to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+      end
+    end
+  end
+
   context 'when filtering by payment dispute lost' do
     it 'returns 1 invoices' do
       result = invoice_query.call(
