@@ -11,8 +11,6 @@ module Integrations
               Integrations::Aggregator::Payments::Payloads::Netsuite.new(integration:, payment:)
             when 'Integrations::XeroIntegration'
               Integrations::Aggregator::Payments::Payloads::Xero.new(integration:, payment:)
-            when 'Integrations::AnrokIntegration'
-              Integrations::Aggregator::Payments::Payloads::Anrok.new(integration:, payment:)
             else
               raise(NotImplementedError)
             end

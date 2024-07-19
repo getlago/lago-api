@@ -83,7 +83,6 @@ module CreditNotes
       :description,
       :credit_amount_cents,
       :refund_amount_cents,
-      :remaining_coupons_amount_cents,
       :automatic
 
     delegate :credit_note, to: :result

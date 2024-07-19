@@ -27,8 +27,8 @@ RSpec.describe Integrations::Aggregator::Payments::Payloads::Factory do
     context 'when integration is an anrok integration' do
       let(:integration) { FactoryBot.create(:anrok_integration) }
 
-      it 'returns payload' do
-        expect(subject).to be_a(Integrations::Aggregator::Payments::Payloads::Anrok)
+      it 'raises NotImplemented' do
+        expect { subject }.to raise_error(NotImplementedError)
       end
     end
   end
