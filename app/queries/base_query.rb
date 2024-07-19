@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
 class BaseQuery < BaseService
+  # nil values force Kaminari to apply its default values for page and limit.
+  DEFAULT_PAGINATION_PARAMS = { page: nil, limit: nil }
+
   Pagination = Struct.new(:page, :limit, keyword_init: true)
 
   class Filters < OpenStruct; end
 
-  def initialize(organization:, pagination: nil, filters: Filters.new)
+  def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: Filters.new)
     @organization = organization
     @pagination_params = pagination
     @filters = filters
