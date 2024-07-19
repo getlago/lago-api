@@ -2,7 +2,7 @@
 
 class BaseQuery < BaseService
   # nil values force Kaminari to apply its default values for page and limit.
-  DEFAULT_PAGINATION_PARAMS = { page: nil, limit: nil }
+  DEFAULT_PAGINATION_PARAMS = {page: nil, limit: nil}
 
   Pagination = Struct.new(:page, :limit, keyword_init: true)
 
