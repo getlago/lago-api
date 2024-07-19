@@ -168,40 +168,80 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
         }
       end
 
-      let(:body) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/error_response.json')
-        File.read(path)
-      end
-
-      let(:http_error) { LagoHttpClient::HttpError.new(500, body, nil) }
+      let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
       before do
         allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
       end
 
-      it 'returns an error' do
-        result = service_call
+      context 'when it is a server error' do
+        let(:error_code) { Faker::Number.between(from: 500, to: 599) }
+        let(:code) { 'action_script_runtime_error' }
+        let(:message) { 'submitFields: Missing a required argument: type' }
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq('action_script_runtime_error')
-          expect(result.error.message)
-            .to eq('action_script_runtime_error: submitFields: Missing a required argument: type')
+        let(:body) do
+          path = Rails.root.join('spec/fixtures/integration_aggregator/error_response.json')
+          File.read(path)
+        end
+
+        it 'returns an error' do
+          result = service_call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error.code).to eq(code)
+            expect(result.error.message).to eq("#{code}: #{message}")
+          end
+        end
+
+        it 'delivers an error webhook' do
+          expect { service_call }.to enqueue_job(SendWebhookJob)
+            .with(
+              'customer.accounting_provider_error',
+              customer,
+              provider: 'netsuite',
+              provider_code: integration.code,
+              provider_error: {
+                message:,
+                error_code: code
+              }
+            )
         end
       end
 
-      it 'delivers an error webhook' do
-        expect { service_call }.to enqueue_job(SendWebhookJob)
-          .with(
-            'customer.accounting_provider_error',
-            customer,
-            provider: 'netsuite',
-            provider_code: integration.code,
-            provider_error: {
-              message: 'submitFields: Missing a required argument: type',
-              error_code: 'action_script_runtime_error'
-            }
-          )
+      context 'when it is a client error' do
+        let(:error_code) { 404 }
+        let(:code) { 'invalid_secret_key_format' }
+        let(:message) { 'Authentication failed. The provided secret key is not a UUID v4.' }
+
+        let(:body) do
+          path = Rails.root.join('spec/fixtures/integration_aggregator/error_auth_response.json')
+          File.read(path)
+        end
+
+        it 'returns an error' do
+          result = service_call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error.code).to eq(code)
+            expect(result.error.message).to eq("#{code}: #{message}")
+          end
+        end
+
+        it 'delivers an error webhook' do
+          expect { service_call }.to enqueue_job(SendWebhookJob)
+            .with(
+              'customer.accounting_provider_error',
+              customer,
+              provider: 'netsuite',
+              provider_code: integration.code,
+              provider_error: {
+                message:,
+                error_code: code
+              }
+            )
+        end
       end
     end
   end
