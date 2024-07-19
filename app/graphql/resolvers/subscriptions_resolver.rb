@@ -19,7 +19,7 @@ module Resolvers
     def resolve(page: nil, limit: nil, plan_code: nil, status: nil)
       result = SubscriptionsQuery.call(
         organization: current_organization,
-        pagination: BaseQuery::Pagination.new(page:, limit:),
+        pagination: {page:, limit:},
         filters: BaseQuery::Filters.new({plan_code:, status:})
       )
 

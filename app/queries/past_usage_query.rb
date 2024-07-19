@@ -14,11 +14,13 @@ class PastUsageQuery < BaseQuery
     end
 
     # NOTE: Pagination attributes
-    result.current_page = query_result.current_page
-    result.next_page = query_result.next_page
-    result.prev_page = query_result.prev_page
-    result.total_pages = query_result.total_pages
-    result.total_count = query_result.total_count
+    if pagination
+      result.current_page = query_result.current_page
+      result.next_page = query_result.next_page
+      result.prev_page = query_result.prev_page
+      result.total_pages = query_result.total_pages
+      result.total_count = query_result.total_count
+    end
 
     result
   end

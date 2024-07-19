@@ -19,7 +19,7 @@ module Resolvers
     def resolve(page: nil, limit: nil, integration_id: nil, mapping_type: nil)
       result = ::IntegrationCollectionMappingsQuery.call(
         organization: current_organization,
-        pagination: BaseQuery::Pagination.new(page:, limit:),
+        pagination: {page:, limit:},
         filters: BaseQuery::Filters.new({integration_id:, mapping_type:})
       )
 

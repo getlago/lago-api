@@ -3,10 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe AppliedCouponsQuery, type: :query do
-  subject(:applied_coupons_query) { described_class.new(organization:, pagination:, filters:) }
+  subject(:result) do
+    described_class.call(organization:, pagination:, filters:)
+  end
 
   let(:organization) { create(:organization) }
-  let(:pagination) { BaseQuery::Pagination.new }
+  let(:pagination) { nil }
   let(:filters) { BaseQuery::Filters.new(query_filters) }
 
   let(:query_filters) { {} }
@@ -18,67 +20,55 @@ RSpec.describe AppliedCouponsQuery, type: :query do
 
   before { applied_coupon }
 
-  describe 'call' do
-    it 'returns a list of applied_coupons' do
-      result = applied_coupons_query.call
+  it 'returns a list of applied_coupons' do
+    aggregate_failures do
+      expect(result).to be_success
+      expect(result.applied_coupons.count).to eq(1)
+      expect(result.applied_coupons).to eq([applied_coupon])
+    end
+  end
 
+  context 'when customer is deleted' do
+    let(:customer) { create(:customer, :deleted, organization:) }
+
+    it 'filters the applied_coupons' do
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.applied_coupons.count).to eq(0)
+      end
+    end
+  end
+
+  context 'with pagination' do
+    let(:pagination) { {page: 2, limit: 10} }
+
+    it 'applies the pagination' do
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.applied_coupons.count).to eq(0)
+        expect(result.applied_coupons.current_page).to eq(2)
+      end
+    end
+  end
+
+  context 'with customer filter' do
+    let(:query_filters) { {external_customer_id: customer.external_id} }
+
+    it 'applies the filter' do
       aggregate_failures do
         expect(result).to be_success
         expect(result.applied_coupons.count).to eq(1)
-        expect(result.applied_coupons).to eq([applied_coupon])
       end
     end
+  end
 
-    context 'when customer is deleted' do
-      let(:customer) { create(:customer, :deleted, organization:) }
+  context 'with status filter' do
+    let(:query_filters) { {status: 'terminated'} }
 
-      it 'filters the applied_coupons' do
-        result = applied_coupons_query.call
-
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.applied_coupons.count).to eq(0)
-        end
-      end
-    end
-
-    context 'with pagination' do
-      let(:pagination) { BaseQuery::Pagination.new(page: 2, limit: 10) }
-
-      it 'applies the pagination' do
-        result = applied_coupons_query.call
-
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.applied_coupons.count).to eq(0)
-          expect(result.applied_coupons.current_page).to eq(2)
-        end
-      end
-    end
-
-    context 'with customer filter' do
-      let(:query_filters) { {external_customer_id: customer.external_id} }
-
-      it 'applies the filter' do
-        result = applied_coupons_query.call
-
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.applied_coupons.count).to eq(1)
-        end
-      end
-    end
-
-    context 'with status filter' do
-      let(:query_filters) { {status: 'terminated'} }
-
-      it 'applies the filter' do
-        result = applied_coupons_query.call
-
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.applied_coupons.count).to eq(0)
-        end
+    it 'applies the filter' do
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.applied_coupons.count).to eq(0)
       end
     end
   end

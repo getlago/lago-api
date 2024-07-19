@@ -94,7 +94,7 @@ RSpec.describe DataExports::Csv::Invoices do
 
     allow(InvoicesQuery)
       .to receive(:new)
-      .with(organization: data_export.organization)
+      .with(organization: data_export.organization, pagination: nil)
       .and_return(invoices_query)
 
     allow(invoices_query)
@@ -102,8 +102,6 @@ RSpec.describe DataExports::Csv::Invoices do
       .with(
         search_term:,
         status:,
-        page: nil,
-        limit: nil,
         filters:
       )
       .and_return(query_results)

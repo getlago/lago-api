@@ -29,10 +29,10 @@ module Api
         def past
           result = PastUsageQuery.call(
             organization: current_organization,
-            pagination: BaseQuery::Pagination.new(
+            pagination: {
               page: params[:page],
               limit: params[:per_page] || PER_PAGE
-            ),
+            },
             filters: BaseQuery::Filters.new(past_usage_filters)
           )
 

@@ -43,9 +43,13 @@ module Api
       end
 
       def index
-        result = InvoicesQuery.new(organization: current_organization).call(
-          page: params[:page],
-          limit: params[:per_page] || PER_PAGE,
+        result = InvoicesQuery.new(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          }
+        ).call(
           search_term: params[:search_term],
           payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
           payment_dispute_lost: params[:payment_dispute_lost],

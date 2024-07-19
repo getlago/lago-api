@@ -38,11 +38,9 @@ module Resolvers
       payment_dispute_lost: nil,
       payment_overdue: nil
     )
-      query = InvoicesQuery.new(organization: current_organization)
+      query = InvoicesQuery.new(organization: current_organization, pagination: {page:, limit:})
       result = query.call(
         search_term:,
-        page:,
-        limit:,
         payment_status:,
         payment_dispute_lost:,
         payment_overdue:,
