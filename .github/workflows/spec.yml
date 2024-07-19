@@ -63,7 +63,7 @@ jobs:
         run: bin/rails db:schema:load:primary
       - name: Set up Clickhouse database schema
         run: bin/rails db:migrate:clickhouse
-      - name: Set up Clickhouse database schema
+      - name: Dump Clickhouse database schema
         run: bin/rails db:schema:dump:clickhouse
       - name: Run tests
         run: bundle exec rspec
