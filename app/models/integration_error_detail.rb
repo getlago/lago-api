@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class IntegrationErrorDetail < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
