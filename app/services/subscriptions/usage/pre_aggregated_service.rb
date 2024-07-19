@@ -14,29 +14,32 @@ module Subscriptions
         return result.not_found_failure!(resource: 'subscription') unless subscription
         return result.not_allowed_failure!(code: 'no_active_subscription') unless subscription.active?
 
-        result.usage_units = fetch_usage_units
+        fetch_usage_units
+
         result.fees = []
         compute_usage
 
+        result.amount_cents = result.fees.sum(&:amount_cents)
         result
       end
 
       private
 
       attr_reader :subscription, :timestamp
+      attr_accessor :usage_units
 
       delegate :plan, to: :subscription
 
       def fetch_usage_units
-        aggregation_types.each_with_object({}) do |aggregation_type, usage_units|
+        @usage_units = aggregation_types.each_with_object({}) do |aggregation_type, units|
           aggregator = Events::Stores::Clickhouse::PreAggregated::Factory.new_instance(
             aggregation_type:, subscription:, boundaries:
           )
-          next usage_units unless aggregator # TODO: Handle unsuported aggregation type
+          next units unless aggregator # TODO: Handle unsuported aggregation type
 
           agg_result = aggregator.call
-          usage_units.merge!(agg_result.charges_units)
-          usage_units
+          units.merge!(agg_result.charges_units)
+          units
         end
       end
 
@@ -52,17 +55,16 @@ module Subscriptions
         @boundaries = {
           from_datetime: date_service.from_datetime,
           to_datetime: date_service.to_datetime,
-          charge_from_datetime: date_service.charge_from_datetime,
-          charge_to_datetime: date_service.charge_to_datetime,
+          charges_from_datetime: date_service.charges_from_datetime,
+          charges_to_datetime: date_service.charges_to_datetime,
           issuing_date: date_service.next_end_of_period,
           charges_duration: date_service.charges_duration_in_days
         }
       end
 
       def charges
-        @charges ||= plan.chages
+        @charges ||= plan.charges
           .includes(:billable_metric, filters: {values: :billable_metric_filter})
-          .index_by { |charge| charge.id }
       end
 
       def aggregation_types
@@ -71,7 +73,7 @@ module Subscriptions
 
       def compute_usage
         charges.each do |charge|
-          process_charge(charge, result.usage_units[c.id])
+          process_charge(charge, usage_units[charge.id] || {units: 0.0, grouped_by: {}})
           add_true_up_fee(charge)
         end
       end
@@ -89,10 +91,10 @@ module Subscriptions
       def init_fees(charge, properties:, units:)
         if charge.standard? && properties['grouped_by'].present?
           filter_units[:grouped_by].each do |grouped_by, values|
-            apply_charge_model(charge, values[:units], 0, JSON.parse(grouped_by), properties)
+            apply_charge_model(charge, values[:units], JSON.parse(grouped_by), properties)
           end
         else
-          apply_charge_model(charge, units[:units], 0, {}, properties)
+          apply_charge_model(charge, units[:units], {}, properties)
         end
       end
 
@@ -149,8 +151,8 @@ module Subscriptions
       end
 
       def add_true_up_fee(charge)
-        fees = result.fees.select { |f| f.charge == charge }
-        true_up_fee = Fees::CreateTrueUpService.call(fee: fees.first, amount_cents: fees.sum(&:amount_cents)).true_up_fee
+        charge_fees = result.fees.select { |f| f.charge == charge }
+        true_up_fee = Fees::CreateTrueUpService.call(fee: charge_fees.first, amount_cents: charge_fees.sum(&:amount_cents)).true_up_fee
         result.fees << true_up_fee if true_up_fee
       end
 
