@@ -21,9 +21,9 @@ namespace :db do
     text = File.read(migration_file)
 
     [
-      ENV.fetch('LAGO_KAFKA_BOOTSTRAP_SERVERS', nil),
-      ENV.fetch('LAGO_KAFKA_RAW_EVENTS_TOPIC', nil),
-      ENV.fetch('LAGO_KAFKA_CLICKHOUSE_CONSUMER_GROUP', nil)
+      ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'],
+      ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'],
+      ENV['LAGO_KAFKA_CLICKHOUSE_CONSUMER_GROUP']
     ].compact.each do |value|
       text = text.gsub(value, '*****')
     end
