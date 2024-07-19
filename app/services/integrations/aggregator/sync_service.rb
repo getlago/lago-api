@@ -42,6 +42,7 @@ module Integrations
 
         return [list[:items]] if options[:only_items]
         return [list[:tax_items]] if options[:only_tax_items]
+        return [list[:accounts]] if options[:only_accounts]
 
         list.values
       end

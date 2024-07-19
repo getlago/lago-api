@@ -17,7 +17,12 @@ RSpec.describe Integrations::Aggregator::AccountsService do
         'Provider-Config-Key' => 'netsuite-tba'
       }
     end
-
+    let(:params) do
+      {
+        limit: 450,
+        cursor: ''
+      }
+    end
     let(:aggregator_response) do
       path = Rails.root.join('spec/fixtures/integration_aggregator/accounts_response.json')
       JSON.parse(File.read(path))
@@ -28,7 +33,7 @@ RSpec.describe Integrations::Aggregator::AccountsService do
         .with(accounts_endpoint)
         .and_return(lago_client)
       allow(lago_client).to receive(:get)
-        .with(headers:)
+        .with(headers:, params:)
         .and_return(aggregator_response)
     end
 

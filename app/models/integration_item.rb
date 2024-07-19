@@ -7,7 +7,8 @@ class IntegrationItem < ApplicationRecord
 
   ITEM_TYPES = [
     :standard,
-    :tax
+    :tax,
+    :account
   ].freeze
 
   enum item_type: ITEM_TYPES
