@@ -10,7 +10,6 @@ module Resolvers
     description 'Query credit notes'
 
     argument :customer_id, ID, required: false
-    argument :ids, [ID], required: false, description: 'List of credit notes IDs to fetch'
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false

@@ -5453,16 +5453,7 @@ type Query {
   """
   Query coupons of an organization
   """
-  coupons(
-    """
-    List of coupon IDs to fetch
-    """
-    ids: [ID!]
-    limit: Int
-    page: Int
-    searchTerm: String
-    status: CouponStatusEnum
-  ): CouponCollection!
+  coupons(limit: Int, page: Int, searchTerm: String, status: CouponStatusEnum): CouponCollection!
 
   """
   Query a single credit note
@@ -5482,17 +5473,7 @@ type Query {
   """
   Query credit notes
   """
-  creditNotes(
-    customerId: ID
-
-    """
-    List of credit notes IDs to fetch
-    """
-    ids: [ID!]
-    limit: Int
-    page: Int
-    searchTerm: String
-  ): CreditNoteCollection!
+  creditNotes(customerId: ID, limit: Int, page: Int, searchTerm: String): CreditNoteCollection!
 
   """
   Retrieves currently connected user
