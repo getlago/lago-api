@@ -60,7 +60,6 @@ module V1
             :subscription,
             :customer,
             :charge,
-            :group,
             :billable_metric,
             {charge_filter: {values: :billable_metric_filter}}
           ]
