@@ -108,7 +108,7 @@ module Invoices
         current_usage: true
       )
 
-      {
+      @boundaries = {
         from_datetime: date_service.from_datetime,
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
