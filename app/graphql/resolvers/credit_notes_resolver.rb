@@ -24,14 +24,15 @@ module Resolvers
       search_term: nil,
       customer_id: nil
     )
-      query = CreditNotesQuery.new(organization: current_organization)
-      result = query.call(
-        customer_id:,
+      result = CreditNotesQuery.call(
+        organization: current_organization,
         search_term:,
-        page:,
-        limit:,
         filters: {
-          ids:
+          customer_id:
+        },
+        pagination: {
+          page:,
+          limit:
         }
       )
 
