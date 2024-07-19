@@ -10,7 +10,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: 'invoice') unless invoice
-      #return result.not_allowed_failure!(code: 'invalid_status') unless invoice.failed?
+      return result.not_allowed_failure!(code: 'invalid_status') unless invoice.failed?
 
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
 
@@ -22,6 +22,8 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice.status = :finalized
+        invoice.issuing_date = issuing_date
+        invoice.payment_due_date = payment_due_date
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes:)
 
@@ -98,6 +100,18 @@ module Invoices
       prepaid_credit_result.raise_if_error!
 
       invoice.total_amount_cents -= prepaid_credit_result.prepaid_credit_amount_cents
+    end
+
+    def issuing_date
+      @issuing_date ||= Time.current.in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def payment_due_date
+      @payment_due_date ||= issuing_date + customer.applicable_net_payment_term.days
+    end
+
+    def customer
+      @customer ||= invoice.customer
     end
   end
 end
