@@ -144,7 +144,7 @@ RSpec.describe Invoices::RetryService, type: :service do
       expect { retry_service.call }
         .to change { invoice.reload.number }
         .from("#{organization.document_number_prefix}-DRAFT")
-        .to("#{customer_slug}-#{format('%03d', sequential_id + 1)}")
+        .to("#{customer_slug}-#{format("%03d", sequential_id + 1)}")
     end
 
     it 'generates expected invoice totals' do
