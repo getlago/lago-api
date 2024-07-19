@@ -95,7 +95,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
     let(:query) do
       <<~GQL
         query {
-          invoices(limit: 5, status: draft) {
+          invoices(limit: 5, status: [draft]) {
             collection { id }
             metadata { currentPage, totalCount }
           }
@@ -194,7 +194,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
     let(:query) do
       <<~GQL
         query {
-          invoices(limit: 5, invoiceType: one_off) {
+          invoices(limit: 5, invoiceType: [one_off]) {
             collection { id }
             metadata { currentPage, totalCount }
           }

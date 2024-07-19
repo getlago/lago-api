@@ -38,14 +38,14 @@ RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
           filters: {
             currency: 'USD',
             customerExternalId: 'abc123',
-            invoiceType: 'one_off',
+            invoiceType: ['one_off'],
             issuingDateFrom: '2024-05-23',
             issuingDateTo: '2024-07-01',
             paymentDisputeLost: false,
             paymentOverdue: true,
-            paymentStatus: 'pending',
+            paymentStatus: ['pending'],
             searchTerm: 'service ABC',
-            status: 'finalized'
+            status: ['finalized']
           }
         }
       }

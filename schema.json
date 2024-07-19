@@ -7698,7 +7698,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "INPUT_OBJECT",
-                  "name": "FiltersInput",
+                  "name": "DataExportInvoiceFiltersInput",
                   "ofType": null
                 }
               },
@@ -13444,6 +13444,161 @@
           ]
         },
         {
+          "kind": "INPUT_OBJECT",
+          "name": "DataExportInvoiceFiltersInput",
+          "description": "Export Invoices search query and filters input argument",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "currency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customerExternalId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceType",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "InvoiceTypeEnum",
+                    "ofType": null
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "issuingDateFrom",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "issuingDateTo",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentDisputeLost",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentOverdue",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentStatus",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "InvoicePaymentStatusTypeEnum",
+                    "ofType": null
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "searchTerm",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "status",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "InvoiceStatusTypeEnum",
+                    "ofType": null
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
           "kind": "ENUM",
           "name": "DataExportStatusEnum",
           "description": null,
@@ -16420,145 +16575,6 @@
                   "name": "ID",
                   "ofType": null
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "enumValues": null
-        },
-        {
-          "kind": "INPUT_OBJECT",
-          "name": "FiltersInput",
-          "description": "Export Invoices search query and filters input argument",
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": [
-            {
-              "name": "currency",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "CurrencyEnum",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "customerExternalId",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "invoiceType",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "InvoiceTypeEnum",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "issuingDateFrom",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "issuingDateTo",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601Date",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "paymentDisputeLost",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "paymentOverdue",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "paymentStatus",
-              "description": null,
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "ENUM",
-                    "name": "InvoicePaymentStatusTypeEnum",
-                    "ofType": null
-                  }
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "searchTerm",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "status",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "InvoiceStatusTypeEnum",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -29122,9 +29138,17 @@
                   "name": "invoiceType",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "InvoiceTypeEnum",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "InvoiceTypeEnum",
+                        "ofType": null
+                      }
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
@@ -29238,9 +29262,17 @@
                   "name": "status",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "InvoiceStatusTypeEnum",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "InvoiceStatusTypeEnum",
+                        "ofType": null
+                      }
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
