@@ -15,8 +15,6 @@ class BillableMetricsQuery < BaseQuery
 
   private
 
-  attr_reader :search_term
-
   def base_scope
     BillableMetric.where(organization:).ransack(search_params)
   end
