@@ -173,9 +173,7 @@ RSpec.describe InvoicesQuery, type: :query do
       result = invoice_query.call(
         search_term: nil,
         status: nil,
-        payment_status: ['succeeded', 'failed'],
-        page: 1,
-        limit: 10
+        payment_status: ['succeeded', 'failed']
       )
 
       returned_ids = result.invoices.pluck(:id)
