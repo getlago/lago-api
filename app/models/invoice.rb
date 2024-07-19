@@ -50,7 +50,7 @@ class Invoice < ApplicationRecord
 
   INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
-  STATUS = %i[draft finalized voided generating].freeze
+  STATUS = %i[draft finalized voided generating failed].freeze
 
   enum invoice_type: INVOICE_TYPES
   enum payment_status: PAYMENT_STATUS, _prefix: :payment
@@ -61,6 +61,7 @@ class Invoice < ApplicationRecord
     state :draft
     state :finalized
     state :voided
+    state :failed
 
     event :finalize do
       transitions from: :draft, to: :finalized
