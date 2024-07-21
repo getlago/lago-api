@@ -16,7 +16,7 @@ module Resolvers
 
     type Types::Coupons::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, status: nil, search_term: nil)
+    def resolve(page: nil, limit: nil, status: nil, search_term: nil)
       result = CouponsQuery.call(
         organization: current_organization,
         search_term:,

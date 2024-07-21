@@ -15,7 +15,7 @@ module Resolvers
 
     type Types::Customers::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, search_term: nil)
+    def resolve(page: nil, limit: nil, search_term: nil)
       result = CustomersQuery.call(
         organization: current_organization,
         search_term:,

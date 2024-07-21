@@ -17,7 +17,6 @@ module Resolvers
     type Types::CreditNotes::Object.collection_type, null: false
 
     def resolve(
-      ids: nil,
       page: nil,
       limit: nil,
       search_term: nil,
