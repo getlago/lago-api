@@ -5720,15 +5720,7 @@ type Query {
   """
   Query plans of an organization
   """
-  plans(
-    """
-    List of plan ID to fetch
-    """
-    ids: [String!]
-    limit: Int
-    page: Int
-    searchTerm: String
-  ): PlanCollection!
+  plans(limit: Int, page: Int, searchTerm: String): PlanCollection!
 
   """
   Query a single subscription of an organization
