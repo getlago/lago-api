@@ -7,7 +7,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
-  let(:pagination) { {page: 1, limit: 10} }
+  let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
   let(:membership) { create(:membership) }
@@ -28,6 +28,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
     returned_ids = result.billable_metrics.pluck(:id)
 
     aggregate_failures do
+      expect(result).to be_success
       expect(returned_ids.count).to eq(4)
       expect(returned_ids).to include(billable_metric_first.id)
       expect(returned_ids).to include(billable_metric_second.id)
