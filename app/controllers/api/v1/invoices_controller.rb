@@ -43,19 +43,18 @@ module Api
       end
 
       def index
-        result = InvoicesQuery.new(
+        result = InvoicesQuery.call(
           organization: current_organization,
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
-          }
-        ).call(
+          },
           search_term: params[:search_term],
-          payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
-          payment_dispute_lost: params[:payment_dispute_lost],
-          payment_overdue: (params[:payment_overdue] if %w[true false].include?(params[:payment_overdue])),
-          status: (params[:status] if valid_status?(params[:status])),
           filters: {
+            payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
+            payment_dispute_lost: params[:payment_dispute_lost],
+            payment_overdue: (params[:payment_overdue] if %w[true false].include?(params[:payment_overdue])),
+            status: (params[:status] if valid_status?(params[:status])),
             currency: params[:currency],
             customer_external_id: params[:external_customer_id],
             invoice_type: params[:invoice_type],
