@@ -13,7 +13,7 @@ module Mutations
       type Types::Invoices::Object
 
       def resolve(id:)
-        invoice = context[:customer_portal_user].invoices.not_generating.find_by(id:)
+        invoice = context[:customer_portal_user].invoices.visible.find_by(id:)
         result = ::Invoices::GeneratePdfService.call(invoice:)
         result.success? ? result.invoice : result_error(result)
       end

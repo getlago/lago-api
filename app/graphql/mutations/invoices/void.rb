@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(**args)
         result = ::Invoices::VoidService.call(
-          invoice: current_organization.invoices.not_generating.find_by(id: args[:id])
+          invoice: current_organization.invoices.visible.find_by(id: args[:id])
         )
         result.success? ? result.invoice : result_error(result)
       end

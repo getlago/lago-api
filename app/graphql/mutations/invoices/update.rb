@@ -15,7 +15,7 @@ module Mutations
       type Types::Invoices::Object
 
       def resolve(**args)
-        invoice = context[:current_organization].invoices.not_generating.find_by(id: args[:id])
+        invoice = context[:current_organization].invoices.visible.find_by(id: args[:id])
         result = ::Invoices::UpdateService.new(invoice:, params: args, webhook_notification: true).call
 
         result.success? ? result.invoice : result_error(result)

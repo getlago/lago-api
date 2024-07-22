@@ -19,7 +19,7 @@ module Api
       end
 
       def update
-        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
         result = Invoices::UpdateService.new(
           invoice:,
@@ -35,7 +35,7 @@ module Api
       end
 
       def show
-        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
         return not_found_error(resource: 'invoice') unless invoice
 
@@ -99,7 +99,7 @@ module Api
       end
 
       def refresh
-        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: 'invoice') unless invoice
 
         result = Invoices::RefreshDraftService.call(invoice:)
@@ -123,7 +123,7 @@ module Api
       end
 
       def void
-        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
         result = Invoices::VoidService.call(invoice:)
         if result.success?
@@ -134,7 +134,7 @@ module Api
       end
 
       def lose_dispute
-        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
         result = Invoices::LoseDisputeService.call(invoice:, payment_dispute_lost_at: DateTime.current)
         if result.success?
@@ -145,7 +145,7 @@ module Api
       end
 
       def retry_payment
-        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: 'invoice') unless invoice
 
         result = Invoices::Payments::RetryService.new(invoice:).call
@@ -155,7 +155,7 @@ module Api
       end
 
       def retry
-        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: 'invoice') unless invoice
 
         result = Invoices::RetryService.new(invoice:).call
@@ -167,7 +167,7 @@ module Api
       end
 
       def payment_url
-        invoice = current_organization.invoices.not_generating.includes(:customer).find_by(id: params[:id])
+        invoice = current_organization.invoices.visible.includes(:customer).find_by(id: params[:id])
         return not_found_error(resource: 'invoice') unless invoice
 
         result = ::Invoices::Payments::GeneratePaymentUrlService.call(invoice:)

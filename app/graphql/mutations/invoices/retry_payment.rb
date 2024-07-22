@@ -16,7 +16,7 @@ module Mutations
       type Types::Invoices::Object
 
       def resolve(**args)
-        invoice = current_organization.invoices.not_generating.find_by(id: args[:id])
+        invoice = current_organization.invoices.visible.find_by(id: args[:id])
         result = ::Invoices::Payments::RetryService.new(invoice:).call
 
         result.success? ? result.invoice : result_error(result)
