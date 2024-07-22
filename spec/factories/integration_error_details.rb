@@ -2,6 +2,7 @@
 
 FactoryBot.define do
   factory :integration_error_detail do
-    integration
+    association :owner, factory: %i[invoice].sample
+    association :error_producer, factory: :anrok_integration
   end
 end
