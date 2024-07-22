@@ -457,6 +457,20 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_22_201341) do
     t.index ["organization_id"], name: "index_data_exports_on_organization_id"
   end
 
+  create_table "error_details", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "owner_type", null: false
+    t.uuid "owner_id", null: false
+    t.string "integration_type"
+    t.uuid "integration_id"
+    t.jsonb "details", default: {}, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_error_details_on_deleted_at"
+    t.index ["integration_type", "integration_id"], name: "index_error_details_on_integration"
+    t.index ["owner_type", "owner_id"], name: "index_error_details_on_owner"
+  end
+
   create_table "events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "customer_id"
@@ -602,20 +616,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_22_201341) do
     t.index ["customer_id"], name: "index_integration_customers_on_customer_id"
     t.index ["external_customer_id"], name: "index_integration_customers_on_external_customer_id"
     t.index ["integration_id"], name: "index_integration_customers_on_integration_id"
-  end
-
-  create_table "integration_error_details", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "owner_type", null: false
-    t.uuid "owner_id", null: false
-    t.string "error_producer_type", null: false
-    t.uuid "error_producer_id", null: false
-    t.jsonb "details", default: {}, null: false
-    t.datetime "deleted_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["deleted_at"], name: "index_integration_error_details_on_deleted_at"
-    t.index ["error_producer_type", "error_producer_id"], name: "index_integration_error_details_on_error_producer"
-    t.index ["owner_type", "owner_id"], name: "index_integration_error_details_on_owner"
   end
 
   create_table "integration_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
