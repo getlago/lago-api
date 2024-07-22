@@ -64,7 +64,7 @@ RSpec.describe Invoices::RetryBatchService, type: :service do
 
     context 'when inner service passes error result' do
       before do
-        result.fail_with_error!(BaseService::MethodNotAllowedFailure.new(result, code:'error'))
+        result.fail_with_error!(BaseService::MethodNotAllowedFailure.new(result, code: 'error'))
       end
 
       it 'returns an error' do
