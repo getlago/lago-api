@@ -11,22 +11,34 @@ module Rails::ConsoleMethods
     end
   end
 
-  def delete_invoice(id)
+  def hard_delete_invoice(id)
     invoice = Invoice.find(id)
-    puts "Retrieved invoice #{invoice.id} from organization #{invoice.organization.name}"
+    puts "Going to hard delete invoice from org `#{invoice.organization.name}` (id: #{invoice.id})" # rubocop:disable Rails/Output
 
-    puts "Deleting invoice #{invoice.id}..."
+    puts "Press any key to confirm deletion or CTRL+C to cancel." # rubocop:disable Rails/Output
+    c = $stdin.getch
+
+    if c == "\u0003"
+      puts "Deletion cancelled." # rubocop:disable Rails/Output
+      return invoice
+    end
+
+    puts "Deleting invoice #{invoice.id}..." # rubocop:disable Rails/Output
     ActiveRecord::Base.transaction do
-      invoice.taxes.destroy_all
+      invoice.invoice_subscriptions.destroy_all
+      invoice.credit_notes.destroy_all
+      invoice.fees.each { |f| f.true_up_fee&.destroy! }
       invoice.fees.destroy_all
-      invoice.destroy
+      invoice.taxes.destroy_all
+      invoice.credits.destroy_all
+      invoice.destroy!
     end
 
     begin
       invoice.reload
-      puts "Invoice #{id} could not be deleted. Please try again."
+      puts "Invoice #{id} could not be deleted. Please try again." # rubocop:disable Rails/Output
     rescue ActiveRecord::RecordNotFound
-      puts "Invoice #{id} has been successfully deleted."
+      puts "Invoice #{id} has been successfully deleted." # rubocop:disable Rails/Output
     end
   end
 end
