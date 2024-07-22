@@ -10,8 +10,7 @@ RSpec.describe Invoice, type: :model do
   it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to have_many(:integration_resources) }
-
-  it { is_expected.to have_many(:integration_error_details) }
+  it { is_expected.to have_many(:error_details) }
 
   describe 'validation' do
     describe 'of payment dispute lost absence' do
