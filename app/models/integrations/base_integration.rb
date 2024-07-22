@@ -24,6 +24,7 @@ module Integrations
       class_name: 'IntegrationCustomers::BaseCustomer',
       foreign_key: :integration_id,
       dependent: :destroy
+    has_many :integration_error_details, as: :error_producer
 
     validates :code, uniqueness: {scope: :organization_id}
     validates :name, presence: true
