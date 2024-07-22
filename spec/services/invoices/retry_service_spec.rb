@@ -107,9 +107,9 @@ RSpec.describe Invoices::RetryService, type: :service do
       end
     end
 
-    context 'when invoice is in draft status' do
+    context 'when invoice is not failed' do
       before do
-        invoice.update(status: :draft)
+        invoice.update(status: %i[draft finalized voided generating].sample)
       end
 
       it 'returns an error' do
