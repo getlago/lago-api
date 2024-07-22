@@ -18,7 +18,7 @@ RSpec.describe Integrations::BaseIntegration, type: :model do
   it { is_expected.to have_many(:integration_customers).dependent(:destroy) }
   it { is_expected.to have_many(:integration_items).dependent(:destroy) }
   it { is_expected.to have_many(:integration_resources).dependent(:destroy) }
-  it { is_expected.to have_many(:integration_error_details) }
+  it { is_expected.to have_many(:error_details) }
 
   describe '.secrets_json' do
     it { expect(integration.secrets_json).to eq(secrets) }
