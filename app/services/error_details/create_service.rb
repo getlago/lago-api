@@ -3,8 +3,6 @@
 module ErrorDetails
   class CreateService < BaseService
     def initialize(params:, integration: nil, owner:)
-      @integration = integration
-      @owner = owner
       super(params:, integration:, owner:)
     end
 
@@ -19,8 +17,6 @@ module ErrorDetails
     end
 
     private
-
-    attr_reader :integration, :owner
 
     def create_error_details!
       new_error = ErrorDetail.create!(
