@@ -25,7 +25,9 @@ FactoryBot.define do
     end
 
     trait :with_error do
-      error_details
+      after :create do |i|
+        create(:error_detail, owner: i)
+      end
     end
 
     trait :failed do
