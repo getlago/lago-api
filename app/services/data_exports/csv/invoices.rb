@@ -83,12 +83,12 @@ module DataExports
 
       def query
         filters = resource_query.except(
-        "search_term",
-        "customer_id",
-        "payment_dispute_lost",
-        "payment_overdue",
-        "payment_status",
-        "status"
+          "search_term",
+          "customer_id",
+          "payment_dispute_lost",
+          "payment_overdue",
+          "payment_status",
+          "status"
         )
 
         InvoicesQuery.new(organization: organization, pagination: nil).call(

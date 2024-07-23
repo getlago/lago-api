@@ -39,7 +39,7 @@ RSpec.describe DataExports::Csv::Invoices do
       "customer_external_id" => customer_external_id,
       "invoice_type" => invoice_type,
       "issuing_date_from" => issuing_date_from,
-      "issuing_date_to" => issuing_date_to,
+      "issuing_date_to" => issuing_date_to
     }
   end
 
@@ -105,7 +105,7 @@ RSpec.describe DataExports::Csv::Invoices do
         payment_dispute_lost:,
         payment_overdue:,
         payment_status:,
-        status:,
+        status:
       )
       .and_return(query_results)
   end
