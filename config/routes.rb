@@ -55,6 +55,7 @@ Rails.application.routes.draw do
         post :download, on: :member
         post :void, on: :member
         post :lose_dispute, on: :member
+        post :retry, on: :member
         post :retry_payment, on: :member
         post :payment_url, on: :member
         put :refresh, on: :member

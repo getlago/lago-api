@@ -154,6 +154,18 @@ module Api
         head(:ok)
       end
 
+      def retry
+        invoice = current_organization.invoices.not_generating.find_by(id: params[:id])
+        return not_found_error(resource: 'invoice') unless invoice
+
+        result = Invoices::RetryService.new(invoice:).call
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       def payment_url
         invoice = current_organization.invoices.not_generating.includes(:customer).find_by(id: params[:id])
         return not_found_error(resource: 'invoice') unless invoice
