@@ -462,12 +462,16 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_22_201341) do
     t.uuid "owner_id", null: false
     t.string "integration_type"
     t.uuid "integration_id"
+    t.uuid "organization_id", null: false
+    t.string "error_code", default: "not_provided", null: false
     t.jsonb "details", default: {}, null: false
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_error_details_on_deleted_at"
+    t.index ["error_code"], name: "index_error_details_on_error_code"
     t.index ["integration_type", "integration_id"], name: "index_error_details_on_integration"
+    t.index ["organization_id"], name: "index_error_details_on_organization_id"
     t.index ["owner_type", "owner_id"], name: "index_error_details_on_owner"
   end
 
@@ -1133,6 +1137,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_22_201341) do
   add_foreign_key "customers_taxes", "taxes"
   add_foreign_key "data_exports", "memberships"
   add_foreign_key "data_exports", "organizations"
+  add_foreign_key "error_details", "organizations"
   add_foreign_key "fees", "add_ons"
   add_foreign_key "fees", "applied_add_ons"
   add_foreign_key "fees", "charges"
