@@ -13,8 +13,8 @@ RSpec.describe Invoice, type: :model do
 
   it 'has fixed status mapping' do
     expect(described_class::VISIBLE_STATUS).to match(draft: 0, finalized: 1, voided: 2, failed: 4)
-    expect(described_class::INVISIBLE_STATUS).to match(generating: 3)
-    expect(described_class::STATUS).to match(draft: 0, finalized: 1, voided: 2, generating: 3, failed: 4)
+    expect(described_class::INVISIBLE_STATUS).to match(generating: 3, open: 5)
+    expect(described_class::STATUS).to match(draft: 0, finalized: 1, voided: 2, generating: 3, failed: 4, open: 5)
   end
 
   describe 'validation' do
