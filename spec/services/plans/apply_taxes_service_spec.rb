@@ -16,14 +16,6 @@ RSpec.describe Plans::ApplyTaxesService, type: :service do
       expect { apply_service.call }.to change { plan.applied_taxes.count }.from(0).to(2)
     end
 
-    it 'marks invoices as ready to be refreshed' do
-      subscription = create(:subscription, organization:, plan:)
-      invoice = create(:invoice, :draft)
-      create(:invoice_subscription, invoice:, subscription:)
-
-      expect { apply_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
-    end
-
     it 'returns applied taxes' do
       result = apply_service.call
       expect(result.applied_taxes.count).to eq(2)

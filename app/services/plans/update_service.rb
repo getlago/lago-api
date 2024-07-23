@@ -52,6 +52,8 @@ module Plans
         end
       end
 
+      plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+
       result.plan = plan.reload
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -216,16 +218,11 @@ module Plans
     end
 
     def discard_charge!(charge)
-      draft_invoice_ids = Invoice.draft.joins(plans: [:charges])
-        .where(charges: {id: charge.id}).distinct.pluck(:id)
-
       charge.discard!
       charge.group_properties.discard_all
 
       charge.filter_values.discard_all
       charge.filters.discard_all
-
-      Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
     end
 
     # NOTE: We should remove pending subscriptions
