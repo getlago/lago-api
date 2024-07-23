@@ -4,6 +4,6 @@ FactoryBot.define do
   factory :error_detail do
     organization
     association :owner, factory: %i[invoice].sample
-    association :integration, factory: :anrok_integration
+    association :integration, factory: %i[netsuite_integration okta_integration xero_integration anrok_integration].sample
   end
 end
