@@ -174,6 +174,44 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           )
       end
     end
+
+    context "when customer has no mandate to make a payment" do
+      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
+      let(:organization) { create(:organization, webhook_url: 'https://webhook.com') }
+
+      before do
+        allow(gocardless_list_response).to receive(:records)
+          .and_return([])
+
+        allow(gocardless_payments_service).to receive(:create)
+          .and_raise(GoCardlessPro::Error.new('code' => 'code', 'message' => 'error'))
+      end
+
+      it 'delivers an error webhook' do
+        result = gocardless_service.create
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq('999')
+          expect(result.error.error_message).to eq('No mandate avaiable for payment')
+          expect(result.invoice.reload).to have_attributes(
+            payment_status: 'failed',
+            ready_for_payment_processing: true
+          )
+          expect(SendWebhookJob).to have_been_enqueued
+            .with(
+              'invoice.payment_failure',
+              invoice,
+              provider_customer_id: gocardless_customer.provider_customer_id,
+              provider_error: {
+                message: 'No mandate avaiable for payment',
+                error_code: '999'
+              }
+            )
+        end
+      end
+    end
   end
 
   describe '.update_payment_status' do
