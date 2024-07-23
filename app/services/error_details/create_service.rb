@@ -2,7 +2,6 @@
 
 module ErrorDetails
   class CreateService < BaseService
-
     def call
       result = super
       return result unless result.success?
@@ -25,6 +24,8 @@ module ErrorDetails
       result
     rescue ArgumentError => e
       result.validation_failure!(errors: e.message)
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
     end
   end
 end
