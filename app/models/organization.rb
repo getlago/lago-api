@@ -33,6 +33,7 @@ class Organization < ApplicationRecord
   has_many :webhooks, through: :webhook_endpoints
   has_many :cached_aggregations
   has_many :data_exports
+  has_many :error_details
 
   has_many :stripe_payment_providers, class_name: 'PaymentProviders::StripeProvider'
   has_many :gocardless_payment_providers, class_name: 'PaymentProviders::GocardlessProvider'
