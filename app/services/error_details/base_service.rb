@@ -2,9 +2,8 @@
 
 module ErrorDetails
   class BaseService < BaseService
-    def initialize(params:, owner:, organization:, integration: nil)
+    def initialize(params:, owner:, organization:)
       @params = params
-      @integration = integration
       @owner = owner
       @organization = organization
 

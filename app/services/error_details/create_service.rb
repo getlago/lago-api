@@ -13,7 +13,6 @@ module ErrorDetails
 
     def create_error_details!
       new_error = ErrorDetail.create!(
-        integration:,
         owner:,
         organization:,
         error_code: params[:error_code],
