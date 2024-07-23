@@ -57,6 +57,7 @@ RSpec.describe ErrorDetails::CreateService, type: :service do
             expect(result.error_details.integration_id).to eq(nil)
             expect(result.error_details.integration_type).to eq(nil)
             expect(result.error_details.details).to eq(params[:details])
+            expect(result.error_details.error_code).to eq('not_provided')
           end
         end
       end
