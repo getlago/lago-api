@@ -93,6 +93,14 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
+    it 'marks invoices as ready to be refreshed' do
+      subscription = create(:subscription, organization:, plan:)
+      invoice = create(:invoice, :draft)
+      create(:invoice_subscription, invoice:, subscription:)
+
+      expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+    end
+
     context 'when charges are not passed' do
       let(:charge) { create(:standard_charge, plan:) }
       let(:update_args) do
@@ -670,13 +678,6 @@ RSpec.describe Plans::UpdateService, type: :service do
           expect { plans_service.call }
             .to change { charge.reload.deleted_at }.from(nil).to(Time.current)
         end
-      end
-
-      it 'marks invoices as ready to be refreshed' do
-        invoice = create(:invoice, :draft)
-        create(:invoice_subscription, subscription:, invoice:)
-
-        expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
       end
     end
 
