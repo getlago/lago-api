@@ -83,8 +83,6 @@ module PaymentProviderCustomers
     end
 
     def deliver_success_webhook
-      return unless organization.webhook_endpoints.any?
-
       SendWebhookJob.perform_later(
         'customer.payment_provider_created',
         customer
@@ -92,8 +90,6 @@ module PaymentProviderCustomers
     end
 
     def deliver_error_webhook(gocardless_error)
-      return unless organization.webhook_endpoints.any?
-
       SendWebhookJob.perform_later(
         'customer.payment_provider_error',
         customer,

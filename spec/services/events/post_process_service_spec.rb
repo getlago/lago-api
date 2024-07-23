@@ -49,5 +49,13 @@ RSpec.describe Events::PostProcessService, type: :service do
         expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
       end
     end
+
+    context 'when there is an error' do
+      it 'delivers an error webhook' do
+        allow(event).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(event))
+
+        expect { process_service.call }.to have_enqueued_job(SendWebhookJob)
+      end
+    end
   end
 end

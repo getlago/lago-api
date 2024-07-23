@@ -163,16 +163,6 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context 'when organization does not have a webhook endpoint' do
-      before { customer.organization.webhook_endpoints.destroy_all }
-
-      it 'does not enqueues a SendWebhookJob' do
-        expect do
-          create_service.call
-        end.not_to have_enqueued_job(SendWebhookJob)
-      end
-    end
-
     context 'with customer timezone' do
       before { customer.update!(timezone: 'America/Los_Angeles') }
 

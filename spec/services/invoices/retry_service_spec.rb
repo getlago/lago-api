@@ -230,16 +230,6 @@ RSpec.describe Invoices::RetryService, type: :service do
       expect(payment_create_service).to have_received(:call)
     end
 
-    context 'when organization does not have a webhook endpoint' do
-      before { invoice.organization.webhook_endpoints.destroy_all }
-
-      it 'does not enqueue a SendWebhookJob' do
-        expect do
-          retry_service.call
-        end.not_to have_enqueued_job(SendWebhookJob)
-      end
-    end
-
     context 'with credit notes' do
       let(:credit_note) do
         create(

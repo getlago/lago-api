@@ -158,8 +158,6 @@ module Invoices
       end
 
       def deliver_error_webhook(gocardless_error)
-        return unless invoice.organization.webhook_endpoints.any?
-
         SendWebhookJob.perform_later(
           'invoice.payment_failure',
           invoice,

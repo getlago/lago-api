@@ -115,16 +115,6 @@ RSpec.describe Invoices::AddOnService, type: :service do
       let(:service_call) { invoice_service.create }
     end
 
-    context 'when organization does not have a webhook endpoint' do
-      before { applied_add_on.customer.organization.webhook_endpoints.destroy_all }
-
-      it 'does not enqueues a SendWebhookJob' do
-        expect do
-          invoice_service.create
-        end.not_to have_enqueued_job(SendWebhookJob)
-      end
-    end
-
     context 'with customer timezone' do
       before { applied_add_on.customer.update!(timezone: 'America/Los_Angeles') }
 

@@ -151,16 +151,6 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context 'when organization does not have a webhook endpoint' do
-      before { subscription.customer.organization.webhook_endpoints.destroy_all }
-
-      it 'does not enqueue a SendWebhookJob' do
-        expect do
-          invoice_service.call
-        end.not_to have_enqueued_job(SendWebhookJob)
-      end
-    end
-
     context 'with customer timezone' do
       before { subscription.customer.update!(timezone: 'America/Los_Angeles', invoice_grace_period: 3) }
 

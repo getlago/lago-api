@@ -18,9 +18,7 @@ module Clock
         )
         .where('webhooks.id IS NULL OR webhooks.created_at::date != ?', Time.current.to_date)
         .find_each do |subscription|
-          if subscription.customer.organization.webhook_endpoints.any?
-            SendWebhookJob.perform_later('subscription.termination_alert', subscription)
-          end
+          SendWebhookJob.perform_later('subscription.termination_alert', subscription)
         end
     end
 

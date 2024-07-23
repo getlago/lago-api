@@ -39,9 +39,8 @@ module WalletTransactions
       end
 
       transactions = wallet_transactions.compact
-      if organization.webhook_endpoints.any?
-        transactions.each { |wt| SendWebhookJob.perform_later('wallet_transaction.created', wt.reload) }
-      end
+
+      transactions.each { |wt| SendWebhookJob.perform_later('wallet_transaction.created', wt.reload) }
 
       result.wallet_transactions = transactions
       result

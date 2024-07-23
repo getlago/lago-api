@@ -33,7 +33,7 @@ module Invoices
       end
 
       Utils::SegmentTrack.invoice_created(result.invoice)
-      SendWebhookJob.perform_later('invoice.add_on_added', result.invoice) if should_deliver_webhook?
+      SendWebhookJob.perform_later('invoice.add_on_added', result.invoice)
       GeneratePdfAndNotifyJob.perform_later(invoice: result.invoice, email: should_deliver_email?)
 
       if result.invoice.should_sync_invoice?
@@ -76,10 +76,6 @@ module Invoices
       fee_result = Fees::AddOnService
         .new(invoice:, applied_add_on:).create
       fee_result.raise_if_error!
-    end
-
-    def should_deliver_webhook?
-      customer.organization.webhook_endpoints.any?
     end
 
     def create_payment(invoice)

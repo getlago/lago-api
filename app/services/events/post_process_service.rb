@@ -110,8 +110,6 @@ module Events
     end
 
     def deliver_error_webhook(error:)
-      return unless organization.webhook_endpoints.any?
-
       SendWebhookJob.perform_later('event.error', event, {error:})
     end
   end
