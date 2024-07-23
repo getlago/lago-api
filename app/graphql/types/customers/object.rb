@@ -79,7 +79,7 @@ module Types
       end
 
       def invoices
-        object.invoices.not_generating.order(created_at: :desc)
+        object.invoices.visible.order(created_at: :desc)
       end
 
       def applied_coupons

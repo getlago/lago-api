@@ -50,7 +50,10 @@ class Invoice < ApplicationRecord
 
   INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
-  STATUS = %i[draft finalized voided generating failed].freeze
+
+  VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4}.freeze
+  INVISIBLE_STATUS = {generating: 3}.freeze
+  STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
 
   enum invoice_type: INVOICE_TYPES
   enum payment_status: PAYMENT_STATUS, _prefix: :payment
@@ -75,6 +78,8 @@ class Invoice < ApplicationRecord
   sequenced scope: ->(invoice) { invoice.customer.invoices },
     lock_key: ->(invoice) { invoice.customer_id }
 
+  scope :visible, -> { where(status: VISIBLE_STATUS.keys) }
+  scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
   scope :ready_to_be_finalized,
