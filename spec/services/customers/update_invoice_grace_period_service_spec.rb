@@ -22,7 +22,7 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
     before do
       invoice_to_be_finalized
       invoice_to_not_be_finalized
-      allow(Invoices::FinalizeService).to receive(:call)
+      allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call)
     end
 
     it 'updates invoice grace period on customer' do
@@ -36,8 +36,8 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
         result = update_service.call
 
         expect(result.customer.invoice_grace_period).to eq(2)
-        expect(Invoices::FinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
-        expect(Invoices::FinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
+        expect(Invoices::RefreshDraftAndFinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
+        expect(Invoices::RefreshDraftAndFinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
       end
     end
 
@@ -76,7 +76,7 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
         travel_to(current_date) do
           update_service.call
 
-          expect(Invoices::FinalizeService).not_to have_received(:call)
+          expect(Invoices::RefreshDraftAndFinalizeService).not_to have_received(:call)
         end
       end
 

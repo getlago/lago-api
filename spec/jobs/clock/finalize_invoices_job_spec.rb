@@ -29,7 +29,7 @@ describe Clock::FinalizeInvoicesJob, job: true do
     before do
       draft_invoice
       finalized_invoice
-      allow(Invoices::FinalizeService).to receive(:call)
+      allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call)
     end
 
     context 'when during the grace period' do

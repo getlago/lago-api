@@ -742,7 +742,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
       subscription.customer.update!(timezone: new_timezone)
 
-      finalized_result = Invoices::FinalizeService.call(invoice: result.invoice.reload)
+      finalized_result = Invoices::RefreshDraftAndFinalizeService.call(invoice: result.invoice.reload)
       invoice_sub = finalized_result.invoice.reload.invoice_subscriptions.first
 
       aggregate_failures do

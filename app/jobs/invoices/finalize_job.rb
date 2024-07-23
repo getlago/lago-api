@@ -5,7 +5,7 @@ module Invoices
     queue_as 'invoices'
 
     def perform(invoice)
-      Invoices::FinalizeService.call(invoice:)
+      Invoices::RefreshDraftAndFinalizeService.call(invoice:)
     end
   end
 end

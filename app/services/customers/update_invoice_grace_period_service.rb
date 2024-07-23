@@ -15,7 +15,7 @@ module Customers
 
         # NOTE: Finalize related draft invoices.
         customer.invoices.ready_to_be_finalized.each do |invoice|
-          Invoices::FinalizeService.call(invoice:)
+          Invoices::RefreshDraftAndFinalizeService.call(invoice:)
         end
 
         # NOTE: Update issuing_date on draft invoices.
