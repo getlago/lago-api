@@ -85,6 +85,7 @@ module Types
     field :lose_invoice_dispute, mutation: Mutations::Invoices::LoseDispute
     field :refresh_invoice, mutation: Mutations::Invoices::Refresh
     field :retry_all_invoice_payments, mutation: Mutations::Invoices::RetryAllPayments
+    field :retry_all_invoices, mutation: Mutations::Invoices::RetryAll
     field :retry_invoice, mutation: Mutations::Invoices::Retry
     field :retry_invoice_payment, mutation: Mutations::Invoices::RetryPayment
     field :update_invoice, mutation: Mutations::Invoices::Update
