@@ -20,7 +20,8 @@ RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
       "target_ongoing_balance" => recurring_transaction_rule.target_ongoing_balance,
       "threshold_credits" => recurring_transaction_rule.threshold_credits.to_s,
       "granted_credits" => recurring_transaction_rule.granted_credits.to_s,
-      "created_at" => recurring_transaction_rule.created_at.iso8601
+      "created_at" => recurring_transaction_rule.created_at.iso8601,
+      "invoice_require_successful_payment" => recurring_transaction_rule.invoice_require_successful_payment
     )
   end
 end
