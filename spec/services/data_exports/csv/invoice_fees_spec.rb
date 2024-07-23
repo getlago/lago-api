@@ -10,6 +10,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   let(:resource_query) do
     {
       currency:,
+      customer_id:,
       customer_external_id:,
       invoice_type:,
       issuing_date_from:,
@@ -24,6 +25,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
 
   let(:currency) { 'EUR' }
   let(:customer_external_id) { 'custext123' }
+  let(:customer_id) { 'customer-lago-id-123' }
   let(:invoice_type) { 'credit' }
   let(:issuing_date_from) { '2023-12-25' }
   let(:issuing_date_to) { '2024-07-01' }
@@ -40,9 +42,6 @@ RSpec.describe DataExports::Csv::InvoiceFees do
       "invoice_type" => invoice_type,
       "issuing_date_from" => issuing_date_from,
       "issuing_date_to" => issuing_date_to,
-      "payment_dispute_lost" => payment_dispute_lost,
-      "payment_overdue" => payment_overdue,
-      "payment_status" => payment_status
     }
   end
 
@@ -212,8 +211,12 @@ RSpec.describe DataExports::Csv::InvoiceFees do
       .to receive(:call)
       .with(
         search_term:,
+        filters:,
+        customer_id:,
+        payment_dispute_lost:,
+        payment_overdue:,
+        payment_status:,
         status:,
-        filters:
       )
       .and_return(query_results)
   end

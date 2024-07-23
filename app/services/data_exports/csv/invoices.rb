@@ -82,14 +82,23 @@ module DataExports
       end
 
       def query
-        search_term = resource_query["search_term"]
-        status = resource_query["status"]
-        filters = resource_query.except("search_term", "status")
+        filters = resource_query.except(
+        "search_term",
+        "customer_id",
+        "payment_dispute_lost",
+        "payment_overdue",
+        "payment_status",
+        "status"
+        )
 
         InvoicesQuery.new(organization: organization, pagination: nil).call(
-          search_term:,
-          status:,
-          filters:
+          search_term: resource_query["search_term"],
+          filters:,
+          customer_id: resource_query["customer_id"],
+          payment_dispute_lost: resource_query["payment_dispute_lost"],
+          payment_overdue: resource_query["payment_overdue"],
+          payment_status: resource_query["payment_status"],
+          status: resource_query["status"]
         )
       end
     end
