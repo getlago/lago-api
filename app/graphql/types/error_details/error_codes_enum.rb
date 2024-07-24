@@ -3,7 +3,7 @@
 module Types
   module ErrorDetails
     class ErrorCodesEnum < Types::BaseEnum
-      graphql_name 'FeeTypesEnum'
+      graphql_name 'ErrorCodesEnum'
 
       ErrorDetail::ERROR_CODES.each do |code|
         value code
