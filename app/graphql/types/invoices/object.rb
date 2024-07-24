@@ -49,10 +49,10 @@ module Types
 
       field :applied_taxes, [Types::Invoices::AppliedTaxes::Object]
       field :credit_notes, [Types::CreditNotes::Object], null: true
+      field :error_details, [Types::ErrorDetails::Object], null: true
       field :fees, [Types::Fees::Object], null: true
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
       field :subscriptions, [Types::Subscriptions::Object]
-      field :error_details, [Types::ErrorDetails::Object], null: true
 
       field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
