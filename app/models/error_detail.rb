@@ -8,5 +8,5 @@ class ErrorDetail < ApplicationRecord
   belongs_to :organization
 
   ERROR_CODES = %w[not_provided tax_error]
-  enum error_code: ERROR_CODES.zip(ERROR_CODES).to_h
+  enum error_code: ERROR_CODES
 end
