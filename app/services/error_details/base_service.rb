@@ -18,6 +18,6 @@ module ErrorDetails
 
     private
 
-    attr_reader :params, :integration, :owner, :organization
+    attr_reader :params, :owner, :organization
   end
 end
