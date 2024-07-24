@@ -5,9 +5,9 @@ module Types
     class Object < Types::BaseObject
       graphql_name 'ErrorDetail'
 
-      field :id, ID, null: false
       field :error_code, Types::ErrorDetails::ErrorCodesEnum, null: false
       field :error_details, Types::ErrorDetails::ErrorCodesEnum, null: false
+      field :id, ID, null: false
     end
   end
 end
