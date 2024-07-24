@@ -24,6 +24,12 @@ FactoryBot.define do
       payment_dispute_lost_at { DateTime.current - 1.day }
     end
 
+    trait :with_error do
+      after :create do |i|
+        create(:error_detail, owner: i)
+      end
+    end
+
     trait :failed do
       status { :failed }
     end

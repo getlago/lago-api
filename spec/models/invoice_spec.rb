@@ -10,6 +10,7 @@ RSpec.describe Invoice, type: :model do
   it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to have_many(:integration_resources) }
+  it { is_expected.to have_many(:error_details) }
 
   it 'has fixed status mapping' do
     expect(described_class::VISIBLE_STATUS).to match(draft: 0, finalized: 1, voided: 2, failed: 4)
