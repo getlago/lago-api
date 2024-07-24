@@ -194,7 +194,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ServiceFailure)
           expect(result.error.code).to eq('999')
-          expect(result.error.error_message).to eq('No mandate avaiable for payment')
+          expect(result.error.error_message).to eq('No mandate available for payment')
           expect(result.invoice.reload).to have_attributes(
             payment_status: 'failed',
             ready_for_payment_processing: true
@@ -205,7 +205,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
               invoice,
               provider_customer_id: gocardless_customer.provider_customer_id,
               provider_error: {
-                message: 'No mandate avaiable for payment',
+                message: 'No mandate available for payment',
                 error_code: '999'
               }
             )
