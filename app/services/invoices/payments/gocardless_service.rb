@@ -6,14 +6,15 @@ module Invoices
       include Customers::PaymentProviderFinder
 
       class MandateNotFoundError < StandardError
-        DEFAULT_MESSAGE = 'No mandate available for payment'
-
-        attr_reader :code
+        DEFAULT_MESSAGE = "No mandate available for payment"
+        ERROR_CODE = "no_mandate_error"
 
         def initialize(msg = DEFAULT_MESSAGE)
-          @code = '999'
-
           super
+        end
+
+        def code
+          ERROR_CODE
         end
       end
 
