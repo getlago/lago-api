@@ -42,6 +42,14 @@ class Customer < ApplicationRecord
   has_one :anrok_customer, class_name: 'IntegrationCustomers::AnrokCustomer'
   has_one :xero_customer, class_name: 'IntegrationCustomers::XeroCustomer'
 
+  has_one :tax_provider_customer, -> {
+    includes(:integration).where(integration: {category: 'tax_provider'})
+  }, class_name: 'IntegrationCustomers::BaseCustomer'
+  has_one :accounting_customer, -> {
+    includes(:integration).where(integration: {category: 'accounting'})
+  }, class_name: 'IntegrationCustomers::BaseCustomer'
+  has_one :payment_provider_customer, class_name: 'PaymentProviderCustomers::BaseCustomer'
+
   PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
 
   default_scope -> { kept }
@@ -105,14 +113,7 @@ class Customer < ApplicationRecord
   end
 
   def provider_customer
-    case payment_provider&.to_sym
-    when :stripe
-      stripe_customer
-    when :gocardless
-      gocardless_customer
-    when :adyen
-      adyen_customer
-    end
+    payment_provider_customer
   end
 
   def shipping_address

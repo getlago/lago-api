@@ -59,19 +59,9 @@ module V1
         document_locale: model.document_locale
       }
 
-      case model.payment_provider&.to_sym
-      when :stripe
-        configuration[:provider_customer_id] = model.stripe_customer&.provider_customer_id
-        configuration[:provider_payment_methods] = model.stripe_customer&.provider_payment_methods
-        configuration.merge!(model.stripe_customer&.settings || {})
-      when :gocardless
-        configuration[:provider_customer_id] = model.gocardless_customer&.provider_customer_id
-        configuration.merge!(model.gocardless_customer&.settings || {})
-      when :adyen
-        configuration[:provider_customer_id] = model.adyen_customer&.provider_customer_id
-        configuration.merge!(model.adyen_customer&.settings || {})
-      end
-
+      configuration[:provider_customer_id] = model.payment_provider_customer&.provider_customer_id
+      configuration.merge!(model.payment_provider_customer&.settings || {})
+      configuration[:provider_payment_methods] = model.payment_provider_customer&.provider_payment_methods
       configuration
     end
 
