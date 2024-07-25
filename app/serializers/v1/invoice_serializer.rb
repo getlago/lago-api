@@ -34,6 +34,7 @@ module V1
       payload.merge!(credits) if include?(:credits)
       payload.merge!(metadata) if include?(:metadata)
       payload.merge!(applied_taxes) if include?(:applied_taxes)
+      payload.merge!(error_details) if include?(:error_details)
 
       payload
     end
@@ -86,6 +87,14 @@ module V1
         model.applied_taxes,
         ::V1::Invoices::AppliedTaxSerializer,
         collection_name: 'applied_taxes'
+      ).serialize
+    end
+
+    def error_details
+      ::CollectionSerializer.new(
+        model.error_details,
+        ::V1::Invoices::ErrorDetailSerializer,
+        collection_name: 'error_details'
       ).serialize
     end
   end

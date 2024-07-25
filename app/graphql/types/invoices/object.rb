@@ -49,6 +49,7 @@ module Types
 
       field :applied_taxes, [Types::Invoices::AppliedTaxes::Object]
       field :credit_notes, [Types::CreditNotes::Object], null: true
+      field :error_details, [Types::ErrorDetails::Object], null: true
       field :fees, [Types::Fees::Object], null: true
       field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
       field :subscriptions, [Types::Subscriptions::Object]

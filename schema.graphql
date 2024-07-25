@@ -3458,6 +3458,17 @@ enum EmailSettingsEnum {
   invoice_finalized
 }
 
+enum ErrorCodesEnum {
+  not_provided
+  tax_error
+}
+
+type ErrorDetail {
+  errorCode: ErrorCodesEnum!
+  errorDetails: JSON
+  id: ID!
+}
+
 type Event {
   apiClient: String
   billableMetricName: String
@@ -3867,6 +3878,7 @@ type Invoice {
   creditableAmountCents: BigInt!
   currency: CurrencyEnum
   customer: Customer!
+  errorDetails: [ErrorDetail!]
   externalIntegrationId: String
   fees: [Fee!]
   feesAmountCents: BigInt!
