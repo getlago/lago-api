@@ -20,6 +20,7 @@ module Types
       field :sync_sales_orders, Boolean
       field :token_id, String, null: true
       field :token_secret, String, null: true
+      field :category, String, null: true
 
       # NOTE: Client secret is a sensitive information. It should not be sent back to the
       #       front end application. Instead we send an obfuscated value

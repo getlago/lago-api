@@ -13,6 +13,7 @@ module Types
       field :sync_credit_notes, Boolean
       field :sync_invoices, Boolean
       field :sync_payments, Boolean
+      field :category, String, null: true
 
       def has_mappings_configured
         object.integration_collection_mappings.where(type: 'IntegrationCollectionMappings::XeroCollectionMapping').any?

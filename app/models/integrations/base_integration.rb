@@ -28,6 +28,9 @@ module Integrations
     validates :code, uniqueness: {scope: :organization_id}
     validates :name, presence: true
 
+    INTEGRATION_CATEGORIES = %w[system accounting tax_provider]
+    enum category: INTEGRATION_CATEGORIES
+
     def self.integration_type(type)
       case type
       when 'netsuite'

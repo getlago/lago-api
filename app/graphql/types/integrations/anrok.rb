@@ -11,6 +11,7 @@ module Types
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
       field :name, String, null: false
+      field :category, String, null: true
 
       # NOTE: Client secret is a sensitive information. It should not be sent back to the
       #       front end application. Instead we send an obfuscated value
