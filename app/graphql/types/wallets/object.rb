@@ -33,6 +33,7 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :invoice_require_successful_payment, Boolean, null: false
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
     end
