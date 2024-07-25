@@ -5800,15 +5800,7 @@ type Query {
   """
   Query webhook endpoints of an organization
   """
-  webhookEndpoints(
-    """
-    List of webhook endpoint IDs to fetch
-    """
-    ids: [ID!]
-    limit: Int
-    page: Int
-    searchTerm: String
-  ): WebhookEndpointCollection!
+  webhookEndpoints(limit: Int, page: Int, searchTerm: String): WebhookEndpointCollection!
 
   """
   Query Webhooks
