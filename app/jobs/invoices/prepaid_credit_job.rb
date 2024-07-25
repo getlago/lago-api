@@ -8,6 +8,7 @@ module Invoices
 
     def perform(invoice)
       Wallets::ApplyPaidCreditsService.new.call(invoice)
+      Invoices::FinalizeOpenCreditService.call(invoice:)
     end
   end
 end

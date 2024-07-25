@@ -11,20 +11,20 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
   describe 'call' do
     let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let(:customer) { create(:customer, organization:, payment_provider: :stripe) }
     let(:subscription) { create(:subscription, plan:, customer:) }
     let(:plan) { create(:plan, organization:) }
     let(:wallet) { create(:wallet, customer:) }
     let(:wallet_transaction) do
-      create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00')
+      create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00', invoice_require_successful_payment:)
     end
+    let(:invoice_require_successful_payment) { false }
 
     let(:invoice) { nil }
 
     before do
       wallet_transaction
       subscription
-      allow(SegmentTrackJob).to receive(:perform_later)
     end
 
     it 'creates an invoice' do
@@ -95,7 +95,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
     it 'calls SegmentTrackJob' do
       invoice = invoice_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: 'invoice_created',
         properties: {
@@ -107,16 +107,8 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
     end
 
     it 'creates a payment' do
-      payment_create_service = instance_double(Invoices::Payments::CreateService)
-      allow(Invoices::Payments::CreateService)
-        .to receive(:new).and_return(payment_create_service)
-      allow(payment_create_service)
-        .to receive(:call)
-
-      invoice_service.call
-
-      expect(Invoices::Payments::CreateService).to have_received(:new)
-      expect(payment_create_service).to have_received(:call)
+      result = invoice_service.call
+      expect(Invoices::Payments::StripeCreateJob).to have_been_enqueued.with(result.invoice)
     end
 
     context 'with customer timezone' do
@@ -150,6 +142,25 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
         expect(result.invoice.total_amount_cents).to eq(1500)
 
         expect(result.invoice).to be_finalized
+      end
+    end
+
+    context 'with wallet_transaction.invoice_require_successful_payment' do
+      let(:invoice_require_successful_payment) { true }
+
+      around { |test| lago_premium!(&test) }
+
+      it 'creates an open invoice' do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to be_open
+        expect(Invoices::Payments::StripeCreateJob).to have_been_enqueued.with(result.invoice)
+
+        # These jobs should only be enqueued for finalized invoices
+        expect(SegmentTrackJob).not_to have_been_enqueued
+        expect(Invoices::GeneratePdfAndNotifyJob).not_to have_been_enqueued
+        expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
   end
