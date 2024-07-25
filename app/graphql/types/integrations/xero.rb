@@ -5,6 +5,7 @@ module Types
     class Xero < Types::BaseObject
       graphql_name 'XeroIntegration'
 
+      field :category, String, null: true
       field :code, String, null: false
       field :connection_id, ID, null: false
       field :has_mappings_configured, Boolean
@@ -13,7 +14,6 @@ module Types
       field :sync_credit_notes, Boolean
       field :sync_invoices, Boolean
       field :sync_payments, Boolean
-      field :category, String, null: true
 
       def has_mappings_configured
         object.integration_collection_mappings.where(type: 'IntegrationCollectionMappings::XeroCollectionMapping').any?

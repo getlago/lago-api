@@ -5,6 +5,7 @@ module Types
     class Okta < Types::BaseObject
       graphql_name 'OktaIntegration'
 
+      field :category, String, null: true
       field :client_id, String, null: true
       field :client_secret, String, null: true
       field :code, String, null: false
@@ -12,7 +13,6 @@ module Types
       field :id, ID, null: false
       field :name, String, null: false
       field :organization_name, String, null: false
-      field :category, String, null: true
 
       # NOTE: Client secret is a sensitive information. It should not be sent back to the
       #       front end application. Instead we send an obfuscated value

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddCategoryToIntegrations < ActiveRecord::Migration[7.1]
   module Integrations
     class BaseIntegration < ApplicationRecord
@@ -23,10 +25,10 @@ class AddCategoryToIntegrations < ActiveRecord::Migration[7.1]
     add_column :integrations, :category, :integer
     add_index :integrations, :category
 
-    Integrations::AnrokIntegration.update_all(category: 'tax_provider')
-    Integrations::NetsuiteIntegration.update_all(category: 'accounting')
-    Integrations::XeroIntegration.update_all(category: 'accounting')
-    Integrations::OktaIntegration.update_all(category: 'system')
+    Integrations::AnrokIntegration.update_all(category: 'tax_provider') # rubocop:disable Rails/SkipsModelValidations
+    Integrations::NetsuiteIntegration.update_all(category: 'accounting') # rubocop:disable Rails/SkipsModelValidations
+    Integrations::XeroIntegration.update_all(category: 'accounting') # rubocop:disable Rails/SkipsModelValidations
+    Integrations::OktaIntegration.update_all(category: 'system') # rubocop:disable Rails/SkipsModelValidations
   end
 
   def down
