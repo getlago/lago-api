@@ -106,7 +106,7 @@ class CreditNote < ApplicationRecord
   end
 
   def should_sync_credit_note?
-    finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_credit_notes }
+    finalized? && customer.accounting_customer.integration.sync_credit_notes
   end
 
   def voidable?

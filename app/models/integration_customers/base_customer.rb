@@ -12,10 +12,6 @@ module IntegrationCustomers
 
     validates :customer_id, uniqueness: {scope: :type}
 
-    scope :accounting_kind, -> do
-      includes(:integration).where(integration: {category: 'accounting'})
-    end
-
     settings_accessors :sync_with_provider
 
     def self.customer_type(type)

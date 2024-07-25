@@ -42,12 +42,15 @@ class Customer < ApplicationRecord
   has_one :anrok_customer, class_name: 'IntegrationCustomers::AnrokCustomer'
   has_one :xero_customer, class_name: 'IntegrationCustomers::XeroCustomer'
 
+  # customer can have only one integration customer per integration_category
   has_one :tax_provider_customer, -> {
     includes(:integration).where(integration: {category: 'tax_provider'})
   }, class_name: 'IntegrationCustomers::BaseCustomer'
   has_one :accounting_customer, -> {
     includes(:integration).where(integration: {category: 'accounting'})
   }, class_name: 'IntegrationCustomers::BaseCustomer'
+
+  # customer can have only one payment_provider_customer
   has_one :payment_provider_customer, class_name: 'PaymentProviderCustomers::BaseCustomer'
 
   PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
