@@ -11,7 +11,7 @@ module WalletTransactions
     end
 
     def call
-      return if credits_amount.zero?
+      return result if credits_amount.zero?
 
       ActiveRecord::Base.transaction do
         wallet_transaction = wallet.wallet_transactions.create!(

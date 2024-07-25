@@ -47,7 +47,8 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           started_at: Time.parse("2024-05-30T12:48:26Z"),
           target_ongoing_balance: 100.0,
           threshold_credits: 0.0,
-          trigger: "interval"
+          trigger: "interval",
+          invoice_require_successful_payment: false
         )
       end
 
@@ -69,6 +70,46 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
             target_ongoing_balance: nil,
             threshold_credits: 1.0,
             trigger: "threshold"
+          )
+        end
+      end
+
+      context 'when invoice_require_successful_payment is present' do
+        let(:rule_params) do
+          {
+            trigger: "threshold",
+            threshold_credits: "1.0",
+            invoice_require_successful_payment: true
+          }
+        end
+
+        it "creates rule with expected attributes" do
+          expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+          expect(wallet.recurring_transaction_rules.first).to have_attributes(
+            invoice_require_successful_payment: true
+          )
+        end
+      end
+
+      context 'when invoice_require_successful_payment is blank' do
+        let(:wallet) { create(:wallet, invoice_require_successful_payment: true) }
+        let(:wallet_params) do
+          {
+            paid_credits: "100.0",
+            granted_credits: "50.0",
+            recurring_transaction_rules: [{
+              trigger: "threshold",
+              threshold_credits: "1.0"
+            }]
+          }
+        end
+
+        it 'follows the wallet configuration' do
+          expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+          expect(wallet.recurring_transaction_rules.first).to have_attributes(
+            invoice_require_successful_payment: true
           )
         end
       end

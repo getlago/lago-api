@@ -80,6 +80,7 @@ module Api
           :paid_credits,
           :granted_credits,
           :expiration_at,
+          :invoice_require_successful_payment,
           recurring_transaction_rules: [
             :granted_credits,
             :interval,
@@ -88,7 +89,8 @@ module Api
             :started_at,
             :target_ongoing_balance,
             :threshold_credits,
-            :trigger
+            :trigger,
+            :invoice_require_successful_payment
           ]
         )
       end
@@ -101,6 +103,7 @@ module Api
         params.require(:wallet).permit(
           :name,
           :expiration_at,
+          :invoice_require_successful_payment,
           recurring_transaction_rules: [
             :lago_id,
             :interval,
@@ -110,7 +113,8 @@ module Api
             :threshold_credits,
             :trigger,
             :paid_credits,
-            :granted_credits
+            :granted_credits,
+            :invoice_require_successful_payment
           ]
         )
       end

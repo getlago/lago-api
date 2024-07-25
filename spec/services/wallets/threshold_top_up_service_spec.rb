@@ -39,9 +39,32 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
             wallet_id: wallet.id,
             paid_credits: "10.0",
             granted_credits: "3.0",
-            source: :threshold
+            source: :threshold,
+            invoice_require_successful_payment: false
           }
         )
+    end
+
+    context 'when rule requires successful payment' do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          invoice_require_successful_payment: true
+        )
+      end
+
+      it "calls wallet transaction create job with expected params" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(invoice_require_successful_payment: true)
+          )
+      end
     end
 
     context "when border has NOT been crossed" do
@@ -82,7 +105,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
               wallet_id: wallet.id,
               paid_credits: "194.5",
               granted_credits: "0.0",
-              source: :threshold
+              source: :threshold,
+              invoice_require_successful_payment: false
             }
           )
       end
