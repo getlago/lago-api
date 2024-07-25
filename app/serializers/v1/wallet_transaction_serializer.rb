@@ -12,7 +12,8 @@ module V1
         amount: model.amount,
         credit_amount: model.credit_amount,
         settled_at: model.settled_at&.iso8601,
-        created_at: model.created_at.iso8601
+        created_at: model.created_at.iso8601,
+        invoice_require_successful_payment: model.invoice_require_successful_payment?
       }
     end
   end

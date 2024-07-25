@@ -14,7 +14,8 @@ module V1
           target_ongoing_balance: model.target_ongoing_balance,
           threshold_credits: model.threshold_credits,
           trigger: model.trigger,
-          created_at: model.created_at.iso8601
+          created_at: model.created_at.iso8601,
+          invoice_require_successful_payment: model.invoice_require_successful_payment?
         }
       end
     end
