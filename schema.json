@@ -14691,7 +14691,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "JSON",
+                "name": "String",
                 "ofType": null
               },
               "isDeprecated": false,
