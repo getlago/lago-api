@@ -61,7 +61,9 @@ module V1
 
       configuration[:provider_customer_id] = model.payment_provider_customer&.provider_customer_id
       configuration.merge!(model.payment_provider_customer&.settings || {})
-      configuration[:provider_payment_methods] = model.payment_provider_customer&.provider_payment_methods
+      if model.payment_provider&.to_sym == :stripe
+        configuration[:provider_payment_methods] = model.payment_provider_customer&.provider_payment_methods
+      end
       configuration
     end
 
