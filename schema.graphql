@@ -3465,7 +3465,7 @@ enum ErrorCodesEnum {
 
 type ErrorDetail {
   errorCode: ErrorCodesEnum!
-  errorDetails: JSON
+  errorDetails: String
   id: ID!
 }
 

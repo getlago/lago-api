@@ -13,8 +13,8 @@ RSpec.describe ErrorDetails::CreateService, type: :service do
 
     let(:params) do
       {
-        error_code: 'not_provided',
-        details: {'error_code' => 'taxDateTooFarInFuture'}
+        error_code: 'tax_error',
+        details: {'tax_error' => 'taxDateTooFarInFuture'}
       }
     end
 
@@ -61,7 +61,7 @@ RSpec.describe ErrorDetails::CreateService, type: :service do
         let(:params) do
           {
             error_code: 'this_error_code_will_never_achieve_its_goal',
-            details: {'error_received' => 'taxDateTooFarInFuture'}
+            details: {'this_error_code_will_never_achieve_its_goal' => 'does not matter what we send here'}
           }
         end
 
