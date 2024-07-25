@@ -13,7 +13,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
     <<-GQL
       mutation($input: CreateCustomerWalletTransactionInput!) {
         createCustomerWalletTransaction(input: $input) {
-          collection { id, status }
+          collection { id, status, invoiceRequireSuccessfulPayment }
         }
       }
     GQL
@@ -38,7 +38,8 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
         input: {
           walletId: wallet.id,
           paidCredits: '5.00',
-          grantedCredits: '5.00'
+          grantedCredits: '5.00',
+          invoiceRequireSuccessfulPayment: true
         }
       }
     )
@@ -46,5 +47,6 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
     result_data = result['data']['createCustomerWalletTransaction']
     expect(result_data['collection'].map { |wt| wt['status'] })
       .to contain_exactly('pending', 'settled')
+    expect(result_data['collection'].map { |wt| wt['invoiceRequireSuccessfulPayment'] }).to all be true
   end
 end

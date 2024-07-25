@@ -22,7 +22,8 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         'amount' => wallet_transaction.amount.to_s,
         'credit_amount' => wallet_transaction.credit_amount.to_s,
         'settled_at' => wallet_transaction.settled_at&.iso8601,
-        'created_at' => wallet_transaction.created_at.iso8601
+        'created_at' => wallet_transaction.created_at.iso8601,
+        'invoice_require_successful_payment' => wallet_transaction.invoice_require_successful_payment
       )
     end
   end

@@ -19,7 +19,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         currency: 'EUR',
         paid_credits: '10',
         granted_credits: '10',
-        expiration_at:
+        expiration_at:,
+        invoice_require_successful_payment: true
       }
     end
 
@@ -33,6 +34,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(json[:wallet][:name]).to eq(create_params[:name])
         expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
         expect(json[:wallet][:expiration_at]).to eq(expiration_at)
+        expect(json[:wallet][:invoice_require_successful_payment]).to eq(true)
       end
     end
 
@@ -73,6 +75,74 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(recurring_rules.first[:trigger]).to eq('interval')
         end
       end
+
+      context 'when invoice_require_successful_payment is set at the wallet level but the rule level' do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: '1',
+            name: 'Wallet1',
+            currency: 'EUR',
+            paid_credits: '10',
+            expiration_at:,
+            invoice_require_successful_payment: true,
+            recurring_transaction_rules: [
+              {
+                trigger: 'interval',
+                interval: 'monthly'
+              }
+            ]
+          }
+        end
+
+        it 'follows the wallet configuration to create the rule' do
+          post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+
+            expect(json[:wallet][:invoice_require_successful_payment]).to eq(true)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:invoice_require_successful_payment]).to eq(true)
+          end
+        end
+      end
+
+      context 'when invoice_require_successful_payment is set at the rule level but not present at the wallet level' do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: '1',
+            name: 'Wallet1',
+            currency: 'EUR',
+            paid_credits: '10',
+            expiration_at:,
+            recurring_transaction_rules: [
+              {
+                trigger: 'interval',
+                interval: 'monthly',
+                invoice_require_successful_payment: true
+              }
+            ]
+          }
+        end
+
+        it 'follows the wallet configuration to create the rule' do
+          post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+
+            expect(json[:wallet][:invoice_require_successful_payment]).to eq(false)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:invoice_require_successful_payment]).to eq(true)
+          end
+        end
+      end
     end
   end
 
@@ -82,7 +152,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     let(:update_params) do
       {
         name: 'wallet1',
-        expiration_at:
+        expiration_at:,
+        invoice_require_successful_payment: true
       }
     end
 
@@ -101,6 +172,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(json[:wallet][:lago_id]).to eq(wallet.id)
         expect(json[:wallet][:name]).to eq(update_params[:name])
         expect(json[:wallet][:expiration_at]).to eq(expiration_at)
+        expect(json[:wallet][:invoice_require_successful_payment]).to eq(true)
       end
     end
 
@@ -127,7 +199,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               interval: 'weekly',
               paid_credits: '105',
               granted_credits: '105',
-              target_ongoing_balance: '300'
+              target_ongoing_balance: '300',
+              invoice_require_successful_payment: true
             }
           ]
         }
@@ -147,6 +220,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         aggregate_failures do
           expect(response).to have_http_status(:success)
 
+          expect(json[:wallet][:invoice_require_successful_payment]).to eq(false)
           expect(recurring_rules).to be_present
           expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
           expect(recurring_rules.first[:interval]).to eq('weekly')
@@ -154,6 +228,113 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(recurring_rules.first[:granted_credits]).to eq('105.0')
           expect(recurring_rules.first[:method]).to eq('target')
           expect(recurring_rules.first[:trigger]).to eq('interval')
+          expect(recurring_rules.first[:invoice_require_successful_payment]).to eq(true)
+        end
+      end
+
+      context 'when invoice_require_successful_payment is updated at the wallet level' do
+        let(:update_params) do
+          {
+            name: 'wallet1',
+            invoice_require_successful_payment: true,
+            recurring_transaction_rules: [
+              {
+                lago_id: rule_id,
+                method: 'target',
+                trigger: 'interval',
+                interval: 'weekly',
+                paid_credits: '105',
+                granted_credits: '105',
+                target_ongoing_balance: '300'
+              }
+            ]
+          }
+        end
+
+        context 'when the rule exists' do
+          let(:rule_id) { recurring_transaction_rule.id }
+
+          it 'updates the wallet and the rule' do
+            put_with_token(
+              organization,
+              "/api/v1/wallets/#{wallet.id}",
+              {wallet: update_params}
+            )
+
+            recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+            aggregate_failures do
+              expect(response).to have_http_status(:success)
+
+              expect(json[:wallet][:invoice_require_successful_payment]).to eq(true)
+              expect(recurring_rules).to be_present
+              expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
+              expect(recurring_rules.first[:invoice_require_successful_payment]).to eq(false)
+            end
+          end
+        end
+
+        context 'when the rule does not exist' do
+          let(:rule_id) { 'does not exists in the db' }
+
+          it 'create a new rule and follow the new wallet configuration' do
+            put_with_token(
+              organization,
+              "/api/v1/wallets/#{wallet.id}",
+              {wallet: update_params}
+            )
+
+            recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+            aggregate_failures do
+              expect(response).to have_http_status(:success)
+
+              expect(json[:wallet][:invoice_require_successful_payment]).to eq(true)
+              expect(recurring_rules).to be_present
+              expect(recurring_rules.first[:invoice_require_successful_payment]).to eq(true)
+            end
+          end
+        end
+
+        context 'when the rule does not exist but the param is passed explicitly' do
+          let(:wallet) { create(:wallet, customer:, invoice_require_successful_payment: true) }
+          let(:update_params) do
+            {
+              name: 'wallet1',
+              invoice_require_successful_payment: false,
+              recurring_transaction_rules: [
+                {
+                  lago_id: 'does not exists in the db',
+                  method: 'target',
+                  trigger: 'interval',
+                  interval: 'weekly',
+                  paid_credits: '105',
+                  granted_credits: '105',
+                  target_ongoing_balance: '300',
+                  invoice_require_successful_payment: true
+                }
+              ]
+            }
+          end
+
+          it 'create a new rule and ignores wallet configuration' do
+            expect(wallet.invoice_require_successful_payment).to eq(true)
+            put_with_token(
+              organization,
+              "/api/v1/wallets/#{wallet.id}",
+              {wallet: update_params}
+            )
+
+            recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+            aggregate_failures do
+              expect(response).to have_http_status(:success)
+
+              expect(json[:wallet][:invoice_require_successful_payment]).to eq(false)
+              expect(recurring_rules).to be_present
+              expect(recurring_rules.first[:invoice_require_successful_payment]).to eq(true)
+            end
+          end
         end
       end
     end

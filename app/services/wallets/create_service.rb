@@ -10,13 +10,19 @@ module Wallets
     def call
       return result unless valid?
 
-      wallet = Wallet.new(
+      attributes = {
         customer_id: result.current_customer.id,
         name: params[:name],
         rate_amount: params[:rate_amount],
         expiration_at: params[:expiration_at],
         status: :active
-      )
+      }
+
+      if params.key?(:invoice_require_successful_payment)
+        attributes[:invoice_require_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_require_successful_payment])
+      end
+
+      wallet = Wallet.new(attributes)
 
       ActiveRecord::Base.transaction do
         currency_result = Customers::UpdateService.new(nil).update_currency(
