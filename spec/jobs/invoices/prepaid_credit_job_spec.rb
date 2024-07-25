@@ -38,4 +38,10 @@ RSpec.describe Invoices::PrepaidCreditJob, type: :job do
 
     expect(wallet_transaction.reload.status).to eq('settled')
   end
+
+  it 'finalize the invoice' do
+    allow(Invoices::FinalizeOpenCreditService).to receive(:call)
+    described_class.perform_now(invoice)
+    expect(Invoices::FinalizeOpenCreditService).to have_received(:call).with(invoice:)
+  end
 end
