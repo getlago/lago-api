@@ -128,6 +128,26 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe 'when status is visible' do
+    it do
+      described_class::VISIBLE_STATUS.keys.each do |status|
+        i = create(:invoice, status:)
+        expect(i).to be_visible
+        expect(i).not_to be_invisible
+      end
+    end
+  end
+
+  describe 'when status is invisible' do
+    it do
+      described_class::INVISIBLE_STATUS.keys.each do |status|
+        i = create(:invoice, status:)
+        expect(i).to be_invisible
+        expect(i).not_to be_visible
+      end
+    end
+  end
+
   describe '#should_sync_invoice?' do
     subject(:method_call) { invoice.should_sync_invoice? }
 

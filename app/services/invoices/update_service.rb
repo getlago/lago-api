@@ -49,7 +49,7 @@ module Invoices
       if params.key?(:payment_status)
         handle_prepaid_credits(params[:payment_status])
         track_payment_status_changed
-        deliver_webhook if old_payment_status != params[:payment_status]
+        deliver_webhook if old_payment_status != params[:payment_status] && invoice.visible?
         Invoices::UpdateFeesPaymentStatusJob.perform_later(invoice)
       end
 

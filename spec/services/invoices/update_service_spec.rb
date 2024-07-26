@@ -75,7 +75,7 @@ RSpec.describe Invoices::UpdateService do
     end
 
     context 'with attached fees' do
-      it 'euqueus a job to update the payment_status of the fees' do
+      it 'enqueues a job to update the payment_status of the fees' do
         result
 
         expect(Invoices::UpdateFeesPaymentStatusJob)
@@ -206,13 +206,28 @@ RSpec.describe Invoices::UpdateService do
     context 'with payment_status update and notification is turned on' do
       let(:webhook_notification) { true }
 
-      it 'delivers a webhook' do
-        result
+      context 'when invoice is visible' do
+        it 'delivers a webhook' do
+          result
 
-        expect(SendWebhookJob).to have_been_enqueued.with(
-          'invoice.payment_status_updated',
-          invoice
-        )
+          expect(SendWebhookJob).to have_been_enqueued.with(
+            'invoice.payment_status_updated',
+            invoice
+          )
+        end
+      end
+
+      context 'when invoice is invisible' do
+        before { invoice.update! status: :open }
+
+        it 'delivers a webhook' do
+          result
+
+          expect(SendWebhookJob).not_to have_been_enqueued.with(
+            'invoice.payment_status_updated',
+            invoice
+          )
+        end
       end
 
       context 'when payment status has not changed' do
