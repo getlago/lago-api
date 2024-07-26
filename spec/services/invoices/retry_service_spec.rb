@@ -13,7 +13,7 @@ RSpec.describe Invoices::RetryService, type: :service do
       create(
         :invoice,
         :failed,
-        :with_error,
+        :with_tax_error,
         customer:,
         organization:,
         subscriptions: [subscription],
@@ -127,9 +127,9 @@ RSpec.describe Invoices::RetryService, type: :service do
           .to change(invoice, :status).from('failed').to('finalized')
       end
 
-      it 'discards previous errors' do
+      it 'discards previous tax errors' do
         expect { retry_service.call }
-          .to change(invoice.error_details.kept, :count).from(1).to(0)
+          .to change(invoice.error_details.tax_error.kept, :count).from(1).to(0)
       end
 
       it 'updates the issuing date and payment due date' do

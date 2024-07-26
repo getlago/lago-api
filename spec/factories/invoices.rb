@@ -24,9 +24,9 @@ FactoryBot.define do
       payment_dispute_lost_at { DateTime.current - 1.day }
     end
 
-    trait :with_error do
+    trait :with_tax_error do
       after :create do |i|
-        create(:error_detail, owner: i)
+        create(:error_detail, owner: i, error_code: 'tax_error')
       end
     end
 
