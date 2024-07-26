@@ -76,7 +76,6 @@ module WalletTransactions
         invoice_requires_successful_payment:
       )
 
-
       BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
 
       wallet_transaction

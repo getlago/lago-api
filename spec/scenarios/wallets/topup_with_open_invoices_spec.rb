@@ -44,7 +44,7 @@ describe 'Wallet Transaction with invoice after payment', :scenarios, type: :req
 
       setup_stripe_for(customer:)
 
-      allow_any_instance_of(::Invoices::Payments::StripeService).to receive(:create_stripe_payment)
+      allow_any_instance_of(::Invoices::Payments::StripeService).to receive(:create_stripe_payment) # rubocop:disable RSpec/AnyInstance
         .and_return(
           Stripe::PaymentIntent.construct_from(
             id: "ch_#{SecureRandom.hex(6)}",
@@ -67,14 +67,13 @@ describe 'Wallet Transaction with invoice after payment', :scenarios, type: :req
       expect(wt.settled_at).not_to be_nil
 
       wallet.reload
-      expect(wallet .credits_balance).to eq 25
+      expect(wallet.credits_balance).to eq 25
     end
-
 
     context 'when there is a payment failure' do
       it 'keeps the invoice invisible' do
         setup_stripe_for(customer:)
-        allow_any_instance_of(::Invoices::Payments::StripeService).to receive(:create_stripe_payment)
+        allow_any_instance_of(::Invoices::Payments::StripeService).to receive(:create_stripe_payment) # rubocop:disable RSpec/AnyInstance
           .and_return(
             Stripe::PaymentIntent.construct_from(
               id: "ch_#{SecureRandom.hex(6)}",
@@ -113,7 +112,7 @@ describe 'Wallet Transaction with invoice after payment', :scenarios, type: :req
         expect(wt.settled_at).to be_nil
 
         wallet.reload
-        expect(wallet .credits_balance).to eq 10
+        expect(wallet.credits_balance).to eq 10
       end
     end
   end

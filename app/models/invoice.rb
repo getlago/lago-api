@@ -123,6 +123,14 @@ class Invoice < ApplicationRecord
     %w[customer]
   end
 
+  def visible?
+    !invisible?
+  end
+
+  def invisible?
+    INVISIBLE_STATUS.key?(status.to_sym)
+  end
+
   def file_url
     return if file.blank?
 
