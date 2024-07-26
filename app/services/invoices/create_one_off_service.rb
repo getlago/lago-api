@@ -21,8 +21,17 @@ module Invoices
         currency_result.raise_if_error!
 
         create_generating_invoice
-        create_one_off_fees(invoice)
-        Invoices::ComputeAmountsFromFees.call(invoice:)
+
+        fees_result = create_one_off_fees(invoice)
+        if tax_error?(fees_result)
+          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+          invoice.failed!
+
+          return fees_result
+        end
+
+        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
 
         invoice.finalized!
@@ -64,8 +73,12 @@ module Invoices
     end
 
     def create_one_off_fees(invoice)
-      fee_result = Fees::OneOffService.new(invoice:, fees:).create
-      fee_result.raise_if_error!
+      fees_result = Fees::OneOffService.new(invoice:, fees:).create
+      fees_result.raise_if_error! unless tax_error?(fees_result)
+
+      result.fees_taxes = fees_result.fees_taxes
+
+      fees_result
     end
 
     def should_deliver_email?
@@ -82,6 +95,10 @@ module Invoices
       identifier = api_context? ? :add_on_code : :add_on_id
 
       fees.pluck(identifier).uniq
+    end
+
+    def tax_error?(fee_result)
+      !fee_result.success? && fee_result.error.code == 'tax_error'
     end
   end
 end
