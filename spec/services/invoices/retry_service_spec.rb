@@ -13,6 +13,7 @@ RSpec.describe Invoices::RetryService, type: :service do
       create(
         :invoice,
         :failed,
+        :with_error,
         customer:,
         organization:,
         subscriptions: [subscription],
@@ -120,162 +121,169 @@ RSpec.describe Invoices::RetryService, type: :service do
       end
     end
 
-    it 'marks the invoice as finalized' do
-      expect { retry_service.call }
-        .to change(invoice, :status).from('failed').to('finalized')
-    end
-
-    it 'updates the issuing date and payment due date' do
-      invoice.customer.update(timezone: 'America/New_York')
-
-      freeze_time do
-        current_date = Time.current.in_time_zone('America/New_York').to_date
-
+    context 'when taxes are fetched successfully' do
+      it 'marks the invoice as finalized' do
         expect { retry_service.call }
-          .to change { invoice.reload.issuing_date }.to(current_date)
-          .and change { invoice.reload.payment_due_date }.to(current_date)
-      end
-    end
-
-    it 'generates invoice number' do
-      customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
-      sequential_id = customer.invoices.where.not(id: invoice.id).order(created_at: :desc).first&.sequential_id || 0
-
-      expect { retry_service.call }
-        .to change { invoice.reload.number }
-        .from("#{organization.document_number_prefix}-DRAFT")
-        .to("#{customer_slug}-#{format("%03d", sequential_id + 1)}")
-    end
-
-    it 'generates expected invoice totals' do
-      result = retry_service.call
-
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.invoice.fees.charge_kind.count).to eq(1)
-        expect(result.invoice.fees.subscription_kind.count).to eq(1)
-
-        expect(result.invoice.currency).to eq('EUR')
-        expect(result.invoice.fees_amount_cents).to eq(3_000)
-
-        expect(result.invoice.taxes_amount_cents).to eq(350)
-        expect(result.invoice.taxes_rate.round(2)).to eq(11.67) # (0.667 * 10) + (0.333 * 15)
-        expect(result.invoice.applied_taxes.count).to eq(2)
-
-        expect(result.invoice.total_amount_cents).to eq(3_350)
-      end
-    end
-
-    it_behaves_like 'syncs invoice' do
-      let(:service_call) { retry_service.call }
-    end
-
-    it_behaves_like 'syncs sales order' do
-      let(:service_call) { retry_service.call }
-    end
-
-    it 'enqueues a SendWebhookJob' do
-      expect do
-        retry_service.call
-      end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
-    end
-
-    it 'enqueues GeneratePdfAndNotifyJob with email false' do
-      expect do
-        retry_service.call
-      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
-    end
-
-    context 'with lago_premium' do
-      around { |test| lago_premium!(&test) }
-
-      it 'enqueues GeneratePdfAndNotifyJob with email true' do
-        expect do
-          retry_service.call
-        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
+          .to change(invoice, :status).from('failed').to('finalized')
       end
 
-      context 'when organization does not have right email settings' do
-        before { invoice.organization.update!(email_settings: []) }
+      it 'discards previous errors' do
+        expect { retry_service.call }
+          .to change(invoice.error_details.kept, :count).from(1).to(0)
+      end
 
-        it 'enqueues GeneratePdfAndNotifyJob with email false' do
-          expect do
-            retry_service.call
-          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      it 'updates the issuing date and payment due date' do
+        invoice.customer.update(timezone: 'America/New_York')
+
+        freeze_time do
+          current_date = Time.current.in_time_zone('America/New_York').to_date
+
+          expect { retry_service.call }
+            .to change { invoice.reload.issuing_date }.to(current_date)
+            .and change { invoice.reload.payment_due_date }.to(current_date)
         end
       end
-    end
 
-    it 'calls SegmentTrackJob' do
-      invoice = retry_service.call.invoice
+      it 'generates invoice number' do
+        customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
+        sequential_id = customer.invoices.where.not(id: invoice.id).order(created_at: :desc).first&.sequential_id || 0
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'invoice_created',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
-    it 'creates a payment' do
-      payment_create_service = instance_double(Invoices::Payments::CreateService)
-      allow(Invoices::Payments::CreateService).to receive(:new).and_return(payment_create_service)
-      allow(payment_create_service).to receive(:call)
-
-      retry_service.call
-      expect(Invoices::Payments::CreateService).to have_received(:new)
-      expect(payment_create_service).to have_received(:call)
-    end
-
-    context 'with credit notes' do
-      let(:credit_note) do
-        create(
-          :credit_note,
-          customer:,
-          total_amount_cents: 10,
-          total_amount_currency: 'EUR',
-          balance_amount_cents: 10,
-          balance_amount_currency: 'EUR',
-          credit_amount_cents: 10,
-          credit_amount_currency: 'EUR'
-        )
+        expect { retry_service.call }
+          .to change { invoice.reload.number }
+          .from("#{organization.document_number_prefix}-DRAFT")
+          .to("#{customer_slug}-#{format("%03d", sequential_id + 1)}")
       end
 
-      before { credit_note }
-
-      it 'updates the invoice accordingly' do
+      it 'generates expected invoice totals' do
         result = retry_service.call
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.fees_amount_cents).to eq(3_000)
-          expect(result.invoice.taxes_amount_cents).to eq(350)
-          expect(result.invoice.total_amount_cents).to eq(3_340)
-          expect(result.invoice.credits.count).to eq(1)
+          expect(result.invoice.fees.charge_kind.count).to eq(1)
+          expect(result.invoice.fees.subscription_kind.count).to eq(1)
 
-          credit = result.invoice.credits.first
-          expect(credit.credit_note).to eq(credit_note)
-          expect(credit.amount_cents).to eq(10)
+          expect(result.invoice.currency).to eq('EUR')
+          expect(result.invoice.fees_amount_cents).to eq(3_000)
+
+          expect(result.invoice.taxes_amount_cents).to eq(350)
+          expect(result.invoice.taxes_rate.round(2)).to eq(11.67) # (0.667 * 10) + (0.333 * 15)
+          expect(result.invoice.applied_taxes.count).to eq(2)
+
+          expect(result.invoice.total_amount_cents).to eq(3_350)
         end
       end
 
-      context 'when invoice type is one_off' do
-        before do
-          invoice.update!(invoice_type: :one_off)
+      it_behaves_like 'syncs invoice' do
+        let(:service_call) { retry_service.call }
+      end
+
+      it_behaves_like 'syncs sales order' do
+        let(:service_call) { retry_service.call }
+      end
+
+      it 'enqueues a SendWebhookJob' do
+        expect do
+          retry_service.call
+        end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
+      end
+
+      it 'enqueues GeneratePdfAndNotifyJob with email false' do
+        expect do
+          retry_service.call
+        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      end
+
+      context 'with lago_premium' do
+        around { |test| lago_premium!(&test) }
+
+        it 'enqueues GeneratePdfAndNotifyJob with email true' do
+          expect do
+            retry_service.call
+          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
         end
 
-        it 'does not apply credit note' do
+        context 'when organization does not have right email settings' do
+          before { invoice.organization.update!(email_settings: []) }
+
+          it 'enqueues GeneratePdfAndNotifyJob with email false' do
+            expect do
+              retry_service.call
+            end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+          end
+        end
+      end
+
+      it 'calls SegmentTrackJob' do
+        invoice = retry_service.call.invoice
+
+        expect(SegmentTrackJob).to have_received(:perform_later).with(
+          membership_id: CurrentContext.membership,
+          event: 'invoice_created',
+          properties: {
+            organization_id: invoice.organization.id,
+            invoice_id: invoice.id,
+            invoice_type: invoice.invoice_type
+          }
+        )
+      end
+
+      it 'creates a payment' do
+        payment_create_service = instance_double(Invoices::Payments::CreateService)
+        allow(Invoices::Payments::CreateService).to receive(:new).and_return(payment_create_service)
+        allow(payment_create_service).to receive(:call)
+
+        retry_service.call
+        expect(Invoices::Payments::CreateService).to have_received(:new)
+        expect(payment_create_service).to have_received(:call)
+      end
+
+      context 'with credit notes' do
+        let(:credit_note) do
+          create(
+            :credit_note,
+            customer:,
+            total_amount_cents: 10,
+            total_amount_currency: 'EUR',
+            balance_amount_cents: 10,
+            balance_amount_currency: 'EUR',
+            credit_amount_cents: 10,
+            credit_amount_currency: 'EUR'
+          )
+        end
+
+        before { credit_note }
+
+        it 'updates the invoice accordingly' do
           result = retry_service.call
 
           aggregate_failures do
             expect(result).to be_success
             expect(result.invoice.fees_amount_cents).to eq(3_000)
             expect(result.invoice.taxes_amount_cents).to eq(350)
-            expect(result.invoice.total_amount_cents).to eq(3_350)
-            expect(result.invoice.credits.count).to eq(0)
+            expect(result.invoice.total_amount_cents).to eq(3_340)
+            expect(result.invoice.credits.count).to eq(1)
+
+            credit = result.invoice.credits.first
+            expect(credit.credit_note).to eq(credit_note)
+            expect(credit.amount_cents).to eq(10)
+          end
+        end
+
+        context 'when invoice type is one_off' do
+          before do
+            invoice.update!(invoice_type: :one_off)
+          end
+
+          it 'does not apply credit note' do
+            result = retry_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.invoice.fees_amount_cents).to eq(3_000)
+              expect(result.invoice.taxes_amount_cents).to eq(350)
+              expect(result.invoice.total_amount_cents).to eq(3_350)
+              expect(result.invoice.credits.count).to eq(0)
+            end
           end
         end
       end
