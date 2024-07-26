@@ -7,7 +7,8 @@ module Invoices
     unique :until_executed, on_conflict: :log
 
     def perform(invoice)
-      Wallets::ApplyPaidCreditsService.new.call(invoice)
+      wallet_transaction = invoice.fees.find_by(fee_type: 'credit')&.invoiceable
+      Wallets::ApplyPaidCreditsService.call(wallet_transaction:)
     end
   end
 end

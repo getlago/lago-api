@@ -2,15 +2,25 @@
 
 module Wallets
   class ApplyPaidCreditsService < BaseService
-    def call(invoice)
-      wallet_transaction = invoice.fees.find_by(fee_type: 'credit')&.invoiceable
+    def initialize(wallet_transaction:)
+      @wallet_transaction = wallet_transaction
+      super
+    end
 
-      return unless wallet_transaction
-      return if wallet_transaction.status == 'settled'
+    def call
+      return result unless wallet_transaction
+      return result if wallet_transaction.status == 'settled'
 
       WalletTransactions::SettleService.new(wallet_transaction:).call
       Wallets::Balance::IncreaseService
         .new(wallet: wallet_transaction.wallet, credits_amount: wallet_transaction.credit_amount).call
+
+      result.wallet_transaction = wallet_transaction
+      result
     end
+
+    private
+
+    attr_reader :wallet_transaction
   end
 end
