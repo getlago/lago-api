@@ -3,7 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe WebhooksQuery, type: :query do
-  subject(:webhook_query) { described_class.new(webhook_endpoint:) }
+  subject(:result) do
+    described_class.call(webhook_endpoint:, pagination:, search_term:, filters:)
+  end
+
+  let(:pagination) { nil }
+  let(:search_term) { nil }
+  let(:filters) { {} }
 
   let(:organization) { webhook_endpoint.organization.reload }
   let(:webhook_endpoint) { create(:webhook_endpoint) }
@@ -18,52 +24,54 @@ RSpec.describe WebhooksQuery, type: :query do
   end
 
   it 'returns all webhooks' do
-    result = webhook_query.call(
-      search_term: nil,
-      page: 1,
-      limit: 10
-    )
-
     returned_ids = result.webhooks.pluck(:id)
 
     aggregate_failures do
-      expect(result.webhooks.count).to eq(3)
+      expect(returned_ids.count).to eq(3)
       expect(returned_ids).to include(webhook_succeeded.id)
       expect(returned_ids).to include(webhook_failed.id)
       expect(returned_ids).to include(webhook_other_type.id)
     end
   end
 
-  context 'when search for /generated/ term' do
-    it 'returns only one webhook' do
-      result = webhook_query.call(
-        search_term: 'generated',
-        page: 1,
-        limit: 10
-      )
+  context 'with pagination' do
+    let(:pagination) { {page: 2, limit: 2} }
 
+    it 'applies the pagination' do
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.webhooks.count).to eq(1)
+        expect(result.webhooks.current_page).to eq(2)
+        expect(result.webhooks.prev_page).to eq(1)
+        expect(result.webhooks.next_page).to be_nil
+        expect(result.webhooks.total_pages).to eq(2)
+        expect(result.webhooks.total_count).to eq(3)
+      end
+    end
+  end
+
+  context 'when search for /generated/ term' do
+    let(:search_term) { 'generated' }
+
+    it 'returns only one webhook' do
       returned_ids = result.webhooks.pluck(:id)
 
       aggregate_failures do
-        expect(result.webhooks.count).to eq(1)
+        expect(returned_ids.count).to eq(1)
         expect(returned_ids).to include(webhook_other_type.id)
       end
     end
   end
 
   context 'when search for /created/ term and filtering by status' do
-    it 'returns only one webhook' do
-      result = webhook_query.call(
-        search_term: 'created',
-        page: 1,
-        limit: 10,
-        status: 'succeeded'
-      )
+    let(:search_term) { 'created' }
+    let(:filters) { {status: 'succeeded'} }
 
+    it 'returns only one webhook' do
       returned_ids = result.webhooks.pluck(:id)
 
       aggregate_failures do
-        expect(result.webhooks.count).to eq(1)
+        expect(returned_ids.count).to eq(1)
         expect(returned_ids).to include(webhook_succeeded.id)
       end
     end

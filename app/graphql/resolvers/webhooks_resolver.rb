@@ -20,12 +20,16 @@ module Resolvers
     def resolve(webhook_endpoint_id:, page: nil, limit: nil, status: nil, search_term: nil)
       webhook_endpoint = current_organization.webhook_endpoints.find(webhook_endpoint_id)
 
-      query = WebhooksQuery.new(webhook_endpoint:)
-      result = query.call(
+      result = WebhooksQuery.call(
+        webhook_endpoint:,
         search_term:,
-        page:,
-        limit:,
-        status:
+        filters: {
+          status:
+        },
+        pagination: {
+          page:,
+          limit:
+        }
       )
 
       result.webhooks
