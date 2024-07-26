@@ -261,6 +261,24 @@ RSpec.describe Invoices::RetryService, type: :service do
           expect(credit.amount_cents).to eq(10)
         end
       end
+
+      context 'when invoice type is one_off' do
+        before do
+          invoice.update!(invoice_type: :one_off)
+        end
+
+        it 'does not apply credit note' do
+          result = retry_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.fees_amount_cents).to eq(3_000)
+            expect(result.invoice.taxes_amount_cents).to eq(350)
+            expect(result.invoice.total_amount_cents).to eq(3_350)
+            expect(result.invoice.credits.count).to eq(0)
+          end
+        end
+      end
     end
   end
 end

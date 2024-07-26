@@ -15,13 +15,12 @@ module Invoices
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
 
       unless taxes_result.success?
-        return result.service_failure!(code: 'taxes', message: 'fetching failed')
+        return result.validation_failure!(errors: {tax_error: [taxes_result.error.code]})
       end
 
       provider_taxes = taxes_result.fees
 
       ActiveRecord::Base.transaction do
-        invoice.status = :finalized
         invoice.issuing_date = issuing_date
         invoice.payment_due_date = payment_due_date
 
@@ -31,6 +30,7 @@ module Invoices
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+        invoice.status = :finalized
         invoice.save!
 
         invoice.reload
@@ -78,10 +78,13 @@ module Invoices
     end
 
     def should_create_credit_note_credit?
+      return false if invoice.one_off?
+
       credit_notes.any?
     end
 
     def should_create_applied_prepaid_credit?
+      return false if invoice.one_off?
       return false unless wallet&.active?
       return false unless invoice.total_amount_cents&.positive?
 
