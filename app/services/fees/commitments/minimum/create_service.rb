@@ -35,9 +35,6 @@ module Fees
             taxes_amount_cents: 0
           )
 
-          taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
-          taxes_result.raise_if_error!
-
           new_fee.save!
           result.fee = new_fee
 
