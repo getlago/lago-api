@@ -5,6 +5,19 @@ module Invoices
     class GocardlessService < BaseService
       include Customers::PaymentProviderFinder
 
+      class MandateNotFoundError < StandardError
+        DEFAULT_MESSAGE = "No mandate available for payment"
+        ERROR_CODE = "no_mandate_error"
+
+        def initialize(msg = DEFAULT_MESSAGE)
+          super
+        end
+
+        def code
+          ERROR_CODE
+        end
+      end
+
       PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed]
         .freeze
       SUCCESS_STATUSES = %w[paid_out].freeze
@@ -46,6 +59,12 @@ module Invoices
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
 
         result.payment = payment
+        result
+      rescue MandateNotFoundError => e
+        deliver_error_webhook(e)
+        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
+
+        result.service_failure!(code: e.code, message: e.message)
         result
       end
 
@@ -101,10 +120,12 @@ module Invoices
 
         mandate = result&.records&.first
 
-        customer.gocardless_customer.provider_mandate_id = mandate&.id
+        raise MandateNotFoundError unless mandate
+
+        customer.gocardless_customer.provider_mandate_id = mandate.id
         customer.gocardless_customer.save!
 
-        mandate&.id
+        mandate.id
       end
 
       def create_gocardless_payment
