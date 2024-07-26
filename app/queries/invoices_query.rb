@@ -14,7 +14,8 @@ class InvoicesQuery < BaseQuery
     invoices = with_issuing_date_range(invoices) if filters.issuing_date_from || filters.issuing_date_to
     invoices = invoices.where(status:) if status.present?
     invoices = invoices.where(payment_status:) if payment_status.present?
-    invoices = invoices.where.not(payment_dispute_lost_at: nil) unless payment_dispute_lost.nil?
+    invoices = invoices.where.not(payment_dispute_lost_at: nil) if payment_dispute_lost
+    invoices = invoices.where(payment_dispute_lost_at: nil) if payment_dispute_lost == false
     invoices = invoices.where(payment_overdue:) if payment_overdue.present?
     invoices = invoices.order(issuing_date: :desc, created_at: :desc)
     invoices = paginate(invoices)
