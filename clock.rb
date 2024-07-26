@@ -100,6 +100,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.day, 'schedule:clean_expired_open_invoices', at: '03:00') do
+    Clock::ExpiredInvoicesCleanupJob
+      .set(sentry: {"slug" => 'lago_clean_expired_open_invoices', "cron" => '0 3 * * *'})
+      .perform_later
+  end
+
   unless ActiveModel::Type::Boolean.new.cast(ENV['LAGO_DISABLE_EVENTS_VALIDATION'])
     every(1.hour, 'schedule:post_validate_events', at: '*:05') do
       Clock::EventsValidationJob
