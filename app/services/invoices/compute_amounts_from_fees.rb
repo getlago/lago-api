@@ -10,7 +10,7 @@ module Invoices
     end
 
     def call
-      unless invoice.one_off?
+      if !invoice.one_off? || invoice.failed?
         invoice.fees.each do |fee|
           taxes_result = if provider_taxes && customer_provider_taxation?
             Fees::ApplyProviderTaxesService.call(fee:, fee_taxes: fee_taxes(fee))
