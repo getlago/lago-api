@@ -78,6 +78,10 @@ module Types
           resource_type: :invoice
         )&.external_id
       end
+
+      def error_details
+        object.error_details.kept
+      end
     end
   end
 end
