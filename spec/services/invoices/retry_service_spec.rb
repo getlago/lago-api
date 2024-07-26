@@ -288,5 +288,27 @@ RSpec.describe Invoices::RetryService, type: :service do
         end
       end
     end
+
+    context 'when failed to fetch taxes' do
+      let(:body) do
+        path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+        File.read(path)
+      end
+
+      it 'keeps invoice in failed status' do
+        result = retry_service.call
+
+        expect(result).not_to be_success
+        expect(invoice.reload.status).to eq('failed')
+      end
+
+      it 'resolves old tax error and creates new one' do
+        aggregate_failures do
+          expect { retry_service.call }.to change(invoice.error_details.tax_error, :count).from(1).to(2)
+          expect(invoice.error_details.tax_error.kept.count).to be(1)
+          expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
+        end
+      end
+    end
   end
 end
