@@ -23,11 +23,13 @@ module Api
       end
 
       def index
-        query = WalletTransactionsQuery.new(organization: current_organization)
-        result = query.call(
+        result = WalletTransactionsQuery.call(
+          organization: current_organization,
           wallet_id: params[:id],
-          page: params[:page],
-          limit: params[:per_page] || PER_PAGE,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          },
           filters: {
             status: params[:status],
             transaction_type: params[:transaction_type]

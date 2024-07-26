@@ -5754,10 +5754,6 @@ type Query {
   Query wallet transactions
   """
   walletTransactions(
-    """
-    List of wallet transaction IDs to fetch
-    """
-    ids: [ID!]
     limit: Int
     page: Int
     status: WalletTransactionStatusEnum
