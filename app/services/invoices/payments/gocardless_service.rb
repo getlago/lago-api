@@ -179,15 +179,13 @@ module Invoices
       end
 
       def deliver_error_webhook(gocardless_error)
-        SendWebhookJob.perform_later(
-          'invoice.payment_failure',
-          invoice,
+        DeliverErrorWebhookService.call_async(invoice, {
           provider_customer_id: customer.gocardless_customer.provider_customer_id,
           provider_error: {
             message: gocardless_error.message,
             error_code: gocardless_error.code
           }
-        )
+        })
       end
     end
   end
