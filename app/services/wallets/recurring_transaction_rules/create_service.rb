@@ -18,7 +18,7 @@ module Wallets
           granted_credits = wallet_params[:granted_credits]
         end
 
-        rule = wallet.recurring_transaction_rules.create!(
+        attributes = {
           paid_credits: rule_params[:paid_credits] || paid_credits || 0.0,
           granted_credits: rule_params[:granted_credits] || granted_credits || 0.0,
           threshold_credits: rule_params[:threshold_credits] || 0.0,
@@ -27,7 +27,15 @@ module Wallets
           started_at: rule_params[:started_at],
           target_ongoing_balance: rule_params[:target_ongoing_balance],
           trigger: rule_params[:trigger].to_s
-        )
+        }
+
+        attributes[:invoice_require_successful_payment] = if rule_params.key?(:invoice_require_successful_payment)
+          ActiveModel::Type::Boolean.new.cast(rule_params[:invoice_require_successful_payment])
+        else
+          wallet.invoice_require_successful_payment?
+        end
+
+        rule = wallet.recurring_transaction_rules.create!(attributes)
 
         result.recurring_transaction_rule = rule
         result

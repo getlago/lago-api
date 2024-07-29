@@ -28,6 +28,8 @@ RSpec.describe Types::Wallets::Object do
 
   it { is_expected.to have_field(:recurring_transaction_rules).of_type('[RecurringTransactionRule!]') }
 
+  it { is_expected.to have_field(:invoice_require_successful_payment).of_type('Boolean!') }
+
   it { is_expected.to have_field(:created_at).of_type('ISO8601DateTime!') }
   it { is_expected.to have_field(:expiration_at).of_type('ISO8601DateTime') }
   it { is_expected.to have_field(:terminated_at).of_type('ISO8601DateTime') }

@@ -14,9 +14,18 @@ module WalletTransactions
 
       wallet_transactions = []
       @source = params[:source] || :manual
+      invoice_require_successful_payment = if params.key?(:invoice_require_successful_payment)
+        ActiveModel::Type::Boolean.new.cast(params[:invoice_require_successful_payment])
+      else
+        result.current_wallet.invoice_require_successful_payment
+      end
 
       if params[:paid_credits]
-        transaction = handle_paid_credits(wallet: result.current_wallet, paid_credits: params[:paid_credits])
+        transaction = handle_paid_credits(
+          wallet: result.current_wallet,
+          paid_credits: params[:paid_credits],
+          invoice_require_successful_payment:
+        )
         wallet_transactions << transaction
       end
 
@@ -24,7 +33,8 @@ module WalletTransactions
         transaction = handle_granted_credits(
           wallet: result.current_wallet,
           granted_credits: params[:granted_credits],
-          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits])
+          reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits]),
+          invoice_require_successful_payment:
         )
         wallet_transactions << transaction
       end
@@ -50,7 +60,7 @@ module WalletTransactions
 
     attr_reader :organization, :params, :source
 
-    def handle_paid_credits(wallet:, paid_credits:)
+    def handle_paid_credits(wallet:, paid_credits:, invoice_require_successful_payment:)
       paid_credits_amount = BigDecimal(paid_credits)
 
       return if paid_credits_amount.zero?
@@ -62,7 +72,8 @@ module WalletTransactions
         credit_amount: paid_credits_amount,
         status: :pending,
         source:,
-        transaction_status: :purchased
+        transaction_status: :purchased,
+        invoice_require_successful_payment:
       )
 
       BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
@@ -70,7 +81,7 @@ module WalletTransactions
       wallet_transaction
     end
 
-    def handle_granted_credits(wallet:, granted_credits:, reset_consumed_credits: false)
+    def handle_granted_credits(wallet:, granted_credits:, invoice_require_successful_payment:, reset_consumed_credits: false)
       granted_credits_amount = BigDecimal(granted_credits)
 
       return if granted_credits_amount.zero?
@@ -84,7 +95,8 @@ module WalletTransactions
           status: :settled,
           settled_at: Time.current,
           source:,
-          transaction_status: :granted
+          transaction_status: :granted,
+          invoice_require_successful_payment:
         )
 
         Wallets::Balance::IncreaseService.new(

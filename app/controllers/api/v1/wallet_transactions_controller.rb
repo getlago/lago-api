@@ -53,7 +53,8 @@ module Api
           :wallet_id,
           :paid_credits,
           :granted_credits,
-          :voided_credits
+          :voided_credits,
+          :invoice_require_successful_payment
         )
       end
     end
