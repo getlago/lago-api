@@ -911,20 +911,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_29_154334) do
     t.index ["tax_id"], name: "index_plans_taxes_on_tax_id"
   end
 
-  create_table "pre_aggregations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "organization_id", null: false
-    t.string "external_subscription_id", null: false
-    t.string "code", null: false
-    t.datetime "timestamp", precision: nil, null: false
-    t.decimal "aggregated_value", default: "0.0", null: false
-    t.jsonb "filters", default: {}, null: false
-    t.integer "units", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["organization_id", "external_subscription_id", "code", "timestamp", "filters"], name: "idx_on_organization_id_external_subscription_id_cod_044827bfab", unique: true
-    t.index ["organization_id"], name: "index_pre_aggregations_on_organization_id"
-  end
-
   create_table "quantified_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "external_subscription_id", null: false
     t.string "external_id"
@@ -1195,7 +1181,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_29_154334) do
   add_foreign_key "plans", "plans", column: "parent_id"
   add_foreign_key "plans_taxes", "plans"
   add_foreign_key "plans_taxes", "taxes"
-  add_foreign_key "pre_aggregations", "organizations"
   add_foreign_key "quantified_events", "groups"
   add_foreign_key "quantified_events", "organizations"
   add_foreign_key "recurring_transaction_rules", "wallets"
