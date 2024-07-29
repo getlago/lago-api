@@ -31,7 +31,7 @@ module Integrations
         end
 
         def integration_customer
-          @integration_customer ||= customer&.integration_customers&.accounting_kind&.first
+          @integration_customer ||= customer&.accounting_customer
         end
 
         def payload(type)

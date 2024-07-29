@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_23_150221) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_24_154417) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -664,6 +664,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150221) do
     t.jsonb "settings", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "category"
+    t.index ["category"], name: "index_integrations_on_category"
     t.index ["code", "organization_id"], name: "index_integrations_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_integrations_on_organization_id"
   end

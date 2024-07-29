@@ -146,6 +146,7 @@ type AnrokFeeObjectCollection {
 
 type AnrokIntegration {
   apiKey: String!
+  category: String
   code: String!
   externalAccountId: String
   hasMappingsConfigured: Boolean
@@ -5112,6 +5113,7 @@ type NetsuiteCustomer {
 
 type NetsuiteIntegration {
   accountId: String
+  category: String
   clientId: String
   clientSecret: String
   code: String!
@@ -5154,6 +5156,7 @@ input OktaAuthorizeInput {
 }
 
 type OktaIntegration {
+  category: String
   clientId: String
   clientSecret: String
   code: String!
@@ -7559,6 +7562,7 @@ type XeroCustomer {
 }
 
 type XeroIntegration {
+  category: String
   code: String!
   connectionId: ID!
   hasMappingsConfigured: Boolean

@@ -42,6 +42,17 @@ class Customer < ApplicationRecord
   has_one :anrok_customer, class_name: 'IntegrationCustomers::AnrokCustomer'
   has_one :xero_customer, class_name: 'IntegrationCustomers::XeroCustomer'
 
+  # customer can have only one integration customer per integration_category
+  has_one :tax_provider_customer, -> {
+    includes(:integration).where(integration: {category: 'tax_provider'})
+  }, class_name: 'IntegrationCustomers::BaseCustomer'
+  has_one :accounting_customer, -> {
+    includes(:integration).where(integration: {category: 'accounting'})
+  }, class_name: 'IntegrationCustomers::BaseCustomer'
+
+  # customer can have only one payment_provider_customer
+  has_one :payment_provider_customer, class_name: 'PaymentProviderCustomers::BaseCustomer'
+
   PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
 
   default_scope -> { kept }
@@ -59,6 +70,8 @@ class Customer < ApplicationRecord
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :payment_provider, inclusion: {in: PAYMENT_PROVIDERS}, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
+
+  alias_method :provider_customer, :payment_provider_customer
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name external_id email]
@@ -102,17 +115,6 @@ class Customer < ApplicationRecord
     return document_locale.to_sym if document_locale?
 
     organization.document_locale.to_sym
-  end
-
-  def provider_customer
-    case payment_provider&.to_sym
-    when :stripe
-      stripe_customer
-    when :gocardless
-      gocardless_customer
-    when :adyen
-      adyen_customer
-    end
   end
 
   def shipping_address

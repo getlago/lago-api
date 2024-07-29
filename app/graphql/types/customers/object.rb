@@ -103,14 +103,7 @@ module Types
       end
 
       def provider_customer
-        case object&.payment_provider&.to_sym
-        when :stripe
-          object.stripe_customer
-        when :gocardless
-          object.gocardless_customer
-        when :adyen
-          object.adyen_customer
-        end
+        object&.payment_provider_customer
       end
 
       def credit_notes_credits_available_count
