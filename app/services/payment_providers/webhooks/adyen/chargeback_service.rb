@@ -13,7 +13,7 @@ module PaymentProviders
           return result.not_found_failure!(resource: 'adyen_payment') unless payment
 
           if status == 'Lost' && event['success'] == 'true'
-            return Invoices::LoseDisputeService.call(invoice: payment.invoice, payment_dispute_lost_at:, reason:)
+            return Invoices::LoseDisputeService.call(invoice: payment.payable, payment_dispute_lost_at:, reason:)
           end
 
           result

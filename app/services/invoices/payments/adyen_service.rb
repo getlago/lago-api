@@ -34,7 +34,7 @@ module Invoices
         return result unless adyen_success
 
         payment = Payment.new(
-          invoice:,
+          payable: invoice,
           payment_provider_id: adyen_payment_provider.id,
           payment_provider_customer_id: customer.adyen_customer.id,
           amount_cents: invoice.total_amount_cents,
@@ -62,8 +62,8 @@ module Invoices
         return result.not_found_failure!(resource: 'adyen_payment') unless payment
 
         result.payment = payment
-        result.invoice = payment.invoice
-        return result if payment.invoice.payment_succeeded?
+        result.invoice = payment.payable
+        return result if payment.payable.payment_succeeded?
 
         payment.update!(status:)
 
@@ -105,7 +105,7 @@ module Invoices
         increment_payment_attempts
 
         Payment.new(
-          invoice:,
+          payable: invoice,
           payment_provider_id: adyen_payment_provider.id,
           payment_provider_customer_id: customer.adyen_customer.id,
           amount_cents: invoice.total_amount_cents,

@@ -13,7 +13,7 @@ module PaymentProviders
           return result.not_found_failure!(resource: 'stripe_payment') unless payment
 
           if status == 'lost'
-            return Invoices::LoseDisputeService.call(invoice: payment.invoice, payment_dispute_lost_at:, reason:)
+            return Invoices::LoseDisputeService.call(invoice: payment.payable, payment_dispute_lost_at:, reason:)
           end
 
           result
