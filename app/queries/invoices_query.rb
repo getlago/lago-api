@@ -16,7 +16,7 @@ class InvoicesQuery < BaseQuery
     invoices = invoices.where(payment_status:) if payment_status.present?
     invoices = invoices.where.not(payment_dispute_lost_at: nil) if payment_dispute_lost
     invoices = invoices.where(payment_dispute_lost_at: nil) if payment_dispute_lost == false
-    invoices = invoices.where(payment_overdue:) if payment_overdue.present?
+    invoices = invoices.where(payment_overdue:) unless payment_overdue.nil?
     invoices = invoices.order(issuing_date: :desc, created_at: :desc)
     invoices = paginate(invoices)
 

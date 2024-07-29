@@ -241,7 +241,39 @@ RSpec.describe InvoicesQuery, type: :query do
         payment_overdue: true
       )
 
-      expect(result.invoices.pluck(:id)).to eq([invoice_third.id])
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+        expect(returned_ids).not_to include(invoice_sixth.id)
+      end
+    end
+  end
+
+  context 'when filtering by payment overdue false' do
+    it 'returns expected invoices' do
+      result = invoice_query.call(
+        search_term: nil,
+        status: nil,
+        payment_overdue: false
+      )
+
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids.count).to eq(5)
+        expect(returned_ids).to include(invoice_first.id)
+        expect(returned_ids).to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).to include(invoice_fourth.id)
+        expect(returned_ids).to include(invoice_fifth.id)
+        expect(returned_ids).to include(invoice_sixth.id)
+      end
     end
   end
 
