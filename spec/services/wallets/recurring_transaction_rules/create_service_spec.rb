@@ -48,7 +48,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           target_ongoing_balance: 100.0,
           threshold_credits: 0.0,
           trigger: "interval",
-          invoice_require_successful_payment: false
+          invoice_requires_successful_payment: false
         )
       end
 
@@ -74,12 +74,12 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         end
       end
 
-      context 'when invoice_require_successful_payment is present' do
+      context 'when invoice_requires_successful_payment is present' do
         let(:rule_params) do
           {
             trigger: "threshold",
             threshold_credits: "1.0",
-            invoice_require_successful_payment: true
+            invoice_requires_successful_payment: true
           }
         end
 
@@ -87,13 +87,13 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
 
           expect(wallet.recurring_transaction_rules.first).to have_attributes(
-            invoice_require_successful_payment: true
+            invoice_requires_successful_payment: true
           )
         end
       end
 
-      context 'when invoice_require_successful_payment is blank' do
-        let(:wallet) { create(:wallet, invoice_require_successful_payment: true) }
+      context 'when invoice_requires_successful_payment is blank' do
+        let(:wallet) { create(:wallet, invoice_requires_successful_payment: true) }
         let(:wallet_params) do
           {
             paid_credits: "100.0",
@@ -109,7 +109,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
 
           expect(wallet.recurring_transaction_rules.first).to have_attributes(
-            invoice_require_successful_payment: true
+            invoice_requires_successful_payment: true
           )
         end
       end

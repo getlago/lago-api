@@ -31,7 +31,7 @@ RSpec.describe ::V1::WalletSerializer do
         'ongoing_balance_cents' => wallet.ongoing_balance_cents,
         'ongoing_usage_balance_cents' => wallet.ongoing_usage_balance_cents,
         'consumed_credits' => wallet.consumed_credits.to_s,
-        'invoice_require_successful_payment' => wallet.invoice_require_successful_payment
+        'invoice_requires_successful_payment' => wallet.invoice_requires_successful_payment
       )
     end
   end

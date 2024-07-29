@@ -17,8 +17,8 @@ module Wallets
       ActiveRecord::Base.transaction do
         wallet.name = params[:name] if params.key?(:name)
         wallet.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
-        if params.key?(:invoice_require_successful_payment)
-          wallet.invoice_require_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_require_successful_payment])
+        if params.key?(:invoice_requires_successful_payment)
+          wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
         if params[:recurring_transaction_rules] && License.premium?
           Wallets::RecurringTransactionRules::UpdateService.call(wallet:, params: params[:recurring_transaction_rules])

@@ -14,7 +14,7 @@ module Mutations
       argument :wallet_id, ID, required: true
 
       argument :granted_credits, String, required: false
-      argument :invoice_require_successful_payment, Boolean, required: false
+      argument :invoice_requires_successful_payment, Boolean, required: false
       argument :paid_credits, String, required: false
       argument :voided_credits, String, required: false
 
