@@ -8,12 +8,13 @@ RSpec.describe Payment, type: :model do
   it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to have_many(:integration_resources) }
-  it { is_expected.to delegate_method(:customer).to(:invoice) }
+  it { is_expected.to belong_to(:payable) }
+  it { is_expected.to delegate_method(:customer).to(:payable) }
 
   describe '#should_sync_payment?' do
     subject(:method_call) { payment.should_sync_payment? }
 
-    let(:payment) { create(:payment, invoice:) }
+    let(:payment) { create(:payment, payable: invoice) }
     let(:invoice) { create(:invoice, customer:, organization:, status:) }
     let(:organization) { create(:organization) }
 

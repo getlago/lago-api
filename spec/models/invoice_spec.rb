@@ -11,6 +11,7 @@ RSpec.describe Invoice, type: :model do
 
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
+  it { is_expected.to belong_to(:payable_group).optional }
 
   it 'has fixed status mapping' do
     expect(described_class::VISIBLE_STATUS).to match(draft: 0, finalized: 1, voided: 2, failed: 4)

@@ -9,7 +9,7 @@ RSpec.describe PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService, t
   let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
   let(:customer) { create(:customer, organization:) }
-  let(:payment) { create(:payment, invoice:, provider_payment_id: 'pi_3OzgpDH4tiDZlIUa0Ezzggtg') }
+  let(:payment) { create(:payment, payable: invoice, provider_payment_id: 'pi_3OzgpDH4tiDZlIUa0Ezzggtg') }
   let(:lose_dispute_service) { Invoices::LoseDisputeService.new(invoice:) }
   let(:invoice) { create(:invoice, customer:, organization:, status:, payment_status: 'succeeded') }
 
@@ -28,8 +28,8 @@ RSpec.describe PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService, t
         it 'does not updates invoice payment dispute lost' do
           expect do
             service.call
-            payment.invoice.reload
-          end.not_to change(payment.invoice.reload, :payment_dispute_lost_at).from(nil)
+            payment.payable.reload
+          end.not_to change(payment.payable.reload, :payment_dispute_lost_at).from(nil)
         end
 
         it 'does not deliver webhook' do
@@ -43,17 +43,17 @@ RSpec.describe PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService, t
         it 'updates invoice payment dispute lost' do
           expect do
             service.call
-            payment.invoice.reload
-          end.to change(payment.invoice, :payment_dispute_lost_at).from(nil)
+            payment.payable.reload
+          end.to change(payment.payable, :payment_dispute_lost_at).from(nil)
         end
 
         it 'delivers a webhook' do
           expect do
             service.call
-            payment.invoice.reload
+            payment.payable.reload
           end.to have_enqueued_job(SendWebhookJob).with(
             'invoice.payment_dispute_lost',
-            payment.invoice,
+            payment.payable,
             provider_error: 'fraudulent'
           )
         end
@@ -72,8 +72,8 @@ RSpec.describe PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService, t
         it 'does not updates invoice payment dispute lost' do
           expect do
             service.call
-            payment.invoice.reload
-          end.not_to change(payment.invoice.reload, :payment_dispute_lost_at).from(nil)
+            payment.payable.reload
+          end.not_to change(payment.payable.reload, :payment_dispute_lost_at).from(nil)
         end
 
         it 'does not deliver webhook' do
@@ -87,8 +87,8 @@ RSpec.describe PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService, t
         it 'does not updates invoice payment dispute lost' do
           expect do
             service.call
-            payment.invoice.reload
-          end.not_to change(payment.invoice.reload, :payment_dispute_lost_at).from(nil)
+            payment.payable.reload
+          end.not_to change(payment.payable.reload, :payment_dispute_lost_at).from(nil)
         end
 
         it 'does not deliver webhook' do

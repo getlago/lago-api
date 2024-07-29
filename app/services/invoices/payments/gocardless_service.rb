@@ -43,7 +43,7 @@ module Invoices
         gocardless_result = create_gocardless_payment
 
         payment = Payment.new(
-          invoice:,
+          payable: invoice,
           payment_provider_id: gocardless_payment_provider.id,
           payment_provider_customer_id: customer.gocardless_customer.id,
           amount_cents: gocardless_result.amount,
@@ -73,8 +73,8 @@ module Invoices
         return result.not_found_failure!(resource: 'gocardless_payment') unless payment
 
         result.payment = payment
-        result.invoice = payment.invoice
-        return result if payment.invoice.payment_succeeded?
+        result.invoice = payment.payable
+        return result if payment.payable.payment_succeeded?
 
         payment.update!(status:)
 

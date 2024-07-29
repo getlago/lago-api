@@ -18,7 +18,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
       payment_provider_customer: stripe_customer,
       amount_cents: 200,
       amount_currency: 'CHF',
-      invoice: credit_note.invoice
+      payable: credit_note.invoice
     )
   end
 
