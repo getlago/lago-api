@@ -177,7 +177,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     end
 
     context 'with a refund, a payment and a succeeded invoice' do
-      let(:payment) { create(:payment, invoice:) }
+      let(:payment) { create(:payment, payable: invoice) }
 
       before { payment }
 
@@ -194,7 +194,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         let(:payment) do
           create(
             :payment,
-            invoice:,
+            payable: invoice,
             payment_provider: gocardless_provider,
             payment_provider_customer: gocardless_customer
           )

@@ -73,7 +73,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(result.invoice.ready_for_payment_processing).to eq(false)
 
         expect(result.payment.id).to be_present
-        expect(result.payment.invoice).to eq(invoice)
+        expect(result.payment.payable).to eq(invoice)
         expect(result.payment.payment_provider).to eq(stripe_payment_provider)
         expect(result.payment.payment_provider_customer).to eq(stripe_customer)
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
@@ -302,7 +302,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           expect(result.invoice.ready_for_payment_processing).to eq(false)
 
           expect(result.payment.id).to be_present
-          expect(result.payment.invoice).to eq(invoice)
+          expect(result.payment.payable).to eq(invoice)
           expect(result.payment.payment_provider).to eq(stripe_payment_provider)
           expect(result.payment.payment_provider_customer).to eq(stripe_customer)
           expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
@@ -417,7 +417,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     let(:payment) do
       create(
         :payment,
-        invoice:,
+        payable: invoice,
         provider_payment_id: 'ch_123456'
       )
     end
