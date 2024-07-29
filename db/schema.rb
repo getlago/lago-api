@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_29_154334) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -488,6 +488,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
     t.string "external_subscription_id"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
+    t.index ["external_subscription_id", "code", "timestamp"], name: "index_events_on_external_subscription_id_with_included", where: "(deleted_at IS NULL)", include: ["organization_id", "properties"]
     t.index ["organization_id", "code", "created_at"], name: "index_events_on_organization_id_and_code_and_created_at", where: "(deleted_at IS NULL)"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
     t.index ["organization_id", "external_subscription_id", "code", "timestamp"], name: "index_events_on_external_subscription_id_and_code_and_timestamp", where: "(deleted_at IS NULL)"
@@ -755,6 +756,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
+    t.index ["status"], name: "index_invoices_on_status"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
@@ -907,6 +909,20 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
     t.index ["plan_id", "tax_id"], name: "index_plans_taxes_on_plan_id_and_tax_id", unique: true
     t.index ["plan_id"], name: "index_plans_taxes_on_plan_id"
     t.index ["tax_id"], name: "index_plans_taxes_on_tax_id"
+  end
+
+  create_table "pre_aggregations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "external_subscription_id", null: false
+    t.string "code", null: false
+    t.datetime "timestamp", precision: nil, null: false
+    t.decimal "aggregated_value", default: "0.0", null: false
+    t.jsonb "filters", default: {}, null: false
+    t.integer "units", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "external_subscription_id", "code", "timestamp", "filters"], name: "idx_on_organization_id_external_subscription_id_cod_044827bfab", unique: true
+    t.index ["organization_id"], name: "index_pre_aggregations_on_organization_id"
   end
 
   create_table "quantified_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1179,6 +1195,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
   add_foreign_key "plans", "plans", column: "parent_id"
   add_foreign_key "plans_taxes", "plans"
   add_foreign_key "plans_taxes", "taxes"
+  add_foreign_key "pre_aggregations", "organizations"
   add_foreign_key "quantified_events", "groups"
   add_foreign_key "quantified_events", "organizations"
   add_foreign_key "recurring_transaction_rules", "wallets"
