@@ -23,7 +23,7 @@ module Invoices
         create_credit_fee(invoice)
         compute_amounts(invoice)
 
-        if License.premium? && wallet_transaction.invoice_require_successful_payment?
+        if License.premium? && wallet_transaction.invoice_requires_successful_payment?
           invoice.open!
         else
           invoice.finalized!

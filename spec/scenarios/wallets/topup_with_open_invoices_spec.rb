@@ -16,7 +16,7 @@ describe 'Wallet Transaction with invoice after payment', :scenarios, type: :req
         name: 'Wallet1',
         currency: 'EUR',
         granted_credits: '10',
-        invoice_require_successful_payment: false # default
+        invoice_requires_successful_payment: false # default
       })
 
       wallet = customer.wallets.sole
@@ -26,13 +26,13 @@ describe 'Wallet Transaction with invoice after payment', :scenarios, type: :req
       create_wallet_transaction({
         wallet_id: wallet.id,
         paid_credits: '15',
-        invoice_require_successful_payment: true
+        invoice_requires_successful_payment: true
       })
       wt = WalletTransaction.find json[:wallet_transactions].first[:lago_id]
 
       expect(wt.status).to eq 'pending'
       expect(wt.transaction_status).to eq 'purchased'
-      expect(wt.invoice_require_successful_payment).to be true
+      expect(wt.invoice_requires_successful_payment).to be true
 
       # Customer does not have a payment_provider set yet
       invoice = customer.invoices.credit.sole
@@ -89,14 +89,14 @@ describe 'Wallet Transaction with invoice after payment', :scenarios, type: :req
           name: 'Wallet1',
           currency: 'EUR',
           granted_credits: '10',
-          invoice_require_successful_payment: false # default
+          invoice_requires_successful_payment: false # default
         })
         wallet = customer.wallets.sole
 
         create_wallet_transaction({
           wallet_id: wallet.id,
           paid_credits: '15',
-          invoice_require_successful_payment: true
+          invoice_requires_successful_payment: true
         })
         wt = WalletTransaction.find json[:wallet_transactions].first[:lago_id]
 

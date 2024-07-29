@@ -16,9 +16,9 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
     let(:plan) { create(:plan, organization:) }
     let(:wallet) { create(:wallet, customer:) }
     let(:wallet_transaction) do
-      create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00', invoice_require_successful_payment:)
+      create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00', invoice_requires_successful_payment:)
     end
-    let(:invoice_require_successful_payment) { false }
+    let(:invoice_requires_successful_payment) { false }
 
     let(:invoice) { nil }
 
@@ -145,8 +145,8 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    context 'with wallet_transaction.invoice_require_successful_payment' do
-      let(:invoice_require_successful_payment) { true }
+    context 'with wallet_transaction.invoice_requires_successful_payment' do
+      let(:invoice_requires_successful_payment) { true }
 
       around { |test| lago_premium!(&test) }
 
