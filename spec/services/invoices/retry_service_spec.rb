@@ -299,6 +299,7 @@ RSpec.describe Invoices::RetryService, type: :service do
         result = retry_service.call
 
         expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(invoice.reload.status).to eq('failed')
       end
 

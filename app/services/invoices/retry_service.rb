@@ -17,7 +17,7 @@ module Invoices
 
       unless taxes_result.success?
         create_error_detail(taxes_result.error.code)
-        return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
+        return result.validation_failure!(errors: {tax_error: [taxes_result.error.code]})
       end
 
       provider_taxes = taxes_result.fees
