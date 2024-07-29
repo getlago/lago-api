@@ -7536,7 +7536,7 @@
               "deprecationReason": null
             },
             {
-              "name": "invoiceRequireSuccessfulPayment",
+              "name": "invoiceRequiresSuccessfulPayment",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -37041,7 +37041,7 @@
               ]
             },
             {
-              "name": "invoiceRequireSuccessfulPayment",
+              "name": "invoiceRequiresSuccessfulPayment",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -37392,7 +37392,7 @@
               ]
             },
             {
-              "name": "invoiceRequireSuccessfulPayment",
+              "name": "invoiceRequiresSuccessfulPayment",
               "description": null,
               "type": {
                 "kind": "NON_NULL",

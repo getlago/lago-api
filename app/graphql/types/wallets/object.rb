@@ -31,7 +31,7 @@ module Types
 
       field :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::Object], null: true
 
-      field :invoice_require_successful_payment, Boolean, null: false
+      field :invoice_requires_successful_payment, Boolean, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true

@@ -23,7 +23,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         id: wallet&.id,
         name: 'new name',
         expiration_at:,
-        invoice_require_successful_payment: true
+        invoice_requires_successful_payment: true
       }
     end
 
@@ -34,7 +34,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       aggregate_failures do
         expect(result.wallet.name).to eq('new name')
         expect(result.wallet.expiration_at.iso8601).to eq(expiration_at)
-        expect(result.wallet.invoice_require_successful_payment).to eq(true)
+        expect(result.wallet.invoice_requires_successful_payment).to eq(true)
       end
     end
 

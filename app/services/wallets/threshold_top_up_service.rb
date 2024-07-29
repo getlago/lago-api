@@ -19,7 +19,7 @@ module Wallets
           paid_credits:,
           granted_credits:,
           source: :threshold,
-          invoice_require_successful_payment: threshold_rule.invoice_require_successful_payment?
+          invoice_requires_successful_payment: threshold_rule.invoice_requires_successful_payment?
         }
       )
     end

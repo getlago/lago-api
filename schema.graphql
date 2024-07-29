@@ -1884,7 +1884,7 @@ input CreateCustomerWalletTransactionInput {
   """
   clientMutationId: String
   grantedCredits: String
-  invoiceRequireSuccessfulPayment: Boolean
+  invoiceRequiresSuccessfulPayment: Boolean
   paidCredits: String
   voidedCredits: String
   walletId: ID!
@@ -7418,7 +7418,7 @@ type Wallet {
   customer: Customer
   expirationAt: ISO8601DateTime
   id: ID!
-  invoiceRequireSuccessfulPayment: Boolean!
+  invoiceRequiresSuccessfulPayment: Boolean!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
   name: String
@@ -7446,7 +7446,7 @@ type WalletTransaction {
   createdAt: ISO8601DateTime!
   creditAmount: String!
   id: ID!
-  invoiceRequireSuccessfulPayment: Boolean!
+  invoiceRequiresSuccessfulPayment: Boolean!
   settledAt: ISO8601DateTime
   status: WalletTransactionStatusEnum!
   transactionStatus: WalletTransactionTransactionStatusEnum!

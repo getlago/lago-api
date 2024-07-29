@@ -43,7 +43,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
                 source: :interval,
-                invoice_require_successful_payment: false
+                invoice_requires_successful_payment: false
               }
             )
         end
@@ -78,7 +78,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
                   source: :interval,
-                  invoice_require_successful_payment: false
+                  invoice_requires_successful_payment: false
                 }
               )
           end
@@ -108,7 +108,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   paid_credits: "150.0",
                   granted_credits: "0.0",
                   source: :interval,
-                  invoice_require_successful_payment: false
+                  invoice_requires_successful_payment: false
                 }
               )
           end
@@ -132,7 +132,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
                 source: :interval,
-                invoice_require_successful_payment: false
+                invoice_requires_successful_payment: false
               }
             )
         end
@@ -160,7 +160,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
                   source: :interval,
-                  invoice_require_successful_payment: false
+                  invoice_requires_successful_payment: false
                 }
               )
           end
@@ -193,7 +193,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
                   source: :interval,
-                  invoice_require_successful_payment: false
+                  invoice_requires_successful_payment: false
                 }
               )
           end
@@ -217,7 +217,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
                 source: :interval,
-                invoice_require_successful_payment: false
+                invoice_requires_successful_payment: false
               }
             )
         end
@@ -245,7 +245,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
                   source: :interval,
-                  invoice_require_successful_payment: false
+                  invoice_requires_successful_payment: false
                 }
               )
           end
@@ -268,7 +268,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
                   source: :interval,
-                  invoice_require_successful_payment: false
+                  invoice_requires_successful_payment: false
                 }
               )
           end
@@ -292,7 +292,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
                 source: :interval,
-                invoice_require_successful_payment: false
+                invoice_requires_successful_payment: false
               }
             )
         end
@@ -320,7 +320,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                   paid_credits: recurring_transaction_rule.paid_credits.to_s,
                   granted_credits: recurring_transaction_rule.granted_credits.to_s,
                   source: :interval,
-                  invoice_require_successful_payment: false
+                  invoice_requires_successful_payment: false
                 }
               )
           end
@@ -393,7 +393,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           interval:,
           created_at: created_at + 1.second,
           started_at:,
-          invoice_require_successful_payment: true
+          invoice_requires_successful_payment: true
         )
       end
       let(:interval) { :weekly }
@@ -414,7 +414,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 paid_credits: recurring_transaction_rule.paid_credits.to_s,
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
                 source: :interval,
-                invoice_require_successful_payment: true
+                invoice_requires_successful_payment: true
               }
             )
         end

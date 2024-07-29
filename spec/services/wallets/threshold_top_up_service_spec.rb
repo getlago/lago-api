@@ -40,7 +40,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
             paid_credits: "10.0",
             granted_credits: "3.0",
             source: :threshold,
-            invoice_require_successful_payment: false
+            invoice_requires_successful_payment: false
           }
         )
     end
@@ -54,7 +54,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
           threshold_credits: "6.0",
           paid_credits: "10.0",
           granted_credits: "3.0",
-          invoice_require_successful_payment: true
+          invoice_requires_successful_payment: true
         )
       end
 
@@ -62,7 +62,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
           .with(
             organization_id: wallet.organization.id,
-            params: hash_including(invoice_require_successful_payment: true)
+            params: hash_including(invoice_requires_successful_payment: true)
           )
       end
     end
@@ -106,7 +106,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
               paid_credits: "194.5",
               granted_credits: "0.0",
               source: :threshold,
-              invoice_require_successful_payment: false
+              invoice_requires_successful_payment: false
             }
           )
       end

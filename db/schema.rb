@@ -755,6 +755,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
+    t.index ["status"], name: "index_invoices_on_status"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
@@ -944,7 +945,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
     t.integer "method", default: 0, null: false
     t.decimal "target_ongoing_balance", precision: 30, scale: 5
     t.datetime "started_at"
-    t.boolean "invoice_require_successful_payment", default: false, null: false
+    t.boolean "invoice_requires_successful_payment", default: false, null: false
     t.index ["started_at"], name: "index_recurring_transaction_rules_on_started_at"
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
   end
@@ -1036,7 +1037,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
     t.uuid "invoice_id"
     t.integer "source", default: 0, null: false
     t.integer "transaction_status", default: 0, null: false
-    t.boolean "invoice_require_successful_payment", default: false, null: false
+    t.boolean "invoice_requires_successful_payment", default: false, null: false
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
   end
@@ -1063,7 +1064,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
     t.decimal "credits_ongoing_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "credits_ongoing_usage_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.boolean "depleted_ongoing_balance", default: false, null: false
-    t.boolean "invoice_require_successful_payment", default: false, null: false
+    t.boolean "invoice_requires_successful_payment", default: false, null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 

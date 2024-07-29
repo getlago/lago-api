@@ -43,7 +43,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         expect(wallet.rate_amount).to eq(1.0)
         expect(wallet.expiration_at.iso8601).to eq(expiration_at)
         expect(wallet.recurring_transaction_rules.count).to eq(0)
-        expect(wallet.invoice_require_successful_payment).to eq(false)
+        expect(wallet.invoice_requires_successful_payment).to eq(false)
       end
     end
 
@@ -61,7 +61,7 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
-    context 'when invoice_require_successful_payment is set ' do
+    context 'when invoice_requires_successful_payment is set ' do
       let(:params) do
         {
           name: 'New Wallet',
@@ -70,7 +70,7 @@ RSpec.describe Wallets::CreateService, type: :service do
           currency: 'EUR',
           rate_amount: '1.00',
           paid_credits:,
-          invoice_require_successful_payment: true
+          invoice_requires_successful_payment: true
         }
       end
 
@@ -81,7 +81,7 @@ RSpec.describe Wallets::CreateService, type: :service do
           expect(service_result).to be_success
 
           wallet = service_result.wallet
-          expect(wallet.invoice_require_successful_payment).to eq(true)
+          expect(wallet.invoice_requires_successful_payment).to eq(true)
         end
       end
     end

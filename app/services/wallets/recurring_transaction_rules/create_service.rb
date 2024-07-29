@@ -29,10 +29,10 @@ module Wallets
           trigger: rule_params[:trigger].to_s
         }
 
-        attributes[:invoice_require_successful_payment] = if rule_params.key?(:invoice_require_successful_payment)
-          ActiveModel::Type::Boolean.new.cast(rule_params[:invoice_require_successful_payment])
+        attributes[:invoice_requires_successful_payment] = if rule_params.key?(:invoice_requires_successful_payment)
+          ActiveModel::Type::Boolean.new.cast(rule_params[:invoice_requires_successful_payment])
         else
-          wallet.invoice_require_successful_payment?
+          wallet.invoice_requires_successful_payment?
         end
 
         rule = wallet.recurring_transaction_rules.create!(attributes)

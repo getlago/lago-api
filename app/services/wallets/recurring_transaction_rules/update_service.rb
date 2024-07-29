@@ -26,8 +26,8 @@ module Wallets
           end
 
           # NOTE: on creation, we follow the wallet configuration if not set
-          unless rule.key?(:invoice_require_successful_payment)
-            rule[:invoice_require_successful_payment] = wallet.invoice_require_successful_payment
+          unless rule.key?(:invoice_requires_successful_payment)
+            rule[:invoice_requires_successful_payment] = wallet.invoice_requires_successful_payment
           end
           created_recurring_rule = wallet.recurring_transaction_rules.create!(rule)
           created_recurring_rules_ids.push(created_recurring_rule.id)

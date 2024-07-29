@@ -18,8 +18,8 @@ module Wallets
         status: :active
       }
 
-      if params.key?(:invoice_require_successful_payment)
-        attributes[:invoice_require_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_require_successful_payment])
+      if params.key?(:invoice_requires_successful_payment)
+        attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
       end
 
       wallet = Wallet.new(attributes)
