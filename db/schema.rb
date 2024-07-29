@@ -751,10 +751,12 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
     t.datetime "payment_dispute_lost_at"
     t.boolean "skip_charges", default: false, null: false
     t.boolean "payment_overdue", default: false
+    t.uuid "payable_group_id"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
+    t.index ["payable_group_id"], name: "index_invoices_on_payable_group_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.index ["status"], name: "index_invoices_on_status"
@@ -855,6 +857,14 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
     t.index ["user_id"], name: "index_password_resets_on_user_id"
   end
 
+  create_table "payable_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.integer "payment_status", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_payable_groups_on_customer_id"
+  end
+
   create_table "payment_provider_customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.uuid "payment_provider_id"
@@ -882,7 +892,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
   end
 
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "invoice_id", null: false
+    t.uuid "payable_id", null: false
     t.uuid "payment_provider_id"
     t.uuid "payment_provider_customer_id"
     t.bigint "amount_cents", null: false
@@ -891,7 +901,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
     t.string "status", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["invoice_id"], name: "index_payments_on_invoice_id"
+    t.string "payable_type", default: "Invoice", null: false
+    t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
   end
@@ -1207,10 +1218,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "password_resets", "users"
+  add_foreign_key "payable_groups", "customers"
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
-  add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"
   add_foreign_key "plans", "organizations"
   add_foreign_key "plans", "plans", column: "parent_id"
