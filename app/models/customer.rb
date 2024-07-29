@@ -71,7 +71,7 @@ class Customer < ApplicationRecord
   validates :payment_provider, inclusion: {in: PAYMENT_PROVIDERS}, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
 
-  alias :provider_customer :payment_provider_customer
+  alias_method :provider_customer, :payment_provider_customer
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name external_id email]
