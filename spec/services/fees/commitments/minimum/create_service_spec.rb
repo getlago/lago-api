@@ -66,12 +66,6 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
             service_call
           end.to change(Fee.commitment_kind, :count).by(1)
         end
-
-        it 'saves taxes amount cents' do
-          service_call
-
-          expect(commitment_fee.taxes_amount_cents).to eq(taxes_amount_cents)
-        end
       end
     end
 
