@@ -7027,6 +7027,7 @@ input UpdateCustomerWalletInput {
   clientMutationId: String
   expirationAt: ISO8601DateTime
   id: ID!
+  invoiceRequiresSuccessfulPayment: Boolean
   name: String
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }

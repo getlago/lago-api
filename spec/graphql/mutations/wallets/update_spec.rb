@@ -76,7 +76,6 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       }
     )
 
-    pp result
     result_data = result['data']['updateCustomerWallet']
 
     expect(result_data).to include(
