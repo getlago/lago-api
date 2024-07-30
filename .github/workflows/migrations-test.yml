@@ -51,7 +51,13 @@ jobs:
         shell: bash
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
+      - name: Move db schema for comparison
+        run: mv db/schema.rb db/schema-before-dump.rb
       - name: Perform Postgres database migrations
         run: bin/rails db:migrate:primary
+      - name: dump schema
+        run: LAGO_DISABLE_SCHEMA_DUMP="" bin/rails db:schema:dump:primary
+      - name: Ensure no changes to schema.rb
+        run: diff db/schema.rb db/schema-before-dump.rb
       - name: Perform Clickhouse database migrations
         run: bin/rails db:migrate:clickhouse
