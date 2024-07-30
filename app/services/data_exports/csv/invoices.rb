@@ -90,7 +90,7 @@ module DataExports
         filters = resource_query.except("search_term")
 
         InvoicesQuery.call(
-          organization: organization,
+          organization:,
           pagination: nil,
           search_term:,
           filters:
