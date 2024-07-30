@@ -35,6 +35,7 @@ module V1
         units: model.units,
         description: model.description,
         precise_unit_amount: model.precise_unit_amount,
+        precise_coupons_amount_cents: model.precise_coupons_amount_cents,
         events_count: model.events_count,
         payment_status: model.payment_status,
         created_at: model.created_at&.iso8601,
