@@ -5822,6 +5822,7 @@ type RecurringTransactionRule {
   createdAt: ISO8601DateTime!
   grantedCredits: String!
   interval: RecurringTransactionIntervalEnum
+  invoiceRequiresSuccessfulPayment: Boolean!
   lagoId: ID!
   method: RecurringTransactionMethodEnum!
   paidCredits: String!

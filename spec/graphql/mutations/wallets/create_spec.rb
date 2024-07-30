@@ -63,7 +63,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
               trigger: 'interval',
               interval: 'monthly',
               targetOngoingBalance: '0.0',
-              invoiceRequiresSuccessfulPayment: true,
+              invoiceRequiresSuccessfulPayment: true
             }
           ]
         }
@@ -85,7 +85,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data['recurringTransactionRules'][0]['interval']).to eq('monthly')
       expect(result_data['recurringTransactionRules'][0]['paidCredits']).to eq('0.0')
       expect(result_data['recurringTransactionRules'][0]['grantedCredits']).to eq('0.0')
-      expect(result_data['recurringTransactionRules'][0]['invoiceRequiresSuccessfulPayment']).to eq('true')
+      expect(result_data['recurringTransactionRules'][0]['invoiceRequiresSuccessfulPayment']).to eq(true)
     end
   end
 
