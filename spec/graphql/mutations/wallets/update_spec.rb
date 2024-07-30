@@ -82,6 +82,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "id" => wallet.id,
       "name" => "New name",
       "status" => "active",
+      "invoiceRequiresSuccessfulPayment" => true,
       "expirationAt" => expiration_at.iso8601
     )
 
@@ -93,7 +94,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "interval" => "weekly",
       "paidCredits" => "22.2",
       "grantedCredits" => "22.2",
-      "targetOngoingBalance" => "300.0"
+      "targetOngoingBalance" => "300.0",
+      "invoiceRequiresSuccessfulPayment" => true
     )
   end
 end
