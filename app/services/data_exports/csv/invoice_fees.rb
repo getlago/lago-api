@@ -40,11 +40,12 @@ module DataExports
                 serialized_subscription&.dig(:plan_code),
                 serialized_fee[:from_date],
                 serialized_fee[:to_date],
-                serialized_fee[:total_amount_cents],
                 serialized_fee[:total_amount_currency],
                 serialized_fee[:units],
                 serialized_fee[:precise_unit_amount],
-                serialized_fee[:taxes_amount_cents]
+                serialized_fee[:precise_coupons_amount],
+                serialized_fee[:taxes_amount_cents],
+                serialized_fee[:total_amount_cents]
               ]
             end
           end
@@ -69,11 +70,12 @@ module DataExports
           subscription_plan_code
           fee_from_date
           fee_to_date
-          fee_total_amount_cents
           fee_amount_currency
           fee_units
           fee_precise_unit_amount
+          fee_precise_coupons_amount_cents
           fee_taxes_amount_cents
+          fee_total_amount_cents
         ]
       end
     end
