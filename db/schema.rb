@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
+ActiveRecord::Schema[7.1].define(version: 2024_07_29_154334) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -488,6 +488,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_23_150304) do
     t.string "external_subscription_id"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
+    t.index ["external_subscription_id", "code", "timestamp"], name: "index_events_on_external_subscription_id_with_included", where: "(deleted_at IS NULL)", include: ["organization_id", "properties"]
     t.index ["organization_id", "code", "created_at"], name: "index_events_on_organization_id_and_code_and_created_at", where: "(deleted_at IS NULL)"
     t.index ["organization_id", "code"], name: "index_events_on_organization_id_and_code"
     t.index ["organization_id", "external_subscription_id", "code", "timestamp"], name: "index_events_on_external_subscription_id_and_code_and_timestamp", where: "(deleted_at IS NULL)"
