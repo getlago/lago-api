@@ -68,8 +68,8 @@ module DataExports
           fee_item_grouped_by
           subscription_external_id
           subscription_plan_code
-          fee_from_date
-          fee_to_date
+          fee_from_date_utc
+          fee_to_date_utc
           fee_amount_currency
           fee_units
           fee_precise_unit_amount
