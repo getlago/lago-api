@@ -17,7 +17,7 @@ module DataExports
         ::CSV.generate(headers: true) do |csv|
           csv << headers
 
-          query.invoices.find_each do |invoice|
+          query.invoices.each do |invoice|
             serialized_invoice = serializer_klass
               .new(invoice, includes: %i[customer])
               .serialize
