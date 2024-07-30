@@ -3,10 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe CustomersQuery, type: :query do
-  subject(:customer_query) do
-    described_class.new(organization:)
+  subject(:result) do
+    described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
+  let(:pagination) { nil }
+  let(:search_term) { nil }
+  let(:filters) { {} }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -27,57 +30,42 @@ RSpec.describe CustomersQuery, type: :query do
   end
 
   it 'returns all customers' do
-    result = customer_query.call(
-      search_term: nil,
-      page: 1,
-      limit: 10
-    )
-
     returned_ids = result.customers.pluck(:id)
 
     aggregate_failures do
-      expect(result.customers.count).to eq(3)
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(3)
       expect(returned_ids).to include(customer_first.id)
       expect(returned_ids).to include(customer_second.id)
       expect(returned_ids).to include(customer_third.id)
     end
   end
 
-  context 'when searching for /de/ term' do
-    it 'returns only two customers' do
-      result = customer_query.call(
-        search_term: 'de',
-        page: 1,
-        limit: 10
-      )
+  context 'with pagination' do
+    let(:pagination) { {page: 2, limit: 2} }
 
-      returned_ids = result.customers.pluck(:id)
-
+    it 'applies the pagination' do
       aggregate_failures do
-        expect(result.customers.count).to eq(2)
-        expect(returned_ids).to include(customer_first.id)
-        expect(returned_ids).to include(customer_second.id)
-        expect(returned_ids).not_to include(customer_third.id)
+        expect(result).to be_success
+        expect(result.customers.count).to eq(1)
+        expect(result.customers.current_page).to eq(2)
+        expect(result.customers.prev_page).to eq(1)
+        expect(result.customers.next_page).to be_nil
+        expect(result.customers.total_pages).to eq(2)
+        expect(result.customers.total_count).to eq(3)
       end
     end
   end
 
-  context 'when searching for /de/ term and filtering by id' do
-    it 'returns only one customer' do
-      result = customer_query.call(
-        search_term: 'de',
-        page: 1,
-        limit: 10,
-        filters: {
-          ids: [customer_second.id]
-        }
-      )
+  context 'when searching for /de/ term' do
+    let(:search_term) { 'de' }
 
+    it 'returns only two customers' do
       returned_ids = result.customers.pluck(:id)
 
       aggregate_failures do
-        expect(result.customers.count).to eq(1)
-        expect(returned_ids).not_to include(customer_first.id)
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).to include(customer_first.id)
         expect(returned_ids).to include(customer_second.id)
         expect(returned_ids).not_to include(customer_third.id)
       end

@@ -31,7 +31,7 @@ module Api
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
           },
-          filters: BaseQuery::Filters.new(index_filters)
+          filters: index_filters
         )
 
         if result.success?

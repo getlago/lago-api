@@ -9,9 +9,7 @@ RSpec.describe AppliedCouponsQuery, type: :query do
 
   let(:organization) { create(:organization) }
   let(:pagination) { nil }
-  let(:filters) { BaseQuery::Filters.new(query_filters) }
-
-  let(:query_filters) { {} }
+  let(:filters) { {} }
 
   let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, organization:) }
@@ -52,7 +50,7 @@ RSpec.describe AppliedCouponsQuery, type: :query do
   end
 
   context 'with customer filter' do
-    let(:query_filters) { {external_customer_id: customer.external_id} }
+    let(:filters) { {external_customer_id: customer.external_id} }
 
     it 'applies the filter' do
       aggregate_failures do
@@ -63,7 +61,7 @@ RSpec.describe AppliedCouponsQuery, type: :query do
   end
 
   context 'with status filter' do
-    let(:query_filters) { {status: 'terminated'} }
+    let(:filters) { {status: 'terminated'} }
 
     it 'applies the filter' do
       aggregate_failures do

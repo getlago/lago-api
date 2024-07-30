@@ -3,10 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe CreditNotesQuery, type: :query do
-  subject(:credit_notes_query) do
-    described_class.new(organization:)
+  subject(:result) do
+    described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
+  let(:pagination) { nil }
+  let(:search_term) { nil }
+  let(:filters) { {} }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -25,18 +28,12 @@ RSpec.describe CreditNotesQuery, type: :query do
     other_org_credit_note
   end
 
-  it 'returns all credit_notes when no customer is provided' do
-    result = credit_notes_query.call(
-      search_term: nil,
-      customer_id: nil,
-      page: 1,
-      limit: 10
-    )
-
+  it 'returns all credit_notes' do
     returned_ids = result.credit_notes.pluck(:id)
 
     aggregate_failures do
-      expect(result.credit_notes.count).to eq(4)
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(4)
       expect(returned_ids).to include(credit_note_first.id)
       expect(returned_ids).to include(credit_note_second.id)
       expect(returned_ids).to include(credit_note_third.id)
@@ -44,49 +41,55 @@ RSpec.describe CreditNotesQuery, type: :query do
     end
   end
 
-  it 'returns all credit_notes of the customer' do
-    result = credit_notes_query.call(
-      search_term: nil,
-      customer_id: customer.id,
-      page: 1,
-      limit: 10
-    )
+  context 'with pagination' do
+    let(:pagination) { {page: 2, limit: 3} }
 
-    returned_ids = result.credit_notes.pluck(:id)
-
-    aggregate_failures do
-      expect(result.credit_notes.count).to eq(3)
-      expect(returned_ids).to include(credit_note_first.id)
-      expect(returned_ids).to include(credit_note_second.id)
-      expect(returned_ids).to include(credit_note_third.id)
-      expect(returned_ids).not_to include(credit_note_fourth.id)
+    it 'applies the pagination' do
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.credit_notes.count).to eq(1)
+        expect(result.credit_notes.current_page).to eq(2)
+        expect(result.credit_notes.prev_page).to eq(1)
+        expect(result.credit_notes.next_page).to be_nil
+        expect(result.credit_notes.total_pages).to eq(2)
+        expect(result.credit_notes.total_count).to eq(4)
+      end
     end
   end
 
-  it 'never returns credit_notes from other organizations' do
-    result = credit_notes_query.call(
-      search_term: nil,
-      customer_id: other_org_credit_note.customer.id,
-      page: 1,
-      limit: 10
-    )
+  context 'when filtering by customer_id' do
+    let(:filters) { {customer_id: customer.id} }
 
-    expect(result.credit_notes).to be_empty
-  end
-
-  context 'when searching for /imthe/ term' do
-    it 'returns three credit_notes' do
-      result = credit_notes_query.call(
-        search_term: 'imthe',
-        customer_id: customer.id,
-        page: 1,
-        limit: 10
-      )
-
+    it 'returns all credit_notes of the customer' do
       returned_ids = result.credit_notes.pluck(:id)
 
       aggregate_failures do
-        expect(result.credit_notes.count).to eq(3)
+        expect(returned_ids.count).to eq(3)
+        expect(returned_ids).to include(credit_note_first.id)
+        expect(returned_ids).to include(credit_note_second.id)
+        expect(returned_ids).to include(credit_note_third.id)
+        expect(returned_ids).not_to include(credit_note_fourth.id)
+      end
+    end
+  end
+
+  context 'when filtering by a customer_id from other organization' do
+    let(:filters) { {customer_id: other_org_credit_note.customer.id} }
+
+    it 'returns an empty result' do
+      expect(result.credit_notes).to be_empty
+    end
+  end
+
+  context 'when searching for /imthe/ term and filtering by customer_id' do
+    let(:search_term) { 'imthe' }
+    let(:filters) { {customer_id: customer.id} }
+
+    it 'returns matching credit_notes' do
+      returned_ids = result.credit_notes.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids.count).to eq(3)
         expect(returned_ids).to include(credit_note_first.id)
         expect(returned_ids).to include(credit_note_second.id)
         expect(returned_ids).to include(credit_note_third.id)
@@ -96,18 +99,13 @@ RSpec.describe CreditNotesQuery, type: :query do
   end
 
   context 'when searching for /done/ term' do
-    it 'returns two credit_notes' do
-      result = credit_notes_query.call(
-        search_term: 'done',
-        customer_id: customer.id,
-        page: 1,
-        limit: 10
-      )
+    let(:search_term) { 'done' }
 
+    it 'returns matching credit_notes' do
       returned_ids = result.credit_notes.pluck(:id)
 
       aggregate_failures do
-        expect(result.credit_notes.count).to eq(2)
+        expect(returned_ids.count).to eq(2)
         expect(returned_ids).not_to include(credit_note_first.id)
         expect(returned_ids).to include(credit_note_second.id)
         expect(returned_ids).to include(credit_note_third.id)
@@ -117,61 +115,17 @@ RSpec.describe CreditNotesQuery, type: :query do
   end
 
   context 'when searching for an id' do
-    it 'returns only one credit_notes' do
-      result = credit_notes_query.call(
-        search_term: credit_note_second.id.scan(/.{10}/).first,
-        customer_id: customer.id,
-        page: 1,
-        limit: 10
-      )
+    let(:search_term) { credit_note_second.id.scan(/.{10}/).first }
 
+    it 'returns matching credit_notes' do
       returned_ids = result.credit_notes.pluck(:id)
 
       aggregate_failures do
-        expect(result.credit_notes.count).to eq(1)
+        expect(returned_ids.count).to eq(1)
         expect(returned_ids).not_to include(credit_note_first.id)
         expect(returned_ids).to include(credit_note_second.id)
         expect(returned_ids).not_to include(credit_note_third.id)
         expect(returned_ids).not_to include(credit_note_fourth.id)
-      end
-    end
-  end
-
-  context 'when filtering by id' do
-    it 'returns only one credit_note' do
-      result = credit_notes_query.call(
-        search_term: nil,
-        customer_id: customer.id,
-        page: 1,
-        limit: 10,
-        filters: {
-          ids: [credit_note_second.id]
-        }
-      )
-
-      returned_ids = result.credit_notes.pluck(:id)
-
-      aggregate_failures do
-        expect(result.credit_notes.count).to eq(1)
-        expect(returned_ids).not_to include(credit_note_first.id)
-        expect(returned_ids).to include(credit_note_second.id)
-        expect(returned_ids).not_to include(credit_note_third.id)
-        expect(returned_ids).not_to include(credit_note_fourth.id)
-      end
-    end
-  end
-
-  context 'when searching for a random user' do
-    it 'returns no credit_note' do
-      result = credit_notes_query.call(
-        search_term: nil,
-        customer_id: create(:customer, organization:).id,
-        page: 1,
-        limit: 10
-      )
-
-      aggregate_failures do
-        expect(result.credit_notes.count).to eq(0)
       end
     end
   end

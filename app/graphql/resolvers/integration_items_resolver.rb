@@ -22,14 +22,16 @@ module Resolvers
 
       return not_found_error(resource: 'integration') unless integration
 
-      query = ::IntegrationItemsQuery.new(organization: current_organization)
-      result = query.call(
-        integration_id:,
+      result = ::IntegrationItemsQuery.call(
+        organization: current_organization,
         search_term:,
-        page:,
-        limit:,
         filters: {
+          integration_id:,
           item_type:
+        },
+        pagination: {
+          page:,
+          limit:
         }
       )
 

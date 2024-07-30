@@ -1,24 +1,39 @@
 # frozen_string_literal: true
 
 class WalletTransactionsQuery < BaseQuery
-  def call(wallet_id:, page:, limit:, filters: {})
-    wallet = organization.wallets.find_by(id: wallet_id)
+  def initialize(organization:, wallet_id:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
+    @wallet = organization.wallets.find_by(id: wallet_id)
+    super(organization:, pagination:, filters:, search_term:, order:)
+  end
+
+  def call
     return result.not_found_failure!(resource: 'wallet') unless wallet
 
     wallet_transactions = wallet.wallet_transactions
+    wallet_transactions = paginate(wallet_transactions)
+    wallet_transactions = wallet_transactions.order(created_at: :desc)
 
-    if valid_transaction_type?(filters[:transaction_type])
-      wallet_transactions = wallet_transactions.where(transaction_type: filters[:transaction_type])
+    if valid_transaction_type?(filters.transaction_type)
+      wallet_transactions = with_transaction_type(wallet_transactions)
     end
-    wallet_transactions = wallet_transactions.where(id: filters[:ids]) if filters[:ids].present?
-    wallet_transactions = wallet_transactions.where(status: filters[:status]) if valid_status?(filters[:status])
-    wallet_transactions = wallet_transactions.order(created_at: :desc).page(page).per(limit)
+
+    wallet_transactions = with_status(wallet_transactions) if valid_status?(filters.status)
 
     result.wallet_transactions = wallet_transactions
     result
   end
 
   private
+
+  attr_reader :wallet
+
+  def with_transaction_type(scope)
+    scope.where(transaction_type: filters.transaction_type)
+  end
+
+  def with_status(scope)
+    scope.where(status: filters.status)
+  end
 
   def valid_status?(status)
     WalletTransaction.statuses.key?(status)

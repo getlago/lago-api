@@ -38,14 +38,15 @@ module Resolvers
       payment_dispute_lost: nil,
       payment_overdue: nil
     )
-      query = InvoicesQuery.new(organization: current_organization, pagination: {page:, limit:})
-      result = query.call(
+      result = InvoicesQuery.call(
+        organization: current_organization,
+        pagination: {page:, limit:},
         search_term:,
-        payment_status:,
-        payment_dispute_lost:,
-        payment_overdue:,
-        status:,
         filters: {
+          payment_status:,
+          payment_dispute_lost:,
+          payment_overdue:,
+          status:,
           currency:,
           customer_external_id:,
           invoice_type:,

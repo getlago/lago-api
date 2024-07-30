@@ -20,7 +20,7 @@ module Resolvers
       result = ::IntegrationMappingsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
-        filters: BaseQuery::Filters.new({integration_id:, mappable_type:})
+        filters: {integration_id:, mappable_type:}
       )
 
       result.integration_mappings

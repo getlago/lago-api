@@ -39,9 +39,14 @@ RSpec.describe DataExports::Csv::InvoiceFees do
     {
       "currency" => currency,
       "customer_external_id" => customer_external_id,
+      "customer_id" => customer_id,
       "invoice_type" => invoice_type,
       "issuing_date_from" => issuing_date_from,
-      "issuing_date_to" => issuing_date_to
+      "issuing_date_to" => issuing_date_to,
+      "payment_dispute_lost" => payment_dispute_lost,
+      "payment_overdue" => payment_overdue,
+      "payment_status" => payment_status,
+      "status" => status
     }
   end
 
@@ -50,8 +55,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
     instance_double('V1::InvoiceSerializer', serialize: serialized_invoice)
   end
 
-  let(:invoices_query) { instance_double('InvoicesQuery') }
-  let(:query_results) do
+  let(:invoices_query_results) do
     BaseService::Result.new.tap do |result|
       result.invoices = Invoice.all
     end
@@ -203,22 +207,14 @@ RSpec.describe DataExports::Csv::InvoiceFees do
       .and_return(invoice_serializer)
 
     allow(InvoicesQuery)
-      .to receive(:new)
-      .with(organization: data_export.organization, pagination: nil)
-      .and_return(invoices_query)
-
-    allow(invoices_query)
       .to receive(:call)
       .with(
+        organization: data_export.organization,
+        pagination: nil,
         search_term:,
-        filters:,
-        customer_id:,
-        payment_dispute_lost:,
-        payment_overdue:,
-        payment_status:,
-        status:
+        filters:
       )
-      .and_return(query_results)
+      .and_return(invoices_query_results)
   end
 
   describe '#call' do

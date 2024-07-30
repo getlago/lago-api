@@ -1,14 +1,13 @@
 # frozen_string_literal: true
 
 class BillableMetricsQuery < BaseQuery
-  def call(search_term:, page:, limit:, filters: {})
-    @search_term = search_term
-
+  def call
     metrics = base_scope.result
-    metrics = metrics.where(id: filters[:ids]) if filters[:ids].present?
-    metrics = metrics.where(recurring: filters[:recurring]) unless filters[:recurring].nil?
-    metrics = metrics.where(aggregation_type: filters[:aggregation_types]) if filters[:aggregation_types].present?
-    metrics = metrics.order(created_at: :desc).page(page).per(limit)
+    metrics = paginate(metrics)
+    metrics = metrics.order(created_at: :desc)
+
+    metrics = with_recurring(metrics) unless filters.recurring.nil?
+    metrics = with_aggregation_type(metrics) if filters.aggregation_types.present?
 
     result.billable_metrics = metrics
     result
@@ -16,19 +15,25 @@ class BillableMetricsQuery < BaseQuery
 
   private
 
-  attr_reader :search_term
-
   def base_scope
     BillableMetric.where(organization:).ransack(search_params)
   end
 
   def search_params
-    return nil if search_term.blank?
+    return if search_term.blank?
 
     {
       m: 'or',
       name_cont: search_term,
       code_cont: search_term
     }
+  end
+
+  def with_recurring(scope)
+    scope.where(recurring: filters.recurring)
+  end
+
+  def with_aggregation_type(scope)
+    scope.where(aggregation_type: filters.aggregation_types)
   end
 end

@@ -8,17 +8,19 @@ class BaseQuery < BaseService
 
   class Filters < OpenStruct; end
 
-  def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: Filters.new)
+  def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @organization = organization
     @pagination_params = pagination
-    @filters = filters
+    @filters = Filters.new(filters)
+    @search_term = search_term
+    @order = order
 
     super
   end
 
   private
 
-  attr_reader :organization, :pagination_params, :filters
+  attr_reader :organization, :pagination_params, :filters, :search_term, :order
 
   def pagination
     return if pagination_params.blank?

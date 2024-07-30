@@ -3,10 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe CouponsQuery, type: :query do
-  subject(:coupon_query) do
-    described_class.new(organization:)
+  subject(:result) do
+    described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
+  let(:pagination) { nil }
+  let(:search_term) { nil }
+  let(:filters) { {} }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:coupon_first) { create(:coupon, organization:, status: 'active', name: 'defgh', code: '11') }
@@ -20,13 +23,6 @@ RSpec.describe CouponsQuery, type: :query do
   end
 
   it 'returns all coupons' do
-    result = coupon_query.call(
-      search_term: nil,
-      status: nil,
-      page: 1,
-      limit: 10
-    )
-
     returned_ids = result.coupons.pluck(:id)
 
     aggregate_failures do
@@ -37,19 +33,30 @@ RSpec.describe CouponsQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term' do
-    it 'returns only two coupons' do
-      result = coupon_query.call(
-        search_term: 'de',
-        status: nil,
-        page: 1,
-        limit: 10
-      )
+  context 'with pagination' do
+    let(:pagination) { {page: 2, limit: 2} }
 
+    it 'applies the pagination' do
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.coupons.count).to eq(1)
+        expect(result.coupons.current_page).to eq(2)
+        expect(result.coupons.prev_page).to eq(1)
+        expect(result.coupons.next_page).to be_nil
+        expect(result.coupons.total_pages).to eq(2)
+        expect(result.coupons.total_count).to eq(3)
+      end
+    end
+  end
+
+  context 'when searching for /de/ term' do
+    let(:search_term) { 'de' }
+
+    it 'returns only two coupons' do
       returned_ids = result.coupons.pluck(:id)
 
       aggregate_failures do
-        expect(result.coupons.count).to eq(2)
+        expect(returned_ids.count).to eq(2)
         expect(returned_ids).to include(coupon_first.id)
         expect(returned_ids).to include(coupon_second.id)
         expect(returned_ids).not_to include(coupon_third.id)
@@ -57,42 +64,14 @@ RSpec.describe CouponsQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term and filtering by id' do
-    it 'returns only one coupon' do
-      result = coupon_query.call(
-        search_term: 'de',
-        status: nil,
-        page: 1,
-        limit: 10,
-        filters: {
-          ids: [coupon_second.id]
-        }
-      )
+  context 'when filtering by terminated status' do
+    let(:filters) { {status: 'terminated'} }
 
-      returned_ids = result.coupons.pluck(:id)
-
-      aggregate_failures do
-        expect(result.coupons.count).to eq(1)
-        expect(returned_ids).not_to include(coupon_first.id)
-        expect(returned_ids).to include(coupon_second.id)
-        expect(returned_ids).not_to include(coupon_third.id)
-      end
-    end
-  end
-
-  context 'when searching for terminated status' do
     it 'returns only two coupons' do
-      result = coupon_query.call(
-        search_term: nil,
-        status: 'terminated',
-        page: 1,
-        limit: 10
-      )
-
       returned_ids = result.coupons.pluck(:id)
 
       aggregate_failures do
-        expect(result.coupons.count).to eq(1)
+        expect(returned_ids.count).to eq(1)
         expect(returned_ids).not_to include(coupon_first.id)
         expect(returned_ids).to include(coupon_second.id)
         expect(returned_ids).not_to include(coupon_third.id)

@@ -6,8 +6,7 @@ RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
   subject(:collection_mappings_query) { described_class.new(organization:, pagination:, filters:) }
 
   let(:pagination) { nil }
-  let(:filters) { BaseQuery::Filters.new(query_filters) }
-  let(:query_filters) { {} }
+  let(:filters) { {} }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -53,7 +52,7 @@ RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
   end
 
   context 'when filtering by integration id' do
-    let(:query_filters) { {integration_id: integration.id} }
+    let(:filters) { {integration_id: integration.id} }
 
     it 'returns two mappings' do
       result = collection_mappings_query.call
@@ -71,7 +70,7 @@ RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
   end
 
   context 'when filtering by mapping type' do
-    let(:query_filters) { {mapping_type: 'fallback_item'} }
+    let(:filters) { {mapping_type: 'fallback_item'} }
 
     it 'returns one netsuite mappings' do
       result = collection_mappings_query.call

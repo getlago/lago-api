@@ -10,7 +10,6 @@ module Resolvers
     description 'Query credit notes'
 
     argument :customer_id, ID, required: false
-    argument :ids, [ID], required: false, description: 'List of credit notes IDs to fetch'
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false
@@ -18,20 +17,20 @@ module Resolvers
     type Types::CreditNotes::Object.collection_type, null: false
 
     def resolve(
-      ids: nil,
       page: nil,
       limit: nil,
       search_term: nil,
       customer_id: nil
     )
-      query = CreditNotesQuery.new(organization: current_organization)
-      result = query.call(
-        customer_id:,
+      result = CreditNotesQuery.call(
+        organization: current_organization,
         search_term:,
-        page:,
-        limit:,
         filters: {
-          ids:
+          customer_id:
+        },
+        pagination: {
+          page:,
+          limit:
         }
       )
 

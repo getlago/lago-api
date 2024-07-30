@@ -9,7 +9,6 @@ module Resolvers
 
     description 'Query coupons of an organization'
 
-    argument :ids, [ID], required: false, description: 'List of coupon IDs to fetch'
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false
@@ -17,15 +16,16 @@ module Resolvers
 
     type Types::Coupons::Object.collection_type, null: false
 
-    def resolve(ids: nil, page: nil, limit: nil, status: nil, search_term: nil)
-      query = CouponsQuery.new(organization: current_organization)
-      result = query.call(
+    def resolve(page: nil, limit: nil, status: nil, search_term: nil)
+      result = CouponsQuery.call(
+        organization: current_organization,
         search_term:,
-        page:,
-        limit:,
-        status:,
         filters: {
-          ids:
+          status:
+        },
+        pagination: {
+          page:,
+          limit:
         }
       )
 

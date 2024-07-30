@@ -11609,26 +11609,6 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "ids",
-                  "description": "List of taxes IDs to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -27639,26 +27619,6 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "ids",
-                  "description": "List of add-ons IDs to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -27740,26 +27700,6 @@
               "isDeprecated": false,
               "deprecationReason": null,
               "args": [
-                {
-                  "name": "ids",
-                  "description": "List of plan ID to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "String",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
                 {
                   "name": "limit",
                   "description": null,
@@ -27874,26 +27814,6 @@
               "isDeprecated": false,
               "deprecationReason": null,
               "args": [
-                {
-                  "name": "ids",
-                  "description": "List of coupon IDs to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
                 {
                   "name": "limit",
                   "description": null,
@@ -28052,26 +27972,6 @@
                     "kind": "SCALAR",
                     "name": "ID",
                     "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "ids",
-                  "description": "List of credit notes IDs to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
@@ -28512,26 +28412,6 @@
               "isDeprecated": false,
               "deprecationReason": null,
               "args": [
-                {
-                  "name": "ids",
-                  "description": "List of customer Lago ID to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "String",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
                 {
                   "name": "limit",
                   "description": null,
@@ -29746,26 +29626,6 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "ids",
-                  "description": "List of plan ID to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "String",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -29974,26 +29834,6 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "ids",
-                  "description": "List of taxes IDs to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -30087,26 +29927,6 @@
               "isDeprecated": false,
               "deprecationReason": null,
               "args": [
-                {
-                  "name": "ids",
-                  "description": "List of wallet transaction IDs to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
                 {
                   "name": "limit",
                   "description": null,
@@ -30306,26 +30126,6 @@
               "isDeprecated": false,
               "deprecationReason": null,
               "args": [
-                {
-                  "name": "ids",
-                  "description": "List of webhook endpoint IDs to fetch",
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
                 {
                   "name": "limit",
                   "description": null,

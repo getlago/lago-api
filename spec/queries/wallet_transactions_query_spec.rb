@@ -3,9 +3,18 @@
 require 'rails_helper'
 
 RSpec.describe WalletTransactionsQuery, type: :query do
-  subject(:wallet_transactions_query) do
-    described_class.new(organization:)
+  subject(:result) do
+    described_class.call(
+      organization:,
+      wallet_id: wallet_id,
+      pagination:,
+      filters:
+    )
   end
+
+  let(:wallet_id) { wallet.id }
+  let(:pagination) { nil }
+  let(:filters) { {} }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -24,17 +33,10 @@ RSpec.describe WalletTransactionsQuery, type: :query do
   end
 
   it 'returns all wallet transactions for a certain wallet' do
-    result = wallet_transactions_query.call(
-      wallet_id: wallet.id,
-      page: 1,
-      limit: 10,
-      filters: {}
-    )
-
     returned_ids = result.wallet_transactions.pluck(:id)
 
     aggregate_failures do
-      expect(result.wallet_transactions.count).to eq(3)
+      expect(returned_ids.count).to eq(3)
       expect(returned_ids).to include(wallet_transaction_first.id)
       expect(returned_ids).to include(wallet_transaction_second.id)
       expect(returned_ids).to include(wallet_transaction_third.id)
@@ -42,25 +44,18 @@ RSpec.describe WalletTransactionsQuery, type: :query do
     end
   end
 
-  context 'when filtering by id' do
-    it 'returns only one wallet transaction' do
-      result = wallet_transactions_query.call(
-        wallet_id: wallet.id,
-        page: 1,
-        limit: 10,
-        filters: {
-          ids: [wallet_transaction_second.id]
-        }
-      )
+  context 'with pagination' do
+    let(:pagination) { {page: 2, limit: 2} }
 
-      returned_ids = result.wallet_transactions.pluck(:id)
-
+    it 'applies the pagination' do
       aggregate_failures do
+        expect(result).to be_success
         expect(result.wallet_transactions.count).to eq(1)
-        expect(returned_ids).not_to include(wallet_transaction_first.id)
-        expect(returned_ids).to include(wallet_transaction_second.id)
-        expect(returned_ids).not_to include(wallet_transaction_third.id)
-        expect(returned_ids).not_to include(wallet_transaction_fourth.id)
+        expect(result.wallet_transactions.current_page).to eq(2)
+        expect(result.wallet_transactions.prev_page).to eq(1)
+        expect(result.wallet_transactions.next_page).to be_nil
+        expect(result.wallet_transactions.total_pages).to eq(2)
+        expect(result.wallet_transactions.total_count).to eq(3)
       end
     end
   end
@@ -68,20 +63,13 @@ RSpec.describe WalletTransactionsQuery, type: :query do
   context 'when filtering by status' do
     let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, status: 'pending') }
 
-    it 'returns only one wallet transaction' do
-      result = wallet_transactions_query.call(
-        wallet_id: wallet.id,
-        page: 1,
-        limit: 10,
-        filters: {
-          status: 'pending'
-        }
-      )
+    let(:filters) { {status: 'pending'} }
 
+    it 'returns only one wallet transaction' do
       returned_ids = result.wallet_transactions.pluck(:id)
 
       aggregate_failures do
-        expect(result.wallet_transactions.count).to eq(1)
+        expect(returned_ids.count).to eq(1)
         expect(returned_ids).not_to include(wallet_transaction_first.id)
         expect(returned_ids).not_to include(wallet_transaction_second.id)
         expect(returned_ids).to include(wallet_transaction_third.id)
@@ -93,20 +81,13 @@ RSpec.describe WalletTransactionsQuery, type: :query do
   context 'when filtering by transaction type' do
     let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, transaction_type: 'outbound') }
 
-    it 'returns only one wallet transaction' do
-      result = wallet_transactions_query.call(
-        wallet_id: wallet.id,
-        page: 1,
-        limit: 10,
-        filters: {
-          transaction_type: 'outbound'
-        }
-      )
+    let(:filters) { {transaction_type: 'outbound'} }
 
+    it 'returns only one wallet transaction' do
       returned_ids = result.wallet_transactions.pluck(:id)
 
       aggregate_failures do
-        expect(result.wallet_transactions.count).to eq(1)
+        expect(returned_ids.count).to eq(1)
         expect(returned_ids).not_to include(wallet_transaction_first.id)
         expect(returned_ids).not_to include(wallet_transaction_second.id)
         expect(returned_ids).to include(wallet_transaction_third.id)
@@ -116,14 +97,9 @@ RSpec.describe WalletTransactionsQuery, type: :query do
   end
 
   context 'when wallet is not found' do
-    it 'returns not found error' do
-      result = wallet_transactions_query.call(
-        wallet_id: "#{wallet.id}abc",
-        page: 1,
-        limit: 10,
-        filters: {}
-      )
+    let(:wallet_id) { "#{wallet.id}abc" }
 
+    it 'returns not found error' do
       aggregate_failures do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
