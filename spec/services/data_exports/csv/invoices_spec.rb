@@ -117,7 +117,7 @@ RSpec.describe DataExports::Csv::Invoices do
 
     it 'generates the correct CSV output' do
       expected_csv = <<~CSV
-        lago_id,sequential_id,issuing_date,customer_lago_id,customer_external_id,customer_country,customer_tax_identification_number,invoince_number,invoice_type,payment_status,status,file_url,currency,fees_amount_cents,coupons_amount_cents,taxes_amount_cents,credit_notes_amount_cents,prepaid_credit_amount_cents,total_amount_cents,payment_due_date,payment_dispute_lost_at,payment_overdue
+        lago_id,sequential_id,issuing_date,customer_lago_id,customer_external_id,customer_country,customer_tax_identification_number,invoice_number,invoice_type,payment_status,status,file_url,currency,fees_amount_cents,coupons_amount_cents,taxes_amount_cents,credit_notes_amount_cents,prepaid_credit_amount_cents,total_amount_cents,payment_due_date,payment_dispute_lost_at,payment_overdue
         invoice-lago-id-123,SEQ123,2023-01-01,customer-lago-id-456,CUST123,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
       CSV
 

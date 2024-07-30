@@ -65,7 +65,7 @@ module DataExports
           customer_external_id
           customer_country
           customer_tax_identification_number
-          invoince_number
+          invoice_number
           invoice_type
           payment_status
           status
