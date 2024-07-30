@@ -78,7 +78,7 @@ module Events
           end
 
           def enriched_events_query
-            return [] if !check_before_boundaries? && !check_after_to_boundaries?
+            return [] if !check_before_boundaries? && !check_after_boundaries?
 
             base_scope = ::Clickhouse::EventsEnriched
               .where(organization_id: organization.id)
