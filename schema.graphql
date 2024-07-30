@@ -1869,6 +1869,7 @@ input CreateCustomerWalletInput {
   customerId: ID!
   expirationAt: ISO8601DateTime
   grantedCredits: String!
+  invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidCredits: String!
   rateAmount: String!
@@ -2047,6 +2048,7 @@ input CreatePlanInput {
 input CreateRecurringTransactionRuleInput {
   grantedCredits: String
   interval: RecurringTransactionIntervalEnum
+  invoiceRequiresSuccessfulPayment: Boolean
   method: RecurringTransactionMethodEnum
   paidCredits: String
   startedAt: ISO8601DateTime

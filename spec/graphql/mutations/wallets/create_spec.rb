@@ -18,6 +18,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           status
           currency
           expirationAt
+          invoiceRequiresSuccessfulPayment
           recurringTransactionRules {
             lagoId
             method
@@ -27,6 +28,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             paidCredits
             grantedCredits
             targetOngoingBalance
+            invoiceRequiresSuccessfulPayment
           }
         }
       }
@@ -54,23 +56,27 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           grantedCredits: '0.00',
           expirationAt: expiration_at.iso8601,
           currency: 'EUR',
+          invoiceRequiresSuccessfulPayment: true,
           recurringTransactionRules: [
             {
               method: 'target',
               trigger: 'interval',
               interval: 'monthly',
-              targetOngoingBalance: '0.0'
+              targetOngoingBalance: '0.0',
+              invoiceRequiresSuccessfulPayment: true,
             }
           ]
         }
       }
     )
 
+    pp result
     result_data = result['data']['createCustomerWallet']
 
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('First Wallet')
+      expect(result_data['invoiceRequiresSuccessfulPayment']).to eq(true)
       expect(result_data['expirationAt']).to eq(expiration_at.iso8601)
       expect(result_data['recurringTransactionRules'].count).to eq(1)
       expect(result_data['recurringTransactionRules'][0]['lagoId']).to be_present
@@ -79,6 +85,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data['recurringTransactionRules'][0]['interval']).to eq('monthly')
       expect(result_data['recurringTransactionRules'][0]['paidCredits']).to eq('0.0')
       expect(result_data['recurringTransactionRules'][0]['grantedCredits']).to eq('0.0')
+      expect(result_data['recurringTransactionRules'][0]['invoiceRequiresSuccessfulPayment']).to eq('true')
     end
   end
 
