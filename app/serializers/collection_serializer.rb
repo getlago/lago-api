@@ -22,7 +22,7 @@ class CollectionSerializer
   end
 
   def collection_name
-    options.fetch(:collection_name, :data)
+    options.fetch(:collection_name, :data).to_sym
   end
 
   def meta?
