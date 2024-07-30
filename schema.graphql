@@ -7215,6 +7215,7 @@ input UpdatePlanInput {
 input UpdateRecurringTransactionRuleInput {
   grantedCredits: String
   interval: RecurringTransactionIntervalEnum
+  invoiceRequiresSuccessfulPayment: Boolean
   lagoId: ID
   method: RecurringTransactionMethodEnum
   paidCredits: String
