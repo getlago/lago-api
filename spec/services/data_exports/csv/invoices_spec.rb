@@ -72,18 +72,19 @@ RSpec.describe DataExports::Csv::Invoices do
         tax_identification_number: '123456789'
       },
       number: 'INV123',
-      total_amount_cents: 1000,
-      currency: 'USD',
       invoice_type: 'credit',
       payment_status: 'pending',
       status: 'finalized',
       file_url: 'http://api.lago.com/invoice.pdf',
-      taxes_amount_cents: 200,
-      credit_notes_amount_cents: 100,
-      prepaid_credit_amount_cents: 50,
-      coupons_amount_cents: 25,
+      currency: 'USD',
+      fees_amount_cents: 70000,
+      coupons_amount_cents: 1655,
+      taxes_amount_cents: 10500,
+      credit_notes_amount_cents: 334,
+      prepaid_credit_amount_cents: 1000,
+      total_amount_cents: 77511,
       payment_due_date: '2023-02-01',
-      payment_dispute_lost_at: nil,
+      payment_dispute_lost_at: '2023-12-22',
       payment_overdue: false
     }
   end
@@ -116,8 +117,8 @@ RSpec.describe DataExports::Csv::Invoices do
 
     it 'generates the correct CSV output' do
       expected_csv = <<~CSV
-        lago_id,sequential_id,issuing_date,customer_lago_id,customer_external_id,customer_country,customer_tax_identification_number,invoince_number,total_amount_cents,currency,invoice_type,payment_status,status,file_url,taxes_amount_cents,credit_notes_amount_cents,prepaid_credit_amount_cents,coupons_amount_cents,payment_due_date,payment_dispute_lost_at,payment_overdue
-        invoice-lago-id-123,SEQ123,2023-01-01,customer-lago-id-456,CUST123,US,123456789,INV123,1000,USD,credit,pending,finalized,http://api.lago.com/invoice.pdf,200,100,50,25,2023-02-01,,false
+        lago_id,sequential_id,issuing_date,customer_lago_id,customer_external_id,customer_country,customer_tax_identification_number,invoince_number,invoice_type,payment_status,status,file_url,currency,fees_amount_cents,coupons_amount_cents,taxes_amount_cents,credit_notes_amount_cents,prepaid_credit_amount_cents,total_amount_cents,payment_due_date,payment_dispute_lost_at,payment_overdue
+        invoice-lago-id-123,SEQ123,2023-01-01,customer-lago-id-456,CUST123,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
       CSV
 
       expect(call).to eq(expected_csv)

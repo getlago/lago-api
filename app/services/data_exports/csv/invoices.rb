@@ -31,16 +31,17 @@ module DataExports
               serialized_invoice[:customer][:country],
               serialized_invoice[:customer][:tax_identification_number],
               serialized_invoice[:number],
-              serialized_invoice[:total_amount_cents],
-              serialized_invoice[:currency],
               serialized_invoice[:invoice_type],
               serialized_invoice[:payment_status],
               serialized_invoice[:status],
               serialized_invoice[:file_url],
+              serialized_invoice[:currency],
+              serialized_invoice[:fees_amount_cents],
+              serialized_invoice[:coupons_amount_cents],
               serialized_invoice[:taxes_amount_cents],
               serialized_invoice[:credit_notes_amount_cents],
               serialized_invoice[:prepaid_credit_amount_cents],
-              serialized_invoice[:coupons_amount_cents],
+              serialized_invoice[:total_amount_cents],
               serialized_invoice[:payment_due_date],
               serialized_invoice[:payment_dispute_lost_at],
               serialized_invoice[:payment_overdue]
@@ -65,16 +66,17 @@ module DataExports
           customer_country
           customer_tax_identification_number
           invoince_number
-          total_amount_cents
-          currency
           invoice_type
           payment_status
           status
           file_url
+          currency
+          fees_amount_cents
+          coupons_amount_cents
           taxes_amount_cents
           credit_notes_amount_cents
           prepaid_credit_amount_cents
-          coupons_amount_cents
+          total_amount_cents
           payment_due_date
           payment_dispute_lost_at
           payment_overdue
