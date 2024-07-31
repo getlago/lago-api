@@ -42,6 +42,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
               'subsidiary' => integration_customer.subsidiary_id,
               'custentity_lago_sf_id' => customer.external_salesforce_id,
               'custentity_form_activeprospect_customer' => customer.name,
+              'custentity_lago_customer_link' => "#{ENV["LAGO_FRONT_URL"]}/customer/#{customer.id}",
               'email' => customer.email,
               'phone' => customer.phone
             },
@@ -128,6 +129,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
             'subsidiary' => integration_customer.subsidiary_id,
             'custentity_lago_sf_id' => customer.external_salesforce_id,
             'custentity_form_activeprospect_customer' => customer.name,
+            'custentity_lago_customer_link' => "#{ENV["LAGO_FRONT_URL"]}/customer/#{customer.id}",
             'email' => customer.email,
             'phone' => customer.phone
           },

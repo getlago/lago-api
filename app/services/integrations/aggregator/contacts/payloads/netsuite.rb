@@ -15,6 +15,7 @@ module Integrations
                 'custentity_lago_id' => customer.id,
                 'custentity_lago_sf_id' => customer.external_salesforce_id,
                 'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
+                'custentity_lago_customer_link' => customer_url,
                 'email' => customer.email,
                 'phone' => customer.phone
               },
@@ -33,6 +34,7 @@ module Integrations
                 'subsidiary' => integration_customer.subsidiary_id,
                 'custentity_lago_sf_id' => customer.external_salesforce_id,
                 'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
+                'custentity_lago_customer_link' => customer_url,
                 'email' => customer.email,
                 'phone' => customer.phone
               },
@@ -40,6 +42,14 @@ module Integrations
                 'isDynamic' => false
               }
             }
+          end
+
+          private
+
+          def customer_url
+            url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+            URI.join(url, "/customer/", customer.id).to_s
           end
         end
       end
