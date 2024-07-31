@@ -8,6 +8,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
   let(:integration_customer) { FactoryBot.create(:netsuite_customer) }
   let(:subsidiary_id) { Faker::Number.number(digits: 2) }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:, subsidiary_id:) }
+  let(:customer_link) { payload.__send__(:customer_url) }
 
   describe "#create_body" do
     subject(:create_body_call) { payload.create_body }
@@ -22,7 +23,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
           'custentity_lago_id' => customer.id,
           'custentity_lago_sf_id' => customer.external_salesforce_id,
           'custentity_form_activeprospect_customer' => customer.name,
-          'custentity_lago_customer_link' => "#{ENV["LAGO_FRONT_URL"]}/customer/#{customer.id}",
+          'custentity_lago_customer_link' => customer_link,
           'email' => customer.email,
           'phone' => customer.phone
         },
@@ -49,7 +50,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
           'subsidiary' => integration_customer.subsidiary_id,
           'custentity_lago_sf_id' => customer.external_salesforce_id,
           'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
-          'custentity_lago_customer_link' => "#{ENV["LAGO_FRONT_URL"]}/customer/#{customer.id}",
+          'custentity_lago_customer_link' => customer_link,
           'email' => customer.email,
           'phone' => customer.phone
         },

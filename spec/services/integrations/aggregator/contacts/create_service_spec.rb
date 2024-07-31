@@ -19,6 +19,12 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
     }
   end
 
+  let(:customer_link) do
+    url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+    URI.join(url, "/customer/", customer.id).to_s
+  end
+
   before do
     allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
   end
@@ -47,7 +53,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
               'custentity_lago_id' => customer.id,
               'custentity_lago_sf_id' => customer.external_salesforce_id,
               'custentity_form_activeprospect_customer' => customer.name,
-              'custentity_lago_customer_link' => "#{ENV["LAGO_FRONT_URL"]}/customer/#{customer.id}",
+              'custentity_lago_customer_link' => customer_link,
               'email' => customer.email,
               'phone' => customer.phone
             },
@@ -160,7 +166,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
             'custentity_lago_id' => customer.id,
             'custentity_lago_sf_id' => customer.external_salesforce_id,
             'custentity_form_activeprospect_customer' => customer.name,
-            'custentity_lago_customer_link' => "#{ENV["LAGO_FRONT_URL"]}/customer/#{customer.id}",
+            'custentity_lago_customer_link' => customer_link,
             'email' => customer.email,
             'phone' => customer.phone
           },
