@@ -892,7 +892,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
   end
 
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "payable_id", null: false
+    t.uuid "invoice_id"
     t.uuid "payment_provider_id"
     t.uuid "payment_provider_customer_id"
     t.bigint "amount_cents", null: false
@@ -902,6 +902,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "payable_type", default: "Invoice", null: false
+    t.uuid "payable_id"
+    t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
@@ -1220,6 +1222,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
+  add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"
   add_foreign_key "plans", "organizations"
   add_foreign_key "plans", "plans", column: "parent_id"
