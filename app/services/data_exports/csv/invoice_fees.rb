@@ -33,6 +33,7 @@ module DataExports
                 serialized_fee[:item][:type],
                 serialized_fee[:item][:code],
                 serialized_fee[:item][:name],
+                serialized_fee[:item][:description],
                 serialized_fee[:item][:invoice_display_name],
                 serialized_fee[:item][:filter_invoice_display_name],
                 serialized_fee[:item][:grouped_by],
@@ -63,6 +64,7 @@ module DataExports
           fee_item_type
           fee_item_code
           fee_item_name
+          fee_item_description
           fee_item_invoice_display_name
           fee_item_filter_invoice_display_name
           fee_item_grouped_by
