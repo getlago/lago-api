@@ -19,7 +19,8 @@ module Integrations
                 'taxamountoverride' => amount(invoice.taxes_amount_cents, resource: invoice),
                 'otherrefnum' => invoice.number,
                 'custbody_lago_id' => invoice.id,
-                'custbody_ava_disable_tax_calculation' => true
+                'custbody_ava_disable_tax_calculation' => true,
+                'custbody_lago_invoice_link' => invoice_url
               },
               'lines' => [
                 {
@@ -34,6 +35,12 @@ module Integrations
           end
 
           private
+
+          def invoice_url
+            url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+            URI.join(url, "/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
+          end
 
           def item(fee)
             mapped_item = if fee.charge?
