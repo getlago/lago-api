@@ -165,3 +165,40 @@ class Subscription < ApplicationRecord
     number_od_days.negative? ? 0 : number_od_days
   end
 end
+
+# == Schema Information
+#
+# Table name: subscriptions
+#
+#  id                       :uuid             not null, primary key
+#  billing_time             :integer          default("calendar"), not null
+#  canceled_at              :datetime
+#  ending_at                :datetime
+#  name                     :string
+#  started_at               :datetime
+#  status                   :integer          not null
+#  subscription_at          :datetime
+#  terminated_at            :datetime
+#  trial_ended_at           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  customer_id              :uuid             not null
+#  external_id              :string           not null
+#  plan_id                  :uuid             not null
+#  previous_subscription_id :uuid
+#
+# Indexes
+#
+#  index_subscriptions_on_customer_id                          (customer_id)
+#  index_subscriptions_on_external_id                          (external_id)
+#  index_subscriptions_on_plan_id                              (plan_id)
+#  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)
+#  index_subscriptions_on_started_at                           (started_at)
+#  index_subscriptions_on_started_at_and_ending_at             (started_at,ending_at)
+#  index_subscriptions_on_status                               (status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (customer_id => customers.id)
+#  fk_rails_...  (plan_id => plans.id)
+#

@@ -51,3 +51,28 @@ class Tax < ApplicationRecord
       .or(organization.customers.where(id: customers.select(:id)))
   end
 end
+
+# == Schema Information
+#
+# Table name: taxes
+#
+#  id                      :uuid             not null, primary key
+#  applied_to_organization :boolean          default(FALSE), not null
+#  auto_generated          :boolean          default(FALSE), not null
+#  code                    :string           not null
+#  description             :string
+#  name                    :string           not null
+#  rate                    :float            default(0.0), not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  organization_id         :uuid             not null
+#
+# Indexes
+#
+#  index_taxes_on_code_and_organization_id  (code,organization_id) UNIQUE
+#  index_taxes_on_organization_id           (organization_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
+#

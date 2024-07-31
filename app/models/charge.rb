@@ -133,3 +133,35 @@ class Charge < ApplicationRecord
     errors.add(:charge_model, :invalid_aggregation_type_or_charge_model)
   end
 end
+
+# == Schema Information
+#
+# Table name: charges
+#
+#  id                   :uuid             not null, primary key
+#  amount_currency      :string
+#  charge_model         :integer          default("standard"), not null
+#  deleted_at           :datetime
+#  invoice_display_name :string
+#  invoiceable          :boolean          default(TRUE), not null
+#  min_amount_cents     :bigint           default(0), not null
+#  pay_in_advance       :boolean          default(FALSE), not null
+#  properties           :jsonb            not null
+#  prorated             :boolean          default(FALSE), not null
+#  regroup_paid_fees    :integer
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  billable_metric_id   :uuid
+#  plan_id              :uuid
+#
+# Indexes
+#
+#  index_charges_on_billable_metric_id  (billable_metric_id)
+#  index_charges_on_deleted_at          (deleted_at)
+#  index_charges_on_plan_id             (plan_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (billable_metric_id => billable_metrics.id)
+#  fk_rails_...  (plan_id => plans.id)
+#

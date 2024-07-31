@@ -133,3 +133,44 @@ class Organization < ApplicationRecord
     errors.add(:email_settings, :unsupported_value)
   end
 end
+
+# == Schema Information
+#
+# Table name: organizations
+#
+#  id                        :uuid             not null, primary key
+#  address_line1             :string
+#  address_line2             :string
+#  api_key                   :string
+#  city                      :string
+#  clickhouse_aggregation    :boolean          default(FALSE), not null
+#  country                   :string
+#  custom_aggregation        :boolean          default(FALSE)
+#  default_currency          :string           default("USD"), not null
+#  document_locale           :string           default("en"), not null
+#  document_number_prefix    :string
+#  document_numbering        :integer          default("per_customer"), not null
+#  email                     :string
+#  email_settings            :string           default([]), not null, is an Array
+#  eu_tax_management         :boolean          default(FALSE)
+#  invoice_footer            :text
+#  invoice_grace_period      :integer          default(0), not null
+#  legal_name                :string
+#  legal_number              :string
+#  logo                      :string
+#  name                      :string           not null
+#  net_payment_term          :integer          default(0), not null
+#  premium_integrations      :string           default([]), not null, is an Array
+#  state                     :string
+#  tax_identification_number :string
+#  timezone                  :string           default("UTC"), not null
+#  vat_rate                  :float            default(0.0), not null
+#  webhook_url               :string
+#  zipcode                   :string
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#
+# Indexes
+#
+#  index_organizations_on_api_key  (api_key) UNIQUE
+#

@@ -65,3 +65,31 @@ class Webhook < ApplicationRecord
     ENV['LAGO_API_URL']
   end
 end
+
+# == Schema Information
+#
+# Table name: webhooks
+#
+#  id                  :uuid             not null, primary key
+#  endpoint            :string
+#  http_status         :integer
+#  last_retried_at     :datetime
+#  object_type         :string
+#  payload             :json
+#  response            :json
+#  retries             :integer          default(0), not null
+#  status              :integer          default("pending"), not null
+#  webhook_type        :string
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  object_id           :uuid
+#  webhook_endpoint_id :uuid
+#
+# Indexes
+#
+#  index_webhooks_on_webhook_endpoint_id  (webhook_endpoint_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (webhook_endpoint_id => webhook_endpoints.id)
+#

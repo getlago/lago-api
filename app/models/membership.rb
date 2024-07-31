@@ -46,3 +46,28 @@ class Membership < ApplicationRecord
     end
   end
 end
+
+# == Schema Information
+#
+# Table name: memberships
+#
+#  id              :uuid             not null, primary key
+#  revoked_at      :datetime
+#  role            :integer          default("admin"), not null
+#  status          :integer          default("active"), not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  organization_id :uuid             not null
+#  user_id         :uuid             not null
+#
+# Indexes
+#
+#  index_memberships_on_organization_id              (organization_id)
+#  index_memberships_on_user_id                      (user_id)
+#  index_memberships_on_user_id_and_organization_id  (user_id,organization_id) UNIQUE WHERE (revoked_at IS NULL)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (user_id => users.id)
+#

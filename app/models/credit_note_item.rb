@@ -12,3 +12,27 @@ class CreditNoteItem < ApplicationRecord
     credit_note.applied_taxes.where(tax_id: fee.applied_taxes.select('fees_taxes.tax_id'))
   end
 end
+
+# == Schema Information
+#
+# Table name: credit_note_items
+#
+#  id                   :uuid             not null, primary key
+#  amount_cents         :bigint           default(0), not null
+#  amount_currency      :string           not null
+#  precise_amount_cents :decimal(30, 5)   not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  credit_note_id       :uuid             not null
+#  fee_id               :uuid
+#
+# Indexes
+#
+#  index_credit_note_items_on_credit_note_id  (credit_note_id)
+#  index_credit_note_items_on_fee_id          (fee_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (credit_note_id => credit_notes.id)
+#  fk_rails_...  (fee_id => fees.id)
+#
