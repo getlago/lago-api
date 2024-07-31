@@ -17,6 +17,7 @@ module V1
           type: model.fee_type,
           code: model.item_code,
           name: model.item_name,
+          description: model.item_description,
           invoice_display_name: model.invoice_name,
           filters: model.charge_filter&.to_h,
           filter_invoice_display_name: model.charge_filter&.display_name,

@@ -53,6 +53,7 @@ RSpec.describe ::V1::FeeSerializer do
         'type' => fee.fee_type,
         'code' => fee.item_code,
         'name' => fee.item_name,
+        'description' => fee.item_description,
         'invoice_display_name' => fee.invoice_name,
         'filter_invoice_display_name' => fee.charge_filter&.display_name,
         'filters' => nil,
