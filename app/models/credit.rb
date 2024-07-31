@@ -57,3 +57,30 @@ class Credit < ApplicationRecord
     "#{coupon.name} (#{suffix})"
   end
 end
+
+# == Schema Information
+#
+# Table name: credits
+#
+#  id                :uuid             not null, primary key
+#  amount_cents      :bigint           not null
+#  amount_currency   :string           not null
+#  before_taxes      :boolean          default(FALSE), not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  applied_coupon_id :uuid
+#  credit_note_id    :uuid
+#  invoice_id        :uuid
+#
+# Indexes
+#
+#  index_credits_on_applied_coupon_id  (applied_coupon_id)
+#  index_credits_on_credit_note_id     (credit_note_id)
+#  index_credits_on_invoice_id         (invoice_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (applied_coupon_id => applied_coupons.id)
+#  fk_rails_...  (credit_note_id => credit_notes.id)
+#  fk_rails_...  (invoice_id => invoices.id)
+#

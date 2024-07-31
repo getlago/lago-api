@@ -82,3 +82,36 @@ class Coupon < ApplicationRecord
     (plans + plans.map(&:children)).flatten
   end
 end
+
+# == Schema Information
+#
+# Table name: coupons
+#
+#  id                       :uuid             not null, primary key
+#  amount_cents             :bigint
+#  amount_currency          :string
+#  code                     :string
+#  coupon_type              :integer          default("fixed_amount"), not null
+#  deleted_at               :datetime
+#  description              :text
+#  expiration               :integer          not null
+#  expiration_at            :datetime
+#  frequency                :integer          default("once"), not null
+#  frequency_duration       :integer
+#  limited_billable_metrics :boolean          default(FALSE), not null
+#  limited_plans            :boolean          default(FALSE), not null
+#  name                     :string           not null
+#  percentage_rate          :decimal(10, 5)
+#  reusable                 :boolean          default(TRUE), not null
+#  status                   :integer          default("active"), not null
+#  terminated_at            :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  organization_id          :uuid             not null
+#
+# Indexes
+#
+#  index_coupons_on_deleted_at                (deleted_at)
+#  index_coupons_on_organization_id           (organization_id)
+#  index_coupons_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#

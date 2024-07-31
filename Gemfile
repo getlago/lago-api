@@ -122,6 +122,8 @@ group :development do
   gem 'rubocop-thread_safety', require: false
   gem "standard", require: false
 
+  gem 'annotate'
+
   gem 'sass-rails'
   gem 'uglifier'
 

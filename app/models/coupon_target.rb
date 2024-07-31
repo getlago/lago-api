@@ -11,3 +11,29 @@ class CouponTarget < ApplicationRecord
 
   default_scope -> { kept }
 end
+
+# == Schema Information
+#
+# Table name: coupon_targets
+#
+#  id                 :uuid             not null, primary key
+#  deleted_at         :datetime
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  billable_metric_id :uuid
+#  coupon_id          :uuid             not null
+#  plan_id            :uuid
+#
+# Indexes
+#
+#  index_coupon_targets_on_billable_metric_id  (billable_metric_id)
+#  index_coupon_targets_on_coupon_id           (coupon_id)
+#  index_coupon_targets_on_deleted_at          (deleted_at)
+#  index_coupon_targets_on_plan_id             (plan_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (billable_metric_id => billable_metrics.id)
+#  fk_rails_...  (coupon_id => coupons.id)
+#  fk_rails_...  (plan_id => plans.id)
+#
