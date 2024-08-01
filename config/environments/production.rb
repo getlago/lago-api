@@ -90,6 +90,4 @@ Rails.application.configure do
       enable_starttls_auto: true
     }
   end
-
-  OpenTelemetry::SDK.configure(&:use_all) if ENV['OTEL_EXPORTER'].present?
 end

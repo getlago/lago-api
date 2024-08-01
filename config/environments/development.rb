@@ -18,7 +18,7 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.server_timing = true
 
-  config.cache_store = :redis_cache_store, {url: ENV['LAGO_REDIS_CACHE_URL'], db: '3'}
+  config.cache_store = :redis_cache_store, {url: ENV['LAGO_REDIS_CACHE_URL'], db: 3}
 
   if Rails.root.join("tmp/caching-dev.txt").exist?
     config.public_file_server.headers = {
