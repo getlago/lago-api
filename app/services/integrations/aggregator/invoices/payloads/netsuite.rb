@@ -20,7 +20,8 @@ module Integrations
                 'otherrefnum' => invoice.number,
                 'custbody_lago_id' => invoice.id,
                 'custbody_ava_disable_tax_calculation' => true,
-                'custbody_lago_invoice_link' => invoice_url
+                'custbody_lago_invoice_link' => invoice_url,
+                'duedate' => due_date
               },
               'lines' => [
                 {
@@ -40,6 +41,10 @@ module Integrations
             url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 
             URI.join(url, "/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
+          end
+
+          def due_date
+            invoice.payment_due_date.strftime("%-m/%-d/%Y")
           end
 
           def item(fee)

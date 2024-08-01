@@ -138,6 +138,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       URI.join(url, "/customer/#{customer.id}/", "invoice/#{invoice.id}/overview").to_s
     end
 
+    let(:due_date) { invoice.payment_due_date.strftime("%-m/%-d/%Y") }
+
     let(:body) do
       {
         'type' => 'invoice',
@@ -151,7 +153,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           'otherrefnum' => invoice.number,
           'custbody_lago_id' => invoice.id,
           'custbody_ava_disable_tax_calculation' => true,
-          'custbody_lago_invoice_link' => invoice_link
+          'custbody_lago_invoice_link' => invoice_link,
+          'duedate' => due_date
         },
         'lines' => [
           {
