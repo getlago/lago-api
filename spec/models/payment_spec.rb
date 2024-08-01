@@ -8,6 +8,7 @@ RSpec.describe Payment, type: :model do
   it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to have_many(:integration_resources) }
+  it { is_expected.to belong_to(:payment_request).optional }
   it { is_expected.to belong_to(:payable) }
   it { is_expected.to delegate_method(:customer).to(:payable) }
 
