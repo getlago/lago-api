@@ -132,6 +132,18 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       )
     end
 
+    let(:charge_fee2) do
+      create(
+        :charge_fee,
+        invoice:,
+        charge:,
+        units: 0,
+        precise_unit_amount: 0.0,
+        amount_cents: 0,
+        created_at: current_time
+      )
+    end
+
     let(:invoice_link) do
       url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 
@@ -219,6 +231,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       fee_sub
       minimum_commitment_fee
       charge_fee
+      charge_fee2
     end
 
     it 'returns payload body' do

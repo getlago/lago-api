@@ -26,7 +26,9 @@ module Integrations
               'lines' => [
                 {
                   'sublistId' => 'item',
-                  'lineItems' => invoice.fees.order(created_at: :asc).map { |fee| item(fee) } + discounts
+                  'lineItems' => invoice.fees.where('amount_cents > ?', 0).order(created_at: :asc).map do |fee|
+                    item(fee)
+                  end + discounts
                 }
               ],
               'options' => {
