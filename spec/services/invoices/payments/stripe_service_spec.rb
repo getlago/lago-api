@@ -212,8 +212,11 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it 'delivers an error webhook' do
+        allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
+
         stripe_service.create
 
+        expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
         expect(SendWebhookJob).to have_been_enqueued
           .with(
             'invoice.payment_failure',
@@ -224,6 +227,33 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
               error_code: nil
             }
           )
+      end
+
+      context 'when invoice is credit? and open?' do
+        let(:wallet_transaction) { create(:wallet_transaction) }
+
+        before do
+          create(:fee, fee_type: :credit, invoice: invoice, invoiceable: wallet_transaction)
+          invoice.update! status: :open, invoice_type: :credit
+        end
+
+        it 'delivers an error webhook' do
+          allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
+
+          stripe_service.create
+
+          expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with(
+              'wallet_transaction.payment_failure',
+              wallet_transaction,
+              provider_customer_id: stripe_customer.provider_customer_id,
+              provider_error: {
+                message: 'error',
+                error_code: nil
+              }
+            )
+        end
       end
     end
 
