@@ -20,6 +20,7 @@ class Invoice < ApplicationRecord
   has_many :credits
   has_many :wallet_transactions
   has_many :payments, as: :payable
+  has_many :payment_requests, as: :payment_requestable
   has_many :invoice_subscriptions
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
