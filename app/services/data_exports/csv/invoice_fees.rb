@@ -44,7 +44,6 @@ module DataExports
                 serialized_fee[:total_amount_currency],
                 serialized_fee[:units],
                 serialized_fee[:precise_unit_amount],
-                serialized_fee[:precise_coupons_amount],
                 serialized_fee[:taxes_amount_cents],
                 serialized_fee[:total_amount_cents]
               ]
@@ -75,7 +74,6 @@ module DataExports
           fee_amount_currency
           fee_units
           fee_precise_unit_amount
-          fee_precise_coupons_amount_cents
           fee_taxes_amount_cents
           fee_total_amount_cents
         ]
