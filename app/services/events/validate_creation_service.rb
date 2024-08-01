@@ -15,7 +15,9 @@ module Events
     end
 
     def call
-      validate_create
+      LagoTracer.in_span("Events::ValidateCreationService#call") do
+        validate_create
+      end
     end
 
     private

@@ -145,11 +145,15 @@ class BaseService
   end
 
   def self.call(*, **, &)
-    new(*, **).call(&)
+    LagoTracer.in_span("#{name}#call") do
+      new(*, **).call(&)
+    end
   end
 
   def self.call_async(*, **, &)
-    new(*, **).call_async(&)
+    LagoTracer.in_span("#{name}#call_async") do
+      new(*, **).call_async(&)
+    end
   end
 
   def initialize(current_user = nil)
