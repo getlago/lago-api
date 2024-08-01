@@ -9,4 +9,5 @@ RSpec.describe PayableGroup, type: :model do
 
   it { is_expected.to have_many(:invoices) }
   it { is_expected.to have_many(:payments) }
+  it { is_expected.to have_many(:payment_requests) }
 end

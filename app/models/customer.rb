@@ -28,6 +28,7 @@ class Customer < ApplicationRecord
   has_many :payment_provider_customers,
     class_name: 'PaymentProviderCustomers::BaseCustomer',
     dependent: :destroy
+  has_many :payment_requests, dependent: :destroy
   has_many :quantified_events
   has_many :integration_customers,
     class_name: 'IntegrationCustomers::BaseCustomer',

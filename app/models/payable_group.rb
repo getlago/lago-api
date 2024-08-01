@@ -7,6 +7,7 @@ class PayableGroup < ApplicationRecord
 
   has_many :invoices
   has_many :payments, as: :payable
+  has_many :payment_requests, as: :payment_requestable
 
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
 

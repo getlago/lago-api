@@ -9,6 +9,7 @@ class Payment < ApplicationRecord
 
   has_many :refunds
   has_many :integration_resources, as: :syncable
+  has_many :payment_requests, dependent: :destroy
 
   delegate :customer, to: :payable
 
