@@ -8,6 +8,5 @@ FactoryBot.define do
     amount_cents { 200 }
     amount_currency { "EUR" }
     email { Faker::Internet.email }
-    invoice_numbers { [Faker::Number.number(digits: 5)] }
   end
 end
