@@ -9,6 +9,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: 'invoice') if invoice.nil?
+      return result unless invoice.draft?
 
       ActiveRecord::Base.transaction do
         Invoices::RefreshDraftService.call(invoice:, context: :finalize).raise_if_error!
