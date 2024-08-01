@@ -11,6 +11,9 @@ module Invoices
     def perform(charge:, event:, timestamp:, invoice: nil)
       result = Invoices::CreatePayInAdvanceChargeService.call(charge:, event:, timestamp:, invoice:)
       return if result.success?
+      # NOTE: We don't want a dead job for failed invoice due to the tax reason.
+      #       This invoice should be in failed status and can be retried.
+      return if result.error.messages.dig(:tax_error)
 
       result.raise_if_error! if invoice || result.invoice.nil? || !result.invoice.generating?
 
