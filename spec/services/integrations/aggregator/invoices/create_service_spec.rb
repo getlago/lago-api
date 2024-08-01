@@ -127,6 +127,12 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
     }
   end
 
+  let(:invoice_url) do
+    url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+    URI.join(url, "/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
+  end
+
   let(:params) do
     {
       'type' => 'invoice',
@@ -139,7 +145,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         'taxamountoverride' => 80.0,
         'otherrefnum' => invoice.number,
         'custbody_lago_id' => invoice.id,
-        'custbody_ava_disable_tax_calculation' => true
+        'custbody_ava_disable_tax_calculation' => true,
+        'custbody_lago_invoice_link' => invoice_url
       },
       'lines' => [
         {
