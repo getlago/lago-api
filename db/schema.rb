@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_07_29_154334) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_01_134833) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -872,6 +872,21 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_29_154334) do
     t.index ["organization_id"], name: "index_payment_providers_on_organization_id"
   end
 
+  create_table "payment_requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.uuid "payment_id"
+    t.uuid "payment_requestable_id", null: false
+    t.string "payment_requestable_type", default: "Invoice", null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.string "email", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_payment_requests_on_customer_id"
+    t.index ["payment_id"], name: "index_payment_requests_on_payment_id"
+    t.index ["payment_requestable_type", "payment_requestable_id"], name: "idx_on_payment_requestable_type_payment_requestable_b151968780"
+  end
+
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "invoice_id"
     t.uuid "payment_provider_id"
@@ -1189,6 +1204,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_07_29_154334) do
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
+  add_foreign_key "payment_requests", "customers"
+  add_foreign_key "payment_requests", "payments"
   add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"
   add_foreign_key "plans", "organizations"
