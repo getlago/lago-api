@@ -50,7 +50,7 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_customer_external_id(scope)
-    scope.joins(:customer).where(customer: {external_id: filters.customer_external_id})
+    scope.joins(:customer).where(customers: {external_id: filters.customer_external_id})
   end
 
   def with_customer_id(scope)

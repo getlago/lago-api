@@ -273,6 +273,23 @@ RSpec.describe InvoicesQuery, type: :query do
         expect(returned_ids).not_to include(invoice_sixth.id)
       end
     end
+
+    context "with searching for /2222/ term" do
+      let(:search_term) { "2222" }
+
+      it "returns 1 invoices" do
+        returned_ids = result.invoices.pluck(:id)
+
+        aggregate_failures do
+          expect(result.invoices.count).to eq(1)
+          expect(returned_ids).not_to include(invoice_first.id)
+          expect(returned_ids).to include(invoice_second.id)
+          expect(returned_ids).not_to include(invoice_third.id)
+          expect(returned_ids).not_to include(invoice_fourth.id)
+          expect(returned_ids).not_to include(invoice_fifth.id)
+        end
+      end
+    end
   end
 
   context 'when filtering by issuing_date_from' do
