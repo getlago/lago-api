@@ -891,6 +891,19 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
     t.index ["organization_id"], name: "index_payment_providers_on_organization_id"
   end
 
+  create_table "payment_requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "customer_id", null: false
+    t.uuid "payment_requestable_id", null: false
+    t.string "payment_requestable_type", default: "Invoice", null: false
+    t.bigint "amount_cents", default: 0, null: false
+    t.string "amount_currency", null: false
+    t.string "email", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_payment_requests_on_customer_id"
+    t.index ["payment_requestable_type", "payment_requestable_id"], name: "idx_on_payment_requestable_type_payment_requestable_b151968780"
+  end
+
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "invoice_id"
     t.uuid "payment_provider_id"
@@ -903,10 +916,12 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
     t.datetime "updated_at", null: false
     t.string "payable_type", default: "Invoice", null: false
     t.uuid "payable_id"
+    t.uuid "payment_request_id"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
+    t.index ["payment_request_id"], name: "index_payments_on_payment_request_id"
   end
 
   create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1224,8 +1239,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
+  add_foreign_key "payment_requests", "customers"
   add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"
+  add_foreign_key "payments", "payment_requests"
   add_foreign_key "plans", "organizations"
   add_foreign_key "plans", "plans", column: "parent_id"
   add_foreign_key "plans_taxes", "plans"
