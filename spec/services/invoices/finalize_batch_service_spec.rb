@@ -20,7 +20,7 @@ RSpec.describe Invoices::FinalizeBatchService, type: :service do
     let(:finalize_service) { instance_double(Invoices::RefreshDraftAndFinalizeService) }
     let(:result) { BaseService::Result.new }
     let(:invoice_ids) { invoices.map(&:id) }
-    let(:invoices) { create_list(:invoice, 3, status: 'draft', customer:)}
+    let(:invoices) { create_list(:invoice, 3, status: 'draft', customer:) }
 
     before do
       invoices

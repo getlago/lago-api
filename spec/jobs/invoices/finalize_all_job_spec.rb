@@ -12,7 +12,7 @@ RSpec.describe Invoices::FinalizeAllJob, type: :job do
 
   before do
     allow(Invoices::FinalizeBatchService).to receive(:new).and_return(finalize_batch_service)
-    allow(finalize_batch_service).to receive(:call)g.and_return(result)
+    allow(finalize_batch_service).to receive(:call).and_return(result)
   end
 
   it 'calls the retry batch service' do

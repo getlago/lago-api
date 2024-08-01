@@ -86,6 +86,7 @@ module Types
     field :refresh_invoice, mutation: Mutations::Invoices::Refresh
     field :retry_all_invoice_payments, mutation: Mutations::Invoices::RetryAllPayments
     field :retry_all_invoices, mutation: Mutations::Invoices::RetryAll
+    field :finalize_all_invoices, mutation: Mutations::Invoices::FinalizeAll
     field :retry_invoice, mutation: Mutations::Invoices::Retry
     field :retry_invoice_payment, mutation: Mutations::Invoices::RetryPayment
     field :update_invoice, mutation: Mutations::Invoices::Update
