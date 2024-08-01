@@ -70,7 +70,6 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       }
     )
 
-    pp result
     result_data = result['data']['createCustomerWallet']
 
     aggregate_failures do
