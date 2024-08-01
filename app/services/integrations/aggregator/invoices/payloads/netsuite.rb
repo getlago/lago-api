@@ -44,7 +44,7 @@ module Integrations
           end
 
           def due_date
-            invoice.payment_due_date.strftime("%-m/%-d/%Y")
+            invoice.payment_due_date&.strftime("%-m/%-d/%Y")
           end
 
           def item(fee)
