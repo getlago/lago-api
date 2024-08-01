@@ -129,6 +129,8 @@ RSpec.describe Integrations::Aggregator::SalesOrders::CreateService do
     URI.join(url, "/customer/#{invoice.customer.id}/", "invoice/#{invoice.id}/overview").to_s
   end
 
+  let(:due_date) { invoice.payment_due_date.strftime("%-m/%-d/%Y") }
+
   let(:params) do
     {
       'type' => 'salesorder',
@@ -142,7 +144,8 @@ RSpec.describe Integrations::Aggregator::SalesOrders::CreateService do
         'otherrefnum' => invoice.number,
         'custbody_lago_id' => invoice.id,
         'custbody_ava_disable_tax_calculation' => true,
-        'custbody_lago_invoice_link' => invoice_url
+        'custbody_lago_invoice_link' => invoice_url,
+        'duedate' => due_date
       },
       'lines' => [
         {
