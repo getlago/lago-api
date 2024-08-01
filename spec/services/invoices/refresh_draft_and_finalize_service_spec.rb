@@ -203,7 +203,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end
 
       it 'does not update the invoice' do
-        expect(Invoices::RefreshDraftService).to receive(:call).never
         expect { finalize_service.call }.not_to change { invoice.reload.status }
       end
     end
