@@ -206,7 +206,7 @@ module Fees
 
       SendWebhookJob.perform_later(
         'fee.tax_provider_error',
-        integration: integration_customer.integration,
+        integration_customer.integration,
         event_transaction_id: event.transaction_id,
         lago_charge_id: charge.id,
         provider_error: {
