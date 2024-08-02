@@ -15,10 +15,16 @@ class BillSubscriptionJob < ApplicationJob
     )
     return if result.success?
 
-    result.raise_if_error! if invoice || result.invoice.nil? || !result.invoice.generating?
+    # If the invoice was passed as an argument, it means the job was already retried (see end of function)
+    result.raise_if_error! if invoice
 
-    # NOTE: retry the job with the already created invoice in a previous failed attempt
-    self.class.set(wait: 3.seconds).perform_later(
+    # If the invoice is in a retryable state, we'll re-enqueue the job manually, otherwise the job fails
+    result.raise_if_error! unless result.invoice&.generating?
+
+    # On billing day, we'll retry the job further in the future because the system is typically under heavy load
+    is_billing_date = invoicing_reason.to_sym == :subscription_periodic
+
+    self.class.set(wait: is_billing_date ? 5.minutes : 3.seconds).perform_later(
       subscriptions,
       timestamp,
       invoicing_reason:,
