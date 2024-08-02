@@ -47,7 +47,7 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
 
         if customer_provider_taxation?
-          taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
+          taxes_result = fetch_taxes_for_invoice_by_status(invoice)
 
           unless taxes_result.success?
             create_error_detail(taxes_result.error.code)
@@ -360,6 +360,13 @@ module Invoices
         }
       )
       error_result.raise_if_error!
+    end
+
+    def fetch_taxes_for_invoice_by_status(invoice)
+      if invoice.finalized?
+        return Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
+      end
+      Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
     end
   end
 end
