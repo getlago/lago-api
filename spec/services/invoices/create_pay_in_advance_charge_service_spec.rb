@@ -225,7 +225,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         allow(response).to receive(:body).and_return(body)
       end
 
-      it 'creates fees' do
+      it 'creates an invoice and fees' do
         result = invoice_service.call
 
         aggregate_failures do
