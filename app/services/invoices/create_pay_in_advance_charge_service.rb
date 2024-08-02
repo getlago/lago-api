@@ -32,7 +32,8 @@ module Invoices
 
         if tax_error?(fee_result)
           invoice.failed!
-          create_error_detail(fee_result.error.messages.dig(:tax_error))
+          invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
+          create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
 
           return fee_result
         end
