@@ -11,9 +11,19 @@ module Clock
     def perform
       return unless License.premium?
 
-      Wallet.active.find_each do |wallet|
-        Wallets::RefreshOngoingBalanceJob.perform_later(wallet)
+      jobs = []
+      batch_size = 100
+
+      Wallet.active.select(:id).find_each do |wallet|
+        jobs << Wallets::RefreshOngoingBalanceJob.new(wallet)
+
+        if jobs.size >= batch_size
+          ActiveJob.perform_all_later(jobs)
+          jobs = []
+        end
       end
+
+      ActiveJob.perform_all_later(jobs)
     end
   end
 end
