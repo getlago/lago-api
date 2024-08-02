@@ -177,7 +177,11 @@ module Fees
     end
 
     def integration_customer
-      @integration_customer ||= subscription.customer.anrok_customer
+      @integration_customer ||= customer.anrok_customer
+    end
+
+    def customer
+      @customer ||= subscription.customer
     end
 
     def apply_provider_taxes(fees_result)
@@ -209,6 +213,14 @@ module Fees
           message:,
           error_code: code
         }
+      )
+    end
+
+    def invoice
+      OpenStruct.new(
+        issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
+        currency: subscription.plan.amount_currency,
+        customer:
       )
     end
   end
