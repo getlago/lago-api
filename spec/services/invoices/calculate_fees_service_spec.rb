@@ -181,6 +181,33 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             end
           end
         end
+
+        context 'when calculating fees for draft invoice' do
+          let(:invoice) do
+            create(
+              :invoice,
+              :draft,
+              organization:,
+              currency: 'EUR',
+              issuing_date: Time.zone.at(timestamp).to_date,
+              customer: subscription.customer
+            )
+          end
+          let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
+
+          it 'creates fees' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(result.invoice.fees_amount_cents).to eq(100)
+              expect(result.invoice.taxes_amount_cents).to eq(10)
+
+              expect(result.invoice.reload.error_details.count).to eq(0)
+            end
+          end
+        end
       end
 
       context 'when charge is pay_in_advance, not recurring and invoiceable' do
