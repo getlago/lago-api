@@ -14,7 +14,7 @@ module Clock
       jobs = []
       batch_size = 100
 
-      Wallet.active.select(:id).find_each do |wallet|
+      Wallet.active.where(updated_at: ..1.minute.ago).select(:id).find_each do |wallet|
         jobs << Wallets::RefreshOngoingBalanceJob.new(wallet)
 
         if jobs.size >= batch_size
