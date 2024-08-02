@@ -5,7 +5,11 @@ module Subscriptions
     def call(billing_at: Time.current)
       @today = billing_at
 
-      billable_subscriptions.group_by(&:customer_id).each do |_customer_id, customer_subscriptions|
+      billable_subscriptions_per_customer = billable_subscriptions.group_by(&:customer_id)
+      total = billable_subscriptions_per_customer.count
+      Rails.logger.info "[#{self.class.name}] Billing #{total} customers"
+
+      billable_subscriptions_per_customer.each do |_customer_id, customer_subscriptions|
         billing_subscriptions = []
         customer_subscriptions.each do |subscription|
           if subscription.next_subscription&.pending?
