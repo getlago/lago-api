@@ -920,8 +920,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_02_115017) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["amount_cents", "plan_id", "recurring"], name: "idx_on_amount_cents_plan_id_recurring_b2c921d82b", unique: true
+    t.index ["plan_id", "recurring"], name: "index_progressive_billing_tresholds_on_plan_id_and_recurring", unique: true, where: "(recurring IS TRUE)"
     t.index ["plan_id"], name: "index_progressive_billing_tresholds_on_plan_id"
-    t.index ["recurring", "plan_id"], name: "index_progressive_billing_tresholds_on_recurring_and_plan_id", unique: true, where: "(recurring IS TRUE)"
   end
 
   create_table "quantified_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

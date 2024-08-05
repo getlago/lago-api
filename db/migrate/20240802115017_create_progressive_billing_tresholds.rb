@@ -13,6 +13,6 @@ class CreateProgressiveBillingTresholds < ActiveRecord::Migration[7.1]
     end
 
     add_index :progressive_billing_tresholds, %i[amount_cents plan_id recurring], unique: true
-    add_index :progressive_billing_tresholds, %i[recurring plan_id], unique: true, where: "recurring is true"
+    add_index :progressive_billing_tresholds, %i[plan_id recurring], unique: true, where: "recurring is true"
   end
 end
