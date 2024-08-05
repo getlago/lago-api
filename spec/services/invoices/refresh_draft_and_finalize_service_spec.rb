@@ -270,6 +270,11 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
           expect { finalize_service.call }.to change(invoice.error_details, :count).from(0).to(1)
         end
 
+        it 'updates fees despite error result' do
+          expect { finalize_service.call }.to change(invoice.fees.charge_kind, :count).from(0).to(1)
+            .and change(invoice.fees.subscription_kind, :count).from(0).to(1)
+        end
+
         it 'does not send any updates' do
           finalize_service.call
           aggregate_failures do
