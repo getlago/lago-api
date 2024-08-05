@@ -46,6 +46,7 @@ module Invoices
 
         invoice_subscriptions.destroy_all
         invoice.applied_taxes.destroy_all
+        invoice.error_details.discard_all
 
         Invoices::CreateInvoiceSubscriptionService.call(
           invoice:,
@@ -67,7 +68,7 @@ module Invoices
           CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:)
         end
 
-        calculate_result.raise_if_error!
+        calculate_result.raise_if_error! unless tax_error?(calculate_result.error)
 
         # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
@@ -94,6 +95,10 @@ module Invoices
       CreditNoteItem
         .joins(:credit_note)
         .where(credit_note: {invoice_id: invoice.id})
+    end
+
+    def tax_error?(error)
+      error&.code == 'tax_error'
     end
   end
 end
