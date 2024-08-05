@@ -6,7 +6,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   subject(:invoice_service) do
     described_class.new(
       invoice:,
-      recurring:
+      recurring:,
+      context:
     )
   end
 
@@ -14,6 +15,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
   let(:recurring) { false }
+  let(:context) { nil }
 
   let(:invoice) do
     create(
@@ -193,18 +195,37 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               customer: subscription.customer
             )
           end
-          let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
 
-          it 'creates fees' do
-            result = invoice_service.call
+          context 'when no context is passed' do
+            let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
 
-            aggregate_failures do
-              expect(result).to be_success
+            it 'creates fees' do
+              result = invoice_service.call
 
-              expect(result.invoice.fees_amount_cents).to eq(100)
-              expect(result.invoice.taxes_amount_cents).to eq(10)
+              aggregate_failures do
+                expect(result).to be_success
 
-              expect(result.invoice.reload.error_details.count).to eq(0)
+                expect(result.invoice.fees_amount_cents).to eq(100)
+                expect(result.invoice.taxes_amount_cents).to eq(10)
+
+                expect(result.invoice.reload.error_details.count).to eq(0)
+              end
+            end
+          end
+          context 'when context is :finalize' do
+            let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+
+            it 'creates fees' do
+              result = invoice_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+
+                expect(result.invoice.fees_amount_cents).to eq(100)
+                expect(result.invoice.taxes_amount_cents).to eq(10)
+
+                expect(result.invoice.reload.error_details.count).to eq(0)
+              end
             end
           end
         end

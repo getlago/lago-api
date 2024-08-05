@@ -252,12 +252,18 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
           File.read(p)
         end
 
-        it 'moves invoice to failed state' do
+        it 'returns error' do
           result = finalize_service.call
           aggregate_failures do
             expect(invoice.reload.status).to eql('failed')
             expect(result.success?).to be(false)
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:tax_error]).to eq(['taxDateTooFarInFuture'])
           end
+        end
+
+        it 'moves invoice to failed state' do
+          expect { finalize_service.call }.to change(invoice.reload, :status).from('draft').to('failed')
         end
 
         it 'creates a new error_detail for the invoice' do
