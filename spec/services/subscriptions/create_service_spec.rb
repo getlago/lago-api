@@ -247,6 +247,15 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       end
     end
 
+    context 'when plan is pay_in_advance and subscription_at is in the past' do
+      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
+      let(:subscription_at) { 5.days.ago }
+
+      it 'enqueues a job to bill the subscription' do
+        expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+      end
+    end
+
     context 'when plan is pay_in_advance and subscription_at is in the future' do
       let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
       let(:subscription_at) { Time.current + 5.days }
