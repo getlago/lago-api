@@ -49,8 +49,10 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
       before do
         tax
         charge = create(:standard_charge, :regroup_paid_fees, plan: subscription.plan)
-        create_list(:charge_fee, 3, :succeeded, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
+        succeeded_fees = create_list(:charge_fee, 3, :succeeded, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
         create_list(:charge_fee, 2, :failed, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
+
+        succeeded_fees.each { |fee| Fees::ApplyTaxesService.call(fee:) }
       end
 
       it 'creates invoices' do
