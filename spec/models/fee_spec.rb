@@ -162,7 +162,7 @@ RSpec.describe Fee, type: :model do
     end
 
     context 'when it is a credit fee' do
-      it 'returns add on name' do
+      it "returns 'credit'" do
         expect(fee_model.new(fee_type: 'credit').item_name).to eq('credit')
       end
     end
@@ -173,6 +173,50 @@ RSpec.describe Fee, type: :model do
       it 'returns related billable metric name' do
         expect(fee_model.new(charge:, fee_type: 'charge').item_name)
           .to eq(charge.billable_metric.name)
+      end
+    end
+  end
+
+  describe ".item_description" do
+    context "when it is a subscription fee" do
+      let(:subscription) { create(:subscription) }
+
+      it "returns related subscription description" do
+        expect(fee_model.new(subscription:, fee_type: "subscription").item_description)
+          .to eq(subscription.plan.description)
+      end
+    end
+
+    context "when it is a charge fee" do
+      let(:charge) { create(:standard_charge) }
+
+      it "returns related billable metric description" do
+        expect(fee_model.new(charge:, fee_type: "charge").item_description)
+          .to eq(charge.billable_metric.description)
+      end
+    end
+
+    context "when it is a add-on fee" do
+      let(:applied_add_on) { create(:applied_add_on) }
+
+      it "returns add on description" do
+        expect(fee_model.new(applied_add_on:, fee_type: "add_on").item_description)
+          .to eq(applied_add_on.add_on.description)
+      end
+    end
+
+    context "when it is a credit fee" do
+      it "returns 'credit'" do
+        expect(fee_model.new(fee_type: "credit").item_description).to eq("credit")
+      end
+    end
+
+    context "when it is an pay_in_advance charge fee" do
+      let(:charge) { create(:standard_charge, :pay_in_advance) }
+
+      it "returns related billable metric description" do
+        expect(fee_model.new(charge:, fee_type: "charge").item_description)
+          .to eq(charge.billable_metric.description)
       end
     end
   end
