@@ -237,15 +237,13 @@ module Invoices
       end
 
       def deliver_error_webhook(adyen_error)
-        SendWebhookJob.perform_later(
-          'invoice.payment_failure',
-          invoice,
+        DeliverErrorWebhookService.call_async(invoice, {
           provider_customer_id: customer.adyen_customer.provider_customer_id,
           provider_error: {
             message: adyen_error.msg,
             error_code: adyen_error.code
           }
-        )
+        })
       end
     end
   end

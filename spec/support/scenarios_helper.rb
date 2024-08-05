@@ -89,6 +89,12 @@ module ScenariosHelper
 
   def create_wallet(params)
     post_with_token(organization, '/api/v1/wallets', {wallet: params})
+    perform_all_enqueued_jobs
+  end
+
+  def create_wallet_transaction(params)
+    post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
+    perform_all_enqueued_jobs
   end
 
   ### Events
@@ -107,6 +113,14 @@ module ScenariosHelper
 
   def estimate_credit_note(params)
     post_with_token(organization, '/api/v1/credit_notes/estimate', {credit_note: params})
+  end
+
+  ### Payment methods
+
+  def setup_stripe_for(customer:)
+    stripe_provider = create(:stripe_provider, organization:)
+    create(:stripe_customer, customer_id: customer.id, payment_provider: stripe_provider)
+    customer.update!(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)
   end
 
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.

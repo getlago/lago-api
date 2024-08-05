@@ -180,7 +180,12 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         end
 
         it 'delivers an error webhook' do
-          expect { adyen_service.create }.to enqueue_job(SendWebhookJob)
+          allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
+
+          adyen_service.create
+
+          expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
+          expect(SendWebhookJob).to have_been_enqueued
             .with(
               'invoice.payment_failure',
               invoice,
@@ -190,6 +195,29 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
                 error_code: nil
               }
             ).on_queue(:webhook)
+        end
+
+        context 'when invoice is credit? and open?' do
+          it 'delivers an error webhook' do
+            wallet_transaction = create(:wallet_transaction)
+            create(:fee, fee_type: :credit, invoice: invoice, invoiceable: wallet_transaction)
+            invoice.update! status: :open, invoice_type: :credit
+            allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
+
+            adyen_service.create
+
+            expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
+            expect(SendWebhookJob).to have_been_enqueued
+              .with(
+                'wallet_transaction.payment_failure',
+                wallet_transaction,
+                provider_customer_id: adyen_customer.provider_customer_id,
+                provider_error: {
+                  message: 'Invalid card number',
+                  error_code: nil
+                }
+              )
+          end
         end
       end
 

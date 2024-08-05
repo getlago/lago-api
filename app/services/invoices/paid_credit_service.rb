@@ -23,14 +23,20 @@ module Invoices
         create_credit_fee(invoice)
         compute_amounts(invoice)
 
-        invoice.finalized!
+        if License.premium? && wallet_transaction.invoice_requires_successful_payment?
+          invoice.open!
+        else
+          invoice.finalized!
+        end
       end
 
-      Utils::SegmentTrack.invoice_created(result.invoice)
-      SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice)
-      GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
-      Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
-      Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
+      if invoice.finalized?
+        Utils::SegmentTrack.invoice_created(result.invoice)
+        SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice)
+        GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
+        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
+        Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
+      end
 
       create_payment(result.invoice)
 

@@ -159,9 +159,11 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       end
 
       it 'delivers an error webhook' do
-        expect { gocardless_service.create }
-          .to raise_error(GoCardlessPro::Error)
+        allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
 
+        expect { gocardless_service.create }.to raise_error(GoCardlessPro::Error)
+
+        expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
         expect(SendWebhookJob).to have_been_enqueued
           .with(
             'invoice.payment_failure',
@@ -172,6 +174,29 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
               error_code: 'code'
             }
           )
+      end
+
+      context 'when invoice is credit? and open?' do
+        it 'delivers an error webhook' do
+          wallet_transaction = create(:wallet_transaction)
+          create(:fee, fee_type: :credit, invoice: invoice, invoiceable: wallet_transaction)
+          invoice.update! status: :open, invoice_type: :credit
+          allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
+
+          expect { gocardless_service.create }.to raise_error(GoCardlessPro::Error)
+
+          expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with(
+              'wallet_transaction.payment_failure',
+              wallet_transaction,
+              provider_customer_id: gocardless_customer.provider_customer_id,
+              provider_error: {
+                message: 'error',
+                error_code: 'code'
+              }
+            )
+        end
       end
     end
 

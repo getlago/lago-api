@@ -283,15 +283,13 @@ module Invoices
       end
 
       def deliver_error_webhook(stripe_error)
-        SendWebhookJob.perform_later(
-          'invoice.payment_failure',
-          invoice,
+        DeliverErrorWebhookService.call_async(invoice, {
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {
             message: stripe_error.message,
             error_code: stripe_error.code
           }
-        )
+        })
       end
 
       def handle_missing_payment(organization_id, metadata)

@@ -7409,6 +7409,18 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceRequiresSuccessfulPayment",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "name",
               "description": null,
               "type": {
@@ -8616,6 +8628,18 @@
               "type": {
                 "kind": "ENUM",
                 "name": "RecurringTransactionIntervalEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceRequiresSuccessfulPayment",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
@@ -30419,6 +30443,24 @@
               ]
             },
             {
+              "name": "invoiceRequiresSuccessfulPayment",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "lagoId",
               "description": null,
               "type": {
@@ -34628,6 +34670,18 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceRequiresSuccessfulPayment",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "name",
               "description": null,
               "type": {
@@ -35950,6 +36004,18 @@
               "type": {
                 "kind": "ENUM",
                 "name": "RecurringTransactionIntervalEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceRequiresSuccessfulPayment",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
