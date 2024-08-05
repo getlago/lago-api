@@ -190,6 +190,47 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end
     end
 
+    context 'when tax integration is set up' do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:lago_client) { instance_double(LagoHttpClient::Client) }
+      let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+      let(:integration_collection_mapping) do
+        create(
+          :netsuite_collection_mapping,
+          integration:,
+          mapping_type: :fallback_item,
+          settings: {external_id: '1', external_account_code: '11', external_name: ''}
+        )
+      end
+      context 'when taxes fetched correctly' do
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
+          json = File.read(p)
+
+          # setting item_id based on the test example
+          response = JSON.parse(json)
+          response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
+          response['succeededInvoices'].first['fees'].last['item_id'] = charge.billable_metric.id
+
+          response.to_json
+        end
+        before do
+          integration_collection_mapping
+          integration_customer
+
+          allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+          allow(lago_client).to receive(:post_with_response).and_return(response)
+          allow(response).to receive(:body).and_return(body)
+        end
+        it 'refreshes all data and applies fetched taxes' do
+
+        end
+      end
+
+    end
+
     context 'when sending an invoice that is not draft' do
       let(:invoice) do
         create(
