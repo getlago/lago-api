@@ -189,5 +189,22 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         end.to have_enqueued_job(SendWebhookJob).with('credit_note.created', CreditNote)
       end
     end
+
+    context 'when sending an invoice that is not draft' do
+      let(:invoice) do
+        create(
+          :invoice,
+          :failed,
+          customer:,
+          subscriptions: [subscription],
+          currency: 'EUR',
+          issuing_date: Time.zone.at(timestamp).to_date
+        )
+      end
+
+      it 'does not update the invoice' do
+        expect { finalize_service.call }.not_to change { invoice.reload.status }
+      end
+    end
   end
 end
