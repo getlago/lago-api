@@ -30,7 +30,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       )
     end
 
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:timestamp) { Time.zone.now - 1.year }
     let(:started_at) { Time.zone.now - 2.years }
     let(:fee) { create(:fee, invoice:, subscription:) }
@@ -204,31 +203,80 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
           settings: {external_id: '1', external_account_code: '11', external_name: ''}
         )
       end
+
+      before do
+        integration_collection_mapping
+        integration_customer
+
+        allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+        allow(Invoices::ApplyProviderTaxesService).to receive(:call).and_call_original
+        allow(SendWebhookJob).to receive(:perform_later).and_call_original
+        allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later).and_call_original
+        allow(Integrations::Aggregator::Invoices::CreateJob).to receive(:perform_later).and_call_original
+        allow(Integrations::Aggregator::SalesOrders::CreateJob).to receive(:perform_later).and_call_original
+        allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
+        allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
+      end
+
       context 'when taxes fetched correctly' do
         let(:body) do
           p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
           json = File.read(p)
 
-          # setting item_id based on the test example
           response = JSON.parse(json)
           response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
-          response['succeededInvoices'].first['fees'].last['item_id'] = charge.billable_metric.id
+          response['succeededInvoices'].first['fees'].last['item_id'] = plan.billable_metrics.first.id
 
           response.to_json
         end
-        before do
-          integration_collection_mapping
-          integration_customer
 
-          allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
-          allow(lago_client).to receive(:post_with_response).and_return(response)
-          allow(response).to receive(:body).and_return(body)
-        end
         it 'refreshes all data and applies fetched taxes' do
+          aggregate_failures do
+            expect { finalize_service.call }.to change { invoice.reload.taxes_rate }.from(0.0).to(10.0)
+              .and change { invoice.fees.count }.from(0).to(2)
+            expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
+            expect(Invoices::ApplyProviderTaxesService).to have_received(:call)
+          end
+        end
 
+        it 'finalizes the invoice' do
+          expect { finalize_service.call }.to change { invoice.reload.status }.from('draft').to('finalized')
         end
       end
 
+      context 'when fetched taxes with errors' do
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+          File.read(p)
+        end
+
+        it 'moves invoice to failed state' do
+          result = finalize_service.call
+          aggregate_failures do
+            expect(invoice.reload.status).to eql('failed')
+            expect(result.success?).to be(false)
+          end
+        end
+
+        it 'creates a new error_detail for the invoice' do
+          expect { finalize_service.call }.to change(invoice.error_details, :count).from(0).to(1)
+        end
+
+        it 'does not send any updates' do
+          finalize_service.call
+          aggregate_failures do
+            expect(SendWebhookJob).not_to have_received(:perform_later)
+            expect(Invoices::GeneratePdfAndNotifyJob).not_to have_received(:perform_later)
+            expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_received(:perform_later)
+            expect(Integrations::Aggregator::SalesOrders::CreateJob).not_to have_received(:perform_later)
+            expect(Invoices::Payments::CreateService).not_to have_received(:new)
+            expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
+          end
+        end
+
+      end
     end
 
     context 'when sending an invoice that is not draft' do
