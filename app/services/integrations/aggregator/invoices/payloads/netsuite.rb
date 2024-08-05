@@ -11,18 +11,7 @@ module Integrations
             {
               'type' => type,
               'isDynamic' => true,
-              'columns' => {
-                'tranid' => invoice.id,
-                'entity' => integration_customer.external_customer_id,
-                'istaxable' => true,
-                'taxitem' => tax_item&.external_id,
-                'taxamountoverride' => amount(invoice.taxes_amount_cents, resource: invoice),
-                'otherrefnum' => invoice.number,
-                'custbody_lago_id' => invoice.id,
-                'custbody_ava_disable_tax_calculation' => true,
-                'custbody_lago_invoice_link' => invoice_url,
-                'duedate' => due_date
-              },
+              'columns' => columns,
               'lines' => [
                 {
                   'sublistId' => 'item',
@@ -38,6 +27,26 @@ module Integrations
           end
 
           private
+
+          def columns
+            result = {
+              'tranid' => invoice.id,
+              'entity' => integration_customer.external_customer_id,
+              'istaxable' => true,
+              'otherrefnum' => invoice.number,
+              'custbody_lago_id' => invoice.id,
+              'custbody_ava_disable_tax_calculation' => true,
+              'custbody_lago_invoice_link' => invoice_url,
+              'duedate' => due_date
+            }
+
+            if tax_item
+              result['taxitem'] = tax_item.external_id
+              result['taxamountoverride'] = amount(invoice.taxes_amount_cents, resource: invoice)
+            end
+
+            result
+          end
 
           def invoice_url
             url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"

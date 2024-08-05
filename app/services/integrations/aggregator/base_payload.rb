@@ -24,7 +24,7 @@ module Integrations
       end
 
       def tax_item
-        @tax_item ||= collection_mapping(:tax) || fallback_item
+        @tax_item ||= collection_mapping(:tax)
       end
 
       def commitment_item

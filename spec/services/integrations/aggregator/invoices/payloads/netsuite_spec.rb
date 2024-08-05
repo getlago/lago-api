@@ -156,18 +156,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       {
         'type' => 'invoice',
         'isDynamic' => true,
-        'columns' => {
-          'tranid' => invoice.id,
-          'entity' => integration_customer.external_customer_id,
-          'istaxable' => true,
-          'taxitem' => integration_collection_mapping5.external_id,
-          'taxamountoverride' => 2.0,
-          'otherrefnum' => invoice.number,
-          'custbody_lago_id' => invoice.id,
-          'custbody_ava_disable_tax_calculation' => true,
-          'custbody_lago_invoice_link' => invoice_link,
-          'duedate' => due_date
-        },
+        'columns' => columns,
         'lines' => [
           {
             'sublistId' => 'item',
@@ -224,7 +213,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       integration_collection_mapping2
       integration_collection_mapping3
       integration_collection_mapping4
-      integration_collection_mapping5
       integration_collection_mapping6
       integration_mapping_add_on
       integration_mapping_bm
@@ -234,8 +222,48 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       charge_fee2
     end
 
-    it 'returns payload body' do
-      expect(subject).to eq(body)
+    context 'when tax item is mapped' do
+      let(:columns) do
+        {
+          'tranid' => invoice.id,
+          'entity' => integration_customer.external_customer_id,
+          'istaxable' => true,
+          'taxitem' => integration_collection_mapping5.external_id,
+          'taxamountoverride' => 2.0,
+          'otherrefnum' => invoice.number,
+          'custbody_lago_id' => invoice.id,
+          'custbody_ava_disable_tax_calculation' => true,
+          'custbody_lago_invoice_link' => invoice_link,
+          'duedate' => due_date
+        }
+      end
+
+      before do
+        integration_collection_mapping5
+      end
+
+      it 'returns payload body with tax columns' do
+        expect(subject).to eq(body)
+      end
+    end
+
+    context 'when tax item is not mapped' do
+      let(:columns) do
+        {
+          'tranid' => invoice.id,
+          'entity' => integration_customer.external_customer_id,
+          'istaxable' => true,
+          'otherrefnum' => invoice.number,
+          'custbody_lago_id' => invoice.id,
+          'custbody_ava_disable_tax_calculation' => true,
+          'custbody_lago_invoice_link' => invoice_link,
+          'duedate' => due_date
+        }
+      end
+
+      it 'returns payload body without tax columns' do
+        expect(subject).to eq(body)
+      end
     end
   end
 end
