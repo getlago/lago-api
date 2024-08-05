@@ -47,13 +47,13 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
 
         if customer_provider_taxation?
-          taxes_result = fetch_taxes_for_invoice_by_status(invoice)
+          taxes_result = fetch_taxes_for_invoice(invoice)
 
           unless taxes_result.success?
             create_error_detail(taxes_result.error.code)
 
-            # Draft invoice needs to stay in draft status
-            invoice.failed! if invoice.finalized?
+            # only fail invoices that are finalizing
+            invoice.failed! if finalizing_invoice?(invoice)
 
             return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
           end
@@ -351,11 +351,15 @@ module Invoices
       error_result.raise_if_error!
     end
 
-    def fetch_taxes_for_invoice_by_status(invoice)
-      if invoice.finalized?
+    def fetch_taxes_for_invoice(invoice)
+      if finalizing_invoice?(invoice)
         return Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
       end
       Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
+    end
+
+    def finalizing_invoice?(invoice)
+      context == :finalize || invoice.status == 'finalized'
     end
   end
 end

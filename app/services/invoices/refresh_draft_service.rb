@@ -43,7 +43,6 @@ module Invoices
         timestamp = fetch_timestamp
 
         invoice.fees.destroy_all
-
         invoice_subscriptions.destroy_all
         invoice.applied_taxes.destroy_all
         invoice.error_details.discard_all
@@ -61,6 +60,7 @@ module Invoices
           recurring:,
           context:
         )
+        return calculate_result if tax_error?(calculate_result.error)
 
         invoice.credit_notes.each do |credit_note|
           subscription_id = cn_subscription_ids.find { |h| h[:credit_note_id] == credit_note.id }[:subscription_id]
@@ -68,7 +68,7 @@ module Invoices
           CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:)
         end
 
-        calculate_result.raise_if_error! unless tax_error?(calculate_result.error)
+        calculate_result.raise_if_error!
 
         # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
