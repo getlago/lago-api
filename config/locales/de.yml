@@ -10,7 +10,6 @@ de:
     - Fr
     - Sa
     abbr_month_names:
-    -
     - Jan
     - Feb
     - Mär
@@ -32,9 +31,8 @@ de:
     - Freitag
     - Samstag
     formats:
-      default: "%d. %b. %Y"
+      default: "%d. %B %Y"
     month_names:
-    -
     - Januar
     - Februar
     - März
