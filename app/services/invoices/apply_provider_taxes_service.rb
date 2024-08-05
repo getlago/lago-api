@@ -116,7 +116,7 @@ module Invoices
     end
 
     def fetch_provider_taxes_result
-      taxes_result = if invoice.draft?
+      taxes_result = if invoice.draft? || invoice.advance_charges?
         Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:)
       else
         Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:)

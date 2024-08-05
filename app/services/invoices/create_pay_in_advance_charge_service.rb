@@ -76,7 +76,8 @@ module Invoices
         invoice_type: :subscription,
         currency: customer.currency,
         datetime: Time.zone.at(timestamp),
-        charge_in_advance: true
+        charge_in_advance: true,
+        invoice_id: result.invoice_id
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)
@@ -92,6 +93,7 @@ module Invoices
       fee_result.raise_if_error! unless tax_error?(fee_result)
 
       result.fees_taxes = fee_result.fees_taxes
+      result.invoice_id = fee_result.invoice_id
 
       fee_result
     end
