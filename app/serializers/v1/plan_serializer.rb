@@ -23,6 +23,7 @@ module V1
       }
 
       payload.merge!(charges) if include?(:charges)
+      payload.merge!(progressive_billing_tresholds) if include?(:progressive_billing_tresholds)
       payload.merge!(taxes) if include?(:taxes)
       payload.merge!(minimum_commitment) if include?(:minimum_commitment) && model.minimum_commitment
 
@@ -37,6 +38,14 @@ module V1
         ::V1::ChargeSerializer,
         collection_name: 'charges',
         includes: include?(:taxes) ? %i[taxes] : []
+      ).serialize
+    end
+
+    def progressive_billing_tresholds
+      ::CollectionSerializer.new(
+        model.progressive_billing_tresholds,
+        ::V1::ProgressiveBillingTresholdSerializer,
+        collection_name: 'progressive_billing_tresholds'
       ).serialize
     end
 

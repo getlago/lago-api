@@ -3,14 +3,21 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::PlanSerializer do
-  subject(:serializer) { described_class.new(plan, root_name: 'plan', includes: %i[charges taxes minimum_commitment]) }
+  subject(:serializer) do
+    described_class.new(
+      plan,
+      root_name: 'plan',
+      includes: %i[charges taxes minimum_commitment progressive_billing_tresholds]
+    )
+  end
 
   let(:plan) { create(:plan) }
   let(:customer) { create(:customer, organization: plan.organization) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, plan:) }
+  let(:progressive_billing_treshold) { create(:progressive_billing_treshold, plan:) }
 
-  before { subscription && charge }
+  before { subscription && charge && progressive_billing_treshold }
 
   context 'when plan has one minimium commitment' do
     let(:commitment) { create(:commitment, plan:) }
@@ -46,6 +53,16 @@ RSpec.describe ::V1::PlanSerializer do
 
       expect(result['plan']['charges'].first).to include(
         'lago_id' => charge.id
+      )
+
+      expect(result['plan']['progressive_billing_tresholds'].first).to include(
+        'lago_id' => progressive_billing_treshold.id,
+        'treshold_display_name' => progressive_billing_treshold.treshold_display_name,
+        'amount_cents' => progressive_billing_treshold.amount_cents,
+        'amount_currency' => progressive_billing_treshold.amount_currency,
+        'recurring' => progressive_billing_treshold.recurring?,
+        'created_at' => progressive_billing_treshold.created_at.iso8601,
+        'updated_at' => progressive_billing_treshold.updated_at.iso8601
       )
 
       expect(result['plan']['minimum_commitment']).to include(
@@ -94,6 +111,16 @@ RSpec.describe ::V1::PlanSerializer do
 
       expect(result['plan']['charges'].first).to include(
         'lago_id' => charge.id
+      )
+
+      expect(result['plan']['progressive_billing_tresholds'].first).to include(
+        'lago_id' => progressive_billing_treshold.id,
+        'treshold_display_name' => progressive_billing_treshold.treshold_display_name,
+        'amount_cents' => progressive_billing_treshold.amount_cents,
+        'amount_currency' => progressive_billing_treshold.amount_currency,
+        'recurring' => progressive_billing_treshold.recurring?,
+        'created_at' => progressive_billing_treshold.created_at.iso8601,
+        'updated_at' => progressive_billing_treshold.updated_at.iso8601
       )
 
       expect(result['plan']['minimum_commitment']).to be_nil
