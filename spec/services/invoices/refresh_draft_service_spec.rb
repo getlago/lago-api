@@ -8,7 +8,21 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
   describe '#call' do
     let(:status) { :draft }
     let(:invoice) do
-      create(:invoice, status:, organization:, customer:)
+      create(
+        :invoice,
+        status:,
+        organization:,
+        customer:,
+        taxes_amount_cents: 10,
+        total_amount_cents: 1000110010,
+        taxes_rate: 30,
+        fees_amount_cents: 2600,
+        coupons_amount_cents: 5300,
+        credit_notes_amount_cents: 11900,
+        prepaid_credit_amount_cents: 20,
+        sub_total_excluding_taxes_amount_cents: 9900090,
+        sub_total_including_taxes_amount_cents: 9900100
+      )
     end
 
     let(:started_at) { 1.month.ago }
@@ -151,7 +165,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
 
     it 'updates taxes_rate' do
       expect { refresh_service.call }
-        .to change { invoice.reload.taxes_rate }.from(0.0).to(15)
+        .to change { invoice.reload.taxes_rate }.from(30.0).to(15)
     end
 
     context 'when there is a tax_integration set up' do
@@ -192,7 +206,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         end
 
         it 'successfully applies taxes and regenerates fees' do
-          expect { refresh_service.call }.to change { invoice.reload.taxes_rate }.from(0.0).to(10.0)
+          expect { refresh_service.call }.to change { invoice.reload.taxes_rate }.from(30.0).to(10.0)
             .and change { invoice.fees.count }.from(0).to(2)
         end
 
@@ -214,11 +228,22 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
           result = refresh_service.call
 
           aggregate_failures do
-            expect(result.success?).to be(true)
+            expect(result.success?).to be(false)
             expect(invoice.reload.error_details.count).to eq(1)
             expect(invoice.error_details.last.error_code).to include('tax_error')
           end
+        end
 
+        it 'resets invoice values to calculatable before the error' do
+          expect { refresh_service.call }.to change(invoice.reload, :taxes_amount_cents).from(10).to(0)
+            .and change(invoice, :total_amount_cents).from(1000110010).to(0)
+            .and change(invoice, :taxes_rate).from(30.0).to(0)
+            .and change(invoice, :fees_amount_cents).from(2600).to(84)
+            .and change(invoice, :coupons_amount_cents).from(5300).to(0)
+            .and change(invoice, :credit_notes_amount_cents).from(11900).to(0)
+            .and change(invoice, :prepaid_credit_amount_cents).from(20).to(0)
+            .and change(invoice, :sub_total_excluding_taxes_amount_cents).from(9900090).to(84)
+            .and change(invoice, :sub_total_including_taxes_amount_cents).from(9900100).to(0)
         end
 
       end
