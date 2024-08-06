@@ -10,6 +10,7 @@ fr:
     - Ven
     - Sam
     abbr_month_names:
+    -
     - janv.
     - févr.
     - mars
@@ -31,8 +32,9 @@ fr:
     - Vendredi
     - Samedi
     formats:
-      default: "%d %B %Y"
+      default: "%d %b %Y"
     month_names:
+    -
     - Janvier
     - Février
     - Mars

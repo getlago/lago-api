@@ -10,6 +10,7 @@ nb:
     - Fre
     - Lør
     abbr_month_names:
+    -
     - jan.
     - feb.
     - mars
@@ -31,8 +32,9 @@ nb:
     - Fredag
     - Lørdag
     formats:
-      default: "%d. %B %Y"
+      default: "%d. %b %Y"
     month_names:
+    -
     - Januar
     - Februar
     - Mars
