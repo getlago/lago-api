@@ -32,7 +32,7 @@ fr:
     - Vendredi
     - Samedi
     formats:
-      default: "%d %b %Y"
+      default: "%-d %b %Y"
     month_names:
     -
     - Janvier
