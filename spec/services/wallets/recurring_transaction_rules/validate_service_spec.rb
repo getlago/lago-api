@@ -17,6 +17,20 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
       expect(validate_service.call).to be_truthy
     end
 
+    context "when invalid metadata" do
+      let(:params) do
+        {
+          trigger: "interval",
+          interval: "weekly",
+          metadata: {'key' => {'nested_key' => 'value'}}
+        }
+      end
+
+      it "returns false" do
+        expect(validate_service.call).to be_falsey
+      end
+    end
+
     context "when invalid interval" do
       let(:params) do
         {

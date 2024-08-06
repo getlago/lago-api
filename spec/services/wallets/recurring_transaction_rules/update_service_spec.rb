@@ -7,6 +7,7 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
 
   let(:wallet) { create(:wallet) }
   let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+  let(:metadata) { {'key1' => 'valid_value', 'key2' => 'also_valid'} }
   let(:params) do
     [
       {
@@ -15,7 +16,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         interval: "weekly",
         paid_credits: "105",
         granted_credits: "105",
-        started_at: "2024-05-30T12:48:26Z"
+        started_at: "2024-05-30T12:48:26Z",
+        metadata:
       }
     ]
   end
@@ -38,7 +40,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
           paid_credits: 105.0,
           started_at: Time.parse("2024-05-30T12:48:26Z"),
           threshold_credits: 0.0,
-          trigger: "interval"
+          trigger: "interval",
+          metadata:
         )
       end
     end
@@ -52,7 +55,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
             method: "target",
             paid_credits: "105",
             target_ongoing_balance: "300",
-            trigger: "interval"
+            trigger: "interval",
+            metadata:
           }
         ]
       end
@@ -71,7 +75,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
             paid_credits: 105.0,
             target_ongoing_balance: 300.0,
             threshold_credits: 0.0,
-            trigger: "interval"
+            trigger: "interval",
+            metadata:
           )
           expect(rule.id).not_to eq(recurring_transaction_rule.id)
         end

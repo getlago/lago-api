@@ -3,12 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe WalletTransactions::VoidService, type: :service do
-  subject(:void_service) { described_class.call(wallet:, credits:) }
+  subject(:void_service) { described_class.call(wallet:, credits:, metadata:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
+  let(:metadata) { {'key1' => 'valid_value', 'key2' => 'also_valid'} }
   let(:wallet) do
     create(
       :wallet,
@@ -48,7 +49,8 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
           status: 'settled',
           source: 'manual',
           transaction_status: 'voided',
-          settled_at: Time.current
+          settled_at: Time.current,
+          metadata:
         )
       end
     end

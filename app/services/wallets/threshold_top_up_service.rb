@@ -12,16 +12,19 @@ module Wallets
       return if wallet.credits_ongoing_balance > threshold_rule.threshold_credits
       return if (pending_transactions_amount + wallet.credits_ongoing_balance) > threshold_rule.threshold_credits
 
-      WalletTransactions::CreateJob.set(wait: 2.seconds).perform_later(
+      job_params = {
         organization_id: wallet.organization.id,
         params: {
           wallet_id: wallet.id,
-          paid_credits:,
-          granted_credits:,
+          paid_credits: paid_credits,
+          granted_credits: granted_credits,
           source: :threshold,
           invoice_requires_successful_payment: threshold_rule.invoice_requires_successful_payment?
         }
-      )
+      }
+      job_params[:params][:metadata] = threshold_rule.metadata unless threshold_rule.metadata.empty?
+
+      WalletTransactions::CreateJob.set(wait: 2.seconds).perform_later(job_params)
     end
 
     private

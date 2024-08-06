@@ -14,6 +14,7 @@ module WalletTransactions
 
       wallet_transactions = []
       @source = params[:source] || :manual
+      @metadata = params[:metadata] || {}
       invoice_requires_successful_payment = if params.key?(:invoice_requires_successful_payment)
         ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
       else
@@ -43,7 +44,8 @@ module WalletTransactions
         void_result = WalletTransactions::VoidService.call(
           wallet: result.current_wallet,
           credits: params[:voided_credits],
-          from_source: source
+          from_source: source,
+          metadata:
         )
         wallet_transactions << void_result.wallet_transaction
       end
@@ -58,7 +60,7 @@ module WalletTransactions
 
     private
 
-    attr_reader :organization, :params, :source
+    attr_reader :organization, :params, :source, :metadata
 
     def handle_paid_credits(wallet:, paid_credits:, invoice_requires_successful_payment:)
       paid_credits_amount = BigDecimal(paid_credits)
@@ -73,7 +75,8 @@ module WalletTransactions
         status: :pending,
         source:,
         transaction_status: :purchased,
-        invoice_requires_successful_payment:
+        invoice_requires_successful_payment:,
+        metadata:
       )
 
       BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
@@ -96,7 +99,8 @@ module WalletTransactions
           settled_at: Time.current,
           source:,
           transaction_status: :granted,
-          invoice_requires_successful_payment:
+          invoice_requires_successful_payment:,
+          metadata:
         )
 
         Wallets::Balance::IncreaseService.new(
