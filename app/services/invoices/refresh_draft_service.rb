@@ -38,15 +38,10 @@ module Invoices
         cn_subscription_ids = invoice.credit_notes.map do |cn|
           {credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id)}
         end
-        invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
+
+        reset_invoice_values
 
         timestamp = fetch_timestamp
-
-        invoice.fees.destroy_all
-        invoice_subscriptions.destroy_all
-        invoice.applied_taxes.destroy_all
-        invoice.error_details.discard_all
-
         Invoices::CreateInvoiceSubscriptionService.call(
           invoice:,
           subscriptions: Subscription.find(subscription_ids),
@@ -99,6 +94,25 @@ module Invoices
 
     def tax_error?(error)
       error&.code == 'tax_error'
+    end
+
+    def reset_invoice_values
+      invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
+      invoice.fees.destroy_all
+      invoice_subscriptions.destroy_all
+      invoice.applied_taxes.destroy_all
+      invoice.error_details.discard_all
+
+      invoice.taxes_amount_cents = 0
+      invoice.total_amount_cents = 0
+      invoice.taxes_rate = 0
+      invoice.fees_amount_cents = 0
+      invoice.coupons_amount_cents = 0
+      invoice.credit_notes_amount_cents = 0
+      invoice.prepaid_credit_amount_cents = 0
+      invoice.sub_total_excluding_taxes_amount_cents = 0
+      invoice.sub_total_including_taxes_amount_cents = 0
+      invoice.save
     end
   end
 end
