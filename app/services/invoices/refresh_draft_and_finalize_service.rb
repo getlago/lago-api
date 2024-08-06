@@ -18,7 +18,7 @@ module Invoices
           return result.validation_failure!(errors: {tax_error: [refresh_result.error.error_message]})
         end
         refresh_result.raise_if_error!
-        invoice.status = 'finalized'
+        invoice.status = :finalized
         invoice.issuing_date = issuing_date
         invoice.payment_due_date = payment_due_date
         invoice.save!
