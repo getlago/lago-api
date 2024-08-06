@@ -209,7 +209,6 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
           expect { refresh_service.call }.to change { invoice.reload.taxes_rate }.from(30.0).to(10.0)
             .and change { invoice.fees.count }.from(0).to(2)
         end
-
       end
 
       context 'when failed to fetch taxes' do
