@@ -2,19 +2,18 @@
 sv:
   date:
     abbr_day_names:
-    - sön.
-    - mån.
-    - tis.
-    - ons.
-    - tor.
-    - fre.
-    - lör.
+    - sön
+    - mån
+    - tis
+    - ons
+    - tor
+    - fre
+    - lör
     abbr_month_names:
-    -
     - jan.
     - feb.
     - mars
-    - april
+    - apr.
     - maj
     - juni
     - juli
@@ -32,9 +31,8 @@ sv:
     - fredag
     - lördag
     formats:
-      default: "%d %b. %Y"
+      default: "%d %B %Y"
     month_names:
-    -
     - januari
     - februari
     - mars

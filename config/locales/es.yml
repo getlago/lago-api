@@ -10,19 +10,18 @@ es:
     - Vie
     - Sáb
     abbr_month_names:
-    -
-    - Ene
-    - Feb
-    - Mar
-    - Abr
-    - May
-    - Jun
-    - Jul
-    - Ago
-    - Sep
-    - Oct
-    - Nov
-    - Dic
+    - ene.
+    - feb.
+    - mar.
+    - abr.
+    - may.
+    - jun.
+    - jul.
+    - ago.
+    - sep.
+    - oct.
+    - nov.
+    - dic.
     day_names:
     - Domingo
     - Lunes
@@ -32,9 +31,8 @@ es:
     - Viernes
     - Sábado
     formats:
-      default: "%d de %b. de %Y"
+      default: "%d de %B de %Y"
     month_names:
-    -
     - Enero
     - Febrero
     - Marzo
