@@ -38,10 +38,10 @@ module Invoices
         cn_subscription_ids = invoice.credit_notes.map do |cn|
           {credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id)}
         end
+        timestamp = fetch_timestamp
 
         reset_invoice_values
 
-        timestamp = fetch_timestamp
         Invoices::CreateInvoiceSubscriptionService.call(
           invoice:,
           subscriptions: Subscription.find(subscription_ids),

@@ -244,7 +244,6 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
             .and change(invoice, :sub_total_excluding_taxes_amount_cents).from(9900090).to(84)
             .and change(invoice, :sub_total_including_taxes_amount_cents).from(9900100).to(0)
         end
-
       end
     end
   end
