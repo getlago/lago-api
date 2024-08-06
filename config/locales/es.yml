@@ -10,6 +10,7 @@ es:
     - Vie
     - Sáb
     abbr_month_names:
+    -
     - ene.
     - feb.
     - mar.
@@ -31,8 +32,9 @@ es:
     - Viernes
     - Sábado
     formats:
-      default: "%d de %B de %Y"
+      default: "%d de %b de %Y"
     month_names:
+    -
     - Enero
     - Febrero
     - Marzo

@@ -42,7 +42,7 @@ en:
         value_already_exist: value_already_exist
   date:
     formats:
-      default: "%B %d, %Y"
+      default: "%b %d, %Y"
   money:
     decimal_mark: "."
     format: "%u%n"
