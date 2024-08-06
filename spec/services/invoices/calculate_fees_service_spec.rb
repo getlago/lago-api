@@ -215,6 +215,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
           context 'when context is :finalize' do
             let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+            let(:context) { :finalize }
 
             it 'creates fees' do
               result = invoice_service.call
