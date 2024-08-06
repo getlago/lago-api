@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class UsageTreshold < ApplicationRecord
+class UsageThreshold < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
 

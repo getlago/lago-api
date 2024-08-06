@@ -23,7 +23,7 @@ module V1
       }
 
       payload.merge!(charges) if include?(:charges)
-      payload.merge!(usage_tresholds) if include?(:usage_tresholds)
+      payload.merge!(usage_thresholds) if include?(:usage_thresholds)
       payload.merge!(taxes) if include?(:taxes)
       payload.merge!(minimum_commitment) if include?(:minimum_commitment) && model.minimum_commitment
 
@@ -41,11 +41,11 @@ module V1
       ).serialize
     end
 
-    def usage_tresholds
+    def usage_thresholds
       ::CollectionSerializer.new(
-        model.usage_tresholds,
-        ::V1::UsageTresholdSerializer,
-        collection_name: 'usage_tresholds'
+        model.usage_thresholds,
+        ::V1::UsageThresholdSerializer,
+        collection_name: 'usage_thresholds'
       ).serialize
     end
 
