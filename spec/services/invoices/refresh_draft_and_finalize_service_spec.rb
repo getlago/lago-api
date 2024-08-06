@@ -286,7 +286,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
             expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
           end
         end
-
       end
     end
 
