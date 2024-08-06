@@ -63,7 +63,11 @@ module Integrations
 
         attr_reader :payment
 
-        delegate :customer, :invoice, to: :payment, allow_nil: true
+        delegate :customer, to: :payment, allow_nil: true
+
+        def invoice
+          payment&.payable
+        end
 
         def payload
           Integrations::Aggregator::Payments::Payloads::Factory.new_instance(integration:, payment:).body

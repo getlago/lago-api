@@ -26,7 +26,9 @@ module Integrations
 
           attr_reader :payment
 
-          delegate :invoice, to: :payment, allow_nil: true
+          def invoice
+            payment.payable
+          end
 
           def integration_invoice
             invoice.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').first

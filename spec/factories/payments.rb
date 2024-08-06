@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :payment do
-    invoice
+    association :payable, factory: :invoice
     association :payment_provider, factory: :stripe_provider
     association :payment_provider_customer, factory: :stripe_customer
 

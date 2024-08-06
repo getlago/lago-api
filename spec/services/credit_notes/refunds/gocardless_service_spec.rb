@@ -20,7 +20,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       payment_provider_customer: gocardless_customer,
       amount_cents: 200,
       amount_currency: 'CHF',
-      invoice: credit_note.invoice
+      payable: credit_note.invoice
     )
   end
 

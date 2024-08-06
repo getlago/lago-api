@@ -11,7 +11,7 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { 'https://api.nango.dev/v1/netsuite/payments' }
-  let(:payment) { create(:payment, invoice:) }
+  let(:payment) { create(:payment, payable: invoice) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:integration_invoice) { create(:integration_resource, syncable: invoice, integration:) }
 
