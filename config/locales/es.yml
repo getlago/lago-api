@@ -32,7 +32,7 @@ es:
     - Viernes
     - Sábado
     formats:
-      default: "%d de %b de %Y"
+      default: "%-d de %b de %Y"
     month_names:
     -
     - Enero
