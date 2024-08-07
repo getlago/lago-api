@@ -85,6 +85,10 @@ gem 'karafka-web', '~> 0.9.0'
 # Taxes
 gem 'valvat', require: false
 
+# Feature flags
+gem 'flipper', '1.3.0'
+gem 'flipper-redis'
+
 group :development, :test, :staging do
   gem 'factory_bot_rails'
   gem 'faker'
