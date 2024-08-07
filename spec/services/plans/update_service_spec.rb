@@ -80,19 +80,19 @@ RSpec.describe Plans::UpdateService, type: :service do
         id: threshold1.id,
         threshold_display_name: 'Threshold 1',
         amount_cents: 1_000,
-        amount_currency: "EUR"
+        amount_currency: "USD"
       },
       {
         id: threshold2.id,
         threshold_display_name: 'Threshold 2',
         amount_cents: 10_000,
-        amount_currency: "EUR"
+        amount_currency: "CAD"
       },
       {
         id: threshold3.id,
         threshold_display_name: 'Threshold 3',
         amount_cents: 100,
-        amount_currency: "EUR",
+        amount_currency: "JPY",
         recurring: true
       }
     ]
@@ -170,20 +170,27 @@ RSpec.describe Plans::UpdateService, type: :service do
               update_args[:usage_thresholds] << {
                 threshold_display_name: 'Threshold 4',
                 amount_cents: 4_000,
-                amount_currency: "EUR"
+                amount_currency: "JPY"
               }
             end
 
             it 'updates the existing thresholds' do
               aggregate_failures do
                 expect(usage_thresholds.first).to have_attributes(
-                  amount_cents: 1_000
+                  amount_cents: 1_000,
+                  amount_currency: plan.amount_currency
                 )
                 expect(usage_thresholds.second).to have_attributes(
-                  amount_cents: 10_000
+                  amount_cents: 10_000,
+                  amount_currency: plan.amount_currency
                 )
                 expect(usage_thresholds.third).to have_attributes(
-                  amount_cents: 100
+                  amount_cents: 100,
+                  amount_currency: plan.amount_currency
+                )
+                expect(usage_thresholds.fourth).to have_attributes(
+                  amount_cents: 4_000,
+                  amount_currency: plan.amount_currency
                 )
               end
             end

@@ -86,7 +86,7 @@ module Plans
       usage_threshold = plan.usage_thresholds.new(
         threshold_display_name: params[:threshold_display_name],
         amount_cents: params[:amount_cents],
-        amount_currency: params[:amount_currency],
+        amount_currency: plan.amount_currency,
         recurring: params[:recurring] || false
       )
 

@@ -40,7 +40,8 @@ module Plans
           plan.usage_thresholds.find_each do |threshold|
             threshold_params = (
               params[:usage_thresholds]&.find { |p| p[:id] == threshold.id } || {}
-            ).merge(plan_id: new_plan.id)
+            ).merge(plan_id: new_plan.id, amount_currency: new_plan.amount_currency)
+
             UsageThresholds::OverrideService.call(threshold:, params: threshold_params)
           end
         end

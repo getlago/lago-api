@@ -16,6 +16,7 @@ module UsageThresholds
           c.recurring = params[:recurring] if params.key?(:recurring)
           c.threshold_display_name = params[:threshold_display_name] if params.key?(:threshold_display_name)
           c.plan_id = params[:plan_id]
+          c.amount_currency = params[:amount_currency]
         end
         new_threshold.save!
 

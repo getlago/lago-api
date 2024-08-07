@@ -17,7 +17,8 @@ RSpec.describe UsageThresholds::OverrideService, type: :service do
         id: threshold.id,
         plan_id: plan.id,
         threshold_display_name: 'Overriden threshold',
-        amount_cents: 1000
+        amount_cents: 1000,
+        amount_currency: 'JPY'
       }
     end
 
@@ -29,7 +30,7 @@ RSpec.describe UsageThresholds::OverrideService, type: :service do
       threshold = UsageThreshold.order(:created_at).last
 
       expect(threshold).to have_attributes(
-        amount_currency: threshold.amount_currency,
+        amount_currency: 'JPY',
         recurring: threshold.recurring,
         # Overriden attributes
         plan_id: plan.id,

@@ -83,7 +83,7 @@ RSpec.describe Plans::OverrideService, type: :service do
           id: usage_threshold.id,
           threshold_display_name: 'Threshold 1',
           amount_cents: 1_000,
-          amount_currency: 'EUR'
+          amount_currency: 'JPY'
         }
       ]
     end
@@ -130,7 +130,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       expect(plan.usage_thresholds.first).to have_attributes(
         threshold_display_name: 'Threshold 1',
         amount_cents: 1_000,
-        amount_currency: 'EUR'
+        amount_currency: plan.amount_currency
       )
 
       expect(plan.minimum_commitment.taxes.first).to eq(tax)
