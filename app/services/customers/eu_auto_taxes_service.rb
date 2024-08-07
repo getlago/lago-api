@@ -32,7 +32,18 @@ module Customers
 
     def process_vies_tax(customer_vies)
       if organization_country_code.casecmp?(customer_vies[:country_code])
-        "lago_eu_#{organization_country_code.downcase}_standard"
+        standard_code = "lago_eu_#{organization_country_code.downcase}_standard"
+        return standard_code if eu_country_exceptions(country_code: customer_vies[:country_code]).empty?
+        return standard_code if customer.zipcode.blank?
+
+        applicable_exception = eu_country_exceptions(country_code: customer_vies[:country_code]).select do |exception|
+          customer.zipcode.match?(exception['postcode'])
+        end
+
+        return standard_code if applicable_exception.blank?
+
+        exception_code = applicable_exception.first['name'].parameterize.underscore
+        "lago_eu_#{customer_vies[:country_code].downcase}_exception_#{exception_code}"
       else
         'lago_eu_reverse_charge'
       end
@@ -47,6 +58,10 @@ module Customers
 
     def eu_countries_code
       LagoEuVat::Rate.new.countries_code
+    end
+
+    def eu_country_exceptions(country_code:)
+      @eu_country_exceptions ||= LagoEuVat::Rate.new.country_rates(country_code:)[:exceptions]
     end
   end
 end
