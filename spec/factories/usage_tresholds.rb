@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :progressive_billing_treshold do
+  factory :usage_treshold do
     plan
     treshold_display_name { Faker::Name.name }
     amount_cents { 100 }

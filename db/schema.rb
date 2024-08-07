@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_02_115017) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_07_072052) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -911,19 +911,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_02_115017) do
     t.index ["tax_id"], name: "index_plans_taxes_on_tax_id"
   end
 
-  create_table "progressive_billing_tresholds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "plan_id", null: false
-    t.string "treshold_display_name"
-    t.bigint "amount_cents", null: false
-    t.string "amount_currency", null: false
-    t.boolean "recurring", default: false, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["amount_cents", "plan_id", "recurring"], name: "idx_on_amount_cents_plan_id_recurring_b2c921d82b", unique: true
-    t.index ["plan_id", "recurring"], name: "index_progressive_billing_tresholds_on_plan_id_and_recurring", unique: true, where: "(recurring IS TRUE)"
-    t.index ["plan_id"], name: "index_progressive_billing_tresholds_on_plan_id"
-  end
-
   create_table "quantified_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "external_subscription_id", null: false
     t.string "external_id"
@@ -1018,6 +1005,19 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_02_115017) do
     t.boolean "auto_generated", default: false, null: false
     t.index ["code", "organization_id"], name: "index_taxes_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_taxes_on_organization_id"
+  end
+
+  create_table "usage_tresholds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "plan_id", null: false
+    t.string "treshold_display_name"
+    t.bigint "amount_cents", null: false
+    t.string "amount_currency", null: false
+    t.boolean "recurring", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["amount_cents", "plan_id", "recurring"], name: "idx_on_amount_cents_plan_id_recurring_d28c0d19e4", unique: true
+    t.index ["plan_id", "recurring"], name: "index_usage_tresholds_on_plan_id_and_recurring", unique: true, where: "(recurring IS TRUE)"
+    t.index ["plan_id"], name: "index_usage_tresholds_on_plan_id"
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1194,7 +1194,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_02_115017) do
   add_foreign_key "plans", "plans", column: "parent_id"
   add_foreign_key "plans_taxes", "plans"
   add_foreign_key "plans_taxes", "taxes"
-  add_foreign_key "progressive_billing_tresholds", "plans"
   add_foreign_key "quantified_events", "groups"
   add_foreign_key "quantified_events", "organizations"
   add_foreign_key "recurring_transaction_rules", "wallets"
@@ -1205,6 +1204,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_02_115017) do
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
   add_foreign_key "taxes", "organizations"
+  add_foreign_key "usage_tresholds", "plans"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"

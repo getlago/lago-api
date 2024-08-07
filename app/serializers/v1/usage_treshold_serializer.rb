@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module V1
-  class ProgressiveBillingTresholdSerializer < ModelSerializer
+  class UsageTresholdSerializer < ModelSerializer
     def serialize
       {
         lago_id: model.id,

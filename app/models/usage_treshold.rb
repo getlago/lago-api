@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class ProgressiveBillingTreshold < ApplicationRecord
+class UsageTreshold < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
 
