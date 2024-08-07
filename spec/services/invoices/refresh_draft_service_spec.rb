@@ -17,9 +17,6 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         total_amount_cents: 1000110010,
         taxes_rate: 30,
         fees_amount_cents: 2600,
-        coupons_amount_cents: 5300,
-        credit_notes_amount_cents: 11900,
-        prepaid_credit_amount_cents: 20,
         sub_total_excluding_taxes_amount_cents: 9900090,
         sub_total_including_taxes_amount_cents: 9900100
       )
@@ -237,11 +234,8 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
           expect { refresh_service.call }.to change(invoice.reload, :taxes_amount_cents).from(10).to(0)
             .and change(invoice, :total_amount_cents).from(1000110010).to(0)
             .and change(invoice, :taxes_rate).from(30.0).to(0)
-            .and change(invoice, :fees_amount_cents).from(2600).to(84)
-            .and change(invoice, :coupons_amount_cents).from(5300).to(0)
-            .and change(invoice, :credit_notes_amount_cents).from(11900).to(0)
-            .and change(invoice, :prepaid_credit_amount_cents).from(20).to(0)
-            .and change(invoice, :sub_total_excluding_taxes_amount_cents).from(9900090).to(84)
+            .and change(invoice, :fees_amount_cents).from(2600).to(81)
+            .and change(invoice, :sub_total_excluding_taxes_amount_cents).from(9900090).to(81)
             .and change(invoice, :sub_total_including_taxes_amount_cents).from(9900100).to(0)
         end
       end

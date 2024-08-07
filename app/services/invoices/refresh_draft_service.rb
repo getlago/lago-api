@@ -107,9 +107,6 @@ module Invoices
       invoice.total_amount_cents = 0
       invoice.taxes_rate = 0
       invoice.fees_amount_cents = 0
-      invoice.coupons_amount_cents = 0
-      invoice.credit_notes_amount_cents = 0
-      invoice.prepaid_credit_amount_cents = 0
       invoice.sub_total_excluding_taxes_amount_cents = 0
       invoice.sub_total_including_taxes_amount_cents = 0
       invoice.save
