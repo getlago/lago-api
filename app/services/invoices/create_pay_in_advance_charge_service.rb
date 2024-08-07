@@ -16,7 +16,8 @@ module Invoices
     end
 
     def call
-      fees = generate_fees
+      fee_result = generate_fees
+      fees = fee_result.fees
       return Result.new if fees.none?
 
       create_generating_invoice unless invoice
@@ -29,7 +30,15 @@ module Invoices
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
-        Invoices::ComputeAmountsFromFees.call(invoice:)
+        if tax_error?(fee_result)
+          invoice.failed!
+          invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
+          create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
+
+          return fee_result
+        end
+
+        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
         create_credit_note_credit if credit_notes.any?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
@@ -67,7 +76,8 @@ module Invoices
         invoice_type: :subscription,
         currency: customer.currency,
         datetime: Time.zone.at(timestamp),
-        charge_in_advance: true
+        charge_in_advance: true,
+        invoice_id: result.invoice_id
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :in_advance_charge)
@@ -80,8 +90,12 @@ module Invoices
 
     def generate_fees
       fee_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
-      fee_result.raise_if_error!
-      fee_result.fees
+      fee_result.raise_if_error! unless tax_error?(fee_result)
+
+      result.fees_taxes = fee_result.fees_taxes
+      result.invoice_id = fee_result.invoice_id
+
+      fee_result
     end
 
     def deliver_webhooks
@@ -130,6 +144,24 @@ module Invoices
 
     def refresh_amounts(credit_amount_cents:)
       invoice.total_amount_cents -= credit_amount_cents
+    end
+
+    def tax_error?(fee_result)
+      !fee_result.success? && fee_result.error.messages.dig(:tax_error)
+    end
+
+    def create_error_detail(code)
+      error_result = ErrorDetails::CreateService.call(
+        owner: invoice,
+        organization: invoice.organization,
+        params: {
+          error_code: :tax_error,
+          details: {
+            tax_error: code
+          }
+        }
+      )
+      error_result.raise_if_error!
     end
   end
 end
