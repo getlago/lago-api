@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe ProgressiveBillingTreshold, type: :model do
-  subject(:progressive_billing_treshold) { build(:progressive_billing_treshold) }
+RSpec.describe UsageTreshold, type: :model do
+  subject(:usage_treshold) { build(:usage_treshold) }
 
   it { is_expected.to belong_to(:plan) }
 
