@@ -6,7 +6,13 @@ module Invoices
 
     def perform(organization:, invoice_ids:)
       result = Invoices::FinalizeBatchService.new(organization:).call(invoice_ids)
-      result.raise_if_error!
+      result.raise_if_error! unless tax_error?(result.error)
+    end
+
+    private
+
+    def tax_error?(error)
+      error&.code == 'tax_error'
     end
   end
 end
