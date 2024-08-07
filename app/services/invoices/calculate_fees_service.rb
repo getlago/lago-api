@@ -45,7 +45,24 @@ module Invoices
           invoice.coupons_amount_cents
 
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
-        Invoices::ComputeAmountsFromFees.call(invoice:)
+
+        if customer_provider_taxation?
+          taxes_result = fetch_taxes_for_invoice(invoice)
+
+          unless taxes_result.success?
+            create_error_detail(taxes_result.error.code)
+
+            # only fail invoices that are finalizing
+            invoice.failed! if finalizing_invoice?(invoice)
+
+            invoice.save!
+            return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
+          end
+
+          Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: taxes_result.fees)
+        else
+          Invoices::ComputeAmountsFromFees.call(invoice:)
+        end
 
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
@@ -315,6 +332,35 @@ module Invoices
       tz = subscription.customer.applicable_timezone
 
       timestamp.in_time_zone(tz).to_date != subscription.trial_end_datetime.in_time_zone(tz).to_date
+    end
+
+    def customer_provider_taxation?
+      @customer_provider_taxation ||= invoice.customer.anrok_customer
+    end
+
+    def create_error_detail(code)
+      error_result = ErrorDetails::CreateService.call(
+        owner: invoice,
+        organization: invoice.organization,
+        params: {
+          error_code: :tax_error,
+          details: {
+            tax_error: code
+          }
+        }
+      )
+      error_result.raise_if_error!
+    end
+
+    def fetch_taxes_for_invoice(invoice)
+      if finalizing_invoice?(invoice)
+        return Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
+      end
+      Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
+    end
+
+    def finalizing_invoice?(invoice)
+      context == :finalize || invoice.status == 'finalized'
     end
   end
 end

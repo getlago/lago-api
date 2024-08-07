@@ -39,12 +39,27 @@ module Fees
           )
           fee.precise_unit_amount = fee.unit_amount.to_f
 
-          taxes_result = tax_codes ? Fees::ApplyTaxesService.call(fee:, tax_codes:) : Fees::ApplyTaxesService.call(fee:)
-          taxes_result.raise_if_error!
+          unless customer_provider_taxation?
+            taxes_result = if tax_codes
+              Fees::ApplyTaxesService.call(fee:, tax_codes:)
+            else
+              Fees::ApplyTaxesService.call(fee:)
+            end
+
+            taxes_result.raise_if_error!
+          end
 
           fee.save!
 
           fees_result << fee
+        end
+
+        if customer_provider_taxation?
+          fee_taxes_result = apply_provider_taxes(fees_result)
+
+          unless fee_taxes_result.success?
+            return result.service_failure!(code: 'tax_error', message: fee_taxes_result.error.code)
+          end
         end
       end
 
@@ -70,6 +85,45 @@ module Fees
 
     def add_on_identifier
       api_context? ? :add_on_code : :add_on_id
+    end
+
+    def customer_provider_taxation?
+      @apply_provider_taxes ||= customer.anrok_customer
+    end
+
+    def apply_provider_taxes(fees_result)
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
+
+      unless taxes_result.success?
+        create_error_detail(taxes_result.error.code)
+
+        return taxes_result
+      end
+
+      result.fees_taxes = taxes_result.fees
+
+      fees_result.each do |fee|
+        fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.item_id }
+
+        res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
+        res.raise_if_error!
+      end
+
+      taxes_result
+    end
+
+    def create_error_detail(code)
+      error_result = ErrorDetails::CreateService.call(
+        owner: invoice,
+        organization: invoice.organization,
+        params: {
+          error_code: :tax_error,
+          details: {
+            tax_error: code
+          }
+        }
+      )
+      error_result.raise_if_error!
     end
   end
 end

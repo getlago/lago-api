@@ -12,8 +12,12 @@ module Invoices
       return result unless invoice.draft?
 
       ActiveRecord::Base.transaction do
-        Invoices::RefreshDraftService.call(invoice:, context: :finalize).raise_if_error!
+        refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
 
+        if tax_error?(refresh_result.error)
+          return result.validation_failure!(errors: {tax_error: [refresh_result.error.error_message]})
+        end
+        refresh_result.raise_if_error!
         invoice.status = :finalized
         invoice.issuing_date = issuing_date
         invoice.payment_due_date = payment_due_date
@@ -67,6 +71,10 @@ module Invoices
     def should_deliver_email?
       License.premium? &&
         invoice.organization.email_settings.include?('invoice.finalized')
+    end
+
+    def tax_error?(error)
+      error&.code == 'tax_error'
     end
   end
 end
