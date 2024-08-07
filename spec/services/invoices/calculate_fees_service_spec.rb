@@ -148,6 +148,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
           allow(lago_client).to receive(:post_with_response).and_return(response)
           allow(response).to receive(:body).and_return(body)
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
         end
 
         it 'creates fees' do
@@ -161,6 +163,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(result.invoice.reload.error_details.count).to eq(0)
           end
+        end
+
+        it 'fetches taxes using finalized invoices service' do
+          invoice_service.call
+          expect(Integrations::Aggregator::Taxes::Invoices::CreateService).to have_received(:call)
         end
 
         context 'when there is error received from the provider' do
@@ -211,6 +218,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
                 expect(result.invoice.reload.error_details.count).to eq(0)
               end
             end
+
+            it 'fetches taxes using draft invoices service' do
+              invoice_service.call
+              expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
+            end
           end
 
           context 'when context is :finalize' do
@@ -228,6 +240,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
                 expect(result.invoice.reload.error_details.count).to eq(0)
               end
+            end
+
+            it 'fetches taxes using finalized invoices service' do
+              invoice_service.call
+              expect(Integrations::Aggregator::Taxes::Invoices::CreateService).to have_received(:call)
             end
           end
         end

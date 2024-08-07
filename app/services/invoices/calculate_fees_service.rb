@@ -55,7 +55,7 @@ module Invoices
             # only fail invoices that are finalizing
             invoice.failed! if finalizing_invoice?(invoice)
 
-            invoice.save
+            invoice.save!
             return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
           end
 
