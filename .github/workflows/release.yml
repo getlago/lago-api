@@ -10,7 +10,7 @@ on:
 jobs:
   build-amd-image:
     name: Build AMD Image
-    runs-on: lago-runner
+    runs-on: self-hosted
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
