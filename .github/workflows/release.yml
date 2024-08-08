@@ -1,19 +1,21 @@
 name: Release
 on:
-  repository_dispatch:
-    types: [release]
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version
+        required: true
 jobs:
-  build-image:
-    name: Build Image
-    runs-on: ubuntu-latest
+  build-arm-image:
+    name: Build ARM Image
+    runs-on: macos-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up Docker Buildx
+      - name: Sep up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
       - name: Log In to Docker Hub
@@ -23,17 +25,60 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Add version into docker image
-        run: echo ${{ github.event.client_payload.version }} > LAGO_VERSION
+        if: github.event_name == 'release'
+        id: add_version
+        run: |
+          echo ${{ github.event.release.tag_name }} > LAGO_VERSION
+          echo lago_version=${{ github.event.release.tag_name }} >> $GITHUB_ENV
+
+      - name: Add version into docker image
+        if: github.event_name == 'workflow_dispatch'
+        id: add_version
+        run: |
+          echo ${{ github.event.inputs.version }} > LAGO_VERSION
+          echo lago_version=${{ github.event.inputs.version }} >> $GITHUB_ENV
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           push: true
-          tags: getlago/api:${{ github.event.client_payload.version }}
+          tags: getlago/api:${{ steps.add_version.outputs.lago_version }}
           build-args: |
             SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
             GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
             GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
             LAGO_OAUTH_URL=https://proxy.getlago.com
+
+  # build-amd-image:
+  #   name: Build AMD Image
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v2
+
+  #     - name: Log In to Docker Hub
+  #       uses: docker/login-action@v2
+  #       with:
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+  #     - name: Add version into docker image
+  #       run: echo ${{ github.event.release.tag_name }} > LAGO_VERSION
+
+  #     - name: Build and push Docker image
+  #       uses: docker/build-push-action@v3
+  #       with:
+  #         context: .
+  #         platforms: linux/amd64
+  #         push: true
+  #         tags: getlago/api:${{ github.event.release.tag_name }}
+  #         build-args: |
+  #           SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
+  #           GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
+  #           GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
+  #           LAGO_OAUTH_URL=https://proxy.getlago.com
