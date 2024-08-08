@@ -31,7 +31,7 @@ jobs:
         id: add_version
         run: |
           echo "${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" > LAGO_VERSION
-          echo "lago_version=${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" >> "$GITHUB_OUPUT"
+          echo "lago_version=${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
