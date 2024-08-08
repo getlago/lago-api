@@ -221,7 +221,7 @@ module Api
           json: ::V1::InvoiceSerializer.new(
             invoice,
             root_name: 'invoice',
-            includes: %i[customer subscriptions fees credits metadata applied_taxes]
+            includes: %i[customer subscriptions fees credits metadata applied_taxes error_details]
           )
         )
       end

@@ -7,7 +7,7 @@ module V1
         {
           lago_id: model.id,
           error_code: model.error_code,
-          error_details: model.error_details
+          details: model.details
         }
       end
     end

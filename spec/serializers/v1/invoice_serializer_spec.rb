@@ -3,12 +3,18 @@
 require 'rails_helper'
 
 RSpec.describe ::V1::InvoiceSerializer do
-  subject(:serializer) { described_class.new(invoice, root_name: 'invoice', includes: %i[metadata]) }
+  subject(:serializer) { described_class.new(invoice, root_name: 'invoice', includes: %i[metadata error_details]) }
 
   let(:invoice) { create(:invoice) }
   let(:metadata) { create(:invoice_metadata, invoice:) }
+  let(:error_details1) { create(:error_detail, owner: invoice) }
+  let(:error_details2) { create(:error_detail, owner: invoice, deleted_at: Time.current) }
 
-  before { metadata }
+  before do
+    metadata
+    error_details1
+    error_details2
+  end
 
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
@@ -36,6 +42,13 @@ RSpec.describe ::V1::InvoiceSerializer do
         'sub_total_including_taxes_amount_cents' => invoice.sub_total_including_taxes_amount_cents,
         'total_amount_cents' => invoice.total_amount_cents,
         'file_url' => invoice.file_url,
+        'error_details' => [
+          {
+            'lago_id' => error_details1.id,
+            'error_code' => error_details1.error_code,
+            'details' => error_details1.details
+          }
+        ],
         'version_number' => 4
       )
 
