@@ -39,7 +39,7 @@ jobs:
           context: .
           platforms: linux/arm64,linux/amd64
           push: true
-          tags: getlago/api:${{ github.event.release.tag_name }}
+          tags: getlago/api:${{ steps.add_version.outputs.lago_version }}
           build-args: |
             SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
             GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
