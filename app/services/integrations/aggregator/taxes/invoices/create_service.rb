@@ -33,8 +33,7 @@ module Integrations
               integration:,
               invoice:,
               customer:,
-              fees:,
-              issuing_date:
+              fees:
             ).body
 
             invoice_data = payload_body.first

@@ -10,15 +10,17 @@ module Invoices
     def call
       return result.not_found_failure!(resource: 'invoice') if invoice.nil?
       return result unless invoice.draft?
+      drafted_issuing_date = invoice.issuing_date
 
       ActiveRecord::Base.transaction do
-        refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize, issuing_date:)
+        invoice.issuing_date = issuing_date
+        refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         if tax_error?(refresh_result.error)
+          invoice.update!(issuing_date: drafted_issuing_date)
           return result.validation_failure!(errors: {tax_error: [refresh_result.error.error_message]})
         end
         refresh_result.raise_if_error!
 
-        invoice.issuing_date = issuing_date
         invoice.payment_due_date = payment_due_date
         invoice.status = :finalized
         invoice.save!

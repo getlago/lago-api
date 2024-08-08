@@ -2,7 +2,7 @@
 
 module Invoices
   class CalculateFeesService < BaseService
-    def initialize(invoice:, recurring: false, context: nil, issuing_date: nil)
+    def initialize(invoice:, recurring: false, context: nil)
       @invoice = invoice
       @timestamp = invoice.invoice_subscriptions.first&.timestamp
 
@@ -11,7 +11,6 @@ module Invoices
       @recurring = recurring
 
       @context = context
-      @issuing_date = issuing_date
 
       super
     end
@@ -82,7 +81,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context, :issuing_date
+    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context
 
     delegate :customer, :currency, to: :invoice
 
@@ -355,7 +354,7 @@ module Invoices
 
     def fetch_taxes_for_invoice
       if finalizing_invoice?
-        return Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees, issuing_date:)
+        return Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
       end
       Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
     end

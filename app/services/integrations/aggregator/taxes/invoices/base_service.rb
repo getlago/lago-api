@@ -5,17 +5,16 @@ module Integrations
     module Taxes
       module Invoices
         class BaseService < Integrations::Aggregator::BaseService
-          def initialize(invoice:, fees: nil, issuing_date: nil)
+          def initialize(invoice:, fees: nil)
             @invoice = invoice
             @fees = fees || invoice.fees
-            @issuing_date = issuing_date
 
             super(integration:)
           end
 
           private
 
-          attr_reader :invoice, :fees, :issuing_date
+          attr_reader :invoice, :fees
 
           delegate :customer, to: :invoice, allow_nil: true
 

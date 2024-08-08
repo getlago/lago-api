@@ -2,12 +2,11 @@
 
 module Invoices
   class RefreshDraftService < BaseService
-    def initialize(invoice:, context: :refresh, issuing_date: nil)
+    def initialize(invoice:, context: :refresh)
       @invoice = invoice
       @subscription_ids = invoice.subscriptions.pluck(:id)
       @context = context
       @invoice_subscriptions = invoice.invoice_subscriptions
-      @issuing_date = issuing_date
 
       # NOTE: Recurring status (meaning billed automatically from the recurring billing process)
       #       should be kept to prevent double billing on billing day
@@ -54,8 +53,7 @@ module Invoices
         calculate_result = Invoices::CalculateFeesService.call(
           invoice: invoice.reload,
           recurring:,
-          context:,
-          issuing_date:
+          context:
         )
 
         invoice.credit_notes.each do |credit_note|
@@ -78,7 +76,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context, :invoice_subscriptions, :issuing_date
+    attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context, :invoice_subscriptions
 
     def fetch_timestamp
       fee = invoice.fees.first

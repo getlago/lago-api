@@ -5,19 +5,18 @@ module Integrations
     module Taxes
       module Invoices
         class Payload < BasePayload
-          def initialize(integration:, customer:, invoice:, fees: [], issuing_date: nil)
+          def initialize(integration:, customer:, invoice:, fees: [])
             super(integration:)
 
             @customer = customer
             @invoice = invoice
             @fees = fees.is_a?(Array) ? fees : fees.order(created_at: :asc)
-            @issuing_date = issuing_date
           end
 
           def body
             [
               {
-                'issuing_date' => issuing_date || invoice.issuing_date,
+                'issuing_date' => invoice.issuing_date,
                 'currency' => invoice.currency,
                 'contact' => {
                   'external_id' => customer.external_id,
@@ -54,7 +53,7 @@ module Integrations
 
           private
 
-          attr_reader :customer, :invoice, :fees, :issuing_date
+          attr_reader :customer, :invoice, :fees
         end
       end
     end
