@@ -10,7 +10,7 @@ on:
 jobs:
   build-amd-image:
     name: Build AMD Image
-    runs-on: ubuntu-latest
+    runs-on: lago-runner
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
