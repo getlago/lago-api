@@ -6,6 +6,7 @@ require_relative '../config/environment'
 
 require 'spec_helper'
 require 'simplecov'
+require 'money-rails/test_helpers'
 
 def pp(*args)
   # Uncomment the following line if you can't find where you left a `pp` call

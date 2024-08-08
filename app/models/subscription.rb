@@ -158,4 +158,11 @@ class Subscription < ApplicationRecord
 
     number_od_days.negative? ? 0 : number_od_days
   end
+
+  def lifetime_usage
+    LifetimeUsage.find_by(
+      organization_id: organization.id,
+      external_subscription_id: external_id
+    )
+  end
 end

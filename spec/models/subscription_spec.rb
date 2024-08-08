@@ -462,4 +462,16 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '#lifetime_usage' do
+    it 'returns nil if there is none' do
+      expect(subscription.lifetime_usage).to be_nil
+    end
+
+    it 'returns the single lifetime usage for this subscription' do
+      lifetime_usage = create(:lifetime_usage, subscription:)
+
+      expect(subscription.lifetime_usage).to eq(lifetime_usage)
+    end
+  end
 end
