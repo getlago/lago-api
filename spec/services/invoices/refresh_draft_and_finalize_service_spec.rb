@@ -294,6 +294,10 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
             expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
           end
         end
+
+        it 'does not change issuing_date on the invoice' do
+          expect { finalize_service.call }.not_to change(invoice, :issuing_date)
+        end
       end
     end
 

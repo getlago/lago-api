@@ -2,7 +2,7 @@
 
 module Invoices
   class CalculateFeesService < BaseService
-    def initialize(invoice:, recurring: false, context: nil)
+    def initialize(invoice:, recurring: false, context: nil, issuing_date: nil)
       @invoice = invoice
       @timestamp = invoice.invoice_subscriptions.first&.timestamp
 
@@ -11,6 +11,7 @@ module Invoices
       @recurring = recurring
 
       @context = context
+      @issuing_date = issuing_date
 
       super
     end
@@ -47,13 +48,13 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
 
         if customer_provider_taxation?
-          taxes_result = fetch_taxes_for_invoice(invoice)
+          taxes_result = fetch_taxes_for_invoice
 
           unless taxes_result.success?
             create_error_detail(taxes_result.error.code)
 
             # only fail invoices that are finalizing
-            invoice.failed! if finalizing_invoice?(invoice)
+            invoice.failed! if finalizing_invoice?
 
             invoice.save!
             return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
@@ -81,7 +82,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context
+    attr_accessor :invoice, :subscriptions, :timestamp, :recurring, :context, :issuing_date
 
     delegate :customer, :currency, to: :invoice
 
@@ -352,14 +353,14 @@ module Invoices
       error_result.raise_if_error!
     end
 
-    def fetch_taxes_for_invoice(invoice)
-      if finalizing_invoice?(invoice)
-        return Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
+    def fetch_taxes_for_invoice
+      if finalizing_invoice?
+        return Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees, issuing_date:)
       end
       Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
     end
 
-    def finalizing_invoice?(invoice)
+    def finalizing_invoice?
       context == :finalize || invoice.status == 'finalized'
     end
   end
