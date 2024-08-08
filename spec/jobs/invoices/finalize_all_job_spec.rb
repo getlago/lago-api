@@ -8,18 +8,20 @@ RSpec.describe Invoices::FinalizeAllJob, type: :job do
   let(:finalize_batch_service) { instance_double(Invoices::FinalizeBatchService) }
   let(:result) { BaseService::Result.new }
   let(:organization) { create(:organization) }
-  let(:invoice) { create(:invoice, organization:) }
+  let(:invoice) { create(:invoice, :draft, organization:) }
 
-  before do
-    allow(Invoices::FinalizeBatchService).to receive(:new).and_return(finalize_batch_service)
-    allow(finalize_batch_service).to receive(:call).and_return(result)
-  end
+  context 'when succesfully fetching taxes' do
+    before do
+      allow(Invoices::FinalizeBatchService).to receive(:new).and_return(finalize_batch_service)
+      allow(finalize_batch_service).to receive(:call).and_return(result)
+    end
 
-  it 'calls the retry batch service' do
-    finalize_all_job.perform_now(organization:, invoice_ids: [invoice.id])
+    it 'calls the retry batch service' do
+      finalize_all_job.perform_now(organization:, invoice_ids: [invoice.id])
 
-    expect(Invoices::FinalizeBatchService).to have_received(:new)
-    expect(finalize_batch_service).to have_received(:call)
+      expect(Invoices::FinalizeBatchService).to have_received(:new)
+      expect(finalize_batch_service).to have_received(:call)
+    end
   end
 
   context 'when there was a tax fetching error in FinalizeBatch service' do
