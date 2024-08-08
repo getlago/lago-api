@@ -36,7 +36,7 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
-          tags: getlago/api:${{ steps.add_version.outputs.lago_version }}
+          tags: getlago/api:${{ steps.add_version.outputs.lago_version }}-arm64
           build-args: |
             SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
             GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
@@ -71,9 +71,29 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: getlago/api:${{ steps.add_version.outputs.lago_version }}
+          tags: getlago/api:${{ steps.add_version.outputs.lago_version }}-amd64
           build-args: |
             SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
             GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
             GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
             LAGO_OAUTH_URL=https://proxy.getlago.com
+
+  create-manifest:
+    runs-on: lago-runner
+    needs: [build-arm-image, build-amd-image]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Create version manifest and Push
+        run: |
+          docker manifest create \
+            getlago/api:${{ steps.build-amd-image.outputs.add_version.outputs.lago_version }} \
+            --amend getlago/api:${{ steps.build-amd-image.outputs.add_version.outputs.lago_version }}-amd64 \
+            --amend getlago/api:${{ steps.build-amd-image.outputs.add_version.outputs.lago_version }}-arm64
+          docker manifest push getlago/api:${{ steps.build-amd-image.outputs.add_version.outputs.lago_version }}
