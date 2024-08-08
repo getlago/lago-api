@@ -22,7 +22,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       )
     end
 
-    let(:started_at) { 1.month.ago }
+    let(:started_at) { 1.month.ago.beginning_of_month }
     let(:customer) { create(:customer) }
     let(:organization) { customer.organization }
 
@@ -234,8 +234,8 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
           expect { refresh_service.call }.to change(invoice.reload, :taxes_amount_cents).from(10).to(0)
             .and change(invoice, :total_amount_cents).from(1000110010).to(0)
             .and change(invoice, :taxes_rate).from(30.0).to(0)
-            .and change(invoice, :fees_amount_cents).from(2600).to(81)
-            .and change(invoice, :sub_total_excluding_taxes_amount_cents).from(9900090).to(81)
+            .and change(invoice, :fees_amount_cents).from(2600).to(100)
+            .and change(invoice, :sub_total_excluding_taxes_amount_cents).from(9900090).to(100)
             .and change(invoice, :sub_total_including_taxes_amount_cents).from(9900100).to(0)
         end
       end
