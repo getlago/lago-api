@@ -233,11 +233,22 @@ module Invoices
       # NOTE: we do not want to create a subscription fee for plans with bill_charges_monthly activated
       # But we want to keep the subscription charge when it has to proceed
       # Cases when we want to charge a subscription:
-      # - Plan is pay in advance, we're at the beginning of the period or subscription has never been billed
+      # - Plan is pay in advance, we're at the beginning of the period or subscription has never been billed and not started in the past
       # - Plan is pay in arrear and we're at the beginning of the period
-      date_service(subscription).first_month_in_yearly_period? ||
-        (subscription.plan.pay_in_advance && !subscription.already_billed?) ||
-        (subscription.plan.pay_in_arrear? && subscription.terminated?)
+
+      if subscription.plan.pay_in_advance? && !subscription.started_in_past?
+        return date_service(subscription).first_month_in_yearly_period? || !subscription.already_billed?
+      end
+
+      if subscription.plan.pay_in_advance? && subscription.started_in_past?
+        return !date_service(subscription).first_month_in_first_yearly_period? && date_service(subscription).first_month_in_yearly_period?
+      end
+
+      if subscription.plan.pay_in_arrear?
+        return subscription.terminated? || date_service(subscription).first_month_in_yearly_period?
+      end
+
+      false
     end
 
     def should_create_charge_fees?(subscription)
