@@ -74,6 +74,43 @@ RSpec.describe Plans::UpdateService, type: :service do
     ]
   end
 
+  let(:usage_thresholds_args) do
+    [
+      {
+        id: threshold1.id,
+        threshold_display_name: 'Threshold 1',
+        amount_cents: 1_000
+      },
+      {
+        id: threshold2.id,
+        threshold_display_name: 'Threshold 2',
+        amount_cents: 10_000
+      },
+      {
+        id: threshold3.id,
+        threshold_display_name: 'Threshold 3',
+        amount_cents: 100,
+        recurring: true
+      }
+    ]
+  end
+
+  let(:threshold1) do
+    create(:usage_threshold, plan:, threshold_display_name: 'Threshold 1', amount_cents: 1)
+  end
+
+  let(:threshold2) do
+    create(:usage_threshold, plan:, threshold_display_name: 'Threshold 2', amount_cents: 2)
+  end
+
+  let(:threshold3) do
+    create(:usage_threshold, :recurring, plan:, threshold_display_name: 'Threshold 3', amount_cents: 1)
+  end
+
+  let(:threshold5) do
+    create(:usage_threshold, plan:, threshold_display_name: 'Threshold 5', amount_cents: 123)
+  end
+
   describe 'call' do
     before do
       applied_tax
@@ -99,6 +136,132 @@ RSpec.describe Plans::UpdateService, type: :service do
       create(:invoice_subscription, invoice:, subscription:)
 
       expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+    end
+
+    context 'when thresholds are present' do
+      let(:usage_thresholds) do
+        updated_plan.usage_thresholds.order(threshold_display_name: :asc)
+      end
+
+      let(:updated_plan) { plans_service.call.plan }
+
+      before do
+        threshold1
+        threshold2
+        threshold3
+        threshold5
+      end
+
+      context 'with premium license' do
+        around { |test| lago_premium!(&test) }
+
+        context 'when progressive billing premium integration is present' do
+          before do
+            plan.organization.update!(premium_integrations: ['progressive_billing'])
+          end
+
+          context 'when thresholds args are passed' do
+            before do
+              update_args[:usage_thresholds] = usage_thresholds_args
+
+              update_args[:usage_thresholds] << {
+                threshold_display_name: 'Threshold 4',
+                amount_cents: 4_000
+              }
+            end
+
+            it 'updates the existing thresholds' do
+              aggregate_failures do
+                expect(usage_thresholds.first).to have_attributes(amount_cents: 1_000)
+                expect(usage_thresholds.second).to have_attributes(amount_cents: 10_000)
+                expect(usage_thresholds.third).to have_attributes(amount_cents: 100)
+                expect(usage_thresholds.fourth).to have_attributes(amount_cents: 4_000)
+              end
+            end
+
+            it 'creates new thresholds and deletes thresholds that are not in the args' do
+              aggregate_failures do
+                expect(plan.usage_thresholds.count).to eq(4)
+                expect(plan.usage_thresholds.order(threshold_display_name: :asc).last.amount_cents).to eq(123)
+                expect(usage_thresholds.count).to eq(4)
+                expect(usage_thresholds.fourth).to have_attributes(amount_cents: 4_000)
+              end
+            end
+          end
+
+          context 'when thresholds args are passed as empty array' do
+            before do
+              update_args[:usage_thresholds] = []
+            end
+
+            it 'deletes all existing thresholds' do
+              expect(usage_thresholds.count).to eq(0)
+            end
+          end
+
+          context 'when thresholds args are not passed' do
+            it 'does not update the thresholds' do
+              aggregate_failures do
+                expect(usage_thresholds.count).to eq(4)
+                expect(usage_thresholds.fourth).to have_attributes(
+                  threshold_display_name: 'Threshold 5'
+                )
+              end
+            end
+          end
+        end
+      end
+    end
+
+    context 'when thresholds are not present' do
+      let(:usage_thresholds) do
+        updated_plan.usage_thresholds.order(threshold_display_name: :asc)
+      end
+
+      let(:updated_plan) { plans_service.call.plan }
+
+      context 'without premium license' do
+        it 'does not create progressive billing thresholds' do
+          expect(usage_thresholds.count).to eq(0)
+        end
+      end
+
+      context 'with premium license' do
+        around { |test| lago_premium!(&test) }
+
+        context 'when progressive billing premium integration is not present' do
+          it 'does not create progressive billing thresholds' do
+            expect(usage_thresholds.count).to eq(0)
+          end
+        end
+
+        context 'when progressive billing premium integration is present' do
+          before do
+            plan.organization.update!(premium_integrations: ['progressive_billing'])
+          end
+
+          context 'when thresholds args are passed' do
+            before do
+              update_args[:usage_thresholds] = usage_thresholds_args
+            end
+
+            it 'creates new thresholds' do
+              aggregate_failures do
+                expect(usage_thresholds.count).to eq(3)
+                expect(usage_thresholds.first).to have_attributes(
+                  amount_cents: 1_000
+                )
+                expect(usage_thresholds.second).to have_attributes(
+                  amount_cents: 10_000
+                )
+                expect(usage_thresholds.third).to have_attributes(
+                  amount_cents: 100
+                )
+              end
+            end
+          end
+        end
+      end
     end
 
     context 'when charges are not passed' do

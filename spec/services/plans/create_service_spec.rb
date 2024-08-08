@@ -30,6 +30,7 @@ RSpec.describe Plans::CreateService, type: :service do
         amount_currency: 'EUR',
         tax_codes: [plan_tax.code],
         charges: charges_args,
+        usage_thresholds: usage_thresholds_args,
         minimum_commitment: minimum_commitment_args
       }
     end
@@ -85,6 +86,24 @@ RSpec.describe Plans::CreateService, type: :service do
       ]
     end
 
+    let(:usage_thresholds_args) do
+      [
+        {
+          threshold_display_name: 'Threshold 1',
+          amount_cents: 1_000
+        },
+        {
+          threshold_display_name: 'Threshold 2',
+          amount_cents: 10_000
+        },
+        {
+          threshold_display_name: 'Threshold 3',
+          amount_cents: 100,
+          recurring: true
+        }
+      ]
+    end
+
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
     end
@@ -104,6 +123,50 @@ RSpec.describe Plans::CreateService, type: :service do
       plan = Plan.order(:created_at).last
 
       expect(plan.minimum_commitment).to be_nil
+    end
+
+    context 'without premium license' do
+      it 'does not create progressive billing thresholds' do
+        plans_service.create(**create_args)
+
+        plan = Plan.order(:created_at).last
+
+        expect(plan.usage_thresholds.count).to eq(0)
+      end
+    end
+
+    context 'with premium license' do
+      around { |test| lago_premium!(&test) }
+
+      context 'when progressive billing premium integration is not present' do
+        it 'does not create progressive billing thresholds' do
+          plans_service.create(**create_args)
+
+          plan = Plan.order(:created_at).last
+
+          expect(plan.usage_thresholds.count).to eq(0)
+        end
+      end
+
+      context 'when progressive billing premium integration is present' do
+        before do
+          organization.update!(premium_integrations: ['progressive_billing'])
+        end
+
+        it 'creates progressive billing thresholds' do
+          plans_service.create(**create_args)
+
+          plan = Plan.order(:created_at).last
+          usage_thresholds = plan.usage_thresholds.order(threshold_display_name: :asc)
+
+          aggregate_failures do
+            expect(plan.usage_thresholds.count).to eq(3)
+            expect(usage_thresholds.first).to have_attributes(amount_cents: 1_000)
+            expect(usage_thresholds.second).to have_attributes(amount_cents: 10_000)
+            expect(usage_thresholds.third).to have_attributes(amount_cents: 100)
+          end
+        end
+      end
     end
 
     it 'creates charges' do

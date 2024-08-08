@@ -6,7 +6,7 @@ RSpec.describe Plan, type: :model do
   subject(:plan) { build(:plan, trial_period: 3) }
 
   it { is_expected.to have_one(:minimum_commitment) }
-  it { is_expected.to have_many(:usage_tresholds) }
+  it { is_expected.to have_many(:usage_thresholds) }
 
   it_behaves_like 'paper_trail traceable'
 

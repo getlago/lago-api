@@ -36,6 +36,16 @@ module Plans
           Charges::OverrideService.call(charge:, params: charge_params)
         end
 
+        if License.premium? && plan.organization.premium_integrations.include?('progressive_billing')
+          plan.usage_thresholds.find_each do |threshold|
+            threshold_params = (
+              params[:usage_thresholds]&.find { |p| p[:id] == threshold.id } || {}
+            ).merge(plan_id: new_plan.id)
+
+            UsageThresholds::OverrideService.call(threshold:, params: threshold_params)
+          end
+        end
+
         if params[:minimum_commitment].present? && License.premium?
           commitment = Commitment.new(plan: new_plan, commitment_type: 'minimum_commitment')
           minimum_commitment_params = params[:minimum_commitment].merge(plan_id: new_plan.id)

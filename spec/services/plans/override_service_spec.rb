@@ -23,6 +23,8 @@ RSpec.describe Plans::OverrideService, type: :service do
       )
     end
 
+    let(:usage_threshold) { create(:usage_threshold, plan: parent_plan) }
+
     let(:filter) do
       create(
         :charge_filter,
@@ -50,6 +52,7 @@ RSpec.describe Plans::OverrideService, type: :service do
         trial_period: 20,
         tax_codes: [tax.code],
         charges: charges_params,
+        usage_thresholds: usage_thresholds_args,
         minimum_commitment: minimum_commitment_params
       }
     end
@@ -74,10 +77,22 @@ RSpec.describe Plans::OverrideService, type: :service do
       ]
     end
 
+    let(:usage_thresholds_args) do
+      [
+        {
+          id: usage_threshold.id,
+          threshold_display_name: 'Threshold 1',
+          amount_cents: 1_000
+        }
+      ]
+    end
+
     around { |test| lago_premium!(&test) }
 
     before do
+      organization.update!(premium_integrations: ['progressive_billing'])
       charge
+      usage_threshold
       allow(SegmentTrackJob).to receive(:perform_later)
       filter_value
     end
@@ -109,6 +124,11 @@ RSpec.describe Plans::OverrideService, type: :service do
         commitment_type: 'minimum_commitment',
         amount_cents: minimum_commitment_amount_cents,
         invoice_display_name: minimum_commitment_invoice_display_name
+      )
+
+      expect(plan.usage_thresholds.first).to have_attributes(
+        threshold_display_name: 'Threshold 1',
+        amount_cents: 1_000
       )
 
       expect(plan.minimum_commitment.taxes.first).to eq(tax)

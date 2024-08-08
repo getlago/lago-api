@@ -7,7 +7,7 @@ RSpec.describe ::V1::PlanSerializer do
     described_class.new(
       plan,
       root_name: 'plan',
-      includes: %i[charges taxes minimum_commitment usage_tresholds]
+      includes: %i[charges taxes minimum_commitment usage_thresholds]
     )
   end
 
@@ -15,9 +15,9 @@ RSpec.describe ::V1::PlanSerializer do
   let(:customer) { create(:customer, organization: plan.organization) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, plan:) }
-  let(:usage_treshold) { create(:usage_treshold, plan:) }
+  let(:usage_threshold) { create(:usage_threshold, plan:) }
 
-  before { subscription && charge && usage_treshold }
+  before { subscription && charge && usage_threshold }
 
   context 'when plan has one minimium commitment' do
     let(:commitment) { create(:commitment, plan:) }
@@ -55,14 +55,13 @@ RSpec.describe ::V1::PlanSerializer do
         'lago_id' => charge.id
       )
 
-      expect(result['plan']['usage_tresholds'].first).to include(
-        'lago_id' => usage_treshold.id,
-        'treshold_display_name' => usage_treshold.treshold_display_name,
-        'amount_cents' => usage_treshold.amount_cents,
-        'amount_currency' => usage_treshold.amount_currency,
-        'recurring' => usage_treshold.recurring?,
-        'created_at' => usage_treshold.created_at.iso8601,
-        'updated_at' => usage_treshold.updated_at.iso8601
+      expect(result['plan']['usage_thresholds'].first).to include(
+        'lago_id' => usage_threshold.id,
+        'threshold_display_name' => usage_threshold.threshold_display_name,
+        'amount_cents' => usage_threshold.amount_cents,
+        'recurring' => usage_threshold.recurring?,
+        'created_at' => usage_threshold.created_at.iso8601,
+        'updated_at' => usage_threshold.updated_at.iso8601
       )
 
       expect(result['plan']['minimum_commitment']).to include(
@@ -113,14 +112,13 @@ RSpec.describe ::V1::PlanSerializer do
         'lago_id' => charge.id
       )
 
-      expect(result['plan']['usage_tresholds'].first).to include(
-        'lago_id' => usage_treshold.id,
-        'treshold_display_name' => usage_treshold.treshold_display_name,
-        'amount_cents' => usage_treshold.amount_cents,
-        'amount_currency' => usage_treshold.amount_currency,
-        'recurring' => usage_treshold.recurring?,
-        'created_at' => usage_treshold.created_at.iso8601,
-        'updated_at' => usage_treshold.updated_at.iso8601
+      expect(result['plan']['usage_thresholds'].first).to include(
+        'lago_id' => usage_threshold.id,
+        'threshold_display_name' => usage_threshold.threshold_display_name,
+        'amount_cents' => usage_threshold.amount_cents,
+        'recurring' => usage_threshold.recurring?,
+        'created_at' => usage_threshold.created_at.iso8601,
+        'updated_at' => usage_threshold.updated_at.iso8601
       )
 
       expect(result['plan']['minimum_commitment']).to be_nil

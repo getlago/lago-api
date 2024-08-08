@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_07_072052) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_08_080611) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1007,17 +1007,16 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_07_072052) do
     t.index ["organization_id"], name: "index_taxes_on_organization_id"
   end
 
-  create_table "usage_tresholds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "usage_thresholds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "plan_id", null: false
-    t.string "treshold_display_name"
+    t.string "threshold_display_name"
     t.bigint "amount_cents", null: false
-    t.string "amount_currency", null: false
     t.boolean "recurring", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["amount_cents", "plan_id", "recurring"], name: "idx_on_amount_cents_plan_id_recurring_d28c0d19e4", unique: true
-    t.index ["plan_id", "recurring"], name: "index_usage_tresholds_on_plan_id_and_recurring", unique: true, where: "(recurring IS TRUE)"
-    t.index ["plan_id"], name: "index_usage_tresholds_on_plan_id"
+    t.index ["amount_cents", "plan_id", "recurring"], name: "idx_on_amount_cents_plan_id_recurring_888044d66b", unique: true
+    t.index ["plan_id", "recurring"], name: "index_usage_thresholds_on_plan_id_and_recurring", unique: true, where: "(recurring IS TRUE)"
+    t.index ["plan_id"], name: "index_usage_thresholds_on_plan_id"
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1204,7 +1203,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_07_072052) do
   add_foreign_key "subscriptions", "customers"
   add_foreign_key "subscriptions", "plans"
   add_foreign_key "taxes", "organizations"
-  add_foreign_key "usage_tresholds", "plans"
+  add_foreign_key "usage_thresholds", "plans"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"

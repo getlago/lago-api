@@ -33,6 +33,14 @@ module Plans
           taxes_result.raise_if_error!
         end
 
+        if args[:usage_thresholds].present? &&
+            License.premium? &&
+            plan.organization.premium_integrations.include?('progressive_billing')
+          args[:usage_thresholds].each do |threshold_args|
+            create_usage_threshold(plan, threshold_args)
+          end
+        end
+
         if args[:charges].present?
           args[:charges].each do |charge|
             new_charge = create_charge(plan, charge)
@@ -75,6 +83,16 @@ module Plans
         invoice_display_name: args[:invoice_display_name],
         amount_cents: args[:amount_cents]
       )
+    end
+
+    def create_usage_threshold(plan, args)
+      usage_threshold = plan.usage_thresholds.new(
+        threshold_display_name: args[:threshold_display_name],
+        amount_cents: args[:amount_cents],
+        recurring: args[:recurring] || false
+      )
+
+      usage_threshold.save!
     end
 
     def create_charge(plan, args)

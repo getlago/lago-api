@@ -45,7 +45,15 @@ module Plans
         end
 
         process_charges(plan, params[:charges]) if params[:charges]
+
+        if params[:usage_thresholds] &&
+            License.premium? &&
+            plan.organization.premium_integrations.include?('progressive_billing')
+          process_usage_thresholds(plan, params[:usage_thresholds])
+        end
+
         process_minimum_commitment(plan, params[:minimum_commitment]) if params[:minimum_commitment] && License.premium?
+
         if old_amount_cents != plan.amount_cents
           process_downgraded_subscriptions
           process_pending_subscriptions
@@ -72,6 +80,17 @@ module Plans
       return unless params[:interval]&.to_sym == :yearly
 
       params[:bill_charges_monthly] || false
+    end
+
+    def create_usage_threshold(plan, params)
+      usage_threshold = plan.usage_thresholds.new(
+        threshold_display_name: params[:threshold_display_name],
+        amount_cents: params[:amount_cents],
+        recurring: params[:recurring] || false
+      )
+
+      usage_threshold.save!
+      usage_threshold
     end
 
     def create_charge(plan, params)
@@ -142,6 +161,39 @@ module Plans
       minimum_commitment
     end
 
+    def process_usage_thresholds(plan, params_thresholds)
+      created_thresholds_ids = []
+
+      hash_thresholds = params_thresholds.map { |c| c.to_h.deep_symbolize_keys }
+      hash_thresholds.each do |payload_threshold|
+        usage_threshold = plan.usage_thresholds.find_by(id: payload_threshold[:id])
+
+        if usage_threshold
+          if payload_threshold.key?(:threshold_display_name)
+            usage_threshold.threshold_display_name = payload_threshold[:threshold_display_name]
+          end
+
+          if payload_threshold.key?(:amount_cents)
+            usage_threshold.amount_cents = payload_threshold[:amount_cents]
+          end
+
+          if payload_threshold.key?(:recurring)
+            usage_threshold.recurring = payload_threshold[:recurring]
+          end
+
+          usage_threshold.save!
+
+          next
+        end
+
+        created_threshold = create_usage_threshold(plan, payload_threshold)
+        created_thresholds_ids.push(created_threshold.id)
+      end
+
+      # NOTE: Delete thresholds that are no more linked to the plan
+      sanitize_thresholds(plan, hash_thresholds, created_thresholds_ids)
+    end
+
     def process_charges(plan, params_charges)
       created_charges_ids = []
 
@@ -205,6 +257,12 @@ module Plans
       args_charges_ids = args_charges.map { |c| c[:id] }.compact
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
       plan.charges.where(id: charges_ids).find_each { |charge| discard_charge!(charge) }
+    end
+
+    def sanitize_thresholds(plan, args_thresholds, created_thresholds_ids)
+      args_thresholds_ids = args_thresholds.map { |c| c[:id] }.compact
+      thresholds_ids = plan.usage_thresholds.pluck(:id) - args_thresholds_ids - created_thresholds_ids
+      plan.usage_thresholds.where(id: thresholds_ids).destroy_all
     end
 
     def discard_charge!(charge)
