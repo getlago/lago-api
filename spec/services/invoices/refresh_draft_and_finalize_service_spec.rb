@@ -207,6 +207,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       before do
         integration_collection_mapping
         integration_customer
+        invoice.update(issuing_date: Time.current + 3.months)
 
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
@@ -231,6 +232,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
 
           response.to_json
         end
+        let(:invoice_issuing_date) { Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date }
 
         it 'refreshes all data and applies fetched taxes' do
           aggregate_failures do
@@ -243,6 +245,12 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
 
         it 'finalizes the invoice' do
           expect { finalize_service.call }.to change { invoice.reload.status }.from('draft').to('finalized')
+        end
+
+        it 'sends finalized invoice issuing date to tax_provider' do
+          finalize_service.call
+          expect(lago_client).to have_received(:post_with_response)
+            .with([hash_including('issuing_date' => invoice_issuing_date)], anything)
         end
       end
 
