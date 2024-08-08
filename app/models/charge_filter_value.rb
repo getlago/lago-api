@@ -29,3 +29,28 @@ class ChargeFilterValue < ApplicationRecord
     errors.add(:values, :inclusion)
   end
 end
+
+# == Schema Information
+#
+# Table name: charge_filter_values
+#
+#  id                        :uuid             not null, primary key
+#  deleted_at                :datetime
+#  values                    :string           default([]), not null, is an Array
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  billable_metric_filter_id :uuid             not null
+#  charge_filter_id          :uuid             not null
+#
+# Indexes
+#
+#  index_active_charge_filter_values                        (charge_filter_id) WHERE (deleted_at IS NULL)
+#  index_charge_filter_values_on_billable_metric_filter_id  (billable_metric_filter_id)
+#  index_charge_filter_values_on_charge_filter_id           (charge_filter_id)
+#  index_charge_filter_values_on_deleted_at                 (deleted_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (billable_metric_filter_id => billable_metric_filters.id)
+#  fk_rails_...  (charge_filter_id => charge_filters.id)
+#

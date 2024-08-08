@@ -76,3 +76,33 @@ class BillableMetric < ApplicationRecord
     errors.add(:recurring, :not_compatible_with_aggregation_type)
   end
 end
+
+# == Schema Information
+#
+# Table name: billable_metrics
+#
+#  id                :uuid             not null, primary key
+#  aggregation_type  :integer          not null
+#  code              :string           not null
+#  custom_aggregator :text
+#  deleted_at        :datetime
+#  description       :string
+#  field_name        :string
+#  name              :string           not null
+#  properties        :jsonb
+#  recurring         :boolean          default(FALSE), not null
+#  weighted_interval :enum
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  organization_id   :uuid             not null
+#
+# Indexes
+#
+#  index_billable_metrics_on_deleted_at                (deleted_at)
+#  index_billable_metrics_on_organization_id           (organization_id)
+#  index_billable_metrics_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
+#

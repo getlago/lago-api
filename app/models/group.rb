@@ -26,3 +26,29 @@ class Group < ApplicationRecord
     children.each { |c| c.properties&.discard_all && c.discard! } && properties.discard_all && discard!
   end
 end
+
+# == Schema Information
+#
+# Table name: groups
+#
+#  id                 :uuid             not null, primary key
+#  deleted_at         :datetime
+#  key                :string           not null
+#  value              :string           not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  billable_metric_id :uuid             not null
+#  parent_group_id    :uuid
+#
+# Indexes
+#
+#  index_groups_on_billable_metric_id                      (billable_metric_id)
+#  index_groups_on_billable_metric_id_and_parent_group_id  (billable_metric_id,parent_group_id)
+#  index_groups_on_deleted_at                              (deleted_at)
+#  index_groups_on_parent_group_id                         (parent_group_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (billable_metric_id => billable_metrics.id) ON DELETE => cascade
+#  fk_rails_...  (parent_group_id => groups.id)
+#
