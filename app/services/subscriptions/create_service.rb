@@ -91,7 +91,9 @@ module Subscriptions
     end
 
     def should_be_billed_today?(sub)
-      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
+      return false unless sub.subscription_at.today? || sub.subscription_at.past?
+
+      sub.active? && plan.pay_in_advance? && !sub.in_trial_period?
     end
 
     def create_subscription
