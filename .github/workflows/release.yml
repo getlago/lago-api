@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up docker
-        run: brew install docker
+        run: brew install docker docker-buildx
 
       - name: Sep up Docker Buildx
         uses: docker/setup-buildx-action@v2
