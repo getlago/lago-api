@@ -8,6 +8,7 @@ module Types
       field :api_key, String, null: false
       field :code, String, null: false
       field :external_account_id, String, null: true
+      field :failed_invoices_count, Integer, null: true
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
       field :name, String, null: false
@@ -26,6 +27,10 @@ module Types
         return nil unless object.api_key.include?('/')
 
         object.api_key.split('/')[0]
+      end
+
+      def failed_invoices_count
+        object.error_details.where(owner_type: 'Invoice').kept.count
       end
     end
   end
