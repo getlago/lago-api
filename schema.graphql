@@ -148,6 +148,7 @@ type AnrokIntegration {
   apiKey: String!
   code: String!
   externalAccountId: String
+  failedInvoicesCount: Int
   hasMappingsConfigured: Boolean
   id: ID!
   name: String!
