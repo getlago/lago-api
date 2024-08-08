@@ -8,7 +8,7 @@ on:
 jobs:
   run-spec:
     name: Run Spec
-    runs-on: ubuntu-latest
+    runs-on: lago-runner
     services:
       postgres:
         image: postgres:14-alpine
