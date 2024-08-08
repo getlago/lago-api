@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_08_080611) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_08_132042) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -777,6 +777,24 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_08_080611) do
     t.index ["tax_id"], name: "index_invoices_taxes_on_tax_id"
   end
 
+  create_table "lifetime_usages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "subscription_id", null: false
+    t.bigint "current_usage_amount_cents", default: 0, null: false
+    t.bigint "invoiced_usage_amount_cents", default: 0, null: false
+    t.boolean "recalculate_current_usage", default: false, null: false
+    t.boolean "recalculate_invoiced_usage", default: false, null: false
+    t.datetime "current_usage_amount_refreshed_at", precision: nil
+    t.datetime "invoiced_usage_amount_refreshed_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
+    t.index ["organization_id"], name: "index_lifetime_usages_on_organization_id"
+    t.index ["recalculate_current_usage"], name: "index_lifetime_usages_on_recalculate_current_usage", where: "((deleted_at IS NULL) AND (recalculate_current_usage = true))"
+    t.index ["recalculate_invoiced_usage"], name: "index_lifetime_usages_on_recalculate_invoiced_usage", where: "((deleted_at IS NULL) AND (recalculate_invoiced_usage = true))"
+    t.index ["subscription_id"], name: "index_lifetime_usages_on_subscription_id", unique: true
+  end
+
   create_table "memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "user_id", null: false
@@ -1181,6 +1199,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_08_080611) do
   add_foreign_key "invoices", "organizations"
   add_foreign_key "invoices_taxes", "invoices"
   add_foreign_key "invoices_taxes", "taxes"
+  add_foreign_key "lifetime_usages", "organizations"
+  add_foreign_key "lifetime_usages", "subscriptions"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "password_resets", "users"
