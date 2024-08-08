@@ -8,15 +8,12 @@ on:
         description: Version
         required: true
 jobs:
-  build-amd-image:
-    name: Build AMD Image
-    runs-on: self-hosted
+  build-arm-image:
+    name: Build ARM Image
+    runs-on: lago-runer-arm64
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -37,7 +34,42 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/arm64
+          push: true
+          tags: getlago/api:${{ steps.add_version.outputs.lago_version }}
+          build-args: |
+            SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
+            GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
+            GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
+            LAGO_OAUTH_URL=https://proxy.getlago.com
+
+  build-amd-image:
+    name: Build AMD Image
+    runs-on: lago-runner
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log In to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Add version into docker image
+        id: add_version
+        run: |
+          echo "${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" > LAGO_VERSION
+          echo "lago_version=${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
           push: true
           tags: getlago/api:${{ steps.add_version.outputs.lago_version }}
           build-args: |
