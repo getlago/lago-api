@@ -79,20 +79,17 @@ RSpec.describe Plans::UpdateService, type: :service do
       {
         id: threshold1.id,
         threshold_display_name: 'Threshold 1',
-        amount_cents: 1_000,
-        amount_currency: "USD"
+        amount_cents: 1_000
       },
       {
         id: threshold2.id,
         threshold_display_name: 'Threshold 2',
-        amount_cents: 10_000,
-        amount_currency: "CAD"
+        amount_cents: 10_000
       },
       {
         id: threshold3.id,
         threshold_display_name: 'Threshold 3',
         amount_cents: 100,
-        amount_currency: "JPY",
         recurring: true
       }
     ]
@@ -169,38 +166,23 @@ RSpec.describe Plans::UpdateService, type: :service do
 
               update_args[:usage_thresholds] << {
                 threshold_display_name: 'Threshold 4',
-                amount_cents: 4_000,
-                amount_currency: "JPY"
+                amount_cents: 4_000
               }
             end
 
             it 'updates the existing thresholds' do
               aggregate_failures do
-                expect(usage_thresholds.first).to have_attributes(
-                  amount_cents: 1_000,
-                  amount_currency: plan.amount_currency
-                )
-                expect(usage_thresholds.second).to have_attributes(
-                  amount_cents: 10_000,
-                  amount_currency: plan.amount_currency
-                )
-                expect(usage_thresholds.third).to have_attributes(
-                  amount_cents: 100,
-                  amount_currency: plan.amount_currency
-                )
-                expect(usage_thresholds.fourth).to have_attributes(
-                  amount_cents: 4_000,
-                  amount_currency: plan.amount_currency
-                )
+                expect(usage_thresholds.first).to have_attributes(amount_cents: 1_000)
+                expect(usage_thresholds.second).to have_attributes(amount_cents: 10_000)
+                expect(usage_thresholds.third).to have_attributes(amount_cents: 100)
+                expect(usage_thresholds.fourth).to have_attributes(amount_cents: 4_000)
               end
             end
 
             it 'creates new thresholds and deletes thresholds that are not in the args' do
               aggregate_failures do
                 expect(plan.usage_thresholds.count).to eq(4)
-                expect(plan.usage_thresholds.order(threshold_display_name: :asc).last.amount_cents)
-                  .to eq(123)
-
+                expect(plan.usage_thresholds.order(threshold_display_name: :asc).last.amount_cents).to eq(123)
                 expect(usage_thresholds.count).to eq(4)
                 expect(usage_thresholds.fourth).to have_attributes(amount_cents: 4_000)
               end

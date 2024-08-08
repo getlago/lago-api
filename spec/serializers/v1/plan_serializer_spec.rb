@@ -59,7 +59,6 @@ RSpec.describe ::V1::PlanSerializer do
         'lago_id' => usage_threshold.id,
         'threshold_display_name' => usage_threshold.threshold_display_name,
         'amount_cents' => usage_threshold.amount_cents,
-        'amount_currency' => usage_threshold.amount_currency,
         'recurring' => usage_threshold.recurring?,
         'created_at' => usage_threshold.created_at.iso8601,
         'updated_at' => usage_threshold.updated_at.iso8601
@@ -117,7 +116,6 @@ RSpec.describe ::V1::PlanSerializer do
         'lago_id' => usage_threshold.id,
         'threshold_display_name' => usage_threshold.threshold_display_name,
         'amount_cents' => usage_threshold.amount_cents,
-        'amount_currency' => usage_threshold.amount_currency,
         'recurring' => usage_threshold.recurring?,
         'created_at' => usage_threshold.created_at.iso8601,
         'updated_at' => usage_threshold.updated_at.iso8601

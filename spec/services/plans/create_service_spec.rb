@@ -90,18 +90,15 @@ RSpec.describe Plans::CreateService, type: :service do
       [
         {
           threshold_display_name: 'Threshold 1',
-          amount_cents: 1_000,
-          amount_currency: "CAD"
+          amount_cents: 1_000
         },
         {
           threshold_display_name: 'Threshold 2',
-          amount_cents: 10_000,
-          amount_currency: "USD"
+          amount_cents: 10_000
         },
         {
           threshold_display_name: 'Threshold 3',
           amount_cents: 100,
-          amount_currency: "EUR",
           recurring: true
         }
       ]
@@ -164,18 +161,9 @@ RSpec.describe Plans::CreateService, type: :service do
 
           aggregate_failures do
             expect(plan.usage_thresholds.count).to eq(3)
-            expect(usage_thresholds.first).to have_attributes(
-              amount_cents: 1_000,
-              amount_currency: 'EUR'
-            )
-            expect(usage_thresholds.second).to have_attributes(
-              amount_cents: 10_000,
-              amount_currency: 'EUR'
-            )
-            expect(usage_thresholds.third).to have_attributes(
-              amount_cents: 100,
-              amount_currency: 'EUR'
-            )
+            expect(usage_thresholds.first).to have_attributes(amount_cents: 1_000)
+            expect(usage_thresholds.second).to have_attributes(amount_cents: 10_000)
+            expect(usage_thresholds.third).to have_attributes(amount_cents: 100)
           end
         end
       end
