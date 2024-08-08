@@ -5,6 +5,7 @@ FactoryBot.define do
     customer
     plan
     status { :active }
+    lifetime_usage { build :lifetime_usage, subscription: instance }
     external_id { SecureRandom.uuid }
     started_at { 1.day.ago }
 
