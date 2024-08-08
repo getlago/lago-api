@@ -90,10 +90,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Add version into docker image
+        id: add_version
+        run: |
+          echo "lago_version=${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
       - name: Create version manifest and Push
         run: |
           docker manifest create \
-            getlago/api:${{ steps.build-amd-image.outputs.add_version.outputs.lago_version }} \
-            --amend getlago/api:${{ steps.build-amd-image.outputs.add_version.outputs.lago_version }}-amd64 \
-            --amend getlago/api:${{ steps.build-amd-image.outputs.add_version.outputs.lago_version }}-arm64
-          docker manifest push getlago/api:${{ steps.build-amd-image.outputs.add_version.outputs.lago_version }}
+            getlago/api:${{ steps.add_version.outputs.lago_version }} \
+            --amend getlago/api:${{ steps.add_version.outputs.lago_version }}-amd64 \
+            --amend getlago/api:${{ steps.add_version.outputs.lago_version }}-arm64
+          docker manifest push getlago/api:${{ steps.add_version.outputs.lago_version }}
