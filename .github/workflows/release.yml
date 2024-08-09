@@ -68,17 +68,23 @@ jobs:
 
       - name: Export Digest
         run: |
-          mkdir -p /tmp/digests
+          mkdir -p ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests
           digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          touch "./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests/${digest#sha256:}"
 
       - name: Upload Digest
         uses: actions/upload-artifact@v4
         with:
           name: digests-${{ env.PLATFORM_PAIR }}
-          path: /tmp/digests/*
+          path: ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests/*
           if-no-files-found: error
           retention-days: 1
+
+      - name: Clean up
+        if: always()
+        run: |
+          [ -e ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests ] && \
+          rm -rf ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests
 
   merge:
     name: Merge Images
@@ -88,7 +94,7 @@ jobs:
       - name: Download Digests
         uses: actions/download-artifact@v4
         with:
-          path: /tmp/digests
+          path: ./_tmp/${{ github.run_id}}/${{ github.run_attempt }}/digests
           pattern: digests-*
           merge-multiple: true
 
@@ -110,7 +116,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Create manifest and push
-        working-directory: /tmp/digests
+        working-directory: ./_tmp/${{ github.run_id }}/${{ github.run_attempt}}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
@@ -120,5 +126,7 @@ jobs:
           docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{  steps.meta.outputs.version }}`
 
       - name: Clean up
+        if: always()
         run: |
-          rm -rf /tmp/digests
+          [ -e ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests ] && \
+          rm -rf ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests
