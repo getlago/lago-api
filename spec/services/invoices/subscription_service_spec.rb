@@ -124,6 +124,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
+    it 'flags lifetime usage for refresh' do
+      invoice_service.call
+
+      expect(subscription.lifetime_usage.recalculate_invoiced_usage).to be(true)
+    end
+
     context 'when periodic but no active subscriptions' do
       it 'does not create any invoices' do
         subscription.terminated!
@@ -189,6 +195,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect do
           invoice_service.call
         end.to have_enqueued_job(SendWebhookJob).with('invoice.drafted', Invoice)
+      end
+
+      it 'does not flag lifetime usage for refresh' do
+        invoice_service.call
+
+        expect(subscription.lifetime_usage.recalculate_invoiced_usage).to be(false)
       end
     end
 
