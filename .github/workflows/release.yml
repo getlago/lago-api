@@ -9,11 +9,22 @@ on:
         required: true
 env:
   REGISTRY_IMAGE: getlago/api
+
 jobs:
   build-arm-image:
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
     name: Build ARM Image
-    runs-on: lago-runner-arm64
+    runs-on: ${{ matrix.platform }}
     steps:
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\\-}" >> $GITHUB_ENV
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -29,7 +40,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           version: latest
-          platforms: linux/arm64
 
       - name: Log In to Docker Hub
         uses: docker/login-action@v3
@@ -47,7 +57,7 @@ jobs:
         id: build
         with:
           context: .
-          platforms: linux/arm64
+          platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           build-args: |
@@ -65,45 +75,10 @@ jobs:
       - name: Upload Digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-arm64
+          name: digests-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
-
-  # build-amd-image:
-  #   name: Build AMD Image
-  #   runs-on: lago-runner
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v4
-
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
-
-  #     - name: Log In to Docker Hub
-  #       uses: docker/login-action@v3
-  #       with:
-  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-  #     - name: Add version into docker image
-  #       id: add_version
-  #       run: |
-  #         echo "${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" > LAGO_VERSION
-  #         echo "lago_version=${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-
-  #     - name: Build and push Docker image
-  #       uses: docker/build-push-action@v6
-  #       with:
-  #         context: .
-  #         platforms: linux/amd64
-  #         push: true
-  #         tags: getlago/api:${{ steps.add_version.outputs.lago_version }}-amd64
-  #         build-args: |
-  #           SEGMENT_WRITE_KEY=${{ secrets.SEGMENT_WRITE_KEY }}
-  #           GOCARDLESS_CLIENT_ID=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_ID }}
-  #           GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
-  #           LAGO_OAUTH_URL=https://proxy.getlago.com
 
   merge:
     name: Merge Images
@@ -147,27 +122,3 @@ jobs:
       - name: Clean up
         run: |
           rm -rf /tmp/digests
-
-  # create-manifest:
-  #   runs-on: lago-runner
-  #   needs: [build-arm-image, build-amd-image]
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Setup QEMU
-  #       uses: docker/setup-qemu-action@v3
-  #     - name: Login to Docker Hub
-  #       uses: docker/login-action@v3
-  #       with:
-  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-  #     - name: Add version into docker image
-  #       id: add_version
-  #       run: |
-  #         echo "lago_version=${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-  #     - name: Create version manifest and Push
-  #       run: |
-  #         docker manifest create \
-  #           getlago/api:${{ steps.add_version.outputs.lago_version }} \
-  #           --amend getlago/api:${{ steps.add_version.outputs.lago_version }}-amd64 \
-  #           --amend getlago/api:${{ steps.add_version.outputs.lago_version }}-arm64
-  #         docker manifest push getlago/api:${{ steps.add_version.outputs.lago_version }}
