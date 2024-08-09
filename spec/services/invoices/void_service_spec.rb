@@ -50,7 +50,7 @@ RSpec.describe Invoices::VoidService, type: :service do
     end
 
     context 'when the invoice is finalized' do
-      let(:invoice) { create(:invoice, status: :finalized, payment_status:, payment_overdue: true) }
+      let(:invoice) { create(:invoice, :subscription, status: :finalized, payment_status:, payment_overdue: true) }
 
       context 'when the payment status is succeeded' do
         let(:payment_status) { :succeeded }
@@ -82,6 +82,12 @@ RSpec.describe Invoices::VoidService, type: :service do
 
         it "marks the invoice's payment overdue as false" do
           expect { void_service.call }.to change(invoice, :payment_overdue).from(true).to(false)
+        end
+
+        it 'flags lifetime usage for refresh' do
+          void_service.call
+
+          expect(invoice.subscriptions.first.lifetime_usage.recalculate_invoiced_usage).to be(true)
         end
       end
     end

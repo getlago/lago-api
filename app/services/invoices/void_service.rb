@@ -15,6 +15,8 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
         invoice.void!
+
+        flag_lifetime_usage if invoice.subscription?
       end
 
       invoice.credits.each do |credit|
@@ -40,5 +42,14 @@ module Invoices
     private
 
     attr_reader :invoice
+
+    def flag_lifetime_usage
+      invoice.subscriptions.each do |subscription|
+        lifetime_usage = subscription.lifetime_usage
+        lifetime_usage ||= subscription.build_lifetime_usage(organization: subscription.organization)
+        lifetime_usage.recalculate_invoiced_usage = true
+        lifetime_usage.save!
+      end
+    end
   end
 end
