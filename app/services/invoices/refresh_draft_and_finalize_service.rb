@@ -19,6 +19,8 @@ module Invoices
         invoice.payment_due_date = payment_due_date
         invoice.save!
 
+        flag_lifetime_usage
+
         invoice.credit_notes.each(&:finalized!)
       end
 
@@ -67,6 +69,15 @@ module Invoices
     def should_deliver_email?
       License.premium? &&
         invoice.organization.email_settings.include?('invoice.finalized')
+    end
+
+    def flag_lifetime_usage
+      invoice.subscriptions.each do |subscription|
+        lifetime_usage = subscription.lifetime_usage
+        lifetime_usage ||= subscription.build_lifetime_usage(organization: subscription.organization)
+        lifetime_usage.recalculate_invoiced_usage = true
+        lifetime_usage.save!
+      end
     end
   end
 end
