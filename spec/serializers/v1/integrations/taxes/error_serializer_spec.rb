@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ::V1::Integrations::Taxes::FeeErrorSerializer do
+RSpec.describe ::V1::Integrations::Taxes::ErrorSerializer do
   subject(:serializer) { described_class.new(integration, options) }
 
   let(:integration) { create(:anrok_integration) }
@@ -11,9 +11,7 @@ RSpec.describe ::V1::Integrations::Taxes::FeeErrorSerializer do
       'provider_error' => {
         'error_message' => 'message',
         'error_code' => 'code'
-      },
-      'event_transaction_id' => '123',
-      'lago_charge_id' => '456'
+      }
     }.with_indifferent_access
   end
 
@@ -22,8 +20,6 @@ RSpec.describe ::V1::Integrations::Taxes::FeeErrorSerializer do
 
     aggregate_failures do
       expect(result['data']['tax_provider_code']).to eq(integration.code)
-      expect(result['data']['lago_charge_id']).to eq('456')
-      expect(result['data']['event_transaction_id']).to eq('123')
       expect(result['data']['provider_error']).to eq(options[:provider_error])
     end
   end
