@@ -29,6 +29,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       )
     end
     let(:subscriptions) { [subscription] }
+    let(:lifetime_usage) { create(:lifetime_usage, subscription: subscription) }
 
     let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
     let(:timestamp) { Time.zone.now.beginning_of_month }
@@ -40,6 +41,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     before do
       tax
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+      lifetime_usage
 
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
@@ -127,7 +129,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     it 'flags lifetime usage for refresh' do
       invoice_service.call
 
-      expect(subscription.lifetime_usage.recalculate_invoiced_usage).to be(true)
+      expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
     end
 
     context 'when periodic but no active subscriptions' do
@@ -200,7 +202,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       it 'does not flag lifetime usage for refresh' do
         invoice_service.call
 
-        expect(subscription.lifetime_usage.recalculate_invoiced_usage).to be(false)
+        expect(lifetime_usage.reload.recalculate_invoiced_usage).to be(false)
       end
     end
 

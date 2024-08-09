@@ -72,12 +72,7 @@ module Invoices
     end
 
     def flag_lifetime_usage
-      invoice.subscriptions.each do |subscription|
-        lifetime_usage = subscription.lifetime_usage
-        lifetime_usage ||= subscription.build_lifetime_usage(organization: subscription.organization)
-        lifetime_usage.recalculate_invoiced_usage = true
-        lifetime_usage.save!
-      end
+      LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
     end
   end
 end
