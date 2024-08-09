@@ -12,7 +12,7 @@ module Invoices
       return result.not_found_failure!(resource: 'invoice') unless invoice
       return result.not_allowed_failure!(code: 'invalid_status') unless invoice.failed?
 
-      invoice.error_details.tax_error.kept.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      invoice.error_details.tax_error.discard_all
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
 
       unless taxes_result.success?

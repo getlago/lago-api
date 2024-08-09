@@ -57,6 +57,8 @@ module Types
       field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
 
+      delegate :error_details, to: :object
+
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
       end
@@ -77,10 +79,6 @@ module Types
           syncable_type: 'Invoice',
           resource_type: :invoice
         )&.external_id
-      end
-
-      def error_details
-        object.error_details.kept
       end
     end
   end
