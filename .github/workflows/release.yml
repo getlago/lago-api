@@ -107,7 +107,7 @@ jobs:
 
   merge:
     runs-on: lago-runner
-    needs: [build-arm-image, build-amd-image]
+    needs: [build-arm-image]
     steps:
       - name: Download Digests
         uses: actions/download-artifact@v2
