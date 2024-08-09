@@ -116,10 +116,10 @@ module Invoices
     end
 
     def fetch_provider_taxes_result
-      taxes_result = if invoice.finalized?
-        Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:)
-      else
+      taxes_result = if invoice.draft?
         Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:)
+      else
+        Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:)
       end
       taxes_result.raise_if_error!
     end
