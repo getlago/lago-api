@@ -8,6 +8,7 @@ RSpec.describe Subscription, type: :model do
   let(:plan) { create(:plan) }
 
   it_behaves_like 'paper_trail traceable'
+  it { is_expected.to have_one(:lifetime_usage) }
 
   describe '#upgraded?' do
     let(:previous_subscription) { nil }
