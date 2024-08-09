@@ -11,19 +11,19 @@ env:
   REGISTRY_IMAGE: getlago/api
 
 jobs:
-  build-arm-image:
+  build-images:
     strategy:
       matrix:
         platform:
           - linux/amd64
           - linux/arm64
-    name: Build ARM Image
+    name: Build ${{ matrix.platform }} Image
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\\-}" >> $GITHUB_ENV
+          # echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -83,7 +83,7 @@ jobs:
   merge:
     name: Merge Images
     runs-on: lago-runner
-    needs: [build-arm-image]
+    needs: [build-images]
     steps:
       - name: Download Digests
         uses: actions/download-artifact@v4
