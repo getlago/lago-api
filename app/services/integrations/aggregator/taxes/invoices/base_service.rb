@@ -61,6 +61,19 @@ module Integrations
             end
           end
 
+          def process_void_response(body)
+            invoice_id = body['succeededInvoices']&.first.try(:[], 'id')
+
+            if invoice_id
+              result.invoice_id = invoice_id
+            else
+              code = body['failedInvoices'].first['validation_errors']['type']
+              message = 'Service failure'
+
+              result.service_failure!(code:, message:)
+            end
+          end
+
           def tax_breakdown(breakdown)
             breakdown.map do |b|
               if b['type'] == 'exempt'
