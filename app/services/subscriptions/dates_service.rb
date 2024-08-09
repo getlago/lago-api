@@ -236,6 +236,10 @@ module Subscriptions
       false
     end
 
+    def first_month_in_first_yearly_period?
+      false
+    end
+
     def compute_duration(from_date:)
       raise(NotImplementedError)
     end

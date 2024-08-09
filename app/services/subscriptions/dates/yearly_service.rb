@@ -9,6 +9,13 @@ module Subscriptions
         monthly_service.compute_from_date(billing_date).month == subscription_at.month
       end
 
+      def first_month_in_first_yearly_period?
+        return billing_date.month == 1 && billing_date.year == subscription_at.year if calendar?
+
+        billing_from_date = monthly_service.compute_from_date(billing_date)
+        billing_from_date.month == subscription_at.month && billing_from_date.year == subscription_at.year
+      end
+
       private
 
       def compute_base_date

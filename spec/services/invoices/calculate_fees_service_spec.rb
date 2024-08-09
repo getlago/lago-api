@@ -891,6 +891,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
+            expect(invoice.fees.subscription_kind.count).to eq(1)
             expect(invoice.fees.charge_kind.count).to eq(1)
           end
         end
@@ -1147,6 +1148,24 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           end
         end
 
+        context 'when started_at in the past' do
+          let(:timestamp) { DateTime.parse(started_at.to_s).end_of_year + 1.day }
+          let(:started_at) { Time.current - 2.months }
+          let(:created_at) { Time.current }
+
+          it 'updates the invoice accordingly' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.subscriptions.first).to eq(subscription)
+              expect(invoice.fees.subscription_kind.count).to eq(0)
+              expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
+            end
+          end
+        end
+
         context 'when plan is pay in advance' do
           let(:pay_in_advance) { true }
 
@@ -1165,6 +1184,44 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
                 to_datetime: match_datetime(DateTime.parse('2023-06-05 23:59:59')),
                 from_datetime: match_datetime(DateTime.parse('2022-06-06 00:00:00'))
               )
+            end
+          end
+        end
+
+        context 'when plan is pay in advance and started_at in the past' do
+          let(:pay_in_advance) { true }
+          let(:timestamp) { Time.current.end_of_month + 1.day }
+          let(:started_at) { Time.current - 2.months }
+          let(:created_at) { Time.current }
+
+          it 'updates the invoice accordingly' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.subscriptions.first).to eq(subscription)
+              expect(invoice.fees.subscription_kind.count).to eq(0)
+              expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
+            end
+          end
+        end
+
+        context 'when plan is pay in advance and started_at in the past and billed on second year' do
+          let(:pay_in_advance) { true }
+          let(:timestamp) { started_at + 1.year }
+          let(:started_at) { Time.current - 2.months }
+          let(:created_at) { Time.current }
+
+          it 'updates the invoice accordingly' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              expect(invoice.subscriptions.first).to eq(subscription)
+              expect(invoice.fees.subscription_kind.count).to eq(1)
+              expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
             end
           end
         end
