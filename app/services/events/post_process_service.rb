@@ -24,6 +24,7 @@ module Events
       event.save!
 
       expire_cached_charges(subscriptions)
+      flag_refresh_from_subscription
 
       handle_pay_in_advance
 
@@ -88,6 +89,10 @@ module Events
           Subscriptions::ChargeCacheService.new(subscription:, charge:).expire_cache
         end
       end
+    end
+
+    def flag_refresh_from_subscription
+      subscriptions.select(&:active?).each { |s| LifetimeUsages::FlagRefreshFromSubscriptionService.new(subscription: s).call }
     end
 
     def handle_pay_in_advance
