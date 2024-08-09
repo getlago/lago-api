@@ -38,14 +38,9 @@ module Invoices
         cn_subscription_ids = invoice.credit_notes.map do |cn|
           {credit_note_id: cn.id, subscription_id: cn.fees.pick(:subscription_id)}
         end
-        invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
-
         timestamp = fetch_timestamp
 
-        invoice.fees.destroy_all
-
-        invoice_subscriptions.destroy_all
-        invoice.applied_taxes.destroy_all
+        reset_invoice_values
 
         Invoices::CreateInvoiceSubscriptionService.call(
           invoice:,
@@ -67,6 +62,7 @@ module Invoices
           CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:)
         end
 
+        return calculate_result if tax_error?(calculate_result.error)
         calculate_result.raise_if_error!
 
         flag_lifetime_usage_for_refresh
@@ -100,6 +96,26 @@ module Invoices
 
     def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
+    end
+
+    def tax_error?(error)
+      error&.code == 'tax_error'
+    end
+
+    def reset_invoice_values
+      invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
+      invoice.fees.destroy_all
+      invoice_subscriptions.destroy_all
+      invoice.applied_taxes.destroy_all
+      invoice.error_details.discard_all
+
+      invoice.taxes_amount_cents = 0
+      invoice.total_amount_cents = 0
+      invoice.taxes_rate = 0
+      invoice.fees_amount_cents = 0
+      invoice.sub_total_excluding_taxes_amount_cents = 0
+      invoice.sub_total_including_taxes_amount_cents = 0
+      invoice.save!
     end
   end
 end
