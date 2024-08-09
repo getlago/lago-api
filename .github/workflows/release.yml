@@ -23,7 +23,7 @@ jobs:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
-          # echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout Repository
         uses: actions/checkout@v4
