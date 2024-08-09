@@ -3,6 +3,7 @@
 class ErrorDetail < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
+  default_scope -> { kept }
 
   belongs_to :owner, polymorphic: true
   belongs_to :organization

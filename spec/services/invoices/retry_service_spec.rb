@@ -129,7 +129,7 @@ RSpec.describe Invoices::RetryService, type: :service do
 
       it 'discards previous tax errors' do
         expect { retry_service.call }
-          .to change(invoice.error_details.tax_error.kept, :count).from(1).to(0)
+          .to change(invoice.error_details.tax_error, :count).from(1).to(0)
       end
 
       it 'updates the issuing date and payment due date' do
@@ -304,9 +304,11 @@ RSpec.describe Invoices::RetryService, type: :service do
       end
 
       it 'resolves old tax error and creates new one' do
+        old_error_id = invoice.reload.error_details.last.id
+        retry_service.call
         aggregate_failures do
-          expect { retry_service.call }.to change(invoice.error_details.tax_error, :count).from(1).to(2)
-          expect(invoice.error_details.tax_error.kept.count).to be(1)
+          expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
+          expect(invoice.error_details.tax_error.count).to be(1)
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
         end
       end
