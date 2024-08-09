@@ -16,7 +16,7 @@ module Invoices
         invoice.payment_overdue = false if invoice.payment_overdue?
         invoice.void!
 
-        flag_lifetime_usage if invoice.subscription?
+        flag_lifetime_usage_for_refresh
       end
 
       invoice.credits.each do |credit|
@@ -43,7 +43,7 @@ module Invoices
 
     attr_reader :invoice
 
-    def flag_lifetime_usage
+    def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
     end
   end

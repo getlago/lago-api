@@ -50,7 +50,8 @@ RSpec.describe Invoices::VoidService, type: :service do
     end
 
     context 'when the invoice is finalized' do
-      let(:invoice) { create(:invoice, :subscription, status: :finalized, payment_status:, payment_overdue: true) }
+      let(:invoice) { create(:invoice, :subscription, subscriptions:, status: :finalized, payment_status:, payment_overdue: true) }
+      let(:subscriptions) { create_list(:subscription, 1) }
 
       context 'when the payment status is succeeded' do
         let(:payment_status) { :succeeded }
@@ -85,6 +86,8 @@ RSpec.describe Invoices::VoidService, type: :service do
         end
 
         it 'flags lifetime usage for refresh' do
+          create(:usage_threshold, plan: subscriptions.first.plan)
+
           void_service.call
 
           expect(invoice.subscriptions.first.lifetime_usage.recalculate_invoiced_usage).to be(true)

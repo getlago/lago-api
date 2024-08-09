@@ -127,6 +127,8 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     end
 
     it 'flags lifetime usage for refresh' do
+      create(:usage_threshold, plan:)
+
       invoice_service.call
 
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
