@@ -38,6 +38,40 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
+    context 'with metadata' do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: '1',
+          name: 'Wallet1',
+          currency: 'EUR',
+          paid_credits: '10',
+          granted_credits: '10',
+          expiration_at:,
+          invoice_requires_successful_payment: true,
+          transaction_metadata: {key1: 'valid_value', key2: 'also_valid'}
+        }
+      end
+
+      before do
+        allow(WalletTransactions::CreateJob).to receive(:perform_later).and_call_original
+        post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+      end
+
+      it 'schedules a WalletTransactions::CreateJob with correct parameters' do
+        expect(WalletTransactions::CreateJob).to have_received(:perform_later).with(
+          organization_id: organization.id,
+          params: hash_including(
+            wallet_id: json[:wallet][:lago_id],
+            paid_credits: '10',
+            granted_credits: '10',
+            source: :manual,
+            metadata: {key1: 'valid_value', key2: 'also_valid'}
+          )
+        )
+      end
+    end
+
     context 'with recurring transaction rules' do
       around { |test| lago_premium!(&test) }
 
@@ -73,6 +107,38 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(recurring_rules.first[:granted_credits]).to eq('10.0')
           expect(recurring_rules.first[:method]).to eq('fixed')
           expect(recurring_rules.first[:trigger]).to eq('interval')
+        end
+      end
+
+      context 'with metadata' do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: '1',
+            name: 'Wallet1',
+            currency: 'EUR',
+            paid_credits: '10',
+            granted_credits: '10',
+            expiration_at:,
+            recurring_transaction_rules: [
+              {
+                trigger: 'interval',
+                interval: 'monthly',
+                metadata: {key1: 'valid_value', key2: 'also_valid'}
+              }
+            ]
+          }
+        end
+
+        it 'creates the rule with the metadata' do
+          post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:metadata]).to eq({key1: 'valid_value', key2: 'also_valid'})
+          end
         end
       end
 
@@ -229,6 +295,71 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(recurring_rules.first[:method]).to eq('target')
           expect(recurring_rules.first[:trigger]).to eq('interval')
           expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
+        end
+      end
+
+      context 'when metadata is set' do
+        let(:metadata) { {key1: 'valid_value', key2: 'also_valid'} }
+        let(:metadata_updated) { {key_update_1: 'updated_valid_value', key_update_2: 'updated_also_valid'} }
+        let(:recurring_transaction_rule) { create(:recurring_transaction_rule, metadata:, wallet:) }
+        let(:update_params) do
+          {
+            name: 'wallet1',
+            invoice_requires_successful_payment: true,
+            recurring_transaction_rules: [
+              {
+                lago_id: rule_id,
+                method: 'target',
+                trigger: 'interval',
+                interval: 'weekly',
+                paid_credits: '105',
+                granted_credits: '105',
+                target_ongoing_balance: '300',
+                metadata: metadata_updated
+              }
+            ]
+          }
+        end
+
+        context 'when the rule exists' do
+          let(:rule_id) { recurring_transaction_rule.id }
+
+          it 'updates the rule' do
+            put_with_token(
+              organization,
+              "/api/v1/wallets/#{wallet.id}",
+              {wallet: update_params}
+            )
+
+            recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+            aggregate_failures do
+              expect(response).to have_http_status(:success)
+              expect(recurring_rules).to be_present
+              expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
+              expect(recurring_rules.first[:metadata]).to eq(metadata_updated)
+            end
+          end
+        end
+
+        context 'when the rule does not exist' do
+          let(:rule_id) { 'does not exists in the db' }
+
+          it 'create a new rule and sets the metadata' do
+            put_with_token(
+              organization,
+              "/api/v1/wallets/#{wallet.id}",
+              {wallet: update_params}
+            )
+
+            recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+            aggregate_failures do
+              expect(response).to have_http_status(:success)
+              expect(recurring_rules).to be_present
+              expect(recurring_rules.first[:metadata]).to eq(metadata_updated)
+            end
+          end
         end
       end
 

@@ -14,6 +14,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
     }
   end
 
+  let(:metadata) { {} }
   let(:rule_params) do
     {
       interval: "monthly",
@@ -22,7 +23,8 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
       granted_credits: "5.0",
       started_at: "2024-05-30T12:48:26Z",
       target_ongoing_balance: "100.0",
-      trigger: "interval"
+      trigger: "interval",
+      metadata:
     }
   end
 
@@ -88,6 +90,18 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
 
           expect(wallet.recurring_transaction_rules.first).to have_attributes(
             invoice_requires_successful_payment: true
+          )
+        end
+      end
+
+      context 'when metadata is present' do
+        let(:metadata) { {'key1' => 'valid_value', 'key2' => 'also_valid'} }
+
+        it "creates rule with expected attributes" do
+          expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+          expect(wallet.recurring_transaction_rules.first).to have_attributes(
+            metadata: metadata
           )
         end
       end

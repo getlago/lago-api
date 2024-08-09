@@ -12,6 +12,7 @@ module Wallets
         return false unless valid_trigger?
         return false unless valid_method?
         return false unless valid_credits?
+        return false unless valid_metadata?
 
         true
       end
@@ -55,6 +56,10 @@ module Wallets
 
       def valid_decimal?(value)
         ::Validators::DecimalAmountService.new(value).valid_decimal?
+      end
+
+      def valid_metadata?
+        ::Validators::MetadataValidator.new(params[:metadata]).valid?
       end
     end
   end

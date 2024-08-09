@@ -26,7 +26,8 @@ module Wallets
           method:,
           started_at: rule_params[:started_at],
           target_ongoing_balance: rule_params[:target_ongoing_balance],
-          trigger: rule_params[:trigger].to_s
+          trigger: rule_params[:trigger].to_s,
+          metadata: rule_params[:metadata] || {}
         }
 
         attributes[:invoice_requires_successful_payment] = if rule_params.key?(:invoice_requires_successful_payment)

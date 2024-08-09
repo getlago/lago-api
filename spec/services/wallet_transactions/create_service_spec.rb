@@ -28,13 +28,15 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     let(:paid_credits) { '10.00' }
     let(:granted_credits) { '15.00' }
     let(:voided_credits) { '3.00' }
+    let(:metadata) { {} }
     let(:params) do
       {
         wallet_id: wallet.id,
         paid_credits:,
         granted_credits:,
         voided_credits:,
-        source: :manual
+        source: :manual,
+        metadata:
       }
     end
 
@@ -78,6 +80,18 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       expect do
         create_service.call
       end.to have_enqueued_job(SendWebhookJob).thrice.with('wallet_transaction.created', WalletTransaction)
+    end
+
+    context 'with valid metadata' do
+      let(:metadata) { {key1: 'valid_value', key2: 'also_valid'} }
+
+      it 'processes the transaction normally and includes the metadata' do
+        expect(create_service).to be_success
+        transactions = WalletTransaction.where(wallet_id: wallet.id)
+        expect(transactions.first.metadata).to include('key1' => 'valid_value', 'key2' => 'also_valid')
+        expect(transactions.second.metadata).to include('key1' => 'valid_value', 'key2' => 'also_valid')
+        expect(transactions.third.metadata).to include('key1' => 'valid_value', 'key2' => 'also_valid')
+      end
     end
 
     context 'with validation error' do

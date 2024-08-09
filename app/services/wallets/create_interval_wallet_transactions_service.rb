@@ -6,7 +6,7 @@ module Wallets
       recurring_transaction_rules.each do |recurring_transaction_rule|
         wallet = recurring_transaction_rule.wallet
 
-        WalletTransactions::CreateJob.perform_later(
+        job_params = {
           organization_id: wallet.organization.id,
           params: {
             wallet_id: wallet.id,
@@ -15,7 +15,10 @@ module Wallets
             source: :interval,
             invoice_requires_successful_payment: recurring_transaction_rule.invoice_requires_successful_payment?
           }
-        )
+        }
+        job_params[:params][:metadata] = recurring_transaction_rule.metadata unless recurring_transaction_rule.metadata.empty?
+
+        WalletTransactions::CreateJob.perform_later(job_params)
       end
     end
 

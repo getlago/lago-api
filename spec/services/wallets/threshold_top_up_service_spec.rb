@@ -25,7 +25,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
         trigger: "threshold",
         threshold_credits: "6.0",
         paid_credits: "10.0",
-        granted_credits: "3.0"
+        granted_credits: "3.0",
+        metadata: {'key1' => 'valid_value', 'key2' => 'also_valid'}
       )
     end
 
@@ -40,7 +41,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
             paid_credits: "10.0",
             granted_credits: "3.0",
             source: :threshold,
-            invoice_requires_successful_payment: false
+            invoice_requires_successful_payment: false,
+            metadata: {'key1' => 'valid_value', 'key2' => 'also_valid'}
           }
         )
     end

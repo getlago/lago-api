@@ -19,7 +19,8 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       {
         wallet_id:,
         paid_credits: '10',
-        granted_credits: '10'
+        granted_credits: '10',
+        metadata: {key1: 'valid_value', key2: 'also_valid'}
       }
     end
 
@@ -30,9 +31,13 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
 
       expect(json[:wallet_transactions].count).to eq(2)
       expect(json[:wallet_transactions].first[:lago_id]).to be_present
+      expect(json[:wallet_transactions].first[:metadata]).to be_present
       expect(json[:wallet_transactions].second[:lago_id]).to be_present
+      expect(json[:wallet_transactions].second[:metadata]).to be_present
       expect(json[:wallet_transactions].first[:status]).to eq('pending')
+      expect(json[:wallet_transactions].first[:metadata]).to include(key1: 'valid_value', key2: 'also_valid')
       expect(json[:wallet_transactions].second[:status]).to eq('settled')
+      expect(json[:wallet_transactions].second[:metadata]).to include(key1: 'valid_value', key2: 'also_valid')
       expect(json[:wallet_transactions].first[:lago_wallet_id]).to eq(wallet.id)
       expect(json[:wallet_transactions].second[:lago_wallet_id]).to eq(wallet.id)
     end
@@ -42,7 +47,8 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       let(:params) do
         {
           wallet_id:,
-          voided_credits: '10'
+          voided_credits: '10',
+          metadata: {key1: 'valid_value', key2: 'also_valid'}
         }
       end
 
@@ -56,7 +62,8 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
           lago_id: String,
           status: 'settled',
           transaction_status: 'voided',
-          lago_wallet_id: wallet.id
+          lago_wallet_id: wallet.id,
+          metadata: {key1: 'valid_value', key2: 'also_valid'}
         )
         expect(wallet.reload.credits_balance).to eq(10)
       end

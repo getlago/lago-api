@@ -15,7 +15,8 @@ module V1
           threshold_credits: model.threshold_credits,
           trigger: model.trigger,
           created_at: model.created_at.iso8601,
-          invoice_requires_successful_payment: model.invoice_requires_successful_payment?
+          invoice_requires_successful_payment: model.invoice_requires_successful_payment?,
+          metadata: model.metadata
         }
       end
     end

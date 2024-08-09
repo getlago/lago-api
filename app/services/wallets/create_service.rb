@@ -47,7 +47,8 @@ module Wallets
           wallet_id: wallet.id,
           paid_credits: params[:paid_credits],
           granted_credits: params[:granted_credits],
-          source: :manual
+          source: :manual,
+          metadata: params[:transaction_metadata]
         }
       )
 
