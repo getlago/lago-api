@@ -33,5 +33,19 @@ FactoryBot.define do
     trait :failed do
       status { :failed }
     end
+
+    trait :subscription do
+      transient do
+        subscriptions { [create(:subscription)] }
+      end
+
+      invoice_type { :subscription }
+
+      after :create do |invoice, evaluator|
+        evaluator.subscriptions.each do |subscription|
+          create(:invoice_subscription, invoice:, subscription:)
+        end
+      end
+    end
   end
 end
