@@ -106,11 +106,12 @@ jobs:
   #           LAGO_OAUTH_URL=https://proxy.getlago.com
 
   merge:
+    name: Merge Images
     runs-on: lago-runner
     needs: [build-arm-image]
     steps:
       - name: Download Digests
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
           pattern: digests-*
