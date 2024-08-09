@@ -12,7 +12,7 @@ env:
 jobs:
   build-arm-image:
     name: Build ARM Image
-    runs-on: lago-runer-arm64
+    runs-on: lago-runner-arm64
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -105,31 +105,47 @@ jobs:
   #           GOCARDLESS_CLIENT_SECRET=${{ secrets.PRODUCTION_GOCARDLESS_CLIENT_SECRET }}
   #           LAGO_OAUTH_URL=https://proxy.getlago.com
 
-  # merge:
-  #   runs-on: lago-runner
-  #   needs: [build-arm-image, build-amd-image]
-  #   steps:
-  #     - name: Download Digests
-  #       uses: actions/download-artifact@v2
-  #       with:
-  #         path: /tmp/digests
-  #         pattern: digests-*
-  #         merge-multiple: true
+  merge:
+    runs-on: lago-runner
+    needs: [build-arm-image, build-amd-image]
+    steps:
+      - name: Download Digests
+        uses: actions/download-artifact@v2
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
 
-  #     - name: Set up Docker buildx
-  #       uses: docker/setup-buildx-action@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+          tags: |
+            type=raw,value=${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}
 
-  #     - name: Log in to Docker Hub
-  #       uses: docker/login-action@v3
-  #       with:
-  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3
 
-  #     - name: Create manifest and push
-  #       working-directory: /tmp/digests
-  #       run: |
-  #         docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-  #           $(printf
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Create manifest and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect Image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{  steps.meta.outputs.version }}`
+
+      - name: Clean up
+        run: |
+          rm -rf /tmp/digests
 
   # create-manifest:
   #   runs-on: lago-runner
