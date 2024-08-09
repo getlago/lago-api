@@ -37,6 +37,8 @@ module Invoices
 
         fee_result.raise_if_error!
         invoice.reload
+
+        flag_lifetime_usage if invoice.finalized?
         fee_result
       end
       result.non_invoiceable_fees = fee_result.non_invoiceable_fees
@@ -115,6 +117,15 @@ module Invoices
     def should_deliver_finalized_email?
       License.premium? &&
         customer.organization.email_settings.include?('invoice.finalized')
+    end
+
+    def flag_lifetime_usage
+      active_subscriptions.each do |subscription|
+        lifetime_usage = subscription.lifetime_usage
+        lifetime_usage ||= subscription.build_lifetime_usage(organization: subscription.organization)
+        lifetime_usage.recalculate_invoiced_usage = true
+        lifetime_usage.save!
+      end
     end
   end
 end
