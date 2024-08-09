@@ -432,6 +432,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
       context 'when plan is not the same' do
         context 'when we upgrade the plan' do
+          before do
+            subscription.mark_as_active!
+          end
+
           let(:plan) { create(:plan, amount_cents: 200, organization:) }
           let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
           let(:name) { 'invoice display name new' }
@@ -593,6 +597,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         end
 
         context 'when we downgrade the plan' do
+          before do
+            subscription.mark_as_active!
+          end
+
           let(:plan) { create(:plan, amount_cents: 50, organization:) }
           let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
           let(:name) { 'invoice display name new' }
