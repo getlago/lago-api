@@ -49,6 +49,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription).to be_active
         expect(subscription.external_id).to eq(external_id)
         expect(subscription).to be_anniversary
+        expect(subscription.lifetime_usage).to be_present
       end
     end
 
@@ -326,6 +327,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           expect(subscription).to be_pending
           expect(subscription.external_id).to eq(external_id)
           expect(subscription).to be_anniversary
+          expect(subscription.lifetime_usage).not_to be_present
         end
       end
     end
@@ -348,6 +350,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           expect(subscription).to be_active
           expect(subscription.external_id).to eq(external_id)
           expect(subscription).to be_anniversary
+          expect(subscription.lifetime_usage).to be_present
         end
       end
     end
@@ -435,6 +438,13 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
           it 'terminates the existing subscription' do
             expect { create_service.call }.to change { subscription.reload.status }.from('active').to('terminated')
+          end
+
+          it 'moves the lifetime_usage to the new subscription' do
+            lifetime_usage = subscription.lifetime_usage
+            result = create_service.call
+            expect(result.subscription.lifetime_usage).to eq(lifetime_usage.reload)
+            expect(subscription.reload.lifetime_usage).to be_nil
           end
 
           it 'sends terminated and started subscription webhooks', :aggregate_failures do
@@ -601,6 +611,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(next_subscription.subscription_at).to eq(subscription.subscription_at)
               expect(next_subscription.previous_subscription).to eq(subscription)
               expect(next_subscription.ending_at).to eq(subscription.ending_at)
+              expect(next_subscription.lifetime_usage).to be_nil
             end
           end
 
@@ -611,6 +622,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(result.subscription.id).to eq(subscription.id)
               expect(result.subscription).to be_active
               expect(result.subscription.next_subscription).to be_present
+              expect(result.subscription.lifetime_usage).to be_present
             end
           end
 

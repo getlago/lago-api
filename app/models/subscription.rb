@@ -13,6 +13,7 @@ class Subscription < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :invoices, through: :invoice_subscriptions
   has_many :fees
+  has_one :lifetime_usage, autosave: true
 
   validates :external_id, :billing_time, presence: true
   validate :validate_external_id, on: :create
@@ -52,6 +53,7 @@ class Subscription < ApplicationRecord
 
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
+    self.lifetime_usage = previous_subscription&.lifetime_usage || build_lifetime_usage(organization: organization)
     active!
   end
 
@@ -157,12 +159,5 @@ class Subscription < ApplicationRecord
     number_od_days -= 1
 
     number_od_days.negative? ? 0 : number_od_days
-  end
-
-  def lifetime_usage
-    LifetimeUsage.find_by(
-      organization_id: organization.id,
-      external_subscription_id: external_id
-    )
   end
 end

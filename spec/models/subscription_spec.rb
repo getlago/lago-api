@@ -8,6 +8,7 @@ RSpec.describe Subscription, type: :model do
   let(:plan) { create(:plan) }
 
   it_behaves_like 'paper_trail traceable'
+  it { is_expected.to have_one(:lifetime_usage) }
 
   describe '#upgraded?' do
     let(:previous_subscription) { nil }
@@ -460,18 +461,6 @@ RSpec.describe Subscription, type: :model do
       it 'takes the daylight saving time into account' do
         expect(result).to eq(29)
       end
-    end
-  end
-
-  describe '#lifetime_usage' do
-    it 'returns nil if there is none' do
-      expect(subscription.lifetime_usage).to be_nil
-    end
-
-    it 'returns the single lifetime usage for this subscription' do
-      lifetime_usage = create(:lifetime_usage, subscription:)
-
-      expect(subscription.lifetime_usage).to eq(lifetime_usage)
     end
   end
 end
