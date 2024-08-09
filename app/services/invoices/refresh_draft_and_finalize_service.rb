@@ -19,7 +19,7 @@ module Invoices
         invoice.payment_due_date = payment_due_date
         invoice.save!
 
-        flag_lifetime_usage
+        flag_lifetime_usage_for_refresh
 
         invoice.credit_notes.each(&:finalized!)
       end
@@ -71,7 +71,7 @@ module Invoices
         invoice.organization.email_settings.include?('invoice.finalized')
     end
 
-    def flag_lifetime_usage
+    def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
     end
   end

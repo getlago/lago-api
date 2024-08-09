@@ -2,7 +2,6 @@
 
 module LifetimeUsages
   class FlagRefreshFromInvoiceService < BaseService
-
     def initialize(invoice:)
       @invoice = invoice
       super

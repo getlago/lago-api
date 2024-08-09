@@ -92,7 +92,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-
     it 'flags lifetime usage for refresh' do
       finalize_service.call
 
