@@ -165,6 +165,12 @@ module Api
                 ]
               },
               {tax_codes: []}
+            ],
+            usage_thresholds: [
+              :id,
+              :threshold_display_name,
+              :amount_cents,
+              :recurring
             ]
           }
         ]

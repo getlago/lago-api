@@ -40,7 +40,7 @@ module Api
 
       def show
         plan = current_organization.plans.parents
-          .includes(charges: {filters: {values: :billable_metric_filter}})
+          .includes(:usage_thresholds, charges: {filters: {values: :billable_metric_filter}})
           .find_by(code: params[:code])
         return not_found_error(resource: 'plan') unless plan
 
@@ -55,11 +55,11 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            plans.includes(charges: {filters: {values: :billable_metric_filter}}),
+            plans.includes(:usage_thresholds, charges: {filters: {values: :billable_metric_filter}}),
             ::V1::PlanSerializer,
             collection_name: 'plans',
             meta: pagination_metadata(plans),
-            includes: %i[charges taxes minimum_commitment]
+            includes: %i[charges usage_thresholds taxes minimum_commitment]
           )
         )
       end
@@ -108,6 +108,12 @@ module Api
               ]
             },
             {tax_codes: []}
+          ],
+          usage_thresholds: [
+            :id,
+            :threshold_display_name,
+            :amount_cents,
+            :recurring
           ]
         )
       end
@@ -117,7 +123,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: 'plan',
-            includes: %i[charges taxes minimum_commitment]
+            includes: %i[charges usage_thresholds taxes minimum_commitment]
           )
         )
       end

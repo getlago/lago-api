@@ -31,10 +31,21 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           minimum_commitment: {
             invoice_display_name: commitment_invoice_display_name,
             amount_cents: commitment_amount_cents
-          }
+          },
+          usage_thresholds: [
+            id: usage_threshold.id,
+            amount_cents: override_amount_cents,
+            threshold_display_name: override_display_name
+          ]
         }
       }
     end
+
+    let(:override_amount_cents) { 777 }
+    let(:override_display_name) { 'Overriden Threshold 12' }
+    let(:usage_threshold) { create(:usage_threshold, plan:) }
+
+    before { usage_threshold }
 
     it 'returns a success', :aggregate_failures do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: 'foo')
@@ -66,6 +77,25 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(json[:subscription][:plan][:minimum_commitment]).to include(
           invoice_display_name: commitment_invoice_display_name,
           amount_cents: commitment_amount_cents
+        )
+      end
+    end
+
+    context 'when progressive billing premium integration is present' do
+      around { |test| lago_premium!(&test) }
+
+      before do
+        organization.update!(premium_integrations: ['progressive_billing'])
+      end
+
+      it 'creates subscription with an overriden plan with usage thresholds' do
+        post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
+
+        expect(response).to have_http_status(:ok)
+
+        expect(json[:subscription][:plan][:usage_thresholds].first).to include(
+          amount_cents: override_amount_cents,
+          threshold_display_name: override_display_name
         )
       end
     end
@@ -198,12 +228,24 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           minimum_commitment: {
             invoice_display_name: commitment_invoice_display_name,
             amount_cents: 1234
-          }
+          },
+          usage_thresholds: [
+            id: usage_threshold.id,
+            amount_cents: override_amount_cents,
+            threshold_display_name: override_display_name
+          ]
         }
       }
     end
 
-    before { subscription }
+    let(:override_amount_cents) { 999 }
+    let(:override_display_name) { 'Overriden Threshold 1' }
+    let(:usage_threshold) { create(:usage_threshold, plan:) }
+
+    before do
+      subscription
+      usage_threshold
+    end
 
     it 'updates a subscription', :aggregate_failures do
       put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}", {subscription: update_params})
@@ -221,6 +263,25 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         invoice_display_name: commitment_invoice_display_name,
         amount_cents: commitment_amount_cents
       )
+    end
+
+    context 'when progressive billing premium integration is present' do
+      around { |test| lago_premium!(&test) }
+
+      before do
+        organization.update!(premium_integrations: ['progressive_billing'])
+      end
+
+      it 'updates subscription with an overriden plan with usage thresholds' do
+        put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}", {subscription: update_params})
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:subscription][:plan][:usage_thresholds].first).to include(
+          amount_cents: override_amount_cents,
+          threshold_display_name: override_display_name
+        )
+      end
     end
 
     context 'with not existing subscription' do
