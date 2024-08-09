@@ -56,6 +56,12 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               properties { amount }
             }
           }
+          usageThresholds {
+            id,
+            amountCents,
+            thresholdDisplayName,
+            recurring
+          }
         }
       }
     GQL
@@ -77,6 +83,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   let(:tax) { create(:tax, organization:) }
 
   around { |test| lago_premium!(&test) }
+
+  before { organization.update!(premium_integrations: ['progressive_billing']) }
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
@@ -198,6 +206,21 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
                 ]
               }
             }
+          ],
+          usageThresholds: [
+            {
+              amountCents: 100,
+              thresholdDisplayName: 'Threshold 1'
+            },
+            {
+              amountCents: 200,
+              thresholdDisplayName: 'Threshold 2'
+            },
+            {
+              amountCents: 1,
+              thresholdDisplayName: 'Threshold 3 Recurring',
+              recurring: true
+            }
           ]
         }
       }
@@ -215,6 +238,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       expect(result_data['amountCents']).to eq('200')
       expect(result_data['taxes'][0]['code']).to eq(plan_tax.code)
       expect(result_data['charges'].count).to eq(6)
+      expect(result_data['usageThresholds'].count).to eq(3)
 
       standard_charge = result_data['charges'][0]
       expect(standard_charge['properties']['amount']).to eq('100.00')
@@ -259,6 +283,23 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
         'amountCents' => minimum_commitment_amount_cents.to_s
       )
       expect(result_data['minimumCommitment']['taxes'].count).to eq(1)
+
+      thresholds = result_data['usageThresholds'].sort_by { |threshold| threshold['thresholdDisplayName'] }
+      expect(thresholds).to include hash_including(
+        'thresholdDisplayName' => 'Threshold 1',
+        'amountCents' => '100',
+        'recurring' => false
+      )
+      expect(thresholds).to include hash_including(
+        'thresholdDisplayName' => 'Threshold 2',
+        'amountCents' => '200',
+        'recurring' => false
+      )
+      expect(thresholds).to include hash_including(
+        'thresholdDisplayName' => 'Threshold 3 Recurring',
+        'amountCents' => '1',
+        'recurring' => true
+      )
     end
   end
 end

@@ -20,6 +20,7 @@ module Types
       field :parent, Types::Plans::Object, null: true
       field :pay_in_advance, Boolean, null: false
       field :trial_period, Float
+      field :usage_thresholds, [Types::UsageThresholds::Object]
 
       field :charges, [Types::Charges::Object]
       field :taxes, [Types::Taxes::Object]

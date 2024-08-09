@@ -28,4 +28,5 @@ RSpec.describe Types::Plans::Object do
   it { is_expected.to have_field(:customers_count).of_type('Int!') }
   it { is_expected.to have_field(:draft_invoices_count).of_type('Int!') }
   it { is_expected.to have_field(:subscriptions_count).of_type('Int!') }
+  it { is_expected.to have_field(:usage_thresholds).of_type('[UsageThreshold!]') }
 end

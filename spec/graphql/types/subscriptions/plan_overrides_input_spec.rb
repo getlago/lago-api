@@ -14,4 +14,5 @@ RSpec.describe Types::Subscriptions::PlanOverridesInput do
   it { is_expected.to accept_argument(:name).of_type('String') }
   it { is_expected.to accept_argument(:tax_codes).of_type('[String!]') }
   it { is_expected.to accept_argument(:trial_period).of_type('Float') }
+  it { is_expected.to accept_argument(:usage_thresholds).of_type('[UsageThresholdOverridesInput!]') }
 end
