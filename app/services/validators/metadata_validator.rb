@@ -3,9 +3,9 @@
 module Validators
   class MetadataValidator
     DEFAULT_CONFIG = {
-      max_keys: 10,
+      max_keys: 5,
       max_key_length: 20,
-      max_value_length: 100
+      max_value_length: 40
     }.freeze
 
     attr_reader :metadata, :errors, :config
@@ -22,6 +22,8 @@ module Validators
       validate_size
       validate_keys_and_values
       validate_structure
+      validate_allowed_keys
+      validate_key_value_pair
 
       errors.empty?
     end
@@ -35,7 +37,10 @@ module Validators
     end
 
     def validate_keys_and_values
-      metadata.each do |key, value|
+      metadata.each do |item|
+        key = item[:key]
+        value = item[:value]
+
         if key.length > config[:max_key_length]
           errors[:metadata] = 'key_too_long'
         end
@@ -46,9 +51,26 @@ module Validators
     end
 
     def validate_structure
-      metadata.each do |_, value|
+      metadata.each do |item|
+        value = item[:value]
         if value.is_a?(Hash) || value.is_a?(Array)
           errors[:metadata] = 'nested_structure_not_allowed'
+        end
+      end
+    end
+
+    def validate_allowed_keys
+      metadata.each do |item|
+        unless item.keys.sort == [:key, :value]
+          errors[:metadata] = 'invalid_keys'
+        end
+      end
+    end
+
+    def validate_key_value_pair
+      metadata.each do |item|
+        if item[:key].nil? || item[:value].nil?
+          errors[:metadata] = 'missing_key_or_value'
         end
       end
     end
