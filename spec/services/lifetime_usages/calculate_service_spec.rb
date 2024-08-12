@@ -13,5 +13,12 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
   let(:invoices) { create_list(:invoice, 2, :finalized, subscription:, amounts_cents: [1000, 2000]) }
 
   describe '#call' do
+    context "without previous invoices" do
+      it "recalculates the invoiced_usage as zero" do
+        result = service.call
+
+        expect(result.lifetime_usage.invoiced_usage_amount_cents).to be_zero
+      end
+    end
   end
 end

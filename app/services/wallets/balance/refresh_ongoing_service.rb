@@ -12,9 +12,8 @@ module Wallets
         total_amount = customer.active_subscriptions.sum do |subscription|
           ::Invoices::CustomerUsageService.call(
             nil, # current_user
-            customer_id: customer.external_id,
-            subscription_id: subscription.external_id,
-            organization_id: customer.organization_id
+            customer: customer,
+            subscription: subscription
           ).invoice.total_amount
         end
         usage_credits_amount = total_amount.to_f.fdiv(wallet.rate_amount)

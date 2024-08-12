@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
   subject(:usage_service) do
-    described_class.new(membership.user, customer_id:, subscription_id:)
+    described_class.with_ids(membership.user, customer_id:, subscription_id:)
   end
 
   let(:membership) { create(:membership) }

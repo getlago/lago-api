@@ -21,6 +21,8 @@ module LifetimeUsages
 
     private
 
+    delegate :subscription, to: :lifetime_usage
+
     def calculate_invoiced_usage_amount_cents
       invoices = subscription.invoices.finalized
       invoices.sum { |invoice| invoice.fees.charge.sum(:amount_cents) }
@@ -28,9 +30,9 @@ module LifetimeUsages
 
     def calculate_current_usage_amount_cents
       result = Invoices::CustomerUsageService.call(
-        nil,
-        customer_id: lifetime_usage.subscription.customer_id,
-        subscription_id: lifetime_usage.subscription_id
+        nil, # current_user
+        customer: subscription.customer,
+        subscription: subscription
       )
       result.usage.amount_cents
     end

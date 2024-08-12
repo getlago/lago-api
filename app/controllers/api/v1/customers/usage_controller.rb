@@ -6,12 +6,11 @@ module Api
       class UsageController < Api::BaseController
         def current
           result = ::Invoices::CustomerUsageService
-            .call(
-              nil,
-              customer_id: params[:customer_external_id],
-              subscription_id: params[:external_subscription_id],
+            .with_external_ids(
+              customer_external_id: params[:customer_external_id],
+              external_subscription_id: params[:external_subscription_id],
               organization_id: current_organization.id
-            )
+            ).call
 
           if result.success?
             render(
