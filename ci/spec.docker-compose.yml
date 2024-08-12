@@ -27,7 +27,7 @@ services:
       - redis
     build:
       context: .
-      dockerfile: ./Dockerfile.dev
+      dockerfile: ../Dockerfile.dev
     environment:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@db:5432/lago"
