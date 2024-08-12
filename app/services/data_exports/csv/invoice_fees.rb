@@ -6,24 +6,50 @@ require 'forwardable'
 module DataExports
   module Csv
     class InvoiceFees < Invoices
+      DEFAULT_BATCH_SIZE = 50
+
       extend Forwardable
+
+      def initialize(
+        data_export:,
+        invoice_serializer_klass: V1::InvoiceSerializer,
+        fee_serializer_klass: V1::FeeSerializer,
+        subscription_serializer_klass: V1::SubscriptionSerializer,
+        output: Tempfile.create
+      )
+
+        @data_export = data_export
+        @invoice_serializer_klass = invoice_serializer_klass
+        @fee_serializer_klass = fee_serializer_klass
+        @subscription_serializer_klass = subscription_serializer_klass
+        @output = output
+        @batch_size = DEFAULT_BATCH_SIZE
+      end
 
       def call
         ::CSV.open(output, 'wb', headers: true) do |csv|
           csv << headers
 
           invoices.find_each(batch_size:).lazy.each do |invoice|
-            serialized_invoice = serializer_klass
-              .new(invoice, includes: %i[fees subscriptions])
-              .serialize
+            serialized_invoice = invoice_serializer_klass.new(invoice).serialize
 
-            subscriptions = serialized_invoice[:subscriptions].index_by do |sub|
-              sub[:lago_id]
-            end
+            invoice
+              .fees
+              .includes(
+                :invoice,
+                :subscription,
+                :charge,
+                :true_up_fee,
+                :customer,
+                :billable_metric,
+                {charge_filter: {values: :billable_metric_filter}}
+              )
+              .find_each(batch_size:)
+              .lazy
+              .each do |fee|
+              serialized_fee = fee_serializer_klass.new(fee).serialize
 
-            serialized_invoice[:fees].each do |serialized_fee|
-              subscription_id = serialized_fee[:lago_subscription_id]
-              serialized_subscription = subscriptions[subscription_id]
+              serialized_subscription = fee.subscription ? subscription_serializer_klass.new(fee.subscription).serialize : {}
 
               csv << [
                 serialized_invoice[:lago_id],
@@ -37,8 +63,8 @@ module DataExports
                 serialized_fee.dig(:item, :invoice_display_name),
                 serialized_fee.dig(:item, :filter_invoice_display_name),
                 serialized_fee.dig(:item, :grouped_by),
-                serialized_subscription&.dig(:external_id),
-                serialized_subscription&.dig(:plan_code),
+                serialized_subscription[:external_id],
+                serialized_subscription[:plan_code],
                 serialized_fee[:from_date],
                 serialized_fee[:to_date],
                 serialized_fee[:total_amount_currency],
@@ -53,6 +79,8 @@ module DataExports
       end
 
       private
+
+      attr_reader :invoice_serializer_klass, :fee_serializer_klass, :subscription_serializer_klass
 
       def headers
         %w[

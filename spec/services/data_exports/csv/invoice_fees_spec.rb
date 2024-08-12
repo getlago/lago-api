@@ -51,9 +51,20 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   end
 
   let(:tempfile) { Tempfile.create("test_export") }
-  let(:serializer_klass) { class_double('V1::InvoiceSerializer') }
+  let(:invoice_serializer_klass) { class_double('V1::InvoiceSerializer') }
+  let(:fee_serializer_klass) { class_double('V1::FeeSerializer') }
+  let(:subscription_serializer_klass) { class_double('V1::SubscriptionSerializer') }
+
   let(:invoice_serializer) do
     instance_double('V1::InvoiceSerializer', serialize: serialized_invoice)
+  end
+
+  let(:fee_serializer) do
+    instance_double('V1::FeeSerializer', serialize: serialized_fee)
+  end
+
+  let(:subscription_serializer) do
+    instance_double('V1::SubscriptionSerializer', serialize: serialized_subscription)
   end
 
   let(:invoices_query_results) do
@@ -63,155 +74,61 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   end
 
   let(:invoice) { create :invoice }
+  let(:fee) { create :fee, invoice: }
+
   let(:serialized_invoice) do
     {
       lago_id: "292ef60b-9e0c-42e7-9f50-44d5af4162ec",
       number: "TWI-2B86-170-001",
-      issuing_date: "2024-06-06",
-      subscriptions: [
-        {
-          lago_id: "80ebcc26-3703-4577-b13e-765591255df4",
-          external_id: "ff6c279c-9f6c-4962-987e-270936d52310",
-          plan_code: "all_charges"
-        }
-      ],
-      fees: [
-        {
-          lago_id: "cc16e6d5-b5e1-4e2c-9ad3-62b3ee4be302",
-          lago_subscription_id: "80ebcc26-3703-4577-b13e-765591255df4",
-          item: {
-            type: "charge",
-            code: "group",
-            name: "group",
-            description: "charge 1 description",
-            invoice_display_name: "group",
-            filter_invoice_display_name: "Converted to EUR",
-            grouped_by: {
-              models: "model_1"
-            }
-          },
-          taxes_amount_cents: 50,
-          total_amount_cents: 10000,
-          total_amount_currency: "USD",
-          units: "100.0",
-          precise_unit_amount: "10.0",
-          from_date: "2024-05-08T00:00:00+00:00",
-          to_date: "2024-06-06T12:48:59+00:00"
-        },
-        {
-          lago_id: "5277b901-3da6-4a55-974a-ee1295978e98",
-          lago_subscription_id: "80ebcc26-3703-4577-b13e-765591255df4",
-          item: {
-            type: "charge",
-            code: "group",
-            name: "group",
-            description: "charge 2 description",
-            invoice_display_name: "group",
-            filter_invoice_display_name: nil,
-            grouped_by: {
-              models: "model_2"
-            }
-          },
-          taxes_amount_cents: 1000,
-          total_amount_cents: 20000,
-          total_amount_currency: "USD",
-          units: "200.0",
-          precise_unit_amount: "1.0",
-          from_date: "2024-05-08T00:00:00+00:00",
-          to_date: "2024-06-06T12:48:59+00:00"
-        },
-        {
-          lago_id: "86d3515f-2c4e-49de-9e81-99f8c22f38ad",
-          lago_subscription_id: "80ebcc26-3703-4577-b13e-765591255df4",
-          item: {
-            type: "charge",
-            code: "group",
-            name: "group",
-            description: "charge 3 description",
-            invoice_display_name: "group",
-            filter_invoice_display_name: nil,
-            grouped_by: {
-              models: "model_3"
-            }
-          },
-          taxes_amount_cents: 0,
-          total_amount_cents: 30000,
-          total_amount_currency: "USD",
-          units: "300.0",
-          precise_unit_amount: "1.0",
-          from_date: "2024-05-08T00:00:00+00:00",
-          to_date: "2024-06-06T12:48:59+00:00"
-        },
-        {
-          lago_id: "203e6d6b-a5ff-4eb5-bbb9-01bfdf4f8d22",
-          lago_subscription_id: "80ebcc26-3703-4577-b13e-765591255df4",
-          item: {
-            type: "charge",
-            code: "filters",
-            name: "filters",
-            description: "charge 4 description",
-            invoice_display_name: "filters",
-            filter_invoice_display_name: "model_1, input",
-            grouped_by: {}
-          },
-          taxes_amount_cents: 0,
-          total_amount_cents: 0,
-          total_amount_currency: "USD",
-          units: "0.0",
-          precise_unit_amount: "0.0",
-          from_date: "2024-05-08T00:00:00+00:00",
-          to_date: "2024-06-06T12:48:59+00:00"
-        },
-        {
-          lago_id: "af3b0a41-33c3-4f2c-a6e4-62402df59ee3",
-          lago_subscription_id: "80ebcc26-3703-4577-b13e-765591255df4",
-          item: {
-            type: "charge",
-            code: "filters",
-            name: "filters",
-            description: "charge 5 description",
-            invoice_display_name: "filters",
-            filter_invoice_display_name: "model_2, output",
-            grouped_by: {}
-          },
-          taxes_amount_cents: 0,
-          total_amount_cents: 0,
-          total_amount_currency: "EUR",
-          units: "0.0",
-          precise_unit_amount: "0.0",
-          from_date: "2024-05-08T00:00:00+00:00",
-          to_date: "2024-06-06T12:48:59+00:00"
-        },
-        {
-          lago_id: "282867c6-fa26-4c08-82b4-42d4128d4627",
-          lago_subscription_id: nil,
-          item: {
-            type: "charge",
-            code: "filters",
-            name: "filters",
-            description: "charge 6 description",
-            invoice_display_name: "filters",
-            filter_invoice_display_name: nil,
-            grouped_by: {}
-          },
-          taxes_amount_cents: 0,
-          total_amount_cents: 0,
-          total_amount_currency: "USD",
-          units: "0.0",
-          precise_unit_amount: "0.0",
-          from_date: "2024-05-08T00:00:00+00:00",
-          to_date: "2024-06-06T12:48:59+00:00"
-        }
-      ]
+      issuing_date: "2024-06-06"
+    }
+  end
+
+  let(:serialized_fee) do
+    {
+      lago_id: "cc16e6d5-b5e1-4e2c-9ad3-62b3ee4be302",
+      item: {
+        type: "charge",
+        code: "group",
+        name: "group",
+        description: "charge 1 description",
+        invoice_display_name: "group",
+        filter_invoice_display_name: "Converted to EUR",
+        grouped_by: {models: "model_1"}
+      },
+      taxes_amount_cents: 50,
+      total_amount_cents: 10000,
+      total_amount_currency: "USD",
+      units: "100.0",
+      precise_unit_amount: "10.0",
+      from_date: "2024-05-08T00:00:00+00:00",
+      to_date: "2024-06-06T12:48:59+00:00"
+    }
+  end
+
+  let(:serialized_subscription) do
+    {
+      lago_id: "80ebcc26-3703-4577-b13e-765591255df4",
+      external_id: "ff6c279c-9f6c-4962-987e-270936d52310",
+      plan_code: "all_charges"
     }
   end
 
   before do
     invoice
+    fee
 
-    allow(serializer_klass)
+    allow(invoice_serializer_klass)
       .to receive(:new)
       .and_return(invoice_serializer)
+
+    allow(fee_serializer_klass)
+      .to receive(:new)
+      .and_return(fee_serializer)
+
+    allow(subscription_serializer_klass)
+      .to receive(:new)
+      .and_return(subscription_serializer)
 
     allow(InvoicesQuery)
       .to receive(:call)
@@ -226,18 +143,19 @@ RSpec.describe DataExports::Csv::InvoiceFees do
 
   describe '#call' do
     subject(:call) do
-      described_class.new(data_export:, serializer_klass:, output: tempfile).call
+      described_class.new(
+        data_export:,
+        invoice_serializer_klass:,
+        fee_serializer_klass:,
+        subscription_serializer_klass:,
+        output: tempfile
+      ).call
     end
 
     it 'generates the correct CSV output' do
       expected_csv = <<~CSV
         invoice_lago_id,invoice_number,invoice_issuing_date,fee_lago_id,fee_item_type,fee_item_code,fee_item_name,fee_item_description,fee_item_invoice_display_name,fee_item_filter_invoice_display_name,fee_item_grouped_by,subscription_external_id,subscription_plan_code,fee_from_date_utc,fee_to_date_utc,fee_amount_currency,fee_units,fee_precise_unit_amount,fee_taxes_amount_cents,fee_total_amount_cents
         292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,cc16e6d5-b5e1-4e2c-9ad3-62b3ee4be302,charge,group,group,charge 1 description,group,Converted to EUR,"{:models=>""model_1""}",ff6c279c-9f6c-4962-987e-270936d52310,all_charges,2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,USD,100.0,10.0,50,10000
-        292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,5277b901-3da6-4a55-974a-ee1295978e98,charge,group,group,charge 2 description,group,,"{:models=>""model_2""}",ff6c279c-9f6c-4962-987e-270936d52310,all_charges,2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,USD,200.0,1.0,1000,20000
-        292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,86d3515f-2c4e-49de-9e81-99f8c22f38ad,charge,group,group,charge 3 description,group,,"{:models=>""model_3""}",ff6c279c-9f6c-4962-987e-270936d52310,all_charges,2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,USD,300.0,1.0,0,30000
-        292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,203e6d6b-a5ff-4eb5-bbb9-01bfdf4f8d22,charge,filters,filters,charge 4 description,filters,"model_1, input",{},ff6c279c-9f6c-4962-987e-270936d52310,all_charges,2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,USD,0.0,0.0,0,0
-        292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,af3b0a41-33c3-4f2c-a6e4-62402df59ee3,charge,filters,filters,charge 5 description,filters,"model_2, output",{},ff6c279c-9f6c-4962-987e-270936d52310,all_charges,2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,EUR,0.0,0.0,0,0
-        292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,282867c6-fa26-4c08-82b4-42d4128d4627,charge,filters,filters,charge 6 description,filters,,{},,,2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,USD,0.0,0.0,0,0
       CSV
 
       call
