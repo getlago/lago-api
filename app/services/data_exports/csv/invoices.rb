@@ -8,52 +8,27 @@ module DataExports
     class Invoices < BaseService
       extend Forwardable
 
-      def initialize(data_export:, serializer_klass: V1::InvoiceSerializer)
+      def initialize(data_export:, serializer_klass: V1::InvoiceSerializer, output: Tempfile.create)
         @data_export = data_export
         @serializer_klass = serializer_klass
+        @output = output
       end
 
       def call
-        ::CSV.generate(headers: true) do |csv|
+        ::CSV.open(output, 'wb', headers: true) do |csv|
           csv << headers
 
-          query.invoices.find_each do |invoice|
-            serialized_invoice = serializer_klass
-              .new(invoice, includes: %i[customer])
-              .serialize
-
-            csv << [
-              serialized_invoice[:lago_id],
-              serialized_invoice[:sequential_id],
-              serialized_invoice[:issuing_date],
-              serialized_invoice[:customer][:lago_id],
-              serialized_invoice[:customer][:external_id],
-              serialized_invoice[:customer][:name],
-              serialized_invoice[:customer][:country],
-              serialized_invoice[:customer][:tax_identification_number],
-              serialized_invoice[:number],
-              serialized_invoice[:invoice_type],
-              serialized_invoice[:payment_status],
-              serialized_invoice[:status],
-              serialized_invoice[:file_url],
-              serialized_invoice[:currency],
-              serialized_invoice[:fees_amount_cents],
-              serialized_invoice[:coupons_amount_cents],
-              serialized_invoice[:taxes_amount_cents],
-              serialized_invoice[:credit_notes_amount_cents],
-              serialized_invoice[:prepaid_credit_amount_cents],
-              serialized_invoice[:total_amount_cents],
-              serialized_invoice[:payment_due_date],
-              serialized_invoice[:payment_dispute_lost_at],
-              serialized_invoice[:payment_overdue]
-            ]
+          invoices.find_each do |invoice|
+            csv << serialized_invoice(invoice)
           end
         end
+
+        output.rewind
       end
 
       private
 
-      attr_reader :data_export, :serializer_klass
+      attr_reader :data_export, :serializer_klass, :output
 
       def_delegators :data_export, :organization, :resource_query
 
@@ -85,7 +60,39 @@ module DataExports
         ]
       end
 
-      def query
+      def serialized_invoice(invoice)
+        serialized_invoice = serializer_klass
+          .new(invoice, includes: %i[customer])
+          .serialize
+
+        [
+          serialized_invoice[:lago_id],
+          serialized_invoice[:sequential_id],
+          serialized_invoice[:issuing_date],
+          serialized_invoice.dig(:customer, :lago_id),
+          serialized_invoice.dig(:customer, :external_id),
+          serialized_invoice.dig(:customer, :name),
+          serialized_invoice.dig(:customer, :country),
+          serialized_invoice.dig(:customer, :tax_identification_number),
+          serialized_invoice[:number],
+          serialized_invoice[:invoice_type],
+          serialized_invoice[:payment_status],
+          serialized_invoice[:status],
+          serialized_invoice[:file_url],
+          serialized_invoice[:currency],
+          serialized_invoice[:fees_amount_cents],
+          serialized_invoice[:coupons_amount_cents],
+          serialized_invoice[:taxes_amount_cents],
+          serialized_invoice[:credit_notes_amount_cents],
+          serialized_invoice[:prepaid_credit_amount_cents],
+          serialized_invoice[:total_amount_cents],
+          serialized_invoice[:payment_due_date],
+          serialized_invoice[:payment_dispute_lost_at],
+          serialized_invoice[:payment_overdue]
+        ]
+      end
+
+      def invoices
         search_term = resource_query["search_term"]
         filters = resource_query.except("search_term")
 
@@ -94,7 +101,7 @@ module DataExports
           pagination: nil,
           search_term:,
           filters:
-        )
+        ).invoices
       end
     end
   end

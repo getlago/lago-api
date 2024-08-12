@@ -9,10 +9,10 @@ module DataExports
       extend Forwardable
 
       def call
-        ::CSV.generate(headers: true) do |csv|
+        ::CSV.open(output, 'wb', headers: true) do |csv|
           csv << headers
 
-          query.invoices.find_each do |invoice|
+          invoices.find_each do |invoice|
             serialized_invoice = serializer_klass
               .new(invoice, includes: %i[fees subscriptions])
               .serialize
@@ -30,13 +30,13 @@ module DataExports
                 serialized_invoice[:number],
                 serialized_invoice[:issuing_date],
                 serialized_fee[:lago_id],
-                serialized_fee[:item][:type],
-                serialized_fee[:item][:code],
-                serialized_fee[:item][:name],
-                serialized_fee[:item][:description],
-                serialized_fee[:item][:invoice_display_name],
-                serialized_fee[:item][:filter_invoice_display_name],
-                serialized_fee[:item][:grouped_by],
+                serialized_fee.dig(:item, :type),
+                serialized_fee.dig(:item, :code),
+                serialized_fee.dig(:item, :name),
+                serialized_fee.dig(:item, :description),
+                serialized_fee.dig(:item, :invoice_display_name),
+                serialized_fee.dig(:item, :filter_invoice_display_name),
+                serialized_fee.dig(:item, :grouped_by),
                 serialized_subscription&.dig(:external_id),
                 serialized_subscription&.dig(:plan_code),
                 serialized_fee[:from_date],

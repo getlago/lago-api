@@ -7,6 +7,10 @@ module DataExports
 
     ResourceTypeNotSupportedError = Class.new(StandardError)
 
+    extend Forwardable
+
+    def_delegators :data_export, :resource_type, :format
+
     def initialize(data_export:)
       @data_export = data_export
 
@@ -19,14 +23,19 @@ module DataExports
 
       data_export.processing!
 
-      data_export.file.attach(
-        io: StringIO.new(file_data),
-        filename:,
-        key: "data_exports/#{data_export.id}.#{data_export.format}",
-        content_type:
-      )
+      Tempfile.create([resource_type, ".#{format}"]) do |tempfile|
+        generate_export(tempfile)
+        tempfile.rewind
 
-      data_export.completed!
+        data_export.file.attach(
+          io: tempfile,
+          filename:,
+          key: "data_exports/#{data_export.id}.#{format}",
+          content_type:
+        )
+
+        data_export.completed!
+      end
 
       DataExportMailer.with(data_export:).completed.deliver_later
 
@@ -41,19 +50,19 @@ module DataExports
 
     attr_reader :data_export
 
-    def file_data
-      case data_export.resource_type
-      when "invoices" then Csv::Invoices.call(data_export:)
-      when "invoice_fees" then Csv::InvoiceFees.call(data_export:)
+    def generate_export(file)
+      case resource_type
+      when "invoices" then Csv::Invoices.call(data_export:, output: file)
+      when "invoice_fees" then Csv::InvoiceFees.call(data_export:, output: file)
       else
         raise ResourceTypeNotSupportedError.new(
-          "'#{data_export.resource_type}' resource not supported"
+          "'#{resource_type}' resource not supported"
         )
       end
     end
 
     def filename
-      "#{data_export.resource_type}_export_#{Time.zone.now.to_i}.#{data_export.format}"
+      "#{resource_type}_export_#{Time.zone.now.to_i}.#{format}"
     end
 
     def content_type

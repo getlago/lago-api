@@ -50,6 +50,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
     }
   end
 
+  let(:tempfile) { Tempfile.create("test_export") }
   let(:serializer_klass) { class_double('V1::InvoiceSerializer') }
   let(:invoice_serializer) do
     instance_double('V1::InvoiceSerializer', serialize: serialized_invoice)
@@ -224,7 +225,9 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   end
 
   describe '#call' do
-    subject(:call) { described_class.new(data_export:, serializer_klass:).call }
+    subject(:call) do
+      described_class.new(data_export:, serializer_klass:, output: tempfile).call
+    end
 
     it 'generates the correct CSV output' do
       expected_csv = <<~CSV
@@ -237,7 +240,11 @@ RSpec.describe DataExports::Csv::InvoiceFees do
         292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,282867c6-fa26-4c08-82b4-42d4128d4627,charge,filters,filters,charge 6 description,filters,,{},,,2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,USD,0.0,0.0,0,0
       CSV
 
-      expect(call).to eq(expected_csv)
+      call
+      tempfile.rewind
+      generated_csv = tempfile.read
+
+      expect(generated_csv).to eq(expected_csv)
     end
   end
 end

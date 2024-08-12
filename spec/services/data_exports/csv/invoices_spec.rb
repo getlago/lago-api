@@ -48,6 +48,7 @@ RSpec.describe DataExports::Csv::Invoices do
     }
   end
 
+  let(:tempfile) { Tempfile.create("test_export") }
   let(:serializer_klass) { class_double('V1::InvoiceSerializer') }
   let(:invoice_serializer) do
     instance_double('V1::InvoiceSerializer', serialize: serialized_invoice)
@@ -110,10 +111,7 @@ RSpec.describe DataExports::Csv::Invoices do
 
   describe '#call' do
     subject(:call) do
-      described_class.new(
-        data_export: data_export,
-        serializer_klass: serializer_klass
-      ).call
+      described_class.new(data_export:, serializer_klass:, output: tempfile).call
     end
 
     it 'generates the correct CSV output' do
@@ -122,7 +120,11 @@ RSpec.describe DataExports::Csv::Invoices do
         invoice-lago-id-123,SEQ123,2023-01-01,customer-lago-id-456,CUST123,customer name,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
       CSV
 
-      expect(call).to eq(expected_csv)
+      call
+      tempfile.rewind
+      generated_csv = tempfile.read
+
+      expect(generated_csv).to eq(expected_csv)
     end
   end
 end
