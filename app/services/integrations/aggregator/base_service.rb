@@ -73,6 +73,19 @@ module Integrations
         )
       end
 
+      def deliver_tax_error_webhook(customer:, code:, message:)
+        SendWebhookJob.perform_later(
+          'customer.tax_provider_error',
+          customer,
+          provider:,
+          provider_code: integration.code,
+          provider_error: {
+            message:,
+            error_code: code
+          }
+        )
+      end
+
       def secret_key
         ENV['NANGO_SECRET_KEY']
       end
