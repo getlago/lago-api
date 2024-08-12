@@ -16,7 +16,7 @@ services:
     container_name: lago_spec_clickhouse
     restart: unless-stopped
     volumes:
-      - ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
+      - ../ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
   api:
     image: getlago/api:spec
     container_name: lago_spec_api
