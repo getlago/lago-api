@@ -177,6 +177,41 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           end
         end
       end
+
+      context 'with metadata' do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: '1',
+            name: 'Wallet1',
+            currency: 'EUR',
+            paid_credits: '10',
+            expiration_at:,
+            recurring_transaction_rules: [
+              {
+                trigger: 'interval',
+                interval: 'monthly',
+                invoice_requires_successful_payment: true,
+                metadata:
+              }
+            ]
+          }
+        end
+
+        let(:metadata) { [{key: 'valid_value', value: 'also_valid'}] }
+
+        it 'create the rule with correct metadata' do
+          post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:metadata]).to eq(metadata)
+          end
+        end
+      end
     end
   end
 
@@ -263,6 +298,43 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(recurring_rules.first[:method]).to eq('target')
           expect(recurring_rules.first[:trigger]).to eq('interval')
           expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
+        end
+      end
+
+      context 'when metadata is set' do
+        let(:update_params) do
+          {
+            name: 'wallet1',
+            invoice_requires_successful_payment: true,
+            recurring_transaction_rules: [
+              {
+                method: 'target',
+                trigger: 'interval',
+                interval: 'weekly',
+                paid_credits: '105',
+                granted_credits: '105',
+                target_ongoing_balance: '300',
+                metadata: update_metadata
+              }
+            ]
+          }
+        end
+
+        let(:update_metadata) { [{key: 'update_key', value: 'update_value'}] }
+
+        it 'updates the rule' do
+          put_with_token(
+            organization,
+            "/api/v1/wallets/#{wallet.id}",
+            {wallet: update_params}
+          )
+
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:metadata]).to eq(update_metadata)
+          end
         end
       end
 

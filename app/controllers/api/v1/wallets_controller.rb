@@ -94,7 +94,11 @@ module Api
             :target_ongoing_balance,
             :threshold_credits,
             :trigger,
-            :invoice_requires_successful_payment
+            :invoice_requires_successful_payment,
+            metadata: [
+              :key,
+              :value
+            ]
           ]
         )
       end
@@ -118,7 +122,11 @@ module Api
             :trigger,
             :paid_credits,
             :granted_credits,
-            :invoice_requires_successful_payment
+            :invoice_requires_successful_payment,
+            metadata: [
+              :key,
+              :value
+            ]
           ]
         )
       end
