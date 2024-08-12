@@ -178,7 +178,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context 'with metadata' do
+      context 'with transaction metadata' do
         let(:create_params) do
           {
             external_customer_id: customer.external_id,
@@ -192,13 +192,13 @@ RSpec.describe Api::V1::WalletsController, type: :request do
                 trigger: 'interval',
                 interval: 'monthly',
                 invoice_requires_successful_payment: true,
-                metadata:
+                transaction_metadata:
               }
             ]
           }
         end
 
-        let(:metadata) { [{key: 'valid_value', value: 'also_valid'}] }
+        let(:transaction_metadata) { [{key: 'valid_value', value: 'also_valid'}] }
 
         it 'create the rule with correct metadata' do
           post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
@@ -208,7 +208,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           aggregate_failures do
             expect(response).to have_http_status(:success)
             expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:metadata]).to eq(metadata)
+            expect(recurring_rules.first[:transaction_metadata]).to eq(transaction_metadata)
           end
         end
       end
@@ -301,7 +301,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context 'when metadata is set' do
+      context 'when transaction metadata is set' do
         let(:update_params) do
           {
             name: 'wallet1',
@@ -314,13 +314,13 @@ RSpec.describe Api::V1::WalletsController, type: :request do
                 paid_credits: '105',
                 granted_credits: '105',
                 target_ongoing_balance: '300',
-                metadata: update_metadata
+                transaction_metadata: update_transaction_metadata
               }
             ]
           }
         end
 
-        let(:update_metadata) { [{key: 'update_key', value: 'update_value'}] }
+        let(:update_transaction_metadata) { [{key: 'update_key', value: 'update_value'}] }
 
         it 'updates the rule' do
           put_with_token(
@@ -333,7 +333,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           aggregate_failures do
             expect(response).to have_http_status(:success)
             expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:metadata]).to eq(update_metadata)
+            expect(recurring_rules.first[:transaction_metadata]).to eq(update_transaction_metadata)
           end
         end
       end

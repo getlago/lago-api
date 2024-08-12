@@ -68,7 +68,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
       end
     end
 
-    context 'when rule contains metadata' do
+    context 'when rule contains transaction metadata' do
       let(:recurring_transaction_rule) do
         create(
           :recurring_transaction_rule,
@@ -77,17 +77,17 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
           threshold_credits: "6.0",
           paid_credits: "10.0",
           granted_credits: "3.0",
-          metadata:
+          transaction_metadata:
         )
       end
 
-      let(:metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+      let(:transaction_metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
 
       it "calls wallet transaction create job with expected params" do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
           .with(
             organization_id: wallet.organization.id,
-            params: hash_including(metadata:)
+            params: hash_including(metadata: transaction_metadata)
           )
       end
     end

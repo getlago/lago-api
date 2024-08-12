@@ -966,7 +966,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_12_130655) do
     t.decimal "target_ongoing_balance", precision: 30, scale: 5
     t.datetime "started_at"
     t.boolean "invoice_requires_successful_payment", default: false, null: false
-    t.jsonb "metadata", default: {}
+    t.jsonb "transaction_metadata", default: {}
     t.index ["started_at"], name: "index_recurring_transaction_rules_on_started_at"
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
   end

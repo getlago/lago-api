@@ -442,12 +442,12 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           interval:,
           created_at: created_at + 1.second,
           started_at:,
-          metadata:
+          transaction_metadata:
         )
       end
       let(:interval) { :weekly }
 
-      let(:metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+      let(:transaction_metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
 
       let(:current_date) do
         DateTime.parse('20 Jun 2022').prev_occurring(created_at.strftime('%A').downcase.to_sym)
@@ -466,7 +466,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 granted_credits: recurring_transaction_rule.granted_credits.to_s,
                 source: :interval,
                 invoice_requires_successful_payment: false,
-                metadata:
+                metadata: transaction_metadata
               }
             )
         end

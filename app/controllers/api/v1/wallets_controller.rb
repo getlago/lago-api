@@ -95,7 +95,7 @@ module Api
             :threshold_credits,
             :trigger,
             :invoice_requires_successful_payment,
-            metadata: [
+            transaction_metadata: [
               :key,
               :value
             ]
@@ -123,7 +123,7 @@ module Api
             :paid_credits,
             :granted_credits,
             :invoice_requires_successful_payment,
-            metadata: [
+            transaction_metadata: [
               :key,
               :value
             ]
