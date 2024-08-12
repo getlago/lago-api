@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Start API
         run: |
-          ls -al
+          docker compose -f ./ci/spec.docker-compose.yml run api ls -al
           docker compose -f ./ci/spec.docker-compose.yml up -d db redis clickhouse api
       - name: Run Specs
         run: |
