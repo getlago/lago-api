@@ -8,7 +8,7 @@ on:
 jobs:
   run-spec:
     name: Run Spec
-    runs-on: ubuntu-latest
+    runs-on: lago-runner
     services:
       postgres:
         image: postgres:14-alpine
@@ -48,22 +48,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install Ruby and gems
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3.4"
-          bundler-cache: true
       - name: Start Clickhouse database
         run: |
           docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml clickhouse/clickhouse-server
         shell: bash
-      - name: Generate RSA keys
-        run: ./scripts/generate.rsa.sh
-      - name: Set up Postgres database schema
-        run: bin/rails db:schema:load:primary
-      - name: Set up Clickhouse database schema
-        run: bin/rails db:migrate:clickhouse
-      - name: Dump Clickhouse database schema
-        run: bin/rails db:schema:dump:clickhouse
-      - name: Run tests
-        run: bundle exec rspec
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t local \
+            -v .:/app \
+            -v /usr/local/bundle:/usr/local/bundle
+            ./Dockerfile.dev
+      - name: Run Specs
+        run: |
+          docker run \
+            -v .:/app \
+            -v /usr/local/bundle:/usr/local/bundle
+            local
+            ./scripts/generate.rsa.sh && \
+            bin/rails db:schema:load:primary && \
+            bin/rails db:migrate:clickhouse && \
+            bin/rails db:schema:dump:clickhouse && \
+            bundle exec rspec
