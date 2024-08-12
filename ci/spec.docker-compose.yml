@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:14-alpine
+    container_name: lago_spec_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lago
+      POSTGRES_USER: lago
+      POSTGRES_PASSWORD: lago
+  redis:
+    image: redis:6-alpine
+    container_name: lago_spec_redis
+    restart: unless-stopped
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    container_name: lago_spec_clickhouse
+    restart: unless-stopped
+    volumes:
+      - ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
+  api:
+    image: getlago/api:spec
+    container_name: lago_spec_api
+    restart: unless-stopped
+    depends_on:
+      - db
+      - clickhouse
+      - redis
+    environment:
+      RAILS_ENV: test
+      DATABASE_URL: "postgres://lago:lago@db:5432/lago"
+      LAGO_REDIS_CACHE_URL: "redis://redis:6379"
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
+      SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+      LAGO_API_URL: https://api.lago.dev
+      LAGO_PDF_URL: https://pdf.lago.dev
+      SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
+      LAGO_FROM_EMAIL: noreply@getlago.com
+      LAGO_CLICKHOUSE_ENABLED: true
+      LAGO_CLICKHOUSE_MIGRATIONS_ENABLED: true
+      LAGO_CLICKHOUSE_HOST: localhost
+      LAGO_CLICKHOUSE_DATABASE: default
+      LAGO_CLICKHOUSE_USERNAME: ""
+      LAGO_CLICKHOUSE_PASSWORD: ""

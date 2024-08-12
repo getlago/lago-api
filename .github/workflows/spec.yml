@@ -9,64 +9,12 @@ jobs:
   run-spec:
     name: Run Spec
     runs-on: lago-runner
-    services:
-      postgres:
-        image: postgres:14-alpine
-        ports:
-          - "5432:5432"
-        env:
-          POSTGRES_DB: lago
-          POSTGRES_USER: lago
-          POSTGRES_PASSWORD: lago
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      RAILS_ENV: test
-      DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
-      LAGO_REDIS_CACHE_URL: "redis://localhost:6379"
-      RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
-      SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
-      LAGO_API_URL: https://api.lago.dev
-      LAGO_PDF_URL: https://pdf.lago.dev
-      SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
-      LAGO_FROM_EMAIL: noreply@getlago.com
-      LAGO_CLICKHOUSE_ENABLED: true
-      LAGO_CLICKHOUSE_MIGRATIONS_ENABLED: true
-      LAGO_CLICKHOUSE_HOST: localhost
-      LAGO_CLICKHOUSE_DATABASE: default
-      LAGO_CLICKHOUSE_USERNAME: ""
-      LAGO_CLICKHOUSE_PASSWORD: ""
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Start Clickhouse database
+      - name: Start API
         run: |
-          docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml clickhouse/clickhouse-server
-        shell: bash
-      - name: Build Docker Image
-        run: |
-          docker build \
-            -t local \
-            -v .:/app \
-            -v /usr/local/bundle:/usr/local/bundle
-            ./Dockerfile.dev
+          docker compose up -d db redis clickhouse api
       - name: Run Specs
         run: |
-          docker run \
-            -v .:/app \
-            -v /usr/local/bundle:/usr/local/bundle
-            local
-            ./scripts/generate.rsa.sh && \
-            bin/rails db:schema:load:primary && \
-            bin/rails db:migrate:clickhouse && \
-            bin/rails db:schema:dump:clickhouse && \
-            bundle exec rspec
+          docker compose exec api make test
