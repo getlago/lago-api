@@ -30,6 +30,8 @@ services:
       dockerfile: ./ci/spec.dockerfile
     volumes:
       - /usr/local/bundle:/usr/local/bundle
+    command:
+      - ../scripts/start.dev.sh
     environment:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@db:5432/lago"
