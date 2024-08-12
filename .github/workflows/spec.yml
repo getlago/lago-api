@@ -11,6 +11,8 @@ jobs:
     runs-on: lago-runner
     container:
       image: ruby:3.3.4-slim
+      volumes:
+        - /usr/local/bundle:/usr/local/bundle
     services:
       postgres:
         image: postgres:14-alpine
@@ -54,6 +56,8 @@ jobs:
         #   run: |
         #     docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml clickhouse/clickhouse-server
         #   shell: bash
+      - name: Bundle Install
+        run: bundle install
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
       - name: Set up Postgres database schema
