@@ -13,7 +13,8 @@ module Wallets
             paid_credits: paid_credits(recurring_transaction_rule),
             granted_credits: granted_credits(recurring_transaction_rule),
             source: :interval,
-            invoice_requires_successful_payment: recurring_transaction_rule.invoice_requires_successful_payment?
+            invoice_requires_successful_payment: recurring_transaction_rule.invoice_requires_successful_payment?,
+            metadata: recurring_transaction_rule.metadata
           }
         )
       end
