@@ -33,7 +33,7 @@ wallets:
   top_up: false
   terminate: false
 invoices:
-  create: false
+  create: true
 developers:
   manage: false
   keys:
