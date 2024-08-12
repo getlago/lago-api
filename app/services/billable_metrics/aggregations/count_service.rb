@@ -47,7 +47,7 @@ module BillableMetrics
         (1..result.aggregation).to_a
       end
 
-      def compute_per_event_aggregation
+      def compute_per_event_aggregation(exclude_event:)
         (0...event_store.count).map { |_| 1 }
       end
     end

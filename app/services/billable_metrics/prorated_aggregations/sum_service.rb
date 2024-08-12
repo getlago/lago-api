@@ -99,13 +99,13 @@ module BillableMetrics
         event_store.prorated_events_values(period_duration)
       end
 
-      def per_event_aggregation
+      def per_event_aggregation(exclude_event: false)
         recurring_result = recurring_value
         recurring_aggregation = recurring_result ? [BigDecimal(recurring_result)] : []
         recurring_prorated_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []
 
         Result.new.tap do |result|
-          result.event_aggregation = recurring_aggregation + base_aggregator.compute_per_event_aggregation
+          result.event_aggregation = recurring_aggregation + base_aggregator.compute_per_event_aggregation(exclude_event:)
           result.event_prorated_aggregation = recurring_prorated_aggregation + compute_per_event_prorated_aggregation
         end
       end

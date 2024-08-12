@@ -42,7 +42,7 @@ module BillableMetrics
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
-      def compute_per_event_aggregation
+      def compute_per_event_aggregation(exclude_event:)
         max_value = event_store.max || 0
         event_values = event_store.events_values
         max_value_seen = false

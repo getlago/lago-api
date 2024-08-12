@@ -532,6 +532,42 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
       expect(event_store.events_values).to eq([1, 2, 3, 4, 5])
     end
+
+    context 'when exclude_event is true' do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            matching_filters:,
+            ignored_filters:,
+            event:
+          }
+        )
+      end
+
+      let(:event) do
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 1.day,
+          properties: {billable_metric.field_name => 6}
+        )
+      end
+
+      it 'excludes current event but returns the value attached to other events' do
+        event
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        expect(event_store.events_values(exclude_event: true)).to eq([1, 2, 3, 4, 5])
+      end
+    end
   end
 
   describe '#last_event' do
