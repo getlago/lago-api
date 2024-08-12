@@ -105,7 +105,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
                 message: 'Service failure',
                 error_code: 'taxDateTooFarInFuture'
               }
-           )
+            )
         end
       end
     end

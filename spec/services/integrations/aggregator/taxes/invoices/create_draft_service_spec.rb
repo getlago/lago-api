@@ -163,7 +163,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
                 message: 'Service failure',
                 error_code: 'taxDateTooFarInFuture'
               }
-          )
+            )
         end
       end
     end
