@@ -29,11 +29,11 @@ services:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@db:5432/lago"
       LAGO_REDIS_CACHE_URL: "redis://redis:6379"
-      RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
-      SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+      RAILS_MASTER_KEY: $RAILS_MASTER_KEY
+      SECRET_KEY_BASE: $SECRET_KEY_BASE
       LAGO_API_URL: https://api.lago.dev
       LAGO_PDF_URL: https://pdf.lago.dev
-      SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
+      SEGMENT_WRITE_KEY: $SEGMENT_WRITE_KEY
       LAGO_FROM_EMAIL: noreply@getlago.com
       LAGO_CLICKHOUSE_ENABLED: true
       LAGO_CLICKHOUSE_MIGRATIONS_ENABLED: true

@@ -9,6 +9,10 @@ jobs:
   run-spec:
     name: Run Spec
     runs-on: lago-runner
+    env:
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
+      SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+      SEGMENT_WRITE_KEY: ${{ secrets.SEGMENT_WRITE_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
