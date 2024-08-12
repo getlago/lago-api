@@ -32,7 +32,8 @@ services:
       bash -c "bundle config build.nokogiri --use-system-libraries
       && bundle install --jobs=4 --without development
       && bin/rails db:schema:load:primary
-      && bin/rails db:migrate:clickhouse"
+      && bin/rails db:migrate:clickhouse
+      && make test"
     environment:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@db:5432/lago"

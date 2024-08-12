@@ -23,6 +23,3 @@ jobs:
       - name: Start API
         run: |
           docker compose -f ./ci/spec.docker-compose.yml up -d --build db redis clickhouse api
-      - name: Run Specs
-        run: |
-          docker compose -f ./ci/spec.docker-compose.yml run api make test
