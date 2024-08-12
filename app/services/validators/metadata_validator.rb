@@ -32,14 +32,14 @@ module Validators
     end
 
     def validate_item(item)
-      unless item.is_a?(Hash) && item.keys.sort == [:key, :value] && item[:key] && item[:value]
+      unless item.is_a?(Hash) && item.keys.sort == %w[key value] && item['key'] && item['value']
         errors[:metadata] = 'invalid_key_value_pair'
         return
       end
 
-      validate_key_length(item[:key])
-      validate_value_length(item[:value])
-      validate_structure(item[:value])
+      validate_key_length(item['key'])
+      validate_value_length(item['value'])
+      validate_structure(item['value'])
     end
 
     def validate_key_length(key)

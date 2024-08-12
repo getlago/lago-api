@@ -34,6 +34,24 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
       end
     end
 
+    context 'when transaction have metadata' do
+      subject(:void_service) { described_class.call(wallet:, credits:, metadata:) }
+
+      let(:metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+
+      it 'sets expected attributes' do
+        expect(void_service.wallet_transaction).to have_attributes(
+          amount: 10,
+          credit_amount: 10,
+          transaction_type: 'outbound',
+          status: 'settled',
+          source: 'manual',
+          transaction_status: 'voided',
+          metadata: metadata
+        )
+      end
+    end
+
     it 'creates a wallet transaction' do
       expect { void_service }.to change(WalletTransaction, :count).by(1)
     end

@@ -17,13 +17,15 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         'lago_id' => wallet_transaction.id,
         'lago_wallet_id' => wallet_transaction.wallet_id,
         'status' => wallet_transaction.status,
+        'source' => wallet_transaction.source,
         'transaction_status' => wallet_transaction.transaction_status,
         'transaction_type' => wallet_transaction.transaction_type,
         'amount' => wallet_transaction.amount.to_s,
         'credit_amount' => wallet_transaction.credit_amount.to_s,
         'settled_at' => wallet_transaction.settled_at&.iso8601,
         'created_at' => wallet_transaction.created_at.iso8601,
-        'invoice_requires_successful_payment' => wallet_transaction.invoice_requires_successful_payment
+        'invoice_requires_successful_payment' => wallet_transaction.invoice_requires_successful_payment,
+        'metadata' => wallet_transaction.metadata
       )
     end
   end
