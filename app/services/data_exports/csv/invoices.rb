@@ -6,19 +6,22 @@ require 'forwardable'
 module DataExports
   module Csv
     class Invoices < BaseService
+      DEFAULT_BATCH_SIZE = 100
+
       extend Forwardable
 
       def initialize(data_export:, serializer_klass: V1::InvoiceSerializer, output: Tempfile.create)
         @data_export = data_export
         @serializer_klass = serializer_klass
         @output = output
+        @batch_size = DEFAULT_BATCH_SIZE
       end
 
       def call
         ::CSV.open(output, 'wb', headers: true) do |csv|
           csv << headers
 
-          invoices.find_each do |invoice|
+          invoices.find_each(batch_size:) do |invoice|
             csv << serialized_invoice(invoice)
           end
         end
@@ -28,7 +31,7 @@ module DataExports
 
       private
 
-      attr_reader :data_export, :serializer_klass, :output
+      attr_reader :data_export, :serializer_klass, :output, :batch_size
 
       def_delegators :data_export, :organization, :resource_query
 

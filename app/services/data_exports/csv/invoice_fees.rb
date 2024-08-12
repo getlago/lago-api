@@ -12,7 +12,7 @@ module DataExports
         ::CSV.open(output, 'wb', headers: true) do |csv|
           csv << headers
 
-          invoices.find_each do |invoice|
+          invoices.find_each(batch_size:) do |invoice|
             serialized_invoice = serializer_klass
               .new(invoice, includes: %i[fees subscriptions])
               .serialize
