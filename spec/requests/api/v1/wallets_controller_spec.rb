@@ -38,6 +38,40 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
+    context 'with transaction metadata' do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: '1',
+          name: 'Wallet1',
+          currency: 'EUR',
+          paid_credits: '10',
+          granted_credits: '10',
+          expiration_at:,
+          invoice_requires_successful_payment: true,
+          transaction_metadata: [{key: 'valid_value', value: 'also_valid'}]
+        }
+      end
+
+      before do
+        allow(WalletTransactions::CreateJob).to receive(:perform_later).and_call_original
+        post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+      end
+
+      it 'schedules a WalletTransactions::CreateJob with correct parameters' do
+        expect(WalletTransactions::CreateJob).to have_received(:perform_later).with(
+          organization_id: organization.id,
+          params: hash_including(
+            wallet_id: json[:wallet][:lago_id],
+            paid_credits: '10',
+            granted_credits: '10',
+            source: :manual,
+            metadata: [{key: 'valid_value', value: 'also_valid'}]
+          )
+        )
+      end
+    end
+
     context 'with recurring transaction rules' do
       around { |test| lago_premium!(&test) }
 

@@ -101,6 +101,24 @@ RSpec.describe Wallets::ValidateService, type: :service do
           expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
         end
       end
+
+      context 'with invalid transaction metadata' do
+        let(:args) do
+          {
+            customer:,
+            organization_id: organization.id,
+            paid_credits:,
+            granted_credits:,
+            expiration_at:,
+            transaction_metadata: [{key: "valid key", value1: "invalid value"}]
+          }
+        end
+
+        it 'returns false and result has errors' do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:metadata]).to eq(['invalid_key_value_pair'])
+        end
+      end
     end
 
     context 'with recurring transaction rules' do

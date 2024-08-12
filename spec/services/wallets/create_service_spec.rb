@@ -95,6 +95,30 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
+    context 'when wallet have transaction metadata' do
+      let(:params) do
+        {
+          name: 'New Wallet',
+          customer:,
+          organization_id: organization.id,
+          currency: 'EUR',
+          rate_amount: '1.00',
+          expiration_at:,
+          paid_credits: '10',
+          granted_credits: '10',
+          transaction_metadata: [{'key' => 'valid_value', 'value' => 'also_valid'}]
+        }
+      end
+
+      it 'enqueues the job with correct metadata' do
+        expect { service_result }.to have_enqueued_job(
+          WalletTransactions::CreateJob
+        ).with(hash_including(
+          params: hash_including(metadata: params[:transaction_metadata])
+        ))
+      end
+    end
+
     context 'with recurring transaction rules' do
       around { |test| lago_premium!(&test) }
 

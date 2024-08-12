@@ -81,6 +81,10 @@ module Api
           :granted_credits,
           :expiration_at,
           :invoice_requires_successful_payment,
+          transaction_metadata: [
+            :key,
+            :value
+          ],
           recurring_transaction_rules: [
             :granted_credits,
             :interval,
