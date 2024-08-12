@@ -27,7 +27,7 @@ services:
       - redis
     build:
       context: ..
-      dockerfile: .ci/spec.dockerfile
+      dockerfile: ./ci/spec.dockerfile
     volumes:
       - /usr/local/bundle:/usr/local/bundle
     environment:
