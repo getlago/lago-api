@@ -123,7 +123,7 @@ jobs:
 
       - name: Inspect Image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{  steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}
 
       - name: Clean up
         if: always()
