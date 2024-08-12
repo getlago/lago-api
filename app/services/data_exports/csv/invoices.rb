@@ -21,7 +21,7 @@ module DataExports
         ::CSV.open(output, 'wb', headers: true) do |csv|
           csv << headers
 
-          invoices.find_each(batch_size:) do |invoice|
+          invoices.find_each(batch_size:).lazy.each do |invoice|
             csv << serialized_invoice(invoice)
           end
         end
