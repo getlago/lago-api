@@ -121,21 +121,19 @@ module Charges
       end
 
       def events_values
-        values = aggregation_result.aggregator.per_event_aggregation.event_aggregation
-
-        # NOTE: when performing aggregation for pay in advance, we have to ignore the last event
+        # NOTE: when performing aggregation for pay in advance, we have to ignore the current event
         #       for computing the diff between event included and excluded
         #       see app/services/charges/apply_pay_in_advance_charge_model_service.rb:18
-        values = values[0...-1] if properties[:ignore_last_event]
-
-        values
+        aggregation_result.aggregator.per_event_aggregation(exclude_event: properties[:exclude_event]).event_aggregation
       end
 
       def compute_amount_with_transaction_min_max
+        return @compute_amount_with_transaction_min_max if defined?(@compute_amount_with_transaction_min_max)
+
         remaining_free_events = free_units_per_events
         remaining_free_amount = free_units_per_total_aggregation
 
-        events_values.reduce(0) do |total_amount, event_value|
+        @compute_amount_with_transaction_min_max ||= events_values.reduce(0) do |total_amount, event_value|
           value = event_value
 
           # NOTE: apply free events

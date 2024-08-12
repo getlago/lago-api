@@ -8,6 +8,8 @@ module Events
         @subscription = subscription
         @boundaries = boundaries
 
+        @filters = filters
+
         @grouped_by = filters[:grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
 
@@ -113,7 +115,7 @@ module Events
 
       protected
 
-      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :matching_filters, :ignored_filters
+      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters
 
       delegate :customer, to: :subscription
 

@@ -21,11 +21,12 @@ module Events
         filters_scope(scope)
       end
 
-      def events_values(limit: nil, force_from: false)
+      def events_values(limit: nil, force_from: false, exclude_event: false)
         field_name = sanitized_property_name
         field_name = "(#{field_name})::numeric" if numeric_property
 
         scope = events(force_from:)
+        scope = scope.where.not(transaction_id: filters[:event].transaction_id) if exclude_event
         scope = scope.limit(limit) if limit
 
         scope.pluck(Arel.sql(field_name))

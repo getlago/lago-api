@@ -22,9 +22,10 @@ module Events
         filters_scope(scope)
       end
 
-      def events_values(limit: nil, force_from: false)
+      def events_values(limit: nil, force_from: false, exclude_event: false)
         scope = events(force_from:).group(DEDUPLICATION_GROUP)
 
+        scope = scope.where('events_raw.transaction_id != ?', filters[:event].transaction_id) if exclude_event
         scope = scope.limit(limit) if limit
 
         scope.pluck(Arel.sql(sanitized_numeric_property))

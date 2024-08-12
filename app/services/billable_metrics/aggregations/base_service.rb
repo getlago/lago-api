@@ -36,9 +36,9 @@ module BillableMetrics
         raise NotImplementedError
       end
 
-      def per_event_aggregation
+      def per_event_aggregation(exclude_event: false)
         Result.new.tap do |result|
-          result.event_aggregation = compute_per_event_aggregation
+          result.event_aggregation = compute_per_event_aggregation(exclude_event:)
         end
       end
 

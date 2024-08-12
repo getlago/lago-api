@@ -127,8 +127,8 @@ module BillableMetrics
         BigDecimal(result)
       end
 
-      def compute_per_event_aggregation
-        event_store.events_values(force_from: true)
+      def compute_per_event_aggregation(exclude_event:)
+        event_store.events_values(force_from: true, exclude_event:)
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)

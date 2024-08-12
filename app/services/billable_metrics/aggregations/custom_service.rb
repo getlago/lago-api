@@ -66,7 +66,7 @@ module BillableMetrics
         result
       end
 
-      def compute_per_event_aggregation
+      def compute_per_event_aggregation(exclude_event:)
         # TODO: Implement custom aggregation logic returning 1 value per event
         event_store.events_properties
       end

@@ -56,7 +56,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
           .and_return(BaseService::Result.new.tap { |r| r.amount = 10 })
 
         allow(charge_model_class).to receive(:apply)
-          .with(charge:, aggregation_result: previous_agg_result, properties: properties.merge(ignore_last_event: true))
+          .with(charge:, aggregation_result: previous_agg_result, properties: properties.merge(exclude_event: true))
           .and_return(BaseService::Result.new.tap { |r| r.amount = 8 })
 
         result = charge_service.call
