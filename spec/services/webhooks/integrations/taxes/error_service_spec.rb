@@ -3,9 +3,9 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::Integrations::Taxes::ErrorService do
-  subject(:webhook_service) { described_class.new(object: integration, options: webhook_options) }
+  subject(:webhook_service) { described_class.new(object: customer, options: webhook_options) }
 
-  let(:integration) { create(:anrok_integration, organization:) }
+  let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:webhook_options) do
     {
@@ -14,6 +14,6 @@ RSpec.describe Webhooks::Integrations::Taxes::ErrorService do
   end
 
   describe '.call' do
-    it_behaves_like 'creates webhook', 'integration.tax_provider_error', 'tax_provider_error'
+    it_behaves_like 'creates webhook', 'customer.tax_provider_error', 'tax_provider_customer_error'
   end
 end

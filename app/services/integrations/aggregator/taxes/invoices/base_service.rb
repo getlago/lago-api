@@ -57,6 +57,8 @@ module Integrations
               code = body['failedInvoices'].first['validation_errors']['type']
               message = 'Service failure'
 
+              deliver_tax_error_webhook(customer:, code:, message:)
+
               result.service_failure!(code:, message:)
             end
           end
@@ -69,6 +71,8 @@ module Integrations
             else
               code = body['failedInvoices'].first['validation_errors']['type']
               message = 'Service failure'
+
+              deliver_tax_error_webhook(customer:, code:, message:)
 
               result.service_failure!(code:, message:)
             end

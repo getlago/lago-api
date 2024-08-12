@@ -93,6 +93,20 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
             expect(result.error.code).to eq('taxDateTooFarInFuture')
           end
         end
+
+        it 'delivers an error webhook' do
+          expect { service_call }.to enqueue_job(SendWebhookJob)
+            .with(
+              'customer.tax_provider_error',
+              customer,
+              provider: 'anrok',
+              provider_code: integration.code,
+              provider_error: {
+                message: 'Service failure',
+                error_code: 'taxDateTooFarInFuture'
+              }
+            )
+        end
       end
     end
 

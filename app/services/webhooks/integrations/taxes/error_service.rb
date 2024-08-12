@@ -11,19 +11,21 @@ module Webhooks
         end
 
         def object_serializer
-          ::V1::Integrations::Taxes::ErrorSerializer.new(
+          ::V1::Integrations::CustomerErrorSerializer.new(
             object,
             root_name: object_type,
-            provider_error: options[:provider_error]
+            provider_error: options[:provider_error],
+            provider: options[:provider],
+            provider_code: options[:provider_code]
           )
         end
 
         def webhook_type
-          'integration.tax_provider_error'
+          'customer.tax_provider_error'
         end
 
         def object_type
-          'tax_provider_error'
+          'tax_provider_customer_error'
         end
       end
     end

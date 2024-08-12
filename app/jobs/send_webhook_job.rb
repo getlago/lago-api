@@ -8,7 +8,6 @@ class SendWebhookJob < ApplicationJob
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 6
 
   WEBHOOK_SERVICES = {
-    'integration.tax_provider_error' => Webhooks::Integrations::Taxes::ErrorService,
     'invoice.created' => Webhooks::Invoices::CreatedService,
     'invoice.one_off_created' => Webhooks::Invoices::OneOffCreatedService,
     'invoice.add_on_added' => Webhooks::Invoices::AddOnCreatedService,
@@ -29,6 +28,7 @@ class SendWebhookJob < ApplicationJob
     'customer.payment_provider_created' => Webhooks::PaymentProviders::CustomerCreatedService,
     'customer.payment_provider_error' => Webhooks::PaymentProviders::CustomerErrorService,
     'customer.checkout_url_generated' => Webhooks::PaymentProviders::CustomerCheckoutService,
+    'customer.tax_provider_error' => Webhooks::Integrations::Taxes::ErrorService,
     'customer.vies_check' => Webhooks::Customers::ViesCheckService,
     'credit_note.created' => Webhooks::CreditNotes::CreatedService,
     'credit_note.generated' => Webhooks::CreditNotes::GeneratedService,
