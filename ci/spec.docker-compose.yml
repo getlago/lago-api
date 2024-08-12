@@ -35,7 +35,7 @@ services:
         bundle config build.nokogiri --use-system-libraries
         && bundle install --jobs=4 --without development
         && bin/rails db:schema:load:primary
-        && bin.rails db:migrate
+        && bin.rails db:migrate:clickhouse
       "
     environment:
       RAILS_ENV: test
