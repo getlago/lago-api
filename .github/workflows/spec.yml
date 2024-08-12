@@ -9,6 +9,8 @@ jobs:
   run-spec:
     name: Run Spec
     runs-on: lago-runner
+    container:
+      image: ruby:3.3.4-slim
     env:
       RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
@@ -21,4 +23,4 @@ jobs:
           docker compose -f ./ci/spec.docker-compose.yml up -d --build db redis clickhouse api
       - name: Run Specs
         run: |
-          docker compose -f ./ci/spec.docker-compose.yml exec api make test
+          docker compose -f ./ci/spec.docker-compose.yml run api make test

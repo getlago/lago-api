@@ -35,7 +35,6 @@ services:
         bundle config build.nokogiri --use-system-libraries
         && bundle install --jobs=4 --without development
         && bundle exec rake db:migrate
-        && make test
       "
     environment:
       RAILS_ENV: test
