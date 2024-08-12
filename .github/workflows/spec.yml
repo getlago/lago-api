@@ -11,6 +11,8 @@ jobs:
     runs-on: lago-runner
     container:
       image: docker:dind
+      volumes:
+        - /usr/local/bundle:/usr/local/bundle
     env:
       RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
