@@ -55,7 +55,7 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            plans.includes(:usage_thresholds, charges: {filters: {values: :billable_metric_filter}}),
+            plans.includes(:usage_thresholds, :taxes, :minimum_commitment, charges: {filters: {values: :billable_metric_filter}}),
             ::V1::PlanSerializer,
             collection_name: 'plans',
             meta: pagination_metadata(plans),

@@ -41,7 +41,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.applied_coupons,
+              result.applied_coupons.includes(:credits),
               ::V1::AppliedCouponSerializer,
               collection_name: 'applied_coupons',
               meta: pagination_metadata(result.applied_coupons),

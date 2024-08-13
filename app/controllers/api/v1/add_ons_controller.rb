@@ -59,7 +59,7 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            add_ons,
+            add_ons.includes(:taxes),
             ::V1::AddOnSerializer,
             collection_name: 'add_ons',
             meta: pagination_metadata(add_ons),
