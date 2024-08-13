@@ -8,6 +8,9 @@ RSpec.describe Plan, type: :model do
   it { is_expected.to have_one(:minimum_commitment) }
   it { is_expected.to have_many(:usage_thresholds) }
 
+  it { is_expected.to validate_presence_of(:interval) }
+  it { is_expected.to define_enum_for(:interval).with_values(Plan::INTERVALS) }
+
   it_behaves_like 'paper_trail traceable'
 
   describe 'Validations' do
