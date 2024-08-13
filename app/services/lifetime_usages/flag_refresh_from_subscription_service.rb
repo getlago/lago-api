@@ -16,7 +16,7 @@ module LifetimeUsages
       lifetime_usage.recalculate_current_usage = true
       lifetime_usage.save!
 
-      result.lifecycle_usage = lifetime_usage
+      result.lifetime_usage = lifetime_usage
 
       result
     rescue ActiveRecord::RecordInvalid => e
