@@ -76,6 +76,8 @@ module DataExports
             end
           end
         end
+
+        output.rewind
       end
 
       private
