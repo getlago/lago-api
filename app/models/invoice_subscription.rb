@@ -18,7 +18,8 @@ class InvoiceSubscription < ApplicationRecord
     subscription_periodic: 'subscription_periodic',
     subscription_terminating: 'subscription_terminating',
     in_advance_charge: 'in_advance_charge',
-    in_advance_charge_periodic: 'in_advance_charge_periodic'
+    in_advance_charge_periodic: 'in_advance_charge_periodic',
+    progressive_billing: 'progressive_billing'
   }.freeze
 
   enum invoicing_reason: INVOICING_REASONS

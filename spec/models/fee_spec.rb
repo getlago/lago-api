@@ -5,6 +5,12 @@ require 'rails_helper'
 RSpec.describe Fee, type: :model do
   subject(:fee_model) { described_class }
 
+  describe 'associations' do
+    subject(:fee) { build(:fee) }
+
+    it { is_expected.to belong_to(:usage_threshold).optional }
+  end
+
   describe '.item_code' do
     context 'when it is a subscription fee' do
       let(:subscription) { create(:subscription) }

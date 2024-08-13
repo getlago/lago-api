@@ -19,7 +19,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_14_144137) do
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "billable_metric_weighted_interval", ["seconds"]
-  create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic"]
+  create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
@@ -538,6 +538,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_14_144137) do
     t.jsonb "grouped_by", default: {}, null: false
     t.string "pay_in_advance_event_transaction_id"
     t.datetime "deleted_at"
+    t.uuid "usage_threshold_id"
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
@@ -550,6 +551,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_14_144137) do
     t.index ["pay_in_advance_event_transaction_id"], name: "index_fees_on_pay_in_advance_event_transaction_id", where: "(deleted_at IS NULL)"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
     t.index ["true_up_parent_fee_id"], name: "index_fees_on_true_up_parent_fee_id"
+    t.index ["usage_threshold_id"], name: "index_fees_on_usage_threshold_id"
   end
 
   create_table "fees_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1212,6 +1214,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_14_144137) do
   add_foreign_key "fees", "groups"
   add_foreign_key "fees", "invoices"
   add_foreign_key "fees", "subscriptions"
+  add_foreign_key "fees", "usage_thresholds"
   add_foreign_key "fees_taxes", "fees"
   add_foreign_key "fees_taxes", "taxes"
   add_foreign_key "group_properties", "charges", on_delete: :cascade

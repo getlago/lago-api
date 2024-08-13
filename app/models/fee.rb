@@ -13,6 +13,7 @@ class Fee < ApplicationRecord
   belongs_to :subscription, optional: true
   belongs_to :charge_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
+  belongs_to :usage_threshold, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: 'Fee', optional: true
 
@@ -34,7 +35,7 @@ class Fee < ApplicationRecord
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit commitment].freeze
+  FEE_TYPES = %i[charge add_on subscription credit commitment progressive_billing].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum fee_type: FEE_TYPES
