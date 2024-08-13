@@ -13,8 +13,8 @@ class Event < EventsRecord
   validates :code, presence: true
 
   default_scope -> { kept }
-  scope :from_datetime, ->(from_datetime) { where('events.timestamp::timestamp(0) >= ?', from_datetime) }
-  scope :to_datetime, ->(to_datetime) { where('events.timestamp::timestamp(0) <= ?', to_datetime) }
+  scope :from_datetime, ->(from_datetime) { where('events.timestamp >= ?', from_datetime) }
+  scope :to_datetime, ->(to_datetime) { where('events.timestamp <= ?', to_datetime) }
 
   def api_client
     metadata['user_agent']
