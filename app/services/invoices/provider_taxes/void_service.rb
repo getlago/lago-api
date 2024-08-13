@@ -19,11 +19,13 @@ module Invoices
         if frozen_transaction?(tax_result)
           negate_result = perform_invoice_negate
 
-          return negate_result unless negate_result.success?
+          unless negate_result.success?
+            return result.validation_failure!(errors: {tax_error: [negate_result.error.code]})
+          end
         elsif !tax_result.success?
           create_error_detail(tax_result.error.code)
 
-          return tax_result
+          return result.validation_failure!(errors: {tax_error: [tax_result.error.code]})
         end
 
         result.invoice = invoice

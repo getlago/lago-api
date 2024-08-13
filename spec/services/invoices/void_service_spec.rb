@@ -80,6 +80,12 @@ RSpec.describe Invoices::VoidService, type: :service do
           end
         end
 
+        it 'enqueues a sync void invoice job' do
+          expect do
+            lose_dispute_service.call
+          end.to have_enqueued_job(Invoices::ProviderTaxes::VoidJob).with(invoice:)
+        end
+
         it "marks the invoice's payment overdue as false" do
           expect { void_service.call }.to change(invoice, :payment_overdue).from(true).to(false)
         end

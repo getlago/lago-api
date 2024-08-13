@@ -31,6 +31,7 @@ module Invoices
       end
 
       SendWebhookJob.perform_later('invoice.voided', result.invoice)
+      Invoices::ProviderTaxes::VoidJob.perform_later(invoice:)
 
       result
     rescue AASM::InvalidTransition => _e
