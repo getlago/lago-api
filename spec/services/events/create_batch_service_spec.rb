@@ -51,6 +51,25 @@ RSpec.describe Events::CreateBatchService, type: :service do
       expect { create_batch_service.call }.to have_enqueued_job(Events::PostProcessJob).exactly(100)
     end
 
+    context 'when no events are provided' do
+      before do
+        events_params[:events] = []
+      end
+
+      it 'returns a no_events error' do
+        result = nil
+
+        aggregate_failures do
+          expect { result = create_batch_service.call }.not_to change(Event, :count)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:events)
+          expect(result.error.messages[:events]).to include('no_events')
+        end
+      end
+    end
+
     context 'when events count is too big' do
       before do
         events_params[:events].push(

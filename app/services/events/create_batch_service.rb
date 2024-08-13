@@ -14,6 +14,10 @@ module Events
     end
 
     def call
+      if events_params.blank?
+        return result.single_validation_failure!(error_code: 'no_events', field: :events)
+      end
+
       if events_params.count > MAX_LENGTH
         return result.single_validation_failure!(error_code: 'too_many_events', field: :events)
       end
