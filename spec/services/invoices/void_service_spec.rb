@@ -82,7 +82,7 @@ RSpec.describe Invoices::VoidService, type: :service do
 
         it 'enqueues a sync void invoice job' do
           expect do
-            lose_dispute_service.call
+            void_service.call
           end.to have_enqueued_job(Invoices::ProviderTaxes::VoidJob).with(invoice:)
         end
 
