@@ -42,7 +42,7 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            customers,
+            customers.includes(:taxes),
             ::V1::CustomerSerializer,
             collection_name: 'customers',
             meta: pagination_metadata(customers),

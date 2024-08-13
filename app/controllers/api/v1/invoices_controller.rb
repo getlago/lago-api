@@ -66,7 +66,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.invoices,
+              result.invoices.includes(:metadata, :applied_taxes),
               ::V1::InvoiceSerializer,
               collection_name: 'invoices',
               meta: pagination_metadata(result.invoices),

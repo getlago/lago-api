@@ -105,7 +105,7 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            credit_notes,
+            credit_notes.includes(:items, :applied_taxes),
             ::V1::CreditNoteSerializer,
             collection_name: 'credit_notes',
             meta: pagination_metadata(credit_notes),
