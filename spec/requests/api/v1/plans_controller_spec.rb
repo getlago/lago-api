@@ -14,7 +14,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         name: 'P1',
         invoice_display_name: 'P1 invoice name',
         code: 'plan_code',
-        interval: 'weekly',
+        interval:,
         description: 'description',
         amount_cents: 100,
         amount_currency: 'EUR',
@@ -45,84 +45,110 @@ RSpec.describe Api::V1::PlansController, type: :request do
     end
     let(:tax_codes) { [tax.code] }
 
-    it 'creates a plan' do
-      post_with_token(organization, '/api/v1/plans', {plan: create_params})
+    context 'when interval is empty' do
+      let(:interval) { nil }
 
-      expect(response).to have_http_status(:success)
-
-      expect(json[:plan][:lago_id]).to be_present
-      expect(json[:plan][:code]).to eq(create_params[:code])
-      expect(json[:plan][:name]).to eq(create_params[:name])
-      expect(json[:plan][:invoice_display_name]).to eq(create_params[:invoice_display_name])
-      expect(json[:plan][:created_at]).to be_present
-      expect(json[:plan][:charges].first[:lago_id]).to be_present
-    end
-
-    context 'when license is not premium' do
-      it 'ignores premium fields' do
+      it 'returns an error' do
         post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
-        expect(response).to have_http_status(:success)
-        charge = json[:plan][:charges].first
-        expect(charge[:invoiceable]).to be true
-        expect(charge[:regroup_paid_fees]).to be_nil
-      end
-    end
-
-    context 'when license is premium' do
-      around { |test| lago_premium!(&test) }
-
-      it 'updates premium fields' do
-        post_with_token(organization, '/api/v1/plans', {plan: create_params})
-
-        expect(response).to have_http_status(:success)
-        charge = json[:plan][:charges].first
-        expect(charge[:invoiceable]).to be false
-        expect(charge[:regroup_paid_fees]).to eq 'invoice'
-      end
-    end
-
-    context 'with minimum commitment' do
-      context 'when license is premium' do
-        around { |test| lago_premium!(&test) }
-
-        it 'creates a plan with minimum commitment' do
-          post_with_token(organization, '/api/v1/plans', {plan: create_params})
-
-          expect(response).to have_http_status(:success)
-          expect(json[:plan][:minimum_commitment][:lago_id]).to be_present
+        aggregate_failures do
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details]).to eq({interval: %w[value_is_mandatory]})
         end
+      end
+    end
+
+    context 'when interval is present' do
+      let(:interval) { 'weekly' }
+
+      it 'creates a plan' do
+        post_with_token(organization, '/api/v1/plans', {plan: create_params})
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:plan][:lago_id]).to be_present
+        expect(json[:plan][:code]).to eq(create_params[:code])
+        expect(json[:plan][:name]).to eq(create_params[:name])
+        expect(json[:plan][:invoice_display_name]).to eq(create_params[:invoice_display_name])
+        expect(json[:plan][:created_at]).to be_present
+        expect(json[:plan][:charges].first[:lago_id]).to be_present
       end
 
       context 'when license is not premium' do
-        it 'does not create minimum commitment' do
+        it 'ignores premium fields' do
           post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
           expect(response).to have_http_status(:success)
-          expect(json[:plan][:minimum_commitment]).not_to be_present
+          charge = json[:plan][:charges].first
+          expect(charge[:invoiceable]).to be true
+          expect(charge[:regroup_paid_fees]).to be_nil
         end
       end
-    end
 
-    context 'with usage thresholds' do
       context 'when license is premium' do
         around { |test| lago_premium!(&test) }
 
-        context 'when progressive billing premium integration is present' do
-          before do
-            organization.update!(premium_integrations: ['progressive_billing'])
-          end
+        it 'updates premium fields' do
+          post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
-          it 'creates a plan with usage thresholds' do
+          expect(response).to have_http_status(:success)
+          charge = json[:plan][:charges].first
+          expect(charge[:invoiceable]).to be false
+          expect(charge[:regroup_paid_fees]).to eq 'invoice'
+        end
+      end
+
+      context 'with minimum commitment' do
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          it 'creates a plan with minimum commitment' do
             post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
             expect(response).to have_http_status(:success)
-            expect(json[:plan][:usage_thresholds].first[:lago_id]).to be_present
-            expect(json[:plan][:usage_thresholds].first[:amount_cents]).to eq(json[:plan][:amount_cents])
+            expect(json[:plan][:minimum_commitment][:lago_id]).to be_present
           end
         end
 
-        context 'when progressive billing premium integration is not present' do
+        context 'when license is not premium' do
+          it 'does not create minimum commitment' do
+            post_with_token(organization, '/api/v1/plans', {plan: create_params})
+
+            expect(response).to have_http_status(:success)
+            expect(json[:plan][:minimum_commitment]).not_to be_present
+          end
+        end
+      end
+
+      context 'with usage thresholds' do
+        context 'when license is premium' do
+          around { |test| lago_premium!(&test) }
+
+          context 'when progressive billing premium integration is present' do
+            before do
+              organization.update!(premium_integrations: ['progressive_billing'])
+            end
+
+            it 'creates a plan with usage thresholds' do
+              post_with_token(organization, '/api/v1/plans', {plan: create_params})
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:usage_thresholds].first[:lago_id]).to be_present
+              expect(json[:plan][:usage_thresholds].first[:amount_cents]).to eq(json[:plan][:amount_cents])
+            end
+          end
+
+          context 'when progressive billing premium integration is not present' do
+            it 'does not create usage thresholds' do
+              post_with_token(organization, '/api/v1/plans', {plan: create_params})
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:usage_thresholds].count).to eq(0)
+            end
+          end
+        end
+
+        context 'when license is not premium' do
           it 'does not create usage thresholds' do
             post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
@@ -132,102 +158,93 @@ RSpec.describe Api::V1::PlansController, type: :request do
         end
       end
 
-      context 'when license is not premium' do
-        it 'does not create usage thresholds' do
+      context 'with graduated charges' do
+        let(:create_params) do
+          {
+            name: 'P1',
+            code: 'plan_code',
+            interval: 'weekly',
+            description: 'description',
+            amount_cents: 100,
+            amount_currency: 'EUR',
+            trial_period: 1,
+            pay_in_advance: false,
+            charges: [
+              {
+                billable_metric_id: billable_metric.id,
+                charge_model: 'graduated',
+                properties: {
+                  graduated_ranges: [
+                    {
+                      to_value: 1,
+                      from_value: 0,
+                      flat_amount: '0',
+                      per_unit_amount: '0'
+                    },
+                    {
+                      to_value: nil,
+                      from_value: 2,
+                      flat_amount: '0',
+                      per_unit_amount: '3200'
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        end
+
+        it 'creates a plan' do
           post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
           expect(response).to have_http_status(:success)
-          expect(json[:plan][:usage_thresholds].count).to eq(0)
+
+          expect(json[:plan][:lago_id]).to be_present
+          expect(json[:plan][:code]).to eq(create_params[:code])
+          expect(json[:plan][:name]).to eq(create_params[:name])
+          expect(json[:plan][:created_at]).to be_present
+          expect(json[:plan][:charges].first[:lago_id]).to be_present
         end
       end
-    end
 
-    context 'with graduated charges' do
-      let(:create_params) do
-        {
-          name: 'P1',
-          code: 'plan_code',
-          interval: 'weekly',
-          description: 'description',
-          amount_cents: 100,
-          amount_currency: 'EUR',
-          trial_period: 1,
-          pay_in_advance: false,
-          charges: [
-            {
-              billable_metric_id: billable_metric.id,
-              charge_model: 'graduated',
-              properties: {
-                graduated_ranges: [
-                  {
-                    to_value: 1,
-                    from_value: 0,
-                    flat_amount: '0',
-                    per_unit_amount: '0'
-                  },
-                  {
-                    to_value: nil,
-                    from_value: 2,
-                    flat_amount: '0',
-                    per_unit_amount: '3200'
-                  }
-                ]
-              }
-            }
-          ]
-        }
+      context 'without charges' do
+        let(:create_params) do
+          {
+            name: 'P1',
+            code: 'plan_code',
+            interval: 'weekly',
+            description: 'description',
+            amount_cents: 100,
+            amount_currency: 'EUR',
+            trial_period: 1,
+            pay_in_advance: false
+          }
+        end
+
+        it 'creates a plan' do
+          post_with_token(organization, '/api/v1/plans', {plan: create_params})
+
+          expect(response).to have_http_status(:success)
+
+          expect(json[:plan][:lago_id]).to be_present
+          expect(json[:plan][:code]).to eq(create_params[:code])
+          expect(json[:plan][:name]).to eq(create_params[:name])
+          expect(json[:plan][:created_at]).to be_present
+          expect(json[:plan][:charges].count).to eq(0)
+        end
       end
 
-      it 'creates a plan' do
-        post_with_token(organization, '/api/v1/plans', {plan: create_params})
+      context 'with unknown tax code on charge' do
+        let(:tax_codes) { ['unknown'] }
 
-        expect(response).to have_http_status(:success)
+        it 'returns a 404 response' do
+          post_with_token(organization, '/api/v1/plans', {plan: create_params})
 
-        expect(json[:plan][:lago_id]).to be_present
-        expect(json[:plan][:code]).to eq(create_params[:code])
-        expect(json[:plan][:name]).to eq(create_params[:name])
-        expect(json[:plan][:created_at]).to be_present
-        expect(json[:plan][:charges].first[:lago_id]).to be_present
-      end
-    end
-
-    context 'without charges' do
-      let(:create_params) do
-        {
-          name: 'P1',
-          code: 'plan_code',
-          interval: 'weekly',
-          description: 'description',
-          amount_cents: 100,
-          amount_currency: 'EUR',
-          trial_period: 1,
-          pay_in_advance: false
-        }
-      end
-
-      it 'creates a plan' do
-        post_with_token(organization, '/api/v1/plans', {plan: create_params})
-
-        expect(response).to have_http_status(:success)
-
-        expect(json[:plan][:lago_id]).to be_present
-        expect(json[:plan][:code]).to eq(create_params[:code])
-        expect(json[:plan][:name]).to eq(create_params[:name])
-        expect(json[:plan][:created_at]).to be_present
-        expect(json[:plan][:charges].count).to eq(0)
-      end
-    end
-
-    context 'with unknown tax code on charge' do
-      let(:tax_codes) { ['unknown'] }
-
-      it 'returns a 404 response' do
-        post_with_token(organization, '/api/v1/plans', {plan: create_params})
-
-        aggregate_failures do
-          expect(response).to have_http_status(:not_found)
-          expect(json[:error]).to eq('Not Found')
-          expect(json[:code]).to eq('tax_not_found')
+          aggregate_failures do
+            expect(response).to have_http_status(:not_found)
+            expect(json[:error]).to eq('Not Found')
+            expect(json[:code]).to eq('tax_not_found')
+          end
         end
       end
     end
