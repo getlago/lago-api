@@ -13,7 +13,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       create(
         :invoice,
         :voided,
-        :with_tax_error,
+        :with_tax_voiding_error,
         customer:,
         organization:,
         subscriptions: [subscription],
@@ -121,7 +121,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
 
       it 'discards previous tax errors' do
         expect { void_service.call }
-          .to change(invoice.error_details.tax_error, :count).from(1).to(0)
+          .to change(invoice.error_details.tax_voiding_error, :count).from(1).to(0)
       end
     end
 
@@ -136,8 +136,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(LagoHttpClient::Client).to have_receive(:new).with(void_endpoint)
-          expect(LagoHttpClient::Client).not_to have_receive(:new).with(negate_endpoint)
+          expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
+          expect(LagoHttpClient::Client).not_to have_received(:new).with(negate_endpoint)
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(invoice.reload.status).to eq('voided')
         end
@@ -149,9 +149,9 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         void_service.call
 
         aggregate_failures do
-          expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
-          expect(invoice.error_details.tax_error.count).to be(1)
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
+          expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
+          expect(invoice.error_details.tax_voiding_error.count).to be(1)
+          expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last.discarded?).to be(false)
         end
       end
     end
@@ -171,8 +171,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(LagoHttpClient::Client).to have_receive(:new).with(void_endpoint)
-          expect(LagoHttpClient::Client).to have_receive(:new).with(negate_endpoint)
+          expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
+          expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(invoice.reload.status).to eq('voided')
         end
@@ -184,9 +184,9 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         void_service.call
 
         aggregate_failures do
-          expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
-          expect(invoice.error_details.tax_error.count).to be(1)
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
+          expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
+          expect(invoice.error_details.tax_voiding_error.count).to be(1)
+          expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last.discarded?).to be(false)
         end
       end
     end

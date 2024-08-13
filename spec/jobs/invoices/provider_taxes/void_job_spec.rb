@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
+  let(:organization) { create(:organization) }
   let(:invoice) { create(:invoice, customer:) }
   let(:customer) { create(:customer, organization:) }
 
@@ -27,7 +28,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
     before { integration_customer }
 
     it 'calls successfully void service' do
-      described_class.perform_now(invoice)
+      described_class.perform_now(invoice:)
 
       expect(Invoices::ProviderTaxes::VoidService).to have_received(:new)
       expect(void_service).to have_received(:call)
@@ -36,7 +37,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
 
   context 'when there is NOT anrok customer' do
     it 'does not call void service' do
-      described_class.perform_now(invoice)
+      described_class.perform_now(invoice:)
 
       expect(Invoices::ProviderTaxes::VoidService).not_to have_received(:new)
       expect(void_service).not_to have_received(:call)

@@ -30,6 +30,12 @@ FactoryBot.define do
       end
     end
 
+    trait :with_tax_voiding_error do
+      after :create do |i|
+        create(:error_detail, owner: i, error_code: 'tax_voiding_error')
+      end
+    end
+
     trait :failed do
       status { :failed }
     end
