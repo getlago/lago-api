@@ -6,15 +6,11 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
   subject(:result) { described_class.call(data_export:) }
 
   let(:data_export) { create :data_export, resource_type: 'invoices', format: 'csv' }
-  let(:file_io) { StringIO.new('file content') }
-  let(:current_time) { Time.zone.now }
-  let(:csv_file_path) { Rails.root.join("spec/fixtures/export.csv") }
-  let(:csv_content) { File.read(csv_file_path) }
+  let(:tempfile) { Tempfile.new("test_export") }
 
   before do
-    allow(DataExports::Csv::Invoices)
-      .to receive(:call)
-      .and_return(csv_content)
+    allow(Tempfile).to receive(:create).and_yield(tempfile)
+    allow(DataExports::Csv::Invoices).to receive(:call).and_return(nil)
   end
 
   describe '#call' do
@@ -104,11 +100,27 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
       end
     end
 
+    context "when resource type is invoices" do
+      let(:data_export) { create :data_export, resource_type: 'invoices', format: 'csv' }
+
+      before do
+        allow(DataExports::Csv::Invoices).to receive(:call).and_return(nil)
+      end
+
+      it "calls the Csv::Invoices exporter" do
+        result
+
+        expect(DataExports::Csv::Invoices)
+          .to have_received(:call)
+          .with(data_export:, output: tempfile)
+      end
+    end
+
     context "when resource type is invoice_fees" do
       let(:data_export) { create :data_export, resource_type: 'invoice_fees', format: 'csv' }
 
       before do
-        allow(DataExports::Csv::InvoiceFees).to receive(:call).and_return(:csv_content)
+        allow(DataExports::Csv::InvoiceFees).to receive(:call).and_return(nil)
       end
 
       it "calls the Csv::InvoiceFees exporter" do
@@ -116,7 +128,7 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
 
         expect(DataExports::Csv::InvoiceFees)
           .to have_received(:call)
-          .with(data_export:)
+          .with(data_export:, output: tempfile)
       end
     end
   end
