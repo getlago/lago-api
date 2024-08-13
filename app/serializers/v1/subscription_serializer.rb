@@ -26,6 +26,7 @@ module V1
 
       payload = payload.merge(customer:) if include?(:customer)
       payload = payload.merge(plan:) if include?(:plan)
+      payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
 
       payload
     end
@@ -41,6 +42,10 @@ module V1
         model.plan,
         includes: %i[charges usage_thresholds taxes minimum_commitment]
       ).serialize
+    end
+
+    def usage_threshold
+      ::V1::UsageThresholdSerializer.new(options[:usage_threshold]).serialize
     end
   end
 end
