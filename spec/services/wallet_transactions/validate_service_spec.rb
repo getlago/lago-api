@@ -77,5 +77,24 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
         expect(result.error.messages[:voided_credits]).to eq(['insufficient_credits'])
       end
     end
+
+    context 'with invalid metadata' do
+      let(:args) do
+        {
+          wallet_id:,
+          customer_id: customer.external_id,
+          organization_id: organization.id,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:,
+          metadata: [{'key' => 'key', 'value' => {'key' => 'nested_value'}}]
+        }
+      end
+
+      it 'returns false and result has errors for metadata' do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:metadata]).to eq(['nested_structure_not_allowed'])
+      end
+    end
   end
 end

@@ -92,6 +92,26 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         end
       end
 
+      context "when transaction metadata is present" do
+        let(:rule_params) do
+          {
+            trigger: "threshold",
+            threshold_credits: "1.0",
+            transaction_metadata:
+          }
+        end
+
+        let(:transaction_metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+
+        it "creates rule with expected attributes" do
+          expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+          expect(wallet.recurring_transaction_rules.first).to have_attributes(
+            transaction_metadata: transaction_metadata
+          )
+        end
+      end
+
       context 'when invoice_requires_successful_payment is blank' do
         let(:wallet) { create(:wallet, invoice_requires_successful_payment: true) }
         let(:wallet_params) do

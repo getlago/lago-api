@@ -40,7 +40,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
             paid_credits: "10.0",
             granted_credits: "3.0",
             source: :threshold,
-            invoice_requires_successful_payment: false
+            invoice_requires_successful_payment: false,
+            metadata: {}
           }
         )
     end
@@ -63,6 +64,30 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
           .with(
             organization_id: wallet.organization.id,
             params: hash_including(invoice_requires_successful_payment: true)
+          )
+      end
+    end
+
+    context 'when rule contains transaction metadata' do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          transaction_metadata:
+        )
+      end
+
+      let(:transaction_metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+
+      it "calls wallet transaction create job with expected params" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(metadata: transaction_metadata)
           )
       end
     end
@@ -106,7 +131,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
               paid_credits: "194.5",
               granted_credits: "0.0",
               source: :threshold,
-              invoice_requires_successful_payment: false
+              invoice_requires_successful_payment: false,
+              metadata: {}
             }
           )
       end

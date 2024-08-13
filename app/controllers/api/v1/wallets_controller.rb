@@ -81,6 +81,10 @@ module Api
           :granted_credits,
           :expiration_at,
           :invoice_requires_successful_payment,
+          transaction_metadata: [
+            :key,
+            :value
+          ],
           recurring_transaction_rules: [
             :granted_credits,
             :interval,
@@ -90,7 +94,11 @@ module Api
             :target_ongoing_balance,
             :threshold_credits,
             :trigger,
-            :invoice_requires_successful_payment
+            :invoice_requires_successful_payment,
+            transaction_metadata: [
+              :key,
+              :value
+            ]
           ]
         )
       end
@@ -114,7 +122,11 @@ module Api
             :trigger,
             :paid_credits,
             :granted_credits,
-            :invoice_requires_successful_payment
+            :invoice_requires_successful_payment,
+            transaction_metadata: [
+              :key,
+              :value
+            ]
           ]
         )
       end

@@ -62,6 +62,28 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
     end
 
+    context 'when metadata is present' do
+      let(:params) do
+        {
+          wallet_id:,
+          paid_credits: '10',
+          granted_credits: '10',
+          metadata: [{'key' => 'valid_value', 'value' => 'also_valid'}]
+        }
+      end
+
+      it 'creates the wallet transactions with correct data' do
+        post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transactions].count).to eq(2)
+        expect(json[:wallet_transactions].first[:metadata]).to be_present
+        expect(json[:wallet_transactions].second[:metadata]).to be_present
+        expect(json[:wallet_transactions].first[:metadata]).to include(key: 'valid_value', value: 'also_valid')
+        expect(json[:wallet_transactions].second[:metadata]).to include(key: 'valid_value', value: 'also_valid')
+      end
+    end
+
     context 'when wallet does not exist' do
       let(:wallet_id) { "#{wallet.id}123" }
 
