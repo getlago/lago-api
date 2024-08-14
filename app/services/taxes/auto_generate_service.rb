@@ -36,7 +36,7 @@ module Taxes
       country_exceptions.each do |exception|
         exception_code = exception['name'].parameterize.underscore
         tax_code = "lago_eu_#{country_code.downcase}_exception_#{exception_code}"
-        tax_name = "Lago EU #{country_code.upcase} #{exception['name']} Standard"
+        tax_name = "Lago EU #{country_code.upcase} #{exception["name"]} Standard"
         create_tax(tax_code, tax_name, exception['standard'])
       end
     end

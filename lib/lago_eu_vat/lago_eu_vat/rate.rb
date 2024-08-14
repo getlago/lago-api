@@ -21,7 +21,7 @@ module LagoEuVat
       rates = country_rates.first.fetch('rates')
       exceptions = country_rates.first.fetch('exceptions', [])
 
-      { rates:, exceptions: }
+      {rates:, exceptions:}
     end
 
     private
