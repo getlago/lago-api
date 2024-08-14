@@ -18,7 +18,10 @@ module LagoEuVat
         Time.zone.now >= DateTime.parse(period['effective_from'])
       end
 
-      country_rates.first.fetch('rates')
+      rates = country_rates.first.fetch('rates')
+      exceptions = country_rates.first.fetch('exceptions', [])
+
+      {rates:, exceptions:}
     end
 
     private

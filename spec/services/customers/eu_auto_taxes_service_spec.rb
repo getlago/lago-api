@@ -52,6 +52,45 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
           expect(tax_code).to eq('lago_eu_reverse_charge')
         end
       end
+
+      context 'when country has exceptions' do
+        let(:vies_response) do
+          {
+            country_code: 'FR'
+          }
+        end
+
+        context 'when customer has no zipcode' do
+          it 'returns the customer country standard tax' do
+            tax_code = eu_tax_service.call
+            expect(tax_code).to eq('lago_eu_fr_standard')
+          end
+        end
+
+        context 'when customer has a zipcode' do
+          context 'when zipcode has applicable exceptions' do
+            before do
+              customer.update(zipcode: '97412')
+            end
+
+            it 'returns the exception tax code' do
+              tax_code = eu_tax_service.call
+              expect(tax_code).to eq('lago_eu_fr_exception_reunion')
+            end
+          end
+
+          context 'when zipcode has no applicable exceptions' do
+            before do
+              customer.update(zipcode: '12345')
+            end
+
+            it 'returns the customer counrty standard tax' do
+              tax_code = eu_tax_service.call
+              expect(tax_code).to eq('lago_eu_fr_standard')
+            end
+          end
+        end
+      end
     end
 
     context 'with non B2B' do
