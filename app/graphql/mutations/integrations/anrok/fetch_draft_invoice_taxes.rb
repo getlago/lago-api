@@ -50,7 +50,7 @@ module Mutations
             OpenStruct.new(
               add_on_id: fee[:add_on_id],
               item_id: fee[:add_on_id],
-              amount_cents: (unit_amount_cents * units).round
+              sub_total_excluding_taxes_amount_cents: (unit_amount_cents * units).round
             )
           end
         end
