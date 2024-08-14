@@ -2,19 +2,25 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    # NOTE: customer_id can reference the lago id or the external id of the customer
-    # NOTE: subscription_id can reference the lago id or the external id of the subscription
-    def initialize(current_user, customer_id:, subscription_id:, organization_id: nil)
+    def initialize(current_user, customer:, subscription:)
       super(current_user)
 
-      if organization_id.present?
-        @organization_id = organization_id
-        @customer = Customer.find_by!(external_id: customer_id, organization_id:)
-        @subscription = @customer&.active_subscriptions&.find_by(external_id: subscription_id)
-      else
-        customer(customer_id:)
-        @subscription = @customer&.active_subscriptions&.find_by(id: subscription_id)
-      end
+      @customer = customer
+      @subscription = subscription
+    end
+
+    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:)
+      customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
+      subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
+      new(nil, customer:, subscription:)
+    rescue ActiveRecord::RecordNotFound
+      result.not_found_failure!(resource: 'customer')
+    end
+
+    def self.with_ids(current_user, customer_id:, subscription_id:)
+      customer = Customer.find_by(id: customer_id, organization_id: current_user.organization_ids)
+      subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
+      new(current_user, customer:, subscription:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: 'customer')
     end
@@ -52,13 +58,6 @@ module Invoices
       compute_amounts
 
       format_usage
-    end
-
-    def customer(customer_id: nil)
-      @customer ||= Customer.find_by(
-        id: customer_id,
-        organization_id: result.user.organization_ids
-      )
     end
 
     def add_charge_fees
