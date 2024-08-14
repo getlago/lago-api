@@ -19,7 +19,7 @@ en:
         intro: Your %{resource_type} export is ready! You can download it using the link below, which will be available for 7 days.
         lago_team: The Lago Team
         main_cta_label: Download export
-        subject: Your Lago %{resource_type} export in ready!
+        subject: Your Lago %{resource_type} export is ready!
         thanks: Thanks,
     invoice:
       finalized:
