@@ -5,7 +5,7 @@ module LifetimeUsages
     class CheckService < BaseService
       def initialize(lifetime_usage:)
         @lifetime_usage = lifetime_usage
-        @thresholds = lifetime_usage.subscription.usage_thresholds
+        @thresholds = lifetime_usage.subscription.plan.usage_thresholds
         super
       end
 
@@ -16,7 +16,10 @@ module LifetimeUsages
         # There is only 1 recurring threshold, `first` will return it or nil
         recurring_threshold = thresholds.recurring.first
 
-        progressive_billed_amount = subscription.invoices.progressive_billing.sum(:amount_cents)
+        # TODO: replace with this once that MR is merged.
+        # progressive_billed_amount = lifetime_usage.subscription.invoices.progressive_billing.sum(:amount_cents)
+
+        progressive_billed_amount = 0
 
         # Calculate the actual current usage, we need to substract the already billed progressive amount
         # as we might be passing the threshold multiple times per period
@@ -35,11 +38,17 @@ module LifetimeUsages
           result.passed_thresholds += fixed_thresholds.select do |threshold|
             threshold.amount_cents > invoiced_usage && threshold.amount_cents <= total_usage
           end
-        end
+          if recurring_threshold
+            if total_usage - largest_threshold_amount >= recurring_threshold.amount_cents
+              result.passed_thresholds << recurring_threshold
+            end
+          end
+        elsif recurring_threshold
+          recurring_remainder = invoiced_usage % recurring_threshold.amount_cents
 
-        # Finally check the recurring threshold
-        if recurring_threshold && total_usage - largest_threshold_amount > recurring_threshold.amount_cents
-          result.passed_thresholds << recurring_threshold
+          if actual_current_usage + recurring_remainder >= recurring_threshold.amount_cents
+            result.passed_thresholds << recurring_threshold
+          end
         end
 
         result
