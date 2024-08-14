@@ -202,6 +202,33 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
               }
             )
         end
+
+        context 'when no integration mapping is defined' do
+          let(:integration_collection_mapping1) { nil }
+          let(:integration_mapping_add_on) { nil }
+          let(:body) do
+            path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+            body_string = File.read(path)
+            body = JSON.parse(body_string)
+            body['failedInvoices'].first['validation_errors'] = "Request body: \"lineItems\": 0: \"productExternalId\": String must contain at least 1 character(s)."
+          end
+
+          before do
+            params.first['fees'].each { |fee| fee['item_code'] = nil }
+          end
+
+          it 'sends request to anrok with empty link to fallback item' do
+            result = service_call
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.fees).to be(nil)
+              expect(result.error).to be_a(BaseService::ServiceFailure)
+              expect(result.error.code).to eq('taxDateTooFarInFuture')
+            end
+          end
+        end
+
       end
     end
 
