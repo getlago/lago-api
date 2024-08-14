@@ -25,7 +25,9 @@ class Organization < ApplicationRecord
   has_many :add_ons
   has_many :invites
   has_many :integrations, class_name: 'Integrations::BaseIntegration'
+  has_many :payable_groups
   has_many :payment_providers, class_name: 'PaymentProviders::BaseProvider'
+  has_many :payment_requests
   has_many :taxes
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets

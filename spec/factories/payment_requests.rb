@@ -3,7 +3,8 @@
 FactoryBot.define do
   factory :payment_request do
     customer
-    payment_requestable { create(:payable_group) }
+    organization { customer.organization }
+    payment_requestable { create(:payable_group, customer:) }
 
     amount_cents { 200 }
     amount_currency { "EUR" }

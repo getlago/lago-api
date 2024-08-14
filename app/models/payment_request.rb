@@ -4,7 +4,8 @@ class PaymentRequest < ApplicationRecord
   include PaperTrailTraceable
 
   has_many :payments
-  belongs_to :customer
+  belongs_to :organization
+  belongs_to :customer, -> { with_discarded }
   belongs_to :payment_requestable, polymorphic: true
 
   validates :email, presence: true
