@@ -128,9 +128,46 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             expect(result).to be_success
             expect(result.fees.first['tax_breakdown'].first['rate']).to eq('0.10')
             expect(result.fees.first['tax_breakdown'].first['name']).to eq('GST/HST')
-            expect(result.fees.first['tax_breakdown'].last['name']).to eq('reverseCharge')
+            expect(result.fees.first['tax_breakdown'].last['name']).to eq('Reverse charge')
             expect(result.fees.first['tax_breakdown'].last['type']).to eq('exempt')
             expect(result.fees.first['tax_breakdown'].last['rate']).to eq('0.00')
+          end
+        end
+
+        context 'when special rules applied' do
+          before do
+            parsed_body = JSON.parse(body)
+            parsed_body['succeededInvoices'].first['fees'].first['tax_breakdown'] = [
+              {
+                "reason": "",
+                "type": rule
+              }
+            ]
+            allow(response).to receive(:body).and_return(parsed_body.to_json)
+          end
+
+          special_rules =
+            [
+              { received_type: 'notCollecting', expected_name: 'Not collecting' },
+              { received_type: 'productNotTaxed', expected_name: 'Product not taxed' },
+              { received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed' }
+            ]
+
+          special_rules.each do |specific_rule|
+            context "when applied rule is #{specific_rule}" do
+              let(:rule) { specific_rule[:received_type] }
+
+              it 'returns fee object with populated for the specific rule fields' do
+                result = service_call
+                aggregate_failures do
+                  expect(result).to be_success
+                  expect(result.fees.first['tax_breakdown'].last['name']).to eq(specific_rule[:expected_name])
+                  expect(result.fees.first['tax_breakdown'].last['type']).to eq(specific_rule[:received_type])
+                  expect(result.fees.first['tax_breakdown'].last['rate']).to eq('0.00')
+                  expect(result.fees.first['tax_breakdown'].last['tax_amount']).to eq(0)
+                end
+              end
+            end
           end
         end
       end

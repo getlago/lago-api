@@ -5,7 +5,6 @@ module Integrations
     module Taxes
       module Invoices
         class BaseService < Integrations::Aggregator::BaseService
-
           SPECIAL_TAXATION_TYPES = %w[exempt notCollecting productNotTaxed jurisNotTaxed].freeze
           def initialize(invoice:, fees: nil)
             @invoice = invoice
