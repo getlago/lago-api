@@ -8,7 +8,6 @@ module Mutations
 
       REQUIRED_PERMISSION = 'invoices:update'
 
-      graphql_name 'RetryTaxProviderVoiding'
       description 'Retry voided invoice sync'
 
       argument :id, ID, required: true
