@@ -9,15 +9,9 @@ RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
 
   let(:result) { BaseService::Result.new }
 
-  let(:void_service) do
-    instance_double(Invoices::ProviderTaxes::VoidService)
-  end
-
   before do
-    allow(Invoices::ProviderTaxes::VoidService).to receive(:new)
+    allow(Invoices::ProviderTaxes::VoidService).to receive(:call)
       .with(invoice:)
-      .and_return(void_service)
-    allow(void_service).to receive(:call)
       .and_return(result)
   end
 
@@ -30,8 +24,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
     it 'calls successfully void service' do
       described_class.perform_now(invoice:)
 
-      expect(Invoices::ProviderTaxes::VoidService).to have_received(:new)
-      expect(void_service).to have_received(:call)
+      expect(Invoices::ProviderTaxes::VoidService).to have_received(:call)
     end
   end
 
@@ -39,8 +32,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
     it 'does not call void service' do
       described_class.perform_now(invoice:)
 
-      expect(Invoices::ProviderTaxes::VoidService).not_to have_received(:new)
-      expect(void_service).not_to have_received(:call)
+      expect(Invoices::ProviderTaxes::VoidService).not_to have_received(:call)
     end
   end
 end
