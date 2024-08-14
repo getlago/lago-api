@@ -17,7 +17,7 @@ RSpec.describe DataExportMailer, type: :mailer do
 
     specify do
       expect(mailer.to).to eq([data_export.user.email])
-      expect(mailer.subject).to eq("Your Lago invoices export in ready!")
+      expect(mailer.subject).to eq("Your Lago invoices export is ready!")
       expect(mailer.body.encoded).to match("Your invoices export is ready!")
       expect(mailer.body.encoded).to match("will be available for 7 days")
       expect(mailer.body.encoded).to match(data_export.file_url)
@@ -27,7 +27,7 @@ RSpec.describe DataExportMailer, type: :mailer do
       let(:data_export) { create(:data_export, :completed, resource_type: 'invoice_fees') }
 
       specify do
-        expect(mailer.subject).to eq("Your Lago invoice fees export in ready!")
+        expect(mailer.subject).to eq("Your Lago invoice fees export is ready!")
         expect(mailer.body.encoded).to match("Your invoice fees export is ready!")
       end
     end
