@@ -3,8 +3,9 @@
 module LifetimeUsages
   module UsageThresholds
     class CheckService < BaseService
-      def initialize(lifetime_usage:)
+      def initialize(lifetime_usage:, progressive_billed_amount: 0)
         @lifetime_usage = lifetime_usage
+        @progressive_billed_amount = progressive_billed_amount
         @thresholds = lifetime_usage.subscription.plan.usage_thresholds
         super
       end
@@ -16,15 +17,12 @@ module LifetimeUsages
         # There is only 1 recurring threshold, `first` will return it or nil
         recurring_threshold = thresholds.recurring.first
 
-        # TODO: replace with this once that MR is merged.
-        # progressive_billed_amount = lifetime_usage.subscription.invoices.progressive_billing.sum(:amount_cents)
-
-        progressive_billed_amount = 0
-
         # Calculate the actual current usage, we need to substract the already billed progressive amount
-        # as we might be passing the threshold multiple times per period
+        # as we might be passing the recurring threshold multiple times per period
         actual_current_usage = lifetime_usage.current_usage_amount_cents - progressive_billed_amount
-        invoiced_usage = lifetime_usage.invoiced_usage_amount_cents
+        # we can end up in a situation where this goes below zero, in that case no thresholds are passed
+        return result if actual_current_usage.negative?
+        invoiced_usage = lifetime_usage.invoiced_usage_amount_cents + progressive_billed_amount
 
         # Get the largest threshold amount
         # in case there are no fixed_thresholds, this will return nil which to_i will convert to 0
@@ -56,7 +54,7 @@ module LifetimeUsages
 
       private
 
-      attr_reader :lifetime_usage, :thresholds
+      attr_reader :lifetime_usage, :thresholds, :progressive_billed_amount
     end
   end
 end
