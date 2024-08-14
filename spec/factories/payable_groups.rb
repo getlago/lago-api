@@ -3,5 +3,6 @@
 FactoryBot.define do
   factory :payable_group do
     customer
+    organization { customer.organization }
   end
 end

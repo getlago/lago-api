@@ -3,6 +3,7 @@
 class PayableGroup < ApplicationRecord
   include PaperTrailTraceable
 
+  belongs_to :organization
   belongs_to :customer, -> { with_discarded }
 
   has_many :invoices

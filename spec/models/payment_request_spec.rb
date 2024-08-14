@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentRequest, type: :model do
   subject(:payment_request) do
     described_class.new(
+      organization:,
       customer:,
       payment_requestable: payable_group,
       email: Faker::Internet.email,
@@ -14,6 +15,7 @@ RSpec.describe PaymentRequest, type: :model do
   end
 
   let(:customer) { create(:customer) }
+  let(:organization) { customer.organization }
   let(:payment) { create(:payment) }
   let(:payable_group) { create(:payable_group) }
 
