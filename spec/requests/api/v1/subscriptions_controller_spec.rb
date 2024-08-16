@@ -33,7 +33,6 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
             amount_cents: commitment_amount_cents
           },
           usage_thresholds: [
-            id: usage_threshold.id,
             amount_cents: override_amount_cents,
             threshold_display_name: override_display_name
           ]
@@ -43,9 +42,6 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
     let(:override_amount_cents) { 777 }
     let(:override_display_name) { 'Overriden Threshold 12' }
-    let(:usage_threshold) { create(:usage_threshold, plan:) }
-
-    before { usage_threshold }
 
     it 'returns a success', :aggregate_failures do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: 'foo')

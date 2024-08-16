@@ -30,7 +30,6 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
             id
             amountCents
             usageThresholds {
-              id
               amountCents
               thresholdDisplayName
             }
@@ -70,7 +69,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
               invoiceDisplayName: 'invoice display name'
             ],
             usageThresholds: [
-              id: threshold.id,
+              amountCents: 100,
               thresholdDisplayName: 'threshold display name'
             ]
           }

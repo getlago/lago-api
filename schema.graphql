@@ -7314,8 +7314,7 @@ input UsageThresholdInput {
 }
 
 input UsageThresholdOverridesInput {
-  amountCents: BigInt
-  id: ID!
+  amountCents: BigInt!
   recurring: Boolean
   thresholdDisplayName: String
 }
