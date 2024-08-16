@@ -10,7 +10,7 @@ module Types
       field :id, ID, null: false
 
       def error_details
-        object.error_details[object.error_code]
+        object.details[object.error_code]
       end
     end
   end
