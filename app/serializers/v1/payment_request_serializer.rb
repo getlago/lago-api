@@ -26,10 +26,8 @@ module V1
     end
 
     def invoices
-      invoices = model.payment_requestable.is_a?(Invoice) ? [model.payment_requestable] : model.payment_requestable.invoices
-
       ::CollectionSerializer.new(
-        invoices,
+        model.invoices,
         ::V1::InvoiceSerializer,
         collection_name: "invoices"
       ).serialize

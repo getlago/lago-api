@@ -53,6 +53,7 @@ module Types
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :payment_provider, resolver: Resolvers::PaymentProviderResolver
     field :payment_providers, resolver: Resolvers::PaymentProvidersResolver
+    field :payment_requests, resolver: Resolvers::PaymentRequestsResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver

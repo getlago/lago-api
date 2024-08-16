@@ -5231,6 +5231,22 @@ type PaymentProviderCollection {
   metadata: CollectionMetadata!
 }
 
+type PaymentRequest {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  createdAt: ISO8601DateTime!
+  customer: Customer!
+  email: String!
+  id: ID!
+  invoices: [Invoice!]!
+  updatedAt: ISO8601DateTime!
+}
+
+type PaymentRequestCollection {
+  collection: [PaymentRequest!]!
+  metadata: CollectionMetadata!
+}
+
 """
 Permissions Type
 """
@@ -5288,6 +5304,7 @@ type Permissions {
   organizationTaxesView: Boolean!
   organizationUpdate: Boolean!
   organizationView: Boolean!
+  paymentRequestsView: Boolean!
   plansCreate: Boolean!
   plansDelete: Boolean!
   plansUpdate: Boolean!
@@ -5717,6 +5734,11 @@ type Query {
   Query organization's payment providers
   """
   paymentProviders(limit: Int, page: Int, type: ProviderTypeEnum): PaymentProviderCollection
+
+  """
+  Query payment requests of an organization
+  """
+  paymentRequests(externalCustomerId: String, limit: Int, page: Int): PaymentRequestCollection!
 
   """
   Query a single plan of an organization

@@ -84,3 +84,5 @@ organization:
     create:
     update:
     delete:
+payment_requests:
+  view: true

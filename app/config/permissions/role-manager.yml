@@ -60,3 +60,5 @@ organization:
     create: false
     update: false
     delete: false
+payment_requests:
+  view: true
