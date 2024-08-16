@@ -45,4 +45,25 @@ RSpec.describe PaymentRequest, type: :model do
       expect(payment_request).not_to be_valid
     end
   end
+
+  describe "#invoices" do
+    context "when payment_requestable is an invoice" do
+      let(:invoice) { create(:invoice) }
+      let(:payment_request) { create(:payment_request, payment_requestable: invoice) }
+
+      it "returns an array with the invoice" do
+        expect(payment_request.invoices).to eq([invoice])
+      end
+    end
+
+    context "when payment_requestable is a payable_group" do
+      let(:payable_group) { create(:payable_group) }
+      let(:payment_request) { create(:payment_request, payment_requestable: payable_group) }
+
+      it "returns the invoices from the payable_group" do
+        invoice = create(:invoice, payable_group:)
+        expect(payment_request.invoices).to eq([invoice])
+      end
+    end
+  end
 end

@@ -11,4 +11,8 @@ class PaymentRequest < ApplicationRecord
   validates :email, presence: true
   validates :amount_cents, presence: true
   validates :amount_currency, presence: true
+
+  def invoices
+    payment_requestable.is_a?(Invoice) ? [payment_requestable] : payment_requestable.invoices
+  end
 end
