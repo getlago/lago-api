@@ -38,6 +38,7 @@ class SendWebhookJob < ApplicationJob
     'subscription.started' => Webhooks::Subscriptions::StartedService,
     'subscription.termination_alert' => Webhooks::Subscriptions::TerminationAlertService,
     'subscription.trial_ended' => Webhooks::Subscriptions::TrialEndedService,
+    'subscription.usage_threshold_reached' => Webhooks::Subscriptions::UsageThresholdsReachedService,
     'wallet.depleted_ongoing_balance' => Webhooks::Wallets::DepletedOngoingBalanceService,
     'wallet_transaction.created' => Webhooks::WalletTransactions::CreatedService,
     'wallet_transaction.updated' => Webhooks::WalletTransactions::UpdatedService,

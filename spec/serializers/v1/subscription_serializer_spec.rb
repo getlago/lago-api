@@ -73,4 +73,23 @@ RSpec.describe ::V1::SubscriptionSerializer do
       end
     end
   end
+
+  context 'when including usage threshold' do
+    subject(:serializer) do
+      described_class.new(
+        subscription,
+        root_name: 'subscription',
+        includes: %i[usage_threshold],
+        usage_threshold:
+      )
+    end
+
+    let(:usage_threshold) { create(:usage_threshold, plan: subscription.plan) }
+
+    it 'serializes the object' do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result['subscription']['usage_threshold']).to be_present
+    end
+  end
 end

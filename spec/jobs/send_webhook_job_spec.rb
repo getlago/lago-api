@@ -8,6 +8,24 @@ RSpec.describe SendWebhookJob, type: :job do
   let(:organization) { create(:organization, webhook_url: 'http://foo.bar') }
   let(:invoice) { create(:invoice, organization:) }
 
+  shared_examples 'a webhook service' do |webhook_type, service_class, object, options|
+    let(:webhook_service) { instance_double(service_class) }
+
+    before do
+      allow(service_class).to receive(:new)
+        .with(object: object, options: options)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook service' do
+      send_webhook_job.perform_now(webhook_type, object, options)
+
+      expect(service_class).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook_id is present' do
     let(:webhook_service) { instance_double(Webhooks::Invoices::CreatedService) }
 
@@ -361,50 +379,6 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
-  context 'when webhook_type is subscription.terminated' do
-    let(:webhook_service) { instance_double(Webhooks::Subscriptions::TerminatedService) }
-    let(:subscription) { create(:subscription) }
-
-    before do
-      allow(Webhooks::Subscriptions::TerminatedService).to receive(:new)
-        .with(object: subscription, options: {})
-        .and_return(webhook_service)
-      allow(webhook_service).to receive(:call)
-    end
-
-    it 'calls the webhook service' do
-      send_webhook_job.perform_now(
-        'subscription.terminated',
-        subscription
-      )
-
-      expect(Webhooks::Subscriptions::TerminatedService).to have_received(:new)
-      expect(webhook_service).to have_received(:call)
-    end
-  end
-
-  context 'when webhook_type is subscription.termination_alert' do
-    let(:webhook_service) { instance_double(Webhooks::Subscriptions::TerminationAlertService) }
-    let(:subscription) { create(:subscription) }
-
-    before do
-      allow(Webhooks::Subscriptions::TerminationAlertService).to receive(:new)
-        .with(object: subscription, options: {})
-        .and_return(webhook_service)
-      allow(webhook_service).to receive(:call)
-    end
-
-    it 'calls the webhook service' do
-      send_webhook_job.perform_now(
-        'subscription.termination_alert',
-        subscription
-      )
-
-      expect(Webhooks::Subscriptions::TerminationAlertService).to have_received(:new)
-      expect(webhook_service).to have_received(:call)
-    end
-  end
-
   context 'when webhook type is invoice.payment_status_updated' do
     let(:webhook_service) { instance_double(Webhooks::Invoices::PaymentStatusUpdatedService) }
     let(:invoice) { create(:invoice, organization:) }
@@ -434,26 +408,29 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
-  context 'when webhook type is subscription.started' do
-    let(:webhook_service) { instance_double(Webhooks::Subscriptions::StartedService) }
-    let(:subscription) { create(:subscription) }
+  context 'with subscription webhooks' do
+    let(:object) { create(:subscription) }
+    let(:options) { {usage_threshold: create(:usage_threshold)} }
 
-    before do
-      allow(Webhooks::Subscriptions::StartedService).to receive(:new)
-        .with(object: subscription, options: {})
-        .and_return(webhook_service)
-      allow(webhook_service).to receive(:call)
-    end
+    it_behaves_like 'a webhook service',
+      'subscription.started',
+      Webhooks::Subscriptions::StartedService
 
-    it 'calls the webhook service' do
-      send_webhook_job.perform_now(
-        'subscription.started',
-        subscription
-      )
+    it_behaves_like 'a webhook service',
+      'subscription.terminated',
+      Webhooks::Subscriptions::TerminatedService
 
-      expect(Webhooks::Subscriptions::StartedService).to have_received(:new)
-      expect(webhook_service).to have_received(:call)
-    end
+    it_behaves_like 'a webhook service',
+      'subscription.termination_alert',
+      Webhooks::Subscriptions::TerminationAlertService
+
+    it_behaves_like 'a webhook service',
+      'subscription.trial_ended',
+      Webhooks::Subscriptions::TrialEndedService
+
+    it_behaves_like 'a webhook service',
+      'subscription.usage_threshold_reached',
+      Webhooks::Subscriptions::UsageThresholdsReachedService
   end
 
   context 'when webhook type is customer.vies_check' do
