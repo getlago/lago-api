@@ -15,6 +15,8 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
         invoice.void!
+
+        flag_lifetime_usage_for_refresh
       end
 
       invoice.credits.each do |credit|
@@ -40,5 +42,9 @@ module Invoices
     private
 
     attr_reader :invoice
+
+    def flag_lifetime_usage_for_refresh
+      LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
+    end
   end
 end
