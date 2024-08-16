@@ -38,6 +38,15 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
     end
 
+    it 'flags the lifetime usage for refresh' do
+      create(:usage_threshold, plan:)
+
+      process_service.call
+
+      expect(subscription.reload.lifetime_usage).to be_present
+      expect(subscription.lifetime_usage.recalculate_current_usage).to be(true)
+    end
+
     context 'when event matches an pay_in_advance charge' do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id') }
