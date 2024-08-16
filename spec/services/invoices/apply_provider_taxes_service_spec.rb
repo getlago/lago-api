@@ -125,25 +125,24 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
       context 'with special provider rules' do
         special_rules =
           [
-            { received_type: 'notCollecting', expected_name: 'Not collecting', tax_code: 'not_collecting' },
-            { received_type: 'productNotTaxed', expected_name: 'Product not taxed', tax_code: 'product_not_taxed' },
-            { received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed', tax_code: 'juris_not_taxed' }
+            {received_type: 'notCollecting', expected_name: 'Not collecting', tax_code: 'not_collecting'},
+            {received_type: 'productNotTaxed', expected_name: 'Product not taxed', tax_code: 'product_not_taxed'},
+            {received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed', tax_code: 'juris_not_taxed'}
           ]
         special_rules.each do |applied_rule|
-
           context "when tax provider returned specific rule applied to fees - #{applied_rule[:expected_name]}" do
             let(:fee_taxes) do
               [
                 OpenStruct.new(
                   tax_breakdown: [
                     OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type],
-                                   rate: '0.00', tax_amount: 0)
+                      rate: '0.00', tax_amount: 0)
                   ]
                 ),
                 OpenStruct.new(
                   tax_breakdown: [
                     OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type],
-                                   rate: '0.00', tax_amount: 0)
+                      rate: '0.00', tax_amount: 0)
                   ]
                 )
               ]
@@ -152,11 +151,11 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
             let(:fee2) { create(:fee, invoice:, amount_cents: 2000, precise_coupons_amount_cents: 0) }
             let(:fee1_applied_tax) do
               create(:fee_applied_tax, fee: fee1, amount_cents: 0, tax_name: applied_rule[:expected_name],
-                     tax_code: applied_rule[:tax_code], tax_rate: 0.0, tax_description: applied_rule[:received_type])
+                tax_code: applied_rule[:tax_code], tax_rate: 0.0, tax_description: applied_rule[:received_type])
             end
             let(:fee2_applied_tax) do
               create(:fee_applied_tax, fee: fee2, amount_cents: 0, tax_name: applied_rule[:expected_name],
-                     tax_code: applied_rule[:tax_code], tax_rate: 0.0, tax_description: applied_rule[:received_type])
+                tax_code: applied_rule[:tax_code], tax_rate: 0.0, tax_description: applied_rule[:received_type])
             end
 
             before do

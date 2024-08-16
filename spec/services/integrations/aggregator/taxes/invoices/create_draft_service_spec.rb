@@ -139,8 +139,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             parsed_body = JSON.parse(body)
             parsed_body['succeededInvoices'].first['fees'].first['tax_breakdown'] = [
               {
-                "reason": "",
-                "type": rule
+                reason: "",
+                type: rule
               }
             ]
             allow(response).to receive(:body).and_return(parsed_body.to_json)
@@ -148,9 +148,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
           special_rules =
             [
-              { received_type: 'notCollecting', expected_name: 'Not collecting' },
-              { received_type: 'productNotTaxed', expected_name: 'Product not taxed' },
-              { received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed' }
+              {received_type: 'notCollecting', expected_name: 'Not collecting'},
+              {received_type: 'productNotTaxed', expected_name: 'Product not taxed'},
+              {received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed'}
             ]
 
           special_rules.each do |specific_rule|

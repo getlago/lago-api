@@ -58,9 +58,9 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
     context 'when applying taxes with specific provider rules' do
       special_rules =
         [
-          { received_type: 'notCollecting', expected_name: 'Not collecting', tax_code: 'not_collecting' },
-          { received_type: 'productNotTaxed', expected_name: 'Product not taxed', tax_code: 'product_not_taxed' },
-          { received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed', tax_code: 'juris_not_taxed' }
+          {received_type: 'notCollecting', expected_name: 'Not collecting', tax_code: 'not_collecting'},
+          {received_type: 'productNotTaxed', expected_name: 'Product not taxed', tax_code: 'product_not_taxed'},
+          {received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed', tax_code: 'juris_not_taxed'}
         ]
       special_rules.each do |applied_rule|
         context "when tax provider returned specific rule applied to fees - #{applied_rule[:expected_name]}" do
@@ -85,7 +85,7 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
               expect(applied_tax).to have_attributes(
                 tax_code: applied_rule[:tax_code],
                 tax_name: applied_rule[:expected_name],
-                tax_description: applied_rule[:received_type],
+                tax_description: applied_rule[:received_type]
               )
               expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_rate: 0)
             end
