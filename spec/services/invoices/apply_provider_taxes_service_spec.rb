@@ -122,7 +122,7 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
         end
       end
 
-      context "with special rules" do
+      context 'with special provider rules' do
         special_rules =
           [
             { received_type: 'notCollecting', expected_name: 'Not collecting', tax_code: 'not_collecting' },

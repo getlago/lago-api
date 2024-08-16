@@ -54,5 +54,44 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
         end.not_to change { fee.applied_taxes.count }
       end
     end
+
+    context 'when applying taxes with specific provider rules' do
+      special_rules =
+        [
+          { received_type: 'notCollecting', expected_name: 'Not collecting', tax_code: 'not_collecting' },
+          { received_type: 'productNotTaxed', expected_name: 'Product not taxed', tax_code: 'product_not_taxed' },
+          { received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed', tax_code: 'juris_not_taxed' }
+        ]
+      special_rules.each do |applied_rule|
+        context "when tax provider returned specific rule applied to fees - #{applied_rule[:expected_name]}" do
+          let(:fee_taxes) do
+            OpenStruct.new(
+              tax_breakdown: [
+                OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type], rate: '0.00', tax_amount: 0)
+              ]
+            )
+          end
+
+          it 'creates applied_taxes based on the provider rules' do
+            result = apply_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              applied_taxes = result.applied_taxes
+              expect(applied_taxes.count).to eq(1)
+
+              applied_tax = applied_taxes.first
+              expect(applied_tax).to have_attributes(
+                tax_code: applied_rule[:tax_code],
+                tax_name: applied_rule[:expected_name],
+                tax_description: applied_rule[:received_type],
+              )
+              expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_rate: 0)
+            end
+          end
+        end
+      end
+    end
   end
 end
