@@ -7,7 +7,7 @@ RSpec.describe Invoice::AppliedTax, type: :model do
 
   it_behaves_like 'paper_trail traceable'
 
-  context '#applied_on_whole_invoice?' do
+  describe '#applied_on_whole_invoice?' do
     subject(:applicable_on_whole_invoice) { applied_tax.applied_on_whole_invoice? }
 
     context 'when applied tax represents special rule' do
@@ -23,6 +23,5 @@ RSpec.describe Invoice::AppliedTax, type: :model do
         expect(subject).to be(false)
       end
     end
-
   end
 end
