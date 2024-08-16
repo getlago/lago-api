@@ -123,7 +123,7 @@ RSpec.describe Mutations::Integrations::Anrok::FetchDraftInvoiceTaxes, type: :gr
 
       breakdown2 = fee['taxBreakdown'].last
 
-      expect(breakdown2['name']).to eq('reverseCharge')
+      expect(breakdown2['name']).to eq('Reverse charge')
       expect(breakdown2['rate']).to eq(0.0)
       expect(breakdown2['taxAmount']).to eq('0')
       expect(breakdown2['type']).to eq('exempt')
