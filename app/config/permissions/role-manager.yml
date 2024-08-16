@@ -62,3 +62,4 @@ organization:
     delete: false
 payment_requests:
   view: true
+  create: true

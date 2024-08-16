@@ -61,7 +61,7 @@ Rails.application.routes.draw do
         put :refresh, on: :member
         put :finalize, on: :member
       end
-      resources :payment_requests, only: %i[index]
+      resources :payment_requests, only: %i[create index]
       resources :plans, param: :code
       resources :taxes, param: :code
       resources :wallet_transactions, only: :create

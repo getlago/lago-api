@@ -5,6 +5,47 @@ require "rails_helper"
 RSpec.describe Api::V1::PaymentRequestsController, type: :request do
   let(:organization) { create(:organization) }
 
+  describe "create" do
+    let(:customer) { create(:customer, organization:) }
+    let(:params) do
+      {
+        email: customer.email,
+        external_customer_id: customer.external_id
+      }
+    end
+
+    context "when customer is not found" do
+      let(:params) do
+        {external_customer_id: "unknown"}
+      end
+
+      it "returns a not found error" do
+        post_with_token(organization, "/api/v1/payment_requests", {payment_request: params})
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    it "delegates to PaymentRequests::CreateService", :aggregate_failures do
+      payment_request = create(:payment_request)
+      allow(PaymentRequests::CreateService).to receive(:call).and_return(
+        BaseService::Result.new.tap { |r| r.payment_request = payment_request }
+      )
+
+      post_with_token(organization, "/api/v1/payment_requests", {payment_request: params})
+
+      expect(PaymentRequests::CreateService).to have_received(:call).with(
+        organization:,
+        params: {
+          email: customer.email,
+          external_customer_id: customer.external_id
+        }
+      )
+
+      expect(response).to have_http_status(:success)
+      expect(json[:payment_request][:lago_id]).to eq(payment_request.id)
+    end
+  end
+
   describe "index" do
     it "returns organization's payment requests", :aggregate_failures do
       first_customer = create(:customer, organization:)

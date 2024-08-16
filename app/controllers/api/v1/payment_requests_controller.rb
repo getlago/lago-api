@@ -3,6 +3,19 @@
 module Api
   module V1
     class PaymentRequestsController < Api::BaseController
+      def create
+        result = PaymentRequests::CreateService.call(
+          organization: current_organization,
+          params: create_params.to_h.deep_symbolize_keys
+        )
+
+        if result.success?
+          render(json: ::V1::PaymentRequestSerializer.new(result.payment_request, root_name: "payment_request"))
+        else
+          render_error_response(result)
+        end
+      end
+
       def index
         result = PaymentRequestsQuery.call(
           organization: current_organization,
@@ -29,6 +42,14 @@ module Api
       end
 
       private
+
+      def create_params
+        params.require(:payment_request).permit(
+          :email,
+          :external_customer_id,
+          :lago_invoice_ids
+        )
+      end
 
       def index_filters
         params.permit(:external_customer_id)
