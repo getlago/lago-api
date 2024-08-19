@@ -17,6 +17,7 @@ module Invoices
       invoice.mark_as_dispute_lost!(payment_dispute_lost_at)
 
       SendWebhookJob.perform_later('invoice.payment_dispute_lost', result.invoice, provider_error: reason)
+      Invoices::ProviderTaxes::VoidJob.perform_later(invoice:)
 
       result
     rescue ActiveRecord::RecordInvalid => _e
