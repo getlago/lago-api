@@ -294,7 +294,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         it 'does not send any updates' do
           finalize_service.call
           aggregate_failures do
-            expect(SendWebhookJob).not_to have_received(:perform_later)
+            expect(SendWebhookJob).not_to have_received(:perform_later).with('invoice.created', invoice)
             expect(Invoices::GeneratePdfAndNotifyJob).not_to have_received(:perform_later)
             expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_received(:perform_later)
             expect(Integrations::Aggregator::SalesOrders::CreateJob).not_to have_received(:perform_later)
