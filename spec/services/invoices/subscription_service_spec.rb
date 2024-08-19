@@ -134,6 +134,91 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
     end
 
+    context 'when there is tax provider integration' do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:lago_client) { instance_double(LagoHttpClient::Client) }
+      let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+      let(:body) do
+        p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
+        json = File.read(p)
+
+        # setting item_id based on the test example
+        response = JSON.parse(json)
+        response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
+        response['succeededInvoices'].first['fees'].last['item_id'] = plan.charges.first.billable_metric.id
+
+        response.to_json
+      end
+      let(:integration_collection_mapping) do
+        create(
+          :netsuite_collection_mapping,
+          integration:,
+          mapping_type: :fallback_item,
+          settings: {external_id: '1', external_account_code: '11', external_name: ''}
+        )
+      end
+
+      before do
+        integration_collection_mapping
+        integration_customer
+
+        allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it 'creates an invoice' do
+        result = invoice_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.invoice.subscriptions.first).to eq(subscription)
+          expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+          expect(result.invoice.invoice_type).to eq('subscription')
+          expect(result.invoice.payment_status).to eq('pending')
+          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          expect(result.invoice.fees.charge_kind.count).to eq(1)
+
+          expect(result.invoice.currency).to eq('EUR')
+          expect(result.invoice.fees_amount_cents).to eq(100)
+
+          expect(result.invoice.taxes_amount_cents).to eq(10)
+          expect(result.invoice.taxes_rate).to eq(10)
+          expect(result.invoice.applied_taxes.count).to eq(2)
+
+          expect(result.invoice.total_amount_cents).to eq(110)
+          expect(result.invoice.version_number).to eq(4)
+          expect(result.invoice).to be_finalized
+        end
+      end
+
+      context 'when there is error received from the provider' do
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+          File.read(p)
+        end
+
+        it 'returns tax error' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:tax_error]).to eq(['taxDateTooFarInFuture'])
+
+            invoice = customer.invoices.order(created_at: :desc).first
+
+            expect(invoice.status).to eq('failed')
+            expect(invoice.error_details.count).to eq(1)
+            expect(invoice.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
+          end
+        end
+      end
+    end
+
     context 'when periodic but no active subscriptions' do
       it 'does not create any invoices' do
         subscription.terminated!
