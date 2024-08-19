@@ -43,6 +43,7 @@ module Integrations
             elsif fee.subscription?
               subscription_item
             end
+            mapped_item ||= empty_struct
 
             {
               'item_id' => fee.item_id,
@@ -54,6 +55,10 @@ module Integrations
           private
 
           attr_reader :customer, :invoice, :fees
+
+          def empty_struct
+            @empty_struct ||= OpenStruct.new
+          end
         end
       end
     end
