@@ -4,8 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
   let(:integration) { integration_customer.integration }
-  let(:customer) { integration_customer.customer }
-  let(:integration_customer) { FactoryBot.create(:netsuite_customer) }
+  let(:integration_customer) { FactoryBot.create(:netsuite_customer, customer:) }
+  let(:customer) { create(:customer) }
   let(:subsidiary_id) { Faker::Number.number(digits: 2) }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:, subsidiary_id:) }
   let(:customer_link) { payload.__send__(:customer_url) }
@@ -16,7 +16,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
     let(:payload_body) do
       {
         'type' => 'customer',
-        'isDynamic' => false,
+        'isDynamic' => true,
         'columns' => {
           'companyname' => customer.name,
           'subsidiary' => subsidiary_id,
@@ -29,12 +29,117 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
         },
         'options' => {
           'ignoreMandatoryFields' => false
-        }
+        },
+        'lines' => lines
       }
     end
 
-    it "returns the payload body" do
-      expect(subject).to eq payload_body
+    context 'when shipping address is present' do
+      context 'when shipping address is not the same as billing address' do
+        let(:customer) { create(:customer, :with_shipping_address) }
+
+        let(:lines) do
+          [
+            {
+              'lineItems' => [
+                {
+                  'defaultshipping' => false,
+                  'defaultbilling' => true,
+                  'subObjectId' => 'addressbookaddress',
+                  'subObject' => {
+                    'addr1' => customer.address_line1,
+                    'addr2' => customer.address_line2,
+                    'city' => customer.city,
+                    'zip' => customer.zipcode,
+                    'state' => customer.state,
+                    'country' => customer.country
+                  }
+                },
+                {
+                  'defaultshipping' => true,
+                  'defaultbilling' => false,
+                  'subObjectId' => 'addressbookaddress',
+                  'subObject' => {
+                    'addr1' => customer.shipping_address_line1,
+                    'addr2' => customer.shipping_address_line2,
+                    'city' => customer.shipping_city,
+                    'zip' => customer.shipping_zipcode,
+                    'state' => customer.shipping_state,
+                    'country' => customer.shipping_country
+                  }
+                }
+              ],
+              'sublistId' => 'addressbook'
+            }
+          ]
+        end
+
+        it 'returns the payload body' do
+          expect(subject).to eq payload_body
+        end
+      end
+
+      context 'when shipping address is the same as billing address' do
+        let(:customer) { create(:customer, :with_same_billing_and_shipping_address) }
+
+        let(:lines) do
+          [
+            {
+              'lineItems' => [
+                {
+                  'defaultshipping' => true,
+                  'defaultbilling' => true,
+                  'subObjectId' => 'addressbookaddress',
+                  'subObject' => {
+                    'addr1' => customer.address_line1,
+                    'addr2' => customer.address_line2,
+                    'city' => customer.city,
+                    'zip' => customer.zipcode,
+                    'state' => customer.state,
+                    'country' => customer.country
+                  }
+                }
+              ],
+              'sublistId' => 'addressbook'
+            }
+          ]
+        end
+
+        it 'returns the payload body' do
+          expect(subject).to eq payload_body
+        end
+      end
+    end
+
+    context 'when shipping address is not present' do
+      let(:customer) { create(:customer) }
+
+      let(:lines) do
+        [
+          {
+            'lineItems' => [
+              {
+                'defaultshipping' => true,
+                'defaultbilling' => true,
+                'subObjectId' => 'addressbookaddress',
+                'subObject' => {
+                  'addr1' => customer.address_line1,
+                  'addr2' => customer.address_line2,
+                  'city' => customer.city,
+                  'zip' => customer.zipcode,
+                  'state' => customer.state,
+                  'country' => customer.country
+                }
+              }
+            ],
+            'sublistId' => 'addressbook'
+          }
+        ]
+      end
+
+      it 'returns the payload body' do
+        expect(subject).to eq payload_body
+      end
     end
   end
 
