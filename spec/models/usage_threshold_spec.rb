@@ -15,4 +15,18 @@ RSpec.describe UsageThreshold, type: :model do
       expect(described_class.unscoped.discarded).to eq([deleted_usage_threshold])
     end
   end
+
+  describe 'invoice_name' do
+    subject(:usage_threshold) { build(:usage_threshold, threshold_display_name:) }
+
+    let(:threshold_display_name) { 'Threshold Display Name' }
+
+    it { expect(usage_threshold.invoice_name).to eq(threshold_display_name) }
+
+    context 'when threshold display name is null' do
+      let(:threshold_display_name) { nil }
+
+      it { expect(usage_threshold.invoice_name).to eq(I18n.t('invoice.usage_threshold')) }
+    end
+  end
 end

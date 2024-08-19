@@ -83,6 +83,7 @@ it:
     units: Unità
     units_prorated_per_period: Unità proporzionate al secondo per %{period}
     usage_based_fees: Tariffe basate sull'utilizzo
+    usage_threshold: Soglia di fatturazione
     volume:
       fee_per_unit: Tassa per unità
       flat_fee_for_all_units: Canone forfettario per tutte le unità

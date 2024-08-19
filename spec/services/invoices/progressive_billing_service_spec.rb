@@ -125,7 +125,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
 
     context 'when threashold was already billed' do
       before do
-        create(
+        invoice = create(
           :invoice,
           organization:,
           customer:,
@@ -133,6 +133,12 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
           invoice_type: :progressive_billing,
           fees_amount_cents: 20,
           subscriptions: [subscription]
+        )
+
+        create(
+          :charge_fee,
+          invoice:,
+          amount_cents: 20
         )
       end
 
@@ -165,7 +171,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
 
     context 'when usage was already billed' do
       before do
-        create(
+        invoice = create(
           :invoice,
           organization:,
           customer:,
@@ -173,6 +179,12 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
           invoice_type: :subscription,
           fees_amount_cents: 7,
           subscriptions: [subscription]
+        )
+
+        create(
+          :charge_fee,
+          invoice:,
+          amount_cents: 7
         )
       end
 

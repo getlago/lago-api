@@ -1,4 +1,4 @@
-- if subscription?
+- if subscription? || progressive_billing?
   - subscriptions.each do |subscription|
     - invoice_subscription = invoice_subscription(subscription.id)
     - subscription_fee = invoice_subscription.subscription_fee
@@ -51,6 +51,16 @@
               - else
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
                   == SlimHelper.render('templates/invoices/v4/_fees_without_filters', fee)
+
+        / Progressive billing fees
+        - if progressive_billing?
+          - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
+            tr
+              td.body-1 = fee.invoice_name
+              td.body-2 = fee.units
+              td.body-2 = MoneyHelper.format(fee.amount)
+              td.body-2 == TaxHelper.applied_taxes(fee)
+              td.body-2 = MoneyHelper.format(fee.amount)
 
     / Charge fees section for subscription invoice
     - if subscription? && subscription_fees(subscription.id).charge_kind.any?

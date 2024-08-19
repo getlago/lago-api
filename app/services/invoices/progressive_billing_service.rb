@@ -99,7 +99,7 @@ module Invoices
       @invoiced_amount_cents ||= subscription.invoices
         .finalized
         .where(invoice_type: %w[subscription progressive_billing])
-        .sum(:fees_amount_cents)
+        .sum { |invoice| invoice.fees.where(fee_type: %w[charge progressive_billing]).sum(:amount_cents) }
     end
 
     # NOTE: Current lifetime usage amount

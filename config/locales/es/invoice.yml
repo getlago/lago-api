@@ -81,6 +81,7 @@ es:
     units: Unidades
     units_prorated_per_period: Unidades prorrateadas por segundo por %{period}
     usage_based_fees: Cargos basados en el uso
+    usage_threshold: Umbral de facturación
     volume:
       fee_per_unit: Tarifa por unidad
       flat_fee_for_all_units: Tarifa plana para todas las unidades
