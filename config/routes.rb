@@ -62,7 +62,7 @@ Rails.application.routes.draw do
         put :finalize, on: :member
       end
       resources :payment_requests, only: %i[create index]
-      resources :plans, param: :code
+      resources :plans, param: :code, code: /.*/
       resources :taxes, param: :code
       resources :wallet_transactions, only: :create
       get '/wallets/:id/wallet_transactions', to: 'wallet_transactions#index'
