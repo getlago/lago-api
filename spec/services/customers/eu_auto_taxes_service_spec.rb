@@ -7,7 +7,7 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
   subject(:eu_tax_service) { described_class.new(customer:) }
 
   let(:organization) { create(:organization, country: 'FR') }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, organization:, zipcode: nil) }
 
   describe '.call' do
     context 'with B2B organization' do
