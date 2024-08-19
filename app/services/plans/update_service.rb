@@ -262,7 +262,7 @@ module Plans
     def sanitize_thresholds(plan, args_thresholds, created_thresholds_ids)
       args_thresholds_ids = args_thresholds.map { |c| c[:id] }.compact
       thresholds_ids = plan.usage_thresholds.pluck(:id) - args_thresholds_ids - created_thresholds_ids
-      plan.usage_thresholds.where(id: thresholds_ids).destroy_all
+      plan.usage_thresholds.where(id: thresholds_ids).discard_all
     end
 
     def discard_charge!(charge)
