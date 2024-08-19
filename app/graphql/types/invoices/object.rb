@@ -56,6 +56,7 @@ module Types
 
       field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
+      field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
 
       delegate :error_details, to: :object
 
@@ -66,6 +67,12 @@ module Types
       def integration_syncable
         object.should_sync_invoice? &&
           object.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').none?
+      end
+
+      def tax_provider_voidable
+        return false unless object.voided?
+
+        object.error_details.tax_voiding_error.any?
       end
 
       def external_integration_id
