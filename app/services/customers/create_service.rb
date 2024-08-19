@@ -197,8 +197,8 @@ module Customers
     def valid_email?(email)
       return true if email.nil?
 
-      email_regex = /\A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i
-      email_regex.match?(email).present?
+      email_regexp = /\A[^@\s]+@[^@\s]+\z/
+      email_regexp.match?(email).present?
     end
 
     def valid_metadata_count?(metadata:)

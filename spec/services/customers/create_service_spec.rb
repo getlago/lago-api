@@ -110,7 +110,7 @@ RSpec.describe Customers::CreateService, type: :service do
           external_id:,
           name: 'Foo Bar',
           currency: 'EUR',
-          email: 'not_valid@not_valid.valid',
+          email: '@missingusername.com',
           tax_identification_number: '123456789',
           billing_configuration: {
             document_locale: 'fr'
