@@ -56,7 +56,7 @@ module Invoices
       if tax_error?(fee_result)
         SendWebhookJob.perform_later('invoice.drafted', invoice) if grace_period?
 
-        return fee_result
+        return result.validation_failure!(errors: {tax_error: [fee_result.error.error_message]})
       end
 
       if grace_period?
