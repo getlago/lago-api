@@ -3,6 +3,8 @@
 class UsageThreshold < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   belongs_to :plan
 
@@ -14,4 +16,6 @@ class UsageThreshold < ApplicationRecord
 
   scope :recurring, -> { where(recurring: true) }
   scope :not_recurring, -> { where(recurring: false) }
+
+  default_scope -> { kept }
 end

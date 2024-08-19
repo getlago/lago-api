@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_14_144137) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_19_092354) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1068,8 +1068,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_14_144137) do
     t.boolean "recurring", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["amount_cents", "plan_id", "recurring"], name: "idx_on_amount_cents_plan_id_recurring_888044d66b", unique: true
-    t.index ["plan_id", "recurring"], name: "index_usage_thresholds_on_plan_id_and_recurring", unique: true, where: "(recurring IS TRUE)"
+    t.datetime "deleted_at"
+    t.index ["amount_cents", "plan_id", "recurring"], name: "idx_on_amount_cents_plan_id_recurring_888044d66b", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["plan_id", "recurring"], name: "index_usage_thresholds_on_plan_id_and_recurring", unique: true, where: "((recurring IS TRUE) AND (deleted_at IS NULL))"
     t.index ["plan_id"], name: "index_usage_thresholds_on_plan_id"
   end
 
