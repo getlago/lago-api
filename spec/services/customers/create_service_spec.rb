@@ -104,6 +104,43 @@ RSpec.describe Customers::CreateService, type: :service do
       )
     end
 
+    context 'with invalid email' do
+      let(:create_args) do
+        {
+          external_id:,
+          name: 'Foo Bar',
+          currency: 'EUR',
+          email: 'not_valid@not_valid.valid',
+          tax_identification_number: '123456789',
+          billing_configuration: {
+            document_locale: 'fr'
+          },
+          shipping_address: {
+            address_line1: 'line1',
+            address_line2: 'line2',
+            city: 'Paris',
+            zipcode: '123456',
+            state: 'foobar',
+            country: 'FR'
+          }
+        }
+      end
+
+      it 'fails to create customer with wrong email' do
+        result = customers_service.create_from_api(
+          organization:,
+          params: create_args
+        )
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:email)
+          expect(result.error.messages[:email]).to include('invalid_format')
+        end
+      end
+    end
+
     context 'with external_id already used by a deleted customer' do
       it 'creates a customer with the same external_id' do
         create(:customer, :deleted, organization:, external_id:)
