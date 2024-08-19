@@ -35,7 +35,10 @@ module Invoices
           recurring:
         )
 
-        fee_result.raise_if_error!
+        # NOTE: We don't want to raise error and corrupt DB commit if there is tax error.
+        #       In that case we want fees to stay attached to the invoice. There is retry action that will enable users
+        #       to finalize invoice
+        fee_result.raise_if_error! unless tax_error?(fee_result)
         invoice.reload
 
         flag_lifetime_usage_for_refresh
@@ -48,6 +51,12 @@ module Invoices
       # The webhook are sent whenever non-invoiceable fees are found in result.
       result.non_invoiceable_fees&.each do |fee|
         SendWebhookJob.perform_later('fee.created', fee)
+      end
+
+      if tax_error?(fee_result)
+        SendWebhookJob.perform_later('invoice.drafted', invoice) if grace_period?
+
+        return fee_result
       end
 
       if grace_period?
@@ -121,6 +130,10 @@ module Invoices
 
     def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
+    end
+
+    def tax_error?(fee_result)
+      !fee_result.success? && fee_result.error.code == 'tax_error'
     end
   end
 end
