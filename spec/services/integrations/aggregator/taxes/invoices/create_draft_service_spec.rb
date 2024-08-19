@@ -211,6 +211,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             body_string = File.read(path)
             body = JSON.parse(body_string)
             body['failedInvoices'].first['validation_errors'] = "Request body: \"lineItems\": 0: \"productExternalId\": String must contain at least 1 character(s)."
+            body.to_json
           end
 
           before do
@@ -224,7 +225,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
               expect(result).not_to be_success
               expect(result.fees).to be(nil)
               expect(result.error).to be_a(BaseService::ServiceFailure)
-              expect(result.error.code).to eq('taxDateTooFarInFuture')
+              expect(result.error.code).to eq('validationError')
             end
           end
         end

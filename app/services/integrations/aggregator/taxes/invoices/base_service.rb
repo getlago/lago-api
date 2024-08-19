@@ -55,9 +55,7 @@ module Integrations
                 )
               end
             else
-              code = body['failedInvoices'].first['validation_errors']['type']
-              message = 'Service failure'
-
+              code, message = retrieve_error_details(body['failedInvoices'].first['validation_errors'])
               deliver_tax_error_webhook(customer:, code:, message:)
 
               result.service_failure!(code:, message:)
@@ -70,9 +68,7 @@ module Integrations
             if invoice_id
               result.invoice_id = invoice_id
             else
-              code = body['failedInvoices'].first['validation_errors']['type']
-              message = 'Service failure'
-
+              code, message = retrieve_error_details(body['failedInvoices'].first['validation_errors'])
               deliver_tax_error_webhook(customer:, code:, message:)
 
               result.service_failure!(code:, message:)
@@ -97,6 +93,18 @@ module Integrations
                 )
               end
             end
+          end
+
+          def retrieve_error_details(validation_error)
+            if validation_error.is_a?(Hash)
+              code = validation_error['type']
+              message = 'Service failure'
+              return [code, message]
+            end
+
+            code = 'validationError'
+            message = validation_error
+            [code, message]
           end
 
           def humanize_tax_name(camelized_name)
