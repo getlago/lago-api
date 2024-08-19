@@ -114,6 +114,53 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
     end
   end
 
+  context "when we pass a threshold with already progressive_billing invoices present" do
+    let(:usage_threshold) { create(:usage_threshold, plan: subscription.plan, amount_cents: 10) }
+    let(:usage_threshold2) { create(:usage_threshold, plan: subscription.plan, amount_cents: 400) }
+    let(:progressive_billing_invoice) do
+      create(
+        :invoice,
+        organization:,
+        customer:,
+        status: 'finalized',
+        invoice_type: :progressive_billing,
+        fees_amount_cents: 20,
+        subscriptions: [subscription]
+      )
+    end
+
+    before do
+      usage_threshold
+      usage_threshold2
+      progressive_billing_invoice
+      events
+      charge
+    end
+
+    it "clears the recalculate_invoiced_usage flag" do
+      expect { service.call }.to change(lifetime_usage, :recalculate_invoiced_usage).from(true).to(false)
+    end
+
+    it "clears the recalculate_current_usage flag" do
+      expect { service.call }.to change(lifetime_usage, :recalculate_current_usage).from(true).to(false)
+    end
+
+    it "sends a webhook for the last threshold" do
+      expect { service.call }.to enqueue_job(SendWebhookJob)
+        .with(
+          'subscription.usage_threshold_reached',
+          subscription,
+          usage_threshold: usage_threshold2
+        ).on_queue(:webhook)
+    end
+
+    it "creates an invoice for the largest usage_threshold amount minus the progressive billing amount" do
+      expect { service.call }.to change(Invoice, :count).by(1)
+      invoice = subscription.invoices.progressive_billing.order(created_at: :desc).first
+      expect(invoice.total_amount_cents).to eq(usage_threshold2.amount_cents - progressive_billing_invoice.fees_amount_cents)
+    end
+  end
+
   context "when we pass no thresholds" do
     let(:usage_threshold) { create(:usage_threshold, plan: subscription.plan, amount_cents: 3000) }
 

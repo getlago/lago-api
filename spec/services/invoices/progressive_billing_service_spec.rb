@@ -123,7 +123,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
       end
     end
 
-    context 'when threashold was already billed' do
+    context 'when threshold was already billed' do
       before do
         create(
           :invoice,
