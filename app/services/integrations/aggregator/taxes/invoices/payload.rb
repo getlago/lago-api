@@ -57,7 +57,7 @@ module Integrations
           attr_reader :customer, :invoice, :fees
 
           def empty_struct
-            @empty_struct ||= OpenStruct.new()
+            @empty_struct ||= OpenStruct.new
           end
         end
       end

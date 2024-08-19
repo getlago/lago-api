@@ -229,7 +229,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             end
           end
         end
-
       end
     end
 
