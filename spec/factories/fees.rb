@@ -102,4 +102,18 @@ FactoryBot.define do
     invoiceable_type { 'Commitment' }
     invoiceable_id { commitment.id }
   end
+
+  factory :progressive_billing_fee, class: 'Fee' do
+    invoice
+    fee_type { 'progressive_billing' }
+    subscription
+
+    amount_cents { 200 }
+    amount_currency { 'EUR' }
+    taxes_amount_cents { 2 }
+
+    usage_threshold { create(:usage_threshold, plan: subscription.plan) }
+    invoiceable_type { 'UsageThreshold' }
+    invoiceable_id { usage_threshold.id }
+  end
 end

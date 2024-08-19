@@ -88,11 +88,10 @@ module Invoices
     end
 
     def date_service(subscription)
-      Subscriptions::DatesService.new_instance(
-        subscription,
-        datetime,
-        current_usage: subscription.terminated? && subscription.upgraded?
-      )
+      current_usage = invoicing_reason.to_sym == :progressive_billing
+      current_usage ||= subscription.terminated? && subscription.upgraded?
+
+      Subscriptions::DatesService.new_instance(subscription, datetime, current_usage:)
     end
 
     # This method calculates boundaries for terminated subscription. If termination is happening on billing date

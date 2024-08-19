@@ -16429,6 +16429,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "progressive_billing",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -20073,6 +20079,12 @@
             },
             {
               "name": "advance_charges",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "progressive_billing",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
