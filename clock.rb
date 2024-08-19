@@ -31,7 +31,7 @@ module Clockwork
   end
 
   every(5.minutes, 'schedule:refresh_lifetime_usages') do
-    Clock::RefreshLifetimUsagesJob
+    Clock::RefreshLifetimeUsagesJob
       .set(sentry: {"slug" => 'lago_refresh_lifetime_usages', "cron" => '*/5 * * * *'})
       .perform_later
   end
