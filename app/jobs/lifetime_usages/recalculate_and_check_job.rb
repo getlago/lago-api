@@ -5,7 +5,7 @@ module LifetimeUsages
     unique :until_executed, on_conflict: :log
 
     def perform(lifetime_usage)
-      LifetimeUsages::RecalculateAndCheckService.call(lifetime_usage)
+      LifetimeUsages::RecalculateAndCheckService.call(lifetime_usage:)
     end
   end
 end
