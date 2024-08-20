@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_19_092354) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_20_090312) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -372,9 +372,11 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_19_092354) do
     t.datetime "updated_at", null: false
     t.uuid "credit_note_id"
     t.boolean "before_taxes", default: false, null: false
+    t.uuid "progressive_billing_invoice_id"
     t.index ["applied_coupon_id"], name: "index_credits_on_applied_coupon_id"
     t.index ["credit_note_id"], name: "index_credits_on_credit_note_id"
     t.index ["invoice_id"], name: "index_credits_on_invoice_id"
+    t.index ["progressive_billing_invoice_id"], name: "index_credits_on_progressive_billing_invoice_id"
   end
 
   create_table "customer_metadata", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1202,6 +1204,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_19_092354) do
   add_foreign_key "credits", "applied_coupons"
   add_foreign_key "credits", "credit_notes"
   add_foreign_key "credits", "invoices"
+  add_foreign_key "credits", "invoices", column: "progressive_billing_invoice_id"
   add_foreign_key "customer_metadata", "customers"
   add_foreign_key "customers", "organizations"
   add_foreign_key "customers_taxes", "customers"

@@ -3,6 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe Credit, type: :model do
+  subject(:credit) { create(:credit) }
+
+  describe 'associations' do
+    it { is_expected.to belong_to(:invoice) }
+    it { is_expected.to belong_to(:applied_coupon).optional }
+    it { is_expected.to belong_to(:credit_note).optional }
+    it { is_expected.to belong_to(:progressive_billing_invoice).optional }
+  end
+
   describe 'invoice item' do
     context 'when credit is a coupon' do
       subject(:credit) { create(:credit, applied_coupon:) }
@@ -60,6 +69,30 @@ RSpec.describe Credit, type: :model do
           expect(credit.item_type).to eq('credit_note')
           expect(credit.item_code).to eq(credit_note.number)
           expect(credit.item_name).to eq(credit_note.invoice.number)
+        end
+      end
+    end
+
+    context 'when credit is a progressive billing invoice' do
+      subject(:credit) { create(:progressive_billing_invoice_credit, progressive_billing_invoice:) }
+
+      let(:progressive_billing_invoice) { create(:invoice, invoice_type: :progressive_billing) }
+      let(:progressive_billing_fee) do
+        create(
+          :fee,
+          invoice: progressive_billing_invoice,
+          fee_type: :progressive_billing
+        )
+      end
+
+      before { progressive_billing_fee }
+
+      it 'returns invoice details', aggregate_failures: true do
+        aggregate_failures do
+          expect(credit.item_id).to eq(progressive_billing_invoice.id)
+          expect(credit.item_type).to eq('invoice')
+          expect(credit.item_code).to eq(progressive_billing_invoice.number)
+          expect(credit.item_name).to eq(progressive_billing_fee.invoice_name)
         end
       end
     end

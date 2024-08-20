@@ -16,4 +16,12 @@ FactoryBot.define do
     amount_cents { 200 }
     amount_currency { 'EUR' }
   end
+
+  factory :progressive_billing_invoice_credit, class: 'Credit' do
+    invoice
+    progressive_billing_invoice factory: :invoice
+
+    amount_cents { 200 }
+    amount_currency { 'EUR' }
+  end
 end

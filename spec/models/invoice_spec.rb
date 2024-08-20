@@ -14,6 +14,8 @@ RSpec.describe Invoice, type: :model do
   it { is_expected.to have_many(:payment_requests) }
   it { is_expected.to belong_to(:payable_group).optional }
 
+  it { is_expected.to have_many(:progressive_billing_credits) }
+
   it 'has fixed status mapping' do
     expect(described_class::VISIBLE_STATUS).to match(draft: 0, finalized: 1, voided: 2, failed: 4)
     expect(described_class::INVISIBLE_STATUS).to match(generating: 3, open: 5)
