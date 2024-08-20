@@ -27,8 +27,6 @@ module Fees
           fee_taxes_result = apply_provider_taxes(fees)
 
           unless fee_taxes_result.success?
-            deliver_tax_error_webhook(code: 'tax_error', message: fee_taxes_result.error.code)
-
             result.validation_failure!(errors: {tax_error: [fee_taxes_result.error.code]})
             result.raise_if_error! unless charge.invoiceable?
 
@@ -199,21 +197,6 @@ module Fees
       end
 
       taxes_result
-    end
-
-    def deliver_tax_error_webhook(code:, message:)
-      return if charge.invoiceable?
-
-      SendWebhookJob.perform_later(
-        'fee.tax_provider_error',
-        integration_customer.integration,
-        event_transaction_id: event.transaction_id,
-        lago_charge_id: charge.id,
-        provider_error: {
-          message:,
-          error_code: code
-        }
-      )
     end
 
     def invoice

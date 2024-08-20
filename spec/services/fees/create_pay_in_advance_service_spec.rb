@@ -182,20 +182,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           end
         end
 
-        it 'does not deliver tax error webhook' do
-          expect { fee_service.call }.not_to enqueue_job(SendWebhookJob)
-            .with(
-              'fee.tax_provider_error',
-              customer.anrok_customer.integration,
-              event_transaction_id: event.transaction_id,
-              lago_charge_id: charge.id,
-              provider_error: {
-                message: 'taxDateTooFarInFuture',
-                error_code: 'tax_error'
-              }
-            )
-        end
-
         context 'when invoiceable is false' do
           let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:, invoiceable: false) }
 
@@ -208,20 +194,6 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
               expect(result.error.messages[:tax_error]).to eq(['taxDateTooFarInFuture'])
               expect(charge.reload.fees.count).to eq(0)
             end
-          end
-
-          it 'delivers tax error webhook' do
-            expect { fee_service.call }.to enqueue_job(SendWebhookJob)
-              .with(
-                'fee.tax_provider_error',
-                customer.anrok_customer.integration,
-                event_transaction_id: event.transaction_id,
-                lago_charge_id: charge.id,
-                provider_error: {
-                  message: 'taxDateTooFarInFuture',
-                  error_code: 'tax_error'
-                }
-              )
           end
         end
       end
