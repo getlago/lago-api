@@ -13,8 +13,8 @@ class CreateEventsMaxAgg < ActiveRecord::Migration[7.1]
       t.string :code, null: false
       t.string :charge_id, null: false
       t.datetime :timestamp, precision: 3, null: false
-      t.map :filters, key_type: :string, value_type: 'Array(String)', null: false
-      t.map :grouped_by, key_type: :string, value_type: :string, null: false
+      t.string :filters, map: :array, null: false
+      t.string :grouped_by, map: true, null: false
     end
 
     add_column :events_max_agg, :value, 'AggregateFunction(max, Decimal(38, 26))', null: false # rubocop:disable Rails/NotNullColumn

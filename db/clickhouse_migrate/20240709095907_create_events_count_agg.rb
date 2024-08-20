@@ -14,8 +14,8 @@ class CreateEventsCountAgg < ActiveRecord::Migration[7.1]
       t.string :charge_id, null: false
       t.decimal :value, precision: 26
       t.datetime :timestamp, precision: 3, null: false
-      t.map :filters, key_type: :string, value_type: 'Array(String)', null: false
-      t.map :grouped_by, key_type: :string, value_type: :string, null: false
+      t.string :filters, map: :array, null: false
+      t.string :grouped_by, map: true, null: false
     end
   end
 end

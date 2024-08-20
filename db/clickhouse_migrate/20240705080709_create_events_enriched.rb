@@ -19,12 +19,12 @@ class CreateEventsEnriched < ActiveRecord::Migration[7.1]
       t.string :code, null: false
       t.datetime :timestamp, null: false, precision: 3
       t.string :transaction_id, null: false
-      t.map :properties, key_type: :string, value_type: :string, null: false
+      t.string :properties, map: true, null: false
       t.string :value
       t.string :charge_id, null: false
       t.string :aggregation_type
-      t.map :filters, key_type: :string, value_type: 'Array(String)', null: false
-      t.map :grouped_by, key_type: :string, value_type: :string, null: false
+      t.string :filters, map: :array, null: false
+      t.string :grouped_by, map: true, null: false
     end
   end
 end
