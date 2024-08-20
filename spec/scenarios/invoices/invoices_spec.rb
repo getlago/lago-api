@@ -190,6 +190,94 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     end
   end
 
+  context 'when subscription is upgraded without grace period' do
+    let(:customer) { create(:customer, organization:, invoice_grace_period: 0) }
+    let(:plan) { create(:plan, organization:, amount_cents: 0) }
+    let(:plan_new) { create(:plan, organization:, amount_cents: 2000) }
+    let(:metric) { create(:latest_billable_metric, organization:) }
+
+    it 'creates invoices with correctly attached amounts and reasons' do
+      ### 24 Apr: Create subscription + charge.
+      apr24_10 = DateTime.parse('2024-4-24 10:00:00')
+
+      travel_to(apr24_10) do
+        create(
+          :package_charge,
+          plan: plan_new,
+          billable_metric: metric,
+          pay_in_advance: false,
+          prorated: false,
+          invoiceable: true,
+          properties: {
+            amount: '2',
+            free_units: 1000,
+            package_size: 1000
+          }
+        )
+
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+      end
+
+      subscription = customer.subscriptions.active.first
+
+      ### 24 Apr: Upgrade subscription
+      apr24_11 = DateTime.parse('2024-4-24 11:00:00')
+
+      travel_to(apr24_11) do
+        expect {
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan_new.code
+            }
+          )
+        }.to change { subscription.reload.status }.from('active').to('terminated')
+          .and change { subscription.invoices.count }.from(0).to(1)
+
+        invoice = subscription.invoices.first
+        invoice_subscription = invoice.invoice_subscriptions.first
+
+        expect(invoice.status).to eq('finalized')
+        expect(invoice.total_amount_cents).to eq(0)
+        expect(invoice_subscription.invoicing_reason).to eq('subscription_terminating')
+        expect(invoice_subscription.from_datetime.iso8601).to eq('2024-04-24T00:00:00Z')
+        expect(invoice_subscription.to_datetime.iso8601).to eq('2024-04-24T11:00:00Z')
+        expect(invoice_subscription.charges_from_datetime.iso8601).to eq('2024-04-24T10:00:00Z')
+        expect(invoice_subscription.charges_to_datetime.iso8601).to eq('2024-04-24T11:00:00Z')
+      end
+
+      latest_subscription = customer.subscriptions.active.order(created_at: :desc).first
+
+      ### 26 Apr: Terminate subscription
+      apr26_11 = DateTime.parse('2024-4-26 11:00:00')
+
+      travel_to(apr26_11) do
+        expect {
+          terminate_subscription(latest_subscription)
+        }.to change { latest_subscription.reload.status }.from('active').to('terminated')
+          .and change { latest_subscription.invoices.count }.from(0).to(1)
+
+        invoice = latest_subscription.invoices.first
+        invoice_subscription = invoice.invoice_subscriptions.first
+
+        expect(invoice.status).to eq('finalized')
+        expect(invoice.total_amount_cents).to eq(240) # (2000/30) x 3 + tax
+        expect(invoice_subscription.invoicing_reason).to eq('subscription_terminating')
+        expect(invoice_subscription.from_datetime.iso8601).to eq('2024-04-24T00:00:00Z')
+        expect(invoice_subscription.to_datetime.iso8601).to eq('2024-04-26T11:00:00Z')
+        expect(invoice_subscription.charges_from_datetime.iso8601).to eq('2024-04-24T11:00:00Z')
+        expect(invoice_subscription.charges_to_datetime.iso8601).to eq('2024-04-26T11:00:00Z')
+      end
+    end
+  end
+
   context 'when subscription is terminated with a grace period' do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
