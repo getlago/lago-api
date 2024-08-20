@@ -2,35 +2,36 @@
 
 module UsageThresholds
   class OverrideService < BaseService
-    def initialize(threshold:, params:)
-      @threshold = threshold
-      @params = params
+    def initialize(usage_thresholds_params:, new_plan:)
+      @usage_thresholds_params = usage_thresholds_params
+      @new_plan = new_plan
 
       super
     end
 
     def call
       ActiveRecord::Base.transaction do
-        new_threshold = threshold.dup.tap do |c|
-          c.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
-          c.recurring = params[:recurring] if params.key?(:recurring)
-          c.threshold_display_name = params[:threshold_display_name] if params.key?(:threshold_display_name)
-          c.plan_id = params[:plan_id]
-        end
-        new_threshold.save!
+        usage_thresholds_params.each do |params|
+          usage_threshold = new_plan.usage_thresholds.new(
+            plan_id: new_plan.id,
+            threshold_display_name: params[:threshold_display_name],
+            amount_cents: params[:amount_cents],
+            recurring: params[:recurring] || false
+          )
 
-        result.usage_threshold = new_threshold
+          usage_threshold.save!
+        end
       end
 
+      result.usage_thresholds = new_plan.usage_thresholds
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue BaseService::FailedResult => e
-      e.result
+      result.fail_with_error!
     end
 
     private
 
-    attr_reader :threshold, :params
+    attr_reader :usage_thresholds_params, :new_plan
   end
 end

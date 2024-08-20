@@ -25,6 +25,7 @@ module Mutations
 
       argument :charges, [Types::Charges::Input]
       argument :minimum_commitment, Types::Commitments::Input, required: false
+      argument :usage_thresholds, [Types::UsageThresholds::Input], required: false
 
       type Types::Plans::Object
 

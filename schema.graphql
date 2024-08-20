@@ -2044,6 +2044,7 @@ input CreatePlanInput {
   payInAdvance: Boolean!
   taxCodes: [String!]
   trialPeriod: Float
+  usageThresholds: [UsageThresholdInput!]
 }
 
 input CreateRecurringTransactionRuleInput {
@@ -5388,6 +5389,7 @@ type Plan {
   taxes: [Tax!]
   trialPeriod: Float
   updatedAt: ISO8601DateTime!
+  usageThresholds: [UsageThreshold!]
 }
 
 type PlanCollection {
@@ -5412,6 +5414,7 @@ input PlanOverridesInput {
   name: String
   taxCodes: [String!]
   trialPeriod: Float
+  usageThresholds: [UsageThresholdOverridesInput!]
 }
 
 type Properties {
@@ -7303,6 +7306,7 @@ input UpdatePlanInput {
   payInAdvance: Boolean!
   taxCodes: [String!]
   trialPeriod: Float
+  usageThresholds: [UsageThresholdInput!]
 }
 
 input UpdateRecurringTransactionRuleInput {
@@ -7362,6 +7366,28 @@ input UpdateXeroIntegrationInput {
   syncCreditNotes: Boolean
   syncInvoices: Boolean
   syncPayments: Boolean
+}
+
+type UsageThreshold {
+  amountCents: BigInt!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  recurring: Boolean!
+  thresholdDisplayName: String
+  updatedAt: ISO8601DateTime!
+}
+
+input UsageThresholdInput {
+  amountCents: BigInt
+  id: ID
+  recurring: Boolean
+  thresholdDisplayName: String
+}
+
+input UsageThresholdOverridesInput {
+  amountCents: BigInt!
+  recurring: Boolean
+  thresholdDisplayName: String
 }
 
 type User {

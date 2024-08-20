@@ -36,14 +36,11 @@ module Plans
           Charges::OverrideService.call(charge:, params: charge_params)
         end
 
-        if License.premium? && plan.organization.premium_integrations.include?('progressive_billing')
-          plan.usage_thresholds.find_each do |threshold|
-            threshold_params = (
-              params[:usage_thresholds]&.find { |p| p[:id] == threshold.id } || {}
-            ).merge(plan_id: new_plan.id)
+        if params[:usage_thresholds].present? &&
+            License.premium? &&
+            plan.organization.premium_integrations.include?('progressive_billing')
 
-            UsageThresholds::OverrideService.call(threshold:, params: threshold_params)
-          end
+          UsageThresholds::OverrideService.call(usage_thresholds_params: params[:usage_thresholds], new_plan: new_plan)
         end
 
         if params[:minimum_commitment].present? && License.premium?

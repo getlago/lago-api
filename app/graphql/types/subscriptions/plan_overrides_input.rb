@@ -12,6 +12,7 @@ module Types
       argument :name, String, required: false
       argument :tax_codes, [String], required: false
       argument :trial_period, Float, required: false
+      argument :usage_thresholds, [Types::Subscriptions::UsageThresholdOverridesInput], required: false
     end
   end
 end
