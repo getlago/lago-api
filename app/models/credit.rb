@@ -6,6 +6,7 @@ class Credit < ApplicationRecord
   belongs_to :invoice
   belongs_to :applied_coupon, optional: true
   belongs_to :credit_note, optional: true
+  belongs_to :progressive_billing_invoice, class_name: 'Invoice', optional: true
 
   has_one :coupon, -> { with_discarded }, through: :applied_coupon
 
@@ -18,24 +19,31 @@ class Credit < ApplicationRecord
 
   def item_id
     return coupon&.id if applied_coupon_id
+    return progressive_billing_invoice_id if progressive_billing_invoice_id?
 
     credit_note.id
   end
 
   def item_type
     return 'coupon' if applied_coupon_id?
+    return 'invoice' if progressive_billing_invoice_id?
 
     'credit_note'
   end
 
   def item_code
     return coupon&.code if applied_coupon_id?
+    return progressive_billing_invoice.number if progressive_billing_invoice_id?
 
     credit_note.number
   end
 
   def item_name
     return coupon&.name if applied_coupon_id?
+
+    if progressive_billing_invoice_id?
+      return progressive_billing_invoice.fees.first&.invoice_name
+    end
 
     # TODO: change it depending on invoice template
     credit_note.invoice.number
@@ -62,25 +70,28 @@ end
 #
 # Table name: credits
 #
-#  id                :uuid             not null, primary key
-#  amount_cents      :bigint           not null
-#  amount_currency   :string           not null
-#  before_taxes      :boolean          default(FALSE), not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  applied_coupon_id :uuid
-#  credit_note_id    :uuid
-#  invoice_id        :uuid
+#  id                             :uuid             not null, primary key
+#  amount_cents                   :bigint           not null
+#  amount_currency                :string           not null
+#  before_taxes                   :boolean          default(FALSE), not null
+#  created_at                     :datetime         not null
+#  updated_at                     :datetime         not null
+#  applied_coupon_id              :uuid
+#  credit_note_id                 :uuid
+#  invoice_id                     :uuid
+#  progressive_billing_invoice_id :uuid
 #
 # Indexes
 #
-#  index_credits_on_applied_coupon_id  (applied_coupon_id)
-#  index_credits_on_credit_note_id     (credit_note_id)
-#  index_credits_on_invoice_id         (invoice_id)
+#  index_credits_on_applied_coupon_id               (applied_coupon_id)
+#  index_credits_on_credit_note_id                  (credit_note_id)
+#  index_credits_on_invoice_id                      (invoice_id)
+#  index_credits_on_progressive_billing_invoice_id  (progressive_billing_invoice_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (applied_coupon_id => applied_coupons.id)
 #  fk_rails_...  (credit_note_id => credit_notes.id)
 #  fk_rails_...  (invoice_id => invoices.id)
+#  fk_rails_...  (progressive_billing_invoice_id => invoices.id)
 #
