@@ -13,7 +13,9 @@ module PaymentRequests
       return result.not_found_failure!(resource: "customer") unless customer
 
       ActiveRecord::Base.transaction do
-        # TODO: Create payable group for the overdue invoices
+        # NOTE: Create payable group for the overdue invoices
+        payable_group = customer.payable_groups.create!(organization:)
+        invoices.each { |i| i.update!(payable_group:) }
 
         # TODO: Create payment request for the payable group
 
@@ -34,6 +36,10 @@ module PaymentRequests
 
     def customer
       @customer ||= organization.customers.find_by(external_id: params[:external_customer_id])
+    end
+
+    def invoices
+      @invoices ||= customer.invoices.where(id: params[:lago_invoice_ids])
     end
   end
 end
