@@ -242,10 +242,15 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription.invoices.count }.from(0).to(1)
 
         invoice = subscription.invoices.first
+        invoice_subscription = invoice.invoice_subscriptions.first
 
         expect(invoice.status).to eq('finalized')
         expect(invoice.total_amount_cents).to eq(0)
-        expect(invoice.invoice_subscriptions.first.invoicing_reason).to eq('subscription_terminating')
+        expect(invoice_subscription.invoicing_reason).to eq('subscription_terminating')
+        expect(invoice_subscription.from_datetime.iso8601).to eq('2024-04-24T00:00:00Z')
+        expect(invoice_subscription.to_datetime.iso8601).to eq('2024-04-24T11:00:00Z')
+        expect(invoice_subscription.charges_from_datetime.iso8601).to eq('2024-04-24T10:00:00Z')
+        expect(invoice_subscription.charges_to_datetime.iso8601).to eq('2024-04-24T11:00:00Z')
       end
 
       latest_subscription = customer.subscriptions.active.order(created_at: :desc).first
@@ -260,10 +265,15 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { latest_subscription.invoices.count }.from(0).to(1)
 
         invoice = latest_subscription.invoices.first
+        invoice_subscription = invoice.invoice_subscriptions.first
 
         expect(invoice.status).to eq('finalized')
         expect(invoice.total_amount_cents).to eq(240) # (2000/30) x 3 + tax
-        expect(invoice.invoice_subscriptions.first.invoicing_reason).to eq('subscription_terminating')
+        expect(invoice_subscription.invoicing_reason).to eq('subscription_terminating')
+        expect(invoice_subscription.from_datetime.iso8601).to eq('2024-04-24T00:00:00Z')
+        expect(invoice_subscription.to_datetime.iso8601).to eq('2024-04-26T11:00:00Z')
+        expect(invoice_subscription.charges_from_datetime.iso8601).to eq('2024-04-24T11:00:00Z')
+        expect(invoice_subscription.charges_to_datetime.iso8601).to eq('2024-04-26T11:00:00Z')
       end
     end
   end
