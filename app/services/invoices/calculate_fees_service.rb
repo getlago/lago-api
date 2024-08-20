@@ -44,6 +44,7 @@ module Invoices
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents) -
           invoice.coupons_amount_cents
 
+        Credits::ProgressiveBillingService.call(invoice:)
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
         Invoices::ComputeAmountsFromFees.call(invoice:)
 

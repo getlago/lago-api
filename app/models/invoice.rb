@@ -403,42 +403,43 @@ end
 #
 # Table name: invoices
 #
-#  id                                     :uuid             not null, primary key
-#  coupons_amount_cents                   :bigint           default(0), not null
-#  credit_notes_amount_cents              :bigint           default(0), not null
-#  currency                               :string
-#  fees_amount_cents                      :bigint           default(0), not null
-#  file                                   :string
-#  invoice_type                           :integer          default("subscription"), not null
-#  issuing_date                           :date
-#  negative_amount_cents                  :bigint           default(0), not null
-#  net_payment_term                       :integer          default(0), not null
-#  number                                 :string           default(""), not null
-#  payment_attempts                       :integer          default(0), not null
-#  payment_dispute_lost_at                :datetime
-#  payment_due_date                       :date
-#  payment_overdue                        :boolean          default(FALSE)
-#  payment_status                         :integer          default("pending"), not null
-#  prepaid_credit_amount_cents            :bigint           default(0), not null
-#  ready_for_payment_processing           :boolean          default(TRUE), not null
-#  ready_to_be_refreshed                  :boolean          default(FALSE), not null
-#  skip_charges                           :boolean          default(FALSE), not null
-#  status                                 :integer          default("finalized"), not null
-#  sub_total_excluding_taxes_amount_cents :bigint           default(0), not null
-#  sub_total_including_taxes_amount_cents :bigint           default(0), not null
-#  taxes_amount_cents                     :bigint           default(0), not null
-#  taxes_rate                             :float            default(0.0), not null
-#  timezone                               :string           default("UTC"), not null
-#  total_amount_cents                     :bigint           default(0), not null
-#  version_number                         :integer          default(4), not null
-#  voided_at                              :datetime
-#  created_at                             :datetime         not null
-#  updated_at                             :datetime         not null
-#  customer_id                            :uuid
-#  organization_id                        :uuid             not null
-#  organization_sequential_id             :integer          default(0), not null
-#  payable_group_id                       :uuid
-#  sequential_id                          :integer
+#  id                                      :uuid             not null, primary key
+#  coupons_amount_cents                    :bigint           default(0), not null
+#  credit_notes_amount_cents               :bigint           default(0), not null
+#  currency                                :string
+#  fees_amount_cents                       :bigint           default(0), not null
+#  file                                    :string
+#  invoice_type                            :integer          default("subscription"), not null
+#  issuing_date                            :date
+#  negative_amount_cents                   :bigint           default(0), not null
+#  net_payment_term                        :integer          default(0), not null
+#  number                                  :string           default(""), not null
+#  payment_attempts                        :integer          default(0), not null
+#  payment_dispute_lost_at                 :datetime
+#  payment_due_date                        :date
+#  payment_overdue                         :boolean          default(FALSE)
+#  payment_status                          :integer          default("pending"), not null
+#  prepaid_credit_amount_cents             :bigint           default(0), not null
+#  progressive_billing_credit_amount_cents :bigint           default(0), not null
+#  ready_for_payment_processing            :boolean          default(TRUE), not null
+#  ready_to_be_refreshed                   :boolean          default(FALSE), not null
+#  skip_charges                            :boolean          default(FALSE), not null
+#  status                                  :integer          default("finalized"), not null
+#  sub_total_excluding_taxes_amount_cents  :bigint           default(0), not null
+#  sub_total_including_taxes_amount_cents  :bigint           default(0), not null
+#  taxes_amount_cents                      :bigint           default(0), not null
+#  taxes_rate                              :float            default(0.0), not null
+#  timezone                                :string           default("UTC"), not null
+#  total_amount_cents                      :bigint           default(0), not null
+#  version_number                          :integer          default(4), not null
+#  voided_at                               :datetime
+#  created_at                              :datetime         not null
+#  updated_at                              :datetime         not null
+#  customer_id                             :uuid
+#  organization_id                         :uuid             not null
+#  organization_sequential_id              :integer          default(0), not null
+#  payable_group_id                        :uuid
+#  sequential_id                           :integer
 #
 # Indexes
 #

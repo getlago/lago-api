@@ -16,8 +16,10 @@ module LifetimeUsages
         usage_thresholds.each do |usage_threshold|
           SendWebhookJob.perform_later('subscription.usage_threshold_reached', subscription, usage_threshold:)
         end
-        Invoices::ProgressiveBillingService.call(usage_thresholds:, lifetime_usage:).raise_if_error!
+        invoice_result = Invoices::ProgressiveBillingService.call(usage_thresholds:, lifetime_usage:).raise_if_error!
+        result.invoice = invoice_result.invoice
       end
+      result
     end
 
     private
