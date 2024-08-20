@@ -83,6 +83,7 @@ de:
     units: Einheiten
     units_prorated_per_period: Einheiten anteilig pro Sekunde pro %{period}
     usage_based_fees: Nutzungsabhängige Gebühren
+    usage_threshold: Abrechnungsschwelle
     volume:
       fee_per_unit: Gebühr pro Einheit
       flat_fee_for_all_units: Pauschalgebühr für alle Einheiten

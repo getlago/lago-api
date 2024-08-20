@@ -83,6 +83,7 @@ nb:
     units: Enheter
     units_prorated_per_period: Enheter proratert per sekund per %{period}
     usage_based_fees: Bruksbaserte kostnader
+    usage_threshold: Faktureringsterskel
     volume:
       fee_per_unit: Gebyr per enhet
       flat_fee_for_all_units: Fast avgift for alle enheter

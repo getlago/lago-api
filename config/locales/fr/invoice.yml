@@ -83,6 +83,7 @@ fr:
     units: Unités
     units_prorated_per_period: Unités proratisées par seconde par %{period}
     usage_based_fees: Frais de consommation
+    usage_threshold: Seuil de facturation
     volume:
       fee_per_unit: Frais par unité
       flat_fee_for_all_units: Frais fixes pour toutes les unités

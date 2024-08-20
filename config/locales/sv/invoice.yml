@@ -81,6 +81,7 @@ sv:
     units: Enheter
     units_prorated_per_period: Proportionella enheter per sekund per %{period}
     usage_based_fees: Avgifter baserade på användning
+    usage_threshold: Faktureringströskel
     volume:
       fee_per_unit: Avgift per enhet
       flat_fee_for_all_units: Fast avgift för alla enheter

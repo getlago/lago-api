@@ -106,7 +106,7 @@ FactoryBot.define do
   factory :progressive_billing_fee, class: 'Fee' do
     invoice
     fee_type { 'progressive_billing' }
-    subscription
+    subscription { create(:subscription) }
 
     amount_cents { 200 }
     amount_currency { 'EUR' }

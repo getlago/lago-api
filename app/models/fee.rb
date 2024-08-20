@@ -66,6 +66,7 @@ class Fee < ApplicationRecord
     return billable_metric.id if charge?
     return add_on.id if add_on?
     return invoiceable_id if credit?
+    return usage_threshold_id if progressive_billing?
 
     subscription_id
   end
@@ -74,6 +75,7 @@ class Fee < ApplicationRecord
     return BillableMetric.name if charge?
     return AddOn.name if add_on?
     return WalletTransaction.name if credit?
+    return UsageThreshold.name if progressive_billing?
 
     Subscription.name
   end
@@ -81,7 +83,7 @@ class Fee < ApplicationRecord
   def item_code
     return billable_metric.code if charge?
     return add_on.code if add_on?
-    return fee_type if credit?
+    return fee_type if credit? || progressive_billing?
 
     subscription.plan.code
   end
@@ -89,7 +91,7 @@ class Fee < ApplicationRecord
   def item_name
     return billable_metric.name if charge?
     return add_on.name if add_on?
-    return fee_type if credit?
+    return fee_type if credit? || progressive_billing?
 
     subscription.plan.name
   end
@@ -97,7 +99,7 @@ class Fee < ApplicationRecord
   def item_description
     return billable_metric.description if charge?
     return add_on.description if add_on?
-    return fee_type if credit?
+    return fee_type if credit? || progressive_billing?
 
     subscription.plan.description
   end
@@ -107,6 +109,7 @@ class Fee < ApplicationRecord
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?
     return fee_type if credit?
+    return usage_threshold.invoice_name if progressive_billing?
 
     subscription.plan.invoice_display_name
   end
