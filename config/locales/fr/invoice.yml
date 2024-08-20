@@ -64,6 +64,12 @@ fr:
     tax_identification_number: 'ID fiscal: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% sur %{amount})"
     tax_name_with_details: "%{name} (%{rate}%)"
+    tax_name_only:
+      not_collecting: Pas de taxe
+      juris_not_taxed: Taxe non applicable
+      reverse_charge: Autoliquidation - Responsabilité fiscale transférée au client
+      customer_exempt: Le client est exonéré de taxe
+      transaction_exempt: Le client est exonéré de taxe
     tax_rate: Taux de taxe
     taxes:
       fr_tax_exempt: Le client est exonéré de taxe – art. 259-1 du CGI.

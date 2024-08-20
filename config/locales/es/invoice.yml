@@ -63,6 +63,12 @@ es:
     tax_identification_number: 'ID del impuesto: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% sobre %{amount})"
     tax_name_with_details: "%{name} (%{rate}%)"
+    tax_name_only:
+      not_collecting: Sin impuesto
+      juris_not_taxed: Sin impuesto
+      reverse_charge: Inversión del sujeto pasivo - Responsabilidad fiscal trasladada al cliente
+      customer_exempt: El cliente está exento de impuestos
+      transaction_exempt: El cliente está exento de impuestos
     tax_rate: Tasas de impuestos
     taxes:
       fr_tax_exempt: El cliente está exento de impuestos según el artículo 259-1 del Código General de Impuestos francés.
