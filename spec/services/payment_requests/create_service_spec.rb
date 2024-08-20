@@ -20,6 +20,30 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
   end
 
   describe "#call" do
+    context "when customer does not exist" do
+      before { params[:external_customer_id] = "non-existing-id" }
+
+      it "returns not found failure", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("customer")
+      end
+    end
+
+    context "when invoices are not found" do
+      before { params[:lago_invoice_ids] = [] }
+
+      it "returns not found failure", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("invoice")
+      end
+    end
+
     it "creates a payable group for the customer" do
       expect { create_service.call }.to change { customer.payable_groups.count }.by(1)
     end
@@ -32,6 +56,11 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
 
     it "creates a payment request" do
       expect { create_service.call }.to change { customer.payment_requests.count }.by(1)
+    end
+
+    it "delivers a webhook" do
+      create_service.call
+      expect(SendWebhookJob).to have_been_enqueued.with("payment_request.created", PaymentRequest)
     end
 
     it "returns the payment request", :aggregate_failures do

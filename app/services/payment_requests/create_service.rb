@@ -10,23 +10,28 @@ module PaymentRequests
     end
 
     def call
+      # TODO: Return error unless premium license
+
       return result.not_found_failure!(resource: "customer") unless customer
+      return result.not_found_failure!(resource: "invoice") if invoices.empty?
+
+      # TODO: Return error if invoices are not overdue
 
       ActiveRecord::Base.transaction do
         # NOTE: Create payable group for the overdue invoices
         payable_group = customer.payable_groups.create!(organization:)
-        invoices.each { |i| i.update!(payable_group:) }
+        invoices.update_all(payable_group_id: payable_group.id) # rubocop:disable Rails/SkipsModelValidations
 
         # NOTE: Create payment request for the payable group
         payment_request = payable_group.payment_requests.create!(
           organization:,
           customer:,
-          amount_cents: invoices.sum(:total_amount_cents),
           amount_currency: invoices.first.currency,
           email:
         )
 
-        # TODO: Send payment_request.created webhook
+        # NOTE: Send payment_request.created webhook
+        SendWebhookJob.perform_later("payment_request.created", payment_request)
 
         # TODO: When payment provider is set: Create payment intent for the overdue invoices
         # TODO: When payment provider is not set: Send email to the customer
