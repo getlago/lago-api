@@ -30,7 +30,7 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
         Invoices::ComputeAmountsFromFees.call(invoice:)
-        create_credit_note_credit if credit_notes.any?
+        create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
@@ -93,14 +93,6 @@ module Invoices
       License.premium? && customer.organization.email_settings.include?('invoice.finalized')
     end
 
-    def credit_notes
-      @credit_notes ||= customer.credit_notes
-        .finalized
-        .available
-        .where.not(invoice_id: invoice.id)
-        .order(created_at: :asc)
-    end
-
     def wallet
       return @wallet if @wallet
 
@@ -115,7 +107,7 @@ module Invoices
     end
 
     def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.new(invoice:, credit_notes:).call
+      credit_result = Credits::CreditNoteService.new(invoice:).call
       credit_result.raise_if_error!
 
       refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits

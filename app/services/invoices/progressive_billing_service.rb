@@ -14,7 +14,16 @@ module Invoices
       ActiveRecord::Base.transaction do
         create_generating_invoice
         create_threshold_fees
+
+        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+        Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
+
         Invoices::ComputeAmountsFromFees.call(invoice:)
+        create_credit_note_credit
+        create_applied_prepaid_credit
+
+        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         invoice.finalized!
       end
 
@@ -105,6 +114,25 @@ module Invoices
     # NOTE: Current lifetime usage amount
     def total_lifetime_usage_amount_cents
       @total_lifetime_usage_amount_cents ||= lifetime_usage.invoiced_usage_amount_cents + lifetime_usage.current_usage_amount_cents
+    end
+
+    def create_credit_note_credit
+      credit_result = Credits::CreditNoteService.new(invoice:).call
+      credit_result.raise_if_error!
+
+      invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents) if credit_result.credits
+    end
+
+    def create_applied_prepaid_credit
+      wallet = subscription.customer.wallets.active.first
+      return unless wallet&.active?
+      return unless invoice.total_amount_cents.positive?
+      return unless wallet.balance.positive?
+
+      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:)
+      prepaid_credit_result.raise_if_error!
+
+      invoice.total_amount_cents -= prepaid_credit_result.prepaid_credit_amount_cents
     end
   end
 end

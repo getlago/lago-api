@@ -176,7 +176,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
           organization:,
           customer:,
           status: 'finalized',
-          invoice_type: :subscription,
+          invoice_type: :progressive_billing,
           fees_amount_cents: 7,
           subscriptions: [subscription]
         )

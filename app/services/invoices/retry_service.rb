@@ -71,18 +71,8 @@ module Invoices
       @wallet = customer.wallets.active.first
     end
 
-    def credit_notes
-      @credit_notes ||= customer.credit_notes
-        .finalized
-        .available
-        .where.not(invoice_id: invoice.id)
-        .order(created_at: :asc)
-    end
-
     def should_create_credit_note_credit?
-      return false if invoice.one_off?
-
-      credit_notes.any?
+      !invoice.one_off?
     end
 
     def should_create_applied_prepaid_credit?
@@ -94,7 +84,7 @@ module Invoices
     end
 
     def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.new(invoice:, credit_notes:).call
+      credit_result = Credits::CreditNoteService.new(invoice:).call
       credit_result.raise_if_error!
 
       invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents) if credit_result.credits

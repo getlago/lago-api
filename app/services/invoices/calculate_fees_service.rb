@@ -262,14 +262,6 @@ module Invoices
       true
     end
 
-    def credit_notes
-      @credit_notes ||= customer.credit_notes
-        .finalized
-        .available
-        .where.not(invoice_id: invoice.id)
-        .order(created_at: :asc)
-    end
-
     def wallet
       return @wallet if @wallet
 
@@ -277,9 +269,7 @@ module Invoices
     end
 
     def should_create_credit_note_credit?
-      return false if not_in_finalizing_process?
-
-      credit_notes.any?
+      !not_in_finalizing_process?
     end
 
     def should_create_coupon_credit?
@@ -298,7 +288,7 @@ module Invoices
     end
 
     def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.new(invoice:, credit_notes:).call
+      credit_result = Credits::CreditNoteService.new(invoice:).call
       credit_result.raise_if_error!
 
       refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
