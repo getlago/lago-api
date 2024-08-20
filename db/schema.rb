@@ -754,6 +754,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_19_092354) do
     t.boolean "skip_charges", default: false, null: false
     t.boolean "payment_overdue", default: false
     t.uuid "payable_group_id"
+    t.bigint "negative_amount_cents", default: 0, null: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
