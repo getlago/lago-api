@@ -85,6 +85,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     allow(SegmentTrackJob).to receive(:perform_later)
     allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
     allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
+    allow(Credits::ProgressiveBillingService).to receive(:call).and_call_original
   end
 
   describe '#call' do
@@ -111,6 +112,12 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             from_datetime: match_datetime(DateTime.parse('2022-02-06 00:00:00'))
           )
         end
+      end
+
+      it "calls the ProgressiveBillingService" do
+        result = invoice_service.call
+        expect(result).to be_success
+        expect(Credits::ProgressiveBillingService).to have_received(:call).with(invoice:)
       end
 
       context 'when charge is pay_in_advance, not recurring and invoiceable' do
