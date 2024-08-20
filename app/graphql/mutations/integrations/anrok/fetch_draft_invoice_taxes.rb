@@ -26,7 +26,7 @@ module Mutations
             fees: fees(args)
           ).call
 
-          result.success? ? result.fees : result_error(result)
+          result.success? ? result.fees : validation_error(messages: result.error.code)
         end
 
         private

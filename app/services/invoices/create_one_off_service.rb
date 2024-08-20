@@ -22,13 +22,15 @@ module Invoices
 
         create_generating_invoice
 
+        result.invoice = invoice
+
         fees_result = create_one_off_fees(invoice)
         if tax_error?(fees_result)
           invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
           invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
           invoice.failed!
 
-          return result.validation_failure!(errors: {tax_error: [fees_result.error.error_message]})
+          return result
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
@@ -44,7 +46,6 @@ module Invoices
       Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
       Invoices::Payments::CreateService.new(invoice).call
 
-      result.invoice = invoice
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

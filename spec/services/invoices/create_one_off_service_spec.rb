@@ -180,15 +180,10 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
           result = create_service.call
 
           aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:tax_error]).to eq(['taxDateTooFarInFuture'])
-
-            invoice = customer.invoices.order(created_at: :desc).first
-
-            expect(invoice.status).to eq('failed')
-            expect(invoice.error_details.count).to eq(1)
-            expect(invoice.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
+            expect(result).to be_success
+            expect(result.invoice.status).to eq('failed')
+            expect(result.invoice.error_details.count).to eq(1)
+            expect(result.invoice.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
           end
         end
       end
