@@ -157,3 +157,74 @@ class Fee < ApplicationRecord
     charge&.filters&.any?
   end
 end
+
+# == Schema Information
+#
+# Table name: fees
+#
+#  id                                  :uuid             not null, primary key
+#  amount_cents                        :bigint           not null
+#  amount_currency                     :string           not null
+#  amount_details                      :jsonb            not null
+#  deleted_at                          :datetime
+#  description                         :string
+#  events_count                        :integer
+#  failed_at                           :datetime
+#  fee_type                            :integer
+#  grouped_by                          :jsonb            not null
+#  invoice_display_name                :string
+#  invoiceable_type                    :string
+#  pay_in_advance                      :boolean          default(FALSE), not null
+#  payment_status                      :integer          default("pending"), not null
+#  precise_coupons_amount_cents        :decimal(30, 5)   default(0.0), not null
+#  precise_unit_amount                 :decimal(30, 15)  default(0.0), not null
+#  properties                          :jsonb            not null
+#  refunded_at                         :datetime
+#  succeeded_at                        :datetime
+#  taxes_amount_cents                  :bigint           not null
+#  taxes_rate                          :float            default(0.0), not null
+#  total_aggregated_units              :decimal(, )
+#  unit_amount_cents                   :bigint           default(0), not null
+#  units                               :decimal(, )      default(0.0), not null
+#  created_at                          :datetime         not null
+#  updated_at                          :datetime         not null
+#  add_on_id                           :uuid
+#  applied_add_on_id                   :uuid
+#  charge_filter_id                    :uuid
+#  charge_id                           :uuid
+#  group_id                            :uuid
+#  invoice_id                          :uuid
+#  invoiceable_id                      :uuid
+#  pay_in_advance_event_id             :uuid
+#  pay_in_advance_event_transaction_id :string
+#  subscription_id                     :uuid
+#  true_up_parent_fee_id               :uuid
+#  usage_threshold_id                  :uuid
+#
+# Indexes
+#
+#  index_fees_on_add_on_id                            (add_on_id)
+#  index_fees_on_applied_add_on_id                    (applied_add_on_id)
+#  index_fees_on_charge_filter_id                     (charge_filter_id)
+#  index_fees_on_charge_id                            (charge_id)
+#  index_fees_on_charge_id_and_invoice_id             (charge_id,invoice_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_deleted_at                           (deleted_at)
+#  index_fees_on_group_id                             (group_id)
+#  index_fees_on_invoice_id                           (invoice_id)
+#  index_fees_on_invoiceable                          (invoiceable_type,invoiceable_id)
+#  index_fees_on_pay_in_advance_event_transaction_id  (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_subscription_id                      (subscription_id)
+#  index_fees_on_true_up_parent_fee_id                (true_up_parent_fee_id)
+#  index_fees_on_usage_threshold_id                   (usage_threshold_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (add_on_id => add_ons.id)
+#  fk_rails_...  (applied_add_on_id => applied_add_ons.id)
+#  fk_rails_...  (charge_id => charges.id)
+#  fk_rails_...  (group_id => groups.id)
+#  fk_rails_...  (invoice_id => invoices.id)
+#  fk_rails_...  (subscription_id => subscriptions.id)
+#  fk_rails_...  (true_up_parent_fee_id => fees.id)
+#  fk_rails_...  (usage_threshold_id => usage_thresholds.id)
+#

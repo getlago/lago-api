@@ -33,3 +33,27 @@ class AppliedCoupon < ApplicationRecord
     terminated!
   end
 end
+
+# == Schema Information
+#
+# Table name: applied_coupons
+#
+#  id                           :uuid             not null, primary key
+#  amount_cents                 :bigint
+#  amount_currency              :string
+#  frequency                    :integer          default("once"), not null
+#  frequency_duration           :integer
+#  frequency_duration_remaining :integer
+#  percentage_rate              :decimal(10, 5)
+#  status                       :integer          default("active"), not null
+#  terminated_at                :datetime
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  coupon_id                    :uuid             not null
+#  customer_id                  :uuid             not null
+#
+# Indexes
+#
+#  index_applied_coupons_on_coupon_id    (coupon_id)
+#  index_applied_coupons_on_customer_id  (customer_id)
+#

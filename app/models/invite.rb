@@ -28,3 +28,31 @@ class Invite < ApplicationRecord
     accepted!
   end
 end
+
+# == Schema Information
+#
+# Table name: invites
+#
+#  id              :uuid             not null, primary key
+#  accepted_at     :datetime
+#  email           :string           not null
+#  revoked_at      :datetime
+#  role            :integer          default("admin"), not null
+#  status          :integer          default("pending"), not null
+#  token           :string           not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  membership_id   :uuid
+#  organization_id :uuid             not null
+#
+# Indexes
+#
+#  index_invites_on_membership_id    (membership_id)
+#  index_invites_on_organization_id  (organization_id)
+#  index_invites_on_token            (token) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (membership_id => memberships.id)
+#  fk_rails_...  (organization_id => organizations.id)
+#

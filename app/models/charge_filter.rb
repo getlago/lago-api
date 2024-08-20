@@ -67,3 +67,26 @@ class ChargeFilter < ApplicationRecord
       .each { |code| errors.add(:properties, code) }
   end
 end
+
+# == Schema Information
+#
+# Table name: charge_filters
+#
+#  id                   :uuid             not null, primary key
+#  deleted_at           :datetime
+#  invoice_display_name :string
+#  properties           :jsonb            not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  charge_id            :uuid             not null
+#
+# Indexes
+#
+#  index_active_charge_filters         (charge_id) WHERE (deleted_at IS NULL)
+#  index_charge_filters_on_charge_id   (charge_id)
+#  index_charge_filters_on_deleted_at  (deleted_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (charge_id => charges.id)
+#

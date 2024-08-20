@@ -19,3 +19,27 @@ class UsageThreshold < ApplicationRecord
 
   default_scope -> { kept }
 end
+
+# == Schema Information
+#
+# Table name: usage_thresholds
+#
+#  id                     :uuid             not null, primary key
+#  amount_cents           :bigint           not null
+#  deleted_at             :datetime
+#  recurring              :boolean          default(FALSE), not null
+#  threshold_display_name :string
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  plan_id                :uuid             not null
+#
+# Indexes
+#
+#  idx_on_amount_cents_plan_id_recurring_888044d66b  (amount_cents,plan_id,recurring) UNIQUE WHERE (deleted_at IS NULL)
+#  index_usage_thresholds_on_plan_id                 (plan_id)
+#  index_usage_thresholds_on_plan_id_and_recurring   (plan_id,recurring) UNIQUE WHERE ((recurring IS TRUE) AND (deleted_at IS NULL))
+#
+# Foreign Keys
+#
+#  fk_rails_...  (plan_id => plans.id)
+#

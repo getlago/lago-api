@@ -106,3 +106,39 @@ class Plan < ApplicationRecord
     errors.add(:code, :taken) if plan && plan != self
   end
 end
+
+# == Schema Information
+#
+# Table name: plans
+#
+#  id                   :uuid             not null, primary key
+#  amount_cents         :bigint           not null
+#  amount_currency      :string           not null
+#  bill_charges_monthly :boolean
+#  code                 :string           not null
+#  deleted_at           :datetime
+#  description          :string
+#  interval             :integer          not null
+#  invoice_display_name :string
+#  name                 :string           not null
+#  pay_in_advance       :boolean          default(FALSE), not null
+#  pending_deletion     :boolean          default(FALSE), not null
+#  trial_period         :float
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  organization_id      :uuid             not null
+#  parent_id            :uuid
+#
+# Indexes
+#
+#  index_plans_on_created_at                (created_at)
+#  index_plans_on_deleted_at                (deleted_at)
+#  index_plans_on_organization_id           (organization_id)
+#  index_plans_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
+#  index_plans_on_parent_id                 (parent_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (parent_id => plans.id)
+#

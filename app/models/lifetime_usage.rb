@@ -17,3 +17,33 @@ class LifetimeUsage < ApplicationRecord
 
   default_scope -> { kept }
 end
+
+# == Schema Information
+#
+# Table name: lifetime_usages
+#
+#  id                                 :uuid             not null, primary key
+#  current_usage_amount_cents         :bigint           default(0), not null
+#  current_usage_amount_refreshed_at  :datetime
+#  deleted_at                         :datetime
+#  invoiced_usage_amount_cents        :bigint           default(0), not null
+#  invoiced_usage_amount_refreshed_at :datetime
+#  recalculate_current_usage          :boolean          default(FALSE), not null
+#  recalculate_invoiced_usage         :boolean          default(FALSE), not null
+#  created_at                         :datetime         not null
+#  updated_at                         :datetime         not null
+#  organization_id                    :uuid             not null
+#  subscription_id                    :uuid             not null
+#
+# Indexes
+#
+#  index_lifetime_usages_on_organization_id             (organization_id)
+#  index_lifetime_usages_on_recalculate_current_usage   (recalculate_current_usage) WHERE ((deleted_at IS NULL) AND (recalculate_current_usage = true))
+#  index_lifetime_usages_on_recalculate_invoiced_usage  (recalculate_invoiced_usage) WHERE ((deleted_at IS NULL) AND (recalculate_invoiced_usage = true))
+#  index_lifetime_usages_on_subscription_id             (subscription_id) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (subscription_id => subscriptions.id)
+#
