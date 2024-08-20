@@ -63,13 +63,13 @@ en:
     tax: Tax
     tax_identification_number: 'Tax ID: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% on %{amount})"
-    tax_name_with_details: "%{name} (%{rate}%)"
     tax_name_only:
-      not_collecting: No tax
-      juris_not_taxed: No tax
-      reverse_charge: Reverse charge - Tax liability shifted to customer
       customer_exempt: Customer is tax exempt
+      juris_not_taxed: No tax
+      not_collecting: No tax
+      reverse_charge: Reverse charge - Tax liability shifted to customer
       transaction_exempt: Customer is tax exempt
+    tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Tax rate
     taxes:
       fr_tax_exempt: Customer is tax exempt according to article 259-1 of the French Tax General Code.

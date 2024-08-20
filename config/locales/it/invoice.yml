@@ -63,13 +63,13 @@ it:
     tax: Tasse
     tax_identification_number: 'Identificativo fiscale: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% su %{amount})"
-    tax_name_with_details: "%{name} (%{rate}%)"
     tax_name_only:
-      not_collecting: Nessuna tassa
-      juris_not_taxed: Nessuna tassa
-      reverse_charge: Inversione contabile - Responsabilità fiscale trasferita al cliente
       customer_exempt: Il cliente è esente da tasse
+      juris_not_taxed: Nessuna tassa
+      not_collecting: Nessuna tassa
+      reverse_charge: Inversione contabile - Responsabilità fiscale trasferita al cliente
       transaction_exempt: Il cliente è esente da tasse
+    tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Aliquota fiscale
     taxes:
       fr_tax_exempt: Il cliente è esente da tasse secondo l'articolo 259-1 del Codice Generale delle Imposte francese.

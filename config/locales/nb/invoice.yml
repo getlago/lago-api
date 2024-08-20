@@ -63,13 +63,13 @@ nb:
     tax: Merverdiavgift
     tax_identification_number: 'Skatte-ID: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% on %{amount})"
-    tax_name_with_details: "%{name} (%{rate}%)"
     tax_name_only:
-      not_collecting: Ingen skatt
-      juris_not_taxed: Ingen skatt
-      reverse_charge: Omvendt avgiftsplikt - Skatteplikt overført til kunden
       customer_exempt: Kunden er fritatt for avgift
+      juris_not_taxed: Ingen skatt
+      not_collecting: Ingen skatt
+      reverse_charge: Omvendt avgiftsplikt - Skatteplikt overført til kunden
       transaction_exempt: Kunden er fritatt for avgift
+    tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Skattesats
     taxes:
       fr_tax_exempt: Kunden er skattefri i henhold til artikkel 259-1 i den franske skatteforvaltningsloven.

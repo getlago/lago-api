@@ -62,13 +62,13 @@ sv:
     tax: Skatt
     tax_identification_number: 'Skatte ID: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% på %{amount})"
-    tax_name_with_details: "%{name} (%{rate}%)"
     tax_name_only:
-      not_collecting: Ingen skatt
-      juris_not_taxed: Ingen skatt
-      reverse_charge: Omvänd skattskyldighet - Skatteskyldighet överförd till kunden
       customer_exempt: Kunden är befriad från moms
+      juris_not_taxed: Ingen skatt
+      not_collecting: Ingen skatt
+      reverse_charge: Omvänd skattskyldighet - Skatteskyldighet överförd till kunden
       transaction_exempt: Kunden är befriad från moms
+    tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Momssats
     taxes:
       fr_tax_exempt: Kunden är skattebefriad enligt artikel 259-1 i den franska skatteförvaltningskoden.
