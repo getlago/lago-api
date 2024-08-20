@@ -17,14 +17,21 @@ module PaymentRequests
         payable_group = customer.payable_groups.create!(organization:)
         invoices.each { |i| i.update!(payable_group:) }
 
-        # TODO: Create payment request for the payable group
+        # NOTE: Create payment request for the payable group
+        payment_request = payable_group.payment_requests.create!(
+          organization:,
+          customer:,
+          amount_cents: invoices.sum(:total_amount_cents),
+          amount_currency: invoices.first.currency,
+          email:
+        )
 
         # TODO: Send payment_request.created webhook
 
         # TODO: When payment provider is set: Create payment intent for the overdue invoices
         # TODO: When payment provider is not set: Send email to the customer
 
-        # result.payment_request = payment_request
+        result.payment_request = payment_request
       end
 
       result
@@ -40,6 +47,10 @@ module PaymentRequests
 
     def invoices
       @invoices ||= customer.invoices.where(id: params[:lago_invoice_ids])
+    end
+
+    def email
+      @email ||= params[:email] || customer.email
     end
   end
 end
