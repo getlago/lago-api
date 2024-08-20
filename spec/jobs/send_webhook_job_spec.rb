@@ -454,4 +454,23 @@ RSpec.describe SendWebhookJob, type: :job do
       expect(webhook_service).to have_received(:call)
     end
   end
+
+  context 'when webhook_type is payment_request.created' do
+    let(:webhook_service) { instance_double(Webhooks::PaymentRequests::CreatedService) }
+    let(:payment_request) { create(:payment_request) }
+
+    before do
+      allow(Webhooks::PaymentRequests::CreatedService).to receive(:new)
+        .with(object: payment_request, options: {})
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook payment_request service' do
+      send_webhook_job.perform_now('payment_request.created', payment_request)
+
+      expect(Webhooks::PaymentRequests::CreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
 end
