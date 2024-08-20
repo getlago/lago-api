@@ -74,6 +74,8 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
       it "calculates the invoiced_usage_amount_cents correctly" do
         result = service.call
         expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(200)
+        expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(200)
+        expect(lifetime_usage.recalculate_invoiced_usage).to be false
       end
     end
   end
@@ -96,6 +98,8 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
       it 'calculates the current_usage_amount_cents correctly' do
         result = service.call
         expect(result.lifetime_usage.current_usage_amount_cents).to eq(2000)
+        expect(lifetime_usage.reload.current_usage_amount_cents).to eq(2000)
+        expect(lifetime_usage.recalculate_current_usage).to be false
       end
     end
   end

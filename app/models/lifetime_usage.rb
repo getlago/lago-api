@@ -16,6 +16,8 @@ class LifetimeUsage < ApplicationRecord
     with_currency: ->(lifetime_usage) { lifetime_usage.subscription.plan.amount_currency }
 
   default_scope -> { kept }
+
+  scope :needs_recalculation, -> { where(recalculate_current_usage: true).or(where(recalculate_invoiced_usage: true)) }
 end
 
 # == Schema Information

@@ -10,10 +10,13 @@ module LifetimeUsages
     def call
       if lifetime_usage.recalculate_current_usage
         lifetime_usage.current_usage_amount_cents = calculate_current_usage_amount_cents
+        lifetime_usage.recalculate_current_usage = false
       end
       if lifetime_usage.recalculate_invoiced_usage
         lifetime_usage.invoiced_usage_amount_cents = calculate_invoiced_usage_amount_cents
+        lifetime_usage.recalculate_invoiced_usage = false
       end
+      lifetime_usage.save!
 
       result.lifetime_usage = lifetime_usage
       result
