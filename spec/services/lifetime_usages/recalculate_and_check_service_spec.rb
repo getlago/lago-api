@@ -124,15 +124,16 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
         customer:,
         status: 'finalized',
         invoice_type: :progressive_billing,
-        fees_amount_cents: 20,
         subscriptions: [subscription]
       )
     end
 
+    let(:progressive_billing_fee) { create(:progressive_billing_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
+
     before do
       usage_threshold
       usage_threshold2
-      progressive_billing_invoice
+      progressive_billing_fee
       events
       charge
     end
@@ -156,8 +157,8 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
 
     it "creates an invoice for the largest usage_threshold amount minus the progressive billing amount" do
       expect { service.call }.to change(Invoice, :count).by(1)
-      invoice = subscription.invoices.progressive_billing.order(created_at: :desc).first
-      expect(invoice.total_amount_cents).to eq(usage_threshold2.amount_cents - progressive_billing_invoice.fees_amount_cents)
+      invoice = subscription.invoices.progressive_billing.where.not(id: progressive_billing_invoice.id).sole
+      expect(invoice.total_amount_cents).to eq(usage_threshold2.amount_cents - 20)
     end
   end
 
