@@ -12,9 +12,9 @@ end
 #
 #  aggregation_type         :string
 #  code                     :string           not null
-#  filters                  :map              not null
-#  grouped_by               :map              not null
-#  properties               :map              not null
+#  filters                  :string           not null
+#  grouped_by               :string           not null
+#  properties               :string           not null
 #  timestamp                :datetime         not null
 #  value                    :string
 #  charge_id                :string           not null

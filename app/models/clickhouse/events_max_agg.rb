@@ -11,8 +11,8 @@ end
 # Table name: events_max_agg
 #
 #  code                     :string           not null
-#  filters                  :map              not null
-#  grouped_by               :map              not null
+#  filters                  :string           not null
+#  grouped_by               :string           not null
 #  timestamp                :datetime         not null
 #  value                    :decimal(38, 26)  not null
 #  charge_id                :string           not null

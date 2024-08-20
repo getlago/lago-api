@@ -14,7 +14,7 @@ class CreateEventsRaw < ActiveRecord::Migration[7.0]
       t.string :transaction_id, null: false
       t.datetime :timestamp, null: false, precision: 3
       t.string :code, null: false
-      t.map :properties, key_type: :string, value_type: :string, null: false
+      t.string :properties, map: true, null: false
     end
   end
 end
