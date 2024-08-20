@@ -2,6 +2,7 @@
 
 module LifetimeUsages
   class RecalculateAndCheckJob < ApplicationJob
+    queue_as 'billing'
     unique :until_executed, on_conflict: :log
 
     def perform(lifetime_usage)
