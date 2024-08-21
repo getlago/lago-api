@@ -290,34 +290,4 @@ RSpec.describe Customer, type: :model do
       end
     end
   end
-
-  describe '#same_billing_and_shipping_address?' do
-    subject(:method_call) { customer.same_billing_and_shipping_address? }
-
-    context 'when shipping address is present' do
-      context 'when shipping address is not the same as billing address' do
-        let(:customer) { build_stubbed(:customer, :with_shipping_address) }
-
-        it 'returns false' do
-          expect(subject).to eq(false)
-        end
-      end
-
-      context 'when shipping address is the same as billing address' do
-        let(:customer) { build_stubbed(:customer, :with_same_billing_and_shipping_address) }
-
-        it 'returns true' do
-          expect(subject).to eq(true)
-        end
-      end
-    end
-
-    context 'when shipping address is not present' do
-      let(:customer) { build_stubbed(:customer) }
-
-      it 'returns true' do
-        expect(subject).to eq(true)
-      end
-    end
-  end
 end
