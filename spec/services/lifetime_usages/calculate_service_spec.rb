@@ -6,8 +6,8 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
   subject(:service) { described_class.new(lifetime_usage: lifetime_usage) }
 
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }
-  let(:recalculate_current_usage) { true }
-  let(:recalculate_invoiced_usage) { true }
+  let(:recalculate_current_usage) { false }
+  let(:recalculate_invoiced_usage) { false }
   let(:subscription) { create(:subscription, customer_id: customer.id) }
   let(:organization) { subscription.organization }
   let(:customer) { create(:customer) }
@@ -40,10 +40,20 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
   end
 
   describe '#recalculate_invoiced_usage' do
+    let(:recalculate_invoiced_usage) { true }
+
     context "without previous invoices" do
       it "calculates the invoiced_usage as zero" do
         result = service.call
         expect(result.lifetime_usage.invoiced_usage_amount_cents).to be_zero
+      end
+
+      it "updates the invoiced_usage_amount_refreshed_at" do
+        expect { service.call }.to change(lifetime_usage, :invoiced_usage_amount_refreshed_at)
+      end
+
+      it "does not change current_usage_amount_refreshed_at" do
+        expect { service.call }.not_to change(lifetime_usage, :current_usage_amount_refreshed_at)
       end
     end
 
@@ -81,11 +91,21 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
   end
 
   describe '#recalculate_current_usage' do
+    let(:recalculate_current_usage) { true }
+
     context 'without usage' do
       it 'calculates the current_usage as zero' do
         result = service.call
         expect(result.lifetime_usage.current_usage_amount_cents).to be_zero
       end
+    end
+
+    it "updates the current_usage_amount_refreshed_at" do
+      expect { service.call }.to change(lifetime_usage, :current_usage_amount_refreshed_at)
+    end
+
+    it "does not change invoiced_usage_amount_refreshed_at" do
+      expect { service.call }.not_to change(lifetime_usage, :invoiced_usage_amount_refreshed_at)
     end
 
     context 'with usage' do
