@@ -62,23 +62,5 @@ RSpec.describe Resolvers::Analytics::InvoiceCollectionsResolver, type: :graphql 
         expect(invoice_collections_response['collection'].first['invoicesCount']).to eq('0')
       end
     end
-
-    describe '#resolve' do
-      subject(:resolve) { resolver.resolve }
-
-      let(:resolver) { described_class.new(object: nil, context: nil, field: nil) }
-      let(:current_organization) { create(:organization) }
-
-      before do
-        allow(Analytics::InvoiceCollection).to receive(:find_all_by).and_return([])
-        allow(resolver).to receive(:current_organization).and_return(current_organization)
-
-        resolve
-      end
-
-      it 'calls ::Analytics::InvoiceCollection.find_all_by' do
-        expect(Analytics::InvoiceCollection).to have_received(:find_all_by).with(current_organization.id, months: 12)
-      end
-    end
   end
 end

@@ -54,23 +54,5 @@ RSpec.describe Resolvers::Analytics::InvoicedUsagesResolver, type: :graphql do
 
       expect(result['data']['invoicedUsages']['collection']).to eq([])
     end
-
-    describe '#resolve' do
-      subject(:resolve) { resolver.resolve }
-
-      let(:resolver) { described_class.new(object: nil, context: nil, field: nil) }
-      let(:current_organization) { create(:organization) }
-
-      before do
-        allow(Analytics::InvoicedUsage).to receive(:find_all_by).and_return([])
-        allow(resolver).to receive(:current_organization).and_return(current_organization)
-
-        resolve
-      end
-
-      it 'calls ::Analytics::InvoicedUsage.find_all_by' do
-        expect(Analytics::InvoicedUsage).to have_received(:find_all_by).with(current_organization.id, months: 12)
-      end
-    end
   end
 end

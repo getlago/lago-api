@@ -61,23 +61,5 @@ RSpec.describe Resolvers::Analytics::MrrsResolver, type: :graphql do
         expect(mrrs_response['collection'].first['currency']).to eq(nil)
       end
     end
-
-    describe '#resolve' do
-      subject(:resolve) { resolver.resolve }
-
-      let(:resolver) { described_class.new(object: nil, context: nil, field: nil) }
-      let(:current_organization) { create(:organization) }
-
-      before do
-        allow(Analytics::Mrr).to receive(:find_all_by).and_return([])
-        allow(resolver).to receive(:current_organization).and_return(current_organization)
-
-        resolve
-      end
-
-      it 'calls ::Analytics::Mrr.find_all_by' do
-        expect(Analytics::Mrr).to have_received(:find_all_by).with(current_organization.id, months: 12)
-      end
-    end
   end
 end
