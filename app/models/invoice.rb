@@ -14,13 +14,10 @@ class Invoice < ApplicationRecord
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
-  belongs_to :payable_group, optional: true
 
   has_many :fees
   has_many :credits
   has_many :wallet_transactions
-  has_many :payments, as: :payable
-  has_many :payment_requests, as: :payment_requestable
   has_many :invoice_subscriptions
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
@@ -32,6 +29,10 @@ class Invoice < ApplicationRecord
   has_many :taxes, through: :applied_taxes
   has_many :integration_resources, as: :syncable
   has_many :error_details, as: :owner, dependent: :destroy
+
+  has_many :applied_payment_requests, class_name: "PaymentRequest::AppliedInvoice"
+  has_many :payment_requests, through: :applied_payment_requests
+  has_many :payments, as: :payable
 
   has_one_attached :file
 
@@ -438,7 +439,6 @@ end
 #  customer_id                             :uuid
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
-#  payable_group_id                        :uuid
 #  sequential_id                           :integer
 #
 # Indexes
@@ -447,7 +447,6 @@ end
 #  index_invoices_on_customer_id_and_sequential_id  (customer_id,sequential_id) UNIQUE
 #  index_invoices_on_number                         (number)
 #  index_invoices_on_organization_id                (organization_id)
-#  index_invoices_on_payable_group_id               (payable_group_id)
 #  index_invoices_on_payment_overdue                (payment_overdue)
 #  index_invoices_on_sequential_id                  (sequential_id)
 #  index_invoices_on_status                         (status)

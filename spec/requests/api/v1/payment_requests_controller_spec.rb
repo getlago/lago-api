@@ -68,10 +68,10 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
       let(:customer) { create(:customer, organization:) }
 
       it "returns customer's payment requests", :aggregate_failures do
-        payable_group = create(:payable_group, customer:)
-        first_payment_request = create(:payment_request, customer:, payment_requestable: payable_group)
+        first_payment_request = create(:payment_request, customer:)
+        invoice = create(:invoice, customer:)
+        create(:payment_request_applied_invoice, invoice:, payment_request: first_payment_request)
         create(:payment_request)
-        invoice = create(:invoice, customer:, payable_group:)
 
         get_with_token(
           organization,

@@ -755,18 +755,26 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_080031) do
     t.datetime "payment_dispute_lost_at"
     t.boolean "skip_charges", default: false, null: false
     t.boolean "payment_overdue", default: false
-    t.uuid "payable_group_id"
     t.bigint "negative_amount_cents", default: 0, null: false
     t.bigint "progressive_billing_credit_amount_cents", default: 0, null: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
-    t.index ["payable_group_id"], name: "index_invoices_on_payable_group_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.index ["status"], name: "index_invoices_on_status"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
+  end
+
+  create_table "invoices_payment_requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "invoice_id", null: false
+    t.uuid "payment_request_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id", "payment_request_id"], name: "idx_on_invoice_id_payment_request_id_aa550779a4", unique: true
+    t.index ["invoice_id"], name: "index_invoices_payment_requests_on_invoice_id"
+    t.index ["payment_request_id"], name: "index_invoices_payment_requests_on_payment_request_id"
   end
 
   create_table "invoices_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -864,16 +872,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_080031) do
     t.index ["user_id"], name: "index_password_resets_on_user_id"
   end
 
-  create_table "payable_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "customer_id", null: false
-    t.integer "payment_status", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.uuid "organization_id", null: false
-    t.index ["customer_id"], name: "index_payable_groups_on_customer_id"
-    t.index ["organization_id"], name: "index_payable_groups_on_organization_id"
-  end
-
   create_table "payment_provider_customers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.uuid "payment_provider_id"
@@ -902,17 +900,15 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_080031) do
 
   create_table "payment_requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
-    t.uuid "payment_requestable_id", null: false
-    t.string "payment_requestable_type", default: "Invoice", null: false
     t.bigint "amount_cents", default: 0, null: false
     t.string "amount_currency", null: false
     t.string "email", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "organization_id", null: false
+    t.integer "payment_status", default: 0, null: false
     t.index ["customer_id"], name: "index_payment_requests_on_customer_id"
     t.index ["organization_id"], name: "index_payment_requests_on_organization_id"
-    t.index ["payment_requestable_type", "payment_requestable_id"], name: "idx_on_payment_requestable_type_payment_requestable_b151968780"
   end
 
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -927,12 +923,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_080031) do
     t.datetime "updated_at", null: false
     t.string "payable_type", default: "Invoice", null: false
     t.uuid "payable_id"
-    t.uuid "payment_request_id"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
-    t.index ["payment_request_id"], name: "index_payments_on_payment_request_id"
   end
 
   create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1242,6 +1236,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_080031) do
   add_foreign_key "invoice_subscriptions", "subscriptions"
   add_foreign_key "invoices", "customers"
   add_foreign_key "invoices", "organizations"
+  add_foreign_key "invoices_payment_requests", "invoices"
+  add_foreign_key "invoices_payment_requests", "payment_requests"
   add_foreign_key "invoices_taxes", "invoices"
   add_foreign_key "invoices_taxes", "taxes"
   add_foreign_key "lifetime_usages", "organizations"
@@ -1249,8 +1245,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_080031) do
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
   add_foreign_key "password_resets", "users"
-  add_foreign_key "payable_groups", "customers"
-  add_foreign_key "payable_groups", "organizations"
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
@@ -1258,7 +1252,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_080031) do
   add_foreign_key "payment_requests", "organizations"
   add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"
-  add_foreign_key "payments", "payment_requests"
   add_foreign_key "plans", "organizations"
   add_foreign_key "plans", "plans", column: "parent_id"
   add_foreign_key "plans_taxes", "plans"

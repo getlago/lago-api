@@ -29,7 +29,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.payment_requests.preload(:customer, payment_requestable: :invoices),
+              result.payment_requests.preload(:customer, :invoices),
               ::V1::PaymentRequestSerializer,
               collection_name: "payment_requests",
               meta: pagination_metadata(result.payment_requests),
