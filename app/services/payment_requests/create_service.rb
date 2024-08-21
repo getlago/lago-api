@@ -10,7 +10,9 @@ module PaymentRequests
     end
 
     def call
-      # TODO: Return error unless premium license
+      unless License.premium? && organization.premium_integrations.include?("dunning")
+        return result.not_allowed_failure!(code: "premium_addon_feature_missing")
+      end
 
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "invoice") if invoices.empty?
