@@ -19,7 +19,39 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     }
   end
 
+  around { |test| lago_premium!(&test) }
+
+  before { organization.update!(premium_integrations: ["dunning"]) }
+
   describe "#call" do
+    context "when organization is not premium" do
+      before do
+        allow(License).to receive(:premium?).and_return(false)
+      end
+
+      it "returns not allowed failure", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("premium_addon_feature_missing")
+      end
+    end
+
+    context "when organization does not have premium dunning integration" do
+      before do
+        allow(organization).to receive(:premium_integrations).and_return([])
+      end
+
+      it "returns not allowed failure", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("premium_addon_feature_missing")
+      end
+    end
+
     context "when customer does not exist" do
       before { params[:external_customer_id] = "non-existing-id" }
 
