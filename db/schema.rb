@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_20_090312) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_20_125840) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -757,6 +757,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_20_090312) do
     t.boolean "payment_overdue", default: false
     t.uuid "payable_group_id"
     t.bigint "negative_amount_cents", default: 0, null: false
+    t.bigint "progressive_billing_credit_amount_cents", default: 0, null: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
@@ -1002,7 +1003,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_20_090312) do
     t.integer "method", default: 0, null: false
     t.decimal "target_ongoing_balance", precision: 30, scale: 5
     t.datetime "started_at"
-    t.boolean "invoice_require_successful_payment", default: false, null: false
+    t.boolean "invoice_requires_successful_payment", default: false, null: false
     t.jsonb "transaction_metadata", default: {}
     t.index ["started_at"], name: "index_recurring_transaction_rules_on_started_at"
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
@@ -1108,7 +1109,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_20_090312) do
     t.uuid "invoice_id"
     t.integer "source", default: 0, null: false
     t.integer "transaction_status", default: 0, null: false
-    t.boolean "invoice_require_successful_payment", default: false, null: false
+    t.boolean "invoice_requires_successful_payment", default: false, null: false
     t.jsonb "metadata", default: {}
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
@@ -1136,7 +1137,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_20_090312) do
     t.decimal "credits_ongoing_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "credits_ongoing_usage_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.boolean "depleted_ongoing_balance", default: false, null: false
-    t.boolean "invoice_require_successful_payment", default: false, null: false
+    t.boolean "invoice_requires_successful_payment", default: false, null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 
