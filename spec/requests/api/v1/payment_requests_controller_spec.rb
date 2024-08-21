@@ -14,17 +14,6 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
       }
     end
 
-    context "when customer is not found" do
-      let(:params) do
-        {external_customer_id: "unknown"}
-      end
-
-      it "returns a not found error" do
-        post_with_token(organization, "/api/v1/payment_requests", {payment_request: params})
-        expect(response).to have_http_status(:not_found)
-      end
-    end
-
     it "delegates to PaymentRequests::CreateService", :aggregate_failures do
       payment_request = create(:payment_request)
       allow(PaymentRequests::CreateService).to receive(:call).and_return(

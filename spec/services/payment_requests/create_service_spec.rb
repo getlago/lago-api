@@ -9,8 +9,8 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
 
-  let(:first_invoice) { create(:invoice, customer:) }
-  let(:second_invoice) { create(:invoice, customer:) }
+  let(:first_invoice) { create(:invoice, customer:, payment_overdue: true) }
+  let(:second_invoice) { create(:invoice, customer:, payment_overdue: true) }
   let(:params) do
     {
       external_customer_id: customer.external_id,
@@ -73,6 +73,18 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.resource).to eq("invoice")
+      end
+    end
+
+    context "when invoices are not overdue" do
+      before { first_invoice.update!(payment_overdue: false) }
+
+      it "returns not allowed failure", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("invoices_not_overdue")
       end
     end
 
