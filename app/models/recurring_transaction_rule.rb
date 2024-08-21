@@ -31,20 +31,20 @@ end
 #
 # Table name: recurring_transaction_rules
 #
-#  id                                 :uuid             not null, primary key
-#  granted_credits                    :decimal(30, 5)   default(0.0), not null
-#  interval                           :integer          default("weekly")
-#  invoice_require_successful_payment :boolean          default(FALSE), not null
-#  method                             :integer          default("fixed"), not null
-#  paid_credits                       :decimal(30, 5)   default(0.0), not null
-#  started_at                         :datetime
-#  target_ongoing_balance             :decimal(30, 5)
-#  threshold_credits                  :decimal(30, 5)   default(0.0)
-#  transaction_metadata               :jsonb
-#  trigger                            :integer          default("interval"), not null
-#  created_at                         :datetime         not null
-#  updated_at                         :datetime         not null
-#  wallet_id                          :uuid             not null
+#  id                                  :uuid             not null, primary key
+#  granted_credits                     :decimal(30, 5)   default(0.0), not null
+#  interval                            :integer          default("weekly")
+#  invoice_requires_successful_payment :boolean          default(FALSE), not null
+#  method                              :integer          default("fixed"), not null
+#  paid_credits                        :decimal(30, 5)   default(0.0), not null
+#  started_at                          :datetime
+#  target_ongoing_balance              :decimal(30, 5)
+#  threshold_credits                   :decimal(30, 5)   default(0.0)
+#  transaction_metadata                :jsonb
+#  trigger                             :integer          default("interval"), not null
+#  created_at                          :datetime         not null
+#  updated_at                          :datetime         not null
+#  wallet_id                           :uuid             not null
 #
 # Indexes
 #

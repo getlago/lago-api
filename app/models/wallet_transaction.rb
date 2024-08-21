@@ -41,20 +41,20 @@ end
 #
 # Table name: wallet_transactions
 #
-#  id                                 :uuid             not null, primary key
-#  amount                             :decimal(30, 5)   default(0.0), not null
-#  credit_amount                      :decimal(30, 5)   default(0.0), not null
-#  invoice_require_successful_payment :boolean          default(FALSE), not null
-#  metadata                           :jsonb
-#  settled_at                         :datetime
-#  source                             :integer          default("manual"), not null
-#  status                             :integer          not null
-#  transaction_status                 :integer          default("purchased"), not null
-#  transaction_type                   :integer          not null
-#  created_at                         :datetime         not null
-#  updated_at                         :datetime         not null
-#  invoice_id                         :uuid
-#  wallet_id                          :uuid             not null
+#  id                                  :uuid             not null, primary key
+#  amount                              :decimal(30, 5)   default(0.0), not null
+#  credit_amount                       :decimal(30, 5)   default(0.0), not null
+#  invoice_requires_successful_payment :boolean          default(FALSE), not null
+#  metadata                            :jsonb
+#  settled_at                          :datetime
+#  source                              :integer          default("manual"), not null
+#  status                              :integer          not null
+#  transaction_status                  :integer          default("purchased"), not null
+#  transaction_type                    :integer          not null
+#  created_at                          :datetime         not null
+#  updated_at                          :datetime         not null
+#  invoice_id                          :uuid
+#  wallet_id                           :uuid             not null
 #
 # Indexes
 #
