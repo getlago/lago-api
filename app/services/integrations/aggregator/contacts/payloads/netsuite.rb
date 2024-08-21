@@ -8,7 +8,7 @@ module Integrations
           def create_body
             {
               'type' => 'customer', # Fixed value
-              'isDynamic' => false, # Fixed value
+              'isDynamic' => true, # Fixed value
               'columns' => {
                 'companyname' => customer.name,
                 'subsidiary' => subsidiary_id,
@@ -22,7 +22,7 @@ module Integrations
               'options' => {
                 'ignoreMandatoryFields' => false # Fixed value
               }
-            }
+            }.merge(customer.empty_billing_and_shipping_address? ? {} : {'lines' => lines})
           end
 
           def update_body
@@ -45,6 +45,65 @@ module Integrations
           end
 
           private
+
+          def lines
+            if customer.same_billing_and_shipping_address?
+              [
+                {
+                  'lineItems' => [
+                    {
+                      'defaultshipping' => true,
+                      'defaultbilling' => true,
+                      'subObjectId' => 'addressbookaddress',
+                      'subObject' => {
+                        'addr1' => customer.address_line1,
+                        'addr2' => customer.address_line2,
+                        'city' => customer.city,
+                        'zip' => customer.zipcode,
+                        'state' => customer.state,
+                        'country' => customer.country
+                      }
+                    }
+                  ],
+                  'sublistId' => 'addressbook'
+                }
+              ]
+            else
+              [
+                {
+                  'lineItems' => [
+                    {
+                      'defaultshipping' => false,
+                      'defaultbilling' => true,
+                      'subObjectId' => 'addressbookaddress',
+                      'subObject' => {
+                        'addr1' => customer.address_line1,
+                        'addr2' => customer.address_line2,
+                        'city' => customer.city,
+                        'zip' => customer.zipcode,
+                        'state' => customer.state,
+                        'country' => customer.country
+                      }
+                    },
+                    {
+                      'defaultshipping' => true,
+                      'defaultbilling' => false,
+                      'subObjectId' => 'addressbookaddress',
+                      'subObject' => {
+                        'addr1' => customer.shipping_address_line1,
+                        'addr2' => customer.shipping_address_line2,
+                        'city' => customer.shipping_city,
+                        'zip' => customer.shipping_zipcode,
+                        'state' => customer.shipping_state,
+                        'country' => customer.shipping_country
+                      }
+                    }
+                  ],
+                  'sublistId' => 'addressbook'
+                }
+              ]
+            end
+          end
 
           def customer_url
             url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"

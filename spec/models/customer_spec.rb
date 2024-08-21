@@ -289,4 +289,95 @@ RSpec.describe Customer, type: :model do
       end
     end
   end
+
+  describe '#same_billing_and_shipping_address?' do
+    subject(:method_call) { customer.same_billing_and_shipping_address? }
+
+    context 'when shipping address is present' do
+      context 'when shipping address is not the same as billing address' do
+        let(:customer) { build_stubbed(:customer, :with_shipping_address) }
+
+        it 'returns false' do
+          expect(subject).to be(false)
+        end
+      end
+
+      context 'when shipping address is the same as billing address' do
+        let(:customer) { build_stubbed(:customer, :with_same_billing_and_shipping_address) }
+
+        it 'returns true' do
+          expect(subject).to be(true)
+        end
+      end
+    end
+
+    context 'when shipping address is not present' do
+      let(:customer) { build_stubbed(:customer) }
+
+      it 'returns true' do
+        expect(subject).to be(true)
+      end
+    end
+  end
+
+  describe '#empty_billing_and_shipping_address?' do
+    subject(:method_call) { customer.empty_billing_and_shipping_address? }
+
+    context 'when shipping address is present' do
+      context 'when billing address is present' do
+        let(:customer) { build_stubbed(:customer, :with_shipping_address) }
+
+        it 'returns false' do
+          expect(subject).to be(false)
+        end
+      end
+
+      context 'when billing address is not present' do
+        let(:customer) do
+          build_stubbed(
+            :customer,
+            :with_shipping_address,
+            address_line1: nil,
+            address_line2: nil,
+            city: nil,
+            zipcode: nil,
+            state: nil,
+            country: nil
+          )
+        end
+
+        it 'returns false' do
+          expect(subject).to be(false)
+        end
+      end
+    end
+
+    context 'when shipping address is not present' do
+      context 'when billing address is present' do
+        let(:customer) { build_stubbed(:customer) }
+
+        it 'returns false' do
+          expect(subject).to be(false)
+        end
+      end
+
+      context 'when billing address is not present' do
+        let(:customer) do
+          build_stubbed(
+            :customer,
+            address_line1: nil,
+            address_line2: nil,
+            city: nil,
+            zipcode: nil,
+            state: nil,
+            country: nil
+          )
+        end
+
+        it 'returns true' do
+          expect(subject).to be(true)
+        end
+      end
+    end
+  end
 end
