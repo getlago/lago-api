@@ -18,23 +18,5 @@ FactoryBot.define do
     legal_name { Faker::Company.name }
     legal_number { Faker::Company.duns_number }
     currency { 'EUR' }
-
-    trait :with_shipping_address do
-      shipping_address_line1 { Faker::Address.street_address }
-      shipping_address_line2 { Faker::Address.secondary_address }
-      shipping_city { Faker::Address.city }
-      shipping_zipcode { Faker::Address.zip_code }
-      shipping_state { Faker::Address.state }
-      shipping_country { Faker::Address.country_code }
-    end
-
-    trait :with_same_billing_and_shipping_address do
-      shipping_address_line1 { address_line1 }
-      shipping_address_line2 { address_line2 }
-      shipping_city { city }
-      shipping_zipcode { zipcode }
-      shipping_state { state }
-      shipping_country { country }
-    end
   end
 end
