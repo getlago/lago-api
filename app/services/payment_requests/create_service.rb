@@ -17,7 +17,9 @@ module PaymentRequests
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "invoice") if invoices.empty?
 
-      # TODO: Return error if invoices are not overdue
+      if invoices.exists?(payment_overdue: false)
+        return result.not_allowed_failure!(code: "invoices_not_overdue")
+      end
 
       ActiveRecord::Base.transaction do
         # NOTE: Create payable group for the overdue invoices
