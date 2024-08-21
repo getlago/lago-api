@@ -108,6 +108,21 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
       expect { service.call }.not_to change(lifetime_usage, :invoiced_usage_amount_refreshed_at)
     end
 
+    context "with terminated subscription" do
+      before do
+        lifetime_usage.subscription.mark_as_terminated!(20.seconds.ago)
+      end
+
+      it "clears the recalculate_current_usage flag" do
+        result = service.call
+        expect(result.lifetime_usage.recalculate_current_usage).to eq(false)
+      end
+
+      it "does not update the current_usage_amount_refreshed_at" do
+        expect { service.call }.not_to change(lifetime_usage, :current_usage_amount_refreshed_at)
+      end
+    end
+
     context 'with usage' do
       before do
         events

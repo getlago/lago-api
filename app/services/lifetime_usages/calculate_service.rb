@@ -8,6 +8,14 @@ module LifetimeUsages
     end
 
     def call
+      result.lifetime_usage = lifetime_usage
+
+      # clear boolean flags without recalculating if the subscription is not active.
+      if !lifetime_usage.subscription.active?
+        lifetime_usage.update!(recalculate_current_usage: false, recalculate_invoiced_usage: false)
+        return result
+      end
+
       if lifetime_usage.recalculate_current_usage
         lifetime_usage.current_usage_amount_cents = calculate_current_usage_amount_cents
         lifetime_usage.recalculate_current_usage = false
@@ -20,7 +28,6 @@ module LifetimeUsages
       end
       lifetime_usage.save!
 
-      result.lifetime_usage = lifetime_usage
       result
     end
 
