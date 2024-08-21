@@ -55,8 +55,8 @@ class Subscription < ApplicationRecord
     self.started_at ||= timestamp
     self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(
       organization:,
-      recalculate_current_usage: true,
-      recalculate_invoiced_usage: true
+      recalculate_current_usage: false,
+      recalculate_invoiced_usage: false
     )
     active!
   end
