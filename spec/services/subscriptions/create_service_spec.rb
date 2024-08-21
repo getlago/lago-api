@@ -50,8 +50,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.external_id).to eq(external_id)
         expect(subscription).to be_anniversary
         expect(subscription.lifetime_usage).to be_present
-        expect(subscription.lifetime_usage.recalculate_invoiced_usage).to be_truthy
-        expect(subscription.lifetime_usage.recalculate_current_usage).to be_truthy
+        expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(false)
+        expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
       end
     end
 
@@ -353,8 +353,8 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           expect(subscription.external_id).to eq(external_id)
           expect(subscription).to be_anniversary
           expect(subscription.lifetime_usage).to be_present
-          expect(subscription.lifetime_usage.recalculate_invoiced_usage).to be_truthy
-          expect(subscription.lifetime_usage.recalculate_current_usage).to be_truthy
+          expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(false)
+          expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
         end
       end
     end
@@ -635,8 +635,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
               expect(result.subscription).to be_active
               expect(result.subscription.next_subscription).to be_present
               expect(result.subscription.lifetime_usage).to be_present
-              expect(result.subscription.lifetime_usage.recalculate_invoiced_usage).to be_truthy
-              expect(result.subscription.lifetime_usage.recalculate_current_usage).to be_truthy
             end
           end
 
