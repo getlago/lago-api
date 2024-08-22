@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_20_125840) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_22_080031) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -798,6 +798,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_20_125840) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.bigint "historical_usage_amount_cents", default: 0, null: false
     t.index ["organization_id"], name: "index_lifetime_usages_on_organization_id"
     t.index ["recalculate_current_usage"], name: "index_lifetime_usages_on_recalculate_current_usage", where: "((deleted_at IS NULL) AND (recalculate_current_usage = true))"
     t.index ["recalculate_invoiced_usage"], name: "index_lifetime_usages_on_recalculate_invoiced_usage", where: "((deleted_at IS NULL) AND (recalculate_invoiced_usage = true))"

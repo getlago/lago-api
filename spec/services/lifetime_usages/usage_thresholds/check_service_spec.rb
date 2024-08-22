@@ -5,13 +5,14 @@ require 'rails_helper'
 RSpec.describe LifetimeUsages::UsageThresholds::CheckService, type: :service do
   subject(:service) { described_class.new(lifetime_usage:, progressive_billed_amount:) }
 
-  let(:lifetime_usage) { create(:lifetime_usage, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }
+  let(:lifetime_usage) { create(:lifetime_usage, subscription:, historical_usage_amount_cents:, recalculate_current_usage:, recalculate_invoiced_usage:) }
   let(:progressive_billed_amount) { 0 }
   let(:recalculate_current_usage) { true }
   let(:recalculate_invoiced_usage) { true }
   let(:subscription) { create(:subscription, customer_id: customer.id) }
   let(:organization) { subscription.organization }
   let(:customer) { create(:customer) }
+  let(:historical_usage_amount_cents) { 0 }
 
   def create_thresholds(subscription, amounts:, recurring: nil)
     amounts.each do |amount|
@@ -291,6 +292,34 @@ RSpec.describe LifetimeUsages::UsageThresholds::CheckService, type: :service do
             [50, 15] => [5]
           })
         end
+      end
+    end
+  end
+
+  context "with historical_usage_amount_cents" do
+    let(:historical_usage_amount_cents) { 11 }
+
+    context "with multiple fixed thresholds" do
+      before do
+        create_thresholds(subscription, amounts: [10, 20, 31, 40])
+      end
+
+      it "calculates the passed thresholds correctly" do
+        validate_thresholds({
+          [0, 7] => [],
+          [0, 9] => [20],
+          [0, 10] => [20],
+          [9, 0] => [],
+          [0, 31] => [20, 31, 40],
+          [8, 2] => [20],
+          [8, 20] => [20, 31],
+          [8, 31] => [20, 31, 40],
+          [11, 1] => [],
+          [11, 10] => [31],
+          [21, 20] => [40],
+          [40, 2] => [],
+          [50, 0] => []
+        })
       end
     end
   end

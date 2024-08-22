@@ -22,7 +22,7 @@ module LifetimeUsages
         actual_current_usage = lifetime_usage.current_usage_amount_cents - progressive_billed_amount
         # we can end up in a situation where this goes below zero, in that case no thresholds are passed
         return result if actual_current_usage.negative?
-        invoiced_usage = lifetime_usage.invoiced_usage_amount_cents + progressive_billed_amount
+        invoiced_usage = lifetime_usage.historical_usage_amount_cents + lifetime_usage.invoiced_usage_amount_cents + progressive_billed_amount
 
         # Get the largest threshold amount
         # in case there are no fixed_thresholds, this will return nil which to_i will convert to 0
