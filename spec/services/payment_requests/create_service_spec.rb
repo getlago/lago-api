@@ -92,10 +92,10 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       expect { create_service.call }.to change { customer.payment_requests.count }.by(1)
     end
 
-    it "creates payment request applied invoices" do
-      expect { create_service.call }
-        .to change { first_invoice.reload.applied_payment_requests.count }.by(1)
-        .and change { second_invoice.reload.applied_payment_requests.count }.by(1)
+    it "assigns the invoices to the created payment request" do
+      result = create_service.call
+
+      expect(result.payment_request.invoices.count).to eq(2)
     end
 
     it "delivers a webhook" do
