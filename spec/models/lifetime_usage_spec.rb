@@ -32,6 +32,17 @@ RSpec.describe LifetimeUsage, type: :model do
       lifetime_usage.invoiced_usage_amount_cents = 1
       expect(lifetime_usage).to be_valid
     end
+
+    it 'requires that historical_usage_amount_cents is positive' do
+      lifetime_usage.historical_usage_amount_cents = -1
+      expect(lifetime_usage).not_to be_valid
+
+      lifetime_usage.historical_usage_amount_cents = 0
+      expect(lifetime_usage).to be_valid
+
+      lifetime_usage.historical_usage_amount_cents = 1
+      expect(lifetime_usage).to be_valid
+    end
   end
 
   describe ".needs_recalculation scope" do

@@ -10,6 +10,7 @@ class LifetimeUsage < ApplicationRecord
 
   validates :current_usage_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :invoiced_usage_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :historical_usage_amount_cents, numericality: {greater_than_or_equal_to: 0}
 
   monetize :current_usage_amount_cents,
     :invoiced_usage_amount_cents,
@@ -28,6 +29,7 @@ end
 #  current_usage_amount_cents         :bigint           default(0), not null
 #  current_usage_amount_refreshed_at  :datetime
 #  deleted_at                         :datetime
+#  historical_usage_amount_cents      :bigint           default(0), not null
 #  invoiced_usage_amount_cents        :bigint           default(0), not null
 #  invoiced_usage_amount_refreshed_at :datetime
 #  recalculate_current_usage          :boolean          default(FALSE), not null
