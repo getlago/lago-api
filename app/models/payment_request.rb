@@ -26,15 +26,17 @@ end
 #
 # Table name: payment_requests
 #
-#  id              :uuid             not null, primary key
-#  amount_cents    :bigint           default(0), not null
-#  amount_currency :string           not null
-#  email           :string           not null
-#  payment_status  :integer          default("pending"), not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  customer_id     :uuid             not null
-#  organization_id :uuid             not null
+#  id                           :uuid             not null, primary key
+#  amount_cents                 :bigint           default(0), not null
+#  amount_currency              :string           not null
+#  email                        :string           not null
+#  payment_attempts             :integer          default(0), not null
+#  payment_status               :integer          default("pending"), not null
+#  ready_for_payment_processing :boolean          default(TRUE), not null
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  customer_id                  :uuid             not null
+#  organization_id              :uuid             not null
 #
 # Indexes
 #
