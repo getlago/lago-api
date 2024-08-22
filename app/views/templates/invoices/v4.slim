@@ -455,6 +455,8 @@ html
           == SlimHelper.render('templates/invoices/v4/_credit', self)
         - elsif subscriptions.count == 1
           == SlimHelper.render('templates/invoices/v4/_subscription_details', self)
+        - elsif progressive_billing?
+          == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', self)
         - else
           == SlimHelper.render('templates/invoices/v4/_subscriptions_summary', self)
 

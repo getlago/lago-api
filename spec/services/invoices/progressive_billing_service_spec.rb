@@ -10,7 +10,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
   let(:organization) { plan.organization }
 
   let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, plan:, customer:) }
+  let(:subscription) { create(:subscription, plan:, customer:, started_at: timestamp - 1.week) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:) }
 
   let(:timestamp) { Time.zone.parse('2024-08-22 10:00:00') }
