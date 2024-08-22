@@ -72,6 +72,18 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context 'when finalize_zero_amount_invoice is sent' do
+      before { params[:finalize_zero_amount_invoice] = 'false' }
+
+      it 'converts document_number_prefix to upcase version' do
+        result = update_service.call
+
+        aggregate_failures do
+          expect(result.organization.finalize_zero_amount_invoice).to eq(false)
+        end
+      end
+    end
+
     context 'when document_number_prefix is invalid' do
       before { params[:document_number_prefix] = 'aaaaaaaaaaaaaaa' }
 

@@ -33,6 +33,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       tax
 
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(Invoices::CheckTransitionToFinalizedService).to receive(:call).and_call_original
       CurrentContext.source = 'api'
     end
 
@@ -58,6 +59,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         expect(result.invoice.total_amount_cents).to eq(3360)
 
         expect(result.invoice).to be_finalized
+        expect(Invoices::CheckTransitionToFinalizedService).to have_received(:call).with(invoice: result.invoice)
       end
     end
 

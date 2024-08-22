@@ -61,6 +61,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         .and_return(charge_result)
 
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(Invoices::CheckTransitionToFinalizedService).to receive(:call).and_call_original
     end
 
     it 'creates an invoice' do
@@ -106,6 +107,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
         expect(result.invoice.total_amount_cents).to eq(12)
 
+        expect(Invoices::CheckTransitionToFinalizedService).to have_received(:call).with(invoice: result.invoice)
         expect(result.invoice).to be_finalized
       end
     end

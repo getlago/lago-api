@@ -16,6 +16,13 @@ module Customers
         )
       end
 
+      unless valid_finalize_zero_amount_invoice?(params[:finalize_zero_amount_invoice])
+        return result.single_validation_failure!(
+          field: :finalize_zero_amount_invoice,
+          error_code: 'invalid_value'
+        )
+      end
+
       unless valid_integration_customers_count?(integration_customers: params[:integration_customers])
         return result.single_validation_failure!(
           field: :integration_customers,
@@ -45,6 +52,7 @@ module Customers
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
         customer.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
         customer.external_salesforce_id = params[:external_salesforce_id] if params.key?(:external_salesforce_id)
+        customer.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
         if params.key?(:tax_identification_number)
           customer.tax_identification_number = params[:tax_identification_number]
         end
@@ -144,6 +152,10 @@ module Customers
         tax_identification_number: args[:tax_identification_number]
       )
 
+      if args.key?(:finalize_zero_amount_invoice)
+        customer.finalize_zero_amount_invoice = args[:finalize_zero_amount_invoice]
+      end
+
       assign_premium_attributes(customer, args)
 
       ActiveRecord::Base.transaction do
@@ -187,11 +199,9 @@ module Customers
 
     private
 
-    def valid_email?(email)
-      return true if email.nil?
-
-      email_regexp = /\A[^@\s]+@[^@\s]+\z/
-      email_regexp.match?(email).present?
+    def valid_finalize_zero_amount_invoice?(value)
+      return true if value.nil?
+      Customer::FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS.include?(value.to_sym)
     end
 
     def valid_metadata_count?(metadata:)

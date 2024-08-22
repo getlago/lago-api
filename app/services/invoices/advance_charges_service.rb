@@ -65,7 +65,7 @@ module Invoices
         Invoices::ComputeAmountsFromFees.call(invoice:)
 
         invoice.payment_status = :succeeded
-        invoice.status = :finalized
+        Invoices::CheckTransitionToFinalizedService.call(invoice:).raise_if_error!
 
         invoice.save!
       end

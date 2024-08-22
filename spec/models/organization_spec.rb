@@ -24,6 +24,10 @@ RSpec.describe Organization, type: :model do
 
   it { is_expected.to validate_inclusion_of(:default_currency).in_array(described_class.currency_list) }
 
+  it 'sets the default value to true' do
+    expect(organization.finalize_zero_amount_invoice).to eq true
+  end
+
   it_behaves_like 'paper_trail traceable'
 
   describe 'Validations' do
@@ -121,6 +125,13 @@ RSpec.describe Organization, type: :model do
       expect(organization).not_to be_valid
       expect(organization.errors.first.attribute).to eq(:email_settings)
       expect(organization.errors.first.type).to eq(:unsupported_value)
+    end
+
+    it 'dont allow finalize_zero_amount_invoice with null value' do
+      expect(organization.finalize_zero_amount_invoice).to eq true
+      organization.finalize_zero_amount_invoice = nil
+
+      expect(organization).not_to be_valid
     end
   end
 

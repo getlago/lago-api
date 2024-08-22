@@ -53,6 +53,21 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context 'with finalize_zero_amount_invoice' do
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          finalize_zero_amount_invoice: "skip"
+        }
+      end
+
+      it 'returns a success' do
+        post_with_token(organization, '/api/v1/customers', {customer: create_params})
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:finalize_zero_amount_invoice]).to eq("skip")
+      end
+    end
+
     context 'with billing configuration' do
       around { |test| lago_premium!(&test) }
 

@@ -65,6 +65,7 @@ module Api
           :webhook_url,
           :document_numbering,
           :document_number_prefix,
+          :finalize_zero_amount_invoice,
           email_settings: [],
           billing_configuration: [
             :invoice_footer,
