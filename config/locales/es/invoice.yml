@@ -62,6 +62,12 @@ es:
     tax: Impuesto
     tax_identification_number: 'ID del impuesto: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% sobre %{amount})"
+    tax_name_only:
+      customer_exempt: El cliente está exento de impuestos
+      juris_not_taxed: Sin impuesto
+      not_collecting: Sin impuesto
+      reverse_charge: Inversión del sujeto pasivo - Responsabilidad fiscal trasladada al cliente
+      transaction_exempt: El cliente está exento de impuestos
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Tasas de impuestos
     taxes:

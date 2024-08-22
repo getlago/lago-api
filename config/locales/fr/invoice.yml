@@ -63,6 +63,12 @@ fr:
     tax: TVA
     tax_identification_number: 'ID fiscal: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% sur %{amount})"
+    tax_name_only:
+      customer_exempt: Le client est exonéré de taxe
+      juris_not_taxed: Taxe non applicable
+      not_collecting: Pas de taxe
+      reverse_charge: Autoliquidation - Responsabilité fiscale transférée au client
+      transaction_exempt: Le client est exonéré de taxe
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Taux de taxe
     taxes:
