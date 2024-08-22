@@ -55,7 +55,12 @@ module Invoices
       )
 
       add_charge_fees
-      compute_amounts
+
+      if customer_provider_taxation?
+        compute_amounts_with_provider_taxes
+      else
+        compute_amounts
+      end
 
       format_usage
     end
@@ -136,6 +141,28 @@ module Invoices
       invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
     end
 
+    def compute_amounts_with_provider_taxes
+      invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
+
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
+
+      return result.validation_failure!(errors: {tax_error: [taxes_result.error.code]}) unless taxes_result.success?
+
+      result.fees_taxes = taxes_result.fees
+
+      invoice.fees.each do |fee|
+        fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.item_id }
+
+        res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
+        res.raise_if_error!
+      end
+
+      res =  Invoices::ApplyProviderTaxesService.call(invoice:, provider_taxes: result.fees_taxes)
+      res.raise_if_error!
+
+      invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
+    end
+
     def charge_cache_key(charge)
       Subscriptions::ChargeCacheService.new(subscription:, charge:).cache_key
     end
@@ -155,6 +182,10 @@ module Invoices
         taxes_amount_cents: invoice.taxes_amount_cents,
         fees: invoice.fees
       )
+    end
+
+    def customer_provider_taxation?
+      @customer_provider_taxation ||= invoice.customer.anrok_customer
     end
   end
 end
