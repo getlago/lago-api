@@ -48,10 +48,10 @@ RSpec.describe Fees::ChargeService do
     )
   end
 
-  describe '.create' do
+  describe '.call' do
     context 'without filters' do
       it 'creates a fee' do
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         expect(result.fees.first).to have_attributes(
           id: String,
@@ -86,7 +86,7 @@ RSpec.describe Fees::ChargeService do
 
         context 'without events' do
           it 'creates an empty fee' do
-            result = charge_subscription_service.create
+            result = charge_subscription_service.call
             expect(result).to be_success
             expect(result.fees.count).to eq(1)
 
@@ -139,7 +139,7 @@ RSpec.describe Fees::ChargeService do
           end
 
           it 'creates a fee for each group' do
-            result = charge_subscription_service.create
+            result = charge_subscription_service.call
             expect(result).to be_success
             expect(result.fees.count).to eq(2)
 
@@ -199,7 +199,7 @@ RSpec.describe Fees::ChargeService do
             end
 
             it 'creates a fee for each group' do
-              result = charge_subscription_service.create
+              result = charge_subscription_service.call
               expect(result).to be_success
               expect(result.fees.count).to eq(2)
 
@@ -235,7 +235,7 @@ RSpec.describe Fees::ChargeService do
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
             it 'creates a fee and a cached aggregation per group' do
-              result = charge_subscription_service.create
+              result = charge_subscription_service.call
               expect(result).to be_success
 
               expect(result.fees.count).to eq(2)
@@ -248,7 +248,7 @@ RSpec.describe Fees::ChargeService do
               create(:custom_aggregation_billable_metric, organization:)
 
               it 'creates a fee and a cached aggregation' do
-                result = charge_subscription_service.create
+                result = charge_subscription_service.call
                 expect(result).to be_success
 
                 expect(result.fees.count).to eq(2)
@@ -292,7 +292,7 @@ RSpec.describe Fees::ChargeService do
         end
 
         it 'creates a fee' do
-          result = charge_subscription_service.create
+          result = charge_subscription_service.call
           expect(result).to be_success
           expect(result.fees.first).to have_attributes(
             id: String,
@@ -314,7 +314,7 @@ RSpec.describe Fees::ChargeService do
         end
 
         it 'does not create a new fee' do
-          expect { charge_subscription_service.create }.not_to change(Fee, :count)
+          expect { charge_subscription_service.call }.not_to change(Fee, :count)
         end
       end
 
@@ -352,7 +352,7 @@ RSpec.describe Fees::ChargeService do
         end
 
         it 'creates a new fee for the complete period' do
-          result = charge_subscription_service.create
+          result = charge_subscription_service.call
           expect(result).to be_success
           expect(result.fees.first).to have_attributes(
             id: String,
@@ -377,7 +377,7 @@ RSpec.describe Fees::ChargeService do
           end
 
           it 'creates fees' do
-            result = charge_subscription_service.create
+            result = charge_subscription_service.call
             expect(result).to be_success
             expect(result.fees.first).to have_attributes(
               id: String,
@@ -421,7 +421,7 @@ RSpec.describe Fees::ChargeService do
 
         context 'with adjusted units' do
           it 'creates a fee' do
-            result = charge_subscription_service.create
+            result = charge_subscription_service.call
 
             expect(result).to be_success
             expect(result.fees.first).to have_attributes(
@@ -442,7 +442,7 @@ RSpec.describe Fees::ChargeService do
             before { charge.update!(min_amount_cents: 20_000) }
 
             it 'creates two fees' do
-              result = charge_subscription_service.create
+              result = charge_subscription_service.call
 
               aggregate_failures do
                 expect(result).to be_success
@@ -557,7 +557,7 @@ RSpec.describe Fees::ChargeService do
 
             it 'creates expected fees for sum_agg aggregation type' do
               billable_metric.update!(aggregation_type: :sum_agg, field_name: 'foo_bar')
-              result = charge_subscription_service.create
+              result = charge_subscription_service.call
               expect(result).to be_success
               created_fees = result.fees
 
@@ -619,7 +619,7 @@ RSpec.describe Fees::ChargeService do
           end
 
           it 'creates a fee' do
-            result = charge_subscription_service.create
+            result = charge_subscription_service.call
 
             expect(result).to be_success
             expect(result.fees.first).to have_attributes(
@@ -654,7 +654,7 @@ RSpec.describe Fees::ChargeService do
           end
 
           it 'creates a fee' do
-            result = charge_subscription_service.create
+            result = charge_subscription_service.call
 
             expect(result).to be_success
             expect(result.fees.first).to have_attributes(
@@ -677,7 +677,7 @@ RSpec.describe Fees::ChargeService do
           before { invoice.finalized! }
 
           it 'creates a fee without using adjusted fee attributes' do
-            result = charge_subscription_service.create
+            result = charge_subscription_service.call
 
             expect(result).to be_success
             expect(result.fees.first).to have_attributes(
@@ -700,7 +700,7 @@ RSpec.describe Fees::ChargeService do
         it 'creates two fees' do
           travel_to(DateTime.new(2023, 4, 1)) do
             charge.update!(min_amount_cents: 1000)
-            result = charge_subscription_service.create
+            result = charge_subscription_service.call
 
             aggregate_failures do
               expect(result).to be_success
@@ -792,7 +792,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for count_agg aggregation type' do
         billable_metric.update!(aggregation_type: :count_agg)
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fees = result.fees
 
@@ -833,7 +833,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for sum_agg aggregation type' do
         billable_metric.update!(aggregation_type: :sum_agg, field_name: 'foo_bar')
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fees = result.fees
 
@@ -874,7 +874,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for max_agg aggregation type' do
         billable_metric.update!(aggregation_type: :max_agg, field_name: 'foo_bar')
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fees = result.fees
 
@@ -916,7 +916,7 @@ RSpec.describe Fees::ChargeService do
       context 'when unique_count_agg' do
         it 'creates expected fees for unique_count_agg aggregation type' do
           billable_metric.update!(aggregation_type: :unique_count_agg, field_name: 'foo_bar')
-          result = charge_subscription_service.create
+          result = charge_subscription_service.call
           expect(result).to be_success
           created_fees = result.fees
 
@@ -1075,7 +1075,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for count_agg aggregation type' do
         billable_metric.update!(aggregation_type: :count_agg)
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fees = result.fees
 
@@ -1221,7 +1221,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for count_agg aggregation type' do
         billable_metric.update!(aggregation_type: :count_agg)
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fees = result.fees
 
@@ -1364,7 +1364,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for count_agg aggregation type' do
         billable_metric.update!(aggregation_type: :count_agg)
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fees = result.fees
 
@@ -1484,7 +1484,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for count_agg aggregation type' do
         billable_metric.update!(aggregation_type: :count_agg)
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fees = result.fees
 
@@ -1619,7 +1619,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates expected fees for count_agg aggregation type' do
         billable_metric.update!(aggregation_type: :count_agg)
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fees = result.fees
 
@@ -1700,7 +1700,7 @@ RSpec.describe Fees::ChargeService do
 
       it 'creates three fees' do
         travel_to(DateTime.new(2023, 4, 1)) do
-          result = charge_subscription_service.create
+          result = charge_subscription_service.call
 
           aggregate_failures do
             expect(result).to be_success
@@ -1717,7 +1717,7 @@ RSpec.describe Fees::ChargeService do
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
       it 'creates a fee and a cached aggregation' do
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
         expect(result).to be_success
         created_fee = result.fees.first
         cached_aggregation = result.cached_aggregations.first
@@ -1763,7 +1763,7 @@ RSpec.describe Fees::ChargeService do
         allow(aggregator_service).to receive(:aggregate)
           .and_return(error_result)
 
-        result = charge_subscription_service.create
+        result = charge_subscription_service.call
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ServiceFailure)

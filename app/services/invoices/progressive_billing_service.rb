@@ -117,8 +117,7 @@ module Invoices
     end
 
     def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.new(invoice:).call
-      credit_result.raise_if_error!
+      credit_result = Credits::CreditNoteService.call(invoice:).raise_if_error!
 
       invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents) if credit_result.credits
     end
@@ -129,8 +128,7 @@ module Invoices
       return unless invoice.total_amount_cents.positive?
       return unless wallet.balance.positive?
 
-      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:)
-      prepaid_credit_result.raise_if_error!
+      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:).raise_if_error!
 
       invoice.total_amount_cents -= prepaid_credit_result.prepaid_credit_amount_cents
     end

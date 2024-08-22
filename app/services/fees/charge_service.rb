@@ -13,7 +13,7 @@ module Fees
       super(nil)
     end
 
-    def create
+    def call
       return result if already_billed?
 
       init_fees
