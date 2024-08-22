@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Integrations::Aggregator::Contacts::CreateService do
   subject(:service_call) { described_class.call(integration:, customer:, subsidiary_id:) }
 
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, :with_same_billing_and_shipping_address, organization:) }
   let(:subsidiary_id) { '1' }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
@@ -46,7 +46,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
         let(:params) do
           {
             'type' => 'customer',
-            'isDynamic' => false,
+            'isDynamic' => true,
             'columns' => {
               'companyname' => customer.name,
               'subsidiary' => subsidiary_id,
@@ -59,7 +59,27 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
             },
             'options' => {
               'ignoreMandatoryFields' => false
-            }
+            },
+            'lines' => [
+              {
+                'lineItems' => [
+                  {
+                    'defaultshipping' => true,
+                    'defaultbilling' => true,
+                    'subObjectId' => 'addressbookaddress',
+                    'subObject' => {
+                      'addr1' => customer.address_line1,
+                      'addr2' => customer.address_line2,
+                      'city' => customer.city,
+                      'zip' => customer.zipcode,
+                      'state' => customer.state,
+                      'country' => customer.country
+                    }
+                  }
+                ],
+                'sublistId' => 'addressbook'
+              }
+            ]
           }
         end
 
@@ -159,7 +179,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
       let(:params) do
         {
           'type' => 'customer',
-          'isDynamic' => false,
+          'isDynamic' => true,
           'columns' => {
             'companyname' => customer.name,
             'subsidiary' => subsidiary_id,
@@ -172,7 +192,27 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
           },
           'options' => {
             'ignoreMandatoryFields' => false
-          }
+          },
+          'lines' => [
+            {
+              'lineItems' => [
+                {
+                  'defaultshipping' => true,
+                  'defaultbilling' => true,
+                  'subObjectId' => 'addressbookaddress',
+                  'subObject' => {
+                    'addr1' => customer.address_line1,
+                    'addr2' => customer.address_line2,
+                    'city' => customer.city,
+                    'zip' => customer.zipcode,
+                    'state' => customer.state,
+                    'country' => customer.country
+                  }
+                }
+              ],
+              'sublistId' => 'addressbook'
+            }
+          ]
         }
       end
 

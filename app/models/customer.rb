@@ -127,6 +127,27 @@ class Customer < ApplicationRecord
     }
   end
 
+  def same_billing_and_shipping_address?
+    return true if shipping_address.values.all?(&:blank?)
+
+    address_line1 == shipping_address_line1 &&
+      address_line2 == shipping_address_line2 &&
+      city == shipping_city &&
+      zipcode == shipping_zipcode &&
+      state == shipping_state &&
+      country == shipping_country
+  end
+
+  def empty_billing_and_shipping_address?
+    shipping_address.values.all?(&:blank?) &&
+      address_line1.blank? &&
+      address_line2.blank? &&
+      city.blank? &&
+      zipcode.blank? &&
+      state.blank? &&
+      country.blank?
+  end
+
   private
 
   def ensure_slug
