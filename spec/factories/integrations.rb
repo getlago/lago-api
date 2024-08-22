@@ -12,7 +12,7 @@ FactoryBot.define do
     end
 
     settings do
-      {account_id: 'acc_12345', client_id: 'cli_12345', script_endpoint_url: Faker::Internet.url}
+      {account_id: 'acc_12345', client_id: 'cli_12345', script_endpoint_url: Faker::Internet.url, legacy_script: false}
     end
   end
 

@@ -5,6 +5,7 @@ module Integrations
     validates :connection_id, :client_secret, :client_id, :account_id, :script_endpoint_url, presence: true
 
     settings_accessors :client_id,
+      :legacy_script,
       :sync_credit_notes,
       :sync_invoices,
       :sync_payments,

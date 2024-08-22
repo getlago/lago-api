@@ -34,54 +34,85 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
       }
     end
 
-    context 'when shipping address is present' do
-      context 'when shipping address is not the same as billing address' do
-        let(:customer) { create(:customer, :with_shipping_address) }
+    context 'when legacy script is false' do
+      context 'when shipping address is present' do
+        context 'when shipping address is not the same as billing address' do
+          let(:customer) { create(:customer, :with_shipping_address) }
 
-        let(:lines) do
-          [
-            {
-              'lineItems' => [
-                {
-                  'defaultshipping' => false,
-                  'defaultbilling' => true,
-                  'subObjectId' => 'addressbookaddress',
-                  'subObject' => {
-                    'addr1' => customer.address_line1,
-                    'addr2' => customer.address_line2,
-                    'city' => customer.city,
-                    'zip' => customer.zipcode,
-                    'state' => customer.state,
-                    'country' => customer.country
+          let(:lines) do
+            [
+              {
+                'lineItems' => [
+                  {
+                    'defaultshipping' => false,
+                    'defaultbilling' => true,
+                    'subObjectId' => 'addressbookaddress',
+                    'subObject' => {
+                      'addr1' => customer.address_line1,
+                      'addr2' => customer.address_line2,
+                      'city' => customer.city,
+                      'zip' => customer.zipcode,
+                      'state' => customer.state,
+                      'country' => customer.country
+                    }
+                  },
+                  {
+                    'defaultshipping' => true,
+                    'defaultbilling' => false,
+                    'subObjectId' => 'addressbookaddress',
+                    'subObject' => {
+                      'addr1' => customer.shipping_address_line1,
+                      'addr2' => customer.shipping_address_line2,
+                      'city' => customer.shipping_city,
+                      'zip' => customer.shipping_zipcode,
+                      'state' => customer.shipping_state,
+                      'country' => customer.shipping_country
+                    }
                   }
-                },
-                {
-                  'defaultshipping' => true,
-                  'defaultbilling' => false,
-                  'subObjectId' => 'addressbookaddress',
-                  'subObject' => {
-                    'addr1' => customer.shipping_address_line1,
-                    'addr2' => customer.shipping_address_line2,
-                    'city' => customer.shipping_city,
-                    'zip' => customer.shipping_zipcode,
-                    'state' => customer.shipping_state,
-                    'country' => customer.shipping_country
-                  }
-                }
-              ],
-              'sublistId' => 'addressbook'
-            }
-          ]
+                ],
+                'sublistId' => 'addressbook'
+              }
+            ]
+          end
+
+          it 'returns the payload body' do
+            expect(subject).to eq payload_body
+          end
         end
 
-        it 'returns the payload body' do
-          expect(subject).to eq payload_body
+        context 'when shipping address is the same as billing address' do
+          let(:customer) { create(:customer, :with_same_billing_and_shipping_address) }
+
+          let(:lines) do
+            [
+              {
+                'lineItems' => [
+                  {
+                    'defaultshipping' => true,
+                    'defaultbilling' => true,
+                    'subObjectId' => 'addressbookaddress',
+                    'subObject' => {
+                      'addr1' => customer.address_line1,
+                      'addr2' => customer.address_line2,
+                      'city' => customer.city,
+                      'zip' => customer.zipcode,
+                      'state' => customer.state,
+                      'country' => customer.country
+                    }
+                  }
+                ],
+                'sublistId' => 'addressbook'
+              }
+            ]
+          end
+
+          it 'returns the payload body' do
+            expect(subject).to eq payload_body
+          end
         end
       end
 
-      context 'when shipping address is the same as billing address' do
-        let(:customer) { create(:customer, :with_same_billing_and_shipping_address) }
-
+      context 'when shipping address is not present' do
         let(:lines) do
           [
             {
@@ -105,59 +136,162 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
           ]
         end
 
-        it 'returns the payload body' do
-          expect(subject).to eq payload_body
+        context 'when billing address is present' do
+          let(:customer) { create(:customer) }
+
+          it 'returns the payload body' do
+            expect(subject).to eq payload_body
+          end
+        end
+
+        context 'when billing address is not present' do
+          let(:customer) do
+            create(
+              :customer,
+              address_line1: nil,
+              address_line2: nil,
+              city: nil,
+              zipcode: nil,
+              state: nil,
+              country: nil
+            )
+          end
+
+          it 'returns the payload body without lines' do
+            expect(subject).to eq payload_body.except('lines')
+          end
         end
       end
     end
 
-    context 'when shipping address is not present' do
-      let(:lines) do
-        [
-          {
-            'lineItems' => [
+    context 'when legacy script is true' do
+      before { integration.legacy_script = true }
+
+      context 'when shipping address is present' do
+        context 'when shipping address is not the same as billing address' do
+          let(:customer) { create(:customer, :with_shipping_address) }
+
+          let(:lines) do
+            [
               {
-                'defaultshipping' => true,
-                'defaultbilling' => true,
-                'subObjectId' => 'addressbookaddress',
-                'subObject' => {
-                  'addr1' => customer.address_line1,
-                  'addr2' => customer.address_line2,
-                  'city' => customer.city,
-                  'zip' => customer.zipcode,
-                  'state' => customer.state,
-                  'country' => customer.country
-                }
+                'lineItems' => [
+                  {
+                    'defaultshipping' => false,
+                    'defaultbilling' => true,
+                    'subObjectId' => 'addressbookaddress',
+                    'subObject' => {
+                      'addr1' => customer.address_line1,
+                      'addr2' => customer.address_line2,
+                      'city' => customer.city,
+                      'zip' => customer.zipcode,
+                      'state' => customer.state,
+                      'country' => customer.country
+                    }
+                  },
+                  {
+                    'defaultshipping' => true,
+                    'defaultbilling' => false,
+                    'subObjectId' => 'addressbookaddress',
+                    'subObject' => {
+                      'addr1' => customer.shipping_address_line1,
+                      'addr2' => customer.shipping_address_line2,
+                      'city' => customer.shipping_city,
+                      'zip' => customer.shipping_zipcode,
+                      'state' => customer.shipping_state,
+                      'country' => customer.shipping_country
+                    }
+                  }
+                ],
+                'sublistId' => 'addressbook'
               }
-            ],
-            'sublistId' => 'addressbook'
-          }
-        ]
-      end
+            ]
+          end
 
-      context 'when billing address is present' do
-        let(:customer) { create(:customer) }
+          it 'returns the payload body without lines' do
+            expect(subject).to eq payload_body.except('lines')
+          end
+        end
 
-        it 'returns the payload body' do
-          expect(subject).to eq payload_body
+        context 'when shipping address is the same as billing address' do
+          let(:customer) { create(:customer, :with_same_billing_and_shipping_address) }
+
+          let(:lines) do
+            [
+              {
+                'lineItems' => [
+                  {
+                    'defaultshipping' => true,
+                    'defaultbilling' => true,
+                    'subObjectId' => 'addressbookaddress',
+                    'subObject' => {
+                      'addr1' => customer.address_line1,
+                      'addr2' => customer.address_line2,
+                      'city' => customer.city,
+                      'zip' => customer.zipcode,
+                      'state' => customer.state,
+                      'country' => customer.country
+                    }
+                  }
+                ],
+                'sublistId' => 'addressbook'
+              }
+            ]
+          end
+
+          it 'returns the payload body without lines' do
+            expect(subject).to eq payload_body.except('lines')
+          end
         end
       end
 
-      context 'when billing address is not present' do
-        let(:customer) do
-          create(
-            :customer,
-            address_line1: nil,
-            address_line2: nil,
-            city: nil,
-            zipcode: nil,
-            state: nil,
-            country: nil
-          )
+      context 'when shipping address is not present' do
+        let(:lines) do
+          [
+            {
+              'lineItems' => [
+                {
+                  'defaultshipping' => true,
+                  'defaultbilling' => true,
+                  'subObjectId' => 'addressbookaddress',
+                  'subObject' => {
+                    'addr1' => customer.address_line1,
+                    'addr2' => customer.address_line2,
+                    'city' => customer.city,
+                    'zip' => customer.zipcode,
+                    'state' => customer.state,
+                    'country' => customer.country
+                  }
+                }
+              ],
+              'sublistId' => 'addressbook'
+            }
+          ]
         end
 
-        it 'returns the payload body without lines' do
-          expect(subject).to eq payload_body.except('lines')
+        context 'when billing address is present' do
+          let(:customer) { create(:customer) }
+
+          it 'returns the payload body without lines' do
+            expect(subject).to eq payload_body.except('lines')
+          end
+        end
+
+        context 'when billing address is not present' do
+          let(:customer) do
+            create(
+              :customer,
+              address_line1: nil,
+              address_line2: nil,
+              city: nil,
+              zipcode: nil,
+              state: nil,
+              country: nil
+            )
+          end
+
+          it 'returns the payload body without lines' do
+            expect(subject).to eq payload_body.except('lines')
+          end
         end
       end
     end

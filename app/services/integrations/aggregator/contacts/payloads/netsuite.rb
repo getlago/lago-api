@@ -22,7 +22,7 @@ module Integrations
               'options' => {
                 'ignoreMandatoryFields' => false # Fixed value
               }
-            }.merge(customer.empty_billing_and_shipping_address? ? {} : {'lines' => lines})
+            }.merge(include_lines? ? {'lines' => lines} : {})
           end
 
           def update_body
@@ -45,6 +45,10 @@ module Integrations
           end
 
           private
+
+          def include_lines?
+            !integration.legacy_script && !customer.empty_billing_and_shipping_address?
+          end
 
           def lines
             if customer.same_billing_and_shipping_address?
