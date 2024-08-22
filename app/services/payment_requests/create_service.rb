@@ -27,9 +27,9 @@ module PaymentRequests
           organization:,
           amount_cents: invoices.sum(:total_amount_cents),
           amount_currency: invoices.first.currency,
-          email:
+          email:,
+          invoices:
         )
-        invoices.each { |i| payment_request.applied_invoices.create!(invoice: i) }
 
         # NOTE: Send payment_request.created webhook
         SendWebhookJob.perform_later("payment_request.created", payment_request)
