@@ -100,6 +100,18 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
+    context "when invoices are not ready for payment processing" do
+      before { first_invoice.update!(ready_for_payment_processing: false) }
+
+      it "returns not allowed failure", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("invoices_not_ready_for_payment_processing")
+      end
+    end
+
     it "creates a payment request" do
       expect { create_service.call }.to change { customer.payment_requests.count }.by(1)
     end

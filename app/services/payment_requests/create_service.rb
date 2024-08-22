@@ -40,6 +40,14 @@ module PaymentRequests
     attr_reader :organization, :params
 
     def check_preconditions
+      # NOTE: Prevent creation of payment request if:
+      # - the organization does not have the premium dunning integration
+      # - the customer does not exist
+      # - there are no invoices
+      # - the invoices are not overdue
+      # - the invoices have different currencies
+      # - the invoices are not ready for payment processing
+
       unless License.premium? && organization.premium_integrations.include?("dunning")
         return result.not_allowed_failure!(code: "premium_addon_feature_missing")
       end
@@ -52,7 +60,11 @@ module PaymentRequests
       end
 
       if invoices.pluck(:currency).uniq.size > 1
-        result.not_allowed_failure!(code: "invoices_have_different_currencies")
+        return result.not_allowed_failure!(code: "invoices_have_different_currencies")
+      end
+
+      if invoices.exists?(ready_for_payment_processing: false)
+        result.not_allowed_failure!(code: "invoices_not_ready_for_payment_processing")
       end
     end
 
