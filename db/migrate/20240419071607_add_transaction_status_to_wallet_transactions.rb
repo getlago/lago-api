@@ -7,12 +7,14 @@ class AddTransactionStatusToWalletTransactions < ActiveRecord::Migration[7.0]
     reversible do |dir|
       dir.up do
         # Set existing wallet transactions as granted if no invoices linked and status is settled.
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           UPDATE wallet_transactions
             SET transaction_status = 1 -- granted
             WHERE invoice_id IS NULL
             AND status = 1; -- settled
-        SQL
+          SQL
+        end
       end
     end
   end

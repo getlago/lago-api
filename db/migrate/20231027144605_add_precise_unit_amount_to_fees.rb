@@ -6,8 +6,10 @@ class AddPreciseUnitAmountToFees < ActiveRecord::Migration[7.0]
   end
 
   def up
-    change_table :fees, bulk: true do |t|
-      t.change :unit_amount_cents, :bigint, null: false, default: 0
+    safety_assured do
+      change_table :fees, bulk: true do |t|
+        t.change :unit_amount_cents, :bigint, null: false, default: 0
+      end
     end
     add_column :fees, :precise_unit_amount, :decimal, precision: 30, scale: 5, null: false, default: '0.0'
 

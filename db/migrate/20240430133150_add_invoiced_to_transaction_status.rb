@@ -5,11 +5,13 @@ class AddInvoicedToTransactionStatus < ActiveRecord::Migration[7.0]
     reversible do |dir|
       dir.up do
         # Set existing wallet transactions as invoiced when transaction_type is outbound.
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           UPDATE wallet_transactions
             SET transaction_status = 3 -- invoiced
             WHERE transaction_type = 1; -- outbound
-        SQL
+          SQL
+        end
       end
     end
   end

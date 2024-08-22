@@ -4,7 +4,8 @@ class SetDefaultPropertiesToCharges < ActiveRecord::Migration[7.0]
   def change
     reversible do |dir|
       dir.up do
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           -- Standard charges
           UPDATE charges
           SET properties = '{
@@ -78,7 +79,8 @@ class SetDefaultPropertiesToCharges < ActiveRecord::Migration[7.0]
           }'
           WHERE charge_model = 5
           AND length(properties::text) = 2;
-        SQL
+          SQL
+        end
       end
     end
   end

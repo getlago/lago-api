@@ -2,7 +2,9 @@
 
 class RemoveEventsQuantifiedEventsRelation < ActiveRecord::Migration[7.0]
   def up
-    remove_column :events, :quantified_event_id
+    safety_assured do
+      remove_column :events, :quantified_event_id
+    end
   end
 
   def down

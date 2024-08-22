@@ -4,7 +4,8 @@ class FixCreditBeforeTaxes < ActiveRecord::Migration[7.0]
   def change
     reversible do |dir|
       dir.up do
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           WITH wrong_before_vat_credits AS (
             SELECT credits.id AS credit_id
             FROM credits
@@ -18,7 +19,8 @@ class FixCreditBeforeTaxes < ActiveRecord::Migration[7.0]
           SET before_taxes = true
           FROM wrong_before_vat_credits
             WHERE wrong_before_vat_credits.credit_id = credits.id;
-        SQL
+          SQL
+        end
       end
     end
   end

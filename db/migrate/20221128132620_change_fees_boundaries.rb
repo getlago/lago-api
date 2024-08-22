@@ -4,7 +4,8 @@ class ChangeFeesBoundaries < ActiveRecord::Migration[7.0]
   def change
     reversible do |dir|
       dir.up do
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           UPDATE fees
           SET properties = CONCAT (
             '{',
@@ -19,7 +20,8 @@ class ChangeFeesBoundaries < ActiveRecord::Migration[7.0]
             '}'
           )::jsonb
           WHERE (properties ? 'from_date');
-        SQL
+          SQL
+        end
       end
     end
   end

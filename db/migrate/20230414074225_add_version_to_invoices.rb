@@ -3,14 +3,15 @@
 class AddVersionToInvoices < ActiveRecord::Migration[7.0]
   def up
     add_column :invoices, :version_number, :integer, null: false, default: 2
-
-    execute <<-SQL
+    safety_assured do
+      execute <<-SQL
       UPDATE invoices
       SET version_number = 1
       WHERE legacy = 't'
-    SQL
+      SQL
 
-    remove_column :invoices, :legacy
+      remove_column :invoices, :legacy
+    end
   end
 
   def down

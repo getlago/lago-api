@@ -11,10 +11,11 @@ class CreatePaymentRequests < ActiveRecord::Migration[7.1]
       t.string :email, null: false
       t.timestamps
     end
-
-    change_table :payments, bulk: true do |t|
-      t.uuid :payment_request_id
+    safety_assured do
+      change_table :payments, bulk: true do |t|
+        t.uuid :payment_request_id
+      end
+      add_foreign_key :payments, :payment_requests
     end
-    add_foreign_key :payments, :payment_requests
   end
 end

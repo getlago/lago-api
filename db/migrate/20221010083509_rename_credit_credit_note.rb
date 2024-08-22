@@ -2,6 +2,8 @@
 
 class RenameCreditCreditNote < ActiveRecord::Migration[7.0]
   def change
-    rename_column :credits, :credit_notes_id, :credit_note_id
+    safety_assured do
+      rename_column :credits, :credit_notes_id, :credit_note_id
+    end
   end
 end

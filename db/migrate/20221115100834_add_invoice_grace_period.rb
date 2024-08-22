@@ -7,14 +7,16 @@ class AddInvoiceGracePeriod < ActiveRecord::Migration[7.0]
 
     reversible do |dir|
       dir.up do
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           ALTER TABLE organizations
             ADD CONSTRAINT check_organizations_on_invoice_grace_period
             CHECK (invoice_grace_period >= 0);
           ALTER TABLE customers
             ADD CONSTRAINT check_customers_on_invoice_grace_period
             CHECK (invoice_grace_period >= 0);
-        SQL
+          SQL
+        end
       end
 
       dir.down do

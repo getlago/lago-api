@@ -4,13 +4,15 @@ class AddInvoiceableToCharges < ActiveRecord::Migration[7.0]
   def change
     add_column :charges, :invoiceable, :boolean, null: false, default: true
 
-    reversible do |dir|
-      dir.up do
-        execute <<-SQL
+    safety_assured do
+      reversible do |dir|
+        dir.up do
+          execute <<-SQL
           UPDATE charges
           SET invoiceable = false
           WHERE pay_in_advance = true;
-        SQL
+          SQL
+        end
       end
     end
   end

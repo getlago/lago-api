@@ -19,8 +19,9 @@ class AddIndexToPaymentProviderCustomers < ActiveRecord::Migration[7.0]
         end
       end
     end
-
-    add_index :payment_provider_customers, %i[customer_id type], unique: true
+    safety_assured do
+      add_index :payment_provider_customers, %i[customer_id type], unique: true
+    end
     remove_index :payment_provider_customers, :customer_id
   end
 end

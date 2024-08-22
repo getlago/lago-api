@@ -3,7 +3,9 @@
 class AddUniqueIdToSubscriptions < ActiveRecord::Migration[7.0]
   def up
     add_column :subscriptions, :unique_id, :string
-    change_column_null :subscriptions, :unique_id, false
+    safety_assured do
+      change_column_null :subscriptions, :unique_id, false
+    end
   end
 
   def down

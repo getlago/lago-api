@@ -2,17 +2,19 @@
 
 class RemoveStatusFromGroups < ActiveRecord::Migration[7.0]
   def change
-    reversible do |dir|
-      dir.up do
-        execute <<-SQL
+    safety_assured do
+      reversible do |dir|
+        dir.up do
+          execute <<-SQL
           UPDATE groups
           SET deleted_at = updated_at
           WHERE deleted_at IS NULL
           AND groups.status = 1
-        SQL
+          SQL
+        end
       end
-    end
 
-    remove_column :groups, :status, :integer, default: 0
+      remove_column :groups, :status, :integer, default: 0
+    end
   end
 end

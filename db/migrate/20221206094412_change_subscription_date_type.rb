@@ -3,14 +3,15 @@
 class ChangeSubscriptionDateType < ActiveRecord::Migration[7.0]
   def up
     add_column :subscriptions, :subscription_at, :datetime
-
-    execute <<-SQL
+    safety_assured do
+      execute <<-SQL
       UPDATE subscriptions
       SET subscription_at = subscription_date::timestamp
       WHERE subscription_date IS NOT NULL;
-    SQL
+      SQL
 
-    remove_column :subscriptions, :subscription_date
+      remove_column :subscriptions, :subscription_date
+    end
   end
 
   def down

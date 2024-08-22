@@ -4,7 +4,8 @@ class UndiscardIncorrectlyDeletedEvents < ActiveRecord::Migration[7.0]
   def change
     reversible do |dir|
       dir.up do
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           WITH discarded_events AS (
             SELECT events.id AS event_id
             FROM events
@@ -21,7 +22,8 @@ class UndiscardIncorrectlyDeletedEvents < ActiveRecord::Migration[7.0]
           SET deleted_at = NULL
           FROM discarded_events
           WHERE discarded_events.event_id = events.id
-        SQL
+          SQL
+        end
       end
     end
   end

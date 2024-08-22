@@ -9,14 +9,16 @@ class AddDeletedAtToBillableMetrics < ActiveRecord::Migration[7.0]
     add_column :events, :deleted_at, :datetime
     add_column :persisted_events, :deleted_at, :datetime
 
-    add_index :billable_metrics, :deleted_at
-    add_index :charges, :deleted_at
-    add_index :groups, :deleted_at
-    add_index :group_properties, :deleted_at
-    add_index :events, :deleted_at
-    add_index :persisted_events, :deleted_at
+    safety_assured do
+      add_index :billable_metrics, :deleted_at
+      add_index :charges, :deleted_at
+      add_index :groups, :deleted_at
+      add_index :group_properties, :deleted_at
+      add_index :events, :deleted_at
+      add_index :persisted_events, :deleted_at
 
-    remove_index :billable_metrics, %i[organization_id code]
-    add_index :billable_metrics, %i[organization_id code], unique: true, where: 'deleted_at IS NULL'
+      remove_index :billable_metrics, %i[organization_id code]
+      add_index :billable_metrics, %i[organization_id code], unique: true, where: 'deleted_at IS NULL'
+    end
   end
 end

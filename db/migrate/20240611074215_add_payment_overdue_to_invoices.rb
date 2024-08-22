@@ -7,14 +7,16 @@ class AddPaymentOverdueToInvoices < ActiveRecord::Migration[7.0]
     reversible do |dir|
       dir.up do
         # Set existing invoices as payment_overdue
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           UPDATE invoices
           SET payment_overdue = true
           WHERE status = 1 -- finalized
             AND payment_status != 1 -- not succeeded
             AND payment_dispute_lost_at IS NULL -- not lost dispute
             AND payment_due_date < NOW(); -- due date is in the past
-        SQL
+          SQL
+        end
       end
     end
   end

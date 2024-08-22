@@ -6,7 +6,8 @@ class FillEventExternalIds < ActiveRecord::Migration[7.0]
   def change
     reversible do |dir|
       dir.up do
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           WITH events_external_ids AS (
             SELECT
               events.id AS event_id,
@@ -25,7 +26,8 @@ class FillEventExternalIds < ActiveRecord::Migration[7.0]
             external_subscription_id = events_external_ids.external_subscription_id
           FROM events_external_ids
           WHERE events_external_ids.event_id = events.id
-        SQL
+          SQL
+        end
       end
     end
   end

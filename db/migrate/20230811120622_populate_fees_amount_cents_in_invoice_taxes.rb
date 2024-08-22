@@ -4,7 +4,8 @@ class PopulateFeesAmountCentsInInvoiceTaxes < ActiveRecord::Migration[7.0]
   def change
     reversible do |dir|
       dir.up do
-        execute <<-SQL
+        safety_assured do
+          execute <<-SQL
           WITH invoice_fees_amounts AS (
             SELECT
               invoices.id AS invoice_id,
@@ -21,7 +22,8 @@ class PopulateFeesAmountCentsInInvoiceTaxes < ActiveRecord::Migration[7.0]
           FROM invoice_fees_amounts
             WHERE invoice_fees_amounts.invoice_id = invoices_taxes.invoice_id
             AND invoice_fees_amounts.tax_id = invoices_taxes.tax_id
-        SQL
+          SQL
+        end
       end
     end
   end

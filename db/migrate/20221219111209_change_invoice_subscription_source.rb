@@ -2,18 +2,20 @@
 
 class ChangeInvoiceSubscriptionSource < ActiveRecord::Migration[7.0]
   def up
-    change_table :invoice_subscriptions, bulk: true do |t|
-      t.remove :source
+    safety_assured do
+      change_table :invoice_subscriptions, bulk: true do |t|
+        t.remove :source
 
-      t.boolean :recurring, null: true
-    end
+        t.boolean :recurring, null: true
+      end
 
-    execute <<-SQL
+      execute <<-SQL
       UPDATE invoice_subscriptions
       SET recurring = true;
-    SQL
+      SQL
 
-    change_column_null :invoice_subscriptions, :recurring, null: false
+      change_column_null :invoice_subscriptions, :recurring, null: false
+    end
   end
 
   def down

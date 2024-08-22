@@ -4,9 +4,11 @@ class AddProgressiveBillingToInvoicingReason < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
 
   def up
-    execute <<-SQL
+    safety_assured do
+      execute <<-SQL
       ALTER TYPE subscription_invoicing_reason ADD VALUE IF NOT EXISTS 'progressive_billing';
-    SQL
+      SQL
+    end
   end
 
   def down

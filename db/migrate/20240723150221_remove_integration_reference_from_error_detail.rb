@@ -2,10 +2,12 @@
 
 class RemoveIntegrationReferenceFromErrorDetail < ActiveRecord::Migration[7.1]
   def up
-    change_table :error_details, bulk: true do |t|
-      t.remove :error_code
-      t.remove_references :integration, polymorphic: true
-      t.integer :error_code, null: false, default: 0, index: true
+    safety_assured do
+      change_table :error_details, bulk: true do |t|
+        t.remove :error_code
+        t.remove_references :integration, polymorphic: true
+        t.integer :error_code, null: false, default: 0, index: true
+      end
     end
   end
 

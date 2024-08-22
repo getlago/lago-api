@@ -2,11 +2,13 @@
 
 class DropInternalCreditNotesVatAmounts < ActiveRecord::Migration[7.0]
   def up
-    change_table :credit_notes, bulk: true do |t|
-      t.remove :credit_vat_amount_cents
-      t.remove :credit_vat_amount_currency
-      t.remove :refund_vat_amount_cents
-      t.remove :refund_vat_amount_currency
+    safety_assured do
+      change_table :credit_notes, bulk: true do |t|
+        t.remove :credit_vat_amount_cents
+        t.remove :credit_vat_amount_currency
+        t.remove :refund_vat_amount_cents
+        t.remove :refund_vat_amount_currency
+      end
     end
   end
 
