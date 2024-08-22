@@ -24,7 +24,6 @@ class Customer < ApplicationRecord
   has_many :add_ons, through: :applied_add_ons
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
-  has_many :payable_groups
   has_many :payment_provider_customers,
     class_name: 'PaymentProviderCustomers::BaseCustomer',
     dependent: :destroy

@@ -4,7 +4,6 @@ class Payment < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :payable, polymorphic: true
-  belongs_to :payment_request, optional: true
   belongs_to :payment_provider, optional: true, class_name: 'PaymentProviders::BaseProvider'
   belongs_to :payment_provider_customer, class_name: 'PaymentProviderCustomers::BaseCustomer'
 
@@ -35,7 +34,6 @@ end
 #  payable_id                   :uuid
 #  payment_provider_customer_id :uuid
 #  payment_provider_id          :uuid
-#  payment_request_id           :uuid
 #  provider_payment_id          :string           not null
 #
 # Indexes
@@ -44,11 +42,9 @@ end
 #  index_payments_on_payable_type_and_payable_id   (payable_type,payable_id)
 #  index_payments_on_payment_provider_customer_id  (payment_provider_customer_id)
 #  index_payments_on_payment_provider_id           (payment_provider_id)
-#  index_payments_on_payment_request_id            (payment_request_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (payment_provider_id => payment_providers.id)
-#  fk_rails_...  (payment_request_id => payment_requests.id)
 #

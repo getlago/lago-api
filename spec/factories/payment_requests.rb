@@ -4,10 +4,10 @@ FactoryBot.define do
   factory :payment_request do
     customer
     organization { customer.organization }
-    payment_requestable { create(:payable_group, customer:) }
 
     amount_cents { 200 }
     amount_currency { "EUR" }
     email { Faker::Internet.email }
+    payment_status { "pending" }
   end
 end

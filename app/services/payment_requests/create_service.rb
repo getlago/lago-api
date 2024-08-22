@@ -22,16 +22,13 @@ module PaymentRequests
       end
 
       ActiveRecord::Base.transaction do
-        # NOTE: Create payable group for the overdue invoices
-        payable_group = customer.payable_groups.create!(organization:)
-        invoices.update_all(payable_group_id: payable_group.id) # rubocop:disable Rails/SkipsModelValidations
-
         # NOTE: Create payment request for the payable group
-        payment_request = payable_group.payment_requests.create!(
+        payment_request = customer.payment_requests.create!(
           organization:,
-          customer:,
+          amount_cents: invoices.sum(:total_amount_cents),
           amount_currency: invoices.first.currency,
-          email:
+          email:,
+          invoices:
         )
 
         # NOTE: Send payment_request.created webhook

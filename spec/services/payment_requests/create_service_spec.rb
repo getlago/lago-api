@@ -88,18 +88,14 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
-    it "creates a payable group for the customer" do
-      expect { create_service.call }.to change { customer.payable_groups.count }.by(1)
-    end
-
-    it "assigns the payable group to the invoices" do
-      expect { create_service.call }
-        .to change { first_invoice.reload.payable_group }.from(nil).to(be_a(PayableGroup))
-        .and change { second_invoice.reload.payable_group }.from(nil).to(be_a(PayableGroup))
-    end
-
     it "creates a payment request" do
       expect { create_service.call }.to change { customer.payment_requests.count }.by(1)
+    end
+
+    it "assigns the invoices to the created payment request" do
+      result = create_service.call
+
+      expect(result.payment_request.invoices.count).to eq(2)
     end
 
     it "delivers a webhook" do
