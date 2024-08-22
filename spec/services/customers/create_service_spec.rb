@@ -136,7 +136,7 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages.keys).to include(:email)
-          expect(result.error.messages[:email]).to include('invalid_format')
+          expect(result.error.messages[:email]).to include('invalid_email_format')
         end
       end
     end

@@ -9,13 +9,6 @@ module Customers
       new_customer = customer.new_record?
       shipping_address = params[:shipping_address] ||= {}
 
-      unless valid_email?(params[:email])
-        return result.single_validation_failure!(
-          field: :email,
-          error_code: 'invalid_format'
-        )
-      end
-
       unless valid_metadata_count?(metadata: params[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
