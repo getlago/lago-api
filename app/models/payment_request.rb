@@ -17,6 +17,9 @@ class PaymentRequest < ApplicationRecord
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
 
   enum payment_status: PAYMENT_STATUS, _prefix: :payment
+
+  alias_attribute :total_amount_cents, :amount_cents
+  alias_attribute :currency, :amount_currency
 end
 
 # == Schema Information
