@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'ostruct'
+
 module LagoUtils
   class Version
     VERSION_FILE = Rails.root.join('LAGO_VERSION')
