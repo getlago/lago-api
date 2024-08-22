@@ -17,9 +17,11 @@ module Invoices
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-        Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
+        Credits::ProgressiveBillingService.call(invoice:)
+        Credits::AppliedCouponsService.call(invoice:)
         Invoices::ComputeAmountsFromFees.call(invoice:)
+
         create_credit_note_credit
         create_applied_prepaid_credit
 

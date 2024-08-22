@@ -107,7 +107,8 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
           status: 'finalized',
           invoice_type: :progressive_billing,
           fees_amount_cents: 20,
-          subscriptions: [subscription]
+          subscriptions: [subscription],
+          issuing_date: timestamp - 1.day
         )
 
         create(
@@ -134,56 +135,12 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
           status: 'finalized',
           invoice_type: 'progressive_billing',
           fees_amount_cents: amount_cents,
-          taxes_amount_cents: amount_cents * tax.rate / 100,
-          total_amount_cents: amount_cents * (1 + tax.rate / 100)
+          taxes_amount_cents: (amount_cents - 20) * tax.rate / 100,
+          total_amount_cents: (amount_cents - 20) * (1 + tax.rate / 100)
         )
 
         expect(invoice.invoice_subscriptions.count).to eq(1)
-        expect(invoice.fees.count).to eq(1)
-      end
-    end
-
-    context 'when usage was already billed' do
-      before do
-        invoice = create(
-          :invoice,
-          organization:,
-          customer:,
-          status: 'finalized',
-          invoice_type: :progressive_billing,
-          fees_amount_cents: 7,
-          subscriptions: [subscription]
-        )
-
-        create(
-          :charge_fee,
-          invoice:,
-          amount_cents: 7
-        )
-      end
-
-      it 'creates a progressive billing invoice', aggregate_failures: true do
-        result = create_service.call
-
-        expect(result).to be_success
-        expect(result.invoice).to be_present
-
-        invoice = result.invoice
-        amount_cents = 100
-
-        expect(invoice).to be_persisted
-        expect(invoice).to have_attributes(
-          organization: organization,
-          customer: customer,
-          currency: plan.amount_currency,
-          status: 'finalized',
-          invoice_type: 'progressive_billing',
-          fees_amount_cents: amount_cents,
-          taxes_amount_cents: (amount_cents * tax.rate / 100).round,
-          total_amount_cents: (amount_cents * (1 + tax.rate / 100)).round
-        )
-
-        expect(invoice.invoice_subscriptions.count).to eq(1)
+        expect(invoice.credits.count).to eq(1)
         expect(invoice.fees.count).to eq(1)
       end
     end
