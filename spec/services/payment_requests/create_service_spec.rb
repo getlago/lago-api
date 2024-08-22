@@ -88,6 +88,18 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
+    context "when invoices have different currencies" do
+      before { second_invoice.update!(currency: "USD") }
+
+      it "returns not allowed failure", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("invoices_have_different_currencies")
+      end
+    end
+
     it "creates a payment request" do
       expect { create_service.call }.to change { customer.payment_requests.count }.by(1)
     end
