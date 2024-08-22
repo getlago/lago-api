@@ -13,7 +13,7 @@ module Invoices
     def call
       ActiveRecord::Base.transaction do
         create_generating_invoice
-        create_threshold_fees
+        create_fees
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
@@ -27,9 +27,11 @@ module Invoices
         invoice.finalized!
       end
 
+      # TODO: deduct previous progressive billing invoices
+
       Utils::SegmentTrack.invoice_created(invoice)
       SendWebhookJob.perform_later('invoice.created', invoice)
-      GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
+      Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
       Invoices::Payments::CreateService.call(invoice)
@@ -66,54 +68,45 @@ module Invoices
       @invoice = invoice_result.invoice
     end
 
-    def sorted_thresholds
-      fixed = usage_thresholds.select { |t| !t.recurring }.sort_by(&:amount_cents)
-      recurring = usage_thresholds.select(&:recurring)
-      fixed + recurring
+    def create_fees
+      charges.find_each do |charge|
+        Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:).raise_if_error!
+      end
     end
 
-    def create_threshold_fees
-      sorted_thresholds.each do |usage_threshold|
-        fee_result = Fees::CreateFromUsageThresholdService
-          .call(usage_threshold:, invoice:, amount_cents: amount_cents(usage_threshold))
-        fee_result.raise_if_error!
-        fee_result.fee
-      end
+    def charges
+      subscription
+        .plan
+        .charges
+        .joins(:billable_metric)
+        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .where(invoiceable: true)
+        .where(pay_in_advance: false)
+        .where(billable_metrics: {recurring: false})
+    end
+
+    def boundaries
+      return @boundaries if defined?(@boundaries)
+
+      invoice_subscription = invoice.invoice_subscriptions.first
+      date_service = Subscriptions::DatesService.new_instance(
+        subscription,
+        timestamp,
+        current_usage: true
+      )
+
+      @boundaries = {
+        from_datetime: invoice_subscription.from_datetime,
+        to_datetime: invoice_subscription.to_datetime,
+        charges_from_datetime: invoice_subscription.charges_from_datetime,
+        charges_to_datetime: invoice_subscription.charges_to_datetime,
+        timestamp: timestamp,
+        charges_duration: date_service.charges_duration_in_days
+      }
     end
 
     def should_deliver_email?
       License.premium? && subscription.organization.email_settings.include?('invoice.finalized')
-    end
-
-    def amount_cents(usage_threshold)
-      if usage_threshold.recurring?
-        # NOTE: Recurring is always the last threshold.
-        #       Amount is the current lifetime usage without already invoiced thresholds
-        #       The recurring threshold can be reached multiple time, so we need to compute the number of times
-        units = (total_lifetime_usage_amount_cents - invoiced_amount_cents) / usage_threshold.amount_cents
-        units * usage_threshold.amount_cents
-      else
-        # NOTE: Amount to bill if the current threshold minus the usage that have already been invoiced
-        result_amount = usage_threshold.amount_cents - invoiced_amount_cents
-
-        # NOTE: Add the amount to the invoiced_amount_cents for next non recurring threshold
-        @invoiced_amount_cents += result_amount
-
-        result_amount
-      end
-    end
-
-    # NOTE: Sum of usage that have already been invoiced
-    def invoiced_amount_cents
-      @invoiced_amount_cents ||= subscription.invoices
-        .finalized
-        .where(invoice_type: %w[subscription progressive_billing])
-        .sum { |invoice| invoice.fees.where(fee_type: %w[charge progressive_billing]).sum(:amount_cents) }
-    end
-
-    # NOTE: Current lifetime usage amount
-    def total_lifetime_usage_amount_cents
-      @total_lifetime_usage_amount_cents ||= lifetime_usage.invoiced_usage_amount_cents + lifetime_usage.current_usage_amount_cents
     end
 
     def create_credit_note_credit

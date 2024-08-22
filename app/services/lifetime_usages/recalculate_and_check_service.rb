@@ -31,7 +31,7 @@ module LifetimeUsages
       subscription.invoices
         .finalized
         .progressive_billing
-        .sum { |invoice| invoice.fees.progressive_billing.sum(:amount_cents) }
+        .sum(:fees_amount_cents)
     end
   end
 end

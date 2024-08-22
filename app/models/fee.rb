@@ -13,7 +13,6 @@ class Fee < ApplicationRecord
   belongs_to :subscription, optional: true
   belongs_to :charge_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
-  belongs_to :usage_threshold, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: 'Fee', optional: true
 
@@ -35,7 +34,7 @@ class Fee < ApplicationRecord
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit commitment progressive_billing].freeze
+  FEE_TYPES = %i[charge add_on subscription credit commitment].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum fee_type: FEE_TYPES
@@ -66,7 +65,6 @@ class Fee < ApplicationRecord
     return billable_metric.id if charge?
     return add_on.id if add_on?
     return invoiceable_id if credit?
-    return usage_threshold_id if progressive_billing?
 
     subscription_id
   end
@@ -75,7 +73,6 @@ class Fee < ApplicationRecord
     return BillableMetric.name if charge?
     return AddOn.name if add_on?
     return WalletTransaction.name if credit?
-    return UsageThreshold.name if progressive_billing?
 
     Subscription.name
   end
@@ -83,7 +80,7 @@ class Fee < ApplicationRecord
   def item_code
     return billable_metric.code if charge?
     return add_on.code if add_on?
-    return fee_type if credit? || progressive_billing?
+    return fee_type if credit?
 
     subscription.plan.code
   end
@@ -91,7 +88,7 @@ class Fee < ApplicationRecord
   def item_name
     return billable_metric.name if charge?
     return add_on.name if add_on?
-    return fee_type if credit? || progressive_billing?
+    return fee_type if credit?
 
     subscription.plan.name
   end
@@ -99,7 +96,7 @@ class Fee < ApplicationRecord
   def item_description
     return billable_metric.description if charge?
     return add_on.description if add_on?
-    return fee_type if credit? || progressive_billing?
+    return fee_type if credit?
 
     subscription.plan.description
   end
@@ -109,7 +106,6 @@ class Fee < ApplicationRecord
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?
     return fee_type if credit?
-    return usage_threshold.invoice_name if progressive_billing?
 
     subscription.plan.invoice_display_name
   end
@@ -202,7 +198,6 @@ end
 #  pay_in_advance_event_transaction_id :string
 #  subscription_id                     :uuid
 #  true_up_parent_fee_id               :uuid
-#  usage_threshold_id                  :uuid
 #
 # Indexes
 #
@@ -218,7 +213,6 @@ end
 #  index_fees_on_pay_in_advance_event_transaction_id  (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
 #  index_fees_on_subscription_id                      (subscription_id)
 #  index_fees_on_true_up_parent_fee_id                (true_up_parent_fee_id)
-#  index_fees_on_usage_threshold_id                   (usage_threshold_id)
 #
 # Foreign Keys
 #
@@ -229,5 +223,4 @@ end
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
 #  fk_rails_...  (true_up_parent_fee_id => fees.id)
-#  fk_rails_...  (usage_threshold_id => usage_thresholds.id)
 #

@@ -199,38 +199,6 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
       end
     end
 
-    context 'when fee is a progressive_billing type with taxes applied to the plan' do
-      let(:plan) { create(:plan, organization:) }
-      let(:usage_threshold) { create(:usage_threshold, plan:) }
-      let(:subscription) { create(:subscription, organization:, customer:, plan:) }
-
-      let(:fee) { create(:progressive_billing_fee, invoice:, amount_cents: 1000, usage_threshold:, subscription:) }
-
-      let(:applied_tax) { create(:plan_applied_tax, plan:, tax: tax1) }
-
-      before { applied_tax }
-
-      it 'creates applied_taxes based on the plan taxes', aggregate_failures: true do
-        result = apply_service.call
-
-        expect(result).to be_success
-
-        applied_taxes = result.applied_taxes
-        expect(applied_taxes.count).to eq(1)
-
-        expect(applied_taxes[0]).to have_attributes(
-          fee:,
-          tax: tax1,
-          tax_description: tax1.description,
-          tax_code: tax1.code,
-          tax_name: tax1.name,
-          tax_rate: 10,
-          amount_currency: fee.currency,
-          amount_cents: 100
-        )
-      end
-    end
-
     context 'when customer has applied_taxes' do
       let(:applied_tax1) { create(:customer_applied_tax, customer:, tax: tax1) }
       let(:applied_tax2) { create(:customer_applied_tax, customer:, tax: tax2) }
