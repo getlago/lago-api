@@ -678,7 +678,7 @@ GEM
     request_store (1.5.1)
       rack (>= 1.4)
     retriable (3.1.2)
-    rexml (3.3.3)
+    rexml (3.3.6)
       strscan
     roda (3.79.0)
       rack
