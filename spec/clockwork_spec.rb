@@ -89,5 +89,29 @@ describe Clockwork do
       Clockwork::Test.block_for(job).call
       expect(Clock::RefreshLifetimeUsagesJob).to have_been_enqueued
     end
+
+    context "with a custom refresh interval configured" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with('LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS').and_return('150')
+      end
+
+      it 'uses the ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"] to set a custom period' do
+        Clockwork::Test.run(
+          file: clock_file,
+          start_time:,
+          end_time:,
+          tick_speed: 1.second
+        )
+
+        expect(Clockwork::Test).to be_ran_job(job)
+        expect(Clockwork::Test.times_run(job)).to eq(12)
+
+        Clockwork::Test.block_for(job).call
+        expect(Clock::RefreshLifetimeUsagesJob).to have_been_enqueued
+
+        expect(ENV).to have_received(:[]).with('LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS')
+      end
+    end
   end
 end
