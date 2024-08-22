@@ -30,9 +30,10 @@ module Clockwork
       .perform_later
   end
 
-  every(5.minutes, 'schedule:refresh_lifetime_usages') do
+  lifetime_usage_refresh_interval = ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
+  every(lifetime_usage_refresh_interval.to_i.seconds, 'schedule:refresh_lifetime_usages') do
     Clock::RefreshLifetimeUsagesJob
-      .set(sentry: {"slug" => 'lago_refresh_lifetime_usages', "cron" => '*/5 * * * *'})
+      .set(sentry: {"slug" => 'lago_refresh_lifetime_usages', "cron" => "#{lifetime_usage_refresh_interval} interval"})
       .perform_later
   end
 
