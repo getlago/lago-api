@@ -48,11 +48,12 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         status: 'finalized',
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
-        issuing_date: invoice.issuing_date - 1.day
+        issuing_date: invoice.issuing_date - 1.day,
+        fees_amount_cents: 20
       )
     end
 
-    let(:progressive_billing_fee) { create(:progressive_billing_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
+    let(:progressive_billing_fee) { create(:charge_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
 
     before do
       progressive_billing_invoice
@@ -79,7 +80,8 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         status: 'finalized',
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
-        issuing_date: invoice.issuing_date - 2.days
+        issuing_date: invoice.issuing_date - 2.days,
+        fees_amount_cents: 20
       )
     end
 
@@ -91,12 +93,13 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         status: 'finalized',
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
-        issuing_date: invoice.issuing_date - 1.day
+        issuing_date: invoice.issuing_date - 1.day,
+        fees_amount_cents: 200
       )
     end
 
-    let(:progressive_billing_fee) { create(:progressive_billing_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
-    let(:progressive_billing_fee2) { create(:progressive_billing_fee, amount_cents: 200, invoice: progressive_billing_invoice2) }
+    let(:progressive_billing_fee) { create(:charge_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
+    let(:progressive_billing_fee2) { create(:charge_fee, amount_cents: 200, invoice: progressive_billing_invoice2) }
 
     before do
       progressive_billing_fee
@@ -127,7 +130,8 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         status: 'finalized',
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
-        issuing_date: invoice.issuing_date - 3.days
+        issuing_date: invoice.issuing_date - 3.days,
+        fees_amount_cents: 20
       )
     end
 
@@ -139,7 +143,8 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         status: 'finalized',
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
-        issuing_date: invoice.issuing_date - 2.days
+        issuing_date: invoice.issuing_date - 2.days,
+        fees_amount_cents: 1000
       )
     end
 
@@ -151,13 +156,14 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         status: 'finalized',
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
-        issuing_date: invoice.issuing_date - 1.day
+        issuing_date: invoice.issuing_date - 1.day,
+        fees_amount_cents: 200
       )
     end
 
-    let(:progressive_billing_fee) { create(:progressive_billing_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
-    let(:progressive_billing_fee2) { create(:progressive_billing_fee, amount_cents: 1000, invoice: progressive_billing_invoice2) }
-    let(:progressive_billing_fee3) { create(:progressive_billing_fee, amount_cents: 200, invoice: progressive_billing_invoice3) }
+    let(:progressive_billing_fee) { create(:charge_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
+    let(:progressive_billing_fee2) { create(:charge_fee, amount_cents: 1000, invoice: progressive_billing_invoice2) }
+    let(:progressive_billing_fee3) { create(:charge_fee, amount_cents: 200, invoice: progressive_billing_invoice3) }
 
     before do
       progressive_billing_fee
@@ -197,11 +203,12 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         status: 'finalized',
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
-        issuing_date: invoice.issuing_date - 1.day
+        issuing_date: invoice.issuing_date - 1.day,
+        fees_amount_cents: 20
       )
     end
 
-    let(:progressive_billing_fee) { create(:progressive_billing_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
+    let(:progressive_billing_fee) { create(:charge_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
 
     before do
       progressive_billing_invoice
@@ -229,11 +236,12 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         status: 'finalized',
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
-        issuing_date: invoice.issuing_date - 2.months
+        issuing_date: invoice.issuing_date - 2.months,
+        fees_amount_cents: 20
       )
     end
 
-    let(:progressive_billing_fee) { create(:progressive_billing_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
+    let(:progressive_billing_fee) { create(:charge_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
 
     before do
       progressive_billing_invoice

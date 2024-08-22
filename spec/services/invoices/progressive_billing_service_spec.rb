@@ -11,16 +11,31 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
 
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, customer:) }
-  let(:lifetime_usage) { create(:lifetime_usage, subscription:) }
+  let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:) }
 
-  let(:timestamp) { Time.current.beginning_of_month }
+  let(:timestamp) { Time.zone.parse('2024-08-22 10:00:00') }
 
   let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: 'value') }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: '1'}) }
+
+  let(:event) do
+    create(
+      :event,
+      organization_id: organization.id,
+      external_subscription_id: subscription.external_id,
+      code: billable_metric.code,
+      properties: {billable_metric.field_name => 1},
+      timestamp: timestamp - 1.hour
+    )
+  end
 
   before do
     allow(SegmentTrackJob).to receive(:perform_later)
 
     tax
+    charge
+    event
   end
 
   describe '#call' do
@@ -31,7 +46,8 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
       expect(result.invoice).to be_present
 
       invoice = result.invoice
-      usage_threshold = usage_thresholds.first
+      amount_cents = 100
+
       expect(invoice).to be_persisted
       expect(invoice).to have_attributes(
         organization: organization,
@@ -39,9 +55,9 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
         currency: plan.amount_currency,
         status: 'finalized',
         invoice_type: 'progressive_billing',
-        fees_amount_cents: usage_threshold.amount_cents,
-        taxes_amount_cents: usage_threshold.amount_cents * tax.rate / 100,
-        total_amount_cents: usage_threshold.amount_cents + usage_threshold.amount_cents * tax.rate / 100
+        fees_amount_cents: amount_cents,
+        taxes_amount_cents: amount_cents * tax.rate / 100,
+        total_amount_cents: amount_cents * (1 + tax.rate / 100)
       )
 
       expect(invoice.invoice_subscriptions.count).to eq(1)
@@ -56,13 +72,15 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
         ]
       end
 
-      it 'creates a progressive billing invoice with two fees', aggregate_failures: true do
+      it 'creates a progressive billing invoice', aggregate_failures: true do
         result = create_service.call
 
         expect(result).to be_success
         expect(result.invoice).to be_present
 
         invoice = result.invoice
+        amount_cents = 100
+
         expect(invoice).to be_persisted
         expect(invoice).to have_attributes(
           organization: organization,
@@ -70,56 +88,13 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
           currency: plan.amount_currency,
           status: 'finalized',
           invoice_type: 'progressive_billing',
-          fees_amount_cents: 2500,
-          taxes_amount_cents: 2500 * tax.rate / 100,
-          total_amount_cents: 2500 * (1 + tax.rate / 100)
+          fees_amount_cents: amount_cents,
+          taxes_amount_cents: amount_cents * tax.rate / 100,
+          total_amount_cents: amount_cents * (1 + tax.rate / 100)
         )
 
         expect(invoice.invoice_subscriptions.count).to eq(1)
-        expect(invoice.fees.count).to eq(2)
-
-        expect(invoice.fees.pluck(:amount_cents)).to match_array([1000, 1500])
-        expect(invoice.fees.pluck(:usage_threshold_id)).to match_array(usage_thresholds.map(&:id))
-      end
-
-      context 'with a recurring threshold' do
-        let(:usage_thresholds) do
-          # NOTE: the order is wrong on purpose to test the sorting
-          [
-            create(:usage_threshold, plan:, amount_cents: 2500),
-            create(:usage_threshold, :recurring, plan:, amount_cents: 500),
-            create(:usage_threshold, plan:, amount_cents: 1000)
-          ]
-        end
-
-        let(:lifetime_usage) { create(:lifetime_usage, subscription:, current_usage_amount_cents: 4300) }
-
-        it 'creates a progressive billing invoice with multiples fees', aggregate_failures: true do
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.invoice).to be_present
-
-          invoice = result.invoice
-          expect(invoice).to be_persisted
-          expect(invoice).to have_attributes(
-            organization: organization,
-            customer: customer,
-            currency: plan.amount_currency,
-            status: 'finalized',
-            invoice_type: 'progressive_billing',
-            fees_amount_cents: 4000,
-            taxes_amount_cents: 4000 * tax.rate / 100,
-            total_amount_cents: 4000 * (1 + tax.rate / 100)
-          )
-
-          expect(invoice.invoice_subscriptions.count).to eq(1)
-          expect(invoice.fees.count).to eq(3)
-
-          expect(invoice.fees.pluck(:amount_cents)).to match_array([1000, 1500, 1500])
-          expect(invoice.fees.pluck(:usage_threshold_id)).to match_array(usage_thresholds.map(&:id))
-          expect(invoice.fees.pluck(:units)).to match_array([1, 1, 3])
-        end
+        expect(invoice.fees.count).to eq(1)
       end
     end
 
@@ -149,8 +124,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
         expect(result.invoice).to be_present
 
         invoice = result.invoice
-        usage_threshold = usage_thresholds.first
-        amount_cents = usage_threshold.amount_cents - 20
+        amount_cents = 100
 
         expect(invoice).to be_persisted
         expect(invoice).to have_attributes(
@@ -195,8 +169,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
         expect(result.invoice).to be_present
 
         invoice = result.invoice
-        usage_threshold = usage_thresholds.first
-        amount_cents = usage_threshold.amount_cents - 7
+        amount_cents = 100
 
         expect(invoice).to be_persisted
         expect(invoice).to have_attributes(
@@ -212,40 +185,6 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
 
         expect(invoice.invoice_subscriptions.count).to eq(1)
         expect(invoice.fees.count).to eq(1)
-      end
-
-      context 'with a recurring threshold' do
-        let(:usage_thresholds) { [create(:usage_threshold, :recurring, plan:, amount_cents: 100)] }
-
-        let(:lifetime_usage) { create(:lifetime_usage, subscription:, current_usage_amount_cents: 215) }
-
-        it 'creates a progressive billing invoice', aggregate_failures: true do
-          result = create_service.call
-
-          expect(result).to be_success
-          expect(result.invoice).to be_present
-
-          invoice = result.invoice
-          usage_threshold = usage_thresholds.first
-          amount_cents = usage_threshold.amount_cents * 2
-
-          expect(invoice).to be_persisted
-          expect(invoice).to have_attributes(
-            organization: organization,
-            customer: customer,
-            currency: plan.amount_currency,
-            status: 'finalized',
-            invoice_type: 'progressive_billing',
-            fees_amount_cents: amount_cents,
-            taxes_amount_cents: amount_cents * tax.rate / 100,
-            total_amount_cents: amount_cents * (1 + tax.rate / 100)
-          )
-
-          expect(invoice.invoice_subscriptions.count).to eq(1)
-          expect(invoice.fees.count).to eq(1)
-
-          expect(invoice.fees.pluck(:units)).to match_array([2])
-        end
       end
     end
 
@@ -267,7 +206,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
       end
 
       context 'when organization does not have right email settings' do
-        before { organization.update!(email_settings: []) }
+        before { subscription.organization.update!(email_settings: []) }
 
         it 'enqueue an GeneratePdfAndNotifyJob with email false' do
           expect { create_service.call }

@@ -3693,7 +3693,6 @@ enum FeeTypesEnum {
   charge
   commitment
   credit
-  progressive_billing
   subscription
 }
 

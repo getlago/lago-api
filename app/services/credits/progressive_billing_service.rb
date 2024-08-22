@@ -25,7 +25,7 @@ module Credits
         remaining_to_credit = total_subscription_amount
 
         progressive_billing_invoices.each do |progressive_billing_invoice|
-          amount_to_credit = progressive_billing_invoice.fees.progressive_billing.sum(:amount_cents)
+          amount_to_credit = progressive_billing_invoice.fees_amount_cents
 
           if amount_to_credit > remaining_to_credit
             # TODO: create credit note for (amount_to_credit - remaining_credit)

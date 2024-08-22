@@ -5,12 +5,6 @@ require 'rails_helper'
 RSpec.describe Fee, type: :model do
   subject(:fee_model) { described_class }
 
-  describe 'associations' do
-    subject(:fee) { build(:fee) }
-
-    it { is_expected.to belong_to(:usage_threshold).optional }
-  end
-
   describe '.item_code' do
     context 'when it is a subscription fee' do
       let(:subscription) { create(:subscription) }
@@ -42,12 +36,6 @@ RSpec.describe Fee, type: :model do
     context 'when it is a credit fee' do
       it 'returns add on code' do
         expect(fee_model.new(fee_type: 'credit').item_code).to eq('credit')
-      end
-    end
-
-    context 'when it is a progressive billing fee' do
-      it 'returns add on code' do
-        expect(fee_model.new(fee_type: 'progressive_billing').item_code).to eq('progressive_billing')
       end
     end
 
@@ -122,14 +110,6 @@ RSpec.describe Fee, type: :model do
         end
       end
 
-      context 'when it is a progressive billing fee' do
-        let(:fee) { build_stubbed(:progressive_billing_fee, invoice_display_name:) }
-
-        it 'returns add on name' do
-          expect(fee_invoice_name).to eq(fee.usage_threshold.invoice_name)
-        end
-      end
-
       context 'when it is an pay_in_advance charge fee' do
         let(:fee) { build_stubbed(:fee, charge:, fee_type: 'charge', invoice_display_name:) }
         let(:charge) { create(:standard_charge, :pay_in_advance, invoice_display_name: charge_invoice_display_name) }
@@ -187,12 +167,6 @@ RSpec.describe Fee, type: :model do
       end
     end
 
-    context 'when it is a progressive billing fee' do
-      it "returns 'credit'" do
-        expect(fee_model.new(fee_type: 'progressive_billing').item_name).to eq('progressive_billing')
-      end
-    end
-
     context 'when it is an pay_in_advance charge fee' do
       let(:charge) { create(:standard_charge, :pay_in_advance) }
 
@@ -234,12 +208,6 @@ RSpec.describe Fee, type: :model do
     context "when it is a credit fee" do
       it "returns 'credit'" do
         expect(fee_model.new(fee_type: "credit").item_description).to eq("credit")
-      end
-    end
-
-    context "when it is a progressive_billing fee" do
-      it "returns 'credit'" do
-        expect(fee_model.new(fee_type: "progressive_billing").item_description).to eq("progressive_billing")
       end
     end
 
@@ -287,12 +255,6 @@ RSpec.describe Fee, type: :model do
       end
     end
 
-    context 'when it is a progressive_billing fee' do
-      it 'returns wallet transaction' do
-        expect(fee_model.new(fee_type: 'progressive_billing').item_type).to eq('UsageThreshold')
-      end
-    end
-
     context 'when it is an pay_in_advance charge fee' do
       let(:charge) { create(:standard_charge, :pay_in_advance) }
 
@@ -337,14 +299,6 @@ RSpec.describe Fee, type: :model do
       it 'returns the wallet transaction id' do
         expect(fee_model.new(fee_type: 'credit', invoiceable: wallet_transaction).item_id)
           .to eq(wallet_transaction.id)
-      end
-    end
-
-    context 'when it is a progressive_billing fee' do
-      let(:fee) { create(:progressive_billing_fee) }
-
-      it 'returns the wallet transaction id' do
-        expect(fee.item_id).to eq(fee.usage_threshold_id)
       end
     end
 

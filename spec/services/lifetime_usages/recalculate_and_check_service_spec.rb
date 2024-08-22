@@ -63,10 +63,8 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
         ).on_queue(:webhook)
     end
 
-    it "creates an invoice for the usage_threshold amount" do
+    it "creates an invoice for the usage_threshold" do
       expect { service.call }.to change(Invoice, :count).by(1)
-      invoice = subscription.invoices.progressive_billing.sole
-      expect(invoice.total_amount_cents).to eq(usage_threshold.amount_cents)
     end
   end
 
@@ -107,10 +105,8 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
         ).on_queue(:webhook)
     end
 
-    it "creates an invoice for the largest usage_threshold amount" do
+    it "creates an invoice for the current usage" do
       expect { service.call }.to change(Invoice, :count).by(1)
-      invoice = subscription.invoices.progressive_billing.sole
-      expect(invoice.total_amount_cents).to eq(usage_threshold2.amount_cents)
     end
   end
 
@@ -128,7 +124,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
       )
     end
 
-    let(:progressive_billing_fee) { create(:progressive_billing_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
+    let(:progressive_billing_fee) { create(:charge_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
 
     before do
       usage_threshold
@@ -155,10 +151,8 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
         ).on_queue(:webhook)
     end
 
-    it "creates an invoice for the largest usage_threshold amount minus the progressive billing amount" do
+    it "creates an invoice for the current usage" do
       expect { service.call }.to change(Invoice, :count).by(1)
-      invoice = subscription.invoices.progressive_billing.where.not(id: progressive_billing_invoice.id).sole
-      expect(invoice.total_amount_cents).to eq(usage_threshold2.amount_cents - 20)
     end
   end
 

@@ -40,10 +40,7 @@ class Credit < ApplicationRecord
 
   def item_name
     return coupon&.name if applied_coupon_id?
-
-    if progressive_billing_invoice_id?
-      return progressive_billing_invoice.fees.first&.invoice_name
-    end
+    return progressive_billing_invoice.number if progressive_billing_invoice_id?
 
     # TODO: change it depending on invoice template
     credit_note.invoice.number

@@ -77,22 +77,13 @@ RSpec.describe Credit, type: :model do
       subject(:credit) { create(:progressive_billing_invoice_credit, progressive_billing_invoice:) }
 
       let(:progressive_billing_invoice) { create(:invoice, invoice_type: :progressive_billing) }
-      let(:progressive_billing_fee) do
-        create(
-          :fee,
-          invoice: progressive_billing_invoice,
-          fee_type: :progressive_billing
-        )
-      end
-
-      before { progressive_billing_fee }
 
       it 'returns invoice details', aggregate_failures: true do
         aggregate_failures do
           expect(credit.item_id).to eq(progressive_billing_invoice.id)
           expect(credit.item_type).to eq('invoice')
           expect(credit.item_code).to eq(progressive_billing_invoice.number)
-          expect(credit.item_name).to eq(progressive_billing_fee.invoice_name)
+          expect(credit.item_name).to eq(progressive_billing_invoice.number)
         end
       end
     end
