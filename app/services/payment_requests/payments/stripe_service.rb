@@ -79,7 +79,7 @@ module PaymentRequests
         return false if payable.payment_succeeded?
         return false if stripe_payment_provider.blank?
 
-        customer&.stripe_customer&.provider_customer_id
+        !!customer&.stripe_customer&.provider_customer_id
       end
 
       def stripe_api_key
