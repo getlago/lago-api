@@ -120,6 +120,34 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         expect(Credits::ProgressiveBillingService).to have_received(:call).with(invoice:)
       end
 
+      context "when a progressive_billing invoice is present" do
+        let(:progressive_invoice) do
+          create(:invoice,
+            customer:,
+            status: 'finalized',
+            invoice_type: :progressive_billing,
+            subscriptions: [subscription],
+            fees_amount_cents: 50,
+            issuing_date: timestamp - 5.days)
+        end
+
+        let(:progressive_fee) do
+          create(:charge_fee, amount_cents: 50, invoice: progressive_invoice)
+        end
+
+        before do
+          progressive_invoice
+          progressive_fee
+        end
+
+        it "creates a credit note for the amount that was billed too much" do
+          expect { invoice_service.call }.to change(CreditNote, :count).by(1)
+
+          credit_note = progressive_invoice.reload.credit_notes.sole
+          expect(credit_note.credit_amount_cents).to eq(50)
+        end
+      end
+
       context 'when charge is pay_in_advance, not recurring and invoiceable' do
         let(:charge) do
           create(
