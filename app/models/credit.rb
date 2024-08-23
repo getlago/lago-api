@@ -16,6 +16,7 @@ class Credit < ApplicationRecord
 
   scope :coupon_kind, -> { where.not(applied_coupon_id: nil) }
   scope :credit_note_kind, -> { where.not(credit_note_id: nil) }
+  scope :progressive_billing_invoice_kind, -> { where.not(progressive_billing_invoice_id: nil) }
 
   def item_id
     return coupon&.id if applied_coupon_id
