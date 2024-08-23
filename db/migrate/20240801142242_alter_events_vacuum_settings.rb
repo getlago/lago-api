@@ -2,7 +2,9 @@
 
 class AlterEventsVacuumSettings < ActiveRecord::Migration[7.1]
   def up
-    execute "ALTER TABLE events set (autovacuum_vacuum_scale_factor=0.005)"
+    safety_assured do
+      execute "ALTER TABLE events set (autovacuum_vacuum_scale_factor=0.005)"
+    end
   end
 
   def down

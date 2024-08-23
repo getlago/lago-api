@@ -2,18 +2,19 @@
 
 class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
   def change
-    change_table(:invoice_subscriptions, bulk: true) do |t|
-      t.column :timestamp, :datetime
-      t.column :from_datetime, :datetime
-      t.column :to_datetime, :datetime
-      t.column :charges_from_datetime, :datetime
-      t.column :charges_to_datetime, :datetime
-    end
+    safety_assured do
+      change_table(:invoice_subscriptions, bulk: true) do |t|
+        t.column :timestamp, :datetime
+        t.column :from_datetime, :datetime
+        t.column :to_datetime, :datetime
+        t.column :charges_from_datetime, :datetime
+        t.column :charges_to_datetime, :datetime
+      end
 
-    reversible do |dir|
-      dir.up do
-        # rubocop:disable Style/RedundantStringEscape
-        execute <<-SQL
+      reversible do |dir|
+        dir.up do
+          # rubocop:disable Style/RedundantStringEscape
+          execute <<-SQL
           /* Unify fees->timestamp to be a required timestamp */
           UPDATE fees
           SET properties = jsonb_set(properties, '{timestamp}', to_jsonb(
@@ -120,8 +121,9 @@ class AddBoundariesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
               ORDER BY fees.created_at ASC
               LIMIT 1)::timestamp
             END
-        SQL
-        # rubocop:enable Style/RedundantStringEscape
+          SQL
+          # rubocop:enable Style/RedundantStringEscape
+        end
       end
     end
   end

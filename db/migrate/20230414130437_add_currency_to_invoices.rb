@@ -4,16 +4,18 @@ class AddCurrencyToInvoices < ActiveRecord::Migration[7.0]
   def up
     add_column :invoices, :currency, :string
 
-    execute <<-SQL
+    safety_assured do
+      execute <<-SQL
       UPDATE invoices
       SET currency = amount_currency
-    SQL
+      SQL
 
-    change_table :invoices, bulk: true do |t|
-      t.remove :amount_currency
-      t.remove :vat_amount_currency
-      t.remove :total_amount_currency
-      t.remove :credit_amount_currency
+      change_table :invoices, bulk: true do |t|
+        t.remove :amount_currency
+        t.remove :vat_amount_currency
+        t.remove :total_amount_currency
+        t.remove :credit_amount_currency
+      end
     end
   end
 

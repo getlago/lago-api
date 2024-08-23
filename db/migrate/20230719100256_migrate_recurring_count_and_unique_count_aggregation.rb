@@ -20,7 +20,8 @@ class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7
     reversible do |dir|
       dir.up do
         # Create quantified event object for all unique count events
-        sql = <<-SQL
+        safety_assured do
+          sql = <<-SQL
           SELECT
             events.id AS event_id,
             events.code AS code,
@@ -39,37 +40,37 @@ class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7
             AND billable_metrics.aggregation_type = 3
             AND billable_metrics.organization_id = events.organization_id
           ORDER BY event_timestamp ASC;
-        SQL
+          SQL
 
-        ApplicationRecord.connection.select_all(sql).each_with_object({}) do |row, _result|
-          existing_quantified_event =
-            QuantifiedEvent.where(
+          ApplicationRecord.connection.select_all(sql).each_with_object({}) do |row, _result|
+            existing_quantified_event =
+              QuantifiedEvent.where(
+                customer_id: row['customer_id'],
+                billable_metric_id: row['billable_metric_id'],
+                external_subscription_id: row['subscription_external_id'],
+                external_id: JSON.parse(row['properties'])[row['field_name'].to_s]
+              ).where(removed_at: nil).any?
+
+            # There can only be one quantified event for certain external_id which guarantees uniqueness
+            next if existing_quantified_event
+
+            quantified_event = QuantifiedEvent.create!(
               customer_id: row['customer_id'],
               billable_metric_id: row['billable_metric_id'],
               external_subscription_id: row['subscription_external_id'],
-              external_id: JSON.parse(row['properties'])[row['field_name'].to_s]
-            ).where(removed_at: nil).any?
+              external_id: JSON.parse(row['properties'])[row['field_name'].to_s],
+              properties: JSON.parse(row['properties']),
+              added_at: row['event_timestamp']
+            )
 
-          # There can only be one quantified event for certain external_id which guarantees uniqueness
-          next if existing_quantified_event
+            event = Event.find_by(id: row['event_id'])
+            event.quantified_event_id = quantified_event.id
+            event.save!
+          end
 
-          quantified_event = QuantifiedEvent.create!(
-            customer_id: row['customer_id'],
-            billable_metric_id: row['billable_metric_id'],
-            external_subscription_id: row['subscription_external_id'],
-            external_id: JSON.parse(row['properties'])[row['field_name'].to_s],
-            properties: JSON.parse(row['properties']),
-            added_at: row['event_timestamp']
-          )
-
-          event = Event.find_by(id: row['event_id'])
-          event.quantified_event_id = quantified_event.id
-          event.save!
-        end
-
-        # If charge is pay_in_advance and aggregation type is SUM we need to set event metadata since this metadata
-        # will be used in calculation of previous_event for further events in same period
-        execute <<-SQL
+          # If charge is pay_in_advance and aggregation type is SUM we need to set event metadata since this metadata
+          # will be used in calculation of previous_event for further events in same period
+          execute <<-SQL
           WITH sum_in_advance_events AS (
             SELECT
               events.id AS event_id,
@@ -91,11 +92,11 @@ class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7
                          jsonb_set(metadata, '{current_aggregation}', to_jsonb(event_value), true)
           FROM sum_in_advance_events
           WHERE sum_in_advance_events.event_id = events.id
-        SQL
+          SQL
 
-        # If charge is pay_in_advance and aggregation type is UNIQUE COUNT we need to set event metadata since this
-        # metadata will be used in calculation of previous event for further events in the same period
-        execute <<-SQL
+          # If charge is pay_in_advance and aggregation type is UNIQUE COUNT we need to set event metadata since this
+          # metadata will be used in calculation of previous event for further events in the same period
+          execute <<-SQL
           WITH unique_count_in_advance_events AS (
             SELECT events.id AS event_id
             FROM events
@@ -111,7 +112,8 @@ class MigrateRecurringCountAndUniqueCountAggregation < ActiveRecord::Migration[7
                          jsonb_set(metadata, '{current_aggregation}', '1'::jsonb, true)
           FROM unique_count_in_advance_events
           WHERE unique_count_in_advance_events.event_id = events.id
-        SQL
+          SQL
+        end
       end
     end
   end

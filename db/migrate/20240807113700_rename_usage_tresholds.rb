@@ -2,7 +2,9 @@
 
 class RenameUsageTresholds < ActiveRecord::Migration[7.1]
   def change
-    rename_table :usage_tresholds, :usage_thresholds
-    rename_column :usage_thresholds, :treshold_display_name, :threshold_display_name
+    safety_assured do
+      rename_table :usage_tresholds, :usage_thresholds
+      rename_column :usage_thresholds, :treshold_display_name, :threshold_display_name
+    end
   end
 end

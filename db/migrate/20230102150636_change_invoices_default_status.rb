@@ -3,10 +3,11 @@
 class ChangeInvoicesDefaultStatus < ActiveRecord::Migration[7.0]
   def up
     change_column_default :invoices, :status, 1
-
-    execute <<-SQL
+    safety_assured do
+      execute <<-SQL
       UPDATE invoices SET status = 1;
-    SQL
+      SQL
+    end
   end
 
   def down

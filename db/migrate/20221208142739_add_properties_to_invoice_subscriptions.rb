@@ -4,9 +4,10 @@ class AddPropertiesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
   def change
     add_column :invoice_subscriptions, :properties, :jsonb, null: false, default: '{}'
 
-    reversible do |dir|
-      dir.up do
-        execute <<-SQL
+    safety_assured do
+      reversible do |dir|
+        dir.up do
+          execute <<-SQL
           UPDATE invoice_subscriptions
           SET properties = COALESCE((
             SELECT fees.properties
@@ -16,7 +17,8 @@ class AddPropertiesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
             ORDER BY fees.created_at ASC
             LIMIT 1
           ), '{}');
-        SQL
+          SQL
+        end
       end
     end
   end

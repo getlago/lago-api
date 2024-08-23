@@ -2,12 +2,13 @@
 
 class AddCodeAndNameToPaymentProviders < ActiveRecord::Migration[7.0]
   def up
-    change_table :payment_providers, bulk: true do |t|
-      t.column :code, :string
-      t.column :name, :string
-    end
+    safety_assured do
+      change_table :payment_providers, bulk: true do |t|
+        t.column :code, :string
+        t.column :name, :string
+      end
 
-    execute <<-SQL
+      execute <<-SQL
       UPDATE payment_providers
       SET
         name = (
@@ -22,11 +23,12 @@ class AddCodeAndNameToPaymentProviders < ActiveRecord::Migration[7.0]
                WHEN type = 'PaymentProviders::StripeProvider' THEN 'stripe_account_1'
                END
         )
-    SQL
+      SQL
 
-    change_column_null :payment_providers, :code, false
-    change_column_null :payment_providers, :name, false
-    add_index :payment_providers, %i[code organization_id], unique: true
+      change_column_null :payment_providers, :code, false
+      change_column_null :payment_providers, :name, false
+      add_index :payment_providers, %i[code organization_id], unique: true
+    end
   end
 
   def down

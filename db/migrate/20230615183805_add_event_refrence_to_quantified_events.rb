@@ -2,6 +2,8 @@
 
 class AddEventRefrenceToQuantifiedEvents < ActiveRecord::Migration[7.0]
   def change
-    add_reference :events, :quantified_event, type: :uuid, index: true
+    safety_assured do
+      add_reference :events, :quantified_event, type: :uuid, index: true
+    end
   end
 end

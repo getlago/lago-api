@@ -8,6 +8,8 @@ class CreateInvoiceSubscriptions < ActiveRecord::Migration[7.0]
 
       t.timestamps
     end
-    remove_reference :invoices, :subscription, index: true, foreign_key: true
+    safety_assured do
+      remove_reference :invoices, :subscription, index: true, foreign_key: true
+    end
   end
 end

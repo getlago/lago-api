@@ -9,19 +9,20 @@ class AddCreditAmountToInvoices < ActiveRecord::Migration[7.0]
   end
 
   def up
-    change_table :invoices, bulk: true do |t|
-      t.bigint :credit_amount_cents, null: false, default: 0
-      t.string :credit_amount_currency
-    end
+    safety_assured do
+      change_table :invoices, bulk: true do |t|
+        t.bigint :credit_amount_cents, null: false, default: 0
+        t.string :credit_amount_currency
+      end
 
-    currency_list = WalletTransaction.joins(:wallet).pluck('DISTINCT(wallets.currency)')
-    currency_list << 'EUR' if currency_list.blank?
-    currency_sql = currency_list.each_with_object([]) do |code, currencies|
-      currency = Money::Currency.new(code)
-      currencies << "('#{code}', #{currency.exponent}, #{currency.subunit_to_unit})"
-    end
+      currency_list = WalletTransaction.joins(:wallet).pluck('DISTINCT(wallets.currency)')
+      currency_list << 'EUR' if currency_list.blank?
+      currency_sql = currency_list.each_with_object([]) do |code, currencies|
+        currency = Money::Currency.new(code)
+        currencies << "('#{code}', #{currency.exponent}, #{currency.subunit_to_unit})"
+      end
 
-    execute <<-SQL
+      execute <<-SQL
       WITH invoice_credit_amounts AS (
         SELECT
           invoices.id AS invoice_id,
@@ -55,7 +56,8 @@ class AddCreditAmountToInvoices < ActiveRecord::Migration[7.0]
         credit_amount_cents = invoice_credit_amounts.credit_amount_cents + invoice_credit_amounts.prepaid_credit_amount_cents
       FROM invoice_credit_amounts
       WHERE invoice_credit_amounts.invoice_id = invoices.id
-    SQL
+      SQL
+    end
   end
 
   def down

@@ -7,6 +7,8 @@ class AddExpirationDateToCoupons < ActiveRecord::Migration[7.0]
     LagoApi::Application.load_tasks
     Rake::Task['coupons:fill_expiration_date'].invoke
 
-    remove_column :coupons, :expiration_duration, :integer
+    safety_assured do
+      remove_column :coupons, :expiration_duration, :integer
+    end
   end
 end

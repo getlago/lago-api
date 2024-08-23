@@ -33,6 +33,7 @@ gem 'pg'
 gem 'ransack', '~> 4.1.0'
 gem 'scenic'
 gem 'with_advisory_lock'
+gem 'strong_migrations'
 
 # Currencies, Countries, Timezones...
 gem 'bigdecimal'

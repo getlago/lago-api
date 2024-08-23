@@ -2,7 +2,9 @@
 
 class ConvertUnitAmountCentsToDecimal < ActiveRecord::Migration[7.0]
   def up
-    change_column :fees, :unit_amount_cents, :decimal, precision: 30, scale: 5, null: false
+    safety_assured do
+      change_column :fees, :unit_amount_cents, :decimal, precision: 30, scale: 5, null: false
+    end
   end
 
   def down

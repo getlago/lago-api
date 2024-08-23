@@ -2,8 +2,10 @@
 
 class RemoveAmountCurrencyFromUsageTresholds < ActiveRecord::Migration[7.1]
   def up
-    change_table :usage_thresholds, bulk: true do |t|
-      t.remove :amount_currency
+    safety_assured do
+      change_table :usage_thresholds, bulk: true do |t|
+        t.remove :amount_currency
+      end
     end
   end
 

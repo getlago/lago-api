@@ -2,6 +2,6 @@
 
 class AddUnaccentExtension < ActiveRecord::Migration[7.0]
   def up
-    execute 'CREATE EXTENSION unaccent'
+    safety_assured { execute 'CREATE EXTENSION unaccent' }
   end
 end

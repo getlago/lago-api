@@ -10,8 +10,9 @@ class RemoveUniqueCountQuantifiedEvents < ActiveRecord::Migration[7.0]
         WHERE aggregation_type = 3
       )
     SQL
-
-    execute(sql)
+    safety_assured do
+      execute(sql)
+    end
   end
 
   def down

@@ -2,7 +2,9 @@
 
 class RemoveInvoiceAmount < ActiveRecord::Migration[7.0]
   def up
-    remove_column :invoices, :amount_cents
+    safety_assured do
+      remove_column :invoices, :amount_cents
+    end
   end
 
   def down

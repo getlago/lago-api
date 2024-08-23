@@ -2,12 +2,14 @@
 
 class ChangesCreditNoteItemsColumns < ActiveRecord::Migration[7.0]
   def up
-    change_table :credit_note_items, bulk: true do |t|
-      t.remove :refund_amount_cents
-      t.remove :refund_amount_currency
+    safety_assured do
+      change_table :credit_note_items, bulk: true do |t|
+        t.remove :refund_amount_cents
+        t.remove :refund_amount_currency
 
-      t.rename :credit_amount_cents, :amount_cents
-      t.rename :credit_amount_currency, :amount_currency
+        t.rename :credit_amount_cents, :amount_cents
+        t.rename :credit_amount_currency, :amount_currency
+      end
     end
   end
 
