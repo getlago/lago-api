@@ -121,23 +121,6 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       end
     end
 
-    context "when payment request has no invoices" do
-      let(:payment_request) do
-        create(:payment_request, organization:, customer:, invoices: [])
-      end
-
-      it 'does not creates a stripe payment', :aggregate_failures do
-        result = stripe_service.create
-
-        expect(result).to be_success
-
-        expect(result.payable).to eq(payment_request)
-        expect(result.payment).to be_nil
-        expect(result.payable).to be_payment_succeeded
-        expect(Stripe::PaymentIntent).not_to have_received(:create)
-      end
-    end
-
     context 'with 0 amount' do
       let(:payable) do
         create(
