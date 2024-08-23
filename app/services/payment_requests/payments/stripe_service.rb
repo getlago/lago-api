@@ -42,12 +42,13 @@ module PaymentRequests
         )
         payment.save!
 
+        payable_payment_status = payable_payment_status(payment.status)
         update_payable_payment_status(
-          payment_status: payable_payment_status(payment.status),
+          payment_status: payable_payment_status,
           processing: payment.status == 'processing'
         )
         update_invoices_payment_status(
-          payment_status: payable_payment_status(payment.status),
+          payment_status: payable_payment_status,
           processing: payment.status == 'processing'
         )
 
