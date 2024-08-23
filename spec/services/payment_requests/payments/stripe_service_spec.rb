@@ -8,7 +8,10 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
-  let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_123456") }
+  let(:stripe_customer) {
+    create(:stripe_customer, customer:, payment_method_id: stripe_payment_method_id)
+  }
+  let(:stripe_payment_method_id) { "pm_123456" }
   let(:code) { "stripe_1" }
 
   let(:payment_request) do
@@ -73,8 +76,6 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           )
         )
       allow(SegmentTrackJob).to receive(:perform_later)
-      #allow(PaymentRequests::PrepaidCreditJob).to receive(:perform_later)
-
       allow(PaymentProviderCustomers::StripeService).to receive(:new)
         .and_return(provider_customer_service)
       allow(provider_customer_service).to receive(:check_payment_method)
@@ -101,23 +102,44 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       expect(result.payment.amount_currency).to eq(payment_request.currency)
       expect(result.payment.status).to eq("succeeded")
 
-      expect(Stripe::PaymentIntent).to have_received(:create)
+      expect(Stripe::PaymentIntent).to have_received(:create).with(
+        {
+          amount: payment_request.total_amount_cents,
+          currency: payment_request.currency.downcase,
+          customer: customer.stripe_customer.provider_customer_id,
+          payment_method: stripe_payment_method_id,
+          payment_method_types: customer.stripe_customer.provider_payment_methods,
+          confirm: true,
+          off_session: true,
+          error_on_requires_action: true,
+          description: "#{organization.name} - PaymentRequest 123",
+          metadata: {
+            lago_customer_id: customer.id,
+            lago_payment_request_id: payment_request.id,
+            lago_invoice_ids: payment_request.invoice_ids
+          },
+        },
+        hash_including(
+          {
+            api_key: an_instance_of(String),
+            idempotency_key: "#{payment_request.id}/#{payment_request.reload.payment_attempts}"
+          }
+        )
+      )
     end
 
     context "with no payment provider" do
       let(:stripe_payment_provider) { nil }
 
-      it "does not creates a stripe payment" do
+      it "does not creates a stripe payment", :aggregate_failures do
         result = stripe_service.create
 
         expect(result).to be_success
 
-        aggregate_failures do
-          expect(result.payable).to eq(payment_request)
-          expect(result.payment).to be_nil
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_nil
 
-          expect(Stripe::PaymentIntent).not_to have_received(:create)
-        end
+        expect(Stripe::PaymentIntent).not_to have_received(:create)
       end
     end
 
@@ -216,27 +238,22 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
     context "with card error on stripe" do
       let(:customer) { create(:customer, organization:, payment_provider_code: code) }
 
-      #let(:subscription) do
-      #  create(:subscription, organization:, customer:)
-      #end
-
       let(:organization) do
         create(:organization, webhook_url: "https://webhook.com")
       end
 
       before do
-      #  subscription
-
         allow(Stripe::PaymentIntent).to receive(:create)
           .and_raise(Stripe::CardError.new("error", {}))
+        allow(PaymentRequests::Payments::DeliverErrorWebhookService)
+          .to receive(:call_async)
+          .and_call_original
       end
 
       it "delivers an error webhook" do
-        #allow(PaymentRequests::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
-
         stripe_service.create
 
-        #expect(PaymentRequests::Payments::DeliverErrorWebhookService).to have_received(:call_async)
+        expect(PaymentRequests::Payments::DeliverErrorWebhookService).to have_received(:call_async)
         expect(SendWebhookJob).to have_been_enqueued
           .with(
             "payment_request.payment_failure",
@@ -249,64 +266,83 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           )
       end
 
-      #context "when invoice is credit? and open?" do
-      #  let(:wallet_transaction) { create(:wallet_transaction) }
-
-      #  before do
-      #    create(:fee, fee_type: :credit, invoice: invoice, invoiceable: wallet_transaction)
-      #    invoice.update! status: :open, invoice_type: :credit
-      #  end
-
-      #  it "delivers an error webhook" do
-      #    allow(PaymentRequests::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
-
-      #    stripe_service.create
-
-      #    expect(PaymentRequests::Payments::DeliverErrorWebhookService).to have_received(:call_async)
-      #    expect(SendWebhookJob).to have_been_enqueued
-      #      .with(
-      #        "wallet_transaction.payment_failure",
-      #        wallet_transaction,
-      #        provider_customer_id: stripe_customer.provider_customer_id,
-      #        provider_error: {
-      #          message: "error",
-      #          error_code: nil
-      #        }
-      #      )
-      #  end
-      #end
+      it "marks the payment request as payment failed" do
+        stripe_service.create
+        expect(payment_request.reload).to be_payment_failed
+      end
     end
 
-    #context "when invoice has a too small amount" do
-    #  let(:organization) { create(:organization) }
-    #  let(:customer) { create(:customer, organization:) }
-    #  let(:subscription) { create(:subscription, organization:, customer:) }
+    context "when payment request has a too small amount" do
+     let(:organization) { create(:organization) }
+     let(:customer) { create(:customer, organization:) }
 
-    #  let(:invoice) do
-    #    create(
-    #      :invoice,
-    #      organization:,
-    #      customer:,
-    #      total_amount_cents: 20,
-    #      currency: "EUR",
-    #      ready_for_payment_processing: true
-    #    )
-    #  end
+     let(:payment_request) do
+       create(
+         :payment_request,
+         organization:,
+         customer:,
+         amount_cents: 20,
+         amount_currency: "EUR",
+         ready_for_payment_processing: true
+       )
+     end
 
-    #  before do
-    #    subscription
+     before do
+       allow(Stripe::PaymentIntent).to receive(:create)
+         .and_raise(Stripe::InvalidRequestError.new("amount_too_small", {}, code: "amount_too_small"))
+     end
 
-    #    allow(Stripe::PaymentIntent).to receive(:create)
-    #      .and_raise(Stripe::InvalidRequestError.new("amount_too_small", {}, code: "amount_too_small"))
-    #  end
+     it "does not mark the payment request as failed" do
+       stripe_service.create
+       expect(payment_request.reload).to be_payment_pending
+     end
+    end
 
-    #  it "does not send mark the invoice as failed" do
-    #    stripe_service.create
-    #    invoice.reload
+    context "with random stripe error" do
+      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
 
-    #    expect(invoice).to be_payment_pending
-    #  end
-    #end
+      let(:organization) do
+        create(:organization, webhook_url: "https://webhook.com")
+      end
+
+      let(:stripe_error) { Stripe::StripeError.new("error") }
+
+      before do
+        allow(Stripe::PaymentIntent).to receive(:create)
+          .and_raise(stripe_error)
+        allow(PaymentRequests::Payments::DeliverErrorWebhookService)
+          .to receive(:call_async)
+          .and_call_original
+        allow(stripe_service).to receive(:raise)
+      end
+
+      it "delivers an error webhook" do
+        stripe_service.create
+
+        expect(PaymentRequests::Payments::DeliverErrorWebhookService).to have_received(:call_async)
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            "payment_request.payment_failure",
+            payment_request,
+            provider_customer_id: stripe_customer.provider_customer_id,
+            provider_error: {
+              message: "error",
+              error_code: nil
+            }
+          )
+      end
+
+     it "does not mark the payment request as failed" do
+       stripe_service.create
+       expect(payment_request.reload).to be_payment_pending
+     end
+
+     it "raises the erorr" do
+       allow(stripe_service).to receive(:raise).and_call_original
+
+       expect { stripe_service.create }.to raise_error
+     end
+    end
 
     context "when payment status is processing" do
       let(:payment_status) { "processing" }

@@ -51,16 +51,16 @@ module PaymentRequests
         result
       rescue Stripe::AuthenticationError, Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         # NOTE: Do not mark the payable as failed if the amount is too small for Stripe
-        #       For now we keep it as pending, the user can still update it manually
+        #       For now we keep it as pending.
         return result if e.code == 'amount_too_small'
 
-        #deliver_error_webhook(e)
+        deliver_error_webhook(e)
         update_payable_payment_status(payment_status: :failed, deliver_webhook: false)
         result
       rescue Stripe::RateLimitError, Stripe::APIConnectionError
         raise # Let the auto-retry process do its own job
       rescue Stripe::StripeError => e
-        #deliver_error_webhook(e)
+        deliver_error_webhook(e)
         raise
       end
 
@@ -151,15 +151,20 @@ module PaymentRequests
           description:,
           metadata: {
             lago_customer_id: customer.id,
-            lago_invoice_id: payable.id,
-            #invoice_issuing_date: payable.issuing_date.iso8601,
-            #invoice_type: invoice.invoice_type
+            lago_payment_request_id: payable.id,
+            lago_invoice_ids: payable.invoice_ids
           }
         }
       end
 
       def description
-        "#{organization.name} - PaymentRequest 123" #TODO: #{invoice.number}"
+        # TODO: for invoices we define the payment description with the
+        #       invoice number, however, we do no have this kind of identifiers
+        #       on payment requests...
+        #
+        # "#{organization.name} - PaymentRequest #{payable.number}"
+
+        "#{organization.name} - PaymentRequest 123"
       end
 
       def payable_payment_status(payment_status)
