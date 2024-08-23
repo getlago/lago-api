@@ -5,6 +5,7 @@ class CreateAppliedUsageThresholds < ActiveRecord::Migration[7.1]
     create_table :applied_usage_thresholds, id: :uuid do |t|
       t.references :usage_threshold, null: false, foreign_key: true, type: :uuid
       t.references :invoice, null: false, foreign_key: true, type: :uuid
+      t.bigint :lifetime_usage_amount_cents, null: false, default: 0
 
       t.timestamps
 

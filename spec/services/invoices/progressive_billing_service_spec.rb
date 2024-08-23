@@ -63,6 +63,9 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
       expect(invoice.invoice_subscriptions.count).to eq(1)
       expect(invoice.fees.count).to eq(1)
       expect(invoice.applied_usage_thresholds.count).to eq(1)
+
+      expect(invoice.applied_usage_thresholds.first.lifetime_usage_amount_cents)
+        .to eq(lifetime_usage.total_amount_cents)
     end
 
     context 'with multiple thresholds' do

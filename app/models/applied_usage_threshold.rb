@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 class AppliedUsageThreshold < ApplicationRecord
-  belongs_to :usage_threshold
+  belongs_to :usage_threshold, -> { with_discarded }
   belongs_to :invoice
 
   validates :usage_threshold_id, uniqueness: {scope: :invoice_id}
+
+  monetize :lifetime_usage_amount_cents,
+    with_currency: ->(applied_usage_threshold) { applied_usage_threshold.invoice.currency }
 end
 
 # == Schema Information

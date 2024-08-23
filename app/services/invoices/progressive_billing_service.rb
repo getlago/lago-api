@@ -23,7 +23,6 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:)
         Invoices::ComputeAmountsFromFees.call(invoice:)
 
-        create_credit_note_credit
         create_applied_prepaid_credit
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
@@ -109,17 +108,17 @@ module Invoices
     end
 
     def create_applied_usage_thresholds
-      usage_thresholds.each { AppliedUsageThreshold.create!(invoice:, usage_threshold: _1) }
+      usage_thresholds.each do
+        AppliedUsageThreshold.create!(
+          invoice:,
+          usage_threshold: _1,
+          lifetime_usage_amount_cents: lifetime_usage.total_amount_cents
+        )
+      end
     end
 
     def should_deliver_email?
       License.premium? && subscription.organization.email_settings.include?('invoice.finalized')
-    end
-
-    def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.call(invoice:).raise_if_error!
-
-      invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents) if credit_result.credits
     end
 
     def create_applied_prepaid_credit
