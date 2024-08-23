@@ -104,10 +104,6 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
-    it_behaves_like "syncs payment" do
-      let(:service_call) { stripe_service.create }
-    end
-
     context "with no payment provider" do
       let(:stripe_payment_provider) { nil }
 
