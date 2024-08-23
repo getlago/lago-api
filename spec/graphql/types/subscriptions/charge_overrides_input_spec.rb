@@ -6,7 +6,7 @@ RSpec.describe Types::Subscriptions::ChargeOverridesInput do
   subject { described_class }
 
   it { is_expected.to accept_argument(:billable_metric_id).of_type('ID!') }
-  it { is_expected.to accept_argument(:id).of_type('ID!') }
+  it { is_expected.to accept_argument(:id).of_type('ID') }
   it { is_expected.to accept_argument(:filters).of_type('[ChargeFilterInput!]') }
   it { is_expected.to accept_argument(:invoice_display_name).of_type('String') }
   it { is_expected.to accept_argument(:min_amount_cents).of_type('BigInt') }

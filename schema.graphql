@@ -361,7 +361,7 @@ enum ChargeModelEnum {
 input ChargeOverridesInput {
   billableMetricId: ID!
   filters: [ChargeFilterInput!]
-  id: ID!
+  id: ID
   invoiceDisplayName: String
   minAmountCents: BigInt
   properties: PropertiesInput
@@ -7687,6 +7687,7 @@ input UsageThresholdInput {
 
 input UsageThresholdOverridesInput {
   amountCents: BigInt!
+  id: ID
   recurring: Boolean
   thresholdDisplayName: String
 }

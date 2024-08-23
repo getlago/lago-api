@@ -46,10 +46,15 @@ module Plans
 
         process_charges(plan, params[:charges]) if params[:charges]
 
-        if params[:usage_thresholds] &&
+        if params.key?(:usage_thresholds) &&
             License.premium? &&
             plan.organization.premium_integrations.include?('progressive_billing')
-          process_usage_thresholds(plan, params[:usage_thresholds])
+
+          if params[:usage_thresholds].empty?
+            plan.usage_thresholds.discard_all
+          else
+            process_usage_thresholds(plan, params[:usage_thresholds])
+          end
         end
 
         process_minimum_commitment(plan, params[:minimum_commitment]) if params[:minimum_commitment] && License.premium?
@@ -83,11 +88,17 @@ module Plans
     end
 
     def create_usage_threshold(plan, params)
-      usage_threshold = plan.usage_thresholds.new(
-        threshold_display_name: params[:threshold_display_name],
-        amount_cents: params[:amount_cents],
-        recurring: params[:recurring] || false
+      usage_threshold = plan.usage_thresholds.find_or_initialize_by(
+        recurring: params[:recurring] || false,
+        amount_cents: params[:amount_cents]
       )
+
+      existing_recurring_threshold = plan.usage_thresholds.recurring.first
+      if params[:recurring] && existing_recurring_threshold
+        usage_threshold = existing_recurring_threshold
+      end
+
+      usage_threshold.threshold_display_name = params[:threshold_display_name]
 
       usage_threshold.save!
       usage_threshold
@@ -185,6 +196,8 @@ module Plans
 
           next
         end
+
+        plan = plan.reload
 
         created_threshold = create_usage_threshold(plan, payload_threshold)
         created_thresholds_ids.push(created_threshold.id)

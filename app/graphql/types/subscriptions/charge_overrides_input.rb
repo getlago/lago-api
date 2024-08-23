@@ -4,7 +4,7 @@ module Types
   module Subscriptions
     class ChargeOverridesInput < Types::BaseInputObject
       argument :billable_metric_id, ID, required: true
-      argument :id, ID, required: true
+      argument :id, ID, required: false
 
       argument :filters, [Types::ChargeFilters::Input], required: false
       argument :invoice_display_name, String, required: false

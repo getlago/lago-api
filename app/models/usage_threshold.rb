@@ -14,8 +14,8 @@ class UsageThreshold < ApplicationRecord
   monetize :amount_cents, with_currency: ->(threshold) { threshold.plan.amount_currency }
 
   validates :amount_cents, numericality: {greater_than: 0}
-  validates :amount_cents, uniqueness: {scope: %i[plan_id recurring]}
-  validates :recurring, uniqueness: {scope: :plan_id}, if: -> { recurring? }
+  validates :amount_cents, uniqueness: {scope: %i[plan_id recurring deleted_at]}, if: -> { deleted_at.nil? }
+  validates :recurring, uniqueness: {scope: %i[plan_id deleted_at]}, if: -> { recurring? && deleted_at.nil? }
 
   scope :recurring, -> { where(recurring: true) }
   scope :not_recurring, -> { where(recurring: false) }
