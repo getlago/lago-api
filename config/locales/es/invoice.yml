@@ -51,6 +51,7 @@ es:
     prepaid_credit_invoice: Factura anticipada
     prepaid_credits: Créditos prepagados
     prepaid_credits_with_value: Créditos prepagados - %{wallet_name}
+    progressive_billing_credit: Uso ya facturado
     quarter: trimestre
     quarterly: Trimestral
     see_breakdown: Consulte el desglose a continuación
@@ -87,7 +88,6 @@ es:
     units: Unidades
     units_prorated_per_period: Unidades prorrateadas por segundo por %{period}
     usage_based_fees: Cargos basados en el uso
-    usage_threshold: Umbral de facturación
     volume:
       fee_per_unit: Tarifa por unidad
       flat_fee_for_all_units: Tarifa plana para todas las unidades

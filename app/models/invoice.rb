@@ -40,6 +40,7 @@ class Invoice < ApplicationRecord
     :credit_notes_amount_cents,
     :fees_amount_cents,
     :prepaid_credit_amount_cents,
+    :progressive_billing_credit_amount_cents,
     :sub_total_excluding_taxes_amount_cents,
     :sub_total_including_taxes_amount_cents,
     :total_amount_cents,
@@ -168,6 +169,12 @@ class Invoice < ApplicationRecord
     invoice_subscription(subscription_id).fees
   end
 
+  def progressice_billing_credits(subscription)
+    credits.where(
+      progressive_billing_invoice_id: subscription.invoices.progressive_billing.select(:id)
+    )
+  end
+
   def existing_fees_in_interval?(subscription_id:, charge_in_advance: false)
     subscription_fees(subscription_id)
       .charge_kind
@@ -246,10 +253,10 @@ class Invoice < ApplicationRecord
     fees_total_creditable = fees.sum(&:creditable_amount_cents)
     return 0 if fees_total_creditable.zero?
 
-    coupons_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
+    credit_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
       0
     else
-      coupons_amount_cents.fdiv(fees_amount_cents) * fees_total_creditable
+      (coupons_amount_cents + progressive_billing_credit_amount_cents).fdiv(fees_amount_cents) * fees_total_creditable
     end
 
     vat = fees.sum do |fee|
@@ -257,11 +264,11 @@ class Invoice < ApplicationRecord
       #       we have to discribute the coupon adjustement at prorata of each fees
       #       to compute the VAT
       fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
-      prorated_coupon_amount = coupons_adjustement * fee_rate
-      (fee.creditable_amount_cents - prorated_coupon_amount) * (fee.taxes_rate || 0)
+      prorated_credit_amount = credit_adjustement * fee_rate
+      (fee.creditable_amount_cents - prorated_credit_amount) * (fee.taxes_rate || 0)
     end.fdiv(100).round
 
-    fees_total_creditable - coupons_adjustement + vat
+    fees_total_creditable - credit_adjustement + vat
   end
 
   def refundable_amount_cents

@@ -8,6 +8,8 @@ module Clock
     unique :until_executed, on_conflict: :log
 
     def perform
+      return unless License.premium?
+
       LifetimeUsage.needs_recalculation.find_each do |ltu|
         LifetimeUsages::RecalculateAndCheckJob.perform_later(ltu)
       end

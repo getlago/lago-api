@@ -34,6 +34,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         'payment_overdue' => invoice.payment_overdue,
         'currency' => invoice.currency,
         'fees_amount_cents' => invoice.fees_amount_cents,
+        'progressive_billing_credit_amount_cents' => invoice.progressive_billing_credit_amount_cents,
         'coupons_amount_cents' => invoice.coupons_amount_cents,
         'credit_notes_amount_cents' => invoice.credit_notes_amount_cents,
         'prepaid_credit_amount_cents' => invoice.prepaid_credit_amount_cents,

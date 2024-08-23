@@ -4049,6 +4049,7 @@ type Invoice {
   paymentOverdue: Boolean!
   paymentStatus: InvoicePaymentStatusTypeEnum!
   prepaidCreditAmountCents: BigInt!
+  progressiveBillingCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
