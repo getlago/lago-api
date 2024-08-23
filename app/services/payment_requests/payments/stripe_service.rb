@@ -191,7 +191,8 @@ module PaymentRequests
       end
 
       def increment_payment_attempts
-        payable.increment!(:payment_attempts)
+        payable.increment(:payment_attempts)
+        payable.save!
       end
 
       def deliver_error_webhook(stripe_error)
