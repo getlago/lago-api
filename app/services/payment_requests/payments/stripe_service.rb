@@ -46,6 +46,10 @@ module PaymentRequests
           payment_status: payable_payment_status(payment.status),
           processing: payment.status == 'processing'
         )
+        update_invoices_payment_status(
+          payment_status: payable_payment_status(payment.status),
+          processing: payment.status == 'processing'
+        )
 
         result.payment = payment
         result
@@ -178,21 +182,23 @@ module PaymentRequests
       def update_payable_payment_status(payment_status:, deliver_webhook: true, processing: false)
         payable.update!(
           payment_status:,
+            # NOTE: A proper `processing` payment status should be introduced for payment_requests
           ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
         )
       end
 
-      def update_invoice_payment_status(payment_status:, deliver_webhook: true, processing: false)
-        result = Invoices::UpdateService.call(
-          invoice: payable.presence || @result.payable,
-          params: {
-            payment_status:,
-            # NOTE: A proper `processing` payment status should be introduced for payables
-            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
-          },
-          webhook_notification: deliver_webhook
-        )
-        result.raise_if_error!
+      def update_invoices_payment_status(payment_status:, deliver_webhook: true, processing: false)
+        payable.invoices.each do |invoice|
+          Invoices::UpdateService.call(
+            invoice: invoice,
+            params: {
+              payment_status:,
+              # NOTE: A proper `processing` payment status should be introduced for invoices
+              ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+            },
+            webhook_notification: deliver_webhook
+          ).raise_if_error!
+        end
       end
 
       def increment_payment_attempts

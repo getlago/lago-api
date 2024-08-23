@@ -128,6 +128,13 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       )
     end
 
+    it "updates invoice payment status to succeeded", :aggregate_failures do
+      stripe_service.create
+
+      expect(invoice_1.reload).to be_payment_succeeded
+      expect(invoice_2.reload).to be_payment_succeeded
+    end
+
     context "with no payment provider" do
       let(:stripe_payment_provider) { nil }
 
