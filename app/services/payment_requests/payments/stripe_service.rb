@@ -20,6 +20,11 @@ module PaymentRequests
         result.payable = payable
         return result unless should_process_payment?
 
+        if payable.invoices.empty?
+          update_payable_payment_status(payment_status: :succeeded)
+          return result
+        end
+
         unless payable.total_amount_cents.positive?
           update_payable_payment_status(payment_status: :succeeded)
           return result
