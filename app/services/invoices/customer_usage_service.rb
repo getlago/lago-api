@@ -157,7 +157,7 @@ module Invoices
         res.raise_if_error!
       end
 
-      res =  Invoices::ApplyProviderTaxesService.call(invoice:, provider_taxes: result.fees_taxes)
+      res = Invoices::ApplyProviderTaxesService.call(invoice:, provider_taxes: result.fees_taxes)
       res.raise_if_error!
 
       invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
