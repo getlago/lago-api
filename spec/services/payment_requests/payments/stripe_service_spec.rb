@@ -117,7 +117,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
             lago_customer_id: customer.id,
             lago_payment_request_id: payment_request.id,
             lago_invoice_ids: payment_request.invoice_ids
-          },
+          }
         },
         hash_including(
           {
@@ -280,29 +280,29 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
     end
 
     context "when payment request has a too small amount" do
-     let(:organization) { create(:organization) }
-     let(:customer) { create(:customer, organization:) }
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
 
-     let(:payment_request) do
-       create(
-         :payment_request,
-         organization:,
-         customer:,
-         amount_cents: 20,
-         amount_currency: "EUR",
-         ready_for_payment_processing: true
-       )
-     end
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          amount_cents: 20,
+          amount_currency: "EUR",
+          ready_for_payment_processing: true
+        )
+      end
 
-     before do
-       allow(Stripe::PaymentIntent).to receive(:create)
-         .and_raise(Stripe::InvalidRequestError.new("amount_too_small", {}, code: "amount_too_small"))
-     end
+      before do
+        allow(Stripe::PaymentIntent).to receive(:create)
+          .and_raise(Stripe::InvalidRequestError.new("amount_too_small", {}, code: "amount_too_small"))
+      end
 
-     it "does not mark the payment request as failed" do
-       stripe_service.create
-       expect(payment_request.reload).to be_payment_pending
-     end
+      it "does not mark the payment request as failed" do
+        stripe_service.create
+        expect(payment_request.reload).to be_payment_pending
+      end
     end
 
     context "with random stripe error" do
@@ -320,11 +320,12 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
         allow(PaymentRequests::Payments::DeliverErrorWebhookService)
           .to receive(:call_async)
           .and_call_original
-        allow(stripe_service).to receive(:raise)
       end
 
-      it "delivers an error webhook" do
-        stripe_service.create
+      it "delivers an error webhook and raises the error" do
+        expect { stripe_service.create }
+          .to raise_error(stripe_error)
+          .and not_change { payment_request.reload.payment_status }
 
         expect(PaymentRequests::Payments::DeliverErrorWebhookService).to have_received(:call_async)
         expect(SendWebhookJob).to have_been_enqueued
@@ -338,17 +339,6 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
             }
           )
       end
-
-     it "does not mark the payment request as failed" do
-       stripe_service.create
-       expect(payment_request.reload).to be_payment_pending
-     end
-
-     it "raises the erorr" do
-       allow(stripe_service).to receive(:raise).and_call_original
-
-       expect { stripe_service.create }.to raise_error
-     end
     end
 
     context "when payment status is processing" do
