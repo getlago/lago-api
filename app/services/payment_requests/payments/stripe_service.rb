@@ -182,7 +182,7 @@ module PaymentRequests
       def update_payable_payment_status(payment_status:, deliver_webhook: true, processing: false)
         payable.update!(
           payment_status:,
-            # NOTE: A proper `processing` payment status should be introduced for payment_requests
+          # NOTE: A proper `processing` payment status should be introduced for payment_requests
           ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
         )
       end
