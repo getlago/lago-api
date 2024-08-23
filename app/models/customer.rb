@@ -9,6 +9,14 @@ class Customer < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
+  FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS = {
+    inherit: 0,
+    do_not_skip: 1,
+    skip: 2
+  }.freeze
+
+  enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, _prefix: :finalize_zero_amount
+
   before_save :ensure_slug
 
   belongs_to :organization
