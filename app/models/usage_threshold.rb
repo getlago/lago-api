@@ -8,6 +8,9 @@ class UsageThreshold < ApplicationRecord
 
   belongs_to :plan
 
+  has_many :applied_usage_thresholds
+  has_many :invoices, through: :applied_usage_thresholds
+
   monetize :amount_cents, with_currency: ->(threshold) { threshold.plan.amount_currency }
 
   validates :amount_cents, numericality: {greater_than: 0}
