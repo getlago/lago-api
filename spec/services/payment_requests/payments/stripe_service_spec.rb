@@ -121,7 +121,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       end
     end
 
-    context "with no invoices" do
+    context "when payment request has no invoices" do
       let(:payment_request) do
         create(:payment_request, organization:, customer:, invoices: [])
       end
@@ -174,7 +174,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
     context "when customer does not have a provider customer id" do
       before { stripe_customer.update!(provider_customer_id: nil) }
 
-      it "does not creates a stripe payment", :aggregate_failures  do
+      it "does not creates a stripe payment", :aggregate_failures do
         result = stripe_service.create
 
         expect(result).to be_success
