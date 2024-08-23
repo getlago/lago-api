@@ -15,7 +15,7 @@ class Customer < ApplicationRecord
     skip: 2
   }.freeze
 
-  enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, _prefix: :finalize_zero_amount
+  enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS
 
   before_save :ensure_slug
 
