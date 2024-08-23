@@ -46,6 +46,7 @@ module PaymentRequests
 
         payable_payment_status = payable_payment_status(payment.status)
         update_payable_payment_status(payment_status: payable_payment_status)
+        update_invoices_payment_status(payment_status: payable_payment_status)
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
 
@@ -143,18 +144,18 @@ module PaymentRequests
         )
       end
 
-      # TODO:
-      # def update_invoice_payment_status(payment_status:, deliver_webhook: true)
-      #   result = Invoices::UpdateService.call(
-      #     invoice:,
-      #     params: {
-      #       payment_status:,
-      #       ready_for_payment_processing: payment_status.to_sym != :succeeded
-      #     },
-      #     webhook_notification: deliver_webhook
-      #   )
-      #   result.raise_if_error!
-      # end
+      def update_invoices_payment_status(payment_status:, deliver_webhook: true)
+        payable.invoices.each do |invoice|
+          Invoices::UpdateService.call(
+            invoice:,
+            params: {
+              payment_status:,
+              ready_for_payment_processing: payment_status.to_sym != :succeeded
+            },
+            webhook_notification: deliver_webhook
+          ).raise_if_error!
+        end
+      end
 
       def deliver_error_webhook(adyen_error)
         DeliverErrorWebhookService.call_async(payable, {

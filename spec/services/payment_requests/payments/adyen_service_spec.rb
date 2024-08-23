@@ -93,7 +93,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       #      does ayden params has metadata?
     end
 
-    xit "updates invoice payment status to succeeded", :aggregate_failures do
+    it "updates invoice payment status to succeeded", :aggregate_failures do
       adyen_service.create
 
       expect(invoice_1.reload).to be_payment_succeeded
