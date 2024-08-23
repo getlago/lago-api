@@ -19,15 +19,15 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
       subscriptions: subscriptions)
   end
 
+  let(:subscription_fees) { [subscription_fee1, subscription_fee2] }
+  let(:subscription_fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 500) }
+  let(:subscription_fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 500) }
+
   before do
     invoice
     invoice.invoice_subscriptions.each { |is| is.update!(charges_from_datetime: invoice.issuing_date - 1.month, charges_to_datetime: invoice.issuing_date) }
     subscription_fees
   end
-
-  let(:subscription_fees) { [subscription_fee1, subscription_fee2] }
-  let(:subscription_fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 500) }
-  let(:subscription_fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 500) }
 
   context "without progressive billing invoices" do
     describe "#call" do
@@ -67,6 +67,9 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         credit = result.credits.sole
         expect(credit.amount_cents).to eq(20)
         expect(invoice.progressive_billing_credit_amount_cents).to eq(20)
+
+        expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(10)
+        expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(10)
       end
     end
   end
