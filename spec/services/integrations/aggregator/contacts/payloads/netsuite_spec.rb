@@ -5,10 +5,12 @@ require 'rails_helper'
 RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
   let(:integration) { integration_customer.integration }
   let(:integration_customer) { FactoryBot.create(:netsuite_customer, customer:) }
-  let(:customer) { create(:customer) }
+  let(:customer) { create(:customer, email:, phone:) }
   let(:subsidiary_id) { Faker::Number.number(digits: 2) }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:, subsidiary_id:) }
   let(:customer_link) { payload.__send__(:customer_url) }
+  let(:email) { 'email@test.com,email2@test.com' }
+  let(:phone) { nil }
 
   describe "#create_body" do
     subject(:create_body_call) { payload.create_body }
@@ -22,10 +24,9 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
           'subsidiary' => subsidiary_id,
           'custentity_lago_id' => customer.id,
           'custentity_lago_sf_id' => customer.external_salesforce_id,
-          'custentity_form_activeprospect_customer' => customer.name,
           'custentity_lago_customer_link' => customer_link,
-          'email' => customer.email,
-          'phone' => customer.phone
+          'email' => customer.email.to_s.split(',').first&.strip,
+          'phone' => customer.phone.to_s.split(',').first&.strip
         },
         'options' => {
           'ignoreMandatoryFields' => false
@@ -37,7 +38,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
     context 'when legacy script is false' do
       context 'when shipping address is present' do
         context 'when shipping address is not the same as billing address' do
-          let(:customer) { create(:customer, :with_shipping_address) }
+          let(:customer) { create(:customer, :with_shipping_address, email:, phone:) }
 
           let(:lines) do
             [
@@ -81,7 +82,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
         end
 
         context 'when shipping address is the same as billing address' do
-          let(:customer) { create(:customer, :with_same_billing_and_shipping_address) }
+          let(:customer) { create(:customer, :with_same_billing_and_shipping_address, email:, phone:) }
 
           let(:lines) do
             [
@@ -137,7 +138,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
         end
 
         context 'when billing address is present' do
-          let(:customer) { create(:customer) }
+          let(:customer) { create(:customer, email:, phone:) }
 
           it 'returns the payload body' do
             expect(subject).to eq payload_body
@@ -148,6 +149,8 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
           let(:customer) do
             create(
               :customer,
+              email:,
+              phone:,
               address_line1: nil,
               address_line2: nil,
               city: nil,
@@ -169,7 +172,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
 
       context 'when shipping address is present' do
         context 'when shipping address is not the same as billing address' do
-          let(:customer) { create(:customer, :with_shipping_address) }
+          let(:customer) { create(:customer, :with_shipping_address, email:, phone:) }
 
           let(:lines) do
             [
@@ -213,7 +216,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
         end
 
         context 'when shipping address is the same as billing address' do
-          let(:customer) { create(:customer, :with_same_billing_and_shipping_address) }
+          let(:customer) { create(:customer, :with_same_billing_and_shipping_address, email:, phone:) }
 
           let(:lines) do
             [
@@ -269,7 +272,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
         end
 
         context 'when billing address is present' do
-          let(:customer) { create(:customer) }
+          let(:customer) { create(:customer, email:, phone:) }
 
           it 'returns the payload body without lines' do
             expect(subject).to eq payload_body.except('lines')
@@ -280,6 +283,8 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
           let(:customer) do
             create(
               :customer,
+              email:,
+              phone:,
               address_line1: nil,
               address_line2: nil,
               city: nil,
@@ -308,10 +313,9 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
           'companyname' => customer.name,
           'subsidiary' => integration_customer.subsidiary_id,
           'custentity_lago_sf_id' => customer.external_salesforce_id,
-          'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
           'custentity_lago_customer_link' => customer_link,
-          'email' => customer.email,
-          'phone' => customer.phone
+          'email' => customer.email.to_s.split(',').first&.strip,
+          'phone' => customer.phone.to_s.split(',').first&.strip
         },
         'options' => {
           'isDynamic' => false
@@ -321,6 +325,86 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
 
     it "returns the payload body" do
       expect(subject).to eq payload_body
+    end
+  end
+
+  describe '#email' do
+    subject(:email_call) { payload.__send__(:email) }
+
+    let(:customer) { create(:customer, email:) }
+
+    context 'when email is nil' do
+      let(:email) { nil }
+
+      it 'returns nil' do
+        expect(subject).to be(nil)
+      end
+    end
+
+    context 'when email is an empty string' do
+      let(:email) { '' }
+
+      it 'returns nil' do
+        expect(subject).to be(nil)
+      end
+    end
+
+    context 'when email contains one email' do
+      let(:email) { Faker::Internet.email }
+
+      it 'returns email' do
+        expect(subject).to eq(email)
+      end
+    end
+
+    context 'when email contains comma-separated email addresses' do
+      let(:email) { "#{email1},#{email2}" }
+      let(:email1) { Faker::Internet.email }
+      let(:email2) { Faker::Internet.email }
+
+      it 'returns first email address' do
+        expect(subject).to eq(email1)
+      end
+    end
+  end
+
+  describe '#phone' do
+    subject(:phone_call) { payload.__send__(:phone) }
+
+    let(:customer) { create(:customer, phone:) }
+
+    context 'when phone is nil' do
+      let(:phone) { nil }
+
+      it 'returns nil' do
+        expect(subject).to be(nil)
+      end
+    end
+
+    context 'when phone is an empty string' do
+      let(:phone) { '' }
+
+      it 'returns nil' do
+        expect(subject).to be(nil)
+      end
+    end
+
+    context 'when phone contains one phone number' do
+      let(:phone) { Faker::PhoneNumber.phone_number }
+
+      it 'returns phone' do
+        expect(subject).to eq(phone)
+      end
+    end
+
+    context 'when phone contains comma-separated phone numbers' do
+      let(:phone) { "#{phone1},#{phone2}" }
+      let(:phone1) { Faker::PhoneNumber.phone_number }
+      let(:phone2) { Faker::PhoneNumber.phone_number }
+
+      it 'returns first phone number' do
+        expect(subject).to eq(phone1)
+      end
     end
   end
 end
