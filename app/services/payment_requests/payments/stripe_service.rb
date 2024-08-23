@@ -25,7 +25,7 @@ module PaymentRequests
           return result
         end
 
-        increment_payment_attempts
+        payable.increment_payment_attempts!
 
         stripe_result = create_stripe_payment
         # NOTE: return if payment was not processed
@@ -199,11 +199,6 @@ module PaymentRequests
             webhook_notification: deliver_webhook
           ).raise_if_error!
         end
-      end
-
-      def increment_payment_attempts
-        payable.increment(:payment_attempts)
-        payable.save!
       end
 
       def deliver_error_webhook(stripe_error)
