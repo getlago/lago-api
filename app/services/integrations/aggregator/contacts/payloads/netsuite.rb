@@ -14,10 +14,9 @@ module Integrations
                 'subsidiary' => subsidiary_id,
                 'custentity_lago_id' => customer.id,
                 'custentity_lago_sf_id' => customer.external_salesforce_id,
-                'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
                 'custentity_lago_customer_link' => customer_url,
-                'email' => customer.email,
-                'phone' => customer.phone
+                'email' => email,
+                'phone' => phone
               },
               'options' => {
                 'ignoreMandatoryFields' => false # Fixed value
@@ -33,10 +32,9 @@ module Integrations
                 'companyname' => customer.name,
                 'subsidiary' => integration_customer.subsidiary_id,
                 'custentity_lago_sf_id' => customer.external_salesforce_id,
-                'custentity_form_activeprospect_customer' => customer.name, # TODO: Will be removed
                 'custentity_lago_customer_link' => customer_url,
-                'email' => customer.email,
-                'phone' => customer.phone
+                'email' => email,
+                'phone' => phone
               },
               'options' => {
                 'isDynamic' => false

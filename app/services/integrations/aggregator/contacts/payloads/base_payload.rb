@@ -17,12 +17,12 @@ module Integrations
             [
               {
                 'name' => customer.name,
-                'email' => customer.email,
                 'city' => customer.city,
                 'zip' => customer.zipcode,
                 'country' => customer.country,
                 'state' => customer.state,
-                'phone' => customer.phone
+                'email' => email,
+                'phone' => phone
               }
             ]
           end
@@ -32,12 +32,12 @@ module Integrations
               {
                 'id' => integration_customer.external_customer_id,
                 'name' => customer.name,
-                'email' => customer.email,
                 'city' => customer.city,
                 'zip' => customer.zipcode,
                 'country' => customer.country,
                 'state' => customer.state,
-                'phone' => customer.phone
+                'email' => email,
+                'phone' => phone
               }
             ]
           end
@@ -45,6 +45,14 @@ module Integrations
           private
 
           attr_reader :customer, :integration_customer, :subsidiary_id
+
+          def email
+            customer.email.to_s.split(',').first&.strip
+          end
+
+          def phone
+            customer.phone.to_s.split(',').first&.strip
+          end
         end
       end
     end
