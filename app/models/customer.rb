@@ -9,7 +9,7 @@ class Customer < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
-  enum :finalize_zero_amount_invoice, [:inherit, :do_not_skip, :skip], validate: true
+  enum :finalize_zero_amount_invoice, [:inherit, :do_not_skip, :skip], default: :inherit, validate: true
 
   before_save :ensure_slug
 
