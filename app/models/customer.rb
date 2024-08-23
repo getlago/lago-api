@@ -164,43 +164,44 @@ end
 #
 # Table name: customers
 #
-#  id                        :uuid             not null, primary key
-#  address_line1             :string
-#  address_line2             :string
-#  city                      :string
-#  country                   :string
-#  currency                  :string
-#  deleted_at                :datetime
-#  document_locale           :string
-#  email                     :string
-#  invoice_grace_period      :integer
-#  legal_name                :string
-#  legal_number              :string
-#  logo_url                  :string
-#  name                      :string
-#  net_payment_term          :integer
-#  payment_provider          :string
-#  payment_provider_code     :string
-#  phone                     :string
-#  shipping_address_line1    :string
-#  shipping_address_line2    :string
-#  shipping_city             :string
-#  shipping_country          :string
-#  shipping_state            :string
-#  shipping_zipcode          :string
-#  slug                      :string
-#  state                     :string
-#  tax_identification_number :string
-#  timezone                  :string
-#  url                       :string
-#  vat_rate                  :float
-#  zipcode                   :string
-#  created_at                :datetime         not null
-#  updated_at                :datetime         not null
-#  external_id               :string           not null
-#  external_salesforce_id    :string
-#  organization_id           :uuid             not null
-#  sequential_id             :bigint
+#  id                           :uuid             not null, primary key
+#  address_line1                :string
+#  address_line2                :string
+#  city                         :string
+#  country                      :string
+#  currency                     :string
+#  deleted_at                   :datetime
+#  document_locale              :string
+#  email                        :string
+#  finalize_zero_amount_invoice :integer          default(0), not null
+#  invoice_grace_period         :integer
+#  legal_name                   :string
+#  legal_number                 :string
+#  logo_url                     :string
+#  name                         :string
+#  net_payment_term             :integer
+#  payment_provider             :string
+#  payment_provider_code        :string
+#  phone                        :string
+#  shipping_address_line1       :string
+#  shipping_address_line2       :string
+#  shipping_city                :string
+#  shipping_country             :string
+#  shipping_state               :string
+#  shipping_zipcode             :string
+#  slug                         :string
+#  state                        :string
+#  tax_identification_number    :string
+#  timezone                     :string
+#  url                          :string
+#  vat_rate                     :float
+#  zipcode                      :string
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  external_id                  :string           not null
+#  external_salesforce_id       :string
+#  organization_id              :uuid             not null
+#  sequential_id                :bigint
 #
 # Indexes
 #
