@@ -20,6 +20,10 @@ class PaymentRequest < ApplicationRecord
 
   alias_attribute :total_amount_cents, :amount_cents
   alias_attribute :currency, :amount_currency
+
+  def invoice_ids
+    applied_invoices.pluck(:invoice_id)
+  end
 end
 
 # == Schema Information

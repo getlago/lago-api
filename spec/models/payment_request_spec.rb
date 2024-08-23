@@ -58,4 +58,18 @@ RSpec.describe PaymentRequest, type: :model do
       expect(payment_request.currency).to eq(payment_request.amount_currency)
     end
   end
+
+  describe "#invoice_ids" do
+    let(:payment_request) do
+      create(:payment_request, invoices:)
+    end
+
+    let(:invoices) do
+      create_list(:invoice, 2)
+    end
+
+    it "returns a list with the applied invoice ids" do
+      expect(payment_request.invoice_ids).to eq(invoices.map(&:id))
+    end
+  end
 end
