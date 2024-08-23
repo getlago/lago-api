@@ -122,7 +122,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
     end
 
     context 'with 0 amount' do
-      let(:payable) do
+      let(:payment_request) do
         create(
           :payment_request,
           organization:,
