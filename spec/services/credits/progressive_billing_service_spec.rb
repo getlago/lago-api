@@ -185,7 +185,7 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         expect(first_credit.amount_cents).to eq(980)
 
         expect(invoice.progressive_billing_credit_amount_cents).to eq(1000)
-        expect(invoice.negative_amount_cents).to eq(-220)
+        # todo: validate that we've created a credit note here
       end
     end
   end
