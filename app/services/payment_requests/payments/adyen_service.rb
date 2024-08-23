@@ -115,7 +115,7 @@ module PaymentRequests
             currency: payable.currency.upcase,
             value: payable.total_amount_cents
           },
-          reference: "reference here", # invoice.number,
+          reference: payable.id,
           paymentMethod: {
             type: 'scheme',
             storedPaymentMethodId: customer.adyen_customer.payment_method_id

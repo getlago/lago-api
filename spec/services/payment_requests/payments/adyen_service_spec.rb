@@ -86,11 +86,30 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       expect(adyen_customer.reload.payment_method_id)
         .to eq(payment_methods_response.response["storedPaymentMethods"].first["id"])
 
-      expect(payments_api).to have_received(:payments)
-
-      # TODO: add expection of the payload send to Adyen with the right data,
-      #      for example the list of invoice ids within its metadata...
-      #      does ayden params has metadata?
+      expect(payments_api)
+        .to have_received(:payments)
+        .with(
+          {
+            amount: {
+              currency: "USD",
+              value: 799
+            },
+            applicationInfo: {
+              externalPlatform: {integrator: "Lago", name: "Lago"},
+              merchantApplication: {name: "Lago"}
+            },
+            merchantAccount: adyen_payment_provider.merchant_account,
+            paymentMethod: {
+              storedPaymentMethodId: adyen_customer.payment_method_id,
+              type: "scheme"
+            },
+            recurringProcessingModel: "UnscheduledCardOnFile",
+            reference: payment_request.id,
+            shopperEmail: customer.email,
+            shopperInteraction: "ContAuth",
+            shopperReference: adyen_customer.provider_customer_id
+          }
+        )
     end
 
     it "updates invoice payment status to succeeded", :aggregate_failures do
@@ -257,7 +276,6 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
     end
   end
 
-  # PRIVATE METHOD, DOH!!!!!
   describe "#payment_method_params" do
     subject(:payment_method_params) { adyen_service.__send__(:payment_method_params) }
 
