@@ -1073,6 +1073,7 @@ RSpec.describe Invoice, type: :model do
           :invoice,
           fees_amount_cents: 200,
           coupons_amount_cents: 20,
+          progressive_billing_credit_amount_cents:,
           taxes_amount_cents: 36,
           total_amount_cents: 216,
           taxes_rate: 20,
@@ -1092,10 +1093,20 @@ RSpec.describe Invoice, type: :model do
         create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 200, taxes_rate: 20)
       end
 
+      let(:progressive_billing_credit_amount_cents) { 0 }
+
       before { fee }
 
       it 'returns the expected creditable amount in cents' do
         expect(invoice.creditable_amount_cents).to eq(216)
+      end
+
+      context 'with progressive billing credit' do
+        let(:progressive_billing_credit_amount_cents) { 2 }
+
+        it 'returns the expected creditable amount in cents' do
+          expect(invoice.creditable_amount_cents).to eq(214)
+        end
       end
     end
   end

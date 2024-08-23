@@ -5,7 +5,7 @@
 .invoice-resume.overflow-auto
   table.invoice-resume-table width="100%"
     tr.first_child
-      td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription.charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription.charges_to_datetime_in_customer_timezone&.to_date, format: :default))
+      td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription.charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(issuing_date, format: :default))
       td.body-2 = I18n.t('invoice.units')
       td.body-2 = I18n.t('invoice.unit_price')
       td.body-2 = I18n.t('invoice.tax_rate')
@@ -43,13 +43,10 @@
 / Total section
 .invoice-resume.overflow-auto
   table.total-table width="100%"
-    - if progressive_billing_credit_amount_cents.positive?
-      - credits.progressive_billing_invoice_kind.order(created_at: :asc) do |credit|
-        tr
-          td.body-2
-          / TODO(ProgressiveBilling): apply the right label
-          td.body-2 #{credit.item_name}
-          td.body-2 = '-' + MoneyHelper.format(credit.amount)
+    tr
+      td.body-2
+      td.body-2 I18.t('invoice.progressive_billing_credit')
+      td.body-2 = '-' + MoneyHelper.format(progressive_billing_credit_amount)
 
     - if coupons_amount_cents.positive?
       - credits.coupon_kind.order(created_at: :asc).each do |credit|

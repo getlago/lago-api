@@ -29,6 +29,7 @@ module Types
       field :credit_notes_amount_cents, GraphQL::Types::BigInt, null: false
       field :fees_amount_cents, GraphQL::Types::BigInt, null: false
       field :prepaid_credit_amount_cents, GraphQL::Types::BigInt, null: false
+      field :progressive_billing_credit_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_including_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false

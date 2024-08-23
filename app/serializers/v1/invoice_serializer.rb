@@ -18,6 +18,7 @@ module V1
         currency: model.currency,
         fees_amount_cents: model.fees_amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
+        progressive_billing_credit_amount_cents: model.progressive_billing_credit_amount_cents,
         coupons_amount_cents: model.coupons_amount_cents,
         credit_notes_amount_cents: model.credit_notes_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents,

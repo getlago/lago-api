@@ -18979,6 +18979,24 @@
               ]
             },
             {
+              "name": "progressiveBillingCreditAmountCents",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "refundableAmountCents",
               "description": null,
               "type": {

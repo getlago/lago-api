@@ -51,6 +51,7 @@ sv:
     prepaid_credit_invoice: Förskottsfaktura
     prepaid_credits: Förbetald kontobalans
     prepaid_credits_with_value: Förbetald kontobalans - %{wallet_name}
+    progressive_billing_credit: Användning redan fakturerad
     quarter: kvartal
     quarterly: Kvartalsvis
     see_breakdown: Se uppdelning nedan
@@ -87,7 +88,6 @@ sv:
     units: Enheter
     units_prorated_per_period: Proportionella enheter per sekund per %{period}
     usage_based_fees: Avgifter baserade på användning
-    usage_threshold: Faktureringströskel
     volume:
       fee_per_unit: Avgift per enhet
       flat_fee_for_all_units: Fast avgift för alla enheter

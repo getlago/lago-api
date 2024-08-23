@@ -28,6 +28,7 @@ RSpec.describe Types::Invoices::Object do
   it { is_expected.to have_field(:credit_notes_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:fees_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:prepaid_credit_amount_cents).of_type('BigInt!') }
+  it { is_expected.to have_field(:progressive_billing_credit_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:sub_total_excluding_taxes_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:sub_total_including_taxes_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:taxes_amount_cents).of_type('BigInt!') }

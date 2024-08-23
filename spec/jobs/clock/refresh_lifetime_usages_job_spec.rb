@@ -16,12 +16,25 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
       lifetime_usage3
     end
 
-    it "enqueues a job for every usage that needs to be recalculated" do
-      described_class.perform_now
+    context 'when freemium' do
+      it 'does not call the refresh service' do
+        described_class.perform_now
+        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage1)
+        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
+        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
+      end
+    end
 
-      expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage1)
-      expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage2)
-      expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
+    context 'when premium' do
+      around { |test| lago_premium!(&test) }
+
+      it "enqueues a job for every usage that needs to be recalculated" do
+        described_class.perform_now
+
+        expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage1)
+        expect(LifetimeUsages::RecalculateAndCheckJob).to have_been_enqueued.with(lifetime_usage2)
+        expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage3)
+      end
     end
   end
 end
