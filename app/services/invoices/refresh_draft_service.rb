@@ -69,6 +69,8 @@ module Invoices
 
         calculate_result.raise_if_error!
 
+        flag_lifetime_usage_for_refresh
+
         # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
       end
@@ -94,6 +96,10 @@ module Invoices
       CreditNoteItem
         .joins(:credit_note)
         .where(credit_note: {invoice_id: invoice.id})
+    end
+
+    def flag_lifetime_usage_for_refresh
+      LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
     end
   end
 end
