@@ -28,7 +28,6 @@ module Invoices
 
       fee_result = ActiveRecord::Base.transaction do
         invoice.status = invoice_status
-        invoice.save!
 
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
