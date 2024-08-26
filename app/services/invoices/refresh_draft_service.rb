@@ -62,7 +62,9 @@ module Invoices
           CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:)
         end
 
-        return calculate_result if tax_error?(calculate_result.error)
+        if tax_error?(calculate_result.error)
+          return result.validation_failure!(errors: {tax_error: [calculate_result.error.error_message]})
+        end
         calculate_result.raise_if_error!
 
         # NOTE: In case of a refresh the same day of the termination.
