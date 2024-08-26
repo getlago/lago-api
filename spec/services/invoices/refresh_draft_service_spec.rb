@@ -153,5 +153,13 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       expect { refresh_service.call }
         .to change { invoice.reload.taxes_rate }.from(0.0).to(15)
     end
+
+    it 'flags lifetime usage for refresh' do
+      create(:usage_threshold, plan: subscription.plan)
+
+      refresh_service.call
+
+      expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
+    end
   end
 end
