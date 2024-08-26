@@ -19,7 +19,7 @@ module CreditNotes
 
       CreditNotes::CreateService.new(
         invoice: progressive_billing_invoice,
-        credit_amount_cents: amount,
+        credit_amount_cents: creditable_amount_cents(amount, items),
         items:,
         reason:,
         automatic: true
@@ -56,6 +56,19 @@ module CreditNotes
       end
 
       items
+    end
+
+    def creditable_amount_cents(amount, items)
+      taxes_result = CreditNotes::ApplyTaxesService.call(
+        invoice: progressive_billing_invoice,
+        items: items.map { |item| CreditNoteItem.new(fee_id: item[:fee_id], precise_amount_cents: item[:amount_cents]) }
+      )
+
+      (
+        amount.truncate(CreditNote::DB_PRECISION_SCALE) -
+        taxes_result.coupons_adjustment_amount_cents +
+        taxes_result.taxes_amount_cents
+      ).round
     end
   end
 end
