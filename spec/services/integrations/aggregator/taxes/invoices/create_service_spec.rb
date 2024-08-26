@@ -6,7 +6,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:anrok_integration, organization:) }
-  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+  let(:integration_customer) { create(:anrok_customer, integration:, customer:, external_customer_id: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
@@ -134,6 +134,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
             expect(result.fees.first['tax_breakdown'].last['rate']).to eq('0.00')
           end
         end
+
+        it 'sets integration customer external id' do
+          service_call
+
+          expect(integration_customer.reload.external_customer_id).to eq(customer.external_id)
+        end
       end
 
       context 'when taxes are not successfully fetched for finalized invoice' do
@@ -165,6 +171,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
                 error_code: 'taxDateTooFarInFuture'
               }
             )
+        end
+
+        it 'does not set integration customer external id' do
+          service_call
+
+          expect(integration_customer.reload.external_customer_id).to eq(nil)
         end
       end
     end

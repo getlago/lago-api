@@ -18,6 +18,10 @@ module Integrations
 
             process_response(body)
 
+            if result.success? && integration_customer.external_customer_id.blank?
+              integration_customer.update!(external_customer_id: customer.external_id)
+            end
+
             result
           rescue LagoHttpClient::HttpError => e
             code = code(e)
