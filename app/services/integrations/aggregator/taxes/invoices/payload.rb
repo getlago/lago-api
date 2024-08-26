@@ -20,7 +20,7 @@ module Integrations
                 'issuing_date' => invoice.issuing_date,
                 'currency' => invoice.currency,
                 'contact' => {
-                  'external_id' => integration_customer.external_customer_id || customer.external_id,
+                  'external_id' => integration_customer&.external_customer_id || customer.external_id,
                   'name' => customer.name,
                   'address_line_1' => customer.shipping_address_line1,
                   'city' => customer.shipping_city,
