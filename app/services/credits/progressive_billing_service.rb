@@ -28,8 +28,10 @@ module Credits
           amount_to_credit = progressive_billing_invoice.fees_amount_cents
 
           if amount_to_credit > remaining_to_credit
-            # TODO: create credit note for (amount_to_credit - remaining_credit)
-            invoice.negative_amount_cents -= (amount_to_credit - remaining_to_credit)
+            CreditNotes::CreateFromProgressiveBillingInvoice.call(
+              progressive_billing_invoice:, amount: amount_to_credit - remaining_to_credit
+            ).raise_if_error!
+
             amount_to_credit = remaining_to_credit
           end
 

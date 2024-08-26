@@ -2,6 +2,13 @@
 
 require 'webmock/rspec'
 
+# Allow remote debugging when RUBY_DEBUG_PORT is set
+if ENV['RUBY_DEBUG_PORT']
+  require 'debug/open_nonstop'
+else
+  require 'debug'
+end
+
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
