@@ -9,7 +9,6 @@ module LifetimeUsages
 
     def call
       return result unless invoice.subscription?
-      return result unless invoice.finalized? || invoice.voided?
       return result unless has_plan_usage_thresholds?
 
       result.lifetime_usages = []
