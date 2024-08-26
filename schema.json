@@ -19288,7 +19288,7 @@
               ]
             },
             {
-              "name": "appliedOnWholeInvoice?",
+              "name": "appliedOnWholeInvoice",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
