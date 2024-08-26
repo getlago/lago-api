@@ -4068,6 +4068,7 @@ type Invoice {
 type InvoiceAppliedTax implements AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  appliedOnWholeInvoice: Boolean!
   createdAt: ISO8601DateTime!
   feesAmountCents: BigInt!
   id: ID!
