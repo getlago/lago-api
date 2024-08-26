@@ -12,6 +12,7 @@ module CreditNotes
 
     def call
       return result unless amount.positive?
+      return result.forbidden_failure! unless progressive_billing_invoice.progressive_billing?
 
       # Important to call this method as it modifies @amount if needed
       items = calculate_items!
@@ -34,7 +35,7 @@ module CreditNotes
       remaining = amount
 
       # The amount can be greater than a single fee amount. We'll keep on deducting until we've credited enough
-      progressive_billing_invoice.fees.each do |fee|
+      progressive_billing_invoice.fees.order(amount_cents: :desc).each do |fee|
         # no further credit remaining
         break if remaining.zero?
 
@@ -49,7 +50,7 @@ module CreditNotes
       end
 
       # it could be that we have some amount remaining
-      # TODO: verify and check in v2
+      # TODO(ProgressiveBilling): verify and check in v2
       if remaining.positive?
         @amount -= remaining
       end
