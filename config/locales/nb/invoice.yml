@@ -55,6 +55,7 @@ nb:
     progressive_billing_credit: Bruk allerede fakturert
     quarter: kvartal
     quarterly: Kvartalsvis
+    reached_usage_threshold: Denne progressive faktureringen er generert fordi din akkumulerte bruk har nådd %{usage_amount}, og overskredet terskelen på %{threshold_amount}.
     see_breakdown: Se oversikt for antall enheter
     sub_total: Sub total
     sub_total_with_tax: Sub total (inkl. MVA)

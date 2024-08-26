@@ -55,6 +55,7 @@ de:
     progressive_billing_credit: Nutzung bereits abgerechnet
     quarter: quartal
     quarterly: Vierteljährlich
+    reached_usage_threshold: Diese progressive Rechnung wird erstellt, da Ihre kumulierte Nutzung %{usage_amount} erreicht hat und den Schwellenwert von %{threshold_amount} überschritten hat.
     see_breakdown: Siehe Aufschlüsselung für Gesamtübersicht
     sub_total: Zwischensumme
     sub_total_with_tax: Zwischensumme (inkl. Steuern)

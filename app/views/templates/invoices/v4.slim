@@ -465,7 +465,7 @@ html
       - if progressive_billing?
         p.body-3.mb-24
           - applied_usage_threshold = applied_usage_thresholds.order(created_at: :asc).last
-            = I18n.t('invoice.reached_usage_threshold', usage_amount: MoneyHelper. applied_usage_threshold.lifetime_usage_amount, threshold_amount: MoneyHelper.format(applied_usage_threshold.threshold.amount_cents)
+          = I18n.t('invoice.reached_usage_threshold', usage_amount: MoneyHelper. applied_usage_threshold.lifetime_usage_amount, threshold_amount: MoneyHelper.format(applied_usage_threshold.threshold.amount_cents))
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 

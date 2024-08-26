@@ -55,7 +55,7 @@ en:
     progressive_billing_credit: Usage already billed
     quarter: quarter
     quarterly: Quarterly
-    reached_usage_threshold: This progressive billing invoice is generated because your lifetime usage has reached %{usage_amount}, exceeding the ${threshold_amount} threshold.
+    reached_usage_threshold: This progressive billing is generated because your cumulative usage has reached %{usage_amount}, exceeding the %{threshold_amount} threshold.
     see_breakdown: See breakdown for total unit
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (incl. tax)
