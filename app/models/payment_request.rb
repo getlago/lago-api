@@ -24,6 +24,11 @@ class PaymentRequest < ApplicationRecord
   def invoice_ids
     applied_invoices.pluck(:invoice_id)
   end
+
+  def increment_payment_attempts!
+    increment(:payment_attempts)
+    save!
+  end
 end
 
 # == Schema Information

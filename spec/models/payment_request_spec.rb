@@ -72,4 +72,14 @@ RSpec.describe PaymentRequest, type: :model do
       expect(payment_request.invoice_ids).to eq(invoices.map(&:id))
     end
   end
+
+  describe "#increment_payment_attempts!" do
+    let(:payment_request) { create :payment_request }
+
+    it "updates payment_attempts attribute +1" do
+      expect { payment_request.increment_payment_attempts! }
+        .to change { payment_request.reload.payment_attempts }
+        .by(1)
+    end
+  end
 end
