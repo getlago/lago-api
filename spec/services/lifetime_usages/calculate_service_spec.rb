@@ -5,17 +5,18 @@ require 'rails_helper'
 RSpec.describe LifetimeUsages::CalculateService, type: :service do
   subject(:service) { described_class.new(lifetime_usage: lifetime_usage) }
 
-  let(:lifetime_usage) { create(:lifetime_usage, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }
+  let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }
   let(:recalculate_current_usage) { false }
   let(:recalculate_invoiced_usage) { false }
-  let(:subscription) { create(:subscription, customer_id: customer.id) }
-  let(:organization) { subscription.organization }
+  let(:subscription) { create(:subscription, customer_id: customer.id, subscription_at:) }
+  let(:organization) { customer.organization }
   let(:customer) { create(:customer) }
 
-  let(:invoice_subscription) { create(:invoice_subscription, invoice: invoice, subscription: subscription) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
   let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: '10'}) }
   let(:timestamp) { Time.current }
+  let(:subscription_at) { timestamp - 6.months }
   let(:fees) do
     create_list(
       :charge_fee,
@@ -58,7 +59,7 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
     end
 
     context "with draft invoice" do
-      let(:invoice) { create(:invoice, :draft) }
+      let(:invoice) { create(:invoice, :draft, organization:) }
 
       before do
         invoice
@@ -68,12 +69,43 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
 
       it "calculates the invoiced_usage as zero" do
         result = service.call
-        expect(result.lifetime_usage.invoiced_usage_amount_cents).to be_zero
+        expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(200)
+        expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(200)
+        expect(lifetime_usage.recalculate_invoiced_usage).to be false
       end
     end
 
     context "with finalized invoice" do
-      let(:invoice) { create(:invoice, :finalized) }
+      let(:invoice) { create(:invoice, :finalized, organization:) }
+
+      before do
+        invoice
+        invoice_subscription
+        fees
+      end
+
+      it "calculates the invoiced_usage_amount_cents correctly" do
+        result = service.call
+        expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(200)
+        expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(200)
+        expect(lifetime_usage.recalculate_invoiced_usage).to be false
+      end
+    end
+
+    context "with invoices from previous subscription" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer_id: customer.id,
+          subscription_at:,
+          previous_subscription:,
+          external_id: previous_subscription.external_id
+        )
+      end
+
+      let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription: previous_subscription) }
+      let(:previous_subscription) { create(:subscription, :terminated, customer_id: customer.id, subscription_at:) }
+      let(:invoice) { create(:invoice, :finalized, organization:) }
 
       before do
         invoice

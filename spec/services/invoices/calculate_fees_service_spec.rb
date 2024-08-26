@@ -122,13 +122,16 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
       context "when a progressive_billing invoice is present" do
         let(:progressive_invoice) do
-          create(:invoice,
+          create(
+            :invoice,
             customer:,
             status: 'finalized',
             invoice_type: :progressive_billing,
             subscriptions: [subscription],
             fees_amount_cents: 50,
-            issuing_date: timestamp - 5.days)
+            issuing_date: timestamp - 5.days,
+            created_at: timestamp - 5.days
+          )
         end
 
         let(:progressive_fee) do

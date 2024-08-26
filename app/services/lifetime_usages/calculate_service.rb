@@ -33,10 +33,18 @@ module LifetimeUsages
 
     private
 
-    delegate :subscription, to: :lifetime_usage
+    delegate :subscription, :organization, to: :lifetime_usage
 
     def calculate_invoiced_usage_amount_cents
-      invoices = subscription.invoices.finalized
+      subscription_ids = organization.subscriptions
+        .where(external_id: subscription.external_id, subscription_at: subscription.subscription_at)
+        .where(canceled_at: nil)
+        .select(:id)
+
+      invoices = organization.invoices.subscription
+        .where(status: %i[finalized draft])
+        .joins(:invoice_subscriptions)
+        .where(invoice_subscriptions: {subscription_id: subscription_ids})
       invoices.sum { |invoice| invoice.fees.charge.sum(:amount_cents) }
     end
 

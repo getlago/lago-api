@@ -139,7 +139,7 @@
             - if progressive_billing_credit_amount_cents.positive?
               tr
                 td.body-2
-                td.body-2 I18.t('invoice.progressive_billing_credit')
+                td.body-2 = I18n.t('invoice.progressive_billing_credit')
                 td.body-2 = '-' + MoneyHelper.format(progressive_billing_credit_amount)
 
             - if coupons_amount_cents.positive?
@@ -191,7 +191,7 @@
             - if credits.present?
               tr
                 td.body-2
-                td.body-2 I18.t('invoice.progressive_billing_credit')
+                td.body-2 = I18n.t('invoice.progressive_billing_credit')
                 td.body-2 = '-' + MoneyHelper.format(credits.sum(&:amount))
           tr
             td.body-2

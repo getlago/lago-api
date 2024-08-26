@@ -45,7 +45,7 @@
   table.total-table width="100%"
     tr
       td.body-2
-      td.body-2 I18.t('invoice.progressive_billing_credit')
+      td.body-2 = I18n.t('invoice.progressive_billing_credit')
       td.body-2 = '-' + MoneyHelper.format(progressive_billing_credit_amount)
 
     - if coupons_amount_cents.positive?
