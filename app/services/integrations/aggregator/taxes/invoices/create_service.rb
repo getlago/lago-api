@@ -37,6 +37,7 @@ module Integrations
               integration:,
               invoice:,
               customer:,
+              integration_customer:,
               fees:
             ).body
 

@@ -5,10 +5,11 @@ module Integrations
     module Taxes
       module Invoices
         class Payload < BasePayload
-          def initialize(integration:, customer:, invoice:, fees: [])
+          def initialize(integration:, customer:, invoice:, integration_customer:, fees: [])
             super(integration:)
 
             @customer = customer
+            @integration_customer = integration_customer
             @invoice = invoice
             @fees = fees.is_a?(Array) ? fees : fees.order(created_at: :asc)
           end
@@ -19,7 +20,7 @@ module Integrations
                 'issuing_date' => invoice.issuing_date,
                 'currency' => invoice.currency,
                 'contact' => {
-                  'external_id' => customer.external_id,
+                  'external_id' => integration_customer.external_customer_id || customer.external_id,
                   'name' => customer.name,
                   'address_line_1' => customer.shipping_address_line1,
                   'city' => customer.shipping_city,
@@ -54,7 +55,7 @@ module Integrations
 
           private
 
-          attr_reader :customer, :invoice, :fees
+          attr_reader :customer, :integration_customer, :invoice, :fees
 
           def empty_struct
             @empty_struct ||= OpenStruct.new
