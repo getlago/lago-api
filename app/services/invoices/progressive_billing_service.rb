@@ -14,6 +14,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         create_generating_invoice
         create_fees
+        create_applied_usage_thresholds
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
@@ -105,6 +106,16 @@ module Invoices
         timestamp: timestamp,
         charges_duration: date_service.charges_duration_in_days
       }
+    end
+
+    def create_applied_usage_thresholds
+      usage_thresholds.each do
+        AppliedUsageThreshold.create!(
+          invoice:,
+          usage_threshold: _1,
+          lifetime_usage_amount_cents: lifetime_usage.total_amount_cents
+        )
+      end
     end
 
     def should_deliver_email?

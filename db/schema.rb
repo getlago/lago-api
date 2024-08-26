@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_22_142524) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_23_092643) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -127,6 +127,17 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_142524) do
     t.integer "frequency_duration_remaining"
     t.index ["coupon_id"], name: "index_applied_coupons_on_coupon_id"
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
+  end
+
+  create_table "applied_usage_thresholds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "usage_threshold_id", null: false
+    t.uuid "invoice_id", null: false
+    t.bigint "lifetime_usage_amount_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_applied_usage_thresholds_on_invoice_id"
+    t.index ["usage_threshold_id", "invoice_id"], name: "idx_on_usage_threshold_id_invoice_id_cb82cdf163", unique: true
+    t.index ["usage_threshold_id"], name: "index_applied_usage_thresholds_on_usage_threshold_id"
   end
 
   create_table "billable_metric_filters", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1175,6 +1186,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_22_142524) do
   add_foreign_key "adjusted_fees", "subscriptions"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
+  add_foreign_key "applied_usage_thresholds", "invoices"
+  add_foreign_key "applied_usage_thresholds", "usage_thresholds"
   add_foreign_key "billable_metric_filters", "billable_metrics"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "cached_aggregations", "groups"

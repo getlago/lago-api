@@ -60,4 +60,14 @@ RSpec.describe LifetimeUsage, type: :model do
       expect(described_class.needs_recalculation).to match_array([lifetime_usage1, lifetime_usage2])
     end
   end
+
+  describe '#total_amount_cents' do
+    it 'returns the sum of the historical, invoiced, and current usage' do
+      lifetime_usage.historical_usage_amount_cents = 100
+      lifetime_usage.invoiced_usage_amount_cents = 200
+      lifetime_usage.current_usage_amount_cents = 300
+
+      expect(lifetime_usage.total_amount_cents).to eq(600)
+    end
+  end
 end

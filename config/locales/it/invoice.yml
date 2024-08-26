@@ -52,9 +52,10 @@ it:
     prepaid_credit_invoice: Fattura anticipata
     prepaid_credits: Crediti prepagati
     prepaid_credits_with_value: Crediti prepagati - %{wallet_name}
-    progressive_billing_credit: Utilizzo già fatturato
+    progressive_billing_credit: Uso già fatturato
     quarter: trimestre
     quarterly: Trimestrale
+    reached_usage_threshold: Questa fatturazione progressiva è generata poiché il tuo utilizzo cumulato ha raggiunto %{usage_amount}, superando la soglia di %{threshold_amount}.
     see_breakdown: Vedere la ripartizione per l'unità totale
     sub_total: Subtotale
     sub_total_with_tax: Subtotale (incl. tasse)

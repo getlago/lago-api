@@ -54,6 +54,7 @@ es:
     progressive_billing_credit: Uso ya facturado
     quarter: trimestre
     quarterly: Trimestral
+    reached_usage_threshold: Esta facturación progresiva se genera porque su uso acumulado ha alcanzado los %{usage_amount}, superando el umbral de %{threshold_amount}.
     see_breakdown: Consulte el desglose a continuación
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (impuestos incl.)

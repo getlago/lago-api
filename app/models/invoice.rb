@@ -34,6 +34,9 @@ class Invoice < ApplicationRecord
   has_many :payment_requests, through: :applied_payment_requests
   has_many :payments, as: :payable
 
+  has_many :applied_usage_thresholds
+  has_many :usage_thresholds, through: :applied_usage_thresholds
+
   has_one_attached :file
 
   monetize :coupons_amount_cents,
