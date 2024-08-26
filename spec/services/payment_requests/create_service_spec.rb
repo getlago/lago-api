@@ -127,6 +127,14 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       expect(SendWebhookJob).to have_been_enqueued.with("payment_request.created", PaymentRequest)
     end
 
+    it "creates a payment for the payment request" do
+      allow(PaymentRequests::Payments::CreateService).to receive(:call)
+
+      result = create_service.call
+
+      expect(PaymentRequests::Payments::CreateService).to have_received(:call).with(result.payment_request)
+    end
+
     it "returns the payment request", :aggregate_failures do
       result = create_service.call
 
