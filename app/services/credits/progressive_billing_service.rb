@@ -17,7 +17,7 @@ module Credits
           .invoices
           .progressive_billing
           .finalized
-          .where(issuing_date: invoice_subscription.charges_from_datetime...invoice_subscription.charges_to_datetime)
+          .where(created_at: invoice_subscription.charges_from_datetime...invoice_subscription.charges_to_datetime)
           .order(issuing_date: :asc)
 
         total_subscription_amount = invoice.fees.charge.where(subscription: subscription).sum(:amount_cents)
@@ -65,7 +65,7 @@ module Credits
       invoice.invoice_subscriptions.any? do |invoice_subscription|
         invoice_subscription.subscription.invoices.progressive_billing
           .finalized
-          .where(issuing_date: invoice_subscription.charges_from_datetime...invoice_subscription.charges_to_datetime)
+          .where(created_at: invoice_subscription.charges_from_datetime...invoice_subscription.charges_to_datetime)
           .exists?
       end
     end

@@ -49,6 +49,7 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
         issuing_date: invoice.issuing_date - 1.day,
+        created_at: invoice.issuing_date - 1.day,
         fees_amount_cents: 20
       )
     end
@@ -84,6 +85,7 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
         issuing_date: invoice.issuing_date - 2.days,
+        created_at: invoice.issuing_date - 2.days,
         fees_amount_cents: 20
       )
     end
@@ -97,6 +99,7 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
         issuing_date: invoice.issuing_date - 1.day,
+        created_at: invoice.issuing_date - 1.day,
         fees_amount_cents: 200
       )
     end
@@ -134,6 +137,7 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
         issuing_date: invoice.issuing_date - 3.days,
+        created_at: invoice.issuing_date - 3.days,
         fees_amount_cents: 20
       )
     end
@@ -147,6 +151,7 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
         issuing_date: invoice.issuing_date - 2.days,
+        created_at: invoice.issuing_date - 2.days,
         fees_amount_cents: 1000
       )
     end
@@ -160,6 +165,7 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
         issuing_date: invoice.issuing_date - 1.day,
+        created_at: invoice.issuing_date - 1.day,
         fees_amount_cents: 200
       )
     end
@@ -220,6 +226,7 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         invoice_type: :progressive_billing,
         subscriptions: [subscription],
         issuing_date: invoice.issuing_date - 1.day,
+        created_at: invoice.issuing_date - 1.day,
         fees_amount_cents: 20
       )
     end
