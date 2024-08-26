@@ -17,7 +17,7 @@ module Invoices
         refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         if tax_error?(refresh_result.error)
           invoice.update!(issuing_date: drafted_issuing_date)
-          return result.validation_failure!(errors: {tax_error: [refresh_result.error.error_message]})
+          return refresh_result
         end
         refresh_result.raise_if_error!
 
@@ -76,7 +76,7 @@ module Invoices
     end
 
     def tax_error?(error)
-      error&.code == 'tax_error'
+      error&.messages&.dig(:tax_error)
     end
   end
 end
