@@ -94,11 +94,13 @@ module Plans
       )
 
       existing_recurring_threshold = plan.usage_thresholds.recurring.first
+
       if params[:recurring] && existing_recurring_threshold
         usage_threshold = existing_recurring_threshold
       end
 
       usage_threshold.threshold_display_name = params[:threshold_display_name]
+      usage_threshold.amount_cents = params[:amount_cents]
 
       usage_threshold.save!
       usage_threshold
