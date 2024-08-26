@@ -42,11 +42,14 @@ module PaymentRequests
           provider_payment_id: res.response['pspReference'],
           status: res.response['resultCode']
         )
-        payment.save!
 
-        payable_payment_status = payable_payment_status(payment.status)
-        update_payable_payment_status(payment_status: payable_payment_status)
-        update_invoices_payment_status(payment_status: payable_payment_status)
+        ActiveRecord::Base.transaction do
+          payment.save!
+
+          payable_payment_status = payable_payment_status(payment.status)
+          update_payable_payment_status(payment_status: payable_payment_status)
+          update_invoices_payment_status(payment_status: payable_payment_status)
+        end
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
 

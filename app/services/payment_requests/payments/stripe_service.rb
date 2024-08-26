@@ -40,17 +40,20 @@ module PaymentRequests
           provider_payment_id: stripe_result.id,
           status: stripe_result.status
         )
-        payment.save!
 
-        payable_payment_status = payable_payment_status(payment.status)
-        update_payable_payment_status(
-          payment_status: payable_payment_status,
-          processing: payment.status == 'processing'
-        )
-        update_invoices_payment_status(
-          payment_status: payable_payment_status,
-          processing: payment.status == 'processing'
-        )
+        ActiveRecord::Base.transaction do
+          payment.save!
+
+          payable_payment_status = payable_payment_status(payment.status)
+          update_payable_payment_status(
+            payment_status: payable_payment_status,
+            processing: payment.status == 'processing'
+          )
+          update_invoices_payment_status(
+            payment_status: payable_payment_status,
+            processing: payment.status == 'processing'
+          )
+        end
 
         result.payment = payment
         result
