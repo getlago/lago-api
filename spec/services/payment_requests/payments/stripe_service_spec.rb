@@ -365,4 +365,30 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       end
     end
   end
+
+  describe "#generate_payment_url" do
+    before do
+      stripe_payment_provider
+      stripe_customer
+
+      allow(Stripe::Checkout::Session).to receive(:create)
+        .and_return({"url" => "https://example.com"})
+    end
+
+    it "generates payment url" do
+      stripe_service.generate_payment_url
+
+      expect(Stripe::Checkout::Session).to have_received(:create)
+    end
+
+    context "when payment_request is payment_succeeded" do
+      before { payment_request.payment_succeeded! }
+
+      it "does not generate payment url" do
+        stripe_service.generate_payment_url
+
+        expect(Stripe::Checkout::Session).not_to have_received(:create)
+      end
+    end
+  end
 end
