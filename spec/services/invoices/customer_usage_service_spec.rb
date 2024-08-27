@@ -148,6 +148,18 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
         end
       end
 
+      it 'uses the Rails cache' do
+        key = [
+          'provider-taxes',
+          subscription.id,
+          plan.updated_at.iso8601
+        ].join('/')
+
+        expect do
+          usage_service.call
+        end.to change { Rails.cache.exist?(key) }.from(false).to(true)
+      end
+
       context 'when there is error received from the provider' do
         let(:body) do
           p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
