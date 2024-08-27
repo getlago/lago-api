@@ -115,14 +115,11 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     describe "#call" do
       it "applies one credit to the invoice" do
         result = credit_service.call
-        expect(result.credits.size).to eq(2)
-        first_credit = result.credits.find { |credit| credit.progressive_billing_invoice == progressive_billing_invoice }
-        expect(first_credit.amount_cents).to eq(20)
+        expect(result.credits.size).to eq(1)
+        sole_credit = result.credits.find { |credit| credit.progressive_billing_invoice == progressive_billing_invoice2 }
+        expect(sole_credit.amount_cents).to eq(200)
 
-        first_credit = result.credits.find { |credit| credit.progressive_billing_invoice == progressive_billing_invoice2 }
-        expect(first_credit.amount_cents).to eq(200)
-
-        expect(invoice.progressive_billing_credit_amount_cents).to eq(220)
+        expect(invoice.progressive_billing_credit_amount_cents).to eq(200)
       end
     end
   end
@@ -166,13 +163,13 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         subscriptions: [subscription],
         issuing_date: invoice.issuing_date - 1.day,
         created_at: invoice.issuing_date - 1.day,
-        fees_amount_cents: 200
+        fees_amount_cents: 2000
       )
     end
 
     let(:progressive_billing_fee) { create(:charge_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
     let(:progressive_billing_fee2) { create(:charge_fee, amount_cents: 1000, invoice: progressive_billing_invoice2) }
-    let(:progressive_billing_fee3) { create(:charge_fee, amount_cents: 200, invoice: progressive_billing_invoice3) }
+    let(:progressive_billing_fee3) { create(:charge_fee, amount_cents: 2000, invoice: progressive_billing_invoice3) }
 
     before do
       progressive_billing_fee
@@ -181,29 +178,23 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     end
 
     describe "#call" do
-      it "applies all the credits to the invoice" do
+      it "applies the last credit to the invoice" do
         result = credit_service.call
-        expect(result.credits.size).to eq(2)
-        first_credit = result.credits.find { |credit| credit.progressive_billing_invoice == progressive_billing_invoice }
-        expect(first_credit.amount_cents).to eq(20)
-
-        first_credit = result.credits.find { |credit| credit.progressive_billing_invoice == progressive_billing_invoice2 }
-        expect(first_credit.amount_cents).to eq(980)
+        expect(result.credits.size).to eq(1)
+        sole_credit = result.credits.find { |credit| credit.progressive_billing_invoice == progressive_billing_invoice3 }
+        expect(sole_credit.amount_cents).to eq(1000)
 
         expect(invoice.progressive_billing_credit_amount_cents).to eq(1000)
       end
 
       it "creates credit notes for the remainder of the progressive billed invoices" do
-        expect { credit_service.call }.to change(CreditNote, :count).by(2)
+        expect { credit_service.call }.to change(CreditNote, :count).by(1)
         # we were able to credit 1000 from the invoice, this means we've got 20 and 200 remaining respectively
         aggregate_failures do
-          expect(progressive_billing_invoice2.credit_notes.size).to eq(1)
           expect(progressive_billing_invoice3.credit_notes.size).to eq(1)
 
-          first = progressive_billing_invoice2.credit_notes.sole
-          expect(first.credit_amount_cents).to eq(20)
-          last = progressive_billing_invoice3.credit_notes.sole
-          expect(last.credit_amount_cents).to eq(200)
+          first = progressive_billing_invoice3.credit_notes.sole
+          expect(first.credit_amount_cents).to eq(1000)
         end
       end
     end

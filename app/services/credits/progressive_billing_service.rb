@@ -13,45 +13,41 @@ module Credits
 
       invoice.invoice_subscriptions.each do |invoice_subscription|
         subscription = invoice_subscription.subscription
-        progressive_billing_invoices = subscription
+        progressive_billing_invoice = subscription
           .invoices
           .progressive_billing
           .finalized
           .where(created_at: invoice_subscription.charges_from_datetime...invoice_subscription.charges_to_datetime)
-          .order(issuing_date: :asc)
+          .order(issuing_date: :desc).first
 
-        total_subscription_amount = invoice.fees.charge.where(subscription: subscription).sum(:amount_cents)
+        next unless progressive_billing_invoice
 
-        remaining_to_credit = total_subscription_amount
+        total_charges_amount = invoice.fees.charge.where(subscription: subscription).sum(:amount_cents)
 
-        progressive_billing_invoices.each do |progressive_billing_invoice|
-          amount_to_credit = progressive_billing_invoice.fees_amount_cents
+        amount_to_credit = progressive_billing_invoice.fees_amount_cents
 
-          if amount_to_credit > remaining_to_credit
-            CreditNotes::CreateFromProgressiveBillingInvoice.call(
-              progressive_billing_invoice:, amount: amount_to_credit - remaining_to_credit
-            ).raise_if_error!
+        if amount_to_credit > total_charges_amount
+          CreditNotes::CreateFromProgressiveBillingInvoice.call(
+            progressive_billing_invoice:, amount: amount_to_credit - total_charges_amount
+          ).raise_if_error!
 
-            amount_to_credit = remaining_to_credit
-          end
+          amount_to_credit = total_charges_amount
+        end
 
-          if amount_to_credit.positive?
-            credit = Credit.create!(
-              invoice:,
-              progressive_billing_invoice:,
-              amount_cents: amount_to_credit,
-              amount_currency: invoice.currency,
-              before_taxes: true
-            )
+        if amount_to_credit.positive?
+          credit = Credit.create!(
+            invoice:,
+            progressive_billing_invoice:,
+            amount_cents: amount_to_credit,
+            amount_currency: invoice.currency,
+            before_taxes: true
+          )
 
-            apply_credit_to_fees(credit)
+          apply_credit_to_fees(credit)
 
-            invoice.sub_total_excluding_taxes_amount_cents -= credit.amount_cents
-            invoice.progressive_billing_credit_amount_cents += credit.amount_cents
-            result.credits << credit
-
-            remaining_to_credit -= amount_to_credit
-          end
+          invoice.sub_total_excluding_taxes_amount_cents -= credit.amount_cents
+          invoice.progressive_billing_credit_amount_cents += credit.amount_cents
+          result.credits << credit
         end
       end
       result

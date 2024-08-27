@@ -17,7 +17,7 @@ module LifetimeUsages
         # There is only 1 recurring threshold, `first` will return it or nil
         recurring_threshold = thresholds.recurring.first
 
-        # Calculate the actual current usage, we need to substract the already billed progressive amount
+        # Calculate the actual current usage, we need to substract the already progressively billed amount
         # as we might be passing the recurring threshold multiple times per period
         actual_current_usage = lifetime_usage.current_usage_amount_cents - progressive_billed_amount
         # we can end up in a situation where this goes below zero, in that case no thresholds are passed

@@ -81,11 +81,9 @@ module Invoices
       subscription
         .plan
         .charges
-        .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .where(invoiceable: true)
         .where(pay_in_advance: false)
-        .where(billable_metrics: {recurring: false})
     end
 
     def boundaries

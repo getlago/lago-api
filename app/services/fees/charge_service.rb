@@ -17,7 +17,10 @@ module Fees
       return result if already_billed?
 
       init_fees
-      init_true_up_fee(fee: result.fees.first, amount_cents: result.fees.sum(&:amount_cents))
+
+      if invoice.nil? || !invoice.progressive_billing?
+        init_true_up_fee(fee: result.fees.first, amount_cents: result.fees.sum(&:amount_cents))
+      end
       return result unless result.success?
 
       ActiveRecord::Base.transaction do
