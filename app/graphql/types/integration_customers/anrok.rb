@@ -5,6 +5,7 @@ module Types
     class Anrok < Types::BaseObject
       graphql_name 'AnrokCustomer'
 
+      field :external_account_id, String, null: true
       field :external_customer_id, String, null: true
       field :id, ID, null: false
       field :integration_code, String, null: true
@@ -22,6 +23,14 @@ module Types
 
       def integration_code
         object.integration&.code
+      end
+
+      def external_account_id
+        api_key = object.integration.api_key
+
+        return nil unless api_key.include?('/')
+
+        api_key.split('/')[0]
       end
     end
   end
