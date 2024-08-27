@@ -160,7 +160,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             precise_unit_amount: 0.01111111111,
             taxes_rate: 10.0,
             taxes_amount_cents: 1
-         )
+          )
           expect(result.fees.first.applied_taxes.count).to eq(2)
         end
       end
