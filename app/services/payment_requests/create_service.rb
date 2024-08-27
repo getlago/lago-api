@@ -14,7 +14,6 @@ module PaymentRequests
       return result if result.error
 
       ActiveRecord::Base.transaction do
-        # NOTE: Create payment request for the payable group
         payment_request = customer.payment_requests.create!(
           organization:,
           amount_cents: invoices.sum(:total_amount_cents),
@@ -23,12 +22,10 @@ module PaymentRequests
           invoices:
         )
 
-        # NOTE: Send payment_request.created webhook
         SendWebhookJob.perform_later("payment_request.created", payment_request)
 
-        Payments::CreateService.call(payment_request)
-
-        # TODO: When payment provider is not set: Send email to the customer
+        payment_result = Payments::CreateService.call(payment_request)
+        PaymentRequestMailer.with(payment_request:).requested.deliver_later unless payment_result.success?
 
         result.payment_request = payment_request
       end

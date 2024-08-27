@@ -20,5 +20,19 @@ it:
         invoice_number: Numero Fattura
         issue_date: Data Emissione
         subject: 'La tua fattura da %{organization_name} #%{invoice_number}'
+    payment_request:
+      requested:
+        already_paid: Se hai già effettuato il pagamento, ti preghiamo di ignorare questa email.
+        hello: Ciao %{customer_name},
+        pay_amount: Paga il saldo
+        payment_terms:
+          one: I nostri termini di pagamento contrattualmente concordati sono %{count} giorno.
+          other: I nostri termini di pagamento contrattualmente concordati sono %{count} giorni.
+          zero: I nostri termini di pagamento contrattualmente concordati richiedono il pagamento al momento della generazione della fattura.
+        remaining_amount: Importo residuo da pagare
+        reminder_overdue_balance: Questo è un promemoria del team finanziario di %{organization_name} che alcune fatture sono in ritardo.
+        subject: Il tuo saldo in ritardo da %{organization_name}
+        thank_you: Grazie.
+        total_amount_due: L'importo totale dovuto è di %{amount}.
     powered_by: Elaborato da
     questions: Domande? Contattaci all'indirizzo

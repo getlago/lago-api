@@ -20,5 +20,19 @@ sv:
         invoice_number: Fakturanummer
         issue_date: Fakturadatum
         subject: 'Din faktura från %{organization_name} #%{invoice_number}'
+    payment_request:
+      requested:
+        already_paid: Om du redan har gjort betalningen, vänligen bortse från detta mejl.
+        hello: Hej %{customer_name},
+        pay_amount: Betala saldot
+        payment_terms:
+          one: Våra avtalsenliga betalningsvillkor är %{count} dag.
+          other: Våra avtalsenliga betalningsvillkor är %{count} dagar.
+          zero: Våra avtalsenliga betalningsvillkor kräver betalning vid fakturautställning.
+        remaining_amount: Återstående belopp att betala
+        reminder_overdue_balance: Detta är en påminnelse från ekonomiavdelningen på %{organization_name} om att vissa fakturor är förfallna.
+        subject: Din förfallna saldo från %{organization_name}
+        thank_you: Tack.
+        total_amount_due: Det totala förfallna beloppet är %{amount}.
     powered_by_lago: Powered by
     questions: Frågor? Kontakta oss på

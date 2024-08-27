@@ -20,5 +20,19 @@ nb:
         invoice_number: Fakturanummer
         issue_date: Dato
         subject: 'Faktura fra %{organization_name} #%{invoice_number}'
+    payment_request:
+      requested:
+        already_paid: Hvis du allerede har foretatt betalingen, vennligst se bort fra denne e-posten.
+        hello: Hei %{customer_name},
+        pay_amount: Betal saldoen
+        payment_terms:
+          one: Våre avtalte betalingsbetingelser er %{count} dag.
+          other: Våre avtalte betalingsbetingelser er %{count} dager.
+          zero: Våre avtalte betalingsbetingelser krever betaling ved fakturautstedelse.
+        remaining_amount: Gjenstående beløp å betale
+        reminder_overdue_balance: Dette er en påminnelse fra økonomiavdelingen i %{organization_name} om at noen fakturaer er forfalt.
+        subject: Din forfalte saldo fra %{organization_name}
+        thank_you: Takk.
+        total_amount_due: Totalbeløpet som forfaller er %{amount}.
     powered_by: Fakturering drevet av
     questions: Har du spørsmål? Kontakt oss på

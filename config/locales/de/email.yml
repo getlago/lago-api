@@ -20,5 +20,19 @@ de:
         invoice_number: Rechnungsnummer
         issue_date: Ausstellungsdatum
         subject: 'Deine Rechnung von %{organization_name} #%{invoice_number}'
+    payment_request:
+      requested:
+        already_paid: Wenn Sie die Zahlung bereits vorgenommen haben, ignorieren Sie bitte diese E-Mail.
+        hello: Hallo %{customer_name},
+        pay_amount": Restbetrag bezahlen
+        payment_terms:
+          one: Unsere vertraglich vereinbarten Zahlungsbedingungen sind %{count} Tag.
+          other: Unsere vertraglich vereinbarten Zahlungsbedingungen sind %{count} Tage.
+          zero: Unsere vertraglich vereinbarten Zahlungsbedingungen erfordern die Zahlung bei Rechnungserstellung.
+        remaining_amount: Restbetrag zu zahlen
+        reminder_overdue_balance: Dies ist eine Erinnerung des Finanzteams von %{organization_name}, dass einige Rechnungen überfällig sind.
+        subject: Ihr überfälliger Saldo von %{organization_name}
+        thank_you: Danke.
+        total_amount_due: Der insgesamt fällige Betrag beträgt %{amount}.
     powered_by: Bereitgestellt von
     questions: Fragen? Kontaktiere uns unter

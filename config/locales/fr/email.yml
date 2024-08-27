@@ -20,5 +20,19 @@ fr:
         invoice_number: Nº de facture
         issue_date: Date d'émission
         subject: Votre facture nº %{invoice_number} de %{organization_name}
+    payment_request:
+      requested:
+        already_paid: Si vous avez déjà effectué le paiement, veuillez ignorer cet e-mail.
+        hello: Bonjour %{customer_name},
+        pay_amount: Payer le solde
+        payment_terms:
+          one: Nos conditions de paiement convenues contractuellement sont de %{count} jour.
+          other: Nos conditions de paiement convenues contractuellement sont de %{count} jours.
+          zero: Nos conditions de paiement définies contractuellement exigent le paiement à la création de la facture.
+        remaining_amount: Montant restant à payer
+        reminder_overdue_balance: Ceci est un rappel de l'équipe financière de %{organization_name} que certaines de vos factures sont en retard.
+        subject: Votre solde impayé pour %{organization_name}
+        thank_you: Merci.
+        total_amount_due: Le montant total dû est de %{amount}.
     powered_by: Généré par
     questions: Questions? Contactez nous à
