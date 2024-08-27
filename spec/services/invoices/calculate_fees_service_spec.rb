@@ -141,6 +141,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         before do
           progressive_invoice
           progressive_fee
+          progressive_invoice.invoice_subscriptions.first.update!(
+            charges_from_datetime: progressive_invoice.issuing_date - 2.weeks,
+            charges_to_datetime: progressive_invoice.issuing_date + 2.weeks,
+            timestamp: progressive_invoice.issuing_date
+          )
         end
 
         it "creates a credit note for the amount that was billed too much" do

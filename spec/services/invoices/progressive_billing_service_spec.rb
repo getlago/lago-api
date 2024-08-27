@@ -121,6 +121,11 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
           invoice:,
           amount_cents: 20
         )
+        invoice.invoice_subscriptions.first.update!(
+          charges_from_datetime: invoice.issuing_date - 2.weeks,
+          charges_to_datetime: invoice.issuing_date + 2.weeks,
+          timestamp: invoice.issuing_date
+        )
       end
 
       it 'creates a progressive billing invoice', aggregate_failures: true do

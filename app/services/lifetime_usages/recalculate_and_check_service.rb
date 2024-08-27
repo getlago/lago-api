@@ -28,13 +28,8 @@ module LifetimeUsages
     delegate :subscription, to: :lifetime_usage
 
     def progressive_billed_amount
-      invoice_subscription = InvoiceSubscription.where("charges_to_datetime > ?", Time.current)
-        .joins(:invoice)
-        .merge(Invoice.progressive_billing)
-        .order("invoices.issuing_date" => :desc).first
-
-      return 0 unless invoice_subscription
-      invoice_subscription.invoice.fees_amount_cents
+      result = Subscriptions::ProgressiveBilledAmount.call(subscription:).raise_if_error!
+      result.progressive_billed_amount
     end
   end
 end
