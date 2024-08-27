@@ -9,7 +9,7 @@ development:
     password: changeme
     database: lago
     port: 5432
-    schema_search_path: "public"
+    schema_search_path: 'public'
   events:
     <<: *default
     host: db
@@ -53,9 +53,11 @@ staging:
   primary:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
   events:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
     database_tasks: false
   clickhouse:
     adapter: clickhouse
