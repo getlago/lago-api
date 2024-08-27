@@ -12,10 +12,10 @@ module PaymentRequests
           case payment_provider&.to_s
           when 'stripe'
             PaymentRequests::Payments::StripeService
-           when 'adyen'
-             PaymentRequests::Payments::AdyenService
-           when 'gocardless'
-             PaymentRequests::Payments::GocardlessService
+          when 'adyen'
+            PaymentRequests::Payments::AdyenService
+          when 'gocardless'
+            PaymentRequests::Payments::GocardlessService
           else
             raise(NotImplementedError)
           end
