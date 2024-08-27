@@ -30,7 +30,7 @@ module Types
       end
 
       def failed_invoices_count
-        object.error_details.where(owner_type: 'Invoice').kept.count
+        Invoice.where(id: object.error_details.where(owner_type: 'Invoice').select(:owner_id)).failed.count
       end
     end
   end
