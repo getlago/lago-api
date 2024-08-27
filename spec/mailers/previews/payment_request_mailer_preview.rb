@@ -2,7 +2,7 @@
 
 class PaymentRequestMailerPreview < BasePreviewMailer
   def requested
-    payment_request = FactoryBot.create(:payment_request)
+    payment_request = FactoryBot.create(:payment_request, amount_cents: 3000)
     first_invoice = FactoryBot.create(:invoice, total_amount_cents: 1000)
     second_invoice = FactoryBot.create(:invoice, total_amount_cents: 2000)
 

@@ -21,6 +21,8 @@ class PaymentRequest < ApplicationRecord
   alias_attribute :total_amount_cents, :amount_cents
   alias_attribute :currency, :amount_currency
 
+  monetize :amount_cents
+
   def invoice_ids
     applied_invoices.pluck(:invoice_id)
   end
