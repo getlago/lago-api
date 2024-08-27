@@ -20,6 +20,8 @@ module PaymentRequests
         when :stripe
           PaymentRequests::Payments::StripeCreateJob.perform_later(payable)
         end
+
+        result
       rescue ActiveJob::Uniqueness::JobNotUnique => e
         Sentry.capture_exception(e)
       end
