@@ -26,7 +26,8 @@ module PaymentRequests
         # NOTE: Send payment_request.created webhook
         SendWebhookJob.perform_later("payment_request.created", payment_request)
 
-        # TODO: When payment provider is set: Create payment intent for the overdue invoices
+        Payments::CreateService.call(payment_request)
+
         # TODO: When payment provider is not set: Send email to the customer
 
         result.payment_request = payment_request

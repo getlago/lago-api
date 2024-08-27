@@ -19,7 +19,7 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory, type: :serv
     context 'when adyen' do
       let(:payment_provider) { 'adyen' }
 
-      xit 'returns correct class' do
+      it 'returns correct class' do
         expect(factory_service.class.to_s).to eq('PaymentRequests::Payments::AdyenService')
       end
     end
@@ -27,7 +27,7 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory, type: :serv
     context 'when gocardless' do
       let(:payment_provider) { 'gocardless' }
 
-      xit 'returns correct class' do
+      it 'returns correct class' do
         expect(factory_service.class.to_s).to eq('PaymentRequests::Payments::GocardlessService')
       end
     end
