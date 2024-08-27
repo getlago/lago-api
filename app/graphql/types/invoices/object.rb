@@ -71,7 +71,7 @@ module Types
       end
 
       def tax_provider_voidable
-        return false unless object.voided?
+        return false if !object.voided? && !object.payment_dispute_lost_at
 
         object.error_details.tax_voiding_error.any?
       end
