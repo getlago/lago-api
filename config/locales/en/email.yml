@@ -31,5 +31,20 @@ en:
         subject: 'Your Invoice from %{organization_name} #%{invoice_number}'
     password_reset:
       subject: Reset your Lago password
+    payment_request:
+      requested:
+        already_paid: If you have already made the payment, please disregard this email.
+        hello: Hello %{customer_name},
+        pay_amount: Pay balance
+        payment_terms:
+          one: Our contractually agreed payment terms is %{count} day.
+          other: Our contractually agreed payment terms are %{count} days.
+          zero: Our contractually agreed payment terms require payment upon invoice generation.
+        remaining_amount: Remaining amount to pay
+        reminder_overdue_balance: This is a reminder from the %{organization_name} finance team that some invoices are overdue.
+        subject: Your overdue balance from %{organization_name}
+        thank_you: Thank you.
+        total_amount_due: The total amount due is %{amount}.
+        upon_invoice_generation: Our contractually agreed payment terms require payment upon invoice generation.
     powered_by: Powered by
     questions: Questions? Contact us at

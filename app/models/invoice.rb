@@ -424,7 +424,6 @@ end
 #  file                                    :string
 #  invoice_type                            :integer          default("subscription"), not null
 #  issuing_date                            :date
-#  negative_amount_cents                   :bigint           default(0), not null
 #  net_payment_term                        :integer          default(0), not null
 #  number                                  :string           default(""), not null
 #  payment_attempts                        :integer          default(0), not null

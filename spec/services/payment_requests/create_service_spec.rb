@@ -128,11 +128,21 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     end
 
     it "creates a payment for the payment request" do
-      allow(PaymentRequests::Payments::CreateService).to receive(:call)
+      allow(PaymentRequests::Payments::CreateService).to receive(:call).and_call_original
 
       result = create_service.call
 
       expect(PaymentRequests::Payments::CreateService).to have_received(:call).with(result.payment_request)
+    end
+
+    context "when Payments::CreateService returns an error" do
+      before { customer.update!(payment_provider: nil) }
+
+      it "sends an email to the customer" do
+        expect do
+          create_service.call
+        end.to have_enqueued_job(SendEmailJob)
+      end
     end
 
     it "returns the payment request", :aggregate_failures do

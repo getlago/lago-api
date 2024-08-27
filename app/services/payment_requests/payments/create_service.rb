@@ -10,6 +10,8 @@ module PaymentRequests
       end
 
       def call
+        return result.not_found_failure!(resource: "payment_provider") unless payment_provider
+
         case payment_provider
         when :adyen
           PaymentRequests::Payments::AdyenCreateJob.perform_later(payable)
@@ -18,8 +20,6 @@ module PaymentRequests
         when :stripe
           PaymentRequests::Payments::StripeCreateJob.perform_later(payable)
         end
-      # TODO: Do something when no payment provider is set
-      #       or leave it to the caller
       rescue ActiveJob::Uniqueness::JobNotUnique => e
         Sentry.capture_exception(e)
       end

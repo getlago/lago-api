@@ -47,7 +47,7 @@ module Api
         params.require(:payment_request).permit(
           :email,
           :external_customer_id,
-          :lago_invoice_ids
+          lago_invoice_ids: []
         )
       end
 
