@@ -190,6 +190,41 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         end
       end
 
+      context 'when it is a server payload error' do
+        let(:error_code) { Faker::Number.between(from: 500, to: 599) }
+        let(:code) { 'TypeError' }
+        let(:message) { 'Please enter value(s) for: Company Name' }
+
+        let(:body) do
+          path = Rails.root.join('spec/fixtures/integration_aggregator/error_payload_response.json')
+          File.read(path)
+        end
+
+        it 'returns an error' do
+          result = service_call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error.code).to eq(code)
+            expect(result.error.message).to eq("#{code}: #{message}")
+          end
+        end
+
+        it 'delivers an error webhook' do
+          expect { service_call }.to enqueue_job(SendWebhookJob)
+            .with(
+              'customer.accounting_provider_error',
+              customer,
+              provider: 'netsuite',
+              provider_code: integration.code,
+              provider_error: {
+                message:,
+                error_code: code
+              }
+            )
+        end
+      end
+
       context 'when it is a client error' do
         let(:error_code) { 404 }
         let(:code) { 'invalid_secret_key_format' }
