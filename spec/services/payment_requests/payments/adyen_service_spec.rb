@@ -276,6 +276,41 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
     end
   end
 
+  describe "#generate_payment_url" do
+    let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
+    let(:payment_links_response) { generate(:adyen_payment_links_response) }
+
+    before do
+      adyen_payment_provider
+      adyen_customer
+
+      allow(Adyen::Client).to receive(:new)
+        .and_return(adyen_client)
+      allow(adyen_client).to receive(:checkout)
+        .and_return(checkout)
+      allow(checkout).to receive(:payment_links_api)
+        .and_return(payment_links_api)
+      allow(payment_links_api).to receive(:payment_links)
+        .and_return(payment_links_response)
+    end
+
+    it "generates payment url" do
+      adyen_service.generate_payment_url
+
+      expect(payment_links_api).to have_received(:payment_links)
+    end
+
+    context "when payment request is payment_succeeded" do
+      before { payment_request.payment_succeeded! }
+
+      it "does not generate payment url" do
+        adyen_service.generate_payment_url
+
+        expect(payment_links_api).not_to have_received(:payment_links)
+      end
+    end
+  end
+
   describe "#payment_method_params" do
     subject(:payment_method_params) { adyen_service.__send__(:payment_method_params) }
 
