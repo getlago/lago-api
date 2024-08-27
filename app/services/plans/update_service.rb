@@ -194,9 +194,15 @@ module Plans
             usage_threshold.recurring = payload_threshold[:recurring]
           end
 
-          usage_threshold.save!
-
-          next
+          # This means that in the UI we just removed an existing threshold
+          # and then just re-added a threshold (which no longer has an id) with the same amount
+          # so we discard the existing one and we're inserting a new one instead
+          if !usage_threshold.valid? && usage_threshold.errors.where(:amount_cents, :taken).present?
+            usage_threshold.discard!
+          else
+            usage_threshold.save!
+            next
+          end
         end
 
         plan = plan.reload
