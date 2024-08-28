@@ -35,6 +35,18 @@ RSpec.describe BillSubscriptionJob, type: :job do
       expect(Invoices::SubscriptionService).to have_received(:call)
     end
 
+    context 'when there is tax error' do
+      let(:result) do
+        BaseService::Result.new.validation_failure!(errors: {tax_error: ['invalidMapping']})
+      end
+
+      it 'does not throw an error' do
+        expect do
+          described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
+        end.not_to raise_error
+      end
+    end
+
     context 'with a previously created invoice' do
       let(:invoice) { create(:invoice, :generating) }
 
