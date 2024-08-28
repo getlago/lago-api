@@ -30,7 +30,8 @@ module Types
       end
 
       def failed_invoices_count
-        object.error_details.where(owner_type: 'Invoice').kept.count
+        Invoice.where(organization_id: object.organization_id, status: 'failed')
+          .joins(:error_details).where(error_details: {error_code: 'tax_error'}).count
       end
     end
   end
