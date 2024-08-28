@@ -10,7 +10,13 @@ module Api
         )
 
         if result.success?
-          render(json: ::V1::PaymentRequestSerializer.new(result.payment_request, root_name: "payment_request"))
+          render(
+            json: ::V1::PaymentRequestSerializer.new(
+              result.payment_request,
+              root_name: "payment_request",
+              includes: %i[customer invoices]
+            )
+          )
         else
           render_error_response(result)
         end
