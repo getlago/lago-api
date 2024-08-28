@@ -5504,6 +5504,7 @@ type PaymentRequest {
   email: String!
   id: ID!
   invoices: [Invoice!]!
+  paymentStatus: InvoicePaymentStatusTypeEnum!
   updatedAt: ISO8601DateTime!
 }
 

@@ -11,6 +11,7 @@ module Types
       field :amount_currency, Types::CurrencyEnum, null: false
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :email, String, null: false
+      field :payment_status, Types::Invoices::PaymentStatusTypeEnum, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :customer, Types::Customers::Object, null: false
