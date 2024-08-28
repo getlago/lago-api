@@ -473,4 +473,32 @@ RSpec.describe SendWebhookJob, type: :job do
       expect(webhook_service).to have_received(:call)
     end
   end
+
+  context 'when webhook_type is payment_request.payment_failure' do
+    let(:webhook_service) { instance_double(Webhooks::PaymentProviders::PaymentRequestPaymentFailureService) }
+    let(:payment_request) { create(:payment_request) }
+    let(:webhook_options) do
+      {
+        provider_error: {
+          message: 'message',
+          error_code: 'code'
+        }
+      }
+    end
+
+    before do
+      allow(Webhooks::PaymentProviders::PaymentRequestPaymentFailureService)
+        .to receive(:new)
+        .with(object: payment_request, options: webhook_options)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook payment_request_payment_failure service' do
+      send_webhook_job.perform_now('payment_request.payment_failure', payment_request, webhook_options)
+
+      expect(Webhooks::PaymentProviders::PaymentRequestPaymentFailureService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
 end
