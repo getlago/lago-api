@@ -129,4 +129,34 @@ RSpec.describe Mutations::Integrations::Anrok::FetchDraftInvoiceTaxes, type: :gr
       expect(breakdown2['type']).to eq('exempt')
     end
   end
+
+  context 'when there is tax error' do
+    let(:body) do
+      path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+      File.read(path)
+    end
+
+    it 'returns validation error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            currency:,
+            fees:
+          }
+        }
+      )
+
+      response = result['errors'].first['extensions']
+
+      aggregate_failures do
+        expect(response['status']).to eq(422)
+        expect(response['details']['taxError']).to include('taxDateTooFarInFuture')
+      end
+    end
+  end
 end
