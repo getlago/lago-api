@@ -133,6 +133,7 @@ type AnrokBreakdownObject {
 }
 
 type AnrokCustomer {
+  externalAccountId: String
   externalCustomerId: String
   id: ID!
   integrationCode: String

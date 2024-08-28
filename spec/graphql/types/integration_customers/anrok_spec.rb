@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Types::IntegrationCustomers::Anrok do
   subject { described_class }
 
+  it { is_expected.to have_field(:external_account_id).of_type('String') }
   it { is_expected.to have_field(:external_customer_id).of_type('String') }
   it { is_expected.to have_field(:id).of_type('ID!') }
   it { is_expected.to have_field(:integration_type).of_type('IntegrationTypeEnum') }

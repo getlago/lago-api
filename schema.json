@@ -996,6 +996,20 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "externalAccountId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "externalCustomerId",
               "description": null,
               "type": {
