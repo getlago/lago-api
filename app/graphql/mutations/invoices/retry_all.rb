@@ -16,7 +16,7 @@ module Mutations
       def resolve
         result = ::Invoices::RetryBatchService.new(organization: current_organization).call_async
 
-        result.success? ? result.invoices : result_error(result)
+        result.success? ? Kaminari.paginate_array(result.invoices) : result_error(result)
       end
     end
   end
