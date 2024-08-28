@@ -57,6 +57,25 @@ module PaymentRequests
         result
       end
 
+      def generate_payment_url
+        return result unless should_process_payment?
+
+        result_url = client.checkout.payment_links_api.payment_links(
+          Lago::Adyen::Params.new(payment_url_params).to_h
+        )
+
+        adyen_success, adyen_error = handle_adyen_response(result_url)
+        return result.service_failure!(code: adyen_error.code, message: adyen_error.msg) unless adyen_success
+
+        result.payment_url = result_url.response['url']
+
+        result
+      rescue Adyen::AdyenError => e
+        deliver_error_webhook(e)
+
+        result.service_failure!(code: e.code, message: e.msg)
+      end
+
       private
 
       attr_accessor :payable
@@ -118,7 +137,7 @@ module PaymentRequests
             currency: payable.currency.upcase,
             value: payable.total_amount_cents
           },
-          reference: payable.id,
+          reference: payable.id, # TODO: invoice.number,
           paymentMethod: {
             type: 'scheme',
             storedPaymentMethodId: customer.adyen_customer.payment_method_id
@@ -130,6 +149,34 @@ module PaymentRequests
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms
+      end
+
+      def payment_url_params
+        prms = {
+          reference: payable.id, # TODO: invoice.number,
+          amount: {
+            value: payable.total_amount_cents,
+            currency: payable.currency.upcase
+          },
+          merchantAccount: adyen_payment_provider.merchant_account,
+          returnUrl: success_redirect_url,
+          shopperReference: customer.external_id,
+          storePaymentMethodMode: 'enabled',
+          recurringProcessingModel: 'UnscheduledCardOnFile',
+          expiresAt: Time.current + 1.day, # TODO: what should we do with the expiration?
+          metadata: {
+            lago_customer_id: customer.id,
+            lago_payment_request_id: payable.id,
+            lago_invoice_ids: payable.invoice_ids,
+            payment_type: 'one-time'
+          }
+        }
+        prms[:shopperEmail] = customer.email if customer.email
+        prms
+      end
+
+      def success_redirect_url
+        adyen_payment_provider.success_redirect_url.presence || ::PaymentProviders::AdyenProvider::SUCCESS_REDIRECT_URL
       end
 
       def payable_payment_status(payment_status)

@@ -72,6 +72,25 @@ module PaymentRequests
         raise
       end
 
+      def generate_payment_url
+        return result unless should_process_payment?
+
+        result_url = Stripe::Checkout::Session.create(
+          payment_url_payload,
+          {
+            api_key: stripe_api_key
+          }
+        )
+
+        result.payment_url = result_url['url']
+
+        result
+      rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::AuthenticationError, Stripe::PermissionError => e
+        deliver_error_webhook(e)
+
+        result.single_validation_failure!(error_code: 'payment_provider_error')
+      end
+
       private
 
       attr_accessor :payable
@@ -203,6 +222,36 @@ module PaymentRequests
             webhook_notification: deliver_webhook
           ).raise_if_error!
         end
+      end
+
+      def payment_url_payload
+        {
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency: payable.currency.downcase,
+                unit_amount: payable.total_amount_cents,
+                product_data: {
+                  name: payable.id # TODO: invoice.number
+                }
+              }
+            }
+          ],
+          mode: 'payment',
+          success_url: success_redirect_url,
+          customer: customer.stripe_customer.provider_customer_id,
+          payment_method_types: customer.stripe_customer.provider_payment_methods,
+          payment_intent_data: {
+            description:,
+            metadata: {
+              lago_customer_id: customer.id,
+              lago_payment_request_id: payable.id,
+              lago_invoice_ids: payable.invoice_ids,
+              payment_type: 'one-time'
+            }
+          }
+        }
       end
 
       def deliver_error_webhook(stripe_error)
