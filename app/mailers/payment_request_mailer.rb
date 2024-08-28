@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PaymentRequestMailer < ApplicationMailer
+  before_action :ensure_invoices_pdf
+
   def requested
     @payment_request = params[:payment_request]
     @organization = @payment_request.organization
@@ -17,6 +19,14 @@ class PaymentRequestMailer < ApplicationMailer
           organization_name: @organization.name
         )
       )
+    end
+  end
+
+  private
+
+  def ensure_invoices_pdf
+    params[:payment_request].invoices.each do |invoice|
+      Invoices::GeneratePdfService.new(invoice:).call
     end
   end
 end
