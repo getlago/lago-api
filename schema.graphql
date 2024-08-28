@@ -4071,6 +4071,7 @@ type InvoiceAppliedTax implements AppliedTax {
   amountCurrency: CurrencyEnum!
   appliedOnWholeInvoice: Boolean!
   createdAt: ISO8601DateTime!
+  enumedTaxCode: InvoiceAppliedTaxOnWholeInvoiceCodeEnum
   feesAmountCents: BigInt!
   id: ID!
   invoice: Invoice!
@@ -4080,6 +4081,14 @@ type InvoiceAppliedTax implements AppliedTax {
   taxName: String!
   taxRate: Float!
   updatedAt: ISO8601DateTime!
+}
+
+enum InvoiceAppliedTaxOnWholeInvoiceCodeEnum {
+  customer_exempt
+  juris_not_taxed
+  not_collecting
+  reverse_charge
+  transaction_exempt
 }
 
 """
