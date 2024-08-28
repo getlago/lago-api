@@ -9,7 +9,7 @@ module PaymentRequests
       end
 
       def call_async
-        SendWebhookJob.perform_later('payment_request.payment_failure', payment_request, params)
+        SendWebhookJob.perform_later("payment_request.payment_failure", payment_request, params)
 
         result
       end
