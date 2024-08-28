@@ -11,7 +11,7 @@ module Webhooks
         end
 
         def object_serializer
-          ::V1::Integrations::CustomerErrorSerializer.new(
+          ::V1::Integrations::Taxes::CustomerErrorSerializer.new(
             object,
             root_name: object_type,
             provider_error: options[:provider_error],
