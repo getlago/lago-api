@@ -7,15 +7,17 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
 
   describe "create" do
     let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:) }
     let(:params) do
       {
         email: customer.email,
-        external_customer_id: customer.external_id
+        external_customer_id: customer.external_id,
+        lago_invoice_ids: [invoice.id]
       }
     end
 
     it "delegates to PaymentRequests::CreateService", :aggregate_failures do
-      payment_request = create(:payment_request)
+      payment_request = create(:payment_request, invoices: [invoice], customer:)
       allow(PaymentRequests::CreateService).to receive(:call).and_return(
         BaseService::Result.new.tap { |r| r.payment_request = payment_request }
       )
@@ -26,12 +28,15 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
         organization:,
         params: {
           email: customer.email,
-          external_customer_id: customer.external_id
+          external_customer_id: customer.external_id,
+          lago_invoice_ids: [invoice.id]
         }
       )
 
       expect(response).to have_http_status(:success)
       expect(json[:payment_request][:lago_id]).to eq(payment_request.id)
+      expect(json[:payment_request][:invoices].map { |i| i[:lago_id] }).to contain_exactly(invoice.id)
+      expect(json[:payment_request][:customer][:lago_id]).to eq(customer.id)
     end
   end
 
