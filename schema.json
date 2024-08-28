@@ -19338,6 +19338,20 @@
               ]
             },
             {
+              "name": "enumedTaxCode",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "InvoiceAppliedTaxOnWholeInvoiceCodeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "feesAmountCents",
               "description": null,
               "type": {
@@ -19498,6 +19512,47 @@
           ],
           "inputFields": null,
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "InvoiceAppliedTaxOnWholeInvoiceCodeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "not_collecting",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "juris_not_taxed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "reverse_charge",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customer_exempt",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "transaction_exempt",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "OBJECT",
