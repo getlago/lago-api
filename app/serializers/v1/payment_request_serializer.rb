@@ -8,6 +8,7 @@ module V1
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
         email: model.email,
+        payment_status: model.payment_status,
         created_at: model.created_at.iso8601
       }
 
