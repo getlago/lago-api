@@ -6,6 +6,8 @@ module Types
       class BreakdownObject < Types::BaseObject
         graphql_name 'AnrokBreakdownObject'
 
+        # we need to show how this tax will behave when invoice is generated - will it be applied
+        # on whole invoice specific rule or just a normal tax
         field :enumed_tax_code, Types::Invoices::AppliedTaxes::WholeInvoiceApplicableTaxCodeEnum, null: true
         field :name, String, null: true
         field :rate, GraphQL::Types::Float, null: true
