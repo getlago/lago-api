@@ -8,6 +8,18 @@ class AppliedUsageThreshold < ApplicationRecord
 
   monetize :lifetime_usage_amount_cents,
     with_currency: ->(applied_usage_threshold) { applied_usage_threshold.invoice.currency }
+
+  monetize :passed_threshold_amount_cents,
+    disable_validation: true,
+    with_currency: ->(applied_usage_threshold) { applied_usage_threshold.invoice.currency }
+
+  def passed_threshold_amount_cents
+    if usage_threshold.recurring?
+      lifetime_usage_amount_cents - (lifetime_usage_amount_cents % usage_threshold.amount_cents)
+    else
+      usage_threshold.amount_cents
+    end
+  end
 end
 
 # == Schema Information

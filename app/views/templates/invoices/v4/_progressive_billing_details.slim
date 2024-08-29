@@ -43,10 +43,11 @@
 / Total section
 .invoice-resume.overflow-auto
   table.total-table width="100%"
-    tr
-      td.body-2
-      td.body-2 = I18n.t('invoice.progressive_billing_credit')
-      td.body-2 = '-' + MoneyHelper.format(progressive_billing_credit_amount)
+    - if progressive_billing_credit_amount.positive?
+      tr
+        td.body-2
+        td.body-2 = I18n.t('invoice.progressive_billing_credit')
+        td.body-2 = '-' + MoneyHelper.format(progressive_billing_credit_amount)
 
     - if coupons_amount_cents.positive?
       - credits.coupon_kind.order(created_at: :asc).each do |credit|

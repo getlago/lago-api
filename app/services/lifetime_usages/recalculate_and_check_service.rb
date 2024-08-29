@@ -28,10 +28,8 @@ module LifetimeUsages
     delegate :subscription, to: :lifetime_usage
 
     def progressive_billed_amount
-      subscription.invoices
-        .finalized
-        .progressive_billing
-        .sum(:fees_amount_cents)
+      result = Subscriptions::ProgressiveBilledAmount.call(subscription:).raise_if_error!
+      result.progressive_billed_amount
     end
   end
 end
