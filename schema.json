@@ -1767,13 +1767,9 @@
               "name": "tax",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "Tax",
-                  "ofType": null
-                }
+                "kind": "OBJECT",
+                "name": "Tax",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -9663,13 +9659,9 @@
               "name": "tax",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "Tax",
-                  "ofType": null
-                }
+                "kind": "OBJECT",
+                "name": "Tax",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -16214,13 +16206,9 @@
               "name": "tax",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "Tax",
-                  "ofType": null
-                }
+                "kind": "OBJECT",
+                "name": "Tax",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -19415,13 +19403,9 @@
               "name": "tax",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "Tax",
-                  "ofType": null
-                }
+                "kind": "OBJECT",
+                "name": "Tax",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
