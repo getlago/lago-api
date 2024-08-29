@@ -927,6 +927,20 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "enumedTaxCode",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "InvoiceAppliedTaxOnWholeInvoiceCodeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "name",
               "description": null,
               "type": {
