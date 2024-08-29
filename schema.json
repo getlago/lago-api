@@ -29864,6 +29864,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "customerId",
+                  "description": "Uniq ID of the customer",
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "invoiceType",
                   "description": null,
                   "type": {

@@ -11,6 +11,7 @@ module Resolvers
 
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
+    argument :customer_id, ID, required: false, description: 'Uniq ID of the customer'
     argument :invoice_type, [Types::Invoices::InvoiceTypeEnum], required: false
     argument :issuing_date_from, GraphQL::Types::ISO8601Date, required: false
     argument :issuing_date_to, GraphQL::Types::ISO8601Date, required: false
@@ -27,6 +28,7 @@ module Resolvers
     def resolve( # rubocop:disable Metrics/ParameterLists
       currency: nil,
       customer_external_id: nil,
+      customer_id: nil,
       invoice_type: nil,
       issuing_date_from: nil,
       issuing_date_to: nil,
@@ -49,6 +51,7 @@ module Resolvers
           status:,
           currency:,
           customer_external_id:,
+          customer_id:,
           invoice_type:,
           issuing_date_from:,
           issuing_date_to:
