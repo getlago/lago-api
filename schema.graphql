@@ -202,7 +202,7 @@ interface AppliedTax {
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
   id: ID!
-  tax: Tax!
+  tax: Tax
   taxCode: String!
   taxDescription: String
   taxName: String!
@@ -2210,7 +2210,7 @@ type CreditNoteAppliedTax implements AppliedTax {
   createdAt: ISO8601DateTime!
   creditNote: CreditNote!
   id: ID!
-  tax: Tax!
+  tax: Tax
   taxCode: String!
   taxDescription: String
   taxName: String!
@@ -3668,7 +3668,7 @@ type FeeAppliedTax implements AppliedTax {
   createdAt: ISO8601DateTime!
   fee: Fee!
   id: ID!
-  tax: Tax!
+  tax: Tax
   taxCode: String!
   taxDescription: String
   taxName: String!
@@ -4076,7 +4076,7 @@ type InvoiceAppliedTax implements AppliedTax {
   feesAmountCents: BigInt!
   id: ID!
   invoice: Invoice!
-  tax: Tax!
+  tax: Tax
   taxCode: String!
   taxDescription: String
   taxName: String!

@@ -7,7 +7,7 @@ module Types
 
       field :id, ID, null: false
 
-      field :tax, Types::Taxes::Object, null: false
+      field :tax, Types::Taxes::Object, null: true
       field :tax_code, String, null: false
       field :tax_description, String, null: true
       field :tax_name, String, null: false
