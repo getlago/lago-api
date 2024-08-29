@@ -15,17 +15,18 @@ end
 #
 # Table name: fees_taxes
 #
-#  id              :uuid             not null, primary key
-#  amount_cents    :bigint           default(0), not null
-#  amount_currency :string           not null
-#  tax_code        :string           not null
-#  tax_description :string
-#  tax_name        :string           not null
-#  tax_rate        :float            default(0.0), not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  fee_id          :uuid             not null
-#  tax_id          :uuid
+#  id                   :uuid             not null, primary key
+#  amount_cents         :bigint           default(0), not null
+#  amount_currency      :string           not null
+#  precise_amount_cents :decimal(40, 15)  default(0.0), not null
+#  tax_code             :string           not null
+#  tax_description      :string
+#  tax_name             :string           not null
+#  tax_rate             :float            default(0.0), not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  fee_id               :uuid             not null
+#  tax_id               :uuid
 #
 # Indexes
 #

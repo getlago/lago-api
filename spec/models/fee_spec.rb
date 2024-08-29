@@ -326,6 +326,26 @@ RSpec.describe Fee, type: :model do
     it { expect(fee.total_amount_currency).to eq('EUR') }
   end
 
+  describe '#precise_total_amount_cents' do
+    subject(:method_call) { fee.precise_total_amount_cents }
+
+    let(:fee) { create(:fee, precise_amount_cents: 200.0000000123, taxes_precise_amount_cents: 20.00000000012) }
+
+    it 'returns sum of precise amount cents and taxes precise amount cents' do
+      expect(subject).to eq(220.00000001242)
+    end
+  end
+
+  describe '#sub_total_excluding_taxes_precise_amount_cents' do
+    subject(:method_call) { fee.sub_total_excluding_taxes_precise_amount_cents }
+
+    let(:fee) { create(:fee, precise_amount_cents: 200.00456000123, precise_coupons_amount_cents: 150.00123) }
+
+    it 'returns sub total minus coupons amount cents' do
+      expect(subject).to eq(50.00333000123)
+    end
+  end
+
   describe '#invoice_sorting_clause' do
     let(:charge) { create(:standard_charge, properties:) }
     let(:fee) { fee_model.new(charge:, fee_type: 'charge', grouped_by:) }

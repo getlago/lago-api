@@ -31,6 +31,9 @@ class Fee < ApplicationRecord
   monetize :amount_cents
   monetize :taxes_amount_cents, with_model_currency: :currency
   monetize :total_amount_cents
+  monetize :precise_amount_cents, with_model_currency: :currency
+  monetize :taxes_precise_amount_cents, with_model_currency: :currency
+  monetize :precise_total_amount_cents
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   # TODO: Deprecate add_on type in the near future
@@ -132,10 +135,19 @@ class Fee < ApplicationRecord
     amount_cents - precise_coupons_amount_cents
   end
 
+  def sub_total_excluding_taxes_precise_amount_cents
+    precise_amount_cents - precise_coupons_amount_cents
+  end
+
   def total_amount_cents
     amount_cents + taxes_amount_cents
   end
   alias_method :total_amount_currency, :currency
+
+  def precise_total_amount_cents
+    precise_amount_cents + taxes_precise_amount_cents
+  end
+  alias_method :precise_total_amount_currency, :currency
 
   def creditable_amount_cents
     amount_cents - credit_note_items.sum(:amount_cents)
@@ -175,12 +187,14 @@ end
 #  invoiceable_type                    :string
 #  pay_in_advance                      :boolean          default(FALSE), not null
 #  payment_status                      :integer          default("pending"), not null
+#  precise_amount_cents                :decimal(40, 15)  default(0.0), not null
 #  precise_coupons_amount_cents        :decimal(30, 5)   default(0.0), not null
 #  precise_unit_amount                 :decimal(30, 15)  default(0.0), not null
 #  properties                          :jsonb            not null
 #  refunded_at                         :datetime
 #  succeeded_at                        :datetime
 #  taxes_amount_cents                  :bigint           not null
+#  taxes_precise_amount_cents          :decimal(40, 15)  default(0.0), not null
 #  taxes_rate                          :float            default(0.0), not null
 #  total_aggregated_units              :decimal(, )
 #  unit_amount_cents                   :bigint           default(0), not null

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_23_092643) do
+ActiveRecord::Schema[7.1].define(version: 2024_08_29_093425) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -551,6 +551,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_23_092643) do
     t.jsonb "grouped_by", default: {}, null: false
     t.string "pay_in_advance_event_transaction_id"
     t.datetime "deleted_at"
+    t.decimal "precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
+    t.decimal "taxes_precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
@@ -576,6 +578,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_23_092643) do
     t.string "amount_currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
     t.index ["fee_id", "tax_id"], name: "index_fees_taxes_on_fee_id_and_tax_id", unique: true, where: "((tax_id IS NOT NULL) AND (created_at >= '2023-09-12 00:00:00'::timestamp without time zone))"
     t.index ["fee_id"], name: "index_fees_taxes_on_fee_id"
     t.index ["tax_id"], name: "index_fees_taxes_on_tax_id"
