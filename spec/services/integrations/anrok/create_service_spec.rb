@@ -32,7 +32,7 @@ RSpec.describe Integrations::Anrok::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
         end
       end
     end
@@ -40,49 +40,32 @@ RSpec.describe Integrations::Anrok::CreateService, type: :service do
     context 'with premium license' do
       around { |test| lago_premium!(&test) }
 
-      context 'when anrok premium integration is not present' do
+      context 'without validation errors' do
+        it 'creates an integration' do
+          expect { service_call }.to change(Integrations::AnrokIntegration, :count).by(1)
+
+          integration = Integrations::AnrokIntegration.order(:created_at).last
+          expect(integration.name).to eq(name)
+          expect(integration.connection_id).to eq('conn1')
+        end
+
+        it 'returns an integration in result object' do
+          result = service_call
+
+          expect(result.integration).to be_a(Integrations::AnrokIntegration)
+        end
+      end
+
+      context 'with validation error' do
+        let(:name) { nil }
+
         it 'returns an error' do
           result = service_call
 
           aggregate_failures do
             expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          end
-        end
-      end
-
-      context 'when anrok premium integration is present' do
-        before do
-          organization.update!(premium_integrations: ['anrok'])
-        end
-
-        context 'without validation errors' do
-          it 'creates an integration' do
-            expect { service_call }.to change(Integrations::AnrokIntegration, :count).by(1)
-
-            integration = Integrations::AnrokIntegration.order(:created_at).last
-            expect(integration.name).to eq(name)
-            expect(integration.connection_id).to eq('conn1')
-          end
-
-          it 'returns an integration in result object' do
-            result = service_call
-
-            expect(result.integration).to be_a(Integrations::AnrokIntegration)
-          end
-        end
-
-        context 'with validation error' do
-          let(:name) { nil }
-
-          it 'returns an error' do
-            result = service_call
-
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
-            end
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
           end
         end
       end

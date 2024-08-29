@@ -51,6 +51,7 @@ class Organization < ApplicationRecord
   ].freeze
 
   INTEGRATIONS = %w[netsuite okta anrok xero progressive_billing dunning].freeze
+  PREMIUM_INTEGRATIONS = %w[netsuite okta xero progressive_billing dunning].freeze
 
   enum document_numbering: DOCUMENT_NUMBERINGS
 
