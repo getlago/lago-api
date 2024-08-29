@@ -3980,6 +3980,7 @@ enum IntegrationItemTypeEnum {
 
 enum IntegrationTypeEnum {
   anrok
+  dunning
   netsuite
   okta
   progressive_billing

@@ -50,7 +50,7 @@ class Organization < ApplicationRecord
     :per_organization
   ].freeze
 
-  INTEGRATIONS = %w[netsuite okta anrok xero progressive_billing].freeze
+  INTEGRATIONS = %w[netsuite okta anrok xero progressive_billing dunning].freeze
 
   enum document_numbering: DOCUMENT_NUMBERINGS
 
