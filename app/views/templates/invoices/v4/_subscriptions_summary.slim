@@ -33,9 +33,14 @@ table.total-table width="100%"
   - if applied_taxes.present?
     - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
       tr
-        td.body-2
-        td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.fees_amount))
-        td.body-2 = MoneyHelper.format(applied_tax.amount)
+        - if applied_tax.applied_on_whole_invoice?
+          td.body-2
+          td.body-2 = I18n.t('invoice.tax_name_only.' + applied_tax.tax_code)
+          td.body-2
+        - else
+          td.body-2
+          td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.fees_amount))
+          td.body-2 = MoneyHelper.format(applied_tax.amount)
   - else
     tr
       td.body-2
