@@ -10,13 +10,19 @@ module Invoices
     def call
       return result.not_found_failure!(resource: 'invoice') if invoice.nil?
       return result unless invoice.draft?
+      drafted_issuing_date = invoice.issuing_date
 
       ActiveRecord::Base.transaction do
-        Invoices::RefreshDraftService.call(invoice:, context: :finalize).raise_if_error!
-
-        invoice.status = :finalized
         invoice.issuing_date = issuing_date
+        refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
+        if tax_error?(refresh_result.error)
+          invoice.update!(issuing_date: drafted_issuing_date)
+          return refresh_result
+        end
+        refresh_result.raise_if_error!
+
         invoice.payment_due_date = payment_due_date
+        invoice.status = :finalized
         invoice.save!
 
         invoice.credit_notes.each(&:finalized!)
@@ -67,6 +73,10 @@ module Invoices
     def should_deliver_email?
       License.premium? &&
         invoice.organization.email_settings.include?('invoice.finalized')
+    end
+
+    def tax_error?(error)
+      error&.messages&.dig(:tax_error)
     end
   end
 end

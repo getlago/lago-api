@@ -6,7 +6,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   subject(:invoice_service) do
     described_class.new(
       invoice:,
-      recurring:
+      recurring:,
+      context:
     )
   end
 
@@ -14,6 +15,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
   let(:recurring) { false }
+  let(:context) { nil }
 
   let(:invoice) do
     create(
@@ -153,6 +155,141 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
           credit_note = progressive_invoice.reload.credit_notes.sole
           expect(credit_note.credit_amount_cents).to eq(50)
+        end
+      end
+
+      context 'when there is tax provider integration' do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+        let(:response) { instance_double(Net::HTTPOK) }
+        let(:lago_client) { instance_double(LagoHttpClient::Client) }
+        let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
+          json = File.read(p)
+
+          # setting item_id based on the test example
+          response = JSON.parse(json)
+          response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
+          response['succeededInvoices'].first['fees'].last['item_id'] = charge.billable_metric.id
+
+          response.to_json
+        end
+        let(:integration_collection_mapping) do
+          create(
+            :netsuite_collection_mapping,
+            integration:,
+            mapping_type: :fallback_item,
+            settings: {external_id: '1', external_account_code: '11', external_name: ''}
+          )
+        end
+
+        before do
+          integration_collection_mapping
+          integration_customer
+
+          allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+          allow(lago_client).to receive(:post_with_response).and_return(response)
+          allow(response).to receive(:body).and_return(body)
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+          allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
+        end
+
+        it 'creates fees' do
+          result = invoice_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(result.invoice.fees_amount_cents).to eq(100)
+            expect(result.invoice.taxes_amount_cents).to eq(10)
+
+            expect(result.invoice.reload.error_details.count).to eq(0)
+          end
+        end
+
+        it 'fetches taxes using finalized invoices service' do
+          invoice_service.call
+          expect(Integrations::Aggregator::Taxes::Invoices::CreateService).to have_received(:call)
+        end
+
+        context 'when there is error received from the provider' do
+          let(:body) do
+            p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+            File.read(p)
+          end
+
+          it 'returns tax error' do
+            result = invoice_service.call
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error.code).to eq('tax_error')
+              expect(result.error.error_message).to eq('taxDateTooFarInFuture')
+
+              expect(invoice.reload.status).to eq('failed')
+              expect(invoice.reload.error_details.count).to eq(1)
+              expect(invoice.reload.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
+            end
+          end
+        end
+
+        context 'when calculating fees for draft invoice' do
+          let(:invoice) do
+            create(
+              :invoice,
+              :draft,
+              organization:,
+              currency: 'EUR',
+              issuing_date: Time.zone.at(timestamp).to_date,
+              customer: subscription.customer
+            )
+          end
+
+          context 'when no context is passed' do
+            let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
+
+            it 'creates fees' do
+              result = invoice_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+
+                expect(result.invoice.fees_amount_cents).to eq(100)
+                expect(result.invoice.taxes_amount_cents).to eq(10)
+
+                expect(result.invoice.reload.error_details.count).to eq(0)
+              end
+            end
+
+            it 'fetches taxes using draft invoices service' do
+              invoice_service.call
+              expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
+            end
+          end
+
+          context 'when context is :finalize' do
+            let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+            let(:context) { :finalize }
+
+            it 'creates fees' do
+              result = invoice_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+
+                expect(result.invoice.fees_amount_cents).to eq(100)
+                expect(result.invoice.taxes_amount_cents).to eq(10)
+
+                expect(result.invoice.reload.error_details.count).to eq(0)
+              end
+            end
+
+            it 'fetches taxes using finalized invoices service' do
+              invoice_service.call
+              expect(Integrations::Aggregator::Taxes::Invoices::CreateService).to have_received(:call)
+            end
+          end
         end
       end
 

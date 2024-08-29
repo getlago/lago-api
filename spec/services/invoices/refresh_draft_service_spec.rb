@@ -8,10 +8,21 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
   describe '#call' do
     let(:status) { :draft }
     let(:invoice) do
-      create(:invoice, status:, organization:, customer:)
+      create(
+        :invoice,
+        status:,
+        organization:,
+        customer:,
+        taxes_amount_cents: 10,
+        total_amount_cents: 1000110010,
+        taxes_rate: 30,
+        fees_amount_cents: 2600,
+        sub_total_excluding_taxes_amount_cents: 9900090,
+        sub_total_including_taxes_amount_cents: 9900100
+      )
     end
 
-    let(:started_at) { 1.month.ago }
+    let(:started_at) { 1.month.ago.beginning_of_month }
     let(:customer) { create(:customer) }
     let(:organization) { customer.organization }
 
@@ -151,7 +162,83 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
 
     it 'updates taxes_rate' do
       expect { refresh_service.call }
-        .to change { invoice.reload.taxes_rate }.from(0.0).to(15)
+        .to change { invoice.reload.taxes_rate }.from(30.0).to(15)
+    end
+
+    context 'when there is a tax_integration set up' do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:lago_client) { instance_double(LagoHttpClient::Client) }
+      let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
+      let(:integration_collection_mapping) do
+        create(
+          :netsuite_collection_mapping,
+          integration:,
+          mapping_type: :fallback_item,
+          settings: {external_id: '1', external_account_code: '11', external_name: ''}
+        )
+      end
+      let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
+
+      before do
+        integration_collection_mapping
+        integration_customer
+        charge
+
+        allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      context 'when successfully fetching taxes' do
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
+          json = File.read(p)
+          response = JSON.parse(json)
+
+          response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
+          response['succeededInvoices'].first['fees'].second['item_id'] = charge.billable_metric.id
+          response.to_json
+        end
+
+        it 'successfully applies taxes and regenerates fees' do
+          expect { refresh_service.call }.to change { invoice.reload.taxes_rate }.from(30.0).to(10.0)
+            .and change { invoice.fees.count }.from(0).to(2)
+        end
+      end
+
+      context 'when failed to fetch taxes' do
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+          json = File.read(p)
+          response = JSON.parse(json)
+          response.to_json
+        end
+
+        it 'regenerates fees' do
+          expect { refresh_service.call }.to change { invoice.fees.count }.from(0).to(2)
+        end
+
+        it 'creates error_detail for the invoice' do
+          result = refresh_service.call
+
+          aggregate_failures do
+            expect(result.success?).to be(false)
+            expect(invoice.reload.error_details.count).to eq(1)
+            expect(invoice.error_details.last.error_code).to include('tax_error')
+          end
+        end
+
+        it 'resets invoice values to calculatable before the error' do
+          expect { refresh_service.call }.to change(invoice.reload, :taxes_amount_cents).from(10).to(0)
+            .and change(invoice, :total_amount_cents).from(1000110010).to(0)
+            .and change(invoice, :taxes_rate).from(30.0).to(0)
+            .and change(invoice, :fees_amount_cents).from(2600).to(100)
+            .and change(invoice, :sub_total_excluding_taxes_amount_cents).from(9900090).to(100)
+            .and change(invoice, :sub_total_including_taxes_amount_cents).from(9900100).to(0)
+        end
+      end
     end
 
     it 'flags lifetime usage for refresh' do
