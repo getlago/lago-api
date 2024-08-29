@@ -17,6 +17,13 @@ module Plans
         bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil
       )
 
+      unless args[:code].match?(/\A[\w\-._~]+\z/)
+        return result.single_validation_failure!(
+          field: :code,
+          error_code: 'invalid_format'
+        )
+      end
+
       # Validates billable metrics
       if args[:charges].present?
         metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
