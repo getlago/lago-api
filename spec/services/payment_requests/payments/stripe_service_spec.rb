@@ -112,7 +112,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           confirm: true,
           off_session: true,
           error_on_requires_action: true,
-          description: "#{organization.name} - PaymentRequest 123",
+          description: "#{organization.name} - Overdue invoices",
           metadata: {
             lago_customer_id: customer.id,
             lago_payment_request_id: payment_request.id,
@@ -389,7 +389,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
                   currency: payment_request.currency.downcase,
                   unit_amount: payment_request.total_amount_cents,
                   product_data: {
-                    name: payment_request.id
+                    name: "Overdue invoices"
                   }
                 }
               }
@@ -399,7 +399,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
             customer: customer.stripe_customer.provider_customer_id,
             payment_method_types: customer.stripe_customer.provider_payment_methods,
             payment_intent_data: {
-              description: "#{organization.name} - PaymentRequest 123",
+              description: "#{organization.name} - Overdue invoices",
               metadata: {
                 lago_customer_id: customer.id,
                 lago_payment_request_id: payment_request.id,

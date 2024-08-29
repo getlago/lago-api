@@ -185,13 +185,7 @@ module PaymentRequests
       end
 
       def description
-        # TODO: for invoices we define the payment description with the
-        #       invoice number, however, we do no have this kind of identifiers
-        #       on payment requests...
-        #
-        # "#{organization.name} - PaymentRequest #{payable.number}"
-
-        "#{organization.name} - PaymentRequest 123"
+        "#{organization.name} - Overdue invoices"
       end
 
       def payable_payment_status(payment_status)
@@ -233,7 +227,7 @@ module PaymentRequests
                 currency: payable.currency.downcase,
                 unit_amount: payable.total_amount_cents,
                 product_data: {
-                  name: payable.id # TODO: invoice.number
+                  name: "Overdue invoices"
                 }
               }
             }

@@ -104,7 +104,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               type: "scheme"
             },
             recurringProcessingModel: "UnscheduledCardOnFile",
-            reference: payment_request.id,
+            reference: "Overdue invoices",
             shopperEmail: customer.email,
             shopperInteraction: "ContAuth",
             shopperReference: adyen_customer.provider_customer_id
@@ -310,7 +310,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
                 externalPlatform: {integrator: "Lago", name: "Lago"},
                 merchantApplication: {name: "Lago"}
               },
-              expiresAt: Time.current + 1.day,
+              expiresAt: Time.current + 70.days,
               merchantAccount: adyen_payment_provider.merchant_account,
               metadata: {
                 lago_customer_id: customer.id,
@@ -319,7 +319,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
                 payment_type: "one-time"
               },
               recurringProcessingModel: "UnscheduledCardOnFile",
-              reference: payment_request.id,
+              reference: "Overdue invoices",
               returnUrl: adyen_payment_provider.success_redirect_url,
               shopperEmail: customer.email,
               shopperReference: customer.external_id,
