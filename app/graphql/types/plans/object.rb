@@ -34,6 +34,10 @@ module Types
       field :draft_invoices_count, Integer, null: false
       field :subscriptions_count, Integer, null: false
 
+      def usage_thresholds
+        object.usage_thresholds.order(amount_cents: :asc)
+      end
+
       def charges
         object.charges.includes(filters: {values: :billable_metric_filter}).order(created_at: :asc)
       end
