@@ -26,7 +26,7 @@ RSpec.describe Invoices::CheckTransitionToFinalizedService, type: :service do
 
     context 'when invoice fees_amount_cents is not zero' do
       it 'finalizes the invoice' do
-        expect(invoice.reload.status).to eq('finalized')
+        expect(invoice.status).to eq('finalized')
       end
 
       context 'with organization and customer settings defined to not finalize' do
@@ -34,7 +34,7 @@ RSpec.describe Invoices::CheckTransitionToFinalizedService, type: :service do
         let(:customer_setting) { 'skip' }
 
         it 'finalizes the invoice' do
-          expect(invoice.reload.status).to eq('finalized')
+          expect(invoice.status).to eq('finalized')
         end
       end
     end
@@ -47,7 +47,7 @@ RSpec.describe Invoices::CheckTransitionToFinalizedService, type: :service do
         let(:organization_setting) { 'false' }
 
         it 'finalizes the invoice' do
-          expect(invoice.reload.status).to eq('finalized')
+          expect(invoice.status).to eq('finalized')
         end
       end
 
@@ -56,7 +56,7 @@ RSpec.describe Invoices::CheckTransitionToFinalizedService, type: :service do
         let(:organization_setting) { 'true' }
 
         it 'closes the invoice' do
-          expect(invoice.reload.status).to eq('closed')
+          expect(invoice.status).to eq('closed')
         end
       end
 
@@ -67,7 +67,7 @@ RSpec.describe Invoices::CheckTransitionToFinalizedService, type: :service do
           let(:organization_setting) { 'true' }
 
           it 'finalizes the invoice' do
-            expect(invoice.reload.status).to eq('finalized')
+            expect(invoice.status).to eq('finalized')
           end
         end
 
@@ -75,7 +75,7 @@ RSpec.describe Invoices::CheckTransitionToFinalizedService, type: :service do
           let(:organization_setting) { 'false' }
 
           it 'closes the invoice' do
-            expect(invoice.reload.status).to eq('closed')
+            expect(invoice.status).to eq('closed')
           end
         end
       end
