@@ -10,10 +10,10 @@ module Invoices
     end
 
     def call
-      if should_finalize_invoice?
-        invoice.update(status: :finalized)
+      invoice.status = if should_finalize_invoice?
+        :finalized
       else
-        invoice.update(status: :closed)
+        :closed
       end
       result.invoice = invoice
       result
