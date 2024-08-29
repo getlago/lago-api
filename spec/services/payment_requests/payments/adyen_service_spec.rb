@@ -295,9 +295,38 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
     end
 
     it "generates payment url" do
-      adyen_service.generate_payment_url
+      freeze_time do
+        adyen_service.generate_payment_url
 
-      expect(payment_links_api).to have_received(:payment_links)
+        expect(payment_links_api)
+          .to have_received(:payment_links)
+          .with(
+            {
+              amount: {
+                currency: "USD",
+                value: 799
+              },
+              applicationInfo: {
+                externalPlatform: {integrator: "Lago", name: "Lago"},
+                merchantApplication: {name: "Lago"}
+              },
+              expiresAt: Time.current + 1.day,
+              merchantAccount: adyen_payment_provider.merchant_account,
+              metadata: {
+                lago_customer_id: customer.id,
+                lago_invoice_ids: [invoice_1.id, invoice_2.id],
+                lago_payment_request_id: payment_request.id,
+                payment_type: "one-time"
+              },
+              recurringProcessingModel: "UnscheduledCardOnFile",
+              reference: payment_request.id,
+              returnUrl: adyen_payment_provider.success_redirect_url,
+              shopperEmail: customer.email,
+              shopperReference: customer.external_id,
+              storePaymentMethodMode: "enabled"
+            }
+          )
+      end
     end
 
     context "when payment request is payment_succeeded" do

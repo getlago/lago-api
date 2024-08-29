@@ -378,7 +378,38 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
     it "generates payment url" do
       stripe_service.generate_payment_url
 
-      expect(Stripe::Checkout::Session).to have_received(:create)
+      expect(Stripe::Checkout::Session)
+        .to have_received(:create)
+        .with(
+          {
+            line_items: [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: payment_request.currency.downcase,
+                  unit_amount: payment_request.total_amount_cents,
+                  product_data: {
+                    name: payment_request.id
+                  }
+                }
+              }
+            ],
+            mode: "payment",
+            success_url: stripe_payment_provider.success_redirect_url,
+            customer: customer.stripe_customer.provider_customer_id,
+            payment_method_types: customer.stripe_customer.provider_payment_methods,
+            payment_intent_data: {
+              description: "#{organization.name} - PaymentRequest 123",
+              metadata: {
+                lago_customer_id: customer.id,
+                lago_payment_request_id: payment_request.id,
+                lago_invoice_ids: payment_request.invoice_ids,
+                payment_type: "one-time"
+              }
+            }
+          },
+          hash_including({api_key: an_instance_of(String)})
+        )
     end
 
     context "when payment_request is payment_succeeded" do
