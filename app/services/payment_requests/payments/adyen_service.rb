@@ -137,7 +137,7 @@ module PaymentRequests
             currency: payable.currency.upcase,
             value: payable.total_amount_cents
           },
-          reference: payable.id, # TODO: invoice.number,
+          reference: "Overdue invoices",
           paymentMethod: {
             type: 'scheme',
             storedPaymentMethodId: customer.adyen_customer.payment_method_id
@@ -153,7 +153,7 @@ module PaymentRequests
 
       def payment_url_params
         prms = {
-          reference: payable.id, # TODO: invoice.number,
+          reference: "Overdue invoices",
           amount: {
             value: payable.total_amount_cents,
             currency: payable.currency.upcase
@@ -163,7 +163,7 @@ module PaymentRequests
           shopperReference: customer.external_id,
           storePaymentMethodMode: 'enabled',
           recurringProcessingModel: 'UnscheduledCardOnFile',
-          expiresAt: Time.current + 1.day, # TODO: what should we do with the expiration?
+          expiresAt: Time.current + 70.days, # max link TTL
           metadata: {
             lago_customer_id: customer.id,
             lago_payment_request_id: payable.id,
