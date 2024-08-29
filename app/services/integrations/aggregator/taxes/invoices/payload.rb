@@ -11,7 +11,7 @@ module Integrations
             @customer = customer
             @integration_customer = integration_customer
             @invoice = invoice
-            @fees = fees.is_a?(Array) ? fees : fees.order(created_at: :asc)
+            @fees = (fees.is_a?(Array) || !fees&.first&.persisted?) ? fees : fees.order(created_at: :asc)
           end
 
           def body

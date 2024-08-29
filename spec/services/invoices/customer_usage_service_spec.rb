@@ -93,6 +93,91 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       end
     end
 
+    context 'when there is tax provider integration' do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:lago_client) { instance_double(LagoHttpClient::Client) }
+      let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
+      let(:body) do
+        p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response.json')
+        json = File.read(p)
+
+        # setting item_id based on the test example
+        response = JSON.parse(json)
+        response['succeededInvoices'].first['fees'].last['item_id'] = charge.billable_metric.id
+
+        response.to_json
+      end
+      let(:integration_collection_mapping) do
+        create(
+          :netsuite_collection_mapping,
+          integration:,
+          mapping_type: :fallback_item,
+          settings: {external_id: '1', external_account_code: '11', external_name: ''}
+        )
+      end
+
+      before do
+        integration_collection_mapping
+        integration_customer
+
+        allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it 'initializes an invoice' do
+        result = usage_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.invoice).to be_a(Invoice)
+
+          expect(result.usage).to have_attributes(
+            from_datetime: Time.current.beginning_of_month.iso8601,
+            to_datetime: Time.current.end_of_month.iso8601,
+            issuing_date: Time.zone.today.end_of_month.iso8601,
+            currency: 'EUR',
+            amount_cents: 2532, # 1266 * 2,
+            taxes_amount_cents: 253, # 2532 * 0.1
+            total_amount_cents: 2785
+          )
+          expect(result.usage.fees.size).to eq(1)
+          expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+        end
+      end
+
+      it 'uses the Rails cache' do
+        key = [
+          'provider-taxes',
+          subscription.id,
+          plan.updated_at.iso8601
+        ].join('/')
+
+        expect do
+          usage_service.call
+        end.to change { Rails.cache.exist?(key) }.from(false).to(true)
+      end
+
+      context 'when there is error received from the provider' do
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+          File.read(p)
+        end
+
+        it 'returns tax error' do
+          result = usage_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:tax_error]).to eq(['taxDateTooFarInFuture'])
+          end
+        end
+      end
+    end
+
     context 'with subscription started in current billing period' do
       before { subscription.update!(started_at: Time.zone.today) }
 
