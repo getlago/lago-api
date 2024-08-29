@@ -36,6 +36,7 @@ module V1
       payload.merge!(metadata) if include?(:metadata)
       payload.merge!(applied_taxes) if include?(:applied_taxes)
       payload.merge!(error_details) if include?(:error_details)
+      payload.merge!(applied_usage_thresholds) if model.progressive_billing?
 
       payload
     end
@@ -96,6 +97,14 @@ module V1
         model.error_details,
         ::V1::Invoices::ErrorDetailSerializer,
         collection_name: 'error_details'
+      ).serialize
+    end
+
+    def applied_usage_thresholds
+      ::CollectionSerializer.new(
+        model.applied_usage_thresholds,
+        ::V1::AppliedUsageThresholdSerializer,
+        collection_name: 'applied_usage_thresholds'
       ).serialize
     end
   end
