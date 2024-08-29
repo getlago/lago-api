@@ -2,13 +2,14 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false) # rubocop:disable Metrics/ParameterLists
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil) # rubocop:disable Metrics/ParameterLists
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
       @datetime = datetime
       @charge_in_advance = charge_in_advance
       @skip_charges = skip_charges
+      @invoice_id = invoice_id
 
       super
     end
@@ -16,6 +17,7 @@ module Invoices
     def call
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
+          id: invoice_id || SecureRandom.uuid,
           organization:,
           customer:,
           invoice_type:,
@@ -37,7 +39,7 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges
+    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id
 
     delegate :organization, to: :customer
 

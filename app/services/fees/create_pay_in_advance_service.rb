@@ -20,9 +20,21 @@ module Fees
         else
           create_fee(properties: charge.properties)
         end
+
+        result.fees = fees.compact
+
+        if customer_provider_taxation?
+          fee_taxes_result = apply_provider_taxes(fees)
+
+          unless fee_taxes_result.success?
+            result.validation_failure!(errors: {tax_error: [fee_taxes_result.error.code]})
+            result.raise_if_error! unless charge.invoiceable?
+
+            return result
+          end
+        end
       end
 
-      result.fees = fees.compact
       deliver_webhooks
 
       result
@@ -70,8 +82,10 @@ module Fees
           grouped_by: format_grouped_by
         )
 
-        taxes_result = Fees::ApplyTaxesService.call(fee:)
-        taxes_result.raise_if_error!
+        unless customer_provider_taxation?
+          taxes_result = Fees::ApplyTaxesService.call(fee:)
+          taxes_result.raise_if_error!
+        end
 
         fee.save! unless estimate
 
@@ -154,6 +168,46 @@ module Fees
       return {} if charge.properties['grouped_by'].blank?
 
       charge.properties['grouped_by'].index_with { event.properties[_1] }
+    end
+
+    def customer_provider_taxation?
+      @apply_provider_taxes ||= integration_customer.present?
+    end
+
+    def integration_customer
+      @integration_customer ||= customer.anrok_customer
+    end
+
+    def customer
+      @customer ||= subscription.customer
+    end
+
+    def apply_provider_taxes(fees_result)
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
+
+      return taxes_result unless taxes_result.success?
+
+      result.fees_taxes = taxes_result.fees
+
+      fees_result.each do |fee|
+        fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.item_id }
+
+        res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
+        res.raise_if_error!
+      end
+
+      taxes_result
+    end
+
+    def invoice
+      result.invoice_id = SecureRandom.uuid
+
+      OpenStruct.new(
+        id: result.invoice_id,
+        issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
+        currency: subscription.plan.amount_currency,
+        customer:
+      )
     end
   end
 end
