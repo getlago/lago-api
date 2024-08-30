@@ -10,7 +10,7 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
 
   let(:invoice) { create(:invoice, organization:, customer:) }
 
-  let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents:) }
+  let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, precise_coupons_amount_cents:) }
   let(:precise_coupons_amount_cents) { 0 }
 
   let(:fee_taxes) do
@@ -38,7 +38,7 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
           expect(applied_taxes.count).to eq(2)
 
           expect(applied_taxes.map(&:tax_code)).to contain_exactly('tax_2', 'tax_3')
-          expect(fee).to have_attributes(taxes_amount_cents: 170, taxes_rate: 17)
+          expect(fee).to have_attributes(taxes_amount_cents: 170, taxes_precise_amount_cents: 170.0, taxes_rate: 17)
         end
       end
     end
@@ -87,7 +87,7 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
                 tax_name: applied_rule[:expected_name],
                 tax_description: applied_rule[:received_type]
               )
-              expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_rate: 0)
+              expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0)
             end
           end
         end
