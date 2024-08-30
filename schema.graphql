@@ -3082,6 +3082,11 @@ type Customer {
   Define if a customer has any credit note
   """
   hasCreditNotes: Boolean!
+
+  """
+  Define if a customer has overdue invoices
+  """
+  hasOverdueInvoices: Boolean!
   id: ID!
   invoiceGracePeriod: Int
   invoices: [Invoice!]

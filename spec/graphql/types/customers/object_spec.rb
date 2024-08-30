@@ -64,6 +64,7 @@ RSpec.describe Types::Customers::Object do
   it { is_expected.to have_field(:credit_notes_credits_available_count).of_type('Int!') }
   it { is_expected.to have_field(:has_active_wallet).of_type('Boolean!') }
   it { is_expected.to have_field(:has_credit_notes).of_type('Boolean!') }
+  it { is_expected.to have_field(:has_overdue_invoices).of_type('Boolean!') }
 
   it { is_expected.to have_field(:can_edit_attributes).of_type('Boolean!') }
 end
