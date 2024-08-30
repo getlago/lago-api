@@ -30,6 +30,7 @@ module Fees
 
         tax_amount_cents = (fee.sub_total_excluding_taxes_amount_cents * tax.rate).fdiv(100)
         applied_tax.amount_cents = tax_amount_cents.round
+        applied_tax.precise_amount_cents = tax_amount_cents
         applied_tax.save! if fee.persisted?
 
         applied_taxes_amount_cents += tax_amount_cents
@@ -39,6 +40,7 @@ module Fees
       end
 
       fee.taxes_amount_cents = applied_taxes_amount_cents.round
+      fee.taxes_precise_amount_cents = applied_taxes_amount_cents
       fee.taxes_rate = applied_taxes_rate
 
       result
