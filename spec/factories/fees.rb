@@ -9,8 +9,10 @@ FactoryBot.define do
     subscription
 
     amount_cents { 200 }
+    precise_amount_cents { 200.0000000001 }
     amount_currency { 'EUR' }
     taxes_amount_cents { 2 }
+    taxes_precise_amount_cents { 2.0000000001 }
 
     invoiceable_type { 'Subscription' }
     invoiceable_id { subscription.id }
