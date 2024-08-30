@@ -29,7 +29,7 @@ module Invoices
       fee_result = ActiveRecord::Base.transaction do
         invoice.status = invoice_status
         if invoice_status == :finalized
-          Invoices::CheckTransitionToFinalizedService.call(invoice:)
+          Invoices::TransitionToFinalStatus.call(invoice:)
         else
           invoice.status = :draft
         end

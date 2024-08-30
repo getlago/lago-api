@@ -35,7 +35,7 @@ module Invoices
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-        Invoices::CheckTransitionToFinalizedService.call(invoice:)
+        Invoices::TransitionToFinalStatus.call(invoice:)
         invoice.save!
       end
 
