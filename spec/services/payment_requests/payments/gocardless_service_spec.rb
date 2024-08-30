@@ -116,7 +116,10 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
       gocardless_service.create
 
       expect(invoice_1.reload).to be_payment_succeeded
+      expect(invoice_1.ready_for_payment_processing).to eq(false)
+
       expect(invoice_2.reload).to be_payment_succeeded
+      expect(invoice_2.ready_for_payment_processing).to eq(false)
     end
 
     context "with no payment provider" do
@@ -229,6 +232,149 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
               error_code: "no_mandate_error"
             }
           )
+      end
+    end
+  end
+
+  describe "#update_payment_status" do
+    let(:payment) do
+      create(
+        :payment,
+        payable: payment_request,
+        provider_payment_id: provider_payment_id,
+        status: "pending_submission"
+      )
+    end
+
+    let(:provider_payment_id) { "ch_123456" }
+
+    before do
+      allow(SendWebhookJob).to receive(:perform_later)
+      payment
+    end
+
+    it "updates the payment, payment_request and invoice payment_status", :aggregate_failures do
+      result = gocardless_service.update_payment_status(
+        provider_payment_id:,
+        status: "paid_out"
+      )
+
+      expect(result).to be_success
+      expect(result.payment.status).to eq("paid_out")
+
+      expect(result.payable.reload).to be_payment_succeeded
+      expect(result.payable.ready_for_payment_processing).to eq(false)
+
+      expect(invoice_1.reload).to be_payment_succeeded
+      expect(invoice_1.ready_for_payment_processing).to eq(false)
+      expect(invoice_2.reload).to be_payment_succeeded
+      expect(invoice_2.ready_for_payment_processing).to eq(false)
+    end
+
+    context "when status is failed" do
+      it "updates the payment, payment_request and invoice status", :aggregate_failures do
+        result = gocardless_service.update_payment_status(
+          provider_payment_id:,
+          status: "failed"
+        )
+
+        expect(result).to be_success
+        expect(result.payment.status).to eq("failed")
+
+        expect(result.payable.reload).to be_payment_failed
+        expect(result.payable.ready_for_payment_processing).to eq(true)
+
+        expect(invoice_1.reload).to be_payment_failed
+        expect(invoice_1.ready_for_payment_processing).to eq(true)
+
+        expect(invoice_2.reload).to be_payment_failed
+        expect(invoice_2.ready_for_payment_processing).to eq(true)
+      end
+    end
+
+    context "when payment is not found" do
+      let(:payment) { nil }
+
+      it "returns a not found error", :aggregate_failures do
+        result = gocardless_service.update_payment_status(
+          provider_payment_id:,
+          status: "paid_out"
+        )
+
+        expect(result).not_to be_success
+        expect(result.payment).to be_nil
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.error_code).to eq("gocardless_payment_not_found")
+      end
+    end
+
+    context "when payment_request and invoice is already payment_succeeded" do
+      before do
+        payment_request.payment_succeeded!
+        invoice_1.payment_succeeded!
+        invoice_2.payment_succeeded!
+      end
+
+      it "does not update the status of invoice, payment_request and payment" do
+        expect {
+          gocardless_service.update_payment_status(provider_payment_id:, status: "paid_out")
+        }.to not_change { invoice_1.reload.payment_status }
+          .and not_change { invoice_2.reload.payment_status }
+          .and not_change { payment_request.reload.payment_status }
+          .and not_change { payment.reload.status }
+
+        result = gocardless_service.update_payment_status(provider_payment_id:, status: "paid_out")
+
+        expect(result).to be_success
+      end
+    end
+
+    context "with invalid status", :aggregate_failures do
+      let(:status) { "invalid-status" }
+
+      it "does not update the payment_status of payment_request, invoice and payment" do
+        expect {
+          gocardless_service.update_payment_status(provider_payment_id:, status:)
+        }.to not_change { payment_request.reload.payment_status }
+          .and not_change { invoice_1.reload.payment_status }
+          .and not_change { invoice_2.reload.payment_status }
+          .and change { payment.reload.status }.to(status)
+      end
+
+      it "returns an error", :aggregate_failures do
+        result = gocardless_service.update_payment_status(provider_payment_id:, status:)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:payment_status)
+        expect(result.error.messages[:payment_status]).to include("value_is_invalid")
+      end
+    end
+
+    context "when payment request is not passed to constructor" do
+      subject(:gocardless_service) { described_class.new(nil) }
+
+      before do
+        payment_request
+      end
+
+      it "updates the payment and invoice payment_status" do
+        result = gocardless_service.update_payment_status(
+          provider_payment_id:,
+          status: "paid_out"
+        )
+
+        expect(result).to be_success
+        expect(result.payment.status).to eq("paid_out")
+
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payable.ready_for_payment_processing).to eq(false)
+
+        expect(invoice_1.reload).to be_payment_succeeded
+        expect(invoice_1.ready_for_payment_processing).to eq(false)
+
+        expect(invoice_2.reload).to be_payment_succeeded
+        expect(invoice_2.ready_for_payment_processing).to eq(false)
       end
     end
   end
