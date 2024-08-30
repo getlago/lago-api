@@ -73,6 +73,7 @@ module Types
         description: 'Number of available credits from credit notes per customer'
       field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
       field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'
+      field :has_overdue_invoices, Boolean, null: false, description: 'Define if a customer has overdue invoices'
 
       field :can_edit_attributes, Boolean, null: false, method: :editable? do
         description 'Check if customer attributes are editable'
@@ -96,6 +97,10 @@ module Types
 
       def has_credit_notes
         object.credit_notes.finalized.any?
+      end
+
+      def has_overdue_invoices
+        object.invoices.payment_overdue.any?
       end
 
       def active_subscriptions_count
