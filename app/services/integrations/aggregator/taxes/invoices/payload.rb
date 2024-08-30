@@ -22,10 +22,10 @@ module Integrations
                 'contact' => {
                   'external_id' => integration_customer&.external_customer_id || customer.external_id,
                   'name' => customer.name,
-                  'address_line_1' => customer.shipping_address_line1,
-                  'city' => customer.shipping_city,
-                  'zip' => customer.shipping_zipcode,
-                  'country' => customer.shipping_country,
+                  'address_line_1' => customer.shipping_address_line1 || customer.address_line1,
+                  'city' => customer.shipping_city || customer.city,
+                  'zip' => customer.shipping_zipcode || customer.zipcode,
+                  'country' => customer.shipping_country || customer.country,
                   'taxable' => customer.tax_identification_number.present?,
                   'tax_number' => customer.tax_identification_number
                 },
