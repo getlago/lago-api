@@ -43,7 +43,8 @@ module Invoices
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-        invoice.finalized!
+        Invoices::TransitionToFinalStatusService.call(invoice:)
+        invoice.save!
       end
 
       Utils::SegmentTrack.invoice_created(invoice)

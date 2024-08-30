@@ -16,6 +16,10 @@ RSpec.describe Customer, type: :model do
   it { is_expected.to have_one(:anrok_customer) }
   it { is_expected.to have_one(:xero_customer) }
 
+  it 'sets the default value to inherit' do
+    expect(customer.finalize_zero_amount_invoice).to eq "inherit"
+  end
+
   describe 'validations' do
     subject(:customer) do
       described_class.new(organization:, external_id:)

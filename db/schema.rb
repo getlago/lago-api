@@ -438,6 +438,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_29_093425) do
     t.string "shipping_zipcode"
     t.string "shipping_state"
     t.string "shipping_country"
+    t.integer "finalize_zero_amount_invoice", default: 0, null: false
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
@@ -869,6 +870,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_29_093425) do
     t.boolean "clickhouse_aggregation", default: false, null: false
     t.string "premium_integrations", default: [], null: false, array: true
     t.boolean "custom_aggregation", default: false
+    t.boolean "finalize_zero_amount_invoice", default: true, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"

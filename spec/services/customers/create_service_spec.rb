@@ -195,6 +195,51 @@ RSpec.describe Customers::CreateService, type: :service do
       end
     end
 
+    context 'with finalize_zero_amount_invoice' do
+      let(:create_args) do
+        {
+          external_id:,
+          finalize_zero_amount_invoice: "skip"
+        }
+      end
+
+      it 'creates customer with finalize_zero_amount_invoice' do
+        result = customers_service.create_from_api(
+          organization:,
+          params: create_args
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.finalize_zero_amount_invoice).to eq("skip")
+        end
+      end
+
+      context 'with incorrect value of finalize_zero_amount_invoice' do
+        let(:create_args) do
+          {
+            external_id:,
+            finalize_zero_amount_invoice: "bad value"
+          }
+        end
+
+        it 'creates customer with finalize_zero_amount_invoice' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args
+          )
+
+          aggregate_failures do
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages.keys).to include(:finalize_zero_amount_invoice)
+            expect(result.error.messages[:finalize_zero_amount_invoice]).to include('invalid_value')
+          end
+        end
+      end
+    end
+
     context 'with premium features' do
       around { |test| lago_premium!(&test) }
 

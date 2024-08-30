@@ -43,6 +43,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
 
     before do
       allow(Invoices::Payments::CreateService).to receive(:call)
+      allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
     context 'with existing standalone fees' do
@@ -83,6 +84,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
           expect(Invoices::GeneratePdfAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
           expect(SendWebhookJob).to have_been_enqueued.with('invoice.created', result.invoice)
           expect(SegmentTrackJob).to have_been_enqueued.once
+          expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
         end
       end
     end

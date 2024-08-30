@@ -63,7 +63,7 @@ class Invoice < ApplicationRecord
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
 
   VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4}.freeze
-  INVISIBLE_STATUS = {generating: 3, open: 5}.freeze
+  INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6}.freeze
   STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
 
   enum invoice_type: INVOICE_TYPES
@@ -77,6 +77,7 @@ class Invoice < ApplicationRecord
     state :finalized
     state :voided
     state :failed
+    state :closed
 
     event :finalize do
       transitions from: :draft, to: :finalized

@@ -111,6 +111,7 @@ module Api
           :timezone,
           :net_payment_term,
           :external_salesforce_id,
+          :finalize_zero_amount_invoice,
           integration_customers: [
             :id,
             :external_customer_id,
