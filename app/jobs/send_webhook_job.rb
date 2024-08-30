@@ -36,6 +36,7 @@ class SendWebhookJob < ApplicationJob
     'payment_provider.error' => Webhooks::PaymentProviders::ErrorService,
     'payment_request.created' => Webhooks::PaymentRequests::CreatedService,
     "payment_request.payment_failure" => Webhooks::PaymentProviders::PaymentRequestPaymentFailureService,
+    "payment_request.payment_status_updated" => Webhooks::PaymentRequests::PaymentStatusUpdatedService,
     'subscription.terminated' => Webhooks::Subscriptions::TerminatedService,
     'subscription.started' => Webhooks::Subscriptions::StartedService,
     'subscription.termination_alert' => Webhooks::Subscriptions::TerminationAlertService,
