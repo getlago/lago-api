@@ -107,6 +107,23 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
             expect(result.integration_customer.subsidiary_id).to eq(subsidiary_id)
           end
         end
+
+        context 'with anrok customer' do
+          let(:external_customer_id) { SecureRandom.uuid }
+          let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+          it 'does not calls aggregator update service' do
+            service_call
+
+            expect(aggregator_contacts_update_service).not_to have_received(:call)
+          end
+
+          it 'does not update integration customer' do
+            service_call
+
+            expect(integration_customer.reload.external_customer_id).not_to eq(external_customer_id)
+          end
+        end
       end
 
       context 'when sync with provider is false' do

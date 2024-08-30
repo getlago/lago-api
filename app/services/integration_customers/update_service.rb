@@ -11,6 +11,7 @@ module IntegrationCustomers
       result = super
       return result if result.error
 
+      return result if integration_customer.type == 'IntegrationCustomers::AnrokCustomer'
       return result.not_found_failure!(resource: 'integration_customer') unless integration_customer
 
       integration_customer.update!(external_customer_id:) if external_customer_id.present?
