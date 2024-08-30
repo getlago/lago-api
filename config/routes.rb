@@ -37,10 +37,10 @@ Rails.application.routes.draw do
       resources :subscriptions, only: %i[create update show index], param: :external_id
       delete '/subscriptions/:external_id', to: 'subscriptions#terminate', as: :terminate
 
-      resources :add_ons, param: :code
-      resources :billable_metrics, param: :code
+      resources :add_ons, param: :code, code: /.*/
+      resources :billable_metrics, param: :code, code: /.*/
 
-      resources :coupons, param: :code
+      resources :coupons, param: :code, code: /.*/
       resources :credit_notes, only: %i[create update show index] do
         post :download, on: :member
         put :void, on: :member
@@ -62,8 +62,8 @@ Rails.application.routes.draw do
         put :finalize, on: :member
       end
       resources :payment_requests, only: %i[create index]
-      resources :plans, param: :code
-      resources :taxes, param: :code
+      resources :plans, param: :code, code: /.*/
+      resources :taxes, param: :code, code: /.*/
       resources :wallet_transactions, only: :create
       get '/wallets/:id/wallet_transactions', to: 'wallet_transactions#index'
       resources :wallets, only: %i[create update show index]
