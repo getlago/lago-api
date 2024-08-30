@@ -66,11 +66,11 @@ sv:
     tax_name: "%{name} (%{rate}% på %{amount})"
     tax_name_only:
       customer_exempt: Kunden är befriad från moms
+      juris_has_no_tax: Ingen skatt
       juris_not_taxed: Ingen skatt
       not_collecting: Ingen skatt
       reverse_charge: Omvänd skattskyldighet - Skatteskyldighet överförd till kunden
       transaction_exempt: Kunden är befriad från moms
-      juris_has_no_tax: Ingen skatt
       unknown_taxation: Okänd
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Momssats
