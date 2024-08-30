@@ -58,6 +58,8 @@ RSpec.describe Fees::ChargeService do
           invoice_id: invoice.id,
           charge_id: charge.id,
           amount_cents: 0,
+          precise_amount_cents: 0.0,
+          taxes_precise_amount_cents: 0.0,
           amount_currency: 'EUR',
           units: 0,
           unit_amount_cents: 0,
@@ -149,6 +151,8 @@ RSpec.describe Fees::ChargeService do
               invoice_id: invoice.id,
               charge_id: charge.id,
               amount_cents: 30_000,
+              precise_amount_cents: 30_000.0,
+              taxes_precise_amount_cents: 0.0,
               amount_currency: 'EUR',
               units: 15,
               unit_amount_cents: 2000,
@@ -162,6 +166,8 @@ RSpec.describe Fees::ChargeService do
               invoice_id: invoice.id,
               charge_id: charge.id,
               amount_cents: 20_000,
+              precise_amount_cents: 20_000.0,
+              taxes_precise_amount_cents: 0.0,
               amount_currency: 'EUR',
               units: 10,
               unit_amount_cents: 2000,
@@ -209,6 +215,8 @@ RSpec.describe Fees::ChargeService do
                 invoice_id: invoice.id,
                 charge_id: charge.id,
                 amount_cents: 6_000,
+                precise_amount_cents: 6_000.0,
+                taxes_precise_amount_cents: 0.0,
                 amount_currency: 'EUR',
                 units: 3,
                 unit_amount_cents: 2000,
@@ -222,6 +230,8 @@ RSpec.describe Fees::ChargeService do
                 invoice_id: invoice.id,
                 charge_id: charge.id,
                 amount_cents: 20_000,
+                precise_amount_cents: 20_000.0,
+                taxes_precise_amount_cents: 0.0,
                 amount_currency: 'EUR',
                 units: 10,
                 unit_amount_cents: 2000,
@@ -299,6 +309,8 @@ RSpec.describe Fees::ChargeService do
             invoice_id: invoice.id,
             charge_id: charge.id,
             amount_cents: 5,
+            precise_amount_cents: 5.0,
+            taxes_precise_amount_cents: 0.0,
             amount_currency: 'EUR',
             units: 4.0,
             unit_amount_cents: 1,
@@ -359,6 +371,8 @@ RSpec.describe Fees::ChargeService do
             invoice_id: invoice.id,
             charge_id: charge.id,
             amount_cents: 2000,
+            precise_amount_cents: 2_000.0,
+            taxes_precise_amount_cents: 0.0,
             amount_currency: 'EUR',
             units: 1
           )
@@ -384,6 +398,8 @@ RSpec.describe Fees::ChargeService do
               invoice_id: invoice.id,
               charge_id: charge.id,
               amount_cents: 0,
+              precise_amount_cents: 0.0,
+              taxes_precise_amount_cents: 0.0,
               amount_currency: 'EUR',
               units: 0,
               unit_amount_cents: 0,
@@ -429,6 +445,8 @@ RSpec.describe Fees::ChargeService do
               invoice_id: invoice.id,
               charge_id: charge.id,
               amount_cents: 6_000,
+              precise_amount_cents: 6_000.0,
+              taxes_precise_amount_cents: 0.0,
               amount_currency: 'EUR',
               units: 3,
               unit_amount_cents: 2_000,
@@ -448,6 +466,8 @@ RSpec.describe Fees::ChargeService do
                 expect(result).to be_success
                 expect(result.fees.count).to eq(2)
                 expect(result.fees.pluck(:amount_cents)).to contain_exactly(6_000, 4_967)
+                expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(6_000.0, 4_967.74193548387)
+                expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0)
                 expect(result.fees.pluck(:unit_amount_cents)).to contain_exactly(2_000, 4_967)
                 expect(result.fees.pluck(:precise_unit_amount)).to contain_exactly(20, 49.67)
               end
@@ -575,6 +595,8 @@ RSpec.describe Fees::ChargeService do
                 expect(europe_fee).to have_attributes(
                   charge_filter: europe_filter,
                   amount_cents: 30_000,
+                  precise_amount_cents: 30_000.0,
+                  taxes_precise_amount_cents: 0.0,
                   units: 15,
                   unit_amount_cents: 2000,
                   precise_unit_amount: 20
@@ -584,6 +606,8 @@ RSpec.describe Fees::ChargeService do
                 expect(usa_fee).to have_attributes(
                   charge_filter: usa_filter,
                   amount_cents: 15_000,
+                  precise_amount_cents: 15_000.0,
+                  taxes_precise_amount_cents: 0.0,
                   units: 3,
                   unit_amount_cents: 5000,
                   precise_unit_amount: 50
@@ -593,6 +617,8 @@ RSpec.describe Fees::ChargeService do
                 expect(france_fee).to have_attributes(
                   charge_filter: france_filter,
                   amount_cents: 5062,
+                  precise_amount_cents: 5061.725,
+                  taxes_precise_amount_cents: 0.0,
                   units: 5,
                   unit_amount_cents: 1012,
                   precise_unit_amount: 10.12345
@@ -627,6 +653,8 @@ RSpec.describe Fees::ChargeService do
               invoice_id: invoice.id,
               charge_id: charge.id,
               amount_cents: 800,
+              precise_amount_cents: 800.0,
+              taxes_precise_amount_cents: 0.0,
               amount_currency: 'EUR',
               units: 4,
               unit_amount_cents: 200,
@@ -662,6 +690,8 @@ RSpec.describe Fees::ChargeService do
               invoice_id: invoice.id,
               charge_id: charge.id,
               amount_cents: 0,
+              precise_amount_cents: 0.0,
+              taxes_precise_amount_cents: 0.0,
               amount_currency: 'EUR',
               units: 0,
               unit_amount_cents: 0,
@@ -706,6 +736,8 @@ RSpec.describe Fees::ChargeService do
               expect(result).to be_success
               expect(result.fees.count).to eq(2)
               expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548) # 548 is 1000 prorated for 17 days.
+              expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(0.0, 548.3870967741935) # 548 is 1000 prorated for 17 days.
+              expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0) # 548 is 1000 prorated for 17 days.
               expect(result.fees.pluck(:unit_amount_cents)).to contain_exactly(0, 548)
               expect(result.fees.pluck(:precise_unit_amount)).to contain_exactly(0, 5.48)
             end
@@ -808,6 +840,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             charge_filter: europe_filter,
             amount_cents: 4000,
+            precise_amount_cents: 4000.0,
+            taxes_precise_amount_cents: 0.0,
             units: 2,
             unit_amount_cents: 2000,
             precise_unit_amount: 20
@@ -816,6 +850,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 5000,
+            precise_amount_cents: 5000.0,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 5000,
             precise_unit_amount: 50
@@ -824,6 +860,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.third).to have_attributes(
             charge_filter: france_filter,
             amount_cents: 1012,
+            precise_amount_cents: 1012.345,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 1012,
             precise_unit_amount: 10.12345
@@ -849,6 +887,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             charge_filter: europe_filter,
             amount_cents: 30_000,
+            precise_amount_cents: 30_000.0,
+            taxes_precise_amount_cents: 0.0,
             units: 15,
             unit_amount_cents: 2000,
             precise_unit_amount: 20
@@ -857,6 +897,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 60_000,
+            precise_amount_cents: 60_000.0,
+            taxes_precise_amount_cents: 0.0,
             units: 12,
             unit_amount_cents: 5000,
             precise_unit_amount: 50
@@ -865,6 +907,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.third).to have_attributes(
             charge_filter: france_filter,
             amount_cents: 5062,
+            precise_amount_cents: 5061.725,
+            taxes_precise_amount_cents: 0.0,
             units: 5,
             unit_amount_cents: 1012,
             precise_unit_amount: 10.12345
@@ -890,6 +934,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             charge_filter: europe_filter,
             amount_cents: 20_000,
+            precise_amount_cents: 20_000.0,
+            taxes_precise_amount_cents: 0.0,
             units: 10,
             unit_amount_cents: 2000,
             precise_unit_amount: 20
@@ -898,6 +944,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 60_000,
+            precise_amount_cents: 60_000.0,
+            taxes_precise_amount_cents: 0.0,
             units: 12,
             unit_amount_cents: 5000,
             precise_unit_amount: 50
@@ -906,6 +954,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.third).to have_attributes(
             charge_filter: france_filter,
             amount_cents: 5062,
+            precise_amount_cents: 5061.725,
+            taxes_precise_amount_cents: 0.0,
             units: 5,
             unit_amount_cents: 1012,
             precise_unit_amount: 10.12345
@@ -932,18 +982,24 @@ RSpec.describe Fees::ChargeService do
             expect(created_fees.first).to have_attributes(
               charge_filter: europe_filter,
               amount_cents: 4000,
+              precise_amount_cents: 4_000.0,
+              taxes_precise_amount_cents: 0.0,
               units: 2
             )
 
             expect(created_fees.second).to have_attributes(
               charge_filter: usa_filter,
               amount_cents: 5000,
+              precise_amount_cents: 5_000.0,
+              taxes_precise_amount_cents: 0.0,
               units: 1
             )
 
             expect(created_fees.third).to have_attributes(
               charge_filter: france_filter,
               amount_cents: 1012,
+              precise_amount_cents: 1012.345,
+              taxes_precise_amount_cents: 0.0,
               units: 1,
               unit_amount_cents: 1012,
               precise_unit_amount: 10.12345
@@ -1092,6 +1148,8 @@ RSpec.describe Fees::ChargeService do
             charge_filter: europe_filter,
             units: 2,
             amount_cents: 10_000,
+            precise_amount_cents: 10_000.0,
+            taxes_precise_amount_cents: 0.0,
             unit_amount_cents: 10_000,
             precise_unit_amount: 100
           )
@@ -1099,6 +1157,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 5000,
+            precise_amount_cents: 5_000.0,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 5000,
             precise_unit_amount: 50
@@ -1107,6 +1167,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.third).to have_attributes(
             charge_filter: france_filter,
             amount_cents: 0,
+            precise_amount_cents: 0.0,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 0,
             precise_unit_amount: 0
@@ -1237,6 +1299,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             charge_filter: europe_filter,
             amount_cents: 200 + 2 * 2,
+            precise_amount_cents: 200.0 + 2 * 2,
+            taxes_precise_amount_cents: 0.0,
             units: 2,
             unit_amount_cents: 102,
             precise_unit_amount: 1.02
@@ -1245,6 +1309,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 1 * 1,
+            precise_amount_cents: 1.0 * 1,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 1,
             precise_unit_amount: 0.01
@@ -1253,6 +1319,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.third).to have_attributes(
             charge_filter: france_filter,
             amount_cents: 100 + 5 * 1,
+            precise_amount_cents: 100.0 + 5.0 * 1,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 105,
             precise_unit_amount: 1.05
@@ -1380,6 +1448,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             charge_filter: europe_filter,
             amount_cents: 3,
+            precise_amount_cents: 3.0,
+            taxes_precise_amount_cents: 0.0,
             units: 2,
             unit_amount_cents: 1,
             precise_unit_amount: 0.015
@@ -1388,6 +1458,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 4,
+            precise_amount_cents: 4.0,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 4,
             precise_unit_amount: 0.04
@@ -1500,6 +1572,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             charge_filter: europe_filter,
             amount_cents: 1400,
+            precise_amount_cents: 1_400.0,
+            taxes_precise_amount_cents: 0.0,
             units: 2,
             unit_amount_cents: 700,
             precise_unit_amount: 7
@@ -1508,6 +1582,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 1100,
+            precise_amount_cents: 1_100.0,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 1100,
             precise_unit_amount: 11
@@ -1635,6 +1711,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             charge_filter: europe_filter,
             amount_cents: 5, # 2 × 0.02 + 0.01
+            precise_amount_cents: 5.0,
+            taxes_precise_amount_cents: 0.0,
             units: 2,
             unit_amount_cents: 2,
             precise_unit_amount: 0.025
@@ -1643,6 +1721,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 4, # 1 × 0.03 + 0.01
+            precise_amount_cents: 4.0,
+            taxes_precise_amount_cents: 0.0,
             units: 1,
             unit_amount_cents: 4,
             precise_unit_amount: 0.04
@@ -1708,6 +1788,8 @@ RSpec.describe Fees::ChargeService do
 
             # 548 is 1000 prorated for 17 days.
             expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 0, 0, 548)
+            expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(0, 0, 0, 548.3870967741935)
+            expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0, 0.0, 0.0)
           end
         end
       end
@@ -1727,6 +1809,8 @@ RSpec.describe Fees::ChargeService do
           expect(created_fee.invoice_id).to eq(invoice.id)
           expect(created_fee.charge_id).to eq(charge.id)
           expect(created_fee.amount_cents).to eq(0)
+          expect(created_fee.precise_amount_cents).to eq(0.0)
+          expect(created_fee.taxes_precise_amount_cents).to eq(0.0)
           expect(created_fee.amount_currency).to eq('EUR')
           expect(created_fee.units).to eq(0)
           expect(created_fee.total_aggregated_units).to eq(0)
@@ -1803,6 +1887,8 @@ RSpec.describe Fees::ChargeService do
             expect(usage_fee.invoice_id).to eq(invoice.id)
             expect(usage_fee.charge_id).to eq(charge.id)
             expect(usage_fee.amount_cents).to eq(0)
+            expect(usage_fee.precise_amount_cents).to eq(0.0)
+            expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
             expect(usage_fee.amount_currency).to eq('EUR')
             expect(usage_fee.units).to eq(0)
           end
@@ -1854,6 +1940,8 @@ RSpec.describe Fees::ChargeService do
           expect(usage_fee.invoice_id).to eq(invoice.id)
           expect(usage_fee.charge_id).to eq(charge.id)
           expect(usage_fee.amount_cents).to eq(5)
+          expect(usage_fee.precise_amount_cents).to eq(5.0)
+          expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
           expect(usage_fee.amount_currency).to eq('EUR')
           expect(usage_fee.units.to_s).to eq('4.0')
         end
