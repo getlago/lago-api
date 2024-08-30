@@ -42,13 +42,13 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
       allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
-      allow(Invoices::TransitionToFinalStatus).to receive(:call).and_call_original
+      allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
     it 'marks the invoice as finalized' do
       expect { finalize_service.call }
         .to change(invoice, :status).from('draft').to('finalized')
-      expect(Invoices::TransitionToFinalStatus).to have_received(:call).with(invoice:)
+      expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice:)
     end
 
     it 'updates the issuing date' do

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Invoices
-  class TransitionToFinalStatus < BaseService
+  class TransitionToFinalStatusService < BaseService
     def initialize(invoice:)
       @invoice = invoice
       @customer = @invoice.customer

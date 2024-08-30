@@ -46,7 +46,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
       allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
-      allow(Invoices::TransitionToFinalStatus).to receive(:call).and_call_original
+      allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
     it 'calls SegmentTrackJob' do
@@ -103,7 +103,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
         expect(result.invoice.total_amount_cents).to eq(120)
         expect(result.invoice.version_number).to eq(4)
-        expect(Invoices::TransitionToFinalStatus).to have_received(:call).with(invoice: result.invoice)
+        expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
         expect(result.invoice).to be_finalized
       end
     end

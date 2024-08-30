@@ -22,7 +22,7 @@ module Invoices
         refresh_result.raise_if_error!
 
         invoice.payment_due_date = payment_due_date
-        Invoices::TransitionToFinalStatus.call(invoice:)
+        Invoices::TransitionToFinalStatusService.call(invoice:)
         invoice.save!
 
         invoice.credit_notes.each(&:finalized!)
