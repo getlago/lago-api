@@ -68,6 +68,7 @@ RSpec.describe Mutations::Integrations::Anrok::FetchDraftInvoiceTaxes, type: :gr
               rate
               taxAmount
               type
+              enumedTaxCode
             }
           }
         }
@@ -120,6 +121,7 @@ RSpec.describe Mutations::Integrations::Anrok::FetchDraftInvoiceTaxes, type: :gr
       expect(breakdown1['rate']).to eq(0.1)
       expect(breakdown1['taxAmount']).to eq('990')
       expect(breakdown1['type']).to eq('tax_exempt')
+      expect(breakdown1['enumedTaxCode']).to eq(nil)
 
       breakdown2 = fee['taxBreakdown'].last
 
@@ -127,6 +129,7 @@ RSpec.describe Mutations::Integrations::Anrok::FetchDraftInvoiceTaxes, type: :gr
       expect(breakdown2['rate']).to eq(0.0)
       expect(breakdown2['taxAmount']).to eq('0')
       expect(breakdown2['type']).to eq('exempt')
+      expect(breakdown2['enumedTaxCode']).to eq('reverse_charge')
     end
   end
 
