@@ -6385,6 +6385,7 @@ type Subscription {
   externalId: String!
   fees: [Fee!]
   id: ID!
+  lifetimeUsage: SubscriptionLifetimeUsage
   name: String
   nextName: String
   nextPendingStartDate: ISO8601Date
@@ -6412,6 +6413,15 @@ type SubscriptionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type SubscriptionLifetimeUsage {
+  lastThresholdAmountCents: BigInt
+  nextThresholdAmountCents: BigInt
+  nextTresholdRatio: Float
+  totalUsageAmountCents: BigInt!
+  totalUsageFromDatetime: ISO8601DateTime!
+  totalUsageToDatetime: ISO8601DateTime!
 }
 
 type Subsidiary {

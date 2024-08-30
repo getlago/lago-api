@@ -31,6 +31,8 @@ module Types
 
       field :fees, [Types::Fees::Object], null: true
 
+      field :lifetime_usage, Types::Subscriptions::LifetimeUsageObject, null: true
+
       def next_plan
         object.next_subscription&.plan
       end
@@ -42,6 +44,12 @@ module Types
       def period_end_date
         ::Subscriptions::DatesService.new_instance(object, Time.current)
           .next_end_of_period
+      end
+
+      def lifetime_usage
+        return nil unless object.plan.usage_thresholds.any?
+
+        object.lifetime_usage
       end
     end
   end
