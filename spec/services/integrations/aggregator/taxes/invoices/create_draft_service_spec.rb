@@ -150,7 +150,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             [
               {received_type: 'notCollecting', expected_name: 'Not collecting'},
               {received_type: 'productNotTaxed', expected_name: 'Product not taxed'},
-              {received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed'}
+              {received_type: 'jurisNotTaxed', expected_name: 'Juris not taxed'},
+              {received_type: 'jurisHasNoTax', expected_name: 'Juris has no tax'},
+              {received_type: 'specialUnknownRule', expected_name: 'Special unknown rule'}
             ]
 
           special_rules.each do |specific_rule|
