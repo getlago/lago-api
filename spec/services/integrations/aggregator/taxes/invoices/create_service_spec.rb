@@ -74,10 +74,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         'contact' => {
           'external_id' => customer.external_id,
           'name' => customer.name,
-          'address_line_1' => customer.shipping_address_line1,
-          'city' => customer.shipping_city,
-          'zip' => customer.shipping_zipcode,
-          'country' => customer.shipping_country,
+          'address_line_1' => customer.address_line1,
+          'city' => customer.city,
+          'zip' => customer.zipcode,
+          'country' => customer.country,
           'taxable' => false,
           'tax_number' => nil
         },

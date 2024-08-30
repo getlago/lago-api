@@ -7,7 +7,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, :with_shipping_address, organization:) }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
