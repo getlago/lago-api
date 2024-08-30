@@ -67,10 +67,12 @@ en:
     tax_name: "%{name} (%{rate}% on %{amount})"
     tax_name_only:
       customer_exempt: Customer is tax exempt
+      juris_has_no_tax: No tax
       juris_not_taxed: No tax
       not_collecting: No tax
       reverse_charge: Reverse charge - Tax liability shifted to customer
       transaction_exempt: Customer is tax exempt
+      unknown_taxation: Unknown
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Tax rate
     taxes:

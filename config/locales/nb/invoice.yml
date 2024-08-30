@@ -67,10 +67,12 @@ nb:
     tax_name: "%{name} (%{rate}% on %{amount})"
     tax_name_only:
       customer_exempt: Kunden er fritatt for avgift
+      juris_has_no_tax: Ingen skatt
       juris_not_taxed: Ingen skatt
       not_collecting: Ingen skatt
       reverse_charge: Omvendt avgiftsplikt - Skatteplikt overført til kunden
       transaction_exempt: Kunden er fritatt for avgift
+      unknown_taxation: Ukjent
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Skattesats
     taxes:

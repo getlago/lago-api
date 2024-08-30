@@ -67,10 +67,12 @@ it:
     tax_name: "%{name} (%{rate}% su %{amount})"
     tax_name_only:
       customer_exempt: Il cliente è esente da tasse
+      juris_has_no_tax: Nessuna tassa
       juris_not_taxed: Nessuna tassa
       not_collecting: Nessuna tassa
       reverse_charge: Inversione contabile - Responsabilità fiscale trasferita al cliente
       transaction_exempt: Il cliente è esente da tasse
+      unknown_taxation: Sconosciuto
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Aliquota fiscale
     taxes:

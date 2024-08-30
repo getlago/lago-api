@@ -16,7 +16,7 @@ class Invoice
     validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
 
     TAX_CODES_APPLICABLE_ON_WHOLE_INVOICE = %w[not_collecting juris_not_taxed reverse_charge customer_exempt
-      transaction_exempt].freeze
+      transaction_exempt juris_has_no_tax unknown_taxation].freeze
 
     def applied_on_whole_invoice?
       TAX_CODES_APPLICABLE_ON_WHOLE_INVOICE.include?(tax_code)

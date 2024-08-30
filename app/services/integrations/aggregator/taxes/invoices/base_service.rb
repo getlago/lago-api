@@ -5,7 +5,7 @@ module Integrations
     module Taxes
       module Invoices
         class BaseService < Integrations::Aggregator::BaseService
-          SPECIAL_TAXATION_TYPES = %w[exempt notCollecting productNotTaxed jurisNotTaxed].freeze
+          SPECIAL_TAXATION_TYPES = %w[exempt notCollecting productNotTaxed jurisNotTaxed jurisHasNoTax].freeze
           def initialize(invoice:, fees: nil)
             @invoice = invoice
             @fees = fees || invoice.fees
@@ -84,12 +84,19 @@ module Integrations
                   tax_amount: 0,
                   type: b['type']
                 )
-              else
+              elsif b['rate']
                 OpenStruct.new(
                   name: b['name'],
                   rate: b['rate'],
                   tax_amount: b['tax_amount'],
                   type: b['type']
+                )
+              else
+                OpenStruct.new(
+                  name: humanize_tax_name(b['reason'].presence || b['type'] || 'unknown_taxation'),
+                  rate: '0.00',
+                  tax_amount: 0,
+                  type: b['type'] || 'unknown_taxation'
                 )
               end
             end
