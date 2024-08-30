@@ -70,6 +70,8 @@ es:
       not_collecting: Sin impuesto
       reverse_charge: Inversión del sujeto pasivo - Responsabilidad fiscal trasladada al cliente
       transaction_exempt: El cliente está exento de impuestos
+      juris_has_no_tax: Sin impuesto
+      unknown_taxation: Desconocido
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Tasas de impuestos
     taxes:

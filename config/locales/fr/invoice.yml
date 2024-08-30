@@ -71,6 +71,8 @@ fr:
       not_collecting: Pas de taxe
       reverse_charge: Autoliquidation - Responsabilité fiscale transférée au client
       transaction_exempt: Le client est exonéré de taxe
+      juris_has_no_tax: Taxe non applicable
+      unknown_taxation: Inconnu
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Taux de taxe
     taxes:

@@ -71,6 +71,8 @@ en:
       not_collecting: No tax
       reverse_charge: Reverse charge - Tax liability shifted to customer
       transaction_exempt: Customer is tax exempt
+      juris_has_no_tax: No tax
+      unknown_taxation: Unknown
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Tax rate
     taxes:

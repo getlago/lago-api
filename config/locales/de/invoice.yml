@@ -71,6 +71,8 @@ de:
       not_collecting: Keine Steuer
       reverse_charge: Reverse-Charge-Verfahren - Steuerschuldnerschaft auf den Kunden übertragen
       transaction_exempt: Der Kunde ist von der Umsatzsteuer befreit
+      juris_has_no_tax: Keine Steuer
+      unknown_taxation: Unbekannt
     tax_name_with_details: "%{name} (%{rate}%)"
     tax_rate: Steuersatz
     taxes:
