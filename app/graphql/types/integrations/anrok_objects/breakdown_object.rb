@@ -19,7 +19,7 @@ module Types
         end
 
         def tax_code
-          object.name&.parameterize(separator: '_')
+          @tax_code ||= object.name&.parameterize(separator: '_')
         end
 
         def enumed_tax_code
