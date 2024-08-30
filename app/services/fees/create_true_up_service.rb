@@ -2,9 +2,10 @@
 
 module Fees
   class CreateTrueUpService < BaseService
-    def initialize(fee:, amount_cents:)
+    def initialize(fee:, amount_cents:, precise_amount_cents:)
       @fee = fee
       @amount_cents = amount_cents
+      @precise_amount_cents = precise_amount_cents
       @boundaries = OpenStruct.new(fee&.properties)
 
       super
@@ -16,6 +17,7 @@ module Fees
 
       true_up_fee = fee.dup.tap do |f|
         f.amount_cents = prorated_min_amount_cents - amount_cents
+        f.precise_amount_cents = prorated_min_amount_cents - precise_amount_cents
         f.units = 1
         f.total_aggregated_units = 1
         f.events_count = 0
@@ -31,7 +33,7 @@ module Fees
 
     private
 
-    attr_reader :fee, :amount_cents, :boundaries
+    attr_reader :fee, :amount_cents, :precise_amount_cents, :boundaries
 
     delegate :charge, :subscription, to: :fee
 
