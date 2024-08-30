@@ -126,6 +126,7 @@ enum AggregationTypeEnum {
 }
 
 type AnrokBreakdownObject {
+  enumedTaxCode: InvoiceAppliedTaxOnWholeInvoiceCodeEnum
   name: String
   rate: Float
   taxAmount: BigInt
