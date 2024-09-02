@@ -45,6 +45,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
     let(:charge_result) do
       BaseService::Result.new.tap do |result|
         result.amount = 10
+        result.precise_amount = 10.0
         result.unit_amount = 0.01111111111
         result.count = 1
         result.units = 9
@@ -72,6 +73,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           subscription:,
           charge:,
           amount_cents: 10,
+          precise_amount_cents: 10.0,
           amount_currency: 'EUR',
           fee_type: 'charge',
           pay_in_advance: true,
@@ -87,7 +89,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           precise_unit_amount: 0.01111111111,
 
           taxes_rate: 20.0,
-          taxes_amount_cents: 2
+          taxes_amount_cents: 2,
+          taxes_precise_amount_cents: 2.0
         )
         expect(result.fees.first.applied_taxes.count).to eq(1)
       end
@@ -145,6 +148,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             subscription:,
             charge:,
             amount_cents: 10,
+            precise_amount_cents: 10.0,
             amount_currency: 'EUR',
             fee_type: 'charge',
             pay_in_advance: true,
@@ -159,7 +163,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             unit_amount_cents: 1,
             precise_unit_amount: 0.01111111111,
             taxes_rate: 10.0,
-            taxes_amount_cents: 1
+            taxes_amount_cents: 1,
+            taxes_precise_amount_cents: 1.0
           )
           expect(result.fees.first.applied_taxes.count).to eq(2)
         end
@@ -280,6 +285,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           subscription:,
           charge:,
           amount_cents: 10,
+          precise_amount_cents: 10.0,
           amount_currency: 'EUR',
           fee_type: 'charge',
           pay_in_advance: true,
@@ -294,7 +300,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           precise_unit_amount: 0.01111111111,
 
           taxes_rate: 20.0,
-          taxes_amount_cents: 2
+          taxes_amount_cents: 2,
+          taxes_precise_amount_cents: 2.0
         )
         expect(result.fees.first.applied_taxes.count).to eq(1)
       end
@@ -321,6 +328,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             subscription:,
             charge:,
             amount_cents: 10,
+            precise_amount_cents: 10.0,
             amount_currency: 'EUR',
             fee_type: 'charge',
             pay_in_advance: true,
@@ -335,7 +343,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             precise_unit_amount: 0.01111111111,
 
             taxes_rate: 20.0,
-            taxes_amount_cents: 2
+            taxes_amount_cents: 2,
+            taxes_precise_amount_cents: 2.0
           )
           expect(result.fees.first.applied_taxes.count).to eq(1)
         end
@@ -374,6 +383,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             subscription:,
             charge:,
             amount_cents: 10,
+            precise_amount_cents: 10.0,
             amount_currency: 'EUR',
             fee_type: 'charge',
             pay_in_advance: true,
@@ -388,7 +398,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             grouped_by: {'operator' => 'foo'},
 
             taxes_rate: 20.0,
-            taxes_amount_cents: 2
+            taxes_amount_cents: 2,
+            taxes_precise_amount_cents: 2
           )
           expect(result.fees.first.applied_taxes.count).to eq(1)
         end
@@ -410,6 +421,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             subscription:,
             charge:,
             amount_cents: 10,
+            precise_amount_cents: 10.0,
             amount_currency: 'EUR',
             fee_type: 'charge',
             pay_in_advance: true,
@@ -423,7 +435,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
             precise_unit_amount: 0.01111111111,
 
             taxes_rate: 20.0,
-            taxes_amount_cents: 2
+            taxes_amount_cents: 2,
+            taxes_precise_amount_cents: 2,
           )
           expect(result.fees.first.applied_taxes.size).to eq(1)
         end

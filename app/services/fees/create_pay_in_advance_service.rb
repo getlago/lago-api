@@ -64,6 +64,7 @@ module Fees
           subscription:,
           charge:,
           amount_cents: result.amount,
+          precise_amount_cents: result.precise_amount,
           amount_currency: subscription.plan.amount_currency,
           fee_type: :charge,
           invoiceable: charge,
@@ -77,6 +78,7 @@ module Fees
           payment_status: :pending,
           pay_in_advance: true,
           taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0.0,
           unit_amount_cents:,
           precise_unit_amount: result.unit_amount,
           grouped_by: format_grouped_by
