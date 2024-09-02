@@ -15,6 +15,7 @@ module Fees
       currency = invoice.total_amount.currency
       rounded_amount = wallet_transaction.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
+      precise_amount_cents = wallet_transaction.amount * currency.subunit_to_unit
       unit_amount_cents = wallet_transaction.wallet.rate_amount * currency.subunit_to_unit
 
       new_fee = Fee.new(
@@ -23,6 +24,7 @@ module Fees
         invoiceable_type: 'WalletTransaction',
         invoiceable: wallet_transaction,
         amount_cents:,
+        precise_amount_cents:,
         amount_currency: wallet_transaction.wallet.currency,
         unit_amount_cents:,
         units: wallet_transaction.credit_amount,
@@ -30,7 +32,8 @@ module Fees
 
         # NOTE: No taxes should be applied on as it can be considered as an advance
         taxes_rate: 0,
-        taxes_amount_cents: 0
+        taxes_amount_cents: 0,
+        taxes_precise_amount_cents: 0
       )
       new_fee.precise_unit_amount = new_fee.unit_amount.to_f
       new_fee.save!

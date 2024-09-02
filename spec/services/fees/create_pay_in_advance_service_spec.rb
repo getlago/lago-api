@@ -399,7 +399,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
 
             taxes_rate: 20.0,
             taxes_amount_cents: 2,
-            taxes_precise_amount_cents: 2
+            taxes_precise_amount_cents: 2.0
           )
           expect(result.fees.first.applied_taxes.count).to eq(1)
         end
@@ -436,7 +436,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
 
             taxes_rate: 20.0,
             taxes_amount_cents: 2,
-            taxes_precise_amount_cents: 2,
+            taxes_precise_amount_cents: 2.0
           )
           expect(result.fees.first.applied_taxes.size).to eq(1)
         end
