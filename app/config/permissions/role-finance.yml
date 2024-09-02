@@ -45,8 +45,8 @@ organization:
     view: true
     update: true
   taxes:
-    view: false
-    update: false
+    view: true
+    update: true
   emails:
     view: false
     update: false
