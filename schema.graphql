@@ -6426,7 +6426,7 @@ type SubscriptionCollection {
 type SubscriptionLifetimeUsage {
   lastThresholdAmountCents: BigInt
   nextThresholdAmountCents: BigInt
-  nextTresholdRatio: Float
+  nextThresholdRatio: Float
   totalUsageAmountCents: BigInt!
   totalUsageFromDatetime: ISO8601DateTime!
   totalUsageToDatetime: ISO8601DateTime!

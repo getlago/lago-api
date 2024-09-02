@@ -11,5 +11,5 @@ RSpec.describe Types::Subscriptions::LifetimeUsageObject do
 
   it { is_expected.to have_field(:last_threshold_amount_cents).of_type('BigInt') }
   it { is_expected.to have_field(:next_threshold_amount_cents).of_type('BigInt') }
-  it { is_expected.to have_field(:next_treshold_ratio).of_type('Float') }
+  it { is_expected.to have_field(:next_threshold_ratio).of_type('Float') }
 end
