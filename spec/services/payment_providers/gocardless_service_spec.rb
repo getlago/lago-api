@@ -178,6 +178,43 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
       end
     end
 
+    context "when event metadata contains payable_type PaymentRequest" do
+      let(:payment_service) { instance_double(PaymentRequests::Payments::GocardlessService) }
+      let(:service_result) { BaseService::Result.new }
+
+      let(:events) do
+        path = Rails.root.join("spec/fixtures/gocardless/events_payment_request.json")
+        File.read(path)
+      end
+
+      before do
+        allow(PaymentRequests::Payments::GocardlessService).to receive(:new)
+          .and_return(payment_service)
+        allow(payment_service).to receive(:update_payment_status)
+          .and_return(service_result)
+      end
+
+      it "routes the event to an other service" do
+        gocardless_service.handle_event(events_json: events)
+
+        expect(PaymentRequests::Payments::GocardlessService).to have_received(:new)
+        expect(payment_service).to have_received(:update_payment_status)
+      end
+    end
+
+    context "when event metadata contains invalid payable_type" do
+      let(:events) do
+        path = Rails.root.join("spec/fixtures/gocardless/events_invalid_payable_type.json")
+        File.read(path)
+      end
+
+      it "routes the event to an other service" do
+        expect {
+          gocardless_service.handle_event(events_json: events)
+        }.to raise_error(NameError, "Invalid lago_payable_type: InvalidPayableTypeName")
+      end
+    end
+
     context 'when succeeded refund event' do
       let(:refund_service) { instance_double(CreditNotes::Refunds::GocardlessService) }
       let(:events) do
