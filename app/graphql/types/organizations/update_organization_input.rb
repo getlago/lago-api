@@ -10,7 +10,7 @@ module Types
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
       argument :logo, String, required: false
-      argument :tax_identification_number, String, required: false, permission: 'organization:taxes:view'
+      argument :tax_identification_number, String, required: false
 
       argument :address_line1, String, required: false
       argument :address_line2, String, required: false
