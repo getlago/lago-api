@@ -249,6 +249,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
     let(:provider_payment_id) { "ch_123456" }
 
     before do
+      allow(SegmentTrackJob).to receive(:perform_later)
       allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
@@ -329,10 +330,10 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
       end
     end
 
-    context "with invalid status", :aggregate_failures do
+    context "with invalid status" do
       let(:status) { "invalid-status" }
 
-      it "does not update the payment_status of payment_request, invoice and payment" do
+      it "does not update the payment_status of payment_request, invoice and payment", :aggregate_failures do
         expect {
           gocardless_service.update_payment_status(provider_payment_id:, status:)
         }.to not_change { payment_request.reload.payment_status }

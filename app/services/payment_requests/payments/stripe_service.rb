@@ -47,11 +47,11 @@ module PaymentRequests
           payable_payment_status = payable_payment_status(payment.status)
           update_payable_payment_status(
             payment_status: payable_payment_status,
-            processing: payment.status == 'processing'
+            processing: payment.status == "processing"
           )
           update_invoices_payment_status(
             payment_status: payable_payment_status,
-            processing: payment.status == 'processing'
+            processing: payment.status == "processing"
           )
         end
 
@@ -60,7 +60,7 @@ module PaymentRequests
       rescue Stripe::AuthenticationError, Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         # NOTE: Do not mark the payable as failed if the amount is too small for Stripe
         #       For now we keep it as pending.
-        return result if e.code == 'amount_too_small'
+        return result if e.code == "amount_too_small"
 
         deliver_error_webhook(e)
         update_payable_payment_status(payment_status: :failed, deliver_webhook: false)
@@ -82,13 +82,39 @@ module PaymentRequests
           }
         )
 
-        result.payment_url = result_url['url']
+        result.payment_url = result_url["url"]
 
         result
       rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::AuthenticationError, Stripe::PermissionError => e
         deliver_error_webhook(e)
 
-        result.single_validation_failure!(error_code: 'payment_provider_error')
+        result.single_validation_failure!(error_code: "payment_provider_error")
+      end
+
+      def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
+        # TODO: do we have one-time payments for payment requests?
+        payment = if metadata[:payment_type] == "one-time"
+          create_payment(provider_payment_id:, metadata:)
+        else
+          Payment.find_by(provider_payment_id:)
+        end
+
+        return handle_missing_payment(organization_id, metadata) unless payment
+
+        result.payment = payment
+        result.payable = payment.payable
+        return result if payment.payable.payment_succeeded?
+
+        payment.update!(status:)
+
+        processing = status == "processing"
+        payment_status = payable_payment_status(status)
+        update_payable_payment_status(payment_status:, processing:)
+        update_invoices_payment_status(payment_status:, processing:)
+
+        result
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
       end
 
       private
@@ -197,15 +223,19 @@ module PaymentRequests
       end
 
       def update_payable_payment_status(payment_status:, deliver_webhook: true, processing: false)
-        payable.update!(
-          payment_status:,
-          # NOTE: A proper `processing` payment status should be introduced for payment_requests
-          ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
-        )
+        UpdateService.call(
+          payable: result.payable,
+          params: {
+            payment_status:,
+            # NOTE: A proper `processing` payment status should be introduced for payment_requests
+            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+          },
+          webhook_notification: deliver_webhook
+        ).raise_if_error!
       end
 
       def update_invoices_payment_status(payment_status:, deliver_webhook: true, processing: false)
-        payable.invoices.each do |invoice|
+        result.payable.invoices.each do |invoice|
           Invoices::UpdateService.call(
             invoice: invoice,
             params: {
@@ -232,7 +262,7 @@ module PaymentRequests
               }
             }
           ],
-          mode: 'payment',
+          mode: "payment",
           success_url: success_redirect_url,
           customer: customer.stripe_customer.provider_customer_id,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
@@ -242,10 +272,45 @@ module PaymentRequests
               lago_customer_id: customer.id,
               lago_payment_request_id: payable.id,
               lago_invoice_ids: payable.invoice_ids,
-              payment_type: 'one-time'
+              payment_type: "one-time"
             }
           }
         }
+      end
+
+      def handle_missing_payment(organization_id, metadata)
+        # NOTE: Payment was not initiated by lago
+        return result unless metadata&.key?(:lago_payment_request_id)
+
+        # NOTE: Payment Request does not belong to this lago organization
+        #       It means the same Stripe secret key is used for multiple organizations
+        payment_request = PaymentRequest.find_by(id: metadata[:lago_payment_request_id], organization_id:)
+        return result unless payment_request
+
+        # NOTE: Payment Request exists but payment status is failed
+        return result if payment_request.payment_failed?
+
+        result.not_found_failure!(resource: "stripe_payment")
+      end
+
+      def create_payment(provider_payment_id:, metadata:)
+        @payable = PaymentRequest.find_by(id: metadata[:lago_payment_request_id])
+
+        unless payable
+          result.not_found_failure!(resource: "payment_request")
+          return
+        end
+
+        payable.increment_payment_attempts!
+
+        Payment.new(
+          payable:,
+          payment_provider_id: stripe_payment_provider.id,
+          payment_provider_customer_id: customer.stripe_customer.id,
+          amount_cents: payable.total_amount_cents,
+          amount_currency: payable.currency&.upcase,
+          provider_payment_id:
+        )
       end
 
       def deliver_error_webhook(stripe_error)
