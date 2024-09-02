@@ -142,4 +142,21 @@ RSpec.describe Organization, type: :model do
       expect(organization.api_key).to be_present
     end
   end
+
+  describe 'Premium integrations scopes' do
+    it "returns the organization if the premium integration is enabled" do
+      Organization::INTEGRATIONS.each do |integration|
+        expect(described_class.send("with_#{integration}_support")).to be_empty
+        organization.update!(premium_integrations: [integration])
+        expect(described_class.send("with_#{integration}_support")).to eq([organization])
+        organization.update!(premium_integrations: [])
+      end
+    end
+
+    it "does not return the organization for another premium integration" do
+      organization.update!(premium_integrations: ['progressive_billing'])
+      expect(described_class.with_dunning_support).to be_empty
+      expect(described_class.with_progressive_billing_support).to eq([organization])
+    end
+  end
 end

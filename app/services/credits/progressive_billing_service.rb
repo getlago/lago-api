@@ -9,7 +9,6 @@ module Credits
 
     def call
       result.credits = []
-      return result unless should_create_progressive_billing_credit?
 
       invoice.invoice_subscriptions.each do |invoice_subscription|
         subscription = invoice_subscription.subscription
@@ -54,15 +53,6 @@ module Credits
     private
 
     attr_reader :invoice
-
-    def should_create_progressive_billing_credit?
-      invoice.invoice_subscriptions.any? do |invoice_subscription|
-        invoice_subscription.subscription.invoices.progressive_billing
-          .finalized
-          .where(created_at: invoice_subscription.charges_from_datetime...invoice_subscription.charges_to_datetime)
-          .exists?
-      end
-    end
 
     def apply_credit_to_fees(credit)
       invoice.fees.charge.reload.each do |fee|
