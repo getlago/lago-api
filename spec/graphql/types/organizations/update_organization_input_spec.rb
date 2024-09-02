@@ -10,7 +10,7 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
   it { is_expected.to accept_argument(:legal_name).of_type('String') }
   it { is_expected.to accept_argument(:legal_number).of_type('String') }
   it { is_expected.to accept_argument(:logo).of_type('String') }
-  it { is_expected.to accept_argument(:tax_identification_number).of_type('String').with_permission('organization:taxes:view') }
+  it { is_expected.to accept_argument(:tax_identification_number).of_type('String') }
 
   it { is_expected.to accept_argument(:address_line1).of_type('String') }
   it { is_expected.to accept_argument(:address_line2).of_type('String') }

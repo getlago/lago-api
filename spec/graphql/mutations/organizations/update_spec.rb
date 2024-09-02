@@ -116,7 +116,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
 
       aggregate_failures do
         expect(result_data['email']).to eq 'foo@bar2.com'
-        expect(result_data['taxIdentificationNumber']).to be_nil
+        expect(result_data['taxIdentificationNumber']).to eq 'tax007'
         expect(result_data['emailSettings']).to be_nil
       end
     end

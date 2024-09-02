@@ -14,7 +14,7 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
   it { is_expected.to have_field(:legal_number).of_type('String') }
   it { is_expected.to have_field(:logo_url).of_type('String') }
   it { is_expected.to have_field(:name).of_type('String!') }
-  it { is_expected.to have_field(:tax_identification_number).of_type('String').with_permission('organization:taxes:view') }
+  it { is_expected.to have_field(:tax_identification_number).of_type('String') }
 
   it { is_expected.to have_field(:address_line1).of_type('String') }
   it { is_expected.to have_field(:address_line2).of_type('String') }

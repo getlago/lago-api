@@ -15,7 +15,7 @@ module Types
 
       field :legal_name, String
       field :legal_number, String
-      field :tax_identification_number, String, permission: 'organization:taxes:view'
+      field :tax_identification_number, String
 
       field :address_line1, String
       field :address_line2, String
