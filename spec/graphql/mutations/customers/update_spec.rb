@@ -29,6 +29,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           netPaymentTerm
           canEditAttributes
           invoiceGracePeriod
+          finalizeZeroAmountInvoice
           providerCustomer { id, providerCustomerId, providerPaymentMethods }
           billingConfiguration { id, documentLocale }
           metadata { id, key, value, displayInInvoice }
@@ -57,6 +58,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       paymentProvider: 'stripe',
       currency: 'USD',
       netPaymentTerm: 3,
+      finalizeZeroAmountInvoice: 'skip',
       providerCustomer: {
         providerCustomerId: 'cu_12345',
         providerPaymentMethods: %w[card sepa_debit]
@@ -119,6 +121,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['timezone']).to be_nil
       expect(result_data['netPaymentTerm']).to eq(3)
       expect(result_data['invoiceGracePeriod']).to be_nil
+      expect(result_data['finalizeZeroAmountInvoice']).to eq('skip')
       expect(result_data['providerCustomer']['id']).to be_present
       expect(result_data['providerCustomer']['providerCustomerId']).to eq('cu_12345')
       expect(result_data['providerCustomer']['providerPaymentMethods']).to eq(%w[card sepa_debit])

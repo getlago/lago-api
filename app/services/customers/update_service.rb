@@ -52,6 +52,10 @@ module Customers
         customer.lastname = args[:lastname] if args.key?(:lastname)
         customer.customer_type = args[:customer_type] if args.key?(:customer_type)
 
+        if args.key?(:finalize_zero_amount_invoice)
+          customer.finalize_zero_amount_invoice = args[:finalize_zero_amount_invoice]
+        end
+
         assign_premium_attributes(customer, args)
 
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)

@@ -41,6 +41,7 @@ module Types
       argument :integration_customers, [Types::IntegrationCustomers::Input], required: false
 
       argument :billing_configuration, Types::Customers::BillingConfigurationInput, required: false
+      argument :finalize_zero_amount_invoice, String, required: false
     end
   end
 end

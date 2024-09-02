@@ -30,6 +30,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           netPaymentTerm
           canEditAttributes
           invoiceGracePeriod
+          finalizeZeroAmountInvoice
           billingConfiguration { documentLocale }
           shippingAddress { addressLine1 city state }
           metadata { id, key, value, displayInInvoice }
@@ -76,6 +77,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           taxIdentificationNumber: '123456789',
           currency: 'EUR',
           netPaymentTerm: 30,
+          finalizeZeroAmountInvoice: 'skip',
           providerCustomer: {
             providerCustomerId: 'cu_12345',
             providerPaymentMethods: ['card']
@@ -124,6 +126,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data['shippingAddress']['city']).to eq('Paris')
       expect(result_data['shippingAddress']['state']).to eq('test state')
       expect(result_data['netPaymentTerm']).to eq(30)
+      expect(result_data['finalizeZeroAmountInvoice']).to eq('skip')
       expect(result_data['metadata'].count).to eq(1)
       expect(result_data['metadata'][0]['value']).to eq('John Doe')
       expect(result_data['taxes'][0]['code']).to eq(tax.code)
