@@ -5697,6 +5697,7 @@ input PlanOverridesInput {
 }
 
 enum PremiumIntegrationTypeEnum {
+  dunning
   netsuite
   okta
   progressive_billing
