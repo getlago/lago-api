@@ -4,6 +4,11 @@ module PaymentProviders
   class AdyenService < BaseService
     WEBHOOKS_EVENTS = %w[AUTHORISATION REFUND REFUND_FAILED CHARGEBACK].freeze
 
+    PAYMENT_SERVICE_CLASS_MAP = {
+      "Invoice" => Invoices::Payments::AdyenService,
+      "PaymentRequest" => PaymentRequests::Payments::AdyenService
+    }.freeze
+
     def create_or_update(**args)
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,
@@ -135,9 +140,24 @@ module PaymentProviders
     def update_payment_status(event, payment_type)
       provider_payment_id = event['pspReference']
       status = (event['success'] == 'true') ? 'succeeded' : 'failed'
-      metadata = {payment_type:, lago_invoice_id: event.dig('additionalData', 'metadata.lago_invoice_id')}
+      metadata = {
+        payment_type:,
+        lago_invoice_id: event.dig('additionalData', 'metadata.lago_invoice_id'),
+        lago_invoice_ids: event.dig('additionalData', 'metadata.lago_invoice_ids'),
+        lago_payment_request_id: event.dig('additionalData', 'metadata.lago_payment_request_id'),
+        lago_payable_type: event.dig('additionalData', 'metadata.lago_payable_type')
+      }
 
-      Invoices::Payments::AdyenService.new.update_payment_status(provider_payment_id:, status:, metadata:)
+      payment_service_klass(metadata)
+        .new.update_payment_status(provider_payment_id:, status:, metadata:)
+    end
+
+    def payment_service_klass(metadata)
+      payable_type = metadata[:lago_payable_type] || "Invoice"
+
+      PAYMENT_SERVICE_CLASS_MAP.fetch(payable_type) do
+        raise NameError, "Invalid lago_payable_type: #{payable_type}"
+      end
     end
   end
 end

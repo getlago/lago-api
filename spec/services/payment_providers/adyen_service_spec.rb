@@ -203,6 +203,52 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       end
     end
 
+    context "when succeeded authorisation event for processed one-time payment belonging to a Payment Request" do
+      let(:payment_service) { instance_double(PaymentRequests::Payments::AdyenService) }
+
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_authorisation_payment_response_payment_request.json")
+        File.read(path)
+      end
+
+      before do
+        allow(PaymentRequests::Payments::AdyenService).to receive(:new)
+          .and_return(payment_service)
+        allow(payment_service).to receive(:update_payment_status)
+          .and_return(service_result)
+      end
+
+      it "routes the event to an other service" do
+        adyen_service.handle_event(organization:, event_json:)
+
+        expect(PaymentRequests::Payments::AdyenService).to have_received(:new)
+        expect(payment_service).to have_received(:update_payment_status)
+      end
+    end
+
+    context "when succeeded authorisation event for processed one-time payment belonging to an invalid payable type" do
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_authorisation_payment_response_invalid_payable.json")
+        File.read(path)
+      end
+
+      it "routes the event to an other service" do
+        expect {
+          adyen_service.handle_event(organization:, event_json:)
+        }.to raise_error(NameError, "Invalid lago_payable_type: InvalidPayableTypeName")
+      end
+    end
+
     context 'when succeeded refund event' do
       let(:refund_service) { instance_double(CreditNotes::Refunds::AdyenService) }
 
