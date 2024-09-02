@@ -1,0 +1,145 @@
+{
+  "id": "evt_123456",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1689539649,
+  "data": {
+    "object": {
+      "id": "ch_123456",
+      "object": "charge",
+      "amount": 10000,
+      "amount_captured": 10000,
+      "amount_refunded": 0,
+      "application": null,
+      "application_fee": null,
+      "application_fee_amount": null,
+      "balance_transaction": "txn_123456",
+      "billing_details": {
+        "address": {
+          "city": null,
+          "country": null,
+          "line1": null,
+          "line2": null,
+          "postal_code": null,
+          "state": null
+        },
+        "email": null,
+        "name": null,
+        "phone": null
+      },
+      "calculated_statement_descriptor": "GET LAGO CORP.",
+      "captured": true,
+      "created": 1689539648,
+      "currency": "usd",
+      "customer": "cus_123456",
+      "description": "Subscription update",
+      "destination": null,
+      "dispute": null,
+      "disputed": false,
+      "failure_balance_transaction": null,
+      "failure_code": null,
+      "failure_message": null,
+      "fraud_details": {
+      },
+      "invoice": "in_123456",
+      "livemode": false,
+      "metadata": {
+        "lago_payment_request_id": "a587e552-36bc-4334-81f2-abcbf034ad3f",
+        "lago_invoice_ids": ["invoice_id_1", "invoice_id_2"],
+        "lago_payable_type": "InvalidPayableTypeName"
+      },
+      "on_behalf_of": null,
+      "order": null,
+      "outcome": {
+        "network_status": "approved_by_network",
+        "reason": null,
+        "risk_level": "normal",
+        "risk_score": 6,
+        "seller_message": "Payment complete.",
+        "type": "authorized"
+      },
+      "paid": true,
+      "payment_intent": "pi_123456",
+      "payment_method": "card_123456",
+      "payment_method_details": {
+        "card": {
+          "brand": "visa",
+          "checks": {
+            "address_line1_check": null,
+            "address_postal_code_check": null,
+            "cvc_check": null
+          },
+          "country": "US",
+          "exp_month": 9,
+          "exp_year": 2029,
+          "fingerprint": "123456",
+          "funding": "credit",
+          "installments": null,
+          "last4": "4242",
+          "mandate": null,
+          "network": "visa",
+          "network_token": {
+            "used": false
+          },
+          "three_d_secure": null,
+          "wallet": null
+        },
+        "type": "card"
+      },
+      "receipt_email": null,
+      "receipt_number": null,
+      "receipt_url": "https://pay.stripe.com/receipts/invoices/123456",
+      "refunded": false,
+      "refunds": {
+        "object": "list",
+        "data": [
+        ],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/charges/ch_123456/refunds"
+      },
+      "review": null,
+      "shipping": null,
+      "source": {
+        "id": "card_123456",
+        "object": "card",
+        "address_city": null,
+        "address_country": null,
+        "address_line1": null,
+        "address_line1_check": null,
+        "address_line2": null,
+        "address_state": null,
+        "address_zip": null,
+        "address_zip_check": null,
+        "brand": "Visa",
+        "country": "US",
+        "customer": "cus_123456",
+        "cvc_check": null,
+        "dynamic_last4": null,
+        "exp_month": 9,
+        "exp_year": 2029,
+        "fingerprint": "123456",
+        "funding": "credit",
+        "last4": "4242",
+        "metadata": {
+        },
+        "name": null,
+        "tokenization_method": null,
+        "wallet": null
+      },
+      "source_transfer": null,
+      "statement_descriptor": null,
+      "statement_descriptor_suffix": null,
+      "status": "succeeded",
+      "transfer_data": null,
+      "transfer_group": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": "in_123456"
+  },
+  "type": "charge.succeeded"
+}

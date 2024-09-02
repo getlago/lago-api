@@ -2,6 +2,11 @@
 
 module PaymentProviders
   class StripeService < BaseService
+    PAYMENT_SERVICE_CLASS_MAP = {
+      "Invoice" => Invoices::Payments::StripeService,
+      "PaymentRequest" => PaymentRequests::Payments::StripeService
+    }.freeze
+
     def create_or_update(**args)
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization_id],
@@ -120,7 +125,7 @@ module PaymentProviders
             metadata: event.data.object.metadata.to_h.symbolize_keys
           ).raise_if_error!
       when 'charge.succeeded'
-        Invoices::Payments::StripeService
+        payment_service_klass(event)
           .new.update_payment_status(
             organization_id: organization.id,
             provider_payment_id: event.data.object.payment_intent,
@@ -134,8 +139,7 @@ module PaymentProviders
         ).raise_if_error!
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
         status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
-
-        Invoices::Payments::StripeService
+        payment_service_klass(event)
           .new.update_payment_status(
             organization_id: organization.id,
             provider_payment_id: event.data.object.id,
@@ -190,6 +194,14 @@ module PaymentProviders
         .joins(:customer)
         .where(payment_provider_id: nil, customers: {organization_id:})
         .update_all(payment_provider_id: stripe_provider.id) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    def payment_service_klass(event)
+      payable_type = event.data.object.metadata.to_h[:lago_payable_type] || "Invoice"
+
+      PAYMENT_SERVICE_CLASS_MAP.fetch(payable_type) do
+        raise NameError, "Invalid lago_payable_type: #{payable_type}"
+      end
     end
   end
 end
