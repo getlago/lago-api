@@ -77,7 +77,7 @@ class Organization < ApplicationRecord
 
   after_create :generate_document_number_prefix
 
-  INTEGRATIONS.each do |premium_integration|
+  PREMIUM_INTEGRATIONS.each do |premium_integration|
     scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
   end
 
