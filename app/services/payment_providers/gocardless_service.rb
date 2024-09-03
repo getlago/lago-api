@@ -6,6 +6,11 @@ module PaymentProviders
     PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
     REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
 
+    PAYMENT_SERVICE_CLASS_MAP = {
+      "Invoice" => Invoices::Payments::GocardlessService,
+      "PaymentRequest" => PaymentRequests::Payments::GocardlessService
+    }.freeze
+
     def create_or_update(**args)
       access_token = if args[:access_code].present?
         oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
@@ -75,7 +80,7 @@ module PaymentProviders
         case event.resource_type
         when 'payments'
           if PAYMENT_ACTIONS.include?(event.action)
-            update_payment_status_result = Invoices::Payments::GocardlessService
+            update_payment_status_result = payment_service_klass(event)
               .new.update_payment_status(
                 provider_payment_id: event.links.payment,
                 status: event.action
@@ -117,6 +122,14 @@ module PaymentProviders
         token_url: '/oauth/access_token',
         auth_scheme: :request_body
       )
+    end
+
+    def payment_service_klass(event)
+      payable_type = event.metadata["lago_payable_type"] || "Invoice"
+
+      PAYMENT_SERVICE_CLASS_MAP.fetch(payable_type) do
+        raise NameError, "Invalid lago_payable_type: #{payable_type}"
+      end
     end
   end
 end

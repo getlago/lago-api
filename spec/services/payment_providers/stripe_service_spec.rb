@@ -232,6 +232,57 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
     end
 
+    context "when payment intent event for a payment request" do
+      let(:payment_service) { instance_double(PaymentRequests::Payments::StripeService) }
+
+      let(:event) do
+        path = Rails.root.join("spec/fixtures/stripe/payment_intent_event_payment_request.json")
+        File.read(path)
+      end
+
+      before do
+        allow(PaymentRequests::Payments::StripeService).to receive(:new)
+          .and_return(payment_service)
+        allow(payment_service).to receive(:update_payment_status)
+          .and_return(service_result)
+      end
+
+      it "routes the event to an other service" do
+        result = stripe_service.handle_event(
+          organization:,
+          event_json: event
+        )
+
+        expect(result).to be_success
+
+        expect(PaymentRequests::Payments::StripeService).to have_received(:new)
+        expect(payment_service).to have_received(:update_payment_status)
+          .with(
+            organization_id: organization.id,
+            provider_payment_id: "pi_1JKS2Y2VYugoKSBzNHPFBNj9",
+            status: "succeeded",
+            metadata: {
+              lago_invoice_ids: %w[invoice_id_1 invoice_id_2],
+              lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
+              lago_payable_type: "PaymentRequest"
+            }
+          )
+      end
+    end
+
+    context "when payment intent event with an invalid payable type" do
+      let(:event) do
+        path = Rails.root.join("spec/fixtures/stripe/payment_intent_event_invalid_payable_type.json")
+        File.read(path)
+      end
+
+      it "routes the event to an other service" do
+        expect {
+          stripe_service.handle_event(organization:, event_json: event)
+        }.to raise_error(NameError, "Invalid lago_payable_type: InvalidPayableTypeName")
+      end
+    end
+
     context 'when charge event' do
       let(:event) do
         path = Rails.root.join('spec/fixtures/stripe/charge_event.json')
@@ -254,6 +305,57 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
             status: 'succeeded',
             metadata: {}
           )
+      end
+    end
+
+    context "when charge event for a payment request" do
+      let(:payment_service) { instance_double(PaymentRequests::Payments::StripeService) }
+
+      let(:event) do
+        path = Rails.root.join("spec/fixtures/stripe/charge_event_payment_request.json")
+        File.read(path)
+      end
+
+      before do
+        allow(PaymentRequests::Payments::StripeService).to receive(:new)
+          .and_return(payment_service)
+        allow(payment_service).to receive(:update_payment_status)
+          .and_return(service_result)
+      end
+
+      it "routes the event to an other service" do
+        result = stripe_service.handle_event(
+          organization:,
+          event_json: event
+        )
+
+        expect(result).to be_success
+
+        expect(PaymentRequests::Payments::StripeService).to have_received(:new)
+        expect(payment_service).to have_received(:update_payment_status)
+          .with(
+            organization_id: organization.id,
+            provider_payment_id: 'pi_123456',
+            status: "succeeded",
+            metadata: {
+              lago_invoice_ids: %w[invoice_id_1 invoice_id_2],
+              lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
+              lago_payable_type: "PaymentRequest"
+            }
+          )
+      end
+    end
+
+    context "when charge event with an invalid payable type" do
+      let(:event) do
+        path = Rails.root.join("spec/fixtures/stripe/charge_event_invalid_payable_type.json")
+        File.read(path)
+      end
+
+      it "routes the event to an other service" do
+        expect {
+          stripe_service.handle_event(organization:, event_json: event)
+        }.to raise_error(NameError, "Invalid lago_payable_type: InvalidPayableTypeName")
       end
     end
 
