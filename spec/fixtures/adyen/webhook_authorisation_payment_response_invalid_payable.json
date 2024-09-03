@@ -14,7 +14,6 @@
           "threeds2.cardEnrolled": "false",
           "recurringProcessingModel": "CardOnFile",
           "metadata.lago_payment_request_id": "ec82efeb-88bb-44f8-ba30-0d55b3fd583a",
-          "metadata.lago_invoice_ids": ["invoice_id_1", "invoice_id_2"],
           "metadata.lago_payable_type": "InvalidPayableTypeName"
         },
         "amount": {

@@ -262,7 +262,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
             provider_payment_id: "pi_1JKS2Y2VYugoKSBzNHPFBNj9",
             status: "succeeded",
             metadata: {
-              lago_invoice_ids: %w[invoice_id_1 invoice_id_2],
               lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
               lago_payable_type: "PaymentRequest"
             }
@@ -338,7 +337,6 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
             provider_payment_id: 'pi_123456',
             status: "succeeded",
             metadata: {
-              lago_invoice_ids: %w[invoice_id_1 invoice_id_2],
               lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
               lago_payable_type: "PaymentRequest"
             }

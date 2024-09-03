@@ -143,7 +143,6 @@ module PaymentProviders
       metadata = {
         payment_type:,
         lago_invoice_id: event.dig('additionalData', 'metadata.lago_invoice_id'),
-        lago_invoice_ids: event.dig('additionalData', 'metadata.lago_invoice_ids'),
         lago_payment_request_id: event.dig('additionalData', 'metadata.lago_payment_request_id'),
         lago_payable_type: event.dig('additionalData', 'metadata.lago_payable_type')
       }
