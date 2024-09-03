@@ -115,8 +115,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           description: "#{organization.name} - Overdue invoices",
           metadata: {
             lago_customer_id: customer.id,
-            lago_payment_request_id: payment_request.id,
-            lago_invoice_ids: payment_request.invoice_ids
+            lago_payment_request_id: payment_request.id
           }
         },
         hash_including(
@@ -403,7 +402,6 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
               metadata: {
                 lago_customer_id: customer.id,
                 lago_payment_request_id: payment_request.id,
-                lago_invoice_ids: payment_request.invoice_ids,
                 payment_type: "one-time"
               }
             }
