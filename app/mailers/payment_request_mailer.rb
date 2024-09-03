@@ -8,6 +8,7 @@ class PaymentRequestMailer < ApplicationMailer
     @organization = @payment_request.organization
     @customer = @payment_request.customer
     @invoices = @payment_request.invoices
+    @payment_url = ::PaymentRequests::Payments::GeneratePaymentUrlService.call(payable: @payment_request).payment_url
 
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(

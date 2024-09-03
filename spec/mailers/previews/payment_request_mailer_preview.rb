@@ -2,9 +2,14 @@
 
 class PaymentRequestMailerPreview < BasePreviewMailer
   def requested
-    payment_request = FactoryBot.create(:payment_request, amount_cents: 3000)
     first_invoice = FactoryBot.create(:invoice, total_amount_cents: 1000)
     second_invoice = FactoryBot.create(:invoice, total_amount_cents: 2000)
+
+    payment_request = FactoryBot.create(
+      :payment_request,
+      amount_cents: 3000,
+      invoices: [first_invoice, second_invoice]
+    )
 
     first_invoice.file.attach(
       io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
@@ -17,16 +22,37 @@ class PaymentRequestMailerPreview < BasePreviewMailer
       content_type: "application/pdf"
     )
 
-    FactoryBot.create(
-      :payment_request_applied_invoice,
-      invoice: first_invoice,
-      payment_request:
+    PaymentRequestMailer.with(payment_request:).requested
+  end
+
+  def requested_with_payment_url
+    first_invoice = FactoryBot.create(:invoice, total_amount_cents: 1000)
+    second_invoice = FactoryBot.create(:invoice, total_amount_cents: 2000)
+
+    payment_request = FactoryBot.create(
+      :payment_request,
+      amount_cents: 3000,
+      invoices: [first_invoice, second_invoice]
     )
-    FactoryBot.create(
-      :payment_request_applied_invoice,
-      invoice: second_invoice,
-      payment_request:
+
+    first_invoice.file.attach(
+      io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+      filename: "invoice.pdf",
+      content_type: "application/pdf"
     )
+    second_invoice.file.attach(
+      io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+      filename: "invoice.pdf",
+      content_type: "application/pdf"
+    )
+
+    ::PaymentRequests::Payments::GeneratePaymentUrlService.class_eval do
+      def self.call(payable:)
+        BaseService::Result.new.tap do |result|
+          result.payment_url = "https://stripe.com/payment_url"
+        end
+      end
+    end
 
     PaymentRequestMailer.with(payment_request:).requested
   end

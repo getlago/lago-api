@@ -1,41 +1,41 @@
-div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
-  = I18n.t('email.payment_request.requested.hello', customer_name: @customer.name)
-div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
-  = I18n.t('email.payment_request.requested.reminder_overdue_balance', organization_name: @organization.name)
-div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
-  = I18n.t('email.payment_request.requested.total_amount_due', amount: MoneyHelper.format(@payment_request.amount))
-div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
+div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
+  = I18n.t("email.payment_request.requested.hello", customer_name: @customer.name)
+div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
+  = I18n.t("email.payment_request.requested.reminder_overdue_balance", organization_name: @organization.name)
+div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
+  = I18n.t("email.payment_request.requested.total_amount_due", amount: MoneyHelper.format(@payment_request.amount))
+div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
   - if @customer.applicable_net_payment_term > 0
-    = I18n.t('email.payment_request.requested.payment_terms', count: @customer.applicable_net_payment_term)
+    = I18n.t("email.payment_request.requested.payment_terms", count: @customer.applicable_net_payment_term)
   - else
-    = I18n.t('email.payment_request.requested.upon_invoice_generation')
-div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
-  = I18n.t('email.payment_request.requested.already_paid')
-div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
-  = I18n.t('email.payment_request.requested.thank_you')
+    = I18n.t("email.payment_request.requested.upon_invoice_generation")
+div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
+  = I18n.t("email.payment_request.requested.already_paid")
+div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
+  = I18n.t("email.payment_request.requested.thank_you")
 
-div style='padding-top: 32px;font-style: normal;font-weight: 400;font-size: 14px;line-height: 20px;color: #66758F;border-top: 1px solid #d9dee7;'
-  = I18n.t('email.payment_request.requested.remaining_amount')
-div style='margin-bottom: 16px;font-style: normal;font-weight: 700;font-size: 32px;line-height: 40px;color: #19212E;'
+div style="padding-top: 32px;font-style: normal;font-weight: 400;font-size: 14px;line-height: 20px;color: #66758F;border-top: 1px solid #d9dee7;"
+  = I18n.t("email.payment_request.requested.remaining_amount")
+div style="margin-bottom: 16px;font-style: normal;font-weight: 700;font-size: 32px;line-height: 40px;color: #19212E;"
   = MoneyHelper.format(@payment_request.amount)
 
 /! TODO: Do not display the button unless payment url is present
-table style='margin-bottom: 32px' width="100%" cellspacing="0" cellpadding="0"
-  tr
-    td
-      table cellspacing="0" cellpadding="0"
-        tr
-          td style="border-radius: 12px;" bgcolor="#006CFA"
-            a href="#" style="padding: 10px 16px;font-size: 16px; color: #ffffff;text-decoration: none;font-weight:bold;display: inline-block;font-weight: 400;font-style: normal;line-height: 24px;"
-              = I18n.t('email.payment_request.requested.pay_amount')
+- if @payment_url
+  table style="margin-bottom: 32px" width="100%" cellspacing="0" cellpadding="0"
+    tr
+      td
+        table cellspacing="0" cellpadding="0"
+          tr
+            td style="border-radius: 12px;" bgcolor="#006CFA"
+              = link_to I18n.t("email.payment_request.requested.pay_amount"), @payment_url, id: "payment_link", style: "padding: 10px 16px;font-size: 16px; color: #ffffff;text-decoration: none;font-weight:bold;display: inline-block;font-weight: 400;font-style: normal;line-height: 24px;"
 
 table style="width: 100%; border-collapse: collapse;"
   tr
   tr style="border-bottom: 1px solid #d9dee7;"
     td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: left; color: #66758F; white-space: nowrap; padding: 16px 0;"
-      = I18n.t('email.credit_note.created.invoice_number')
+      = I18n.t("email.credit_note.created.invoice_number")
     td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: right; color: #66758F; white-space: nowrap; padding: 16px 0;"
-      = I18n.t('invoice.amount')
+      = I18n.t("invoice.amount")
   - @invoices.each do |invoice|
     tr style="border-bottom: 1px solid #d9dee7;"
       td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: left; padding-right: 16px; white-space: nowrap; padding: 16px 0;"
