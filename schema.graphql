@@ -3017,7 +3017,7 @@ type CurrentOrganization {
   logoUrl: String
   name: String!
   netPaymentTerm: Int!
-  premiumIntegrations: [IntegrationTypeEnum!]!
+  premiumIntegrations: [PremiumIntegrationTypeEnum!]!
   state: String
   stripePaymentProviders: [StripeProvider!]
   taxIdentificationNumber: String
@@ -5694,6 +5694,14 @@ input PlanOverridesInput {
   taxCodes: [String!]
   trialPeriod: Float
   usageThresholds: [UsageThresholdOverridesInput!]
+}
+
+enum PremiumIntegrationTypeEnum {
+  dunning
+  netsuite
+  okta
+  progressive_billing
+  xero
 }
 
 type Properties {

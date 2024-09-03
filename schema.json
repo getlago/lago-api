@@ -11577,7 +11577,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "ENUM",
-                      "name": "IntegrationTypeEnum",
+                      "name": "PremiumIntegrationTypeEnum",
                       "ofType": null
                     }
                   }
@@ -27634,6 +27634,47 @@
             }
           ],
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "PremiumIntegrationTypeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "netsuite",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "okta",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "xero",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "progressive_billing",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "dunning",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "OBJECT",

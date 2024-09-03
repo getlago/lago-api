@@ -145,7 +145,7 @@ RSpec.describe Organization, type: :model do
 
   describe 'Premium integrations scopes' do
     it "returns the organization if the premium integration is enabled" do
-      Organization::INTEGRATIONS.each do |integration|
+      Organization::PREMIUM_INTEGRATIONS.each do |integration|
         expect(described_class.send("with_#{integration}_support")).to be_empty
         organization.update!(premium_integrations: [integration])
         expect(described_class.send("with_#{integration}_support")).to eq([organization])
