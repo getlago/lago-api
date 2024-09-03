@@ -2,25 +2,26 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(current_user, customer:, subscription:)
+    def initialize(current_user, customer:, subscription:, apply_taxes: true)
       super(current_user)
 
+      @apply_taxes = apply_taxes
       @customer = customer
       @subscription = subscription
     end
 
-    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:)
+    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(nil, customer:, subscription:)
+      new(nil, customer:, subscription:, apply_taxes:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: 'customer')
     end
 
-    def self.with_ids(current_user, customer_id:, subscription_id:)
+    def self.with_ids(current_user, customer_id:, subscription_id:, apply_taxes: true)
       customer = Customer.find_by(id: customer_id, organization_id: current_user.organization_ids)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
-      new(current_user, customer:, subscription:)
+      new(current_user, customer:, subscription:, apply_taxes:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: 'customer')
     end
@@ -36,7 +37,7 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :subscription
+    attr_reader :invoice, :subscription, :apply_taxes
 
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
@@ -56,10 +57,12 @@ module Invoices
 
       add_charge_fees
 
-      if customer_provider_taxation?
+      if apply_taxes && customer_provider_taxation?
         compute_amounts_with_provider_taxes
-      else
+      elsif apply_taxes
         compute_amounts
+      else
+        compute_amounts_without_tax
       end
 
       format_usage
@@ -139,6 +142,13 @@ module Invoices
       taxes_result.raise_if_error!
 
       invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
+    end
+
+    def compute_amounts_without_tax
+      invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
+      invoice.taxes_amount_cents = 0
+      invoice.taxes_rate = 0
+      invoice.total_amount_cents = invoice.fees_amount_cents
     end
 
     def compute_amounts_with_provider_taxes

@@ -15,7 +15,12 @@ module Resolvers
       type Types::Customers::Usage::Current, null: false
 
       def resolve(customer_id:, subscription_id:)
-        result = Invoices::CustomerUsageService.with_ids(context[:current_user], customer_id:, subscription_id:).call
+        result = Invoices::CustomerUsageService.with_ids(
+          context[:current_user],
+          customer_id:,
+          subscription_id:,
+          apply_taxes: false
+        ).call
 
         result.success? ? result.usage : result_error(result)
       end
