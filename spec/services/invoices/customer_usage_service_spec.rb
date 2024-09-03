@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
   subject(:usage_service) do
-    described_class.with_ids(membership.user, customer_id:, subscription_id:)
+    described_class.with_ids(membership.user, customer_id:, subscription_id:, apply_taxes:)
   end
 
   let(:membership) { create(:membership) }
@@ -15,6 +15,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
   let(:subscription_id) { subscription&.id }
   let(:plan) { create(:plan, interval: 'monthly') }
   let(:timestamp) { Time.current }
+  let(:apply_taxes) { true }
 
   let(:subscription) do
     create(
@@ -90,6 +91,31 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
         )
         expect(result.usage.fees.size).to eq(1)
         expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+      end
+    end
+
+    context 'when apply_taxes property is set to false' do
+      let(:apply_taxes) { false }
+
+      it 'initializes an invoice' do
+        result = usage_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.invoice).to be_a(Invoice)
+
+          expect(result.usage).to have_attributes(
+            from_datetime: Time.current.beginning_of_month.iso8601,
+            to_datetime: Time.current.end_of_month.iso8601,
+            issuing_date: Time.zone.today.end_of_month.iso8601,
+            currency: 'EUR',
+            amount_cents: 2532, # 1266 * 2,
+            taxes_amount_cents: 0,
+            total_amount_cents: 2532
+          )
+          expect(result.usage.fees.size).to eq(1)
+          expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+        end
       end
     end
 
