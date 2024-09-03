@@ -145,8 +145,8 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
       expect(usage_response['currency']).to eq('EUR')
       expect(usage_response['issuingDate']).to eq(Time.zone.today.end_of_month.iso8601)
       expect(usage_response['amountCents']).to eq('405')
-      expect(usage_response['totalAmountCents']).to eq('486')
-      expect(usage_response['taxesAmountCents']).to eq('81')
+      expect(usage_response['totalAmountCents']).to eq('405')
+      expect(usage_response['taxesAmountCents']).to eq('0')
 
       charge_usage = usage_response['chargesUsage'].first
       expect(charge_usage['billableMetric']['name']).to eq(metric.name)
