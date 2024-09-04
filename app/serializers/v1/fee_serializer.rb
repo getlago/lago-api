@@ -3,7 +3,7 @@
 module V1
   class FeeSerializer < ModelSerializer
     def serialize
-      # subunit_to_unit = model.amount.currency.subunit_to_unit
+      subunit_to_unit = model.amount.currency.subunit_to_unit.to_d
 
       payload = {
         lago_id: model.id,
@@ -31,10 +31,10 @@ module V1
         invoiceable:,
         amount_cents: model.amount_cents,
         amount_currency: model.amount_currency,
-        # precise_amount: model.precise_amount_cents.fdiv(subunit_to_unit),
-        # precise_total_amount: model.precise_total_amount_cents.fdiv(subunit_to_unit),
+        precise_amount: model.precise_amount_cents.fdiv(subunit_to_unit),
+        precise_total_amount: model.precise_total_amount_cents.fdiv(subunit_to_unit),
         taxes_amount_cents: model.taxes_amount_cents,
-        # taxes_precise_amount: model.taxes_precise_amount_cents.fdiv(subunit_to_unit),
+        taxes_precise_amount: model.taxes_precise_amount_cents.fdiv(subunit_to_unit),
         taxes_rate: model.taxes_rate,
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.amount_currency,
