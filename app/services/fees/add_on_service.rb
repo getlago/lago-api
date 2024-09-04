@@ -11,17 +11,21 @@ module Fees
     def create
       return result if already_billed?
 
+      amount_cents = applied_add_on.amount_cents
+
       new_fee = Fee.new(
         invoice:,
         applied_add_on:,
-        amount_cents: applied_add_on.amount_cents,
+        amount_cents:,
+        precise_amount_cents: amount_cents.to_d,
         amount_currency: applied_add_on.amount_currency,
         fee_type: :add_on,
         invoiceable_type: 'AppliedAddOn',
         invoiceable: applied_add_on,
         units: 1,
         payment_status: :pending,
-        taxes_amount_cents: 0
+        taxes_amount_cents: 0,
+        taxes_precise_amount_cents: 0.to_d
       )
 
       taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)

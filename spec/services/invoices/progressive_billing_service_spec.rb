@@ -13,7 +13,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
   let(:subscription) { create(:subscription, plan:, customer:, started_at: timestamp - 1.week) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:) }
 
-  let(:timestamp) { Time.zone.parse('2024-08-22 10:00:00') }
+  let(:timestamp) { Time.zone.parse(Date.current.strftime('%Y-%m-%d 10:00:00')) }
 
   let(:tax) { create(:tax, organization:, rate: 20) }
   let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: 'value') }

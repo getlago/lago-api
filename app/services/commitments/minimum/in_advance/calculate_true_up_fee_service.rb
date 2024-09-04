@@ -12,6 +12,12 @@ module Commitments
           super
         end
 
+        def precise_amount_cents
+          return 0.to_d unless invoice_subscription.previous_invoice_subscription
+
+          super
+        end
+
         def subscription_fees
           dates_service = Commitments::DatesService.new_instance(
             commitment: minimum_commitment,

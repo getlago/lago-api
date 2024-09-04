@@ -19,7 +19,11 @@ module Fees
       init_fees
 
       if invoice.nil? || !invoice.progressive_billing?
-        init_true_up_fee(fee: result.fees.first, amount_cents: result.fees.sum(&:amount_cents))
+        init_true_up_fee(
+          fee: result.fees.first,
+          amount_cents: result.fees.sum(&:amount_cents),
+          precise_amount_cents: result.fees.sum(&:precise_amount_cents)
+        )
       end
       return result unless result.success?
 
@@ -100,6 +104,7 @@ module Fees
       # to the currency decimals and transform it into currency cents
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
+      precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
 
       units = if is_current_usage && (charge.pay_in_advance? || charge.prorated?)
@@ -115,6 +120,7 @@ module Fees
         subscription:,
         charge:,
         amount_cents:,
+        precise_amount_cents:,
         amount_currency: currency,
         fee_type: :charge,
         invoiceable_type: 'Charge',
@@ -125,6 +131,7 @@ module Fees
         events_count: amount_result.count,
         payment_status: :pending,
         taxes_amount_cents: 0,
+        taxes_precise_amount_cents: 0.to_d,
         unit_amount_cents:,
         precise_unit_amount: amount_result.unit_amount,
         amount_details: amount_result.amount_details,
@@ -170,8 +177,8 @@ module Fees
       @adjusted_fee[key] = scope.first
     end
 
-    def init_true_up_fee(fee:, amount_cents:)
-      true_up_fee = Fees::CreateTrueUpService.call(fee:, amount_cents:).true_up_fee
+    def init_true_up_fee(fee:, amount_cents:, precise_amount_cents:)
+      true_up_fee = Fees::CreateTrueUpService.call(fee:, amount_cents:, precise_amount_cents:).true_up_fee
       result.fees << true_up_fee if true_up_fee
     end
 

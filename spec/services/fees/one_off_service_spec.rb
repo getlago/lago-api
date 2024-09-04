@@ -52,6 +52,7 @@ RSpec.describe Fees::OneOffService do
           precise_unit_amount: 12,
           units: 2,
           amount_cents: 2400,
+          precise_amount_cents: 2400.0,
           amount_currency: 'EUR',
           fee_type: 'add_on',
           payment_status: 'pending'
@@ -67,6 +68,7 @@ RSpec.describe Fees::OneOffService do
           precise_unit_amount: 4,
           units: 1,
           amount_cents: 400,
+          precise_amount_cents: 400.0,
           amount_currency: 'EUR',
           fee_type: 'add_on',
           payment_status: 'pending'
@@ -127,6 +129,7 @@ RSpec.describe Fees::OneOffService do
             precise_unit_amount: 12,
             units: 2,
             amount_cents: 2400,
+            precise_amount_cents: 2400.0,
             amount_currency: 'EUR',
             fee_type: 'add_on',
             payment_status: 'pending'
@@ -194,6 +197,7 @@ RSpec.describe Fees::OneOffService do
             payment_status: 'pending'
           )
           expect(first_fee.applied_taxes.first.amount_cents).to eq(240)
+          expect(first_fee.applied_taxes.first.precise_amount_cents).to eq(240.0)
 
           expect(second_fee).to have_attributes(
             id: String,
@@ -204,11 +208,13 @@ RSpec.describe Fees::OneOffService do
             precise_unit_amount: 4,
             units: 1,
             amount_cents: 400,
+            precise_amount_cents: 400.0,
             amount_currency: 'EUR',
             fee_type: 'add_on',
             payment_status: 'pending'
           )
           expect(second_fee.applied_taxes.first.amount_cents).to eq(60)
+          expect(second_fee.applied_taxes.first.precise_amount_cents).to eq(60.0)
 
           expect(invoice.reload.error_details.count).to eq(0)
         end

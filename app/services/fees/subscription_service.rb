@@ -13,8 +13,9 @@ module Fees
     def create
       return result if already_billed?
 
-      new_amount_cents = compute_amount.round
-      new_fee = initialize_fee(new_amount_cents)
+      new_precise_amount_cents = compute_amount
+      new_amount_cents = new_precise_amount_cents.round
+      new_fee = initialize_fee(new_amount_cents, new_precise_amount_cents)
       new_fee.precise_unit_amount = new_fee.unit_amount.to_f
 
       ActiveRecord::Base.transaction do
@@ -35,11 +36,12 @@ module Fees
     delegate :customer, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
 
-    def initialize_fee(new_amount_cents)
+    def initialize_fee(new_amount_cents, new_precise_amount_cents)
       base_fee = Fee.new(
         invoice:,
         subscription:,
         amount_cents: new_amount_cents,
+        precise_amount_cents: new_precise_amount_cents.to_d,
         amount_currency: plan.amount_currency,
         fee_type: :subscription,
         invoiceable_type: 'Subscription',
@@ -64,7 +66,14 @@ module Fees
       unit_amount_cents = adjusted_fee.unit_amount_cents.round
       amount_cents = adjusted_fee.adjusted_units? ? (units * new_amount_cents) : (units * unit_amount_cents)
 
+      precise_amount_cents = if adjusted_fee.adjusted_units?
+        (units * new_precise_amount_cents)
+      else
+        (units * unit_amount_cents)
+      end
+
       base_fee.amount_cents = amount_cents.round
+      base_fee.precise_amount_cents = precise_amount_cents
       base_fee.units = units
       base_fee.unit_amount_cents = adjusted_fee.adjusted_units? ? new_amount_cents : unit_amount_cents
       base_fee.invoice_display_name = adjusted_fee.invoice_display_name

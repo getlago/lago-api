@@ -29,13 +29,15 @@ module Fees
             description: fee[:description] || add_on.description,
             unit_amount_cents:,
             amount_cents: (unit_amount_cents * units).round,
+            precise_amount_cents: unit_amount_cents * units.to_d,
             amount_currency: invoice.currency,
             fee_type: :add_on,
             invoiceable_type: 'AddOn',
             invoiceable: add_on,
             units:,
             payment_status: :pending,
-            taxes_amount_cents: 0
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0.to_d
           )
           fee.precise_unit_amount = fee.unit_amount.to_f
 

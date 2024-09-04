@@ -10,7 +10,7 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
 
   let(:invoice) { create(:invoice, organization:, customer:) }
 
-  let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents:) }
+  let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, precise_coupons_amount_cents:) }
   let(:precise_coupons_amount_cents) { 0 }
 
   let(:tax1) { create(:tax, organization:, rate: 10, applied_to_organization: false) }
@@ -37,7 +37,7 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
           expect(applied_taxes.count).to eq(2)
 
           expect(applied_taxes.map(&:tax_code)).to contain_exactly(tax2.code, tax3.code)
-          expect(fee).to have_attributes(taxes_amount_cents: 170, taxes_rate: 17)
+          expect(fee).to have_attributes(taxes_amount_cents: 170, taxes_precise_amount_cents: 170.0, taxes_rate: 17)
         end
       end
     end
@@ -48,7 +48,17 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
       let(:customer) { create(:customer, organization:) }
       let(:plan) { create(:plan, organization:) }
       let(:organization) { create(:organization) }
-      let(:fee) { create(:minimum_commitment_fee, invoice:, amount_cents: 1000, commitment:, subscription:) }
+
+      let(:fee) do
+        create(
+          :minimum_commitment_fee,
+          invoice:,
+          amount_cents: 1000,
+          precise_amount_cents: 1000.0,
+          commitment:,
+          subscription:
+        )
+      end
 
       before { commitment.taxes << tax2 }
 
@@ -69,7 +79,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
             tax_name: tax2.name,
             tax_rate: 12,
             amount_currency: plan.amount_currency,
-            amount_cents: 120
+            amount_cents: 120,
+            precise_amount_cents: 120.0
           )
         end
       end
@@ -79,7 +90,10 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
       let(:add_on) { create(:add_on, organization:) }
       let(:applied_tax2) { create(:add_on_applied_tax, add_on:, tax: tax2) }
       let(:subscription) { create(:subscription, organization:, customer:) }
-      let(:fee) { create(:add_on_fee, invoice:, amount_cents: 1000, add_on:, subscription:) }
+
+      let(:fee) do
+        create(:add_on_fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, add_on:, subscription:)
+      end
 
       before { applied_tax2 }
 
@@ -100,7 +114,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
             tax_name: tax2.name,
             tax_rate: 12,
             amount_currency: fee.currency,
-            amount_cents: 120
+            amount_cents: 120,
+            precise_amount_cents: 120.0
           )
         end
       end
@@ -111,7 +126,9 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
       let(:charge) { create(:standard_charge, plan:) }
       let(:subscription) { create(:subscription, organization:, customer:, plan:) }
 
-      let(:fee) { create(:charge_fee, invoice:, amount_cents: 1000, charge:, subscription:) }
+      let(:fee) do
+        create(:charge_fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, charge:, subscription:)
+      end
 
       let(:applied_tax) { create(:plan_applied_tax, plan:, tax: tax1) }
 
@@ -134,7 +151,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
             tax_name: tax1.name,
             tax_rate: 10,
             amount_currency: fee.currency,
-            amount_cents: 100
+            amount_cents: 100,
+            precise_amount_cents: 100.0
           )
         end
       end
@@ -161,7 +179,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
               tax_name: tax2.name,
               tax_rate: 12,
               amount_currency: fee.currency,
-              amount_cents: 120
+              amount_cents: 120,
+              precise_amount_cents: 120.0
             )
           end
         end
@@ -170,7 +189,7 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
       context 'when fee is a subscription type with taxes applied to the plan' do
         let(:plan) { create(:plan, organization:) }
         let(:subscription) { create(:subscription, organization:, customer:, plan:) }
-        let(:fee) { create(:fee, invoice:, amount_cents: 1000, subscription:) }
+        let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, subscription:) }
         let(:applied_tax) { create(:plan_applied_tax, plan:, tax: tax1) }
 
         before { applied_tax }
@@ -192,7 +211,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
               tax_name: tax1.name,
               tax_rate: 10,
               amount_currency: fee.currency,
-              amount_cents: 100
+              amount_cents: 100,
+              precise_amount_cents: 100.0
             )
           end
         end
@@ -225,7 +245,8 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
             tax_name: tax1.name,
             tax_rate: 10,
             amount_currency: fee.currency,
-            amount_cents: 100
+            amount_cents: 100,
+            precise_amount_cents: 100.0
           )
 
           expect(applied_taxes[1]).to have_attributes(
@@ -236,11 +257,13 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
             tax_name: tax2.name,
             tax_rate: 12,
             amount_currency: fee.currency,
-            amount_cents: 120
+            amount_cents: 120,
+            precise_amount_cents: 120.0
           )
 
           expect(fee).to have_attributes(
             taxes_amount_cents: 220,
+            taxes_precise_amount_cents: 220.0,
             taxes_rate: 22
           )
         end
@@ -267,11 +290,13 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
             tax_name: tax3.name,
             tax_rate: 5,
             amount_currency: fee.currency,
-            amount_cents: 45
+            amount_cents: 45,
+            precise_amount_cents: 45.0
           )
 
           expect(fee).to have_attributes(
             taxes_amount_cents: 45, # (1000 - 100) * 5 / 100
+            taxes_precise_amount_cents: 45.0, # (1000 - 100) * 5 / 100
             taxes_rate: 5
           )
         end
@@ -295,11 +320,13 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
           tax_name: tax3.name,
           tax_rate: 5,
           amount_currency: fee.currency,
-          amount_cents: 50
+          amount_cents: 50,
+          precise_amount_cents: 50.0
         )
 
         expect(fee).to have_attributes(
           taxes_amount_cents: 50,
+          taxes_precise_amount_cents: 50.0,
           taxes_rate: 5
         )
       end

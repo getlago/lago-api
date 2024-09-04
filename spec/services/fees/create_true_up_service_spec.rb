@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Fees::CreateTrueUpService, type: :service do
-  subject(:create_service) { described_class.new(fee:, amount_cents:) }
+  subject(:create_service) { described_class.new(fee:, amount_cents:, precise_amount_cents:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -16,6 +16,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
     create(
       :charge_fee,
       amount_cents:,
+      precise_amount_cents: amount_cents,
       customer:,
       charge:,
       properties: {
@@ -27,6 +28,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
     )
   end
   let(:amount_cents) { 700 }
+  let(:precise_amount_cents) { 700.0 }
 
   before { tax }
 
@@ -41,7 +43,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
     end
 
     context 'when min_amount_cents is lower than the fee amount_cents' do
-      let(:fee) { create(:charge_fee, amount_cents: 1500) }
+      let(:fee) { create(:charge_fee, amount_cents: 1500, precise_amount_cents: 1500.0) }
 
       it 'does not instantiate a true-up fee' do
         result = create_service.call
@@ -68,6 +70,9 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             events_count: 0,
             charge_filter: nil,
             amount_cents: 300,
+            precise_amount_cents: 300.0,
+            taxes_amount_cents: 2,
+            taxes_precise_amount_cents: 2.0000000001,
             unit_amount_cents: 300,
             precise_unit_amount: 3,
             true_up_parent_fee_id: fee.id
@@ -78,10 +83,13 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
 
     context 'when prorated' do
       let(:amount_cents) { 200 }
+      let(:precise_amount_cents) { 200.0 }
+
       let(:fee) do
         create(
           :charge_fee,
           amount_cents:,
+          precise_amount_cents: amount_cents,
           charge:,
           properties: {
             'from_datetime' => DateTime.parse('2022-08-01 00:00:00'),
@@ -100,7 +108,8 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
             expect(result).to be_success
 
             expect(result.true_up_fee).to have_attributes(
-              amount_cents: 283 # (1000 / 31.0 * 15) - 200
+              amount_cents: 283, # (1000 / 31.0 * 15) - 200
+              precise_amount_cents: 283.8709677419355
             )
           end
         end
@@ -129,6 +138,7 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
               events_count: 0,
               charge_filter: nil,
               amount_cents: 300,
+              precise_amount_cents: 300.0,
               unit_amount_cents: 300,
               precise_unit_amount: 3,
               true_up_parent_fee_id: fee.id

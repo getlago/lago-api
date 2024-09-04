@@ -51,6 +51,12 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
 
           expect(Fee.commitment_kind.first.taxes_amount_cents).to eq(0)
         end
+
+        it 'saves precise amount cents' do
+          service_call
+
+          expect(Fee.commitment_kind.first.precise_amount_cents).to eq(1000.0)
+        end
       end
 
       context 'when commitment has taxes' do
