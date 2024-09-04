@@ -3,7 +3,7 @@
 module V1
   class FeeSerializer < ModelSerializer
     def serialize
-      subunit_to_unit = model.amount.currency.subunit_to_unit
+      subunit_to_unit = model.amount.currency.subunit_to_unit.to_d
 
       payload = {
         lago_id: model.id,
