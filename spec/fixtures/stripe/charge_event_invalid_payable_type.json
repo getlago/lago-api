@@ -45,7 +45,6 @@
       "livemode": false,
       "metadata": {
         "lago_payment_request_id": "a587e552-36bc-4334-81f2-abcbf034ad3f",
-        "lago_invoice_ids": ["invoice_id_1", "invoice_id_2"],
         "lago_payable_type": "InvalidPayableTypeName"
       },
       "on_behalf_of": null,

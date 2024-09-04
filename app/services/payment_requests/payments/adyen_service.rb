@@ -190,7 +190,6 @@ module PaymentRequests
           metadata: {
             lago_customer_id: customer.id,
             lago_payment_request_id: payable.id,
-            lago_invoice_ids: payable.invoice_ids,
             payment_type: "one-time"
           }
         }
