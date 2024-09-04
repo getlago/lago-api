@@ -66,6 +66,18 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
     it "creates an invoice for the usage_threshold" do
       expect { service.call }.to change(Invoice, :count).by(1)
     end
+
+    context 'when there is tax provider error' do
+      let(:error_result) { BaseService::Result.new.service_failure!(code: 'tax_error', message: '') }
+
+      before do
+        allow(Invoices::ProgressiveBillingService).to receive(:call).and_return(error_result)
+      end
+
+      it "creates a failed invoice without raising error" do
+        expect { service.call }.not_to raise_error
+      end
+    end
   end
 
   context "when we pass multiple thresholds" do

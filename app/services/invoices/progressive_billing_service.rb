@@ -21,7 +21,20 @@ module Invoices
 
         Credits::ProgressiveBillingService.call(invoice:)
         Credits::AppliedCouponsService.call(invoice:)
-        Invoices::ComputeAmountsFromFees.call(invoice:)
+
+        if customer_provider_taxation?
+          taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
+
+          unless taxes_result.success?
+            create_error_detail(taxes_result.error.code)
+            invoice.failed!
+
+            return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
+          end
+          Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: taxes_result.fees)
+        else
+          Invoices::ComputeAmountsFromFees.call(invoice:)
+        end
 
         create_credit_note_credit
         create_applied_prepaid_credit
@@ -135,6 +148,24 @@ module Invoices
       prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:).raise_if_error!
 
       invoice.total_amount_cents -= prepaid_credit_result.prepaid_credit_amount_cents
+    end
+
+    def customer_provider_taxation?
+      @customer_provider_taxation ||= invoice.customer.anrok_customer
+    end
+
+    def create_error_detail(code)
+      error_result = ErrorDetails::CreateService.call(
+        owner: invoice,
+        organization: invoice.organization,
+        params: {
+          error_code: :tax_error,
+          details: {
+            tax_error: code
+          }
+        }
+      )
+      error_result.raise_if_error!
     end
   end
 end
