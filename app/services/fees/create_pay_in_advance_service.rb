@@ -78,7 +78,7 @@ module Fees
           payment_status: :pending,
           pay_in_advance: true,
           taxes_amount_cents: 0,
-          taxes_precise_amount_cents: 0.0,
+          taxes_precise_amount_cents: 0.to_d,
           unit_amount_cents:,
           precise_unit_amount: result.unit_amount,
           grouped_by: format_grouped_by

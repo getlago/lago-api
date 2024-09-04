@@ -104,7 +104,7 @@ module Fees
       # to the currency decimals and transform it into currency cents
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
-      precise_amount_cents = amount_result.amount * currency.subunit_to_unit
+      precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
 
       units = if is_current_usage && (charge.pay_in_advance? || charge.prorated?)
@@ -131,7 +131,7 @@ module Fees
         events_count: amount_result.count,
         payment_status: :pending,
         taxes_amount_cents: 0,
-        taxes_precise_amount_cents: 0.0,
+        taxes_precise_amount_cents: 0.to_d,
         unit_amount_cents:,
         precise_unit_amount: amount_result.unit_amount,
         amount_details: amount_result.amount_details,

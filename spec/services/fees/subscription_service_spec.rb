@@ -288,7 +288,7 @@ RSpec.describe Fees::SubscriptionService do
               # 100 - ((100/7)*3)
               expect(result.fee).to have_attributes(
                 amount_cents: 57,
-                precise_amount_cents: 57.14285714285715
+                precise_amount_cents: 57.14285714285714
               )
             end
           end
@@ -330,7 +330,7 @@ RSpec.describe Fees::SubscriptionService do
 
                 expect(result.fee).to have_attributes(
                   amount_cents: 57,
-                  precise_amount_cents: 57.14285714285715
+                  precise_amount_cents: 57.14285714285714
                 )
               end
             end
@@ -913,7 +913,7 @@ RSpec.describe Fees::SubscriptionService do
 
               expect(result.fee).to have_attributes(
                 amount_cents: 57,
-                precise_amount_cents: 57.14285714285715
+                precise_amount_cents: 57.14285714285714
               )
             end
           end

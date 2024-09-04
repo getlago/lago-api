@@ -13,7 +13,7 @@ module Commitments
         end
 
         def precise_amount_cents
-          return 0 unless invoice_subscription.previous_invoice_subscription
+          return 0.to_d unless invoice_subscription.previous_invoice_subscription
 
           super
         end

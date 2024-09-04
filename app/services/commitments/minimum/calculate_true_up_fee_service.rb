@@ -39,7 +39,7 @@ module Commitments
       end
 
       def precise_amount_cents
-        return 0 if !minimum_commitment || fees_total_precise_amount_cents >= commitment_amount_cents
+        return 0.to_d if !minimum_commitment || fees_total_precise_amount_cents >= commitment_amount_cents
 
         commitment_amount_cents - fees_total_precise_amount_cents
       end

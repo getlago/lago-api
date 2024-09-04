@@ -46,7 +46,7 @@ module Fees
       units = adjusted_fee.units
       if adjusted_fee.adjusted_units?
         rounded_amount = amount_result.amount.round(currency.exponent)
-        precise_amount_cents = amount_result.amount * currency.subunit_to_unit
+        precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
         amount_cents = rounded_amount * currency.subunit_to_unit
         unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
         precise_unit_amount = amount_result.unit_amount
@@ -55,7 +55,7 @@ module Fees
         unit_amount_cents = adjusted_fee.unit_amount_cents.round
         amount_cents = (units * unit_amount_cents).round
         precise_unit_amount = amount_cents / (currency.subunit_to_unit * units)
-        precise_amount_cents = units * adjusted_fee.unit_amount_cents
+        precise_amount_cents = units * adjusted_fee.unit_amount_cents.to_d
         amount_details = {}
       end
 
@@ -75,7 +75,7 @@ module Fees
         events_count: 0,
         payment_status: :pending,
         taxes_amount_cents: 0,
-        taxes_precise_amount_cents: 0,
+        taxes_precise_amount_cents: 0.to_d,
         unit_amount_cents:,
         precise_unit_amount:,
         amount_details:,
