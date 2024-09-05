@@ -39,7 +39,7 @@ module Api
           json: ::V1::LifetimeUsageSerializer.new(
             lifetime_usage,
             root_name: 'lifetime_usage',
-            include: %i[usage_thresholds]
+            includes: %i[usage_thresholds]
           )
         )
       end

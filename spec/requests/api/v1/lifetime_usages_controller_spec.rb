@@ -5,10 +5,17 @@ require 'rails_helper'
 RSpec.describe Api::V1::LifetimeUsagesController, type: :request do
   let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:) }
   let(:organization) { create(:organization) }
-  let(:subscription) { create(:subscription, organization:, subscription_at:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, plan:, organization:, subscription_at:, customer:) }
   let(:subscription_at) { Date.new(2022, 8, 22) }
 
-  before { lifetime_usage }
+  let(:plan) { create(:plan) }
+  let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 100) }
+
+  before do
+    lifetime_usage
+    usage_threshold
+  end
 
   describe 'show' do
     it 'returns the lifetime_usage' do
@@ -19,6 +26,19 @@ RSpec.describe Api::V1::LifetimeUsagesController, type: :request do
 
       expect(response).to have_http_status(:success)
       expect(json[:lifetime_usage][:lago_id]).to eq(lifetime_usage.id)
+    end
+
+    it 'includes the usage_thresholds' do
+      get_with_token(
+        organization,
+        "/api/v1/subscriptions/#{subscription.external_id}/lifetime_usage"
+      )
+
+      expect(response).to have_http_status(:success)
+      expect(json[:lifetime_usage][:lago_id]).to eq(lifetime_usage.id)
+      expect(json[:lifetime_usage][:usage_thresholds]).to eq([
+        {amount_cents: 100, completion_ratio: 0.0, reached_at: nil}
+      ])
     end
 
     context 'when subscription cannot be found' do
