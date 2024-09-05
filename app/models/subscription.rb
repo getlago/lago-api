@@ -164,6 +164,10 @@ class Subscription < ApplicationRecord
 
     number_od_days.negative? ? 0 : number_od_days
   end
+
+  def terminated_at?(timestamp)
+    terminated? && terminated_at <= timestamp
+  end
 end
 
 # == Schema Information
