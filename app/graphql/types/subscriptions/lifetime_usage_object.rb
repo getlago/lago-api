@@ -11,7 +11,7 @@ module Types
 
       field :last_threshold_amount_cents, GraphQL::Types::BigInt, null: true
       field :next_threshold_amount_cents, GraphQL::Types::BigInt, null: true
-      field :next_treshold_ratio, GraphQL::Types::Float, null: true
+      field :next_threshold_ratio, GraphQL::Types::Float, null: true
 
       def total_usage_from_datetime
         object.subscription.subscription_at
@@ -25,7 +25,7 @@ module Types
 
       delegate :last_threshold_amount_cents,
         :next_threshold_amount_cents,
-        :next_treshold_ratio,
+        :next_threshold_ratio,
         to: :last_and_next_thresholds
 
       def last_and_next_thresholds

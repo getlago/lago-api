@@ -17,7 +17,7 @@ RSpec.describe LifetimeUsages::FindLastAndNextThresholdsService, type: :service 
   it 'computes the amounts' do
     expect(lifetime_usage_result.last_threshold_amount_cents).to be_nil
     expect(lifetime_usage_result.next_threshold_amount_cents).to be_nil
-    expect(lifetime_usage_result.next_treshold_ratio).to be_nil
+    expect(lifetime_usage_result.next_threshold_ratio).to be_nil
   end
 
   context 'with a usage_threshold' do
@@ -28,7 +28,7 @@ RSpec.describe LifetimeUsages::FindLastAndNextThresholdsService, type: :service 
     it 'computes the amounts' do
       expect(lifetime_usage_result.last_threshold_amount_cents).to be_nil
       expect(lifetime_usage_result.next_threshold_amount_cents).to eq(100)
-      expect(lifetime_usage_result.next_treshold_ratio).to be_zero
+      expect(lifetime_usage_result.next_threshold_ratio).to be_zero
     end
 
     context 'with a lifetime_usage' do
@@ -37,7 +37,7 @@ RSpec.describe LifetimeUsages::FindLastAndNextThresholdsService, type: :service 
       it 'computes the amounts' do
         expect(lifetime_usage_result.last_threshold_amount_cents).to be_nil
         expect(lifetime_usage_result.next_threshold_amount_cents).to eq(100)
-        expect(lifetime_usage_result.next_treshold_ratio).to eq(0.23)
+        expect(lifetime_usage_result.next_threshold_ratio).to eq(0.23)
       end
     end
   end
@@ -64,7 +64,7 @@ RSpec.describe LifetimeUsages::FindLastAndNextThresholdsService, type: :service 
     it 'computes the amounts' do
       expect(lifetime_usage_result.last_threshold_amount_cents).to eq(100)
       expect(lifetime_usage_result.next_threshold_amount_cents).to eq(200)
-      expect(lifetime_usage_result.next_treshold_ratio).to eq(0.2)
+      expect(lifetime_usage_result.next_threshold_ratio).to eq(0.2)
     end
 
     context 'when lifetime_usage is above last threshold' do
@@ -74,7 +74,7 @@ RSpec.describe LifetimeUsages::FindLastAndNextThresholdsService, type: :service 
       it 'computes the amounts' do
         expect(lifetime_usage_result.last_threshold_amount_cents).to eq(200)
         expect(lifetime_usage_result.next_threshold_amount_cents).to be_nil
-        expect(lifetime_usage_result.next_treshold_ratio).to be_nil
+        expect(lifetime_usage_result.next_threshold_ratio).to be_nil
       end
     end
 
@@ -84,7 +84,7 @@ RSpec.describe LifetimeUsages::FindLastAndNextThresholdsService, type: :service 
       it 'computes the amounts' do
         expect(lifetime_usage_result.last_threshold_amount_cents).to eq(100)
         expect(lifetime_usage_result.next_threshold_amount_cents).to eq(300)
-        expect(lifetime_usage_result.next_treshold_ratio).to eq(0.1)
+        expect(lifetime_usage_result.next_threshold_ratio).to eq(0.1)
       end
 
       context 'when lifetime_usage is above next threshold' do
@@ -94,7 +94,7 @@ RSpec.describe LifetimeUsages::FindLastAndNextThresholdsService, type: :service 
         it 'computes the amounts' do
           expect(lifetime_usage_result.last_threshold_amount_cents).to eq(700)
           expect(lifetime_usage_result.next_threshold_amount_cents).to eq(900)
-          expect(lifetime_usage_result.next_treshold_ratio).to eq(0.115) # (723 - 700) / 200
+          expect(lifetime_usage_result.next_threshold_ratio).to eq(0.115) # (723 - 700) / 200
         end
       end
     end

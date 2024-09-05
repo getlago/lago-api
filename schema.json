@@ -32565,7 +32565,7 @@
               ]
             },
             {
-              "name": "nextTresholdRatio",
+              "name": "nextThresholdRatio",
               "description": null,
               "type": {
                 "kind": "SCALAR",

@@ -34,7 +34,9 @@ Rails.application.routes.draw do
         end
       end
 
-      resources :subscriptions, only: %i[create update show index], param: :external_id
+      resources :subscriptions, only: %i[create update show index], param: :external_id do
+        resource :lifetime_usage, only: %i[show update]
+      end
       delete '/subscriptions/:external_id', to: 'subscriptions#terminate', as: :terminate
 
       resources :add_ons, param: :code, code: /.*/
