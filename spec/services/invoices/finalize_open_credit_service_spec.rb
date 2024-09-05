@@ -9,8 +9,10 @@ RSpec.describe Invoices::FinalizeOpenCreditService, type: :service do
   let(:invoice) { create(:invoice, organization:, invoice_type: 'credit', status: :open, payment_due_date: 1.week.ago.to_date) }
 
   before do
-    allow(invoice).to receive(:should_sync_invoice?).and_return(true)
-    allow(invoice).to receive(:should_sync_sales_order?).and_return(true)
+    if invoice
+      allow(invoice).to receive(:should_sync_invoice?).and_return(true)
+      allow(invoice).to receive(:should_sync_sales_order?).and_return(true)
+    end
   end
 
   describe '.call' do
