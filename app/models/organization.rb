@@ -158,7 +158,7 @@ end
 #  email                        :string
 #  email_settings               :string           default([]), not null, is an Array
 #  eu_tax_management            :boolean          default(FALSE)
-#  finalize_zero_amount_invoice :boolean          default(FALSE), not null
+#  finalize_zero_amount_invoice :boolean          default(TRUE), not null
 #  invoice_footer               :text
 #  invoice_grace_period         :integer          default(0), not null
 #  legal_name                   :string
