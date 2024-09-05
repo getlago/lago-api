@@ -182,7 +182,7 @@ end
 #  deleted_at                   :datetime
 #  document_locale              :string
 #  email                        :string
-#  finalize_zero_amount_invoice :integer          default(0), not null
+#  finalize_zero_amount_invoice :integer          default("inherit"), not null
 #  invoice_grace_period         :integer
 #  legal_name                   :string
 #  legal_number                 :string
