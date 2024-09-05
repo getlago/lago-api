@@ -64,7 +64,7 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
       context 'when subscription is just terminated' do
         let(:billing_at) { DateTime.parse('10 Jul 2022') }
 
-        before { subscription.terminated! }
+        before { subscription.mark_as_terminated!('9 Jul 2022') }
 
         it 'returns the beginning of the quarter' do
           expect(result).to eq('2022-07-01 00:00:00 UTC')
@@ -116,7 +116,7 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
       context 'when subscription is just terminated' do
         let(:billing_at) { DateTime.parse('10 May 2022') }
 
-        before { subscription.terminated! }
+        before { subscription.mark_as_terminated!('9 May 2022') }
 
         it 'returns the correct day at the beginning of the quarter' do
           expect(result).to eq('2022-05-02 00:00:00 UTC')
@@ -143,8 +143,10 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
           let(:billing_at) { DateTime.parse('27 Feb 2022') }
           let(:subscription_at) { DateTime.parse('28 Feb 2021') }
 
+          before { subscription.mark_as_terminated!('25 Feb 2022') }
+
           it 'returns the previous quarter last day' do
-            expect(result).to eq('2021-11-30 00:00:00 UTC')
+            expect(result).to eq('2021-11-28 00:00:00 UTC')
           end
         end
       end

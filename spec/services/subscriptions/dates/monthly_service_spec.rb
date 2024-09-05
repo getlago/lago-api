@@ -66,7 +66,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       context 'when subscription is just terminated' do
         let(:billing_at) { DateTime.parse('10 Mar 2022') }
 
-        before { subscription.terminated! }
+        before { subscription.mark_as_terminated!('9 Mar 2022') }
 
         it 'returns the beginning of the month' do
           expect(result).to eq('2022-03-01 00:00:00 UTC')
@@ -101,7 +101,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       context 'when subscription is just terminated' do
         let(:billing_at) { DateTime.parse('10 Mar 2022') }
 
-        before { subscription.terminated! }
+        before { subscription.mark_as_terminated!('9 Mar 2022') }
 
         it 'returns the previous month day' do
           expect(result).to eq('2022-03-02 00:00:00 UTC')
@@ -125,11 +125,13 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         end
 
         context 'when billing day on first month of the year' do
+          before { subscription.mark_as_terminated!('27 Jan 2022') }
+
           let(:billing_at) { DateTime.parse('28 Jan 2022') }
-          let(:subscription_at) { DateTime.parse('29 Mar 2021') }
+          let(:subscription_at) { DateTime.parse('27 Mar 2021') }
 
           it 'returns the previous month last day' do
-            expect(result).to eq('2021-12-29 00:00:00 UTC')
+            expect(result).to eq('2021-12-27 00:00:00 UTC')
           end
         end
       end
@@ -476,11 +478,9 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
       end
 
       context 'when subscription is terminated in the middle of a period' do
-        let(:terminated_at) { DateTime.parse('06 Mar 2022') }
+        let(:terminated_at) { DateTime.parse('1 Mar 2022') }
 
-        before do
-          subscription.update!(status: :terminated, terminated_at:)
-        end
+        before { subscription.mark_as_terminated!(terminated_at) }
 
         it 'returns the terminated date' do
           expect(result).to eq(subscription.terminated_at.utc.to_s)

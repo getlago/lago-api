@@ -63,7 +63,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       context 'when subscription is just terminated' do
         let(:billing_at) { DateTime.parse('10 Mar 2022') }
 
-        before { subscription.terminated! }
+        before { subscription.mark_as_terminated!('9 Mar 2022') }
 
         it 'returns the beginning of the week' do
           expect(result).to eq('2022-03-07 00:00:00 UTC')
@@ -100,7 +100,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       end
 
       context 'when subscription is just terminated' do
-        before { subscription.terminated! }
+        before { subscription.mark_as_terminated!('8 Mar 2022') }
 
         it 'returns the previous week day' do
           expect(result).to eq('2022-03-08 00:00:00 UTC')

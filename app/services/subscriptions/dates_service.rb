@@ -95,7 +95,7 @@ module Subscriptions
 
     def charges_to_datetime
       datetime = customer_timezone_shift(compute_charges_to_date, end_of_day: true)
-      datetime = subscription.terminated_at if subscription.terminated? && datetime > subscription.terminated_at
+      datetime = subscription.terminated_at if subscription.terminated_at?(datetime)
 
       datetime
     end
@@ -179,11 +179,11 @@ module Subscriptions
     def terminated_pay_in_arrear?
       # NOTE: In case of termination or upgrade when we are terminating old plan (paying in arrear),
       #       we should take to the beginning of the billing period
-      subscription.terminated? && plan.pay_in_arrear? && !subscription.downgraded?
+      subscription.terminated_at?(billing_at) && plan.pay_in_arrear? && !subscription.downgraded?
     end
 
     def terminated?
-      subscription.terminated? && !subscription.next_subscription
+      subscription.terminated_at?(billing_at) && !subscription.next_subscription
     end
 
     # NOTE: Handle leap years and anniversary date > 28
