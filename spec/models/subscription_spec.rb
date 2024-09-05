@@ -491,4 +491,27 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '#terminated_at?' do
+    context 'when subscription is terminated before the timestamp' do
+      it 'returns true' do
+        subscription = build(:subscription, :terminated, terminated_at: 2.days.ago)
+        expect(subscription.terminated_at?(1.day.ago)).to be true
+      end
+    end
+
+    context 'when subscription is terminated after the timestamp' do
+      it 'returns false' do
+        subscription = build(:subscription, :terminated, terminated_at: 1.day.from_now)
+        expect(subscription.terminated_at?(2.days.ago)).to be false
+      end
+    end
+
+    context 'when subscription is not terminated' do
+      it 'returns false' do
+        subscription = build(:subscription)
+        expect(subscription.terminated_at?(1.day.ago)).to be false
+      end
+    end
+  end
 end
