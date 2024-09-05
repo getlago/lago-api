@@ -49,32 +49,42 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
   let(:tax1) { create(:tax, organization:, rate: 12) }
   let(:tax2) { create(:tax, organization:, rate: 8) }
 
-  let(:applied_tax11) do
+  let(:fee_applied_tax11) do
     create(
       :fee_applied_tax,
       tax: tax1,
+      tax_code: tax1.code,
       fee: fee1,
       amount_cents: (fee1.sub_total_excluding_taxes_amount_cents * tax1.rate).fdiv(100)
     )
   end
 
-  let(:applied_tax21) do
+  let(:fee_applied_tax21) do
     create(
       :fee_applied_tax,
       tax: tax1,
+      tax_code: tax1.code,
       fee: fee2,
       amount_cents: (fee2.sub_total_excluding_taxes_amount_cents * tax1.rate).fdiv(100)
     )
   end
 
-  let(:applied_tax22) do
+  let(:fee_applied_tax22) do
     create(
       :fee_applied_tax,
       tax: tax2,
+      tax_code: tax2.code,
       fee: fee2,
       amount_cents: (fee2.sub_total_excluding_taxes_amount_cents * tax2.rate).fdiv(100)
     )
   end
+
+  let(:invoice_applied_taxes) {
+    [
+      create(:invoice_applied_tax, tax_code: tax1.code, tax_rate: tax1.rate, tax: tax1, invoice:),
+      create(:invoice_applied_tax, tax_code: tax2.code, tax_rate: tax2.rate, tax: tax2, invoice:)
+    ]
+  }
 
   let(:items) do
     [
@@ -98,9 +108,10 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
   end
 
   before do
-    applied_tax11
-    applied_tax21
-    applied_tax22
+    invoice_applied_taxes
+    fee_applied_tax11
+    fee_applied_tax21
+    fee_applied_tax22
   end
 
   describe 'call' do

@@ -16,27 +16,27 @@ module CreditNotes
       applied_taxes_amount_cents = 0
       taxes_rate = 0
 
-      applicable_taxes.each do |tax|
-        invoice_applied_tax = find_invoice_applied_tax(tax)
+      indexed_items.each do |tax_code, _|
+        invoice_applied_tax = find_invoice_applied_tax(tax_code)
 
         applied_tax = CreditNote::AppliedTax.new(
-          tax:,
-          tax_description: invoice_applied_tax&.tax_description || tax.description,
-          tax_code: invoice_applied_tax&.tax_code || tax.code,
-          tax_name: invoice_applied_tax&.tax_name || tax.name,
-          tax_rate: invoice_applied_tax&.tax_rate || tax.rate,
+          tax: invoice_applied_tax.tax,
+          tax_description: invoice_applied_tax.tax_description,
+          tax_code: invoice_applied_tax.tax_code,
+          tax_name: invoice_applied_tax.tax_name,
+          tax_rate: invoice_applied_tax.tax_rate,
           amount_currency: invoice.currency
         )
         result.applied_taxes << applied_tax
 
-        base_amount_cents = compute_base_amount_cents(tax)
+        base_amount_cents = compute_base_amount_cents(tax_code)
         applied_tax.base_amount_cents = base_amount_cents.round
 
-        tax_amount_cents = (base_amount_cents * tax.rate).fdiv(100)
+        tax_amount_cents = (base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
         applied_tax.amount_cents = tax_amount_cents.round
 
         applied_taxes_amount_cents += tax_amount_cents
-        taxes_rate += pro_rated_taxes_rate(tax)
+        taxes_rate += pro_rated_taxes_rate(applied_tax)
       end
 
       result.taxes_amount_cents = applied_taxes_amount_cents
@@ -51,17 +51,13 @@ module CreditNotes
 
     delegate :organization, to: :invoice
 
-    def applicable_taxes
-      organization.taxes.where(id: indexed_items.keys)
-    end
-
     # NOTE: indexes the credit note fees by taxes.
     #       Example output will be: { tax1 => [fee1, fee2], tax2 => [fee2] }
     def indexed_items
       @indexed_items ||= items.each_with_object({}) do |item, applied_taxes|
-        item.fee.applied_taxes.each do |applied_tax|
-          applied_taxes[applied_tax.tax_id] ||= []
-          applied_taxes[applied_tax.tax_id] << item
+        item.fee.applied_taxes.each do |fee_applied_tax|
+          applied_taxes[fee_applied_tax.tax_code] ||= []
+          applied_taxes[fee_applied_tax.tax_code] << item
         end
       end
     end
@@ -79,8 +75,8 @@ module CreditNotes
       end
     end
 
-    def compute_base_amount_cents(tax)
-      indexed_items[tax.id].map do |item|
+    def compute_base_amount_cents(tax_code)
+      indexed_items[tax_code].map do |item|
         # NOTE: Part of the item taken from the fee amount
         item_fee_rate = item.fee.amount_cents.zero? ? 0 : item.precise_amount_cents.fdiv(item.fee.amount_cents)
 
@@ -94,17 +90,17 @@ module CreditNotes
     # NOTE: Tax might not be applied to all items of the credit note.
     #       In order to compute the credit_note#taxes_rate, we have to apply
     #       a pro-rata of the items attached to the tax on the total items amount
-    def pro_rated_taxes_rate(tax)
-      tax_items_amount_cents = compute_base_amount_cents(tax)
+    def pro_rated_taxes_rate(applied_tax)
+      tax_items_amount_cents = compute_base_amount_cents(applied_tax.tax_code)
       total_items_amount_cents = items_amount_cents - result.coupons_adjustment_amount_cents
 
       items_rate = total_items_amount_cents.zero? ? 0 : tax_items_amount_cents.fdiv(total_items_amount_cents)
 
-      items_rate * tax.rate
+      items_rate * applied_tax.tax_rate
     end
 
-    def find_invoice_applied_tax(tax)
-      invoice.applied_taxes.find_by(tax_id: tax.id)
+    def find_invoice_applied_tax(tax_code)
+      invoice.applied_taxes.find_by(tax_code: tax_code)
     end
   end
 end
