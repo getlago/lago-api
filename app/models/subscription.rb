@@ -166,7 +166,10 @@ class Subscription < ApplicationRecord
   end
 
   def terminated_at?(timestamp)
-    terminated? && terminated_at <= timestamp
+    return false unless terminated?
+    return false if terminated_at.nil? || timestamp.nil?
+
+    terminated_at <= timestamp
   end
 end
 

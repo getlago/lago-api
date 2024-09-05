@@ -65,7 +65,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
       context 'when subscription is just terminated' do
         let(:billing_at) { DateTime.parse('10 Mar 2022') }
 
-        before { subscription.terminated! }
+        before { subscription.mark_as_terminated!('9 Mar 2022') }
 
         it 'returns the beginning of the year' do
           expect(result).to eq('2022-01-01 00:00:00 UTC')
@@ -108,7 +108,7 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
       end
 
       context 'when subscription is just terminated' do
-        before { subscription.terminated! }
+        before { subscription.mark_as_terminated!('1 Feb 2022') }
 
         it 'returns the previous year day' do
           expect(result).to eq('2022-02-02 00:00:00 UTC')
@@ -419,12 +419,10 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
         end
 
         context 'when subscription terminated in the middle of a period' do
-          let(:terminated_at) { DateTime.parse('10 Mar 2022') }
+          let(:terminated_at) { DateTime.parse('05 Mar 2022') }
           let(:billing_at) { DateTime.parse('07 Mar 2022') }
 
-          before do
-            subscription.update!(status: :terminated, terminated_at:)
-          end
+          before { subscription.mark_as_terminated!(terminated_at) }
 
           it 'returns the terminated_at date' do
             expect(result).to eq(subscription.terminated_at.utc.to_s)
@@ -452,11 +450,9 @@ RSpec.describe Subscriptions::Dates::YearlyService, type: :service do
       end
 
       context 'when subscription is terminated in the middle of a period' do
-        let(:terminated_at) { DateTime.parse('06 Mar 2022') }
+        let(:terminated_at) { DateTime.parse('6 Jan 2022') }
 
-        before do
-          subscription.update!(status: :terminated, terminated_at:)
-        end
+        before { subscription.mark_as_terminated!(terminated_at) }
 
         it 'returns the terminated date' do
           expect(result).to eq(subscription.terminated_at.utc.to_s)

@@ -89,7 +89,7 @@ module Invoices
 
     def date_service(subscription)
       current_usage = invoicing_reason.to_sym == :progressive_billing
-      current_usage ||= subscription.terminated? && subscription.upgraded?
+      current_usage ||= subscription.terminated_at?(datetime) && subscription.upgraded?
 
       Subscriptions::DatesService.new_instance(subscription, datetime, current_usage:)
     end

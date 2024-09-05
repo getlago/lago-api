@@ -1198,7 +1198,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         let(:started_at) { DateTime.parse('07 Mar 2022') }
         let(:terminated_at) { DateTime.parse('17 Oct 2022 12:35:12') }
-        let(:timestamp) { DateTime.parse('17 Oct 2022') }
+        let(:timestamp) { DateTime.parse('17 Oct 2022 15:00') }
 
         let(:subscription) do
           create(
