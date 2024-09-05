@@ -463,4 +463,32 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe '#mark_as_active!' do
+    subject(:subscription) { create(:subscription, status: :pending) }
+
+    it 'changes the status to active' do
+      expect { subscription.mark_as_active! }
+        .to change(subscription, :status).from('pending').to('active')
+
+      expect(subscription.started_at).to be_present
+      expect(subscription.lifetime_usage).to be_present
+    end
+
+    context 'with a previous subscription' do
+      subject(:subscription) { create(:subscription, status: :pending, previous_subscription:) }
+
+      let(:previous_subscription) { create(:subscription, :terminated) }
+      let(:lifetime_usage) { create(:lifetime_usage, subscription: previous_subscription) }
+
+      before { lifetime_usage }
+
+      it 'changes the status to active' do
+        expect { subscription.mark_as_active! }
+          .to change(subscription, :status).from('pending').to('active')
+
+        expect(lifetime_usage.reload.subscription).to eq(subscription)
+      end
+    end
+  end
 end
