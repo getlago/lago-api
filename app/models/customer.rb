@@ -15,7 +15,7 @@ class Customer < ApplicationRecord
     :finalize
   ].freeze
 
-  CUSTOMER_TYPES= [
+  CUSTOMER_TYPES = [
     :company,
     :individual
   ].freeze
