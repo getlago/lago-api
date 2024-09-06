@@ -71,7 +71,7 @@ RSpec.describe Customer, type: :model do
   describe '#display_name' do
     subject(:customer) { build(:customer, name: name, legal_name: legal_name, firstname: firstname, lastname: lastname) }
 
-    let(:name) { 'ACME Inc.' }
+    let(:name) { 'ACME Inc' }
     let(:legal_name) { 'ACME International Corporation' }
     let(:firstname) { 'Thomas' }
     let(:lastname) { 'Anderson' }
@@ -101,11 +101,35 @@ RSpec.describe Customer, type: :model do
       let(:lastname) { nil }
 
       it 'returns only the name when prefer_legal_name is false' do
-        expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc.')
+        expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc')
       end
 
       it 'returns only the legal_name when prefer_legal_name is true' do
         expect(customer.display_name(prefer_legal_name: true)).to eq('ACME International Corporation')
+      end
+    end
+
+    context 'when name is present and both firstname and lastname are present' do
+      let(:legal_name) { nil }
+
+      it 'returns only firstname and lastname when prefer_legal_name is true' do
+        expect(customer.display_name(prefer_legal_name: true)).to eq('Thomas Anderson')
+      end
+
+      it 'returns name with firstname and lastname when prefer_legal_name is false' do
+        expect(customer.display_name).to eq('ACME Inc - Thomas Anderson')
+      end
+    end
+
+    context 'when legal_name is present and both firstname and lastname are present' do
+      let(:name) { nil }
+
+      it 'returns legal_name with firstname and lastname when prefer_legal_name is true' do
+        expect(customer.display_name(prefer_legal_name: true)).to eq('ACME International Corporation - Thomas Anderson')
+      end
+
+      it 'returns only firstname and lastname when prefer_legal_name is false' do
+        expect(customer.display_name(prefer_legal_name: false)).to eq('Thomas Anderson')
       end
     end
 
@@ -115,7 +139,7 @@ RSpec.describe Customer, type: :model do
       end
 
       it 'returns name with firstname and lastname when prefer_legal_name is false' do
-        expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc. - Thomas Anderson')
+        expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc - Thomas Anderson')
       end
     end
   end

@@ -76,15 +76,14 @@ class Customer < ApplicationRecord
   end
 
   def display_name(prefer_legal_name: false)
-    [legal_name.presence || name.presence]
-    names = prefer_legal_name ? [legal_name.presence || name.presence] : [name.presence]
+    primary_name = prefer_legal_name ? legal_name.presence : name.presence
 
+    names = [primary_name]
     if firstname.present? || lastname.present?
-      names << '-' if names.compact.any?
-      names << firstname.presence
-      names << lastname.presence
+      names << '-' if primary_name.present?
+      names << firstname
+      names << lastname
     end
-
     names.compact.join(' ')
   end
 
