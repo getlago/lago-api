@@ -5,10 +5,7 @@ div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16
 div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
   = I18n.t("email.payment_request.requested.total_amount_due", amount: MoneyHelper.format(@payment_request.amount))
 div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
-  - if @customer.applicable_net_payment_term > 0
     = I18n.t("email.payment_request.requested.payment_terms", count: @customer.applicable_net_payment_term)
-  - else
-    = I18n.t("email.payment_request.requested.upon_invoice_generation")
 div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
   = I18n.t("email.payment_request.requested.already_paid")
 div style="margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;"
