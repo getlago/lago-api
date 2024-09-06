@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_29_093425) do
+ActiveRecord::Schema[7.1].define(version: 2024_09_06_154644) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -439,6 +439,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_29_093425) do
     t.string "shipping_state"
     t.string "shipping_country"
     t.integer "finalize_zero_amount_invoice", default: 0, null: false
+    t.string "firstname"
+    t.string "lastname"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"

@@ -68,6 +68,39 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe '#display_name' do
+    subject(:customer) { build(:customer, name: name, legal_name: legal_name, firstname: firstname, lastname: lastname) }
+
+    let(:name) { 'ACME Inc.' }
+    let(:legal_name) { 'ACME International Corporation' }
+    let(:firstname) { 'Thomas' }
+    let(:lastname) { 'Anderson' }
+
+    context 'when all fields are nil' do
+      let(:name) { nil }
+      let(:legal_name) { nil }
+      let(:firstname) { nil }
+      let(:lastname) { nil }
+
+      it 'returns an empty string' do
+        expect(customer.display_name).to eq('')
+      end
+    end
+
+    context 'when firstname and lastname are nil' do
+      let(:firstname) { nil }
+      let(:lastname) { nil }
+
+      it 'returns only the name when prefer_legal_name is false' do
+        expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc.')
+      end
+
+      it 'returns only the legal_name when prefer_legal_name is true' do
+        expect(customer.display_name(prefer_legal_name: true)).to eq('ACME International Corporation')
+      end
+    end
+  end
+
   describe 'preferred_document_locale' do
     subject(:customer) do
       described_class.new(

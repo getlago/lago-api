@@ -75,6 +75,19 @@ class Customer < ApplicationRecord
     %w[id name external_id email]
   end
 
+  def display_name(prefer_legal_name: false)
+    [legal_name.presence || name.presence]
+    names = prefer_legal_name ? [legal_name.presence || name.presence] : [name.presence]
+
+    if firstname.present? || lastname.present?
+      names << '-' if names.size > 1
+      names << firstname.presence
+      names << lastname.presence
+    end
+
+    names.compact.join(' ')
+  end
+
   def active_subscription
     subscriptions.active.order(started_at: :desc).first
   end
@@ -183,7 +196,9 @@ end
 #  document_locale              :string
 #  email                        :string
 #  finalize_zero_amount_invoice :integer          default("inherit"), not null
+#  firstname                    :string
 #  invoice_grace_period         :integer
+#  lastname                     :string
 #  legal_name                   :string
 #  legal_number                 :string
 #  logo_url                     :string
