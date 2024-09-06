@@ -119,6 +119,29 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       expect(invoice_2.reload).to be_payment_succeeded
     end
 
+    context "when payment request payment status is already succeeded" do
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          payment_status: "succeeded",
+          amount_cents: 799,
+          amount_currency: "EUR"
+        )
+      end
+
+      it "does not creates a payment", :aggregate_failures do
+        result = adyen_service.create
+
+        expect(result).to be_success
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payment).to be_nil
+
+        expect(payments_api).not_to have_received(:payments)
+      end
+    end
+
     context "with no payment provider" do
       let(:adyen_payment_provider) { nil }
 
@@ -126,8 +149,10 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
         result = adyen_service.create
 
         expect(result).to be_success
+
         expect(result.payable).to eq(payment_request)
         expect(result.payment).to be_nil
+
         expect(payments_api).not_to have_received(:payments)
       end
     end
@@ -172,8 +197,10 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
         result = adyen_service.create
 
         expect(result).to be_success
+
         expect(result.payable).to eq(payment_request)
         expect(result.payment).to be_nil
+
         expect(payments_api).not_to have_received(:payments)
       end
     end
@@ -196,6 +223,13 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               error_code: "validation"
             }
           ).on_queue(:webhook)
+      end
+
+      it "does not change the payment request payment status" do
+        result = adyen_service.create
+
+        expect(result).to be_success
+        expect(result.payable).to be_payment_pending
       end
     end
 
@@ -224,6 +258,13 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               }
             ).on_queue(:webhook)
         end
+
+        it "marks the payment request as payment failed" do
+          result = adyen_service.create
+
+          expect(result).to be_success
+          expect(result.payable).to be_payment_failed
+        end
       end
 
       context "when payment fails with invalid card" do
@@ -244,6 +285,13 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               }
             ).on_queue(:webhook)
         end
+
+        it "marks the payment request as payment failed" do
+          result = adyen_service.create
+
+          expect(result).to be_success
+          expect(result.payable).to be_payment_failed
+        end
       end
     end
 
@@ -262,8 +310,9 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       end
 
       it "delivers an error webhook" do
-        expect { adyen_service.create }.to raise_error(Adyen::AdyenError)
-          .and enqueue_job(SendWebhookJob).with(
+        expect { adyen_service.create }
+          .to enqueue_job(SendWebhookJob)
+          .with(
             "payment_request.payment_failure",
             payment_request,
             provider_customer_id: adyen_customer.provider_customer_id,
@@ -272,6 +321,13 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               error_code: "code"
             }
           )
+      end
+
+      it "updates payment request payment status to failed" do
+        result = adyen_service.create
+
+        expect(result).not_to be_success
+        expect(result.payable).to be_payment_failed
       end
     end
   end

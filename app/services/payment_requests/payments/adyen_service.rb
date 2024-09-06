@@ -43,13 +43,11 @@ module PaymentRequests
           status: res.response["resultCode"]
         )
 
-        ActiveRecord::Base.transaction do
-          payment.save!
+        payment.save!
 
-          payable_payment_status = payable_payment_status(payment.status)
-          update_payable_payment_status(payment_status: payable_payment_status)
-          update_invoices_payment_status(payment_status: payable_payment_status)
-        end
+        payable_payment_status = payable_payment_status(payment.status)
+        update_payable_payment_status(payment_status: payable_payment_status)
+        update_invoices_payment_status(payment_status: payable_payment_status)
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
 
@@ -144,7 +142,8 @@ module PaymentRequests
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
         update_payable_payment_status(payment_status: :failed, deliver_webhook: false)
-        raise e
+        result.service_failure!(code: e.code, message: e.message)
+        nil
       end
 
       def payment_method_params
