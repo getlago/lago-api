@@ -147,6 +147,7 @@ module PaymentProviders
         lago_payable_type: event.dig('additionalData', 'metadata.lago_payable_type')
       }
 
+      # TODO: this should send an email for payment requests
       payment_service_klass(metadata)
         .new.update_payment_status(provider_payment_id:, status:, metadata:)
     end

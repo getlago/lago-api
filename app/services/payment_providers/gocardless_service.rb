@@ -80,6 +80,8 @@ module PaymentProviders
         case event.resource_type
         when 'payments'
           if PAYMENT_ACTIONS.include?(event.action)
+
+            # TODO: this should send an email for payment requests
             update_payment_status_result = payment_service_klass(event)
               .new.update_payment_status(
                 provider_payment_id: event.links.payment,
