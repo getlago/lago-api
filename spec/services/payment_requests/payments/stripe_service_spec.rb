@@ -134,6 +134,32 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       expect(invoice_2.reload).to be_payment_succeeded
     end
 
+    context "when payment request payment status is succeeded" do
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          payment_status: "succeeded",
+          amount_cents: 799,
+          amount_currency: "EUR",
+          invoices: [invoice_1, invoice_2]
+        )
+      end
+
+      it "does not creates a payment", :aggregate_failures do
+        result = stripe_service.create
+
+        expect(result).to be_success
+
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payable.payment_attempts).to eq(0)
+        expect(result.payment).to be_nil
+
+        expect(Stripe::PaymentIntent).not_to have_received(:create)
+      end
+    end
+
     context "with no payment provider" do
       let(:stripe_payment_provider) { nil }
 
@@ -273,8 +299,10 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       end
 
       it "marks the payment request as payment failed" do
-        stripe_service.create
-        expect(payment_request.reload).to be_payment_failed
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.payable).to be_payment_failed
       end
     end
 
@@ -299,7 +327,9 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       end
 
       it "does not mark the payment request as failed" do
-        stripe_service.create
+        result = stripe_service.create
+
+        expect(result).to be_success
         expect(payment_request.reload).to be_payment_pending
       end
     end

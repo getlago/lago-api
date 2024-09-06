@@ -41,25 +41,24 @@ module PaymentRequests
           status: stripe_result.status
         )
 
-        ActiveRecord::Base.transaction do
-          payment.save!
+        payment.save!
 
-          payable_payment_status = payable_payment_status(payment.status)
-          update_payable_payment_status(
-            payment_status: payable_payment_status,
-            processing: payment.status == "processing"
-          )
-          update_invoices_payment_status(
-            payment_status: payable_payment_status,
-            processing: payment.status == "processing"
-          )
-        end
+        payable_payment_status = payable_payment_status(payment.status)
+        update_payable_payment_status(
+          payment_status: payable_payment_status,
+          processing: payment.status == "processing"
+        )
+        update_invoices_payment_status(
+          payment_status: payable_payment_status,
+          processing: payment.status == "processing"
+        )
 
         result.payment = payment
         result
       rescue Stripe::AuthenticationError, Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         # NOTE: Do not mark the payable as failed if the amount is too small for Stripe
         #       For now we keep it as pending.
+        #
         return result if e.code == "amount_too_small"
 
         deliver_error_webhook(e)
