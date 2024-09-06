@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
-  subject(:update_service) { described_class.new(wallet:, usage_credits_amount:) }
+  subject(:update_service) { described_class.new(wallet:, total_usage_amount_cents:, pay_in_advance_usage_amount_cents:) }
 
   let(:wallet) do
     create(
@@ -16,7 +16,8 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
       credits_ongoing_usage_balance: 2.0
     )
   end
-  let(:usage_credits_amount) { BigDecimal('4.5') }
+  let(:total_usage_amount_cents) { 450 }
+  let(:pay_in_advance_usage_amount_cents) { 0 }
 
   before { wallet }
 
@@ -31,8 +32,8 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
       expect(wallet).not_to be_depleted_ongoing_balance
     end
 
-    context 'when credits_amount is greater than the balance' do
-      let(:usage_credits_amount) { BigDecimal('15') }
+    context 'when usage amount is greater than the balance' do
+      let(:total_usage_amount_cents) { 1500 }
 
       it 'updates wallet ongoing balance to a negative value' do
         expect { update_service.call }

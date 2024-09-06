@@ -3,11 +3,12 @@
 module Wallets
   module Balance
     class UpdateOngoingService < BaseService
-      def initialize(wallet:, usage_credits_amount:)
+      def initialize(wallet:, total_usage_amount_cents:, pay_in_advance_usage_amount_cents:)
         super
 
         @wallet = wallet
-        @usage_credits_amount = usage_credits_amount
+        @total_usage_amount_cents = total_usage_amount_cents
+        @pay_in_advance_usage_amount_cents = pay_in_advance_usage_amount_cents
       end
 
       def call
@@ -26,12 +27,12 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :usage_credits_amount
+      attr_reader :wallet, :total_usage_amount_cents, :pay_in_advance_usage_amount_cents
 
       def compute_update_params
         params = {
-          ongoing_usage_balance_cents: usage_amount_cents,
-          credits_ongoing_usage_balance: usage_credits_amount,
+          ongoing_usage_balance_cents: total_usage_amount_cents,
+          credits_ongoing_usage_balance:,
           ongoing_balance_cents:,
           credits_ongoing_balance:
         }
@@ -49,16 +50,16 @@ module Wallets
         @currency ||= wallet.ongoing_balance.currency
       end
 
-      def usage_amount_cents
-        @usage_amount_cents ||= wallet.rate_amount * usage_credits_amount * currency.subunit_to_unit
+      def credits_ongoing_usage_balance
+        total_usage_amount_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
       end
 
       def ongoing_balance_cents
-        wallet.balance_cents - usage_amount_cents
+        wallet.balance_cents - total_usage_amount_cents + pay_in_advance_usage_amount_cents
       end
 
       def credits_ongoing_balance
-        wallet.credits_balance - usage_credits_amount
+        ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
       end
     end
   end
