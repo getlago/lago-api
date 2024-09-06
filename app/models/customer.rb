@@ -198,6 +198,7 @@ end
 #  city                         :string
 #  country                      :string
 #  currency                     :string
+#  customer_type                :integer
 #  deleted_at                   :datetime
 #  document_locale              :string
 #  email                        :string
