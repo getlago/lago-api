@@ -104,6 +104,11 @@ group :development, :test do
   gem 'rspec-rails'
   gem 'simplecov', require: false
   gem 'webmock'
+  gem 'rubocop-rails'
+  gem 'rubocop-graphql', require: false
+  gem 'rubocop-performance', require: false
+  gem 'rubocop-rspec', require: false
+  gem 'rubocop-thread_safety', require: false
   gem 'awesome_print'
 end
 
@@ -119,13 +124,7 @@ group :development do
   gem 'coffee-rails'
   gem 'graphiql-rails', git: 'https://github.com/rmosolgo/graphiql-rails.git'
 
-  gem 'rubocop-graphql', require: false
-  gem 'rubocop-performance', require: false
-  gem 'rubocop-rails', require: false
-  gem 'rubocop-rspec', require: false
-  gem 'rubocop-thread_safety', require: false
   gem "standard", require: false
-
   gem 'annotate'
 
   gem 'sass-rails'
