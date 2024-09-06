@@ -5,6 +5,7 @@ require:
   - rubocop-rails
   - rubocop-thread_safety
   - rubocop-graphql
+  - ./lib/cops/service_call_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -13,9 +14,9 @@ AllCops:
   NewCops: disable
   DisplayStyleGuide: true
   Exclude:
-    - "bin/**/*"
-    - "db/schema.rb"
-    - "db/*_schema.rb"
+    - 'bin/**/*'
+    - 'db/schema.rb'
+    - 'db/*_schema.rb'
 
 # TODO: Enable when we have time to fix all the offenses
 Style/StringLiterals:
@@ -29,11 +30,11 @@ Performance/CaseWhenSplat:
   Enabled: true
 
 Rails/InverseOf:
-  Description: "Checks for associations where the inverse cannot be determined automatically."
+  Description: 'Checks for associations where the inverse cannot be determined automatically.'
   Enabled: false
 
 Rails/HttpStatus:
-  Description: "Enforces use of symbolic or numeric value to describe HTTP status."
+  Description: 'Enforces use of symbolic or numeric value to describe HTTP status.'
   Enabled: false
 
 Rails/HasManyOrHasOneDependent:
@@ -41,11 +42,11 @@ Rails/HasManyOrHasOneDependent:
   Enabled: false
 
 RSpec/ExampleLength:
-  Description: "Checks for long examples."
+  Description: 'Checks for long examples.'
   Enabled: false
 
 RSpec/MultipleExpectations:
-  Description: "Checks if examples contain too many expect calls."
+  Description: 'Checks if examples contain too many expect calls.'
   Enabled: false
 
 RSpec/MultipleMemoizedHelpers:
@@ -73,10 +74,10 @@ GraphQL/ExtractType:
 
 GraphQL/ExtractInputType:
   Exclude:
-    - "app/graphql/mutations/applied_coupons/create.rb"
-    - "app/graphql/mutations/credit_notes/create.rb"
-    - "app/graphql/mutations/invites/accept.rb"
-    - "app/graphql/mutations/plans/create.rb"
-    - "app/graphql/mutations/plans/update.rb"
-    - "app/graphql/mutations/register_user.rb"
-    - "app/graphql/mutations/wallet_transactions/create.rb"
+    - 'app/graphql/mutations/applied_coupons/create.rb'
+    - 'app/graphql/mutations/credit_notes/create.rb'
+    - 'app/graphql/mutations/invites/accept.rb'
+    - 'app/graphql/mutations/plans/create.rb'
+    - 'app/graphql/mutations/plans/update.rb'
+    - 'app/graphql/mutations/register_user.rb'
+    - 'app/graphql/mutations/wallet_transactions/create.rb'
