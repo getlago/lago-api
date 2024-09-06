@@ -121,6 +121,29 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
       expect(invoice_2.ready_for_payment_processing).to eq(false)
     end
 
+    context "when payment request payment status is already succeeded" do
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          payment_status: "succeeded",
+          amount_cents: 799,
+          amount_currency: "EUR"
+        )
+      end
+
+      it "does not creates a payment", :aggregate_failures do
+        result = gocardless_service.create
+
+        expect(result).to be_success
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payment).to be_nil
+
+        expect(gocardless_payments_service).not_to have_received(:create)
+      end
+    end
+
     context "with no payment provider" do
       let(:gocardless_payment_provider) { nil }
 
@@ -187,7 +210,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
       end
 
       it "delivers an error webhook" do
-        expect { gocardless_service.create }.to raise_error(GoCardlessPro::Error)
+        gocardless_service.create
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
@@ -199,6 +222,14 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
               error_code: "code"
             }
           )
+      end
+
+      it "returns a service failure" do
+        result = gocardless_service.create
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("code")
+        expect(result.payable).to be_payment_failed
       end
     end
 
@@ -231,6 +262,14 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
               error_code: "no_mandate_error"
             }
           )
+      end
+
+      it "marks the payment request as payment failed" do
+        result = gocardless_service.create
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("no_mandate_error")
+        expect(payment_request.reload).to be_payment_failed
       end
     end
   end
