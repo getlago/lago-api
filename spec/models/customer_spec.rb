@@ -87,6 +87,15 @@ RSpec.describe Customer, type: :model do
       end
     end
 
+    context 'when name and legal_name are nil' do
+      let(:name) { nil }
+      let(:legal_name) { nil }
+
+      it 'returns only firstname and lastname if present' do
+        expect(customer.display_name).to eq('Thomas Anderson')
+      end
+    end
+
     context 'when firstname and lastname are nil' do
       let(:firstname) { nil }
       let(:lastname) { nil }
@@ -97,6 +106,16 @@ RSpec.describe Customer, type: :model do
 
       it 'returns only the legal_name when prefer_legal_name is true' do
         expect(customer.display_name(prefer_legal_name: true)).to eq('ACME International Corporation')
+      end
+    end
+
+    context 'when all fields are present' do
+      it 'returns legal_name with firstname and lastname when prefer_legal_name is true' do
+        expect(customer.display_name(prefer_legal_name: true)).to eq('ACME International Corporation - Thomas Anderson')
+      end
+
+      it 'returns name with firstname and lastname when prefer_legal_name is false' do
+        expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc. - Thomas Anderson')
       end
     end
   end

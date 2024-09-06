@@ -80,7 +80,7 @@ class Customer < ApplicationRecord
     names = prefer_legal_name ? [legal_name.presence || name.presence] : [name.presence]
 
     if firstname.present? || lastname.present?
-      names << '-' if names.size > 1
+      names << '-' if names.compact.any?
       names << firstname.presence
       names << lastname.presence
     end
