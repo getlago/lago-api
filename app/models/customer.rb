@@ -15,7 +15,7 @@ class Customer < ApplicationRecord
     :finalize
   ].freeze
 
-  CUSTOMER_TYPE_OPTIONS = [
+  CUSTOMER_TYPES= [
     :company,
     :individual
   ].freeze
@@ -23,7 +23,7 @@ class Customer < ApplicationRecord
   attribute :finalize_zero_amount_invoice, :integer
   enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, _prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :integer
-  enum customer_type: CUSTOMER_TYPE_OPTIONS, _prefix: :customer_type
+  enum customer_type: CUSTOMER_TYPES, _prefix: :customer_type
 
   before_save :ensure_slug
 
