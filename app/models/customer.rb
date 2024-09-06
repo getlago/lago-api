@@ -15,8 +15,14 @@ class Customer < ApplicationRecord
     :finalize
   ].freeze
 
-  attribute :finalize_zero_amount_invoice, :integer # rails 7.1 check the field exists when defining enum and when running the migration first time is not there
+  CUSTOMER_TYPE_OPTIONS = [
+    :company,
+    :individual
+  ].freeze
+
+  attribute :finalize_zero_amount_invoice, :integer
   enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, _prefix: :finalize_zero_amount_invoice
+  enum customer_type: CUSTOMER_TYPE_OPTIONS, _prefix: :customer_type
 
   before_save :ensure_slug
 

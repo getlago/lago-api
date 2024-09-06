@@ -69,7 +69,7 @@ RSpec.describe Customer, type: :model do
   end
 
   describe '#display_name' do
-    subject(:customer) { build(:customer, name: name, legal_name: legal_name, firstname: firstname, lastname: lastname) }
+    subject(:customer) { build(:customer, name:, legal_name:, firstname:, lastname:) }
 
     let(:name) { 'ACME Inc' }
     let(:legal_name) { 'ACME International Corporation' }
@@ -140,6 +140,36 @@ RSpec.describe Customer, type: :model do
 
       it 'returns name with firstname and lastname when prefer_legal_name is false' do
         expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc - Thomas Anderson')
+      end
+    end
+  end
+
+  describe 'customer_type enum' do
+    subject(:customer) { build(:customer, customer_type:) }
+
+    context 'when customer_type is company' do
+      let(:customer_type) { 'company' }
+
+      it 'identifies the customer as a company' do
+        expect(customer.customer_type).to eq('company')
+        expect(customer.customer_type_company?).to be true
+      end
+    end
+
+    context 'when customer_type is individual' do
+      let(:customer_type) { 'individual' }
+
+      it 'identifies the customer as an individual' do
+        expect(customer.customer_type).to eq('individual')
+        expect(customer.customer_type_individual?).to be true
+      end
+    end
+
+    context 'when customer_type is nil' do
+      subject(:customer) { build(:customer) }
+
+      it 'defaults to nil for existing customers' do
+        expect(customer.customer_type).to be_nil
       end
     end
   end
