@@ -20,19 +20,19 @@ es:
         invoice_number: Número de factura
         issue_date: Fecha de emisión
         subject: 'Tu factura de %{organization_name} #%{invoice_number}'
-      payment_request:
-        requested:
-          already_paid: Si ya ha realizado el pago, por favor ignore este correo electrónico.
-          hello: Hola %{customer_name},
-          pay_amount: Pagar el saldo
-          payment_terms:
-            one: Nuestros términos de pago acordados contractualmente son %{count} día.
-            other: Nuestros términos de pago acordados contractualmente son %{count} días.
-            zero: Nuestros términos de pago acordados contractualmente requieren el pago al generar la factura.
-          remaining_amount: Monto restante a pagar
-          reminder_overdue_balance: Este es un recordatorio del equipo financiero de %{organization_name} de que algunas facturas están vencidas.
-          subject: Su saldo vencido de %{organization_name}
-          thank_you: Gracias.
-          total_amount_due: El monto total adeudado es de %{amount}.
+    payment_request:
+      requested:
+        already_paid: Si ya ha realizado el pago, por favor ignore este correo electrónico.
+        hello: Hola %{customer_name},
+        pay_amount: Pagar el saldo
+        payment_terms:
+          one: Nuestros términos de pago acordados contractualmente son %{count} día.
+          other: Nuestros términos de pago acordados contractualmente son %{count} días.
+          zero: Nuestros términos de pago acordados contractualmente requieren el pago al generar la factura.
+        remaining_amount: Monto restante a pagar
+        reminder_overdue_balance: Este es un recordatorio del equipo financiero de %{organization_name} de que algunas facturas están vencidas.
+        subject: Su saldo vencido de %{organization_name}
+        thank_you: Gracias.
+        total_amount_due: El monto total adeudado es de %{amount}.
     powered_by_lago: Powered by
     questions: "¿Preguntas? Contáctanos en"
