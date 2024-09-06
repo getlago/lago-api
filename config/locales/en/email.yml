@@ -45,6 +45,5 @@ en:
         subject: Your overdue balance from %{organization_name}
         thank_you: Thank you.
         total_amount_due: The total amount due is %{amount}.
-        upon_invoice_generation: Our contractually agreed payment terms require payment upon invoice generation.
     powered_by: Powered by
     questions: Questions? Contact us at
