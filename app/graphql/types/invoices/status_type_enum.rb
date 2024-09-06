@@ -5,7 +5,7 @@ module Types
     class StatusTypeEnum < Types::BaseEnum
       graphql_name 'InvoiceStatusTypeEnum'
 
-      Invoice::VISIBLE_STATUS.keys.each do |type|
+      Invoice::STATUS.keys.each do |type|
         value type
       end
     end

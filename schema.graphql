@@ -4166,9 +4166,12 @@ enum InvoicePaymentStatusTypeEnum {
 }
 
 enum InvoiceStatusTypeEnum {
+  closed
   draft
   failed
   finalized
+  generating
+  open
   voided
 }
 
