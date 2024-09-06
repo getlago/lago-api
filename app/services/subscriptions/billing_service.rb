@@ -2,16 +2,20 @@
 
 module Subscriptions
   class BillingService < BaseService
-    def call(billing_at: Time.current)
+    def initialize(billing_at: Time.current)
       @today = billing_at
 
+      super
+    end
+
+    def call
       billable_subscriptions.group_by(&:customer_id).each do |_customer_id, customer_subscriptions|
         billing_subscriptions = []
         customer_subscriptions.each do |subscription|
           if subscription.next_subscription&.pending?
             # NOTE: In case of downgrade, subscription remain active until the end of the period,
             #       a next subscription is pending, the current one must be terminated
-            Subscriptions::TerminateJob.perform_later(subscription, billing_at.to_i)
+            Subscriptions::TerminateJob.perform_later(subscription, today.to_i)
           else
             billing_subscriptions << subscription
           end
@@ -19,11 +23,11 @@ module Subscriptions
 
         BillSubscriptionJob.perform_later(
           billing_subscriptions,
-          billing_at.to_i,
+          today.to_i,
           invoicing_reason: :subscription_periodic
         )
 
-        BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, billing_at)
+        BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, today)
       end
     end
 
