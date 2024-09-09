@@ -6,7 +6,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
   let(:required_permissions) { 'customers:update' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, organization:, legal_name: nil) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:tax) { create(:tax, organization:) }
   let(:external_id) { SecureRandom.uuid }
@@ -17,6 +17,10 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
         updateCustomer(input: $input) {
           id
           name
+          firstname
+          lastname
+          displayName
+          customerType
           taxIdentificationNumber
           externalId
           paymentProvider
@@ -45,6 +49,9 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     {
       id: customer.id,
       name: 'Updated customer',
+      firstname: 'Updated firstname',
+      lastname: 'Updated lastname',
+      customerType: 'individual',
       taxIdentificationNumber: '2246',
       externalId: external_id,
       paymentProvider: 'stripe',
@@ -101,6 +108,10 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['id']).to be_present
       expect(result_data['name']).to eq('Updated customer')
+      expect(result_data['firstname']).to eq('Updated firstname')
+      expect(result_data['lastname']).to eq('Updated lastname')
+      expect(result_data['displayName']).to eq('Updated customer - Updated firstname Updated lastname')
+      expect(result_data['customerType']).to eq('individual')
       expect(result_data['taxIdentificationNumber']).to eq('2246')
       expect(result_data['externalId']).to eq(external_id)
       expect(result_data['paymentProvider']).to eq('stripe')
