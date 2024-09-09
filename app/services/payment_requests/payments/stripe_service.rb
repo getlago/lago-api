@@ -58,7 +58,6 @@ module PaymentRequests
       rescue Stripe::AuthenticationError, Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
         # NOTE: Do not mark the payable as failed if the amount is too small for Stripe
         #       For now we keep it as pending.
-        #
         return result if e.code == "amount_too_small"
 
         deliver_error_webhook(e)
