@@ -15,6 +15,10 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
         createCustomer(input: $input) {
           id
           name
+          firstname
+          lastname
+          displayName
+          customerType
           externalId
           city
           country
@@ -61,7 +65,10 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          name: 'John Doe',
+          name: 'John Doe Inc',
+          firstname: 'John',
+          lastname: 'Doe',
+          customerType: 'company',
           externalId: 'john_doe_2',
           city: 'London',
           country: 'GB',
@@ -98,7 +105,11 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
 
     aggregate_failures do
       expect(result_data['id']).to be_present
-      expect(result_data['name']).to eq('John Doe')
+      expect(result_data['name']).to eq('John Doe Inc')
+      expect(result_data['firstname']).to eq('John')
+      expect(result_data['lastname']).to eq('Doe')
+      expect(result_data['displayName']).to eq('John Doe Inc - John Doe')
+      expect(result_data['customerType']).to eq('company')
       expect(result_data['externalId']).to eq('john_doe_2')
       expect(result_data['city']).to eq('London')
       expect(result_data['country']).to eq('GB')
