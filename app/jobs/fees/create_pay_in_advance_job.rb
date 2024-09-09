@@ -9,9 +9,17 @@ module Fees
     def perform(charge:, event:, billing_at: nil)
       result = Fees::CreatePayInAdvanceService.call(charge:, event:, billing_at:)
 
-      return if !result.success? && result.error.messages.dig(:tax_error)
+      return if !result.success? && tax_error?(result)
 
       result.raise_if_error!
+    end
+
+    private
+
+    def tax_error?(result)
+      return false unless result.error.is_a?(BaseService::ValidationFailure)
+
+      result.error&.messages&.dig(:tax_error)
     end
   end
 end

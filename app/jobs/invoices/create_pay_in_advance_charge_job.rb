@@ -13,7 +13,7 @@ module Invoices
       return if result.success?
       # NOTE: We don't want a dead job for failed invoice due to the tax reason.
       #       This invoice should be in failed status and can be retried.
-      return if result.error.messages.dig(:tax_error)
+      return if tax_error?(result)
 
       result.raise_if_error! if invoice || result.invoice.nil? || !result.invoice.generating?
 
@@ -24,6 +24,14 @@ module Invoices
         timestamp:,
         invoice: result.invoice
       )
+    end
+
+    private
+
+    def tax_error?(result)
+      return false unless result.error.is_a?(BaseService::ValidationFailure)
+
+      result.error&.messages&.dig(:tax_error)
     end
   end
 end
