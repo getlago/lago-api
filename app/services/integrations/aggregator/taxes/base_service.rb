@@ -20,12 +20,12 @@ module Integrations
 
         def payload_service
           @payload_service ||= Integrations::Aggregator::Taxes::PayloadBuilder.assign(
-            integration:, customer:, invoice: nil, integration_customer:, fees: [], credit_note: nil, items: []
+            integration:, customer:, invoice:, integration_customer:, fees:, credit_note:, items:
           )
         end
 
         def customer
-          if invoice.present
+          if invoice.present?
             invoice.customer
           else
             credit_note.customer

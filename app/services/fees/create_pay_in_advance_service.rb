@@ -183,7 +183,7 @@ module Fees
     end
 
     def apply_provider_taxes(fees_result)
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
+      taxes_result = Integrations::Aggregator::Taxes::CreateService.call(invoice:, fees: fees_result)
 
       return taxes_result unless taxes_result.success?
 
