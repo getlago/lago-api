@@ -1004,6 +1004,8 @@ RSpec.describe Customers::CreateService, type: :service do
         {
           external_id: SecureRandom.uuid,
           name: 'Foo Bar',
+          firstname: 'First',
+          lastname: 'Last',
           organization_id: organization.id,
           timezone: 'Europe/Paris',
           invoice_grace_period: 2
@@ -1017,8 +1019,32 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(result).to be_success
 
           customer = result.customer
+          expect(customer.firstname).to eq(create_args[:firstname])
+          expect(customer.lastname).to eq(create_args[:lastname])
+          expect(customer.customer_type).to be_nil
           expect(customer.timezone).to eq('Europe/Paris')
           expect(customer.invoice_grace_period).to eq(2)
+        end
+      end
+    end
+
+    context 'with customer_type' do
+      let(:create_args) do
+        {
+          external_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          customer_type: 'individual',
+          organization_id: organization.id
+        }
+      end
+
+      it 'creates customer with customer_type' do
+        result = customers_service.create(**create_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+          customer = result.customer
+          expect(customer.customer_type).to eq(create_args[:customer_type])
         end
       end
     end
