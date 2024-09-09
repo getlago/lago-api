@@ -88,16 +88,16 @@ RSpec.describe CustomersQuery, type: :query do
   end
 
   context 'when searching for lastname "Doe"' do
-    let(:search_term) { 'Doe' }
+    let(:search_term) { 'Johnson' }
 
     it 'returns only one customer' do
       returned_ids = result.customers.pluck(:id)
 
       aggregate_failures do
         expect(returned_ids.count).to eq(1)
-        expect(returned_ids).to include(customer_first.id)
+        expect(returned_ids).not_to include(customer_first.id)
         expect(returned_ids).not_to include(customer_second.id)
-        expect(returned_ids).not_to include(customer_third.id)
+        expect(returned_ids).to include(customer_third.id)
       end
     end
   end
