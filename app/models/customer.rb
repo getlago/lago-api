@@ -22,7 +22,7 @@ class Customer < ApplicationRecord
 
   attribute :finalize_zero_amount_invoice, :integer
   enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, _prefix: :finalize_zero_amount_invoice
-  attribute :customer_type, :integer
+  #attribute :customer_type, :integer
   enum customer_type: CUSTOMER_TYPES, _prefix: :customer_type
 
   before_save :ensure_slug
@@ -198,7 +198,7 @@ end
 #  city                         :string
 #  country                      :string
 #  currency                     :string
-#  customer_type                :integer
+#  customer_type                :enum
 #  deleted_at                   :datetime
 #  document_locale              :string
 #  email                        :string
