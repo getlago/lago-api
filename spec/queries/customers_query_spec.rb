@@ -87,7 +87,7 @@ RSpec.describe CustomersQuery, type: :query do
     end
   end
 
-  context 'when searching for lastname "Doe"' do
+  context 'when searching for lastname "Johnson"' do
     let(:search_term) { 'Johnson' }
 
     it 'returns only one customer' do
