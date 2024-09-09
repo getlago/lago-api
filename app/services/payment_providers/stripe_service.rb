@@ -138,7 +138,6 @@ module PaymentProviders
           event_json:
         ).raise_if_error!
       when 'payment_intent.payment_failed', 'payment_intent.succeeded'
-        # TODO: This should send an email for payment requests
         status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
         payment_service_klass(event)
           .new.update_payment_status(
