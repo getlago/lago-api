@@ -48,6 +48,9 @@ module Customers
         customer.shipping_zipcode = shipping_address[:zipcode] if shipping_address.key?(:zipcode)
         customer.shipping_state = shipping_address[:state] if shipping_address.key?(:state)
         customer.shipping_country = shipping_address[:country]&.upcase if shipping_address.key?(:country)
+        customer.firstname = args[:firstname] if args.key?(:firstname)
+        customer.lastname = args[:lastname] if args.key?(:lastname)
+        customer.customer_type = args[:customer_type] if args.key?(:customer_type)
 
         assign_premium_attributes(customer, args)
 

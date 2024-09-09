@@ -16,6 +16,8 @@ RSpec.describe Customers::CreateService, type: :service do
         external_id:,
         name: 'Foo Bar',
         currency: 'EUR',
+        firstname: 'First',
+        lastname: 'Last',
         tax_identification_number: '123456789',
         billing_configuration: {
           document_locale: 'fr'
@@ -46,6 +48,9 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.organization_id).to eq(organization.id)
         expect(customer.external_id).to eq(create_args[:external_id])
         expect(customer.name).to eq(create_args[:name])
+        expect(customer.firstname).to eq(create_args[:firstname])
+        expect(customer.lastname).to eq(create_args[:lastname])
+        expect(customer.customer_type).to be_nil
         expect(customer.currency).to eq(create_args[:currency])
         expect(customer.tax_identification_number).to eq(create_args[:tax_identification_number])
         expect(customer.timezone).to be_nil
@@ -152,6 +157,30 @@ RSpec.describe Customers::CreateService, type: :service do
           customers = organization.customers.with_discarded
           expect(customers.count).to eq(2)
           expect(customers.pluck(:external_id).uniq).to eq([external_id])
+        end
+      end
+    end
+
+    context 'with customer_type' do
+      let(:create_args) do
+        {
+          external_id:,
+          name: 'Foo Bar',
+          currency: 'EUR',
+          customer_type: 'company'
+        }
+      end
+
+      it 'creates customer with correct customer_type' do
+        result = customers_service.create_from_api(
+          organization:,
+          params: create_args
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          customer = result.customer
+          expect(customer.customer_type).to eq(create_args[:customer_type])
         end
       end
     end
