@@ -152,7 +152,10 @@ module Customers
         payment_provider_code: args[:payment_provider_code],
         currency: args[:currency],
         document_locale: billing_configuration[:document_locale],
-        tax_identification_number: args[:tax_identification_number]
+        tax_identification_number: args[:tax_identification_number],
+        firstname: args[:firstname],
+        lastname: args[:lastname],
+        customer_type: args[:customer_type]
       )
 
       if args.key?(:finalize_zero_amount_invoice)
