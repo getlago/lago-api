@@ -10,14 +10,17 @@ module Types
       argument :city, String, required: false
       argument :country, Types::CountryCodeEnum, required: false
       argument :currency, Types::CurrencyEnum, required: false
+      argument :customer_type, Types::Customers::CustomerTypeEnum, required: false
       argument :email, String, required: false
       argument :external_id, String, required: true
       argument :external_salesforce_id, String, required: false
+      argument :firstname, String, required: false
       argument :invoice_grace_period, Integer, required: false
+      argument :lastname, String, required: false
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
       argument :logo_url, String, required: false
-      argument :name, String, required: true
+      argument :name, String, required: false
       argument :net_payment_term, Integer, required: false
       argument :phone, String, required: false
       argument :state, String, required: false

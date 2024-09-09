@@ -7,7 +7,10 @@ RSpec.describe Types::Customers::Object do
 
   it { is_expected.to have_field(:id).of_type('ID!') }
 
+  it { is_expected.to have_field(:customer_type).of_type(Types::Customers::CustomerTypeEnum) }
   it { is_expected.to have_field(:external_id).of_type('String!') }
+  it { is_expected.to have_field(:firstname).of_type('String') }
+  it { is_expected.to have_field(:lastname).of_type('String') }
   it { is_expected.to have_field(:name).of_type('String') }
   it { is_expected.to have_field(:sequential_id).of_type('String!') }
   it { is_expected.to have_field(:slug).of_type('String!') }
