@@ -13,6 +13,8 @@ class Wallet < ApplicationRecord
   monetize :balance_cents, :ongoing_balance_cents, :ongoing_usage_balance_cents
   monetize :consumed_amount_cents
 
+  validates :rate_amount, numericality: {greater_than: 0}
+
   STATUSES = [
     :active,
     :terminated
