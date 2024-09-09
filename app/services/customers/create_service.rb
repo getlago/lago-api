@@ -53,6 +53,9 @@ module Customers
         customer.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
         customer.external_salesforce_id = params[:external_salesforce_id] if params.key?(:external_salesforce_id)
         customer.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
+        customer.firstname = params[:firstname] if params.key?(:firstname)
+        customer.lastname = params[:lastname] if params.key?(:lastname)
+        customer.customer_type = params[:customer_type] if params.key?(:customer_type)
         if params.key?(:tax_identification_number)
           customer.tax_identification_number = params[:tax_identification_number]
         end
@@ -149,7 +152,10 @@ module Customers
         payment_provider_code: args[:payment_provider_code],
         currency: args[:currency],
         document_locale: billing_configuration[:document_locale],
-        tax_identification_number: args[:tax_identification_number]
+        tax_identification_number: args[:tax_identification_number],
+        firstname: args[:firstname],
+        lastname: args[:lastname],
+        customer_type: args[:customer_type]
       )
 
       if args.key?(:finalize_zero_amount_invoice)
