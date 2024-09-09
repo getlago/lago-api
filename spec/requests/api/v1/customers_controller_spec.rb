@@ -9,7 +9,10 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:create_params) do
       {
         external_id: SecureRandom.uuid,
-        name: 'Foo Bar',
+        name: 'Foo Bar Inc.',
+        firstname: 'Foo',
+        lastname: 'Bar',
+        customer_type: 'company',
         currency: 'EUR',
         timezone: 'America/New_York',
         external_salesforce_id: 'foobar'
@@ -25,6 +28,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customer][:lago_id]).to be_present
         expect(json[:customer][:external_id]).to eq(create_params[:external_id])
         expect(json[:customer][:name]).to eq(create_params[:name])
+        expect(json[:customer][:firstname]).to eq(create_params[:firstname])
+        expect(json[:customer][:lastname]).to eq(create_params[:lastname])
+        expect(json[:customer][:customer_type]).to eq(create_params[:customer_type])
         expect(json[:customer][:created_at]).to be_present
         expect(json[:customer][:currency]).to eq(create_params[:currency])
         expect(json[:customer][:external_salesforce_id]).to eq(create_params[:external_salesforce_id])

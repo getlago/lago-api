@@ -94,6 +94,9 @@ module Api
         params.require(:customer).permit(
           :external_id,
           :name,
+          :firstname,
+          :lastname,
+          :customer_type,
           :country,
           :address_line1,
           :address_line2,
