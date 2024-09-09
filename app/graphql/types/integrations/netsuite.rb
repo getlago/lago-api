@@ -6,6 +6,7 @@ module Types
       graphql_name 'NetsuiteIntegration'
 
       field :account_id, String, null: true
+      field :category, String, null: true
       field :client_id, String, null: true
       field :client_secret, String, null: true
       field :code, String, null: false

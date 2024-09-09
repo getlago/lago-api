@@ -6,6 +6,7 @@ FactoryBot.define do
     type { 'Integrations::NetsuiteIntegration' }
     code { "netsuite_#{SecureRandom.uuid}" }
     name { 'Accounting integration 1' }
+    category { 'accounting' }
 
     secrets do
       {connection_id: SecureRandom.uuid, client_secret: SecureRandom.uuid}.to_json
@@ -21,6 +22,7 @@ FactoryBot.define do
     type { 'Integrations::OktaIntegration' }
     code { 'okta' }
     name { 'Okta Integration' }
+    category { 'system' }
 
     settings do
       {client_id: SecureRandom.uuid, domain: 'foo.test', organization_name: 'Foobar'}
@@ -36,6 +38,7 @@ FactoryBot.define do
     type { 'Integrations::AnrokIntegration' }
     code { 'anrok' }
     name { 'Anrok Integration' }
+    category { 'tax_provider' }
 
     secrets do
       {connection_id: SecureRandom.uuid, api_key: SecureRandom.uuid}.to_json
@@ -47,6 +50,7 @@ FactoryBot.define do
     type { 'Integrations::XeroIntegration' }
     code { 'xero' }
     name { 'Xero Integration' }
+    category { 'accounting' }
 
     secrets do
       {connection_id: SecureRandom.uuid}.to_json
