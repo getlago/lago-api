@@ -69,7 +69,7 @@ RSpec.describe Customer, type: :model do
   end
 
   describe '#display_name' do
-    subject(:customer) { build(:customer, name:, legal_name:, firstname:, lastname:) }
+    subject(:customer) { build_stubbed(:customer, name:, legal_name:, firstname:, lastname:) }
 
     let(:name) { 'ACME Inc' }
     let(:legal_name) { 'ACME International Corporation' }
@@ -100,23 +100,23 @@ RSpec.describe Customer, type: :model do
       let(:firstname) { nil }
       let(:lastname) { nil }
 
-      it 'returns only the name when prefer_legal_name is false' do
-        expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc')
+      it 'returns only the legal_name' do
+        expect(customer.display_name).to eq('ACME International Corporation')
       end
 
-      it 'returns only the legal_name when prefer_legal_name is true' do
-        expect(customer.display_name(prefer_legal_name: true)).to eq('ACME International Corporation')
+      context 'when we dont have a legal_name' do
+        let(:legal_name) { nil }
+
+        it 'returns only the name if present' do
+          expect(customer.display_name).to eq('ACME Inc')
+        end
       end
     end
 
     context 'when name is present and both firstname and lastname are present' do
       let(:legal_name) { nil }
 
-      it 'returns only firstname and lastname when prefer_legal_name is true' do
-        expect(customer.display_name(prefer_legal_name: true)).to eq('Thomas Anderson')
-      end
-
-      it 'returns name with firstname and lastname when prefer_legal_name is false' do
+      it 'returns name with firstname and lastname' do
         expect(customer.display_name).to eq('ACME Inc - Thomas Anderson')
       end
     end
@@ -124,28 +124,20 @@ RSpec.describe Customer, type: :model do
     context 'when legal_name is present and both firstname and lastname are present' do
       let(:name) { nil }
 
-      it 'returns legal_name with firstname and lastname when prefer_legal_name is true' do
-        expect(customer.display_name(prefer_legal_name: true)).to eq('ACME International Corporation - Thomas Anderson')
-      end
-
-      it 'returns only firstname and lastname when prefer_legal_name is false' do
-        expect(customer.display_name(prefer_legal_name: false)).to eq('Thomas Anderson')
+      it 'returns legal_name with firstname and lastname' do
+        expect(customer.display_name).to eq('ACME International Corporation - Thomas Anderson')
       end
     end
 
     context 'when all fields are present' do
-      it 'returns legal_name with firstname and lastname when prefer_legal_name is true' do
-        expect(customer.display_name(prefer_legal_name: true)).to eq('ACME International Corporation - Thomas Anderson')
-      end
-
-      it 'returns name with firstname and lastname when prefer_legal_name is false' do
-        expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc - Thomas Anderson')
+      it 'returns legal_name with firstname and lastname' do
+        expect(customer.display_name).to eq('ACME International Corporation - Thomas Anderson')
       end
     end
   end
 
   describe 'customer_type enum' do
-    subject(:customer) { build(:customer, customer_type:) }
+    subject(:customer) { build_stubbed(:customer, customer_type:) }
 
     context 'when customer_type is company' do
       let(:customer_type) { 'company' }

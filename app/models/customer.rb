@@ -82,12 +82,10 @@ class Customer < ApplicationRecord
     %w[id name external_id email]
   end
 
-  def display_name(prefer_legal_name: false)
-    primary_name = prefer_legal_name ? legal_name.presence : name.presence
-
-    names = [primary_name]
+  def display_name
+    names = [legal_name.presence || name.presence]
     if firstname.present? || lastname.present?
-      names << '-' if primary_name.present?
+      names << '-' if names.compact.present?
       names << firstname
       names << lastname
     end
