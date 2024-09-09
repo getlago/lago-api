@@ -495,7 +495,7 @@ RSpec.describe InvoicesQuery, type: :query do
   context 'when searching for lastname "SanchezLast"' do
     let(:search_term) { 'SanchezLast' }
 
-    it 'returns four invoices for this customer' do
+    it 'returns the correct invoices for this customer' do
       returned_ids = result.invoices.pluck(:id)
 
       aggregate_failures do
@@ -510,10 +510,10 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
-  context 'when searching for firstname "SanchezLast"' do
+  context 'when searching for firstname "MortyFirst"' do
     let(:search_term) { 'MortyFirst' }
 
-    it 'returns two invoices for this customer' do
+    it 'returns the correct invoices for this customer' do
       returned_ids = result.invoices.pluck(:id)
 
       aggregate_failures do
