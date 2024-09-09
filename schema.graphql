@@ -1904,16 +1904,19 @@ input CreateCustomerInput {
   clientMutationId: String
   country: CountryCode
   currency: CurrencyEnum
+  customerType: CustomerTypeEnum
   email: String
   externalId: String!
   externalSalesforceId: String
+  firstname: String
   integrationCustomers: [IntegrationCustomerInput!]
   invoiceGracePeriod: Int
+  lastname: String
   legalName: String
   legalNumber: String
   logoUrl: String
   metadata: [CustomerMetadataInput!]
-  name: String!
+  name: String
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
@@ -3069,10 +3072,13 @@ type Customer {
   """
   creditNotesCreditsAvailableCount: Int!
   currency: CurrencyEnum
+  customerType: CustomerTypeEnum
   deletedAt: ISO8601DateTime
+  displayName: String!
   email: String
   externalId: String!
   externalSalesforceId: String
+  firstname: String
 
   """
   Define if a customer has an active wallet
@@ -3091,6 +3097,7 @@ type Customer {
   id: ID!
   invoiceGracePeriod: Int
   invoices: [Invoice!]
+  lastname: String
   legalName: String
   legalNumber: String
   logoUrl: String
@@ -3181,6 +3188,11 @@ input CustomerMetadataInput {
   id: ID
   key: String!
   value: String!
+}
+
+enum CustomerTypeEnum {
+  company
+  individual
 }
 
 type CustomerUsage {
@@ -7420,17 +7432,20 @@ input UpdateCustomerInput {
   clientMutationId: String
   country: CountryCode
   currency: CurrencyEnum
+  customerType: CustomerTypeEnum
   email: String
   externalId: String!
   externalSalesforceId: String
+  firstname: String
   id: ID!
   integrationCustomers: [IntegrationCustomerInput!]
   invoiceGracePeriod: Int
+  lastname: String
   legalName: String
   legalNumber: String
   logoUrl: String
   metadata: [CustomerMetadataInput!]
-  name: String!
+  name: String
   netPaymentTerm: Int
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String

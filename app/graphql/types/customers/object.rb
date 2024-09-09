@@ -8,6 +8,7 @@ module Types
       field :id, ID, null: false
 
       field :customer_type, Types::Customers::CustomerTypeEnum
+      field :display_name, String, null: false
       field :external_id, String, null: false
       field :firstname, String
       field :lastname, String
