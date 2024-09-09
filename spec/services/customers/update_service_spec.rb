@@ -41,7 +41,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         expect(updated_customer.firstname).to eq(update_args[:firstname])
         expect(updated_customer.lastname).to eq(update_args[:lastname])
         expect(updated_customer.customer_type).to eq(update_args[:customer_type])
-        expect(updated_customer.tax_identification_number).to eq('2246')
+        expect(updated_customer.tax_identification_number).to eq(update_args[:tax_identification_number])
 
         shipping_address = update_args[:shipping_address]
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
