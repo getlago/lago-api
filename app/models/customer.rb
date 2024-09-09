@@ -15,8 +15,15 @@ class Customer < ApplicationRecord
     :finalize
   ].freeze
 
-  attribute :finalize_zero_amount_invoice, :integer # rails 7.1 check the field exists when defining enum and when running the migration first time is not there
+  CUSTOMER_TYPES = {
+    company: 'company',
+    individual: 'individual'
+  }.freeze
+
+  attribute :finalize_zero_amount_invoice, :integer
   enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, _prefix: :finalize_zero_amount_invoice
+  attribute :customer_type, :string
+  enum customer_type: CUSTOMER_TYPES, _prefix: :customer_type
 
   before_save :ensure_slug
 
@@ -73,6 +80,16 @@ class Customer < ApplicationRecord
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name external_id email]
+  end
+
+  def display_name
+    names = [legal_name.presence || name.presence]
+    if firstname.present? || lastname.present?
+      names << '-' if names.compact.present?
+      names << firstname
+      names << lastname
+    end
+    names.compact.join(' ')
   end
 
   def active_subscription
@@ -179,11 +196,14 @@ end
 #  city                         :string
 #  country                      :string
 #  currency                     :string
+#  customer_type                :enum
 #  deleted_at                   :datetime
 #  document_locale              :string
 #  email                        :string
 #  finalize_zero_amount_invoice :integer          default("inherit"), not null
+#  firstname                    :string
 #  invoice_grace_period         :integer
+#  lastname                     :string
 #  legal_name                   :string
 #  legal_number                 :string
 #  logo_url                     :string

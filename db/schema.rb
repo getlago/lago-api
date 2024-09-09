@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_08_29_093425) do
+ActiveRecord::Schema[7.1].define(version: 2024_09_06_170048) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -19,6 +19,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_29_093425) do
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "billable_metric_weighted_interval", ["seconds"]
+  create_enum "customer_type", ["company", "individual"]
   create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -439,6 +440,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_08_29_093425) do
     t.string "shipping_state"
     t.string "shipping_country"
     t.integer "finalize_zero_amount_invoice", default: 0, null: false
+    t.string "firstname"
+    t.string "lastname"
+    t.enum "customer_type", enum_type: "customer_type"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"

@@ -68,6 +68,104 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe '#display_name' do
+    subject(:customer) { build_stubbed(:customer, name:, legal_name:, firstname:, lastname:) }
+
+    let(:name) { 'ACME Inc' }
+    let(:legal_name) { 'ACME International Corporation' }
+    let(:firstname) { 'Thomas' }
+    let(:lastname) { 'Anderson' }
+
+    context 'when all fields are nil' do
+      let(:name) { nil }
+      let(:legal_name) { nil }
+      let(:firstname) { nil }
+      let(:lastname) { nil }
+
+      it 'returns an empty string' do
+        expect(customer.display_name).to eq('')
+      end
+    end
+
+    context 'when name and legal_name are nil' do
+      let(:name) { nil }
+      let(:legal_name) { nil }
+
+      it 'returns only firstname and lastname if present' do
+        expect(customer.display_name).to eq('Thomas Anderson')
+      end
+    end
+
+    context 'when firstname and lastname are nil' do
+      let(:firstname) { nil }
+      let(:lastname) { nil }
+
+      it 'returns only the legal_name' do
+        expect(customer.display_name).to eq('ACME International Corporation')
+      end
+
+      context 'when we dont have a legal_name' do
+        let(:legal_name) { nil }
+
+        it 'returns only the name if present' do
+          expect(customer.display_name).to eq('ACME Inc')
+        end
+      end
+    end
+
+    context 'when name is present and both firstname and lastname are present' do
+      let(:legal_name) { nil }
+
+      it 'returns name with firstname and lastname' do
+        expect(customer.display_name).to eq('ACME Inc - Thomas Anderson')
+      end
+    end
+
+    context 'when legal_name is present and both firstname and lastname are present' do
+      let(:name) { nil }
+
+      it 'returns legal_name with firstname and lastname' do
+        expect(customer.display_name).to eq('ACME International Corporation - Thomas Anderson')
+      end
+    end
+
+    context 'when all fields are present' do
+      it 'returns legal_name with firstname and lastname' do
+        expect(customer.display_name).to eq('ACME International Corporation - Thomas Anderson')
+      end
+    end
+  end
+
+  describe 'customer_type enum' do
+    subject(:customer) { build_stubbed(:customer, customer_type:) }
+
+    context 'when customer_type is company' do
+      let(:customer_type) { 'company' }
+
+      it 'identifies the customer as a company' do
+        expect(customer.customer_type).to eq('company')
+        expect(customer.customer_type_company?).to be true
+      end
+    end
+
+    context 'when customer_type is individual' do
+      let(:customer_type) { 'individual' }
+
+      it 'identifies the customer as an individual' do
+        expect(customer.customer_type).to eq('individual')
+        expect(customer.customer_type_individual?).to be true
+      end
+    end
+
+    context 'when customer_type is nil' do
+      subject(:customer) { build(:customer) }
+
+      it 'defaults to nil for existing customers' do
+        expect(customer.customer_type).to be_nil
+      end
+    end
+  end
+
   describe 'preferred_document_locale' do
     subject(:customer) do
       described_class.new(
