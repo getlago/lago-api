@@ -416,6 +416,12 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
   end
 
   describe "#update_payment_status" do
+    subject(:result) do
+      adyen_service.update_payment_status(provider_payment_id:, status:)
+    end
+
+    let(:status) { "Authorised" }
+
     let(:payment) do
       create(
         :payment,
@@ -434,13 +440,8 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
     end
 
     it "updates the payment, payment_request and invoices payment_status", :aggregate_failures do
-      result = adyen_service.update_payment_status(
-        provider_payment_id:,
-        status: "Authorised"
-      )
-
       expect(result).to be_success
-      expect(result.payment.status).to eq("Authorised")
+      expect(result.payment.status).to eq(status)
 
       expect(result.payable.reload).to be_payment_succeeded
       expect(result.payable.ready_for_payment_processing).to eq(false)
@@ -451,15 +452,16 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       expect(invoice_2.ready_for_payment_processing).to eq(false)
     end
 
-    context "when status is failed" do
-      it "updates the payment, payment_request and invoices status", :aggregate_failures do
-        result = adyen_service.update_payment_status(
-          provider_payment_id:,
-          status: "Refused"
-        )
+    it "does not send payment requested email" do
+      expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
+    end
 
+    context "when status is failed" do
+      let(:status) { "Refused" }
+
+      it "updates the payment, payment_request and invoices status", :aggregate_failures do
         expect(result).to be_success
-        expect(result.payment.status).to eq("Refused")
+        expect(result.payment.status).to eq(status)
 
         expect(result.payable.reload).to be_payment_failed
         expect(result.payable.ready_for_payment_processing).to eq(true)
@@ -470,9 +472,18 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
         expect(invoice_2.reload).to be_payment_failed
         expect(invoice_2.ready_for_payment_processing).to eq(true)
       end
+
+      it "sends a payment requested email" do
+        expect { result }.to have_enqueued_mail(PaymentRequestMailer, :requested)
+          .with(params: {payment_request:}, args: [])
+      end
     end
 
     context "when payment_request and invoices is already payment_succeeded" do
+      let(:status) do
+        %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample
+      end
+
       before do
         payment_request.payment_succeeded!
         invoice_1.payment_succeeded!
@@ -480,22 +491,17 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       end
 
       it "does not update the status of invoices, payment_request and payment" do
-        expect {
-          adyen_service.update_payment_status(
-            provider_payment_id:,
-            status: %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample
-          )
-        }.to not_change { invoice_1.reload.payment_status }
+        expect { result }
+          .to not_change { invoice_1.reload.payment_status }
           .and not_change { invoice_2.reload.payment_status }
           .and not_change { payment_request.reload.payment_status }
           .and not_change { payment.reload.status }
 
-        result = adyen_service.update_payment_status(
-          provider_payment_id:,
-          status: %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample
-        )
-
         expect(result).to be_success
+      end
+
+      it "does not send payment requested email" do
+        expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
       end
     end
 
@@ -503,26 +509,28 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       let(:status) { "invalid-status" }
 
       it "does not update the payment_status of payment_request, invoices and payment" do
-        expect {
-          adyen_service.update_payment_status(provider_payment_id:, status:)
-        }.to not_change { payment_request.reload.payment_status }
+        expect { result }
+          .to not_change { payment_request.reload.payment_status }
           .and not_change { invoice_1.reload.payment_status }
           .and not_change { invoice_2.reload.payment_status }
           .and change { payment.reload.status }.to(status)
       end
 
       it "returns an error", :aggregate_failures do
-        result = adyen_service.update_payment_status(provider_payment_id:, status:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages.keys).to include(:payment_status)
         expect(result.error.messages[:payment_status]).to include("value_is_invalid")
       end
+
+      it "does not send payment requested email" do
+        expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
+      end
     end
 
     context "when payment is not found and it is one time payment" do
       let(:payment) { nil }
+      let(:status) { "succeeded" }
 
       before do
         adyen_payment_provider
@@ -532,7 +540,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       it "creates a payment and updates payment request and invoices payment status", :aggregate_failures do
         result = adyen_service.update_payment_status(
           provider_payment_id:,
-          status: "succeeded",
+          status:,
           metadata: {
             lago_payment_request_id: payment_request.id,
             payment_type: "one-time"
@@ -540,7 +548,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
         )
 
         expect(result).to be_success
-        expect(result.payment.status).to eq("succeeded")
+        expect(result.payment.status).to eq(status)
 
         expect(result.payable).to be_payment_succeeded
         expect(result.payable.ready_for_payment_processing).to eq(false)

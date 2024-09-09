@@ -111,6 +111,8 @@ module PaymentRequests
         update_payable_payment_status(payment_status:, processing:)
         update_invoices_payment_status(payment_status:, processing:)
 
+        PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
+
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
