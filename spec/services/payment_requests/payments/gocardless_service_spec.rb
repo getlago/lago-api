@@ -103,7 +103,8 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
             links: {mandate: "mandate_id"},
             metadata: {
               lago_customer_id: customer.id,
-              lago_payment_request_id: payment_request.id
+              lago_payable_id: payment_request.id,
+              lago_payable_type: "PaymentRequest"
             },
             retry_if_possible: false
           }

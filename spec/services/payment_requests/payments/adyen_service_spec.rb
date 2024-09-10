@@ -370,7 +370,8 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               merchantAccount: adyen_payment_provider.merchant_account,
               metadata: {
                 lago_customer_id: customer.id,
-                lago_payment_request_id: payment_request.id,
+                lago_payable_id: payment_request.id,
+                lago_payable_type: "PaymentRequest",
                 payment_type: "one-time"
               },
               recurringProcessingModel: "UnscheduledCardOnFile",
@@ -542,7 +543,8 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
           provider_payment_id:,
           status:,
           metadata: {
-            lago_payment_request_id: payment_request.id,
+            lago_payable_id: payment_request.id,
+            lago_payable_type: "PaymentRequest",
             payment_type: "one-time"
           }
         )

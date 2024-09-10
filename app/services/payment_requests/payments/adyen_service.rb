@@ -190,7 +190,8 @@ module PaymentRequests
           expiresAt: Time.current + 70.days, # max link TTL
           metadata: {
             lago_customer_id: customer.id,
-            lago_payment_request_id: payable.id,
+            lago_payable_id: payable.id,
+            lago_payable_type: payable.class.name,
             payment_type: "one-time"
           }
         }
@@ -235,7 +236,7 @@ module PaymentRequests
       end
 
       def create_payment(provider_payment_id:, metadata:)
-        @payable = PaymentRequest.find(metadata[:lago_payment_request_id])
+        @payable = PaymentRequest.find(metadata[:lago_payable_id])
 
         payable.increment_payment_attempts!
 

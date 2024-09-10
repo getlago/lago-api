@@ -115,7 +115,8 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           description: "#{organization.name} - Overdue invoices",
           metadata: {
             lago_customer_id: customer.id,
-            lago_payment_request_id: payment_request.id
+            lago_payable_id: payment_request.id,
+            lago_payable_type: "PaymentRequest"
           }
         },
         hash_including(
@@ -431,7 +432,8 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
               description: "#{organization.name} - Overdue invoices",
               metadata: {
                 lago_customer_id: customer.id,
-                lago_payment_request_id: payment_request.id,
+                lago_payable_id: payment_request.id,
+                lago_payable_type: "PaymentRequest",
                 payment_type: "one-time"
               }
             }
@@ -577,7 +579,11 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           organization_id: organization.id,
           provider_payment_id:,
           status:,
-          metadata: {lago_payment_request_id: payment_request.id, payment_type: "one-time"}
+          metadata: {
+            lago_payable_id: payment_request.id,
+            lago_payable_type: "PaymentRequest",
+            payment_type: "one-time"
+          }
         )
 
         expect(result).to be_success
@@ -598,7 +604,11 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
             organization_id: organization.id,
             provider_payment_id:,
             status:,
-            metadata: {lago_payment_request_id: "invalid", payment_type: "one-time"}
+            metadata: {
+              lago_payable_id: "invalid",
+              lago_payable_type: "PaymentRequest",
+              payment_type: "one-time"
+            }
           )
 
           expect(result).not_to be_success
@@ -623,7 +633,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
             organization_id: organization.id,
             provider_payment_id:,
             status:,
-            metadata: {lago_payment_request_id: SecureRandom.uuid}
+            metadata: {lago_payable_id: SecureRandom.uuid, lago_payable_type: "PaymentRequest"}
           )
 
           expect(result).to be_success
@@ -636,7 +646,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
               organization_id: organization.id,
               provider_payment_id:,
               status:,
-              metadata: {lago_payment_request_id: payment_request.id}
+              metadata: {lago_payable_id: payment_request.id, lago_payable_type: "PaymentRequest"}
             )
 
             expect(result).not_to be_success

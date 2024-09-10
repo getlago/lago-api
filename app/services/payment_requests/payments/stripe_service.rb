@@ -204,7 +204,8 @@ module PaymentRequests
           description:,
           metadata: {
             lago_customer_id: customer.id,
-            lago_payment_request_id: payable.id
+            lago_payable_id: payable.id,
+            lago_payable_type: payable.class.name
           }
         }
       end
@@ -269,7 +270,8 @@ module PaymentRequests
             description:,
             metadata: {
               lago_customer_id: customer.id,
-              lago_payment_request_id: payable.id,
+              lago_payable_id: payable.id,
+              lago_payable_type: payable.class.name,
               payment_type: "one-time"
             }
           }
@@ -278,11 +280,11 @@ module PaymentRequests
 
       def handle_missing_payment(organization_id, metadata)
         # NOTE: Payment was not initiated by lago
-        return result unless metadata&.key?(:lago_payment_request_id)
+        return result unless metadata&.key?(:lago_payable_id)
 
         # NOTE: Payment Request does not belong to this lago organization
         #       It means the same Stripe secret key is used for multiple organizations
-        payment_request = PaymentRequest.find_by(id: metadata[:lago_payment_request_id], organization_id:)
+        payment_request = PaymentRequest.find_by(id: metadata[:lago_payable_id], organization_id:)
         return result unless payment_request
 
         # NOTE: Payment Request exists but payment status is failed
@@ -292,7 +294,7 @@ module PaymentRequests
       end
 
       def create_payment(provider_payment_id:, metadata:)
-        @payable = PaymentRequest.find_by(id: metadata[:lago_payment_request_id])
+        @payable = PaymentRequest.find_by(id: metadata[:lago_payable_id])
 
         unless payable
           result.not_found_failure!(resource: "payment_request")
