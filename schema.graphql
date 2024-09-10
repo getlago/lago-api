@@ -1908,6 +1908,7 @@ input CreateCustomerInput {
   email: String
   externalId: String!
   externalSalesforceId: String
+  finalizeZeroAmountInvoice: FinalizeZeroAmountInvoiceEnum
   firstname: String
   integrationCustomers: [IntegrationCustomerInput!]
   invoiceGracePeriod: Int
@@ -3013,6 +3014,7 @@ type CurrentOrganization {
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
+  finalizeZeroAmountInvoice: Boolean!
   gocardlessPaymentProviders: [GocardlessProvider!]
   id: ID!
   legalName: String
@@ -3078,6 +3080,11 @@ type Customer {
   email: String
   externalId: String!
   externalSalesforceId: String
+
+  """
+  Options for handling invoices with a zero total amount.
+  """
+  finalizeZeroAmountInvoice: FinalizeZeroAmountInvoiceEnum
   firstname: String
 
   """
@@ -3780,6 +3787,12 @@ input FinalizeInvoiceInput {
   """
   clientMutationId: String
   id: ID!
+}
+
+enum FinalizeZeroAmountInvoiceEnum {
+  finalize
+  inherit
+  skip
 }
 
 type FinalizedInvoiceCollection {
@@ -7440,6 +7453,7 @@ input UpdateCustomerInput {
   email: String
   externalId: String!
   externalSalesforceId: String
+  finalizeZeroAmountInvoice: FinalizeZeroAmountInvoiceEnum
   firstname: String
   id: ID!
   integrationCustomers: [IntegrationCustomerInput!]
@@ -7636,6 +7650,7 @@ input UpdateOrganizationInput {
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean
+  finalizeZeroAmountInvoice: Boolean
   legalName: String
   legalNumber: String
   logo: String
