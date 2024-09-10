@@ -8,6 +8,7 @@ RSpec.describe CreditNote, type: :model do
   it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to have_many(:integration_resources) }
+  it { is_expected.to have_many(:error_details) }
 
   describe 'sequential_id' do
     let(:invoice) { create(:invoice) }
