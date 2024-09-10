@@ -1,5 +1,7 @@
 ---
 analytics:
+  overdue_balances:
+    view: true
   view: false
 billable_metrics:
   view: false

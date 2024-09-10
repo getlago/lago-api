@@ -5574,6 +5574,7 @@ type Permissions {
   addonsDelete: Boolean!
   addonsUpdate: Boolean!
   addonsView: Boolean!
+  analyticsOverdueBalancesView: Boolean!
   analyticsView: Boolean!
   billableMetricsCreate: Boolean!
   billableMetricsDelete: Boolean!

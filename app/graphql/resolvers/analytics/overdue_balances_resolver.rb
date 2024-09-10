@@ -6,7 +6,7 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'analytics:view'
+      REQUIRED_PERMISSION = 'analytics:overdue_balances:view'
 
       description 'Query overdue balances of an organization'
 
