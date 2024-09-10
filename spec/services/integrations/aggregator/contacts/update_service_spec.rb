@@ -89,6 +89,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
             {
               'id' => integration_customer.external_customer_id,
               'name' => customer.name,
+              'firstname' => customer.firstname,
+              'lastname' => customer.lastname,
               'email' => customer.email,
               'city' => customer.city,
               'zip' => customer.zipcode,

@@ -17,6 +17,8 @@ module Integrations
             [
               {
                 'name' => customer.name,
+                'firstname' => customer.firstname,
+                'lastname' => customer.lastname,
                 'city' => customer.city,
                 'zip' => customer.zipcode,
                 'country' => customer.country,
@@ -32,6 +34,8 @@ module Integrations
               {
                 'id' => integration_customer.external_customer_id,
                 'name' => customer.name,
+                'firstname' => customer.firstname,
+                'lastname' => customer.lastname,
                 'city' => customer.city,
                 'zip' => customer.zipcode,
                 'country' => customer.country,
