@@ -154,7 +154,7 @@ module PaymentProviderCustomers
     end
 
     def name
-      customer.name.presence || [customer.firstname, customer.lastname].join(' ')
+      customer.name.presence || [customer.firstname, customer.lastname].compact.join(' ')
     end
 
     def checkout_link_params
