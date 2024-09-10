@@ -5917,7 +5917,7 @@ type Query {
   """
   Query gross revenue of an organization
   """
-  grossRevenues(currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String): GrossRevenueCollection!
+  grossRevenues(currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
 
   """
   Query a single integration
