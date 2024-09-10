@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 class AddCategoryToIntegrations < ActiveRecord::Migration[7.1]
-
   module Integrations
     class BaseIntegration < ApplicationRecord
       self.table_name = 'integrations'
