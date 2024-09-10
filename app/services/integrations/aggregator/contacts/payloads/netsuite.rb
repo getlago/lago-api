@@ -10,14 +10,14 @@ module Integrations
               'type' => 'customer', # Fixed value
               'isDynamic' => true, # Fixed value
               'columns' => {
-                'companyname' => customer.name,
+                'isperson' => isperson,
                 'subsidiary' => subsidiary_id,
                 'custentity_lago_id' => customer.id,
                 'custentity_lago_sf_id' => customer.external_salesforce_id,
                 'custentity_lago_customer_link' => customer_url,
                 'email' => email,
                 'phone' => phone
-              },
+              }.merge(names),
               'options' => {
                 'ignoreMandatoryFields' => false # Fixed value
               }
@@ -29,13 +29,13 @@ module Integrations
               'type' => 'customer',
               'recordId' => integration_customer.external_customer_id,
               'values' => {
-                'companyname' => customer.name,
+                'isperson' => isperson,
                 'subsidiary' => integration_customer.subsidiary_id,
                 'custentity_lago_sf_id' => customer.external_salesforce_id,
                 'custentity_lago_customer_link' => customer_url,
                 'email' => email,
                 'phone' => phone
-              },
+              }.merge(names),
               'options' => {
                 'isDynamic' => false
               }
@@ -43,6 +43,19 @@ module Integrations
           end
 
           private
+
+          def names
+            # customer_type might be nil -> in that case it's a company so we better check for an individual type here
+            return {'companyname' => customer.name} unless customer.customer_type_individual?
+
+            names_hash = {'firstname' => customer.firstname, 'lastname' => customer.lastname}
+
+            customer.name.present? ? names_hash.merge('companyname' => customer.name) : names_hash
+          end
+
+          def isperson
+            customer.customer_type_individual? ? 'T' : 'F'
+          end
 
           def include_lines?
             !integration.legacy_script && !customer.empty_billing_and_shipping_address?
