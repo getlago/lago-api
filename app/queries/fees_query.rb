@@ -3,7 +3,7 @@
 class FeesQuery < BaseQuery
   def call
     fees = paginate(Fee.from_organization(organization))
-    fees = fees.order(created_at: :asc)
+    fees = fees.order(created_at: :asc, id: :asc)
 
     fees = with_external_subscription(fees) if filters.external_subscription_id
     fees = with_external_customer(fees) if filters.external_customer_id
