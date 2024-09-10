@@ -12,8 +12,8 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:filters) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer_first) { create(:customer, organization:, name: 'Rick Sanchez', email: 'pickle@hotmail.com') }
-  let(:customer_second) { create(:customer, organization:, name: 'Morty Smith', email: 'ilovejessica@gmail.com') }
+  let(:customer_first) { create(:customer, organization:, name: 'Rick Sanchez', firstname: 'RickFirst', lastname: 'SanchezLast', email: 'pickle@hotmail.com') }
+  let(:customer_second) { create(:customer, organization:, name: 'Morty Smith', firstname: 'MortyFirst', lastname: 'SmithLast', email: 'ilovejessica@gmail.com') }
   let(:invoice_first) do
     create(
       :invoice,
@@ -488,6 +488,42 @@ RSpec.describe InvoicesQuery, type: :query do
         expect(returned_ids).not_to include(invoice_second.id)
         expect(returned_ids).not_to include(invoice_third.id)
         expect(returned_ids).not_to include(invoice_fourth.id)
+      end
+    end
+  end
+
+  context 'when searching for lastname "SanchezLast"' do
+    let(:search_term) { 'SanchezLast' }
+
+    it 'returns the correct invoices for this customer' do
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids.count).to eq(4)
+        expect(returned_ids).to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+        expect(returned_ids).to include(invoice_fifth.id)
+        expect(returned_ids).to include(invoice_sixth.id)
+      end
+    end
+  end
+
+  context 'when searching for firstname "MortyFirst"' do
+    let(:search_term) { 'MortyFirst' }
+
+    it 'returns the correct invoices for this customer' do
+      returned_ids = result.invoices.pluck(:id)
+
+      aggregate_failures do
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
+        expect(returned_ids).not_to include(invoice_sixth.id)
       end
     end
   end
