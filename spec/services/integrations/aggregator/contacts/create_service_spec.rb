@@ -115,6 +115,8 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
           [
             {
               'name' => customer.name,
+              'firstname' => customer.firstname,
+              'lastname' => customer.lastname,
               'email' => customer.email,
               'city' => customer.city,
               'zip' => customer.zipcode,

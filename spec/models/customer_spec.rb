@@ -117,7 +117,10 @@ RSpec.describe Customer, type: :model do
       let(:legal_name) { nil }
 
       it 'returns name with firstname and lastname' do
-        expect(customer.display_name).to eq('ACME Inc - Thomas Anderson')
+        aggregate_failures do
+          expect(customer.display_name).to eq('ACME Inc - Thomas Anderson')
+          expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc - Thomas Anderson')
+        end
       end
     end
 
@@ -125,13 +128,19 @@ RSpec.describe Customer, type: :model do
       let(:name) { nil }
 
       it 'returns legal_name with firstname and lastname' do
-        expect(customer.display_name).to eq('ACME International Corporation - Thomas Anderson')
+        aggregate_failures do
+          expect(customer.display_name).to eq('ACME International Corporation - Thomas Anderson')
+          expect(customer.display_name(prefer_legal_name: false)).to eq('Thomas Anderson')
+        end
       end
     end
 
     context 'when all fields are present' do
-      it 'returns legal_name with firstname and lastname' do
-        expect(customer.display_name).to eq('ACME International Corporation - Thomas Anderson')
+      it 'returns display name' do
+        aggregate_failures do
+          expect(customer.display_name).to eq('ACME International Corporation - Thomas Anderson')
+          expect(customer.display_name(prefer_legal_name: false)).to eq('ACME Inc - Thomas Anderson')
+        end
       end
     end
   end
