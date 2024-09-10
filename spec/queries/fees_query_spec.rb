@@ -26,6 +26,25 @@ RSpec.describe FeesQuery, type: :query do
       end
     end
 
+    context 'with multiple fees' do
+      let(:fee2) { create(:fee, subscription:, invoice: nil, created_at: fee.created_at) }
+
+      before do
+        fee2
+        fee2.update! id: '00000000-0000-0000-0000-000000000000'
+      end
+
+      it 'returns a consistent list when 2 fees have the same created_at' do
+        result = fees_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.fees.count).to eq(2)
+          expect(result.fees).to eq([fee2, fee])
+        end
+      end
+    end
+
     context 'with pagination' do
       let(:pagination) { {page: 2, limit: 10} }
 
