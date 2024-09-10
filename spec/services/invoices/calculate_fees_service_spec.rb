@@ -92,8 +92,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
   describe '#call' do
     context 'when subscription is billed on anniversary date' do
-      let(:timestamp) { DateTime.parse('07 Mar 2022') }
-      let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
+      let(:timestamp) { Time.zone.parse('07 Mar 2022') }
+      let(:started_at) { Time.zone.parse('06 Jun 2021').to_date }
       let(:subscription_at) { started_at }
       let(:billing_time) { :anniversary }
 
@@ -110,8 +110,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
           invoice_subscription = invoice.invoice_subscriptions.first
           expect(invoice_subscription).to have_attributes(
-            to_datetime: match_datetime(DateTime.parse('2022-03-05 23:59:59')),
-            from_datetime: match_datetime(DateTime.parse('2022-02-06 00:00:00'))
+            to_datetime: match_datetime(Time.zone.parse('2022-03-05 23:59:59')),
+            from_datetime: match_datetime(Time.zone.parse('2022-02-06 00:00:00'))
           )
         end
       end
@@ -849,8 +849,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
 
       context 'when subscription is billed on anniversary date' do
-        let(:timestamp) { DateTime.parse('22 Mar 2022') }
-        let(:started_at) { DateTime.parse('2021-06-06 05:00:00') }
+        let(:timestamp) { Time.zone.parse('22 Mar 2022') }
+        let(:started_at) { Time.zone.parse('2021-06-06 05:00:00') }
         let(:subscription_at) { started_at }
         let(:billing_time) { 'anniversary' }
 
@@ -865,7 +865,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(terminated_at),
-                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
+                from_datetime: match_datetime(Time.zone.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -896,7 +896,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
                 to_datetime: match_datetime(terminated_at),
-                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
+                from_datetime: match_datetime(Time.zone.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -918,8 +918,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:pay_in_advance) { true }
 
       context 'when billed on anniversary date' do
-        let(:timestamp) { DateTime.parse('07 Mar 2022') }
-        let(:started_at) { DateTime.parse('06 Jun 2021').to_date }
+        let(:timestamp) { Time.zone.parse('07 Mar 2022') }
+        let(:started_at) { Time.zone.parse('06 Jun 2021').to_date }
         let(:subscription_at) { started_at }
         let(:billing_time) { :anniversary }
 
@@ -936,8 +936,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(DateTime.parse('2022-04-05 23:59:59')),
-                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
+                to_datetime: match_datetime(Time.zone.parse('2022-04-05 23:59:59')),
+                from_datetime: match_datetime(Time.zone.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -970,8 +970,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(DateTime.parse('2022-04-05 23:59:59')),
-                from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
+                to_datetime: match_datetime(Time.zone.parse('2022-04-05 23:59:59')),
+                from_datetime: match_datetime(Time.zone.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -1196,9 +1196,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           )
         end
 
-        let(:started_at) { DateTime.parse('07 Mar 2022') }
-        let(:terminated_at) { DateTime.parse('17 Oct 2022 12:35:12') }
-        let(:timestamp) { DateTime.parse('17 Oct 2022 15:00') }
+        let(:started_at) { Time.zone.parse('07 Mar 2022') }
+        let(:terminated_at) { Time.zone.parse('17 Oct 2022 12:35:12') }
+        let(:timestamp) { Time.zone.parse('17 Oct 2022 15:00') }
 
         let(:subscription) do
           create(
@@ -1228,7 +1228,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
-                charges_from_datetime: match_datetime(DateTime.parse('2022-10-01 00:00:00')),
+                charges_from_datetime: match_datetime(Time.zone.parse('2022-10-01 00:00:00')),
                 charges_to_datetime: match_datetime(terminated_at)
               )
             end
@@ -1262,7 +1262,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
                 invoice_subscription = invoice.invoice_subscriptions.first
                 expect(invoice_subscription).to have_attributes(
-                  charges_from_datetime: match_datetime(DateTime.parse('2022-10-01 00:00:00')),
+                  charges_from_datetime: match_datetime(Time.zone.parse('2022-10-01 00:00:00')),
                   charges_to_datetime: match_datetime(terminated_at)
                 )
               end
@@ -1305,8 +1305,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
 
       context 'when subscription is billed on anniversary date' do
-        let(:timestamp) { DateTime.parse('07 Jun 2022') }
-        let(:started_at) { DateTime.parse('06 Jun 2020').to_date }
+        let(:timestamp) { Time.zone.parse('07 Jun 2022') }
+        let(:started_at) { Time.zone.parse('06 Jun 2020').to_date }
         let(:subscription_at) { started_at }
         let(:billing_time) { :anniversary }
 
@@ -1322,14 +1322,14 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
-              from_datetime: match_datetime(DateTime.parse('2021-06-06 00:00:00'))
+              to_datetime: match_datetime(Time.zone.parse('2022-06-05 23:59:59')),
+              from_datetime: match_datetime(Time.zone.parse('2021-06-06 00:00:00'))
             )
           end
         end
 
         context 'when started_at in the past' do
-          let(:timestamp) { DateTime.parse(started_at.to_s).end_of_year + 1.day }
+          let(:timestamp) { Time.zone.parse(started_at.to_s).end_of_year + 1.day }
           let(:started_at) { Time.current - 2.months }
           let(:created_at) { Time.current }
 
@@ -1361,8 +1361,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(DateTime.parse('2023-06-05 23:59:59')),
-                from_datetime: match_datetime(DateTime.parse('2022-06-06 00:00:00'))
+                to_datetime: match_datetime(Time.zone.parse('2023-06-05 23:59:59')),
+                from_datetime: match_datetime(Time.zone.parse('2022-06-06 00:00:00'))
               )
             end
           end
@@ -1408,7 +1408,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
 
       context 'when billed yearly on first year' do
-        let(:timestamp) { DateTime.parse(started_at.to_s).end_of_year + 1.day }
+        let(:timestamp) { Time.zone.parse(started_at.to_s).end_of_year + 1.day }
         let(:started_at) { Time.zone.today - 3.months }
 
         it 'updates the invoice accordingly' do
@@ -1457,8 +1457,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
 
       context 'when subscription is billed on anniversary date' do
-        let(:timestamp) { DateTime.parse('07 Jun 2022') }
-        let(:started_at) { DateTime.parse('06 Jun 2020').to_date }
+        let(:timestamp) { Time.zone.parse('07 Jun 2022') }
+        let(:started_at) { Time.zone.parse('06 Jun 2020').to_date }
         let(:subscription_at) { started_at }
         let(:billing_time) { :anniversary }
 
@@ -1474,10 +1474,10 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
-              from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00')),
-              charges_to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
-              charges_from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
+              to_datetime: match_datetime(Time.zone.parse('2022-06-05 23:59:59')),
+              from_datetime: match_datetime(Time.zone.parse('2022-03-06 00:00:00')),
+              charges_to_datetime: match_datetime(Time.zone.parse('2022-06-05 23:59:59')),
+              charges_from_datetime: match_datetime(Time.zone.parse('2022-03-06 00:00:00'))
             )
           end
         end
@@ -1508,10 +1508,10 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(DateTime.parse('2022-09-05 23:59:59')),
-                from_datetime: match_datetime(DateTime.parse('2022-06-06 00:00:00')),
-                charges_to_datetime: match_datetime(DateTime.parse('2022-06-05 23:59:59')),
-                charges_from_datetime: match_datetime(DateTime.parse('2022-03-06 00:00:00'))
+                to_datetime: match_datetime(Time.zone.parse('2022-09-05 23:59:59')),
+                from_datetime: match_datetime(Time.zone.parse('2022-06-06 00:00:00')),
+                charges_to_datetime: match_datetime(Time.zone.parse('2022-06-05 23:59:59')),
+                charges_from_datetime: match_datetime(Time.zone.parse('2022-03-06 00:00:00'))
               )
             end
           end
@@ -1519,8 +1519,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
 
       context 'when billed quarterly on first billing day' do
-        let(:timestamp) { DateTime.parse('01 Jan 2022') }
-        let(:started_at) { DateTime.parse('12 Nov 2021').to_date }
+        let(:timestamp) { Time.zone.parse('01 Jan 2022') }
+        let(:started_at) { Time.zone.parse('12 Nov 2021').to_date }
         let(:subscription_at) { started_at }
 
         it 'updates the invoice accordingly' do

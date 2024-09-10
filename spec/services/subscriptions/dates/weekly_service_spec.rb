@@ -20,8 +20,8 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
   let(:plan) { create(:plan, interval: :weekly, pay_in_advance:) }
   let(:pay_in_advance) { false }
 
-  let(:subscription_at) { DateTime.parse('02 Feb 2021') }
-  let(:billing_at) { DateTime.parse('07 Mar 2022') }
+  let(:subscription_at) { Time.zone.parse('02 Feb 2021') }
+  let(:billing_at) { Time.zone.parse('07 Mar 2022') }
   let(:started_at) { subscription_at }
   let(:timezone) { 'UTC' }
 
@@ -45,7 +45,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       end
 
       context 'when date is before the start date' do
-        let(:started_at) { DateTime.parse('01 Mar 2022 05:00:00') }
+        let(:started_at) { Time.zone.parse('01 Mar 2022 05:00:00') }
 
         it 'returns the start date' do
           expect(result).to eq(started_at.beginning_of_day.utc.to_s)
@@ -61,7 +61,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       end
 
       context 'when subscription is just terminated' do
-        let(:billing_at) { DateTime.parse('10 Mar 2022') }
+        let(:billing_at) { Time.zone.parse('10 Mar 2022') }
 
         before { subscription.mark_as_terminated!('9 Mar 2022') }
 
@@ -83,7 +83,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_at) { DateTime.parse('09 Mar 2022') }
+      let(:billing_at) { Time.zone.parse('09 Mar 2022') }
 
       it 'returns the previous week week day' do
         expect(result).to eq('2022-03-01 00:00:00 UTC')
@@ -91,7 +91,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       end
 
       context 'when date is before the start date' do
-        let(:started_at) { DateTime.parse('08 Mar 2022') }
+        let(:started_at) { Time.zone.parse('08 Mar 2022') }
 
         it 'returns the start date' do
           expect(result).to eq(started_at.utc.to_s)
@@ -124,7 +124,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is calendar' do
       let(:billing_time) { :calendar }
-      let(:billing_at) { DateTime.parse('07 Mar 2022') }
+      let(:billing_at) { Time.zone.parse('07 Mar 2022') }
 
       it 'returns the end of the previous week' do
         expect(result).to eq('2022-03-06 23:59:59 UTC')
@@ -148,8 +148,8 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       end
 
       context 'when subscription is just terminated' do
-        let(:billing_at) { DateTime.parse('07 Mar 2022') }
-        let(:terminated_at) { DateTime.parse('02 Mar 2022') }
+        let(:billing_at) { Time.zone.parse('07 Mar 2022') }
+        let(:terminated_at) { Time.zone.parse('02 Mar 2022') }
 
         before do
           subscription.update!(
@@ -174,7 +174,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_at) { DateTime.parse('09 Mar 2022') }
+      let(:billing_at) { Time.zone.parse('09 Mar 2022') }
 
       it 'returns the previous week week day' do
         expect(result).to eq('2022-03-07 23:59:59 UTC')
@@ -192,7 +192,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         before do
           subscription.update!(
             status: :terminated,
-            terminated_at: DateTime.parse('02 Mar 2022')
+            terminated_at: Time.zone.parse('02 Mar 2022')
           )
         end
 
@@ -221,7 +221,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
         end
 
         context 'when timezone has changed' do
-          let(:billing_at) { DateTime.parse('08 Mar 2022') }
+          let(:billing_at) { Time.zone.parse('08 Mar 2022') }
 
           let(:previous_invoice_subscription) do
             create(
@@ -243,7 +243,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       end
 
       context 'when subscription started in the middle of a period' do
-        let(:started_at) { DateTime.parse('03 Mar 2022') }
+        let(:started_at) { Time.zone.parse('03 Mar 2022') }
 
         it 'returns the start date' do
           expect(result).to eq(subscription.started_at.utc.to_s)
@@ -261,14 +261,14 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_at) { DateTime.parse('09 Mar 2022') }
+      let(:billing_at) { Time.zone.parse('09 Mar 2022') }
 
       it 'returns from_date' do
         expect(result).to eq(date_service.from_datetime.to_s)
       end
 
       context 'when subscription started in the middle of a period' do
-        let(:started_at) { DateTime.parse('03 Mar 2022') }
+        let(:started_at) { Time.zone.parse('03 Mar 2022') }
 
         it 'returns the start date' do
           expect(result).to eq(subscription.started_at.utc.to_s)
@@ -304,7 +304,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       end
 
       context 'when subscription is terminated in the middle of a period' do
-        let(:terminated_at) { DateTime.parse('06 Mar 2022') }
+        let(:terminated_at) { Time.zone.parse('06 Mar 2022') }
 
         before do
           subscription.update!(status: :terminated, terminated_at:)
@@ -326,14 +326,14 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_at) { DateTime.parse('09 Mar 2022') }
+      let(:billing_at) { Time.zone.parse('09 Mar 2022') }
 
       it 'returns to_date' do
         expect(result).to eq(date_service.to_datetime.to_s)
       end
 
       context 'when subscription is terminated in the middle of a period' do
-        let(:terminated_at) { DateTime.parse('06 Mar 2022') }
+        let(:terminated_at) { Time.zone.parse('06 Mar 2022') }
 
         before do
           subscription.update!(status: :terminated, terminated_at:)
@@ -375,7 +375,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
     context 'when billing_time is anniversary' do
       let(:billing_time) { :anniversary }
-      let(:billing_at) { DateTime.parse('08 Mar 2022 20:00:00') }
+      let(:billing_at) { Time.zone.parse('08 Mar 2022 20:00:00') }
 
       it 'returns the end of the billing week' do
         expect(result).to eq('2022-03-14 23:59:59 UTC')
@@ -390,7 +390,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       end
 
       context 'when date is the end of the period' do
-        let(:billing_at) { DateTime.parse('07 Mar 2022') }
+        let(:billing_at) { Time.zone.parse('07 Mar 2022') }
 
         it 'returns the date' do
           expect(result).to eq(billing_at.utc.end_of_day.to_s)
@@ -455,7 +455,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
   describe 'single_day_price' do
     let(:billing_time) { :anniversary }
-    let(:billing_at) { DateTime.parse('08 Mar 2022') }
+    let(:billing_at) { Time.zone.parse('08 Mar 2022') }
     let(:result) { date_service.single_day_price }
 
     it 'returns the price of single day' do
@@ -465,7 +465,7 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
 
   describe 'charges_duration_in_days' do
     let(:billing_time) { :anniversary }
-    let(:billing_at) { DateTime.parse('08 Mar 2022') }
+    let(:billing_at) { Time.zone.parse('08 Mar 2022') }
     let(:result) { date_service.charges_duration_in_days }
 
     it 'returns the duration of the period' do

@@ -222,8 +222,8 @@ class Invoice < ApplicationRecord
       charge: fee.charge,
       subscription: fee.subscription,
       boundaries: {
-        from_datetime: DateTime.parse(fee.properties['charges_from_datetime']),
-        to_datetime: DateTime.parse(fee.properties['charges_to_datetime']),
+        from_datetime: Time.zone.parse(fee.properties['charges_from_datetime']),
+        to_datetime: Time.zone.parse(fee.properties['charges_to_datetime']),
         charges_duration: fee.properties['charges_duration']
       },
       filters:
