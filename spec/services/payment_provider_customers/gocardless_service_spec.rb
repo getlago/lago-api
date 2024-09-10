@@ -27,6 +27,20 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
         .and_return(GoCardlessPro::Resources::Customer.new('id' => '123'))
     end
 
+    context 'when all customer details are present' do
+      it 'creates a customer with company_name, given_name, and family_name' do
+        gocardless_service.create
+        expect(gocardless_customers_service).to have_received(:create).with(
+          hash_including(
+            email: customer.email,
+            company_name: customer.name,
+            given_name: customer.firstname,
+            family_name: customer.lastname
+          )
+        )
+      end
+    end
+
     it 'creates the gocardless customer' do
       result = gocardless_service.create
 
