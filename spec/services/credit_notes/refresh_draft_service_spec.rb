@@ -21,7 +21,8 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
   describe '#call' do
     let(:status) { :draft }
     let(:fee) { create(:fee, invoice:, taxes_rate: 20, amount_cents: 100, precise_coupons_amount_cents: 20) }
-    let(:applied_tax) { create(:fee_applied_tax, tax:, fee:, amount_cents: 0) }
+    let(:fee_applied_tax) { create(:fee_applied_tax, tax:, fee:, amount_cents: 0) }
+    let(:invoice_applied_tax) { create(:invoice_applied_tax, tax:, invoice:) }
     let(:credit_note_item) { create(:credit_note_item, credit_note:, fee: create(:fee, invoice:, taxes_rate: 0)) }
     let(:credit_note) do
       create(
@@ -37,7 +38,8 @@ RSpec.describe CreditNotes::RefreshDraftService, type: :service do
     end
 
     before do
-      applied_tax
+      fee_applied_tax
+      invoice_applied_tax
       credit_note_item
     end
 

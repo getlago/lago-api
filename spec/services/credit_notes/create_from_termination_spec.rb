@@ -59,9 +59,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   end
 
   let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:fee_applied_tax) { create(:fee_applied_tax, tax:, fee: subscription_fee) }
+  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, tax:)}
 
   describe '#call' do
-    before { create(:fee_applied_tax, tax:, fee: subscription_fee) }
+    before do
+      fee_applied_tax
+      invoice_applied_tax
+    end
 
     it 'creates a credit note' do
       result = create_service.call
@@ -79,6 +84,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         expect(credit_note.balance_amount_cents).to eq(19)
         expect(credit_note.balance_amount_currency).to eq('EUR')
         expect(credit_note.reason).to eq('order_change')
+        expect(credit_note.applied_taxes.length).to eq(1)
+        expect(credit_note.applied_taxes.first.tax_code).to eq(invoice_applied_tax.tax_code)
 
         expect(credit_note.items.count).to eq(1)
       end

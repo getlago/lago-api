@@ -46,6 +46,7 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice, type: :service 
 
   let(:fee1_applied_tax) { create(:fee_applied_tax, tax:, fee: fee1) }
   let(:fee2_applied_tax) { create(:fee_applied_tax, tax:, fee: fee2) }
+  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice: progressive_billing_invoice, tax: )}
 
   before do
     progressive_billing_invoice
@@ -53,6 +54,7 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice, type: :service 
     fee2
     fee1_applied_tax
     fee2_applied_tax
+    invoice_applied_tax
   end
 
   describe "#call" do
@@ -83,6 +85,9 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice, type: :service 
         expect(credit_fee1.amount_cents).to eq(80)
         credit_fee2 = credit_note.items.find { |i| i.fee == fee2 }
         expect(credit_fee2.amount_cents).to eq(20)
+        expect(credit_note.applied_taxes.length).to eq(1)
+        expect(credit_note.applied_taxes.first.tax_code).to eq(invoice_applied_tax.tax_code)
+        expect(credit_note.applied_taxes.first.tax_id).to eq(tax.id)
       end
     end
   end
