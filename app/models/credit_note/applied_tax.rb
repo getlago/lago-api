@@ -36,6 +36,7 @@ end
 #  index_credit_notes_taxes_on_credit_note_id               (credit_note_id)
 #  index_credit_notes_taxes_on_credit_note_id_and_tax_code  (credit_note_id,tax_code) UNIQUE
 #  index_credit_notes_taxes_on_tax_code                     (tax_code)
+#  index_credit_notes_taxes_on_tax_id                       (tax_id)
 #
 # Foreign Keys
 #

@@ -373,6 +373,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_10_111203) do
     t.index ["credit_note_id", "tax_code"], name: "index_credit_notes_taxes_on_credit_note_id_and_tax_code", unique: true
     t.index ["credit_note_id"], name: "index_credit_notes_taxes_on_credit_note_id"
     t.index ["tax_code"], name: "index_credit_notes_taxes_on_tax_code"
+    t.index ["tax_id"], name: "index_credit_notes_taxes_on_tax_id"
   end
 
   create_table "credits", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
