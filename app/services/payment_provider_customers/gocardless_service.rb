@@ -70,12 +70,14 @@ module PaymentProviderCustomers
     end
 
     def create_gocardless_customer
-      client.customers.create(
-        params: {
-          email: customer.email&.strip&.split(',')&.first,
-          company_name: customer.name
-        }
-      )
+      customer_params = {
+        email: customer.email&.strip&.split(',')&.first,
+        company_name: customer.name.presence,
+        given_name: customer.firstname.presence,
+        family_name: customer.lastname.presence
+      }.compact
+
+      client.customers.create(customer_params)
     rescue GoCardlessPro::Error => e
       deliver_error_webhook(e)
 
