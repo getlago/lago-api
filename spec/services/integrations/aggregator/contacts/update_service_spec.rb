@@ -45,6 +45,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
             'recordId' => integration_customer.external_customer_id,
             'values' => {
               'companyname' => customer.name,
+              'isperson' => 'F',
               'subsidiary' => integration_customer.subsidiary_id,
               'custentity_lago_sf_id' => customer.external_salesforce_id,
               'custentity_lago_customer_link' => customer_link,
@@ -131,6 +132,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
           'recordId' => integration_customer.external_customer_id,
           'values' => {
             'companyname' => customer.name,
+            'isperson' => 'F',
             'subsidiary' => integration_customer.subsidiary_id,
             'custentity_lago_sf_id' => customer.external_salesforce_id,
             'custentity_lago_customer_link' => customer_link,

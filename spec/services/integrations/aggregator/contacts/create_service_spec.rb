@@ -49,6 +49,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
             'isDynamic' => true,
             'columns' => {
               'companyname' => customer.name,
+              'isperson' => 'F',
               'subsidiary' => subsidiary_id,
               'custentity_lago_id' => customer.id,
               'custentity_lago_sf_id' => customer.external_salesforce_id,
@@ -181,6 +182,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
           'isDynamic' => true,
           'columns' => {
             'companyname' => customer.name,
+            'isperson' => 'F',
             'subsidiary' => subsidiary_id,
             'custentity_lago_id' => customer.id,
             'custentity_lago_sf_id' => customer.external_salesforce_id,
