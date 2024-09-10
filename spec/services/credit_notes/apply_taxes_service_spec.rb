@@ -320,4 +320,21 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
     end
 
   end
+
+  context 'when no taxes are applied on the invoice' do
+    describe 'call' do
+      it 'succeeds' do
+        result = apply_service.call
+        expect(result).to be_success
+        aggregate_failures do
+          applied_taxes = result.applied_taxes
+          expect(applied_taxes.count).to eq(0)
+          expect(result.taxes_amount_cents.round).to eq(0)
+          expect(result.taxes_rate).to eq(0)
+          expect(result.coupons_adjustment_amount_cents.round).to eq(12)
+        end
+      end
+    end
+
+  end
 end
