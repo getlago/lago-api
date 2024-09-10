@@ -30,7 +30,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     context 'when customer name is not present' do
       it 'creates a stripe customer with the customer firstname and lastname' do
         allow(Stripe::Customer).to receive(:create)
-                                     .and_return(Stripe::Customer.new(id: 'cus_123456'))
+          .and_return(Stripe::Customer.new(id: 'cus_123456'))
         stripe_service.create
 
         expected_name = "#{customer.firstname} #{customer.lastname}"
