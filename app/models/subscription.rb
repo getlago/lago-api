@@ -169,7 +169,11 @@ class Subscription < ApplicationRecord
     return false unless terminated?
     return false if terminated_at.nil? || timestamp.nil?
 
-    terminated_at <= timestamp
+    # TODO: should be cleaued up to only use Time
+    timestamp = timestamp.to_time if [Date, DateTime, String].include?(timestamp.class)
+    timestamp = Time.zone.at(timestamp) if timestamp.is_a?(Integer)
+
+    terminated_at.round <= timestamp.round
   end
 end
 

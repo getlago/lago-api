@@ -51,7 +51,7 @@ module Fees
 
       @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
-        boundaries.timestamp || Time.current,
+        boundaries.timestamp ? Time.zone.parse(boundaries.timestamp) : Time.current,
         current_usage: subscription.terminated? && subscription.upgraded?
       )
     end

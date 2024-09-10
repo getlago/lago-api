@@ -30,7 +30,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
     )
   end
 
-  let(:subscription_at) { DateTime.parse('2022-12-01 00:00:00') }
+  let(:subscription_at) { Time.zone.parse('2022-12-01 00:00:00') }
   let(:started_at) { subscription_at }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
@@ -54,8 +54,8 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
     )
   end
 
-  let(:from_datetime) { DateTime.parse('2023-05-01 00:00:00') }
-  let(:to_datetime) { DateTime.parse('2023-05-31 23:59:59') }
+  let(:from_datetime) { Time.zone.parse('2023-05-01 00:00:00') }
+  let(:to_datetime) { Time.zone.parse('2023-05-31 23:59:59') }
 
   let(:old_events) do
     create_list(
@@ -126,7 +126,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
             status: :terminated
           )
         end
-        let(:to_datetime) { DateTime.parse('2023-05-30 23:59:59') }
+        let(:to_datetime) { Time.zone.parse('2023-05-30 23:59:59') }
 
         it 'returns the detail the persisted metrics' do
           aggregate_failures do
@@ -143,7 +143,7 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       end
 
       context 'when subscription was started in the period' do
-        let(:started_at) { DateTime.parse('2023-05-03') }
+        let(:started_at) { Time.zone.parse('2023-05-03') }
         let(:old_events) { nil }
         let(:from_datetime) { started_at }
 

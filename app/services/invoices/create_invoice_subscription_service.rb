@@ -133,7 +133,7 @@ module Invoices
       # NOTE: upgrading is used as a not persisted reason as it means
       #       one subscription starting and a second one terminating
       return invoicing_reason if invoicing_reason.to_sym != :upgrading
-      return :subscription_terminating if subscription.terminated? && subscription.terminated_at <= timestamp
+      return :subscription_terminating if subscription.terminated_at?(timestamp)
 
       :subscription_starting
     end
