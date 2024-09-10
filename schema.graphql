@@ -3940,6 +3940,7 @@ type GroupedChargeUsage {
   eventsCount: Int!
   filters: [ChargeFilterUsage!]
   groupedBy: JSON
+  id: ID!
   units: Float!
 }
 
