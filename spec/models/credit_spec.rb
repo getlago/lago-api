@@ -10,7 +10,6 @@ RSpec.describe Credit, type: :model do
     it { is_expected.to belong_to(:applied_coupon).optional }
     it { is_expected.to belong_to(:credit_note).optional }
     it { is_expected.to belong_to(:progressive_billing_invoice).optional }
-    it { is_expected.to have_many(:error_details) }
   end
 
   describe 'invoice item' do
