@@ -53,6 +53,15 @@ RSpec.describe PaymentRequest, type: :model do
     end
   end
 
+  describe "#total_amount_cents=" do
+    let(:amount_cents) { 19_999_55 }
+
+    it "aliases amount_cents=" do
+      payment_request.total_amount_cents = amount_cents
+      expect(payment_request.amount_cents).to eq(amount_cents)
+    end
+  end
+
   describe "#currency" do
     it "aliases amount_currency" do
       expect(payment_request.currency).to eq(payment_request.amount_currency)

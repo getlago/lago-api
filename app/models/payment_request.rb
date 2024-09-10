@@ -31,6 +31,10 @@ class PaymentRequest < ApplicationRecord
     increment(:payment_attempts)
     save!
   end
+
+  def total_amount_cents=(total_amount_cents)
+    self.amount_cents = total_amount_cents
+  end
 end
 
 # == Schema Information
