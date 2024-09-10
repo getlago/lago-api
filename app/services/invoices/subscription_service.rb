@@ -66,7 +66,7 @@ module Invoices
       if grace_period?
         SendWebhookJob.perform_later('invoice.drafted', invoice)
       else
-        unless invoice.closed # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
+        unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_later('invoice.created', invoice)
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_finalized_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
