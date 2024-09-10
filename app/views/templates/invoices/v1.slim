@@ -411,11 +411,7 @@ html
           .body-2 = organization.email
         .billing-information-column
           .body-1 = I18n.t('invoice.bill_to')
-          .body-2
-            - if customer.legal_name.present?
-              | #{customer.legal_name}
-            - else
-              | #{customer.name}
+          .body-2 = customer.display_name
           .body-2 = customer.address_line1
           .body-2 = customer.address_line2
           .body-2

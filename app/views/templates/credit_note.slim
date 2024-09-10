@@ -347,11 +347,7 @@ html
             .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: organization.tax_identification_number)
         .billing-information-column
           .body-1 = I18n.t('credit_note.credit_to')
-          .body-2
-            - if customer.legal_name.present?
-              | #{customer.legal_name}
-            - else
-              | #{customer.name}
+          .body-2 = customer.display_name
           - if customer.legal_number.present?
             .body-2 #{customer.legal_number}
           .body-2 = customer.address_line1
