@@ -12,13 +12,14 @@ module Resolvers
 
       argument :currency, Types::CurrencyEnum, required: false
       argument :external_customer_id, String, required: false
+      argument :months, Integer, required: false
 
       argument :expire_cache, Boolean, required: false
 
       type Types::Analytics::GrossRevenues::Object.collection_type, null: false
 
       def resolve(**args)
-        ::Analytics::GrossRevenue.find_all_by(current_organization.id, **args.merge(months: 12))
+        ::Analytics::GrossRevenue.find_all_by(current_organization.id, **args)
       end
     end
   end
