@@ -7,7 +7,7 @@ class CreditNote
     include PaperTrailTraceable
 
     belongs_to :credit_note
-    belongs_to :tax
+    belongs_to :tax, optional: true
 
     monetize :amount_cents
     monetize :base_amount_cents, with_model_currency: :amount_currency
@@ -29,7 +29,7 @@ end
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  credit_note_id    :uuid             not null
-#  tax_id            :uuid             not null
+#  tax_id            :uuid
 #
 # Indexes
 #
