@@ -22,12 +22,15 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
         'columns' => {
           'companyname' => customer.name,
           'subsidiary' => subsidiary_id,
+          'isperson' => 'F',
           'custentity_lago_id' => customer.id,
           'custentity_lago_sf_id' => customer.external_salesforce_id,
           'custentity_lago_customer_link' => customer_link,
           'email' => customer.email.to_s.split(',').first&.strip,
           'phone' => customer.phone.to_s.split(',').first&.strip
-        },
+        }.merge(
+          customer.customer_type_individual? ? {'firstname' => customer.firstname, 'lastname' => customer.lastname} : {}
+        ),
         'options' => {
           'ignoreMandatoryFields' => false
         },
@@ -305,26 +308,53 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
   describe "#update_body" do
     subject(:update_body_call) { payload.update_body }
 
+    let(:customer) { create(:customer, customer_type:) }
+    let(:isperson) { payload.__send__(:isperson) }
+
     let(:payload_body) do
       {
         'type' => 'customer',
         'recordId' => integration_customer.external_customer_id,
         'values' => {
-          'companyname' => customer.name,
+          'isperson' => isperson,
           'subsidiary' => integration_customer.subsidiary_id,
           'custentity_lago_sf_id' => customer.external_salesforce_id,
           'custentity_lago_customer_link' => customer_link,
           'email' => customer.email.to_s.split(',').first&.strip,
           'phone' => customer.phone.to_s.split(',').first&.strip
-        },
+        }.merge(names),
         'options' => {
           'isDynamic' => false
         }
       }
     end
 
-    it "returns the payload body" do
-      expect(subject).to eq payload_body
+    context 'when customer is an individual' do
+      let(:customer_type) { :individual }
+
+      let(:names) do
+        {
+          'companyname' => customer.name,
+          'firstname' => customer.firstname,
+          'lastname' => customer.lastname
+        }
+      end
+
+      it "returns the payload body" do
+        expect(subject).to eq payload_body
+      end
+    end
+
+    context 'when customer is not an individual' do
+      let(:customer_type) { [nil, :company].sample }
+
+      let(:names) do
+        {'companyname' => customer.name}
+      end
+
+      it "returns the payload body" do
+        expect(subject).to eq payload_body
+      end
     end
   end
 
@@ -368,8 +398,93 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
     end
   end
 
+  describe '#names' do
+    subject(:names_call) { payload.__send__(:names) }
+
+    let(:customer) { create(:customer, customer_type:, name:) }
+
+    context 'when customer type is nil' do
+      let(:customer_type) { nil }
+      let(:name) { Faker::TvShows::SiliconValley.character }
+      let(:names) { {'companyname' => customer.name} }
+
+      it 'returns the result hash' do
+        expect(subject).to eq(names)
+      end
+    end
+
+    context 'when customer type is company' do
+      let(:customer_type) { :company }
+      let(:name) { Faker::TvShows::SiliconValley.character }
+
+      let(:names) { {'companyname' => customer.name} }
+
+      it 'returns the result hash' do
+        expect(subject).to eq(names)
+      end
+    end
+
+    context 'when customer type is individual' do
+      let(:customer_type) { :individual }
+
+      context 'when name is present' do
+        let(:name) { Faker::TvShows::SiliconValley.character }
+
+        let(:names) do
+          {'companyname' => customer.name, 'firstname' => customer.firstname, 'lastname' => customer.lastname}
+        end
+
+        it 'returns the result hash' do
+          expect(subject).to eq(names)
+        end
+      end
+
+      context 'when name is not present' do
+        let(:name) { nil }
+
+        let(:names) do
+          {'firstname' => customer.firstname, 'lastname' => customer.lastname}
+        end
+
+        it 'returns the result hash' do
+          expect(subject).to eq(names)
+        end
+      end
+    end
+  end
+
+  describe '#isperson' do
+    subject(:isperson_call) { payload.__send__(:isperson) }
+
+    let(:customer) { create(:customer, customer_type:) }
+
+    context 'when customer type is nil' do
+      let(:customer_type) { nil }
+
+      it 'returns F' do
+        expect(subject).to eq('F')
+      end
+    end
+
+    context 'when customer type is company' do
+      let(:customer_type) { :company }
+
+      it 'returns F' do
+        expect(subject).to eq('F')
+      end
+    end
+
+    context 'when customer type is individual' do
+      let(:customer_type) { :individual }
+
+      it 'returns T' do
+        expect(subject).to eq('T')
+      end
+    end
+  end
+
   describe '#phone' do
-    subject(:phone_call) { payload.__send__(:phone) }
+    subject { payload.__send__(:phone) }
 
     let(:customer) { create(:customer, phone:) }
 
