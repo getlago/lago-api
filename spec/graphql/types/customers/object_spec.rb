@@ -71,4 +71,5 @@ RSpec.describe Types::Customers::Object do
   it { is_expected.to have_field(:has_overdue_invoices).of_type('Boolean!') }
 
   it { is_expected.to have_field(:can_edit_attributes).of_type('Boolean!') }
+  it { is_expected.to have_field(:finalize_zero_amount_invoice).of_type('FinalizeZeroAmountInvoiceEnum') }
 end

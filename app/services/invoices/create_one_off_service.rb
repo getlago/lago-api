@@ -39,12 +39,14 @@ module Invoices
         invoice.save!
       end
 
-      Utils::SegmentTrack.invoice_created(invoice)
-      SendWebhookJob.perform_later('invoice.one_off_created', invoice)
-      GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
-      Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
-      Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
-      Invoices::Payments::CreateService.new(invoice).call
+      unless invoice.closed?
+        Utils::SegmentTrack.invoice_created(invoice)
+        SendWebhookJob.perform_later('invoice.one_off_created', invoice)
+        GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
+        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
+        Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
+        Invoices::Payments::CreateService.new(invoice).call
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e

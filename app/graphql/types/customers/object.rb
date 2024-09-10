@@ -83,6 +83,8 @@ module Types
         description 'Check if customer attributes are editable'
       end
 
+      field :finalize_zero_amount_invoice, Types::Customers::FinalizeZeroAmountInvoiceEnum, null: true, description: 'Options for handling invoices with a zero total amount.'
+
       def invoices
         object.invoices.visible.order(created_at: :desc)
       end

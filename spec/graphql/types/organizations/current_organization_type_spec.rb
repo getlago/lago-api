@@ -32,6 +32,7 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
   it { is_expected.to have_field(:created_at).of_type('ISO8601DateTime!') }
   it { is_expected.to have_field(:updated_at).of_type('ISO8601DateTime!') }
 
+  it { is_expected.to have_field(:finalize_zero_amount_invoice).of_type('Boolean!') }
   it { is_expected.to have_field(:billing_configuration).of_type('OrganizationBillingConfiguration').with_permission('organization:invoices:view') }
   it { is_expected.to have_field(:email_settings).of_type('[EmailSettingsEnum!]').with_permission('organization:emails:view') }
   it { is_expected.to have_field(:taxes).of_type('[Tax!]').with_permission('organization:taxes:view') }

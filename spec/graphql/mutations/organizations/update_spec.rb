@@ -26,6 +26,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           euTaxManagement,
           documentNumbering
           documentNumberPrefix
+          finalizeZeroAmountInvoice
           billingConfiguration {
             invoiceFooter,
             invoiceGracePeriod,
@@ -62,6 +63,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
           euTaxManagement: true,
           webhookUrl: 'https://app.test.dev',
           documentNumberPrefix: 'ORG-2',
+          finalizeZeroAmountInvoice: false,
           billingConfiguration: {
             invoiceFooter: 'invoice footer',
             documentLocale: 'fr'
@@ -93,6 +95,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       expect(result_data['billingConfiguration']['documentLocale']).to eq('fr')
       expect(result_data['euTaxManagement']).to be_truthy
       expect(result_data['timezone']).to eq('TZ_UTC')
+      expect(result_data['finalizeZeroAmountInvoice']).to be false
     end
   end
 

@@ -42,6 +42,7 @@ module Types
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, permission: 'organization:invoices:view'
       field :email_settings, [Types::Organizations::EmailSettingsEnum], permission: 'organization:emails:view'
+      field :finalize_zero_amount_invoice, Boolean, null: false
       field :taxes, [Types::Taxes::Object], resolver: Resolvers::TaxesResolver, permission: 'organization:taxes:view'
 
       field :adyen_payment_providers, [Types::PaymentProviders::Adyen], permission: 'organization:integrations:view'

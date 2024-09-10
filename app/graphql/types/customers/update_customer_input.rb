@@ -45,6 +45,7 @@ module Types
       argument :tax_codes, [String], required: false, permissions: %w[customer_settings:update:tax_rates customers:update]
 
       argument :billing_configuration, Types::Customers::BillingConfigurationInput, required: false
+      argument :finalize_zero_amount_invoice, Types::Customers::FinalizeZeroAmountInvoiceEnum, required: false
     end
   end
 end

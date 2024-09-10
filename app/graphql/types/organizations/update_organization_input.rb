@@ -31,6 +31,7 @@ module Types
 
       argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: 'organization:invoices:view'
       argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: 'organization:emails:view'
+      argument :finalize_zero_amount_invoice, Boolean, required: false
     end
   end
 end

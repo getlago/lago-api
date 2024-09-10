@@ -7392,6 +7392,18 @@
               "deprecationReason": null
             },
             {
+              "name": "finalizeZeroAmountInvoice",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "FinalizeZeroAmountInvoiceEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "clientMutationId",
               "description": "A unique identifier for the client performing the mutation.",
               "type": {
@@ -11478,6 +11490,24 @@
               ]
             },
             {
+              "name": "finalizeZeroAmountInvoice",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "gocardlessPaymentProviders",
               "description": null,
               "type": {
@@ -12242,6 +12272,20 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "finalizeZeroAmountInvoice",
+              "description": "Options for handling invoices with a zero total amount.",
+              "type": {
+                "kind": "ENUM",
+                "name": "FinalizeZeroAmountInvoiceEnum",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -16852,6 +16896,35 @@
           "enumValues": null
         },
         {
+          "kind": "ENUM",
+          "name": "FinalizeZeroAmountInvoiceEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "inherit",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "skip",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "finalize",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "OBJECT",
           "name": "FinalizedInvoiceCollection",
           "description": null,
@@ -20099,6 +20172,24 @@
             },
             {
               "name": "failed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "generating",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "open",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "closed",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -35653,6 +35744,18 @@
               "deprecationReason": null
             },
             {
+              "name": "finalizeZeroAmountInvoice",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "FinalizeZeroAmountInvoiceEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "clientMutationId",
               "description": "A unique identifier for the client performing the mutation.",
               "type": {
@@ -36804,6 +36907,18 @@
                     "ofType": null
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "finalizeZeroAmountInvoice",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
