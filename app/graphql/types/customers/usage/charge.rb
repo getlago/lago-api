@@ -8,12 +8,17 @@ module Types
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
+        field :id, ID, null: false
         field :units, GraphQL::Types::Float, null: false
 
         field :billable_metric, Types::BillableMetrics::Object, null: false
         field :charge, Types::Charges::Object, null: false
         field :filters, [Types::Customers::Usage::ChargeFilter], null: true
         field :grouped_usage, [Types::Customers::Usage::GroupedUsage], null: false
+
+        def id
+          SecureRandom.uuid
+        end
 
         def units
           object.map { |f| BigDecimal(f.units) }.sum

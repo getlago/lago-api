@@ -376,6 +376,7 @@ type ChargeUsage {
   eventsCount: Int!
   filters: [ChargeFilterUsage!]
   groupedUsage: [GroupedChargeUsage!]!
+  id: ID!
   units: Float!
 }
 
