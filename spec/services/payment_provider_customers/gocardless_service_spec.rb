@@ -29,7 +29,8 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
 
     context 'when all customer details are present' do
       it 'creates a customer with company_name, given_name, and family_name' do
-        expect(gocardless_customers_service).to receive(:create).with(
+        gocardless_service.create
+        expect(gocardless_customers_service).to have_received(:create).with(
           hash_including(
             email: customer.email,
             company_name: customer.name,
@@ -37,7 +38,6 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
             family_name: customer.lastname
           )
         )
-        gocardless_service.create
       end
     end
 
