@@ -5,15 +5,39 @@ require 'rails_helper'
 RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
   subject(:stripe_service) { described_class.new(stripe_customer) }
 
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, name: customer_name, organization:) }
   let(:stripe_provider) { create(:stripe_provider) }
   let(:organization) { stripe_provider.organization }
+  let(:customer_name) { nil }
 
   let(:stripe_customer) do
     create(:stripe_customer, customer:, provider_customer_id: nil)
   end
 
   describe '#create' do
+    context 'when customer name is present' do
+      let(:customer_name) { 'Big inc' }
+
+      it 'creates a stripe customer with the customer name' do
+        allow(Stripe::Customer).to receive(:create)
+          .and_return(Stripe::Customer.new(id: 'cus_123456'))
+        stripe_service.create
+
+        expect(Stripe::Customer).to have_received(:create).with(hash_including(name: customer_name), anything)
+      end
+    end
+
+    context 'when customer name is not present' do
+      it 'creates a stripe customer with the customer firstname and lastname' do
+        allow(Stripe::Customer).to receive(:create)
+          .and_return(Stripe::Customer.new(id: 'cus_123456'))
+        stripe_service.create
+
+        expected_name = "#{customer.firstname} #{customer.lastname}"
+        expect(Stripe::Customer).to have_received(:create).with(hash_including(name: expected_name), anything)
+      end
+    end
+
     it 'creates the stripe customer' do
       allow(Stripe::Customer).to receive(:create)
         .and_return(Stripe::Customer.new(id: 'cus_123456'))

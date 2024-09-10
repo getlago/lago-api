@@ -153,6 +153,10 @@ module PaymentProviderCustomers
       stripe_payment_provider.secret_key
     end
 
+    def name
+      customer.name.presence || [customer.firstname, customer.lastname].compact.join(' ')
+    end
+
     def checkout_link_params
       {
         success_url: success_redirect_url,
@@ -203,7 +207,7 @@ module PaymentProviderCustomers
           state: customer.state
         },
         email: customer.email&.strip&.split(',')&.first,
-        name: customer.name,
+        name:,
         metadata: {
           lago_customer_id: customer.id,
           customer_id: customer.external_id
@@ -223,7 +227,7 @@ module PaymentProviderCustomers
           state: customer.state
         },
         email: customer.email&.strip&.split(',')&.first,
-        name: customer.name,
+        name:,
         phone: customer.phone
       }
     end
