@@ -13,7 +13,8 @@ module Integrations
           name: args[:name],
           code: args[:code],
           connection_id: args[:connection_id],
-          api_key: args[:api_key]
+          api_key: args[:api_key],
+          category: 'tax_provider'
         )
 
         integration.save!

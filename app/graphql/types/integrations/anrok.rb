@@ -6,6 +6,7 @@ module Types
       graphql_name 'AnrokIntegration'
 
       field :api_key, String, null: false
+      field :category, String, null: true
       field :code, String, null: false
       field :external_account_id, String, null: true
       field :failed_invoices_count, Integer, null: true

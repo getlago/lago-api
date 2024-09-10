@@ -5,6 +5,7 @@ module Types
     class Okta < Types::BaseObject
       graphql_name 'OktaIntegration'
 
+      field :category, String, null: true
       field :client_id, String, null: true
       field :client_secret, String, null: true
       field :code, String, null: false

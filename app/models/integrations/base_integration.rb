@@ -28,6 +28,9 @@ module Integrations
     validates :code, uniqueness: {scope: :organization_id}
     validates :name, presence: true
 
+    INTEGRATION_CATEGORIES = %w[system accounting tax_provider]
+    enum category: INTEGRATION_CATEGORIES
+
     def self.integration_type(type)
       case type
       when 'netsuite'
@@ -50,6 +53,7 @@ end
 # Table name: integrations
 #
 #  id              :uuid             not null, primary key
+#  category        :integer
 #  code            :string           not null
 #  name            :string           not null
 #  secrets         :string
@@ -61,6 +65,7 @@ end
 #
 # Indexes
 #
+#  index_integrations_on_category                  (category)
 #  index_integrations_on_code_and_organization_id  (code,organization_id) UNIQUE
 #  index_integrations_on_organization_id           (organization_id)
 #

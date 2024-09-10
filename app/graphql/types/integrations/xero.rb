@@ -5,6 +5,7 @@ module Types
     class Xero < Types::BaseObject
       graphql_name 'XeroIntegration'
 
+      field :category, String, null: false
       field :code, String, null: false
       field :connection_id, ID, null: false
       field :has_mappings_configured, Boolean
