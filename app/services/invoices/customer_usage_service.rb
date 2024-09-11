@@ -98,7 +98,7 @@ module Invoices
         fees_result.fees.to_json
       end
 
-      JSON.parse(json).map { |j| Fee.new(j) }
+      JSON.parse(json).map { |j| Fee.new(j.slice(*Fee.column_names)) }
     end
 
     def charge_usage_without_cache(charge)
