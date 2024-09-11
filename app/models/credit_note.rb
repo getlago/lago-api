@@ -21,6 +21,7 @@ class CreditNote < ApplicationRecord
   has_many :applied_taxes, class_name: 'CreditNote::AppliedTax', dependent: :destroy
   has_many :taxes, through: :applied_taxes
   has_many :integration_resources, as: :syncable
+  has_many :error_details, as: :owner, dependent: :destroy
 
   has_one_attached :file
 
