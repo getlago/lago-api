@@ -24,7 +24,7 @@ de:
       requested:
         already_paid: Wenn Sie die Zahlung bereits vorgenommen haben, ignorieren Sie bitte diese E-Mail.
         hello: Hallo %{customer_name},
-        pay_amount": Restbetrag bezahlen
+        pay_amount: Restbetrag bezahlen
         payment_terms:
           one: Unsere vertraglich vereinbarten Zahlungsbedingungen sind %{count} Tag.
           other: Unsere vertraglich vereinbarten Zahlungsbedingungen sind %{count} Tage.
