@@ -158,7 +158,6 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
   end
 
   context 'when taxes from tax provider are applied' do
-
     let(:provider_tax_1) { OpenStruct.new(name: 'provider tax 1', type: 'providerTax1', rate: 12.0, code: 'provider_tax_1') }
     let(:provider_tax_2) { OpenStruct.new(name: 'provider tax 2', type: 'providerTax2', rate: 8.0, code: 'provider_tax_2') }
 
@@ -188,14 +187,14 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         :with_provider_tax,
         tax: nil,
         provider_tax_breakdown_object: provider_tax_2,
-        fee: fee2,
+        fee: fee2
       )
     end
 
     let(:invoice_applied_taxes) {
       [
-        create(:invoice_applied_tax, :with_provider_tax,  provider_tax_breakdown_object: provider_tax_1, tax: nil, invoice:),
-        create(:invoice_applied_tax, :with_provider_tax,  provider_tax_breakdown_object: provider_tax_2, tax: nil, invoice:)
+        create(:invoice_applied_tax, :with_provider_tax, provider_tax_breakdown_object: provider_tax_1, tax: nil, invoice:),
+        create(:invoice_applied_tax, :with_provider_tax, provider_tax_breakdown_object: provider_tax_2, tax: nil, invoice:)
       ]
     }
 
@@ -207,7 +206,6 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
     end
 
     context 'when coupons are applied' do
-
       describe 'call' do
         it 'creates applied taxes' do
           result = apply_service.call
@@ -220,26 +218,26 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
               expect(applied_taxes.count).to eq(2)
 
               expect(applied_taxes[0]).to have_attributes(
-                                            credit_note: nil,
-                                            tax: nil,
-                                            tax_description: provider_tax_1.type,
-                                            tax_code: provider_tax_1.code,
-                                            tax_name: provider_tax_1.name,
-                                            tax_rate: provider_tax_1.rate,
-                                            amount_currency: invoice.currency,
-                                            amount_cents: 7
-                                          )
+                credit_note: nil,
+                tax: nil,
+                tax_description: provider_tax_1.type,
+                tax_code: provider_tax_1.code,
+                tax_name: provider_tax_1.name,
+                tax_rate: provider_tax_1.rate,
+                amount_currency: invoice.currency,
+                amount_cents: 7
+              )
 
               expect(applied_taxes[1]).to have_attributes(
-                                            credit_note: nil,
-                                            tax: nil,
-                                            tax_description: provider_tax_2.type,
-                                            tax_code: provider_tax_2.code,
-                                            tax_name: provider_tax_2.name,
-                                            tax_rate: provider_tax_2.rate,
-                                            amount_currency: invoice.currency,
-                                            amount_cents: 3
-                                          )
+                credit_note: nil,
+                tax: nil,
+                tax_description: provider_tax_2.type,
+                tax_code: provider_tax_2.code,
+                tax_name: provider_tax_2.name,
+                tax_rate: provider_tax_2.rate,
+                amount_currency: invoice.currency,
+                amount_cents: 3
+              )
 
               expect(result.taxes_amount_cents.round).to eq(10)
               expect(result.taxes_rate).to eq(17.71429)
@@ -250,7 +248,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       end
     end
 
-    context 'plain fees without coupons' do
+    context 'when there are plain fees without coupons' do
       let(:fee1) do
         create(
           :fee,
@@ -275,7 +273,6 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
 
       let(:provider_tax_1) { OpenStruct.new(name: 'provider tax 1', type: 'providerTax1', rate: 20.0, code: 'provider_tax_1') }
       let(:provider_tax_2) { OpenStruct.new(name: 'provider tax 2', type: 'providerTax2', rate: 10.0, code: 'provider_tax_2') }
-
 
       describe 'call' do
         it 'creates applied taxes' do
@@ -318,7 +315,6 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         end
       end
     end
-
   end
 
   context 'when no taxes are applied on the invoice' do
@@ -335,6 +331,5 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         end
       end
     end
-
   end
 end

@@ -46,7 +46,7 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice, type: :service 
 
   let(:fee1_applied_tax) { create(:fee_applied_tax, tax:, fee: fee1) }
   let(:fee2_applied_tax) { create(:fee_applied_tax, tax:, fee: fee2) }
-  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice: progressive_billing_invoice, tax: )}
+  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice: progressive_billing_invoice, tax:) }
 
   before do
     progressive_billing_invoice
