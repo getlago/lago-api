@@ -26,6 +26,8 @@ module Integrations
 
           result
         rescue LagoHttpClient::HttpError => e
+          raise RequestLimitError(e) if request_limit_error?(e)
+
           code = code(e)
           message = message(e)
 
