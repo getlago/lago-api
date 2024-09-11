@@ -17,10 +17,7 @@ module Integrations
             body = JSON.parse(response.body)
 
             process_response(body)
-
-            if result.success? && integration_customer.external_customer_id.blank?
-              integration_customer.update!(external_customer_id: customer.external_id)
-            end
+            assign_external_customer_id
 
             result
           rescue LagoHttpClient::HttpError => e
