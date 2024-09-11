@@ -5,8 +5,9 @@ require "rails_helper"
 RSpec.describe PaymentRequestMailer, type: :mailer do
   subject(:payment_request_mailer) { described_class }
 
-  let(:first_invoice) { create(:invoice, total_amount_cents: 1000) }
-  let(:second_invoice) { create(:invoice, total_amount_cents: 2000) }
+  let(:organization) { create(:organization, document_number_prefix: 'ORG-123B') }
+  let(:first_invoice) { create(:invoice, total_amount_cents: 1000, organization:) }
+  let(:second_invoice) { create(:invoice, total_amount_cents: 2000, organization:) }
   let(:payment_request) { create(:payment_request, invoices: [first_invoice, second_invoice]) }
 
   before do
