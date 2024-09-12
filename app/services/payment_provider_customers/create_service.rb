@@ -8,7 +8,7 @@ module PaymentProviderCustomers
       super(nil)
     end
 
-    def create_or_update(customer_class:, payment_provider_id:, params:, async: true)
+    def create_or_update(customer_class:, payment_provider_id:, params:, async: false)
       provider_customer = customer_class.find_by(customer_id: customer.id)
       provider_customer ||= customer_class.new(customer_id: customer.id, payment_provider_id:)
 
