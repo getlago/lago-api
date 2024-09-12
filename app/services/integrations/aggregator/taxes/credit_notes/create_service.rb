@@ -4,11 +4,11 @@ module Integrations
   module Aggregator
     module Taxes
       module CreditNotes
-        class CreateService < Integrations::Aggregator::Taxes::Invoices::BaseService
+        class CreateService < Integrations::Aggregator::Taxes::BaseService
           def initialize(credit_note:)
             @credit_note = credit_note
 
-            super(invoice: credit_note.invoice)
+            super()
           end
 
           def action_path
@@ -36,6 +36,8 @@ module Integrations
           private
 
           attr_reader :credit_note
+
+          delegate :customer, to: :credit_note, allow_nil: true
 
           def payload
             Integrations::Aggregator::Taxes::CreditNotes::Payload.new(
