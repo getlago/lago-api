@@ -31,7 +31,10 @@ module PaymentRequests
         return result unless res
 
         adyen_success, _adyen_error = handle_adyen_response(res)
-        return result unless adyen_success
+        unless adyen_success
+          update_payable_payment_status(payment_status: :failed, deliver_webhook: false)
+          return result
+        end
 
         payment = Payment.new(
           payable: payable,
@@ -43,13 +46,11 @@ module PaymentRequests
           status: res.response["resultCode"]
         )
 
-        ActiveRecord::Base.transaction do
-          payment.save!
+        payment.save!
 
-          payable_payment_status = payable_payment_status(payment.status)
-          update_payable_payment_status(payment_status: payable_payment_status)
-          update_invoices_payment_status(payment_status: payable_payment_status)
-        end
+        payable_payment_status = payable_payment_status(payment.status)
+        update_payable_payment_status(payment_status: payable_payment_status)
+        update_invoices_payment_status(payment_status: payable_payment_status)
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
 
@@ -93,6 +94,8 @@ module PaymentRequests
         payable_payment_status = payable_payment_status(status)
         update_payable_payment_status(payment_status: payable_payment_status)
         update_invoices_payment_status(payment_status: payable_payment_status)
+
+        PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
 
         result
       rescue BaseService::FailedResult => e
@@ -144,7 +147,8 @@ module PaymentRequests
       rescue Adyen::AdyenError => e
         deliver_error_webhook(e)
         update_payable_payment_status(payment_status: :failed, deliver_webhook: false)
-        raise e
+        result.service_failure!(code: e.code, message: e.message)
+        nil
       end
 
       def payment_method_params
@@ -189,7 +193,8 @@ module PaymentRequests
           expiresAt: Time.current + 70.days, # max link TTL
           metadata: {
             lago_customer_id: customer.id,
-            lago_payment_request_id: payable.id,
+            lago_payable_id: payable.id,
+            lago_payable_type: payable.class.name,
             payment_type: "one-time"
           }
         }
@@ -234,7 +239,7 @@ module PaymentRequests
       end
 
       def create_payment(provider_payment_id:, metadata:)
-        @payable = PaymentRequest.find(metadata[:lago_payment_request_id])
+        @payable = PaymentRequest.find(metadata[:lago_payable_id])
 
         payable.increment_payment_attempts!
 

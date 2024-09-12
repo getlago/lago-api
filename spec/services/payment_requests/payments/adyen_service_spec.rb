@@ -119,6 +119,29 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       expect(invoice_2.reload).to be_payment_succeeded
     end
 
+    context "when payment request payment status is already succeeded" do
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          payment_status: "succeeded",
+          amount_cents: 799,
+          amount_currency: "EUR"
+        )
+      end
+
+      it "does not creates a payment", :aggregate_failures do
+        result = adyen_service.create
+
+        expect(result).to be_success
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payment).to be_nil
+
+        expect(payments_api).not_to have_received(:payments)
+      end
+    end
+
     context "with no payment provider" do
       let(:adyen_payment_provider) { nil }
 
@@ -126,8 +149,10 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
         result = adyen_service.create
 
         expect(result).to be_success
+
         expect(result.payable).to eq(payment_request)
         expect(result.payment).to be_nil
+
         expect(payments_api).not_to have_received(:payments)
       end
     end
@@ -172,8 +197,10 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
         result = adyen_service.create
 
         expect(result).to be_success
+
         expect(result.payable).to eq(payment_request)
         expect(result.payment).to be_nil
+
         expect(payments_api).not_to have_received(:payments)
       end
     end
@@ -196,6 +223,13 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               error_code: "validation"
             }
           ).on_queue(:webhook)
+      end
+
+      it "marks the payment request as payment failed" do
+        result = adyen_service.create
+
+        expect(result).to be_success
+        expect(result.payable).to be_payment_failed
       end
     end
 
@@ -224,6 +258,13 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               }
             ).on_queue(:webhook)
         end
+
+        it "marks the payment request as payment failed" do
+          result = adyen_service.create
+
+          expect(result).to be_success
+          expect(result.payable).to be_payment_failed
+        end
       end
 
       context "when payment fails with invalid card" do
@@ -244,6 +285,13 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               }
             ).on_queue(:webhook)
         end
+
+        it "marks the payment request as payment failed" do
+          result = adyen_service.create
+
+          expect(result).to be_success
+          expect(result.payable).to be_payment_failed
+        end
       end
     end
 
@@ -262,8 +310,9 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       end
 
       it "delivers an error webhook" do
-        expect { adyen_service.create }.to raise_error(Adyen::AdyenError)
-          .and enqueue_job(SendWebhookJob).with(
+        expect { adyen_service.create }
+          .to enqueue_job(SendWebhookJob)
+          .with(
             "payment_request.payment_failure",
             payment_request,
             provider_customer_id: adyen_customer.provider_customer_id,
@@ -272,6 +321,13 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               error_code: "code"
             }
           )
+      end
+
+      it "updates payment request payment status to failed" do
+        result = adyen_service.create
+
+        expect(result).not_to be_success
+        expect(result.payable).to be_payment_failed
       end
     end
   end
@@ -314,7 +370,8 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
               merchantAccount: adyen_payment_provider.merchant_account,
               metadata: {
                 lago_customer_id: customer.id,
-                lago_payment_request_id: payment_request.id,
+                lago_payable_id: payment_request.id,
+                lago_payable_type: "PaymentRequest",
                 payment_type: "one-time"
               },
               recurringProcessingModel: "UnscheduledCardOnFile",
@@ -360,6 +417,12 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
   end
 
   describe "#update_payment_status" do
+    subject(:result) do
+      adyen_service.update_payment_status(provider_payment_id:, status:)
+    end
+
+    let(:status) { "Authorised" }
+
     let(:payment) do
       create(
         :payment,
@@ -378,13 +441,8 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
     end
 
     it "updates the payment, payment_request and invoices payment_status", :aggregate_failures do
-      result = adyen_service.update_payment_status(
-        provider_payment_id:,
-        status: "Authorised"
-      )
-
       expect(result).to be_success
-      expect(result.payment.status).to eq("Authorised")
+      expect(result.payment.status).to eq(status)
 
       expect(result.payable.reload).to be_payment_succeeded
       expect(result.payable.ready_for_payment_processing).to eq(false)
@@ -395,15 +453,16 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       expect(invoice_2.ready_for_payment_processing).to eq(false)
     end
 
-    context "when status is failed" do
-      it "updates the payment, payment_request and invoices status", :aggregate_failures do
-        result = adyen_service.update_payment_status(
-          provider_payment_id:,
-          status: "Refused"
-        )
+    it "does not send payment requested email" do
+      expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
+    end
 
+    context "when status is failed" do
+      let(:status) { "Refused" }
+
+      it "updates the payment, payment_request and invoices status", :aggregate_failures do
         expect(result).to be_success
-        expect(result.payment.status).to eq("Refused")
+        expect(result.payment.status).to eq(status)
 
         expect(result.payable.reload).to be_payment_failed
         expect(result.payable.ready_for_payment_processing).to eq(true)
@@ -414,9 +473,18 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
         expect(invoice_2.reload).to be_payment_failed
         expect(invoice_2.ready_for_payment_processing).to eq(true)
       end
+
+      it "sends a payment requested email" do
+        expect { result }.to have_enqueued_mail(PaymentRequestMailer, :requested)
+          .with(params: {payment_request:}, args: [])
+      end
     end
 
     context "when payment_request and invoices is already payment_succeeded" do
+      let(:status) do
+        %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample
+      end
+
       before do
         payment_request.payment_succeeded!
         invoice_1.payment_succeeded!
@@ -424,22 +492,17 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       end
 
       it "does not update the status of invoices, payment_request and payment" do
-        expect {
-          adyen_service.update_payment_status(
-            provider_payment_id:,
-            status: %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample
-          )
-        }.to not_change { invoice_1.reload.payment_status }
+        expect { result }
+          .to not_change { invoice_1.reload.payment_status }
           .and not_change { invoice_2.reload.payment_status }
           .and not_change { payment_request.reload.payment_status }
           .and not_change { payment.reload.status }
 
-        result = adyen_service.update_payment_status(
-          provider_payment_id:,
-          status: %w[Authorised SentForSettle SettleScheduled Settled Refunded].sample
-        )
-
         expect(result).to be_success
+      end
+
+      it "does not send payment requested email" do
+        expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
       end
     end
 
@@ -447,26 +510,28 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       let(:status) { "invalid-status" }
 
       it "does not update the payment_status of payment_request, invoices and payment" do
-        expect {
-          adyen_service.update_payment_status(provider_payment_id:, status:)
-        }.to not_change { payment_request.reload.payment_status }
+        expect { result }
+          .to not_change { payment_request.reload.payment_status }
           .and not_change { invoice_1.reload.payment_status }
           .and not_change { invoice_2.reload.payment_status }
           .and change { payment.reload.status }.to(status)
       end
 
       it "returns an error", :aggregate_failures do
-        result = adyen_service.update_payment_status(provider_payment_id:, status:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages.keys).to include(:payment_status)
         expect(result.error.messages[:payment_status]).to include("value_is_invalid")
       end
+
+      it "does not send payment requested email" do
+        expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
+      end
     end
 
     context "when payment is not found and it is one time payment" do
       let(:payment) { nil }
+      let(:status) { "succeeded" }
 
       before do
         adyen_payment_provider
@@ -476,15 +541,16 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       it "creates a payment and updates payment request and invoices payment status", :aggregate_failures do
         result = adyen_service.update_payment_status(
           provider_payment_id:,
-          status: "succeeded",
+          status:,
           metadata: {
-            lago_payment_request_id: payment_request.id,
+            lago_payable_id: payment_request.id,
+            lago_payable_type: "PaymentRequest",
             payment_type: "one-time"
           }
         )
 
         expect(result).to be_success
-        expect(result.payment.status).to eq("succeeded")
+        expect(result.payment.status).to eq(status)
 
         expect(result.payable).to be_payment_succeeded
         expect(result.payable.ready_for_payment_processing).to eq(false)
