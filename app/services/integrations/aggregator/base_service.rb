@@ -6,6 +6,7 @@ module Integrations
   module Aggregator
     class BaseService < BaseService
       BASE_URL = 'https://api.nango.dev/'
+      REQUEST_LIMIT_ERROR_CODE = 'SSS_REQUEST_LIMIT_EXCEEDED'
 
       def initialize(integration:, options: {})
         @integration = integration
@@ -100,6 +101,14 @@ module Integrations
         json.dig('payload', 'message').presence ||
           json.dig('error', 'payload', 'message').presence ||
           json.dig('error', 'message')
+      end
+
+      def request_limit_error?(http_error)
+        return false unless http_error.error_code.to_i == 500
+
+        http_error.json_message.dig('error', 'payload', 'error', 'code') == REQUEST_LIMIT_ERROR_CODE
+      rescue JSON::ParserError
+        false
       end
     end
   end

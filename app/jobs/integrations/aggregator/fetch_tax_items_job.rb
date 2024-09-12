@@ -6,6 +6,7 @@ module Integrations
       queue_as 'integrations'
 
       retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 3
+      retry_on RequestLimitError, wait: :polynomially_longer, attempts: 10
 
       def perform(integration:)
         result = Integrations::Aggregator::TaxItemsService.call(integration:)
