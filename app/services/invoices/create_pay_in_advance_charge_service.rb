@@ -140,8 +140,10 @@ module Invoices
       invoice.total_amount_cents -= credit_amount_cents
     end
 
-    def tax_error?(fee_result)
-      !fee_result.success? && fee_result.error.messages.dig(:tax_error)
+    def tax_error?(result)
+      return false unless result.error.is_a?(BaseService::ValidationFailure)
+
+      result.error&.messages&.dig(:tax_error).present?
     end
 
     def create_error_detail(code)

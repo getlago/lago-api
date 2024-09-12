@@ -34,8 +34,10 @@ module LifetimeUsages
       result.progressive_billed_amount
     end
 
-    def tax_error?(fee_result)
-      !fee_result.success? && fee_result&.error&.code == 'tax_error'
+    def tax_error?(result)
+      return false unless result.error.is_a?(BaseService::ServiceFailure)
+
+      !result.success? && result.error&.code == 'tax_error'
     end
   end
 end
