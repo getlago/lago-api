@@ -109,6 +109,7 @@ module Fees
 
         res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
         res.raise_if_error!
+        fee.save
       end
 
       taxes_result

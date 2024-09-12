@@ -172,6 +172,15 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         end
       end
 
+      it 'saves applies taxes on fees and on invoice' do
+        result = create_service.call
+        invoice = result.invoice.reload
+
+        expect(invoice.applied_taxes.count).to eq(2)
+        expect(invoice.fees.map(&:applied_taxes).flatten.count).to eq(2)
+        expect(invoice.fees.map(&:taxes_rate).sort).to eq([10.0, 15.0])
+      end
+
       context 'when there is error received from the provider' do
         let(:body) do
           p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
