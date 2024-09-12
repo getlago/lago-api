@@ -222,14 +222,14 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
         end
 
         it 'returns the termination date' do
-          expect(result).to eq(subscription.terminated_at.utc.to_s)
+          expect(result).to match_datetime(subscription.terminated_at.utc)
         end
 
         context 'with customer timezone' do
           let(:timezone) { 'America/New_York' }
 
           it 'returns the termination date' do
-            expect(result).to eq(subscription.terminated_at.utc.to_s)
+            expect(result).to match_datetime(subscription.terminated_at.utc)
           end
         end
       end
@@ -295,7 +295,7 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
         end
 
         it 'returns the termination date' do
-          expect(result).to eq(subscription.terminated_at.utc.to_s)
+          expect(result).to match_datetime(subscription.terminated_at.utc)
         end
       end
     end
