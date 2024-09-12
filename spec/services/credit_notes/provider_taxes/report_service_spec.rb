@@ -146,7 +146,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         aggregate_failures do
           expect(credit_note.error_details.tax_error.order(created_at: :asc).last.id).not_to eql(old_error_id)
           expect(credit_note.error_details.tax_error.count).to be(1)
-          expect(credit_note.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
+          expect(credit_note.error_details.tax_error.order(created_at: :asc).last).not_to be_discarded
         end
       end
     end
