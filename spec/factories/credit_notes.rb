@@ -31,5 +31,11 @@ FactoryBot.define do
     trait :draft do
       status { :draft }
     end
+
+    trait :with_tax_error do
+      after :create do |i|
+        create(:error_detail, owner: i, error_code: 'tax_error')
+      end
+    end
   end
 end
