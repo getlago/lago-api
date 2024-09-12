@@ -139,7 +139,10 @@ module Invoices
     end
 
     def tax_error?(fee_result)
-      !fee_result.success? && fee_result&.error&.code == 'tax_error'
+      return false if fee_result.success?
+      return false unless fee_result.error.is_a?(BaseService::ServiceFailure)
+
+      fee_result.error.code == 'tax_error'
     end
   end
 end
