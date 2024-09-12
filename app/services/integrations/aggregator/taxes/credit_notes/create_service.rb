@@ -8,7 +8,7 @@ module Integrations
           def initialize(credit_note:)
             @credit_note = credit_note
 
-            super(integration:)
+            super()
           end
 
           def action_path

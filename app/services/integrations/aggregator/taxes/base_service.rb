@@ -5,6 +5,9 @@ module Integrations
     module Taxes
       class BaseService < Integrations::Aggregator::BaseService
         SPECIAL_TAXATION_TYPES = %w[exempt notCollecting productNotTaxed jurisNotTaxed jurisHasNoTax].freeze
+        def initialize
+          super(integration:)
+        end
 
         private
 
