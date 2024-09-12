@@ -225,11 +225,11 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
           ).on_queue(:webhook)
       end
 
-      it "does not change the payment request payment status" do
+      it "marks the payment request as payment failed" do
         result = adyen_service.create
 
         expect(result).to be_success
-        expect(result.payable).to be_payment_pending
+        expect(result.payable).to be_payment_failed
       end
     end
 

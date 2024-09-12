@@ -31,7 +31,10 @@ module PaymentRequests
         return result unless res
 
         adyen_success, _adyen_error = handle_adyen_response(res)
-        return result unless adyen_success
+        unless adyen_success
+          update_payable_payment_status(payment_status: :failed, deliver_webhook: false)
+          return result
+        end
 
         payment = Payment.new(
           payable: payable,
