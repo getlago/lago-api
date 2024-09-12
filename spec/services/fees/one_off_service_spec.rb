@@ -177,8 +177,8 @@ RSpec.describe Fees::OneOffService do
       it 'creates fees' do
         result = one_off_service.create
 
-        first_fee = result.fees[0]
-        second_fee = result.fees[1]
+        first_fee = result.fees[0].reload
+        second_fee = result.fees[1].reload
 
         aggregate_failures do
           expect(result).to be_success
