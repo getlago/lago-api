@@ -177,8 +177,8 @@ RSpec.describe Fees::OneOffService do
       it 'creates fees' do
         result = one_off_service.create
 
-        first_fee = result.fees[0]
-        second_fee = result.fees[1]
+        first_fee = result.fees[0].reload
+        second_fee = result.fees[1].reload
 
         aggregate_failures do
           expect(result).to be_success
@@ -194,7 +194,8 @@ RSpec.describe Fees::OneOffService do
             amount_cents: 2400,
             amount_currency: 'EUR',
             fee_type: 'add_on',
-            payment_status: 'pending'
+            payment_status: 'pending',
+            taxes_rate: 10
           )
           expect(first_fee.applied_taxes.first.amount_cents).to eq(240)
           expect(first_fee.applied_taxes.first.precise_amount_cents).to eq(240.0)
@@ -211,7 +212,8 @@ RSpec.describe Fees::OneOffService do
             precise_amount_cents: 400.0,
             amount_currency: 'EUR',
             fee_type: 'add_on',
-            payment_status: 'pending'
+            payment_status: 'pending',
+            taxes_rate: 15
           )
           expect(second_fee.applied_taxes.first.amount_cents).to eq(60)
           expect(second_fee.applied_taxes.first.precise_amount_cents).to eq(60.0)
