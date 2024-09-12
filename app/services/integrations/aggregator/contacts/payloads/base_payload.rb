@@ -17,15 +17,13 @@ module Integrations
             [
               {
                 'name' => customer.name,
-                'firstname' => customer.firstname,
-                'lastname' => customer.lastname,
                 'city' => customer.city,
                 'zip' => customer.zipcode,
                 'country' => customer.country,
                 'state' => customer.state,
                 'email' => email,
                 'phone' => phone
-              }
+              }.merge(contact_names)
             ]
           end
 
@@ -34,21 +32,23 @@ module Integrations
               {
                 'id' => integration_customer.external_customer_id,
                 'name' => customer.name,
-                'firstname' => customer.firstname,
-                'lastname' => customer.lastname,
                 'city' => customer.city,
                 'zip' => customer.zipcode,
                 'country' => customer.country,
                 'state' => customer.state,
                 'email' => email,
                 'phone' => phone
-              }
+              }.merge(contact_names)
             ]
           end
 
           private
 
           attr_reader :customer, :integration_customer, :subsidiary_id
+
+          def contact_names
+            {'firstname' => customer.firstname, 'lastname' => customer.lastname}.compact_blank
+          end
 
           def email
             customer.email.to_s.split(',').first&.strip
