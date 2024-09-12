@@ -96,6 +96,19 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         expect(result).to be_success
         expect(result.invoice).to be_nil
       end
+
+      context "when there is a pay in advance charge" do
+        before do
+          create(:standard_charge, :regroup_paid_fees, plan: subscription.plan)
+        end
+
+        it 'does not create an invoice' do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_nil
+        end
+      end
     end
 
     context 'with integration requiring sync' do

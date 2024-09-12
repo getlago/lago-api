@@ -20,7 +20,7 @@ module Invoices
 
       invoice = create_group_invoice
 
-      unless invoice&.closed?
+      if invoice && !invoice.closed?
         SendWebhookJob.perform_later('invoice.created', invoice)
         Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: false)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
@@ -55,9 +55,8 @@ module Invoices
         end
 
         if invoice.fees.empty?
-          invoice.invoice_subscriptions.destroy_all
-          invoice.destroy!
-          return nil
+          invoice = nil
+          raise ActiveRecord::Rollback
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:)
