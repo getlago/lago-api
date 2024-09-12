@@ -41,6 +41,13 @@ module Integrations
             }
           end
 
+          def assign_external_customer_id
+            return unless result.success?
+            return if integration_customer.external_customer_id
+
+            integration_customer.update!(external_customer_id: customer.external_id)
+          end
+
           def process_response(body)
             fees = body['succeededInvoices']&.first.try(:[], 'fees')
 

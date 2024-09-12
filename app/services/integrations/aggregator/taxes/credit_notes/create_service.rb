@@ -3,8 +3,14 @@
 module Integrations
   module Aggregator
     module Taxes
-      module Invoices
-        class CreateService < BaseService
+      module CreditNotes
+        class CreateService < Integrations::Aggregator::Taxes::Invoices::BaseService
+          def initialize(credit_note:)
+            @credit_note = credit_note
+
+            super(invoice: credit_note.invoice)
+          end
+
           def action_path
             "v1/#{provider}/finalized_invoices"
           end
@@ -21,8 +27,6 @@ module Integrations
 
             result
           rescue LagoHttpClient::HttpError => e
-            raise RequestLimitError(e) if request_limit_error?(e)
-
             code = code(e)
             message = message(e)
 
@@ -31,19 +35,15 @@ module Integrations
 
           private
 
+          attr_reader :credit_note
+
           def payload
-            payload_body = Integrations::Aggregator::Taxes::Invoices::Payload.new(
+            Integrations::Aggregator::Taxes::CreditNotes::Payload.new(
               integration:,
-              invoice:,
               customer:,
               integration_customer:,
-              fees:
+              credit_note:
             ).body
-
-            invoice_data = payload_body.first
-            invoice_data['id'] = invoice.id
-
-            [invoice_data]
           end
         end
       end
