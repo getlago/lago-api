@@ -9,7 +9,7 @@ module Integrations
             @invoice = invoice
             @fees = fees || invoice.fees
 
-            super(integration:)
+            super()
           end
 
           private
