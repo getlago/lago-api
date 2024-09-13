@@ -53,6 +53,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
   before do
     create(:fee_applied_tax, tax:, fee: fee1)
     create(:fee_applied_tax, tax:, fee: fee2)
+    create(:invoice_applied_tax, tax:, invoice:) if invoice
   end
 
   describe '.call' do
