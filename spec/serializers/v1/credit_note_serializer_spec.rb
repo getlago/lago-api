@@ -4,12 +4,18 @@ require 'rails_helper'
 
 RSpec.describe V1::CreditNoteSerializer, type: :serializer do
   subject(:serializer) do
-    described_class.new(credit_note, root_name: 'credit_note', includes: %i[customer items])
+    described_class.new(credit_note, root_name: 'credit_note', includes: %i[customer items error_details])
   end
 
   let(:credit_note) { create(:credit_note) }
+  let(:error_detail) { create(:error_detail, owner: credit_note) }
   let(:customer) { credit_note.customer }
   let(:item) { create(:credit_note_item, credit_note:) }
+
+  before do
+    error_detail
+    item
+  end
 
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
@@ -35,7 +41,12 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
       'coupons_adjustment_amount_cents' => credit_note.coupons_adjustment_amount_cents,
       'created_at' => credit_note.created_at.iso8601,
       'updated_at' => credit_note.updated_at.iso8601,
-      'file_url' => credit_note.file_url
+      'file_url' => credit_note.file_url,
+      'error_details' => [{
+        'lago_id' => error_detail.id,
+        'error_code' => error_detail.error_code,
+        'details' => error_detail.details
+      }]
     )
 
     expect(result['credit_note'].keys).to include('customer', 'items')

@@ -2187,6 +2187,7 @@ type CreditNote {
   currency: CurrencyEnum!
   customer: Customer!
   description: String
+  errorDetails: [ErrorDetail!]
   externalIntegrationId: String
   fileUrl: String
   id: ID!
