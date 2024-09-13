@@ -76,6 +76,7 @@ module Types
 
     field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download
+    field :retry_tax_reporting, mutation: Mutations::CreditNotes::RetryTaxReporting
     field :update_credit_note, mutation: Mutations::CreditNotes::Update
     field :void_credit_note, mutation: Mutations::CreditNotes::Void
 
