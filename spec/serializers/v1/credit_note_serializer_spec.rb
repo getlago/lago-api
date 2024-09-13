@@ -8,6 +8,7 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
   end
 
   let(:credit_note) { create(:credit_note) }
+  let(:error_detail) { create(:error_detail, owner: credit_note) }
   let(:customer) { credit_note.customer }
   let(:item) { create(:credit_note_item, credit_note:) }
 
@@ -35,7 +36,12 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
       'coupons_adjustment_amount_cents' => credit_note.coupons_adjustment_amount_cents,
       'created_at' => credit_note.created_at.iso8601,
       'updated_at' => credit_note.updated_at.iso8601,
-      'file_url' => credit_note.file_url
+      'file_url' => credit_note.file_url,
+      'error_details' => {
+        'lago_id' => error_detail.id,
+        'error_code' => error_detail.error_code,
+        'details' => error_detail.details
+      }
     )
 
     expect(result['credit_note'].keys).to include('customer', 'items')
