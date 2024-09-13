@@ -48,6 +48,7 @@ module Types
       field :error_details, [Types::ErrorDetails::Object], null: true
       field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
+      field :tax_provider_syncable, GraphQL::Types::Boolean, null: false
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
@@ -56,6 +57,12 @@ module Types
       def integration_syncable
         object.should_sync_credit_note? &&
           object.integration_resources.where(resource_type: 'credit_note', syncable_type: 'CreditNote').none?
+      end
+
+      def tax_provider_syncable
+        return false unless object.finalized?
+
+        object.error_details.tax_error.any?
       end
 
       def external_integration_id
