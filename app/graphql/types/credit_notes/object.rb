@@ -45,9 +45,9 @@ module Types
         description 'Check if credit note can be voided'
       end
 
+      field :error_details, [Types::ErrorDetails::Object], null: true
       field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
-      field :error_details, [Types::ErrorDetails::Object], null: true
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)

@@ -59,8 +59,6 @@ module Types
       field :integration_syncable, GraphQL::Types::Boolean, null: false
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
 
-      delegate :error_details, to: :object
-
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
       end
