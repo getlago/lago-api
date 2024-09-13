@@ -95,7 +95,7 @@ module V1
     def error_details
       ::CollectionSerializer.new(
         model.error_details,
-        ::V1::Invoices::ErrorDetailSerializer,
+        ::V1::ErrorDetailSerializer,
         collection_name: 'error_details'
       ).serialize
     end
