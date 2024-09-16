@@ -18511,6 +18511,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "hubspot",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -27999,6 +28005,12 @@
             },
             {
               "name": "dunning",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "hubspot",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
