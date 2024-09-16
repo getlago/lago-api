@@ -101,6 +101,8 @@ module Invoices
     end
 
     def tax_error?(error)
+      return false unless error.is_a?(BaseService::ServiceFailure)
+
       error&.code == 'tax_error'
     end
 
