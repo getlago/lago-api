@@ -5,7 +5,7 @@ module Types
     class LifetimeUsageObject < Types::BaseObject
       graphql_name "SubscriptionLifetimeUsage"
 
-      field :total_usage_amount_cents, GraphQL::Types::BigInt, null: false
+      field :total_usage_amount_cents, GraphQL::Types::BigInt, method: :total_amount_cents, null: false
       field :total_usage_from_datetime, GraphQL::Types::ISO8601DateTime, null: false
       field :total_usage_to_datetime, GraphQL::Types::ISO8601DateTime, null: false
 
