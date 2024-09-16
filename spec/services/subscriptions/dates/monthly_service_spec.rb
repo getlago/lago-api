@@ -205,23 +205,44 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
       context 'when subscription is just terminated' do
         let(:billing_at) { Time.zone.parse('10 Mar 2022') }
+        let(:terminated_at) { Time.zone.parse('09 Mar 2022') }
 
-        before do
-          subscription.update!(
-            status: :terminated,
-            terminated_at: Time.zone.parse('02 Mar 2022')
-          )
-        end
+        before { subscription.update!(status: :terminated, terminated_at:) }
 
         it 'returns the termination date' do
-          expect(result).to eq(subscription.terminated_at.utc.to_s)
+          expect(result).to match_datetime(subscription.terminated_at.utc)
+        end
+
+        context 'with pending next subscription' do
+          let(:subscription_at) { Time.zone.parse('2024-09-09T14:00:01') }
+          let(:terminated_at) { Time.zone.parse('2024-09-09T16:00:01') }
+
+          let(:downgraded_plan) { create(:plan, interval: :monthly, pay_in_advance: false, amount_cents: 0) }
+
+          before do
+            create(
+              :subscription,
+              status: :pending,
+              external_id: subscription.external_id,
+              plan: downgraded_plan,
+              customer:,
+              subscription_at:,
+              billing_time:,
+              started_at: nil,
+              previous_subscription: subscription
+            )
+          end
+
+          it 'makes sure the to_datetime is not before start date' do
+            expect(result).to match_datetime(subscription.started_at.utc)
+          end
         end
 
         context 'with customer timezone' do
           let(:timezone) { 'America/New_York' }
 
           it 'returns the termination date' do
-            expect(result).to eq(subscription.terminated_at.utc.to_s)
+            expect(result).to match_datetime(subscription.terminated_at.utc)
           end
         end
       end
@@ -288,7 +309,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
         end
 
         it 'returns the termination date' do
-          expect(result).to eq(subscription.terminated_at.utc.to_s)
+          expect(result).to match_datetime(subscription.terminated_at.utc)
         end
       end
     end

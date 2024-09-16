@@ -633,9 +633,9 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe '#charge_pay_in_advance_proration_range' do
-    let(:invoice_subscription) { create(:invoice_subscription) }
+    let(:invoice_subscription) { create(:invoice_subscription, subscription:) }
     let(:invoice) { invoice_subscription.invoice }
-    let(:subscription) { invoice_subscription.subscription }
+    let(:subscription) { create(:subscription, started_at: timestamp - 1.year) }
     let(:timestamp) { DateTime.parse('2023-07-25 00:00:00 UTC') }
     let(:event) { create(:event, subscription_id: subscription.id, timestamp:) }
     let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization, recurring: true) }

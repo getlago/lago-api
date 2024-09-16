@@ -18,9 +18,9 @@ describe 'Subscriptions Termination Scenario', :scenarios, type: :request do
     )
   end
 
-  let(:creation_time) { DateTime.new(2023, 9, 5, 0, 0) }
-  let(:subscription_at) { DateTime.new(2023, 9, 5, 0, 0) }
-  let(:ending_at) { DateTime.new(2023, 9, 6, 0, 0) }
+  let(:creation_time) { Time.zone.parse('2023-09-05T00:00:00') }
+  let(:subscription_at) { Time.zone.parse('2023-09-05T00:00:00') }
+  let(:ending_at) { Time.zone.parse('2023-09-06T00:00:00') }
 
   context 'when timezone is Europe/Paris' do
     it 'terminates the subscription when it reaches its ending date' do

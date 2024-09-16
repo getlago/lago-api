@@ -64,13 +64,13 @@ module Subscriptions
       return @to_datetime if @to_datetime
 
       @to_datetime = customer_timezone_shift(compute_to_date, end_of_day: true)
-      terminated_at = subscription.terminated_at&.change(usec: 0)
-      bill_at = billing_at&.change(usec: 0)
+      terminated_at = subscription.terminated_at&.to_time&.round
 
-      if subscription.terminated? && @to_datetime > terminated_at && bill_at && bill_at >= terminated_at
+      if subscription.terminated_at?(billing_at) && @to_datetime > terminated_at
         @to_datetime = terminated_at
       end
 
+      @to_datetime = subscription.started_at if @to_datetime < subscription.started_at
       @to_datetime
     end
 
@@ -96,6 +96,7 @@ module Subscriptions
     def charges_to_datetime
       datetime = customer_timezone_shift(compute_charges_to_date, end_of_day: true)
       datetime = subscription.terminated_at if subscription.terminated_at?(datetime)
+      datetime = subscription.started_at if datetime < subscription.started_at
 
       datetime
     end
@@ -151,6 +152,8 @@ module Subscriptions
       subscription.subscription_at.in_time_zone(customer.applicable_timezone)
     end
 
+    # NOTE: This method converts a DAY epress in the customer timezone into a proper UTC datetime
+    #       Example: `2024-03-01` in `America/New_York` will be converted to `2024-03-01T05:00:00 UTC`
     def customer_timezone_shift(date, end_of_day: false)
       result = date.in_time_zone(customer.applicable_timezone)
       result = result.end_of_day if end_of_day
