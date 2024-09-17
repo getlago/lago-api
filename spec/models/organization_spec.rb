@@ -156,7 +156,7 @@ RSpec.describe Organization, type: :model do
 
     it "does not return the organization for another premium integration" do
       organization.update!(premium_integrations: ['progressive_billing'])
-      expect(described_class.with_dunning_support).to be_empty
+      expect(described_class.with_okta_support).to be_empty
       expect(described_class.with_progressive_billing_support).to eq([organization])
     end
   end

@@ -51,7 +51,7 @@ class Organization < ApplicationRecord
     :per_organization
   ].freeze
 
-  INTEGRATIONS = %w[netsuite okta anrok xero progressive_billing dunning hubspot].freeze
+  INTEGRATIONS = %w[netsuite okta anrok xero progressive_billing hubspot].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
   enum document_numbering: DOCUMENT_NUMBERINGS

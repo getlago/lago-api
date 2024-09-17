@@ -39,17 +39,14 @@ module PaymentRequests
 
     def check_preconditions
       # NOTE: Prevent creation of payment request if:
-      # - the organization does not have the premium dunning integration
+      # - the organization is not premium
       # - the customer does not exist
       # - there are no invoices
       # - the invoices are not overdue
       # - the invoices have different currencies
       # - the invoices are not ready for payment processing
 
-      unless License.premium? && organization.premium_integrations.include?("dunning")
-        return result.not_allowed_failure!(code: "premium_addon_feature_missing")
-      end
-
+      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "invoice") if invoices.empty?
 
