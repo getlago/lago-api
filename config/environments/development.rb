@@ -13,6 +13,10 @@ Rails.application.configure do
   config.middleware.use(ActionDispatch::Session::CookieStore, key: '_lago_dev')
   config.middleware.use(Rack::MethodOverride)
 
+  config.eager_load_paths += %W[
+    #{config.root}/dev
+  ]
+
   config.enable_reloading = true
   config.eager_load = false
   config.consider_all_requests_local = true
