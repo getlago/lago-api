@@ -28,7 +28,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
   it_behaves_like 'requires a customer portal user'
 
   it 'returns a list of invoices' do
-    result = execute_graphql(
+    result = execute_customer_portal_graphql(
       customer_portal_user: customer,
       query:
     )
@@ -56,7 +56,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
     end
 
     it 'only returns draft invoice' do
-      result = execute_graphql(
+      result = execute_customer_portal_graphql(
         customer_portal_user: customer,
         query:,
         variables: {status: ['draft']}
@@ -74,7 +74,7 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
 
   context 'without customer portal user' do
     it 'returns an error' do
-      result = execute_graphql(
+      result = execute_customer_portal_graphql(
         query:
       )
 

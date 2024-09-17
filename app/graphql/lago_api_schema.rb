@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# TODO(graphql_schema): This schema is deprecated and should be removed.
 class LagoApiSchema < GraphQL::Schema
   mutation(Types::MutationType)
   query(Types::QueryType)
