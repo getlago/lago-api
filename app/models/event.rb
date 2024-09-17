@@ -64,26 +64,28 @@ end
 #
 # Table name: events
 #
-#  id                       :uuid             not null, primary key
-#  code                     :string           not null
-#  deleted_at               :datetime
-#  metadata                 :jsonb            not null
-#  properties               :jsonb            not null
-#  timestamp                :datetime
-#  created_at               :datetime         not null
-#  updated_at               :datetime         not null
-#  customer_id              :uuid
-#  external_customer_id     :string
-#  external_subscription_id :string
-#  organization_id          :uuid             not null
-#  subscription_id          :uuid
-#  transaction_id           :string           not null
+#  id                         :uuid             not null, primary key
+#  code                       :string           not null
+#  deleted_at                 :datetime
+#  metadata                   :jsonb            not null
+#  precise_total_amount_cents :decimal(40, 15)
+#  properties                 :jsonb            not null
+#  timestamp                  :datetime
+#  created_at                 :datetime         not null
+#  updated_at                 :datetime         not null
+#  customer_id                :uuid
+#  external_customer_id       :string
+#  external_subscription_id   :string
+#  organization_id            :uuid             not null
+#  subscription_id            :uuid
+#  transaction_id             :string           not null
 #
 # Indexes
 #
 #  index_events_on_customer_id                                      (customer_id)
 #  index_events_on_deleted_at                                       (deleted_at)
 #  index_events_on_external_subscription_id_and_code_and_timestamp  (organization_id,external_subscription_id,code,timestamp) WHERE (deleted_at IS NULL)
+#  index_events_on_external_subscription_id_precise_amount          (external_subscription_id,code,timestamp) WHERE ((deleted_at IS NULL) AND (precise_total_amount_cents IS NOT NULL))
 #  index_events_on_external_subscription_id_with_included           (external_subscription_id,code,timestamp) WHERE (deleted_at IS NULL)
 #  index_events_on_organization_id                                  (organization_id)
 #  index_events_on_organization_id_and_code                         (organization_id,code)
