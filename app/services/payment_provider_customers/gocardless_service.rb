@@ -77,7 +77,7 @@ module PaymentProviderCustomers
         family_name: customer.lastname.presence
       }.compact
 
-      client.customers.create(customer_params)
+      client.customers.create(params: customer_params)
     rescue GoCardlessPro::Error => e
       deliver_error_webhook(e)
 
