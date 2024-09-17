@@ -52,4 +52,19 @@ FactoryBot.define do
       {connection_id: SecureRandom.uuid}.to_json
     end
   end
+
+  factory :hubspot_integration, class: 'Integrations::HubspotIntegration' do
+    organization
+    type { 'Integrations::HubspotIntegration' }
+    code { 'hubspot' }
+    name { 'Hubspot Integration' }
+
+    settings do
+      {default_targeted_object: 'Companies', sync_subscriptions: true, sync_invoices: true}
+    end
+
+    secrets do
+      {connection_id: SecureRandom.uuid, private_app_token: SecureRandom.uuid}.to_json
+    end
+  end
 end

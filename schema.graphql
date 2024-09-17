@@ -4016,6 +4016,7 @@ enum IntegrationItemTypeEnum {
 enum IntegrationTypeEnum {
   anrok
   dunning
+  hubspot
   netsuite
   okta
   progressive_billing
@@ -5741,6 +5742,7 @@ input PlanOverridesInput {
 
 enum PremiumIntegrationTypeEnum {
   dunning
+  hubspot
   netsuite
   okta
   progressive_billing
