@@ -5,7 +5,7 @@ require:
   - rubocop-rails
   - rubocop-thread_safety
   - rubocop-graphql
-  - ./lib/cops/service_call_cop.rb
+  - ./dev/cops/service_call_cop.rb
 
 inherit_gem:
   standard: config/base.yml
