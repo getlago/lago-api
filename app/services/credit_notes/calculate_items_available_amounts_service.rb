@@ -9,6 +9,11 @@ module CreditNotes
     end
 
     def call
+      if credit_note_is_not_applied?
+        result.available_amounts = initial_items_amounts
+        return result
+      end
+
       clear_items_available_amounts = calculate_items_sum_without_taxes
       result.available_amounts = split_sum_into_items(clear_items_available_amounts)
       result
@@ -17,6 +22,14 @@ module CreditNotes
     private
 
     attr_reader :credit_note
+
+    def credit_note_is_not_applied?
+      credit_note.balance_amount_cents == credit_note.credit_amount_cents
+    end
+
+    def initial_items_amounts
+      credit_note.items.map { |item| [item.id, item.amount_cents] }.to_h
+    end
 
     # balance_amount_cents includes items_sum + their taxes,
     # but taxes_rate is the percentage, not decimal
