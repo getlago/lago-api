@@ -32,10 +32,12 @@ RSpec.describe PaymentProviderCustomers::GocardlessService, type: :service do
         gocardless_service.create
         expect(gocardless_customers_service).to have_received(:create).with(
           hash_including(
-            email: customer.email,
-            company_name: customer.name,
-            given_name: customer.firstname,
-            family_name: customer.lastname
+            params: {
+              email: customer.email,
+              company_name: customer.name,
+              given_name: customer.firstname,
+              family_name: customer.lastname
+            }
           )
         )
       end
