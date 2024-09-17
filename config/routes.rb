@@ -4,9 +4,16 @@ Rails.application.routes.draw do
   mount Sidekiq::Web, at: '/sidekiq' if defined? Sidekiq::Web
   mount Karafka::Web::App, at: '/karafka' if ENV['KARAFKA_WEB']
 
-  mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql' if Rails.env.development?
+  if Rails.env.development?
+    mount GraphiQL::Rails::Engine, at: '/customer_portal_graphiql', as: 'customer_portal_graphiql_rails', graphql_path: '/customer_portal_graphql'
+    mount GraphiQL::Rails::Engine, at: '/api_graphiql', as: 'api_graphiql_rails', graphql_path: '/api_graphql'
+  end
 
-  post '/graphql', to: 'graphql#execute'
+  # TODO: Remove this deprecated route.
+  post '/graphql', to: 'graphql/api#execute'
+
+  post '/api_graphql', to: 'graphql/api#execute'
+  post '/customer_portal_graphql', to: 'graphql/customer_portal#execute'
 
   # Health Check status
   get '/health', to: 'application#health'

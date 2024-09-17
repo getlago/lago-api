@@ -25,7 +25,7 @@ RSpec.describe Resolvers::CustomerPortal::OrganizationResolver, type: :graphql d
   it_behaves_like 'requires a customer portal user'
 
   it 'returns the customer portal organization' do
-    result = execute_graphql(
+    result = execute_customer_portal_graphql(
       customer_portal_user: customer,
       query:
     )

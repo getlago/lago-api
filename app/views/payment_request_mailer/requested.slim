@@ -16,7 +16,6 @@ div style="padding-top: 32px;font-style: normal;font-weight: 400;font-size: 14px
 div style="margin-bottom: 16px;font-style: normal;font-weight: 700;font-size: 32px;line-height: 40px;color: #19212E;"
   = MoneyHelper.format(@payment_request.amount)
 
-/! TODO: Do not display the button unless payment url is present
 - if @payment_url
   table style="margin-bottom: 32px" width="100%" cellspacing="0" cellpadding="0"
     tr
