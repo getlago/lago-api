@@ -138,6 +138,9 @@ module Types
     field :create_xero_integration, mutation: Mutations::Integrations::Xero::Create
     field :update_xero_integration, mutation: Mutations::Integrations::Xero::Update
 
+    field :create_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Create
+    field :update_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Update
+
     field :okta_accept_invite, mutation: Mutations::Auth::Okta::AcceptInvite
     field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize
     field :okta_login, mutation: Mutations::Auth::Okta::Login

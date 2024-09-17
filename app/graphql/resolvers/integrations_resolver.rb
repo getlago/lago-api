@@ -33,6 +33,8 @@ module Resolvers
         'Integrations::AnrokIntegration'
       when 'xero'
         'Integrations::XeroIntegration'
+      when 'hubspot'
+        'Integrations::HubspotIntegration'
       else
         raise(NotImplementedError)
       end
