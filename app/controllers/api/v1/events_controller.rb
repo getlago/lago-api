@@ -60,6 +60,21 @@ module Api
         )
       end
 
+      def index
+        events = current_organization.events
+          .page(params[:page])
+          .per(params[:per_page] || PER_PAGE)
+
+        render(
+          json: ::CollectionSerializer.new(
+            events,
+            ::V1::EventSerializer,
+            collection_name: 'events',
+            meta: pagination_metadata(events),
+          )
+        )
+      end
+
       def estimate_fees
         result = Fees::EstimatePayInAdvanceService.call(
           organization: current_organization,

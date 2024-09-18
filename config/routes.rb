@@ -48,7 +48,7 @@ Rails.application.routes.draw do
         put :void, on: :member
         post :estimate, on: :collection
       end
-      resources :events, only: %i[create show] do
+      resources :events, only: %i[create show index] do
         post :estimate_fees, on: :collection
       end
       resources :applied_coupons, only: %i[create index]
