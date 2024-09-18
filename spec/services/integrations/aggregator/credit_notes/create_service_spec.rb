@@ -351,7 +351,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       let(:integration_collection_mapping3) { nil }
       let(:integration_collection_mapping4) { nil }
       let(:integration_collection_mapping5) { nil }
-      let(:integration_collection_mapping6){ nil }
+      let(:integration_collection_mapping6) { nil }
       let(:integration_mapping_add_on) { nil }
       let(:integration_mapping_bm) { nil }
       let(:response) { instance_double(Net::HTTPOK) }
