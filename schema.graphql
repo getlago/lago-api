@@ -3218,6 +3218,27 @@ input CustomerMetadataInput {
   value: String!
 }
 
+type CustomerPortalCustomer {
+  addressLine1: String
+  addressLine2: String
+  billingConfiguration: CustomerBillingConfiguration
+  city: String
+  country: CountryCode
+  currency: CurrencyEnum
+  displayName: String!
+  email: String
+  firstname: String
+  id: ID!
+  lastname: String
+  legalName: String
+  legalNumber: String
+  name: String
+  shippingAddress: CustomerAddress
+  state: String
+  taxIdentificationNumber: String
+  zipcode: String
+}
+
 enum CustomerTypeEnum {
   company
   individual
@@ -5276,6 +5297,16 @@ type Mutation {
   ): Customer
 
   """
+  Update customer data from Customer Portal
+  """
+  updateCustomerPortalCustomer(
+    """
+    Parameters for UpdateCustomerPortalCustomer
+    """
+    input: UpdateCustomerPortalCustomerInput!
+  ): CustomerPortalCustomer
+
+  """
   Updates a new Customer Wallet
   """
   updateCustomerWallet(
@@ -5971,7 +6002,7 @@ type Query {
   """
   Query a customer portal user
   """
-  customerPortalUser: Customer
+  customerPortalUser: CustomerPortalCustomer
 
   """
   Query the usage of the customer on the current billing period
@@ -7567,6 +7598,31 @@ input UpdateCustomerInvoiceGracePeriodInput {
   clientMutationId: String
   id: ID!
   invoiceGracePeriod: Int
+}
+
+"""
+Customer Portal Customer Update input arguments
+"""
+input UpdateCustomerPortalCustomerInput {
+  addressLine1: String
+  addressLine2: String
+  city: String
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  country: CountryCode
+  documentLocale: String
+  email: String
+  firstname: String
+  lastname: String
+  legalName: String
+  name: String
+  shippingAddress: CustomerAddressInput
+  state: String
+  taxIdentificationNumber: String
+  zipcode: String
 }
 
 """
