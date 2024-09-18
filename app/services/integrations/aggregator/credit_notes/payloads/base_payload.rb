@@ -66,7 +66,9 @@ module Integrations
               subscription_item
             end
 
-            return {} unless mapped_item
+            unless mapped_item
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invalid_mapping')
+            end
 
             precise_unit_amount = credit_note_item.amount_cents
 

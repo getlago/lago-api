@@ -136,7 +136,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
         'tranid' => credit_note.number,
         'entity' => integration_customer.external_customer_id,
         'istaxable' => true,
-        'taxitem' => integration_collection_mapping5.external_id,
+        'taxitem' => integration_collection_mapping5&.external_id,
         'taxamountoverride' => 80.0,
         'otherrefnum' => credit_note.number,
         'custbody_lago_id' => credit_note.id,
@@ -338,6 +338,42 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
         it 'enqueues a SendWebhookJob' do
           expect { service_call }.to have_enqueued_job(SendWebhookJob)
         end
+      end
+    end
+
+    context 'when there is payload error' do
+      let(:integration) { create(:xero_integration, organization:) }
+      let(:integration_customer) { create(:xero_customer, integration:, customer:) }
+      let(:lago_client) { instance_double(LagoHttpClient::Client) }
+      let(:endpoint) { 'https://api.nango.dev/v1/xero/creditnotes' }
+      let(:integration_collection_mapping1) { nil }
+      let(:integration_collection_mapping2) { nil }
+      let(:integration_collection_mapping3) { nil }
+      let(:integration_collection_mapping4) { nil }
+      let(:integration_collection_mapping5) { nil }
+      let(:integration_collection_mapping6){ nil }
+      let(:integration_mapping_add_on) { nil }
+      let(:integration_mapping_bm) { nil }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:headers) do
+        {
+          'Connection-Id' => integration.connection_id,
+          'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+          'Provider-Config-Key' => 'xero'
+        }
+      end
+      let(:body) do
+        path = Rails.root.join('spec/fixtures/integration_aggregator/credit_notes/success_hash_response.json')
+        File.read(path)
+      end
+
+      before do
+        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it 'sends error webhook' do
+        expect { service_call }.to have_enqueued_job(SendWebhookJob)
       end
     end
   end

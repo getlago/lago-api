@@ -3,6 +3,16 @@
 module Integrations
   module Aggregator
     class BasePayload
+      class Failure < BaseService::FailedResult
+        attr_reader :code
+
+        def initialize(result, code:)
+          @code = code
+
+          super(result, code)
+        end
+      end
+
       def initialize(integration:)
         @integration = integration
       end
