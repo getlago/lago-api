@@ -15,7 +15,7 @@ RSpec.describe Integrations::Aggregator::SendPrivateAppTokenJob, type: :job do
       allow(send_token_service).to receive(:call).and_return(result)
     end
 
-    it 'sends the private app token the hubspot' do
+    it 'sends the private app token the nango' do
       described_class.perform_now(integration:)
 
       expect(Integrations::Aggregator::SendPrivateAppTokenService).to have_received(:new)
