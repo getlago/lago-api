@@ -2,35 +2,26 @@
 
 require 'rails_helper'
 
-RSpec.describe Integrations::Hubspot::CreateService, type: :service do
-  let(:membership) { create(:membership) }
+RSpec.describe Integrations::Hubspot::UpdateService, type: :service do
+  let(:integration) { create(:hubspot_integration, organization:) }
   let(:organization) { membership.organization }
+  let(:membership) { create(:membership) }
 
   describe '#call' do
-    subject(:service_call) { described_class.call(params: create_args) }
+    subject(:service_call) { described_class.call(integration:, params: update_args) }
+
+    before { integration }
 
     let(:name) { 'Hubspot 1' }
-    let(:script_endpoint_url) { Faker::Internet.url }
-
-    let(:create_args) do
+    let(:update_args) do
       {
         name:,
         code: 'hubspot1',
-        organization_id: organization.id,
-        connection_id: 'conn1',
-        private_app_token: 'token',
-        client_secret: 'secret',
-        default_targeted_object: "test",
-        sync_invoices: false,
-        sync_subscriptions: false
+        private_app_token: 'new_token'
       }
     end
 
     context 'without premium license' do
-      it 'does not create an integration' do
-        expect { service_call }.not_to change(Integrations::HubspotIntegration, :count)
-      end
-
       it 'returns an error' do
         result = service_call
 
@@ -62,18 +53,12 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
         end
 
         context 'without validation errors' do
-          it 'creates an integration' do
-            expect { service_call }.to change(Integrations::HubspotIntegration, :count).by(1)
+          it 'updates an integration' do
+            service_call
 
-            integration = Integrations::HubspotIntegration.order(:created_at).last
+            integration = Integrations::HubspotIntegration.order(:updated_at).last
             expect(integration.name).to eq(name)
-            expect(integration.code).to eq(create_args[:code])
-            expect(integration.connection_id).to eq(create_args[:connection_id])
-            expect(integration.private_app_token).to eq(create_args[:private_app_token])
-            expect(integration.default_targeted_object).to eq(create_args[:default_targeted_object])
-            expect(integration.sync_invoices).to eq(create_args[:sync_invoices])
-            expect(integration.sync_subscriptions).to eq(create_args[:sync_subscriptions])
-            expect(integration.organization_id).to eq(organization.id)
+            expect(integration.private_app_token).to eq(update_args[:private_app_token])
           end
 
           it 'returns an integration in result object' do
@@ -85,7 +70,6 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
           it 'calls Integrations::Aggregator::SendPrivateAppTokenJob' do
             service_call
 
-            integration = Integrations::HubspotIntegration.order(:created_at).last
             expect(Integrations::Aggregator::SendPrivateAppTokenJob).to have_received(:perform_later).with(integration:)
           end
         end
