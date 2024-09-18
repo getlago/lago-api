@@ -18,8 +18,8 @@ module Mutations
 
         def resolve(**args)
           result = ::Integrations::Hubspot::CreateService
-            .new(context[:current_user])
-            .call(**args.merge(organization_id: current_organization.id))
+            .new(params: args.merge(organization_id: current_organization.id))
+            .call
 
           result.success? ? result.integration : result_error(result)
         end
