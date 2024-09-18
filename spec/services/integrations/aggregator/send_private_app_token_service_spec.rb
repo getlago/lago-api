@@ -21,7 +21,7 @@ RSpec.describe Integrations::Aggregator::SendPrivateAppTokenService do
       integration.save!
     end
 
-    it 'successfully sends token to hubspot' do
+    it 'successfully sends token to nango' do
       send_private_token_service.call
 
       aggregate_failures do
