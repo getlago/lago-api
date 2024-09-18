@@ -32,6 +32,8 @@ module Integrations
           'xero'
         when 'Integrations::AnrokIntegration'
           'anrok'
+        when 'Integrations::HubspotIntegration'
+          'hubspot'
         end
       end
 
@@ -43,6 +45,8 @@ module Integrations
           'xero'
         when 'Integrations::AnrokIntegration'
           'anrok'
+        when 'Integrations::HubspotIntegration'
+          'hubspot'
         end
       end
 
