@@ -61,18 +61,27 @@ module Api
       end
 
       def index
-        events = current_organization.events
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            events,
-            ::V1::EventSerializer,
-            collection_name: 'events',
-            meta: pagination_metadata(events),
-          )
+        result = EventsQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          },
+          filters: index_filters
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.events,
+              ::V1::EventSerializer,
+              collection_name: 'events',
+              meta: pagination_metadata(result.events)
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       def estimate_fees
@@ -120,6 +129,15 @@ module Api
               properties: {} # rubocop:disable Style/HashAsLastArrayItem
             ]
           ).to_h.deep_symbolize_keys
+      end
+
+      def index_filters
+        params.permit(
+          :code,
+          :external_subscription_id,
+          :timestamp_from,
+          :timestamp_to
+        )
       end
 
       def event_metadata
