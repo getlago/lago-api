@@ -85,6 +85,80 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
   end
 
+  describe 'GET /events' do
+    let(:event1) { create(:event, timestamp: 5.days.ago.to_date, organization:) }
+
+    before { event1 }
+
+    it 'returns events' do
+      get_with_token(organization, '/api/v1/events')
+
+      expect(response).to have_http_status(:ok)
+      expect(json[:events].count).to eq(1)
+      expect(json[:events].first[:lago_id]).to eq(event1.id)
+    end
+
+    context 'with pagination' do
+      let(:event2) { create(:event, organization:) }
+
+      before { event2 }
+
+      it 'returns events with correct meta data' do
+        get_with_token(organization, '/api/v1/events?page=1&per_page=1')
+
+        expect(response).to have_http_status(:ok)
+
+        expect(json[:events].count).to eq(1)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(2)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
+      end
+    end
+
+    context 'with code' do
+      it 'returns events' do
+        get_with_token(organization, "/api/v1/events?code=#{event1.code}")
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events].count).to eq(1)
+        expect(json[:events].first[:lago_id]).to eq(event1.id)
+      end
+    end
+
+    context 'with external subscription id' do
+      it 'returns events' do
+        get_with_token(organization, "/api/v1/events?external_subscription_id=#{event1.external_subscription_id}")
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events].count).to eq(1)
+        expect(json[:events].first[:lago_id]).to eq(event1.id)
+      end
+    end
+
+    context 'with timestamp' do
+      let(:event2) { create(:event, timestamp: 3.days.ago.to_date, organization:) }
+      let(:event3) { create(:event, timestamp: 1.day.ago.to_date, organization:) }
+
+      before do
+        event2
+        event3
+      end
+
+      it 'returns events with correct timestamp' do
+        get_with_token(
+          organization,
+          "/api/v1/events?timestamp_from=#{2.days.ago.to_date}&timestamp_to=#{Date.tomorrow.to_date}"
+        )
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events].count).to eq(1)
+        expect(json[:events].first[:lago_id]).to eq(event3.id)
+      end
+    end
+  end
+
   describe 'GET /events/:id' do
     let(:event) { create(:event) }
 
