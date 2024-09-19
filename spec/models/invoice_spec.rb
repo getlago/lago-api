@@ -638,14 +638,14 @@ RSpec.describe Invoice, type: :model do
     let(:invoice) { create(:invoice, customer:, organization:) }
 
     it 'returns the correct name for EU country' do
-      expect(invoice.document_name).to eq('Invoice')
+      expect(invoice.document_invoice_name).to eq('Invoice')
     end
 
     context 'when organization country is Australia' do
       let(:organization) { create(:organization, name: 'LAGO', country: 'AU') }
 
       it 'returns the correct name that includes keyword tax' do
-        expect(invoice.document_name).to eq('Tax invoice')
+        expect(invoice.document_invoice_name).to eq('Tax invoice')
       end
     end
 
@@ -653,7 +653,7 @@ RSpec.describe Invoice, type: :model do
       let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :credit) }
 
       it 'returns the correct name for EU country' do
-        expect(invoice.document_name).to eq('Advance invoice')
+        expect(invoice.document_invoice_name).to eq('Advance invoice')
       end
     end
   end
