@@ -17,6 +17,7 @@ fr:
     date_to: au
     details: Détails de %{resource}
     document_name: Facture
+    document_tax_name: Facture fiscale
     due_date: Date d'échéance le %{date}
     fee_prorated: Les frais sont calculés au prorata des jours d'utilisation, le prix unitaire affiché est une moyenne
     fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}

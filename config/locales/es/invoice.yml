@@ -16,6 +16,7 @@ es:
     date_to: hasta
     details: Detalles de %{resource}
     document_name: Factura
+    document_tax_name: Factura fiscal
     due_date: Vence el %{date}
     fee_prorated: La tarifa se prorratea según los días de uso, el precio unitario mostrado es un promedio
     fees_from_to_date: Cargos desde %{from_date} hasta %{to_date}

@@ -322,6 +322,14 @@ class Invoice < ApplicationRecord
       end
   end
 
+  def document_invoice_name
+    return I18n.t('invoice.prepaid_credit_invoice') if credit?
+
+    return I18n.t('invoice.document_tax_name') if %w[AU AE ID].include?(organization.country)
+
+    I18n.t('invoice.document_name')
+  end
+
   private
 
   def should_assign_sequential_id?

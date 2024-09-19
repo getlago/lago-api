@@ -16,6 +16,7 @@ sv:
     date_to: till och med
     details: "%{resource} specifikation”"
     document_name: Faktura
+    document_tax_name: Skattefaktura
     due_date: Förfaller %{date}
     fee_prorated: Avgiften är proraterad för användningsdagar, det visade enhetspriset är ett genomsnitt
     fees_from_to_date: Avgifter från %{from_date} till %{to_date}

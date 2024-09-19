@@ -17,6 +17,7 @@ de:
     date_to: Bis
     details: "%{resource} Details"
     document_name: Rechnung
+    document_tax_name: Steuerrechnung
     due_date: Fälligkeit %{date}
     fee_prorated: Die Gebühr wird anteilig nach Nutzungstagen berechnet, der angezeigte Stückpreis ist ein Durchschnitt
     fees_from_to_date: Gebühren vom %{from_date} bis %{to_date}

@@ -17,6 +17,7 @@ it:
     date_to: al
     details: Dettagli %{resource}
     document_name: Fattura
+    document_tax_name: Fattura fiscale
     due_date: Scadenza %{date}
     fee_prorated: La tariffa è calcolata in base ai giorni di utilizzo, il prezzo unitario visualizzato è una media
     fees_from_to_date: Tariffe dal %{from_date} al %{to_date}

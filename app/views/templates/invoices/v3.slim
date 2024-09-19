@@ -342,7 +342,7 @@ html
 
     .wrapper
       .mb-24
-        h1.invoice-title = I18n.t('invoice.document_name')
+        h1.invoice-title = document_invoice_name
         - if organization.logo.present?
           img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
 
