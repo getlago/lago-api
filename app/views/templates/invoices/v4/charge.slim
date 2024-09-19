@@ -266,6 +266,32 @@ html
       .invoice-resume table {
         border-collapse: collapse;
       }
+
+      .invoice-resume-table tr.details, .invoice-resume-table tr.charge-name {
+          border: none;
+      }
+
+      .invoice-resume-table tr.charge-name td {
+          padding-bottom: 0;
+          color: #19212e;
+      }
+
+      .invoice-resume-table tr.details td {
+          color: #66758F;
+          padding-top: 4px;
+          padding-bottom: 4px;
+      }
+
+      .invoice-resume-table tr.details td:first-child {
+          padding-left: 8px;
+      }
+
+      .invoice-resume-table tr.details.subtotal td {
+          padding-bottom: 8px;
+          border-bottom: 1px solid #d9dee7;
+          color: #19212e;
+      }
+
       .invoice-resume .total-table tr td {
         padding-top: 8px;
         padding-bottom: 8px;
@@ -421,32 +447,51 @@ html
             td.body-2 = I18n.t('invoice.amount')
           - fees.order(:succeeded_at, :created_at).each do |fee|
             tr
-              - if !fee.charge.invoiceable? # TODO: edit with `invoicing_strategy`
-                td
-                  .body-1
+              - if fee.charge.charge_model.to_sym == :percentage
+                tr.charge-name
+                  td.body-1
                     = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
                     - if fee.charge_filter_id?
                       = ' • ' + fee.filter_display_name(separator: ' • ')
-                  - succeeded_at_date = fee.succeeded_at&.in_time_zone(customer.applicable_timezone)&.to_date
-                  - if succeeded_at_date
-                    .body-3 = I18n.l(succeeded_at_date, format: :default)
-              - elsif fee.charge.prorated?
-                - pay_in_advance_range = charge_pay_in_advance_proration_range(fee, invoice_subscription(fee.subscription.id).timestamp)
-                td
-                  .body-1
-                    = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
-                    - if fee.charge_filter_id?
-                      = ' • ' + fee.filter_display_name(separator: ' • ')
-                  .body-3 = I18n.t('invoice.breakdown_for_days', breakdown_duration: pay_in_advance_range[:number_of_days], breakdown_total_duration: pay_in_advance_range[:period_duration])
+                    - if fee.billable_metric.weighted_sum_agg?
+                      .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(fee.subscription.plan.interval))
+                    - if fee.charge.percentage?
+                      .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
+                    - if fee.charge.prorated?
+                      .body-3 = I18n.t('invoice.fee_prorated')
+                  td.body-2
+                  td.body-2
+                  td.body-2
+                  td.body-2
+                == SlimHelper.render('templates/invoices/v4/_charge_percentage', fee)
               - else
-                td.body-1
-                  = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
-                  - if fee.charge_filter_id?
-                    = ' • ' + fee.filter_display_name(separator: ' • ')
-              td.body-2 = fee.units
-              td.body-2 = MoneyHelper.format(fee.unit_amount)
-              td.body-2 == TaxHelper.applied_taxes(fee)
-              td.body-2 = MoneyHelper.format(fee.amount)
+                - if !fee.charge.invoiceable? # TODO: edit with `invoicing_strategy`
+                  td
+                    .body-1
+                      = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
+                      - if fee.charge_filter_id?
+                        = ' • ' + fee.filter_display_name(separator: ' • ')
+                    - succeeded_at_date = fee.succeeded_at&.in_time_zone(customer.applicable_timezone)&.to_date
+                    - if succeeded_at_date
+                      .body-3 = I18n.l(succeeded_at_date, format: :default)
+                - elsif fee.charge.prorated?
+                  - pay_in_advance_range = charge_pay_in_advance_proration_range(fee, invoice_subscription(fee.subscription.id).timestamp)
+                  td
+                    .body-1
+                      = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
+                      - if fee.charge_filter_id?
+                        = ' • ' + fee.filter_display_name(separator: ' • ')
+                    .body-3 = I18n.t('invoice.breakdown_for_days', breakdown_duration: pay_in_advance_range[:number_of_days], breakdown_total_duration: pay_in_advance_range[:period_duration])
+                - else
+                  td.body-1
+                    = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
+                    - if fee.charge_filter_id?
+                      = ' • ' + fee.filter_display_name(separator: ' • ')
+                td.body-2 = fee.units
+                td.body-2 = MoneyHelper.format(fee.unit_amount)
+                td.body-2 == TaxHelper.applied_taxes(fee)
+                td.body-2 = MoneyHelper.format(fee.amount)
+
 
         table.total-table width="100%"
           - if coupons_amount_cents.positive?
