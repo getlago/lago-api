@@ -10,7 +10,6 @@ class Charge < ApplicationRecord
   belongs_to :billable_metric, -> { with_discarded }
 
   has_many :fees
-  has_many :group_properties, dependent: :destroy
   has_many :filters, dependent: :destroy, class_name: 'ChargeFilter'
   has_many :filter_values, through: :filters, class_name: 'ChargeFilterValue', source: :values
 
@@ -32,12 +31,12 @@ class Charge < ApplicationRecord
   enum charge_model: CHARGE_MODELS
   enum regroup_paid_fees: REGROUPING_PAID_FEES_OPTIONS
 
-  validate :validate_amount, if: -> { standard? && group_properties.empty? }
-  validate :validate_graduated, if: -> { graduated? && group_properties.empty? }
-  validate :validate_package, if: -> { package? && group_properties.empty? }
-  validate :validate_percentage, if: -> { percentage? && group_properties.empty? }
-  validate :validate_volume, if: -> { volume? && group_properties.empty? }
-  validate :validate_graduated_percentage, if: -> { graduated_percentage? && group_properties.empty? }
+  validate :validate_amount, if: -> { standard? }
+  validate :validate_graduated, if: -> { graduated? }
+  validate :validate_package, if: -> { package? }
+  validate :validate_percentage, if: -> { percentage? }
+  validate :validate_volume, if: -> { volume? }
+  validate :validate_graduated_percentage, if: -> { graduated_percentage? }
 
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
