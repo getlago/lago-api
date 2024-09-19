@@ -9,12 +9,6 @@ Rails.application.routes.draw do
     mount GraphiQL::Rails::Engine, at: '/api_graphiql', as: 'api_graphiql_rails', graphql_path: '/api_graphql'
   end
 
-  # TODO: Remove this deprecated route.
-  post '/graphql', to: 'graphql/api#execute'
-
-  post '/api_graphql', to: 'graphql/api#execute'
-  post '/customer_portal_graphql', to: 'graphql/customer_portal#execute'
-
   # Health Check status
   get '/health', to: 'application#health'
 
@@ -90,6 +84,12 @@ Rails.application.routes.draw do
       end
     end
   end
+
+  # TODO: Remove this deprecated route.
+  post '/graphql', to: 'graphql/api#execute'
+
+  post 'api/graphql', to: 'graphql/api#execute'
+  post 'customer_portal/graphql', to: 'graphql/customer_portal#execute'
 
   resources :webhooks, only: [] do
     post 'stripe/:organization_id', to: 'webhooks#stripe', on: :collection, as: :stripe

@@ -21,7 +21,7 @@ RSpec.describe Graphql::ApiController, type: :request do
     end
 
     it "returns GraphQL response" do
-      post "/api_graphql",
+      post "/api/graphql",
         params: {
           query: mutation,
           variables: {
@@ -57,7 +57,7 @@ RSpec.describe Graphql::ApiController, type: :request do
       end
 
       it "retrieves the current user and refreshes the token" do
-        post "/api_graphql",
+        post "/api/graphql",
           headers: {
             "Authorization" => "Bearer #{token}"
           },
@@ -76,7 +76,7 @@ RSpec.describe Graphql::ApiController, type: :request do
       end
 
       it "retrieves the current organization" do
-        post "/api_graphql",
+        post "/api/graphql",
           headers: {
             "Authorization" => "Bearer #{token}",
             "x-lago-organization" => membership.organization
@@ -100,7 +100,7 @@ RSpec.describe Graphql::ApiController, type: :request do
         sleep 1 # Ensure token is expired
 
         post(
-          "/api_graphql",
+          "/api/graphql",
           headers: {
             "Authorization" => "Bearer #{expired_token}"
           },

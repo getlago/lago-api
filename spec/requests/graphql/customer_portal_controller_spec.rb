@@ -20,7 +20,7 @@ RSpec.describe Graphql::CustomerPortalController, type: :request do
 
   it "retrieves the correct end user and returns success status code" do
     post(
-      "/customer_portal_graphql",
+      "/customer_portal/graphql",
       headers: {
         "customer-portal-token" => token
       },
