@@ -66,7 +66,9 @@ module Integrations
               subscription_item
             end
 
-            return {} unless mapped_item
+            unless mapped_item
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invalid_mapping')
+            end
 
             {
               'external_id' => mapped_item.external_id,
