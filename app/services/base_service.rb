@@ -170,6 +170,10 @@ class BaseService
     raise NotImplementedError
   end
 
+  protected
+
+  attr_writer :result
+
   private
 
   attr_reader :result, :source

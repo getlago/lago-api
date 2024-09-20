@@ -150,6 +150,111 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
+  context "when charge is dynamic" do
+    let(:charge) { create(:dynamic_charge, billable_metric:) }
+
+    it "computes the precise_total_amount_cents" do
+      result = sum_service.aggregate(options:)
+      expect(result.precise_total_amount_cents).to be_zero
+    end
+
+    context 'with events that specify a precise_total_amount_cents' do
+      let(:old_events) do
+        create_list(
+          :event,
+          2,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: subscription.started_at + 3.months,
+          properties: {
+            total_count: 2.5
+          },
+          precise_total_amount_cents: 12
+        )
+      end
+      let(:latest_events) do
+        create_list(
+          :event,
+          4,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 1.day,
+          properties: {
+            total_count: 12
+          },
+          precise_total_amount_cents: 10
+        )
+      end
+
+      it "computes the precise_total_amount_cents" do
+        result = sum_service.aggregate(options:)
+        expect(result.aggregation).to eq(4 * 12)
+        expect(result.precise_total_amount_cents).to eq(4 * 10)
+      end
+    end
+
+    context 'when filters are given' do
+      let(:matching_filters) { {region: ['europe']} }
+
+      before do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 1.day,
+          properties: {
+            total_count: 12,
+            region: 'europe'
+          },
+          precise_total_amount_cents: 5
+        )
+
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 1.day,
+          properties: {
+            total_count: 8,
+            region: 'europe'
+          },
+          precise_total_amount_cents: 7
+        )
+
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 1.day,
+          properties: {
+            total_count: 12,
+            region: 'africa'
+          },
+          precise_total_amount_cents: 9
+        )
+      end
+
+      it 'aggregates the events matching the filter' do
+        result = sum_service.aggregate(options:)
+
+        expect(result.aggregation).to eq(20)
+        expect(result.count).to eq(2)
+        expect(result.precise_total_amount_cents).to eq(12)
+        expect(result.options).to eq({running_total: [12, 20]})
+      end
+    end
+  end
+
   context 'when events are out of bounds' do
     let(:latest_events) do
       create_list(

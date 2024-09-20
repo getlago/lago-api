@@ -4,9 +4,10 @@ module BillableMetrics
   module ProratedAggregations
     class UniqueCountService < BillableMetrics::ProratedAggregations::BaseService
       def initialize(**args)
-        @base_aggregator = BillableMetrics::Aggregations::UniqueCountService.new(**args)
+        super
 
-        super(**args)
+        @base_aggregator = BillableMetrics::Aggregations::UniqueCountService.new(**args)
+        @base_aggregator.result = result
 
         event_store.aggregation_property = billable_metric.field_name
         event_store.use_from_boundary = !billable_metric.recurring

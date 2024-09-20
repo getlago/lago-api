@@ -66,7 +66,8 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         external_customer_id: customer.external_id,
         code:,
         timestamp: boundaries[:from_datetime] + (i + 1).days,
-        properties:
+        properties:,
+        precise_total_amount_cents: i + 1
       )
     end
 
@@ -165,6 +166,12 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           expect(row[:value]).to eq(1)
         end
       end
+    end
+  end
+
+  describe '#sum_precise_total_amount_cents' do
+    it 'returns the sum of precise_total_amount_cent values' do
+      expect(event_store.sum_precise_total_amount_cents).to eq(15)
     end
   end
 

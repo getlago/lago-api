@@ -15,6 +15,7 @@ module Charges
       when :percentage then default_percentage_properties
       when :volume then default_volume_properties
       when :graduated_percentage then default_graduated_percentage_properties
+      when :dynamic then default_dynamic_properties
       end
     end
 
@@ -76,6 +77,10 @@ module Charges
           }
         ]
       }
+    end
+
+    def default_dynamic_properties
+      {}
     end
   end
 end

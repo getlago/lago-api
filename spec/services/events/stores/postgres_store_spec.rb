@@ -52,7 +52,8 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         timestamp: boundaries[:from_datetime] + (i + 1).days,
         properties: {
           billable_metric.field_name => i + 1
-        }
+        },
+        precise_total_amount_cents: i + 1
       )
 
       if i.even?
@@ -744,6 +745,12 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
           expect(row[:value]).not_to be_nil
         end
       end
+    end
+  end
+
+  describe '#sum_precise_total_amount_cents' do
+    it 'returns the sum of precise_total_amount_cent values' do
+      expect(event_store.sum_precise_total_amount_cents).to eq(15)
     end
   end
 

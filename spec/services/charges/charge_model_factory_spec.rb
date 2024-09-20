@@ -59,6 +59,12 @@ RSpec.describe Charges::ChargeModelFactory, type: :service do
       it { expect(result).to be_a(Charges::ChargeModels::VolumeService) }
     end
 
+    context 'with dynamic charge model' do
+      let(:charge) { build(:dynamic_charge) }
+
+      it { expect(result).to be_a(Charges::ChargeModels::DynamicService) }
+    end
+
     context 'with custom charge model' do
       let(:charge) { build(:custom_charge) }
 

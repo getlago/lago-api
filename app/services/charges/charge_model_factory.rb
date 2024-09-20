@@ -30,6 +30,8 @@ module Charges
         Charges::ChargeModels::VolumeService
       when :custom
         Charges::ChargeModels::CustomService
+      when :dynamic
+        Charges::ChargeModels::DynamicService
       else
         raise(NotImplementedError)
       end

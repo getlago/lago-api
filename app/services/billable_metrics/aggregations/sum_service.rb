@@ -4,7 +4,7 @@ module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
       def initialize(...)
-        super(...)
+        super
 
         event_store.numeric_property = true
         event_store.aggregation_property = billable_metric.field_name
@@ -62,6 +62,10 @@ module BillableMetrics
         result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)
+      end
+
+      def compute_precise_total_amount_cents(options: {})
+        result.precise_total_amount_cents = event_store.sum_precise_total_amount_cents
       end
 
       # NOTE: Return cumulative sum of field_name based on the number of free units

@@ -10,11 +10,12 @@ end
 #
 # Table name: events_raw
 #
-#  code                     :string           not null
-#  properties               :string           not null
-#  timestamp                :datetime         not null
-#  external_customer_id     :string           not null
-#  external_subscription_id :string           not null
-#  organization_id          :string           not null
-#  transaction_id           :string           not null
+#  code                       :string           not null
+#  precise_total_amount_cents :decimal(40, 15)
+#  properties                 :string           not null
+#  timestamp                  :datetime         not null
+#  external_customer_id       :string           not null
+#  external_subscription_id   :string           not null
+#  organization_id            :string           not null
+#  transaction_id             :string           not null
 #

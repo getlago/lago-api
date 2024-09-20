@@ -297,6 +297,27 @@ RSpec.describe Charge, type: :model do
     end
   end
 
+  describe '#validate_dynamic' do
+    subject(:charge) { build(:dynamic_charge, billable_metric:) }
+
+    context 'with sum aggregation' do
+      let(:billable_metric) { create(:sum_billable_metric) }
+
+      it 'is valid' do
+        expect(charge).to be_valid
+      end
+    end
+
+    context 'with other aggregation' do
+      let(:billable_metric) { create(:latest_billable_metric) }
+
+      it 'is invalid' do
+        expect(charge).not_to be_valid
+        expect(charge.errors[:charge_model]).to include("invalid_aggregation_type_or_charge_model")
+      end
+    end
+  end
+
   describe '#validate_graduated_percentage' do
     subject(:charge) do
       build(:graduated_percentage_charge, properties: charge_properties)

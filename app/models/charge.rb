@@ -24,6 +24,7 @@ class Charge < ApplicationRecord
     volume
     graduated_percentage
     custom
+    dynamic
   ].freeze
 
   REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
@@ -37,6 +38,7 @@ class Charge < ApplicationRecord
   validate :validate_percentage, if: -> { percentage? }
   validate :validate_volume, if: -> { volume? }
   validate :validate_graduated_percentage, if: -> { graduated_percentage? }
+  validate :validate_dynamic, if: -> { dynamic? }
 
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
@@ -77,6 +79,13 @@ class Charge < ApplicationRecord
 
   def validate_graduated_percentage
     validate_charge_model(Charges::Validators::GraduatedPercentageService)
+  end
+
+  def validate_dynamic
+    # Only sum aggregation is compatible with Dynamic Pricing for now
+    return if billable_metric.sum_agg?
+
+    errors.add(:charge_model, :invalid_aggregation_type_or_charge_model)
   end
 
   def validate_charge_model(validator)

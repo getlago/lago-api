@@ -93,5 +93,13 @@ RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
         )
       end
     end
+
+    context 'when dynamic charge model' do
+      let(:charge_model) { :dynamic }
+
+      it 'returns dynamic default properties' do
+        expect(service.call).to eq({})
+      end
+    end
   end
 end

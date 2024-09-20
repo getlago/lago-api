@@ -4,9 +4,9 @@ module BillableMetrics
   module ProratedAggregations
     class SumService < BillableMetrics::ProratedAggregations::BaseService
       def initialize(**args)
+        super
         @base_aggregator = BillableMetrics::Aggregations::SumService.new(**args)
-
-        super(**args)
+        @base_aggregator.result = result
 
         event_store.numeric_property = true
         event_store.aggregation_property = billable_metric.field_name
