@@ -330,5 +330,40 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect(result.invoice).to be_nil
       end
     end
+
+    context 'when skip zero invoices is set' do
+      before do
+        customer.update(finalize_zero_amount_invoice: :skip)
+      end
+      context 'when invoice total amount is not 0' do
+        it 'creates an invoice in :finalized status' do
+          result = invoice_service.call
+          expect(result.invoice.status).to eq('finalized')
+        end
+      end
+
+      context 'when invoice total amount is 0' do
+        let(:plan) { create(:plan, interval: 'monthly', pay_in_advance:, amount_cents: 0) }
+        before do
+          plan
+        end
+
+        it 'creates an invoice in :closed status' do
+          result = invoice_service.call
+          expect(result.invoice.status).to eq('closed')
+        end
+
+        context 'when organization gas grace period' do
+          before do
+            organization.update!(invoice_grace_period: 30)
+          end
+          it 'creates an invoice in :draft status' do
+            result = invoice_service.call
+            expect(result.invoice.status).to eq('draft')
+          end
+
+        end
+      end
+    end
   end
 end
