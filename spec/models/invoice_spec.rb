@@ -632,6 +632,32 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#document_invoice_name' do
+    let(:organization) { create(:organization, name: 'LAGO', country: 'FR') }
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+
+    it 'returns the correct name for EU country' do
+      expect(invoice.document_invoice_name).to eq('Invoice')
+    end
+
+    context 'when organization country is Australia' do
+      let(:organization) { create(:organization, name: 'LAGO', country: 'AU') }
+
+      it 'returns the correct name that includes keyword tax' do
+        expect(invoice.document_invoice_name).to eq('Tax invoice')
+      end
+    end
+
+    context 'when it is credit invoice' do
+      let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :credit) }
+
+      it 'returns the correct name for EU country' do
+        expect(invoice.document_invoice_name).to eq('Advance invoice')
+      end
+    end
+  end
+
   describe '#charge_pay_in_advance_proration_range' do
     let(:invoice_subscription) { create(:invoice_subscription, subscription:) }
     let(:invoice) { invoice_subscription.invoice }

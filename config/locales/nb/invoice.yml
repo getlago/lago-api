@@ -17,6 +17,7 @@ nb:
     date_to: til
     details: "%{resource} detaljer"
     document_name: Faktura
+    document_tax_name: Skattefaktura
     due_date: Forfallsdato %{date}
     fee_prorated: Avgiften beregnes forholdsmessig etter brukerdager, den viste enhetsprisen er et gjennomsnitt
     fees_from_to_date: Gebyrer fra %{from_date} til %{to_date}
