@@ -7,8 +7,8 @@ Rails.application.routes.draw do
   # TODO(graphql_schema): This route is deprecated and should be removed.
   post '/graphql', to: 'graphql#execute'
 
-  post 'api/graphql', to: 'graphql/api#execute'
-  post 'customer_portal/graphql', to: 'graphql/customer_portal#execute'
+  post '/api/graphql', to: 'graphql/api#execute'
+  post '/customer_portal/graphql', to: 'graphql/customer_portal#execute'
 
   if Rails.env.development?
     mount GraphiQL::Rails::Engine,
