@@ -14,7 +14,7 @@ module WalletTransactions
 
       wallet_transactions = []
       @source = params[:source] || :manual
-      @metadata = params[:metadata] || {}
+      @metadata = params[:metadata] || []
       invoice_requires_successful_payment = if params.key?(:invoice_requires_successful_payment)
         ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
       else
