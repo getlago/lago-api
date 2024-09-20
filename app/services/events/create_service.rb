@@ -19,6 +19,7 @@ module Events
       event.properties = params[:properties] || {}
       event.metadata = metadata || {}
       event.timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
+      event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
       event.save! unless organization.clickhouse_aggregation?
 
@@ -52,6 +53,7 @@ module Events
           transaction_id: event.transaction_id,
           timestamp: event.timestamp.iso8601[...-1], # NOTE: Removes trailing 'Z' to allow clickhouse parsing
           code: event.code,
+          precise_total_amount_cents: event.precise_total_amount_cents,
           properties: event.properties,
           ingested_at: Time.zone.now.iso8601[...-1]
         }.to_json

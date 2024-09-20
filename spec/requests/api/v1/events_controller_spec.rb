@@ -22,6 +22,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
             timestamp: Time.current.to_i,
+            precise_total_amount_cents: '123.45',
             properties: {
               foo: 'bar'
             }
@@ -48,6 +49,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
               transaction_id: event.transaction_id,
               external_subscription_id: subscription.external_id,
               timestamp: Time.current.to_i,
+              precise_total_amount_cents: '123.45',
               properties: {
                 foo: 'bar'
               }
@@ -72,6 +74,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
               transaction_id: SecureRandom.uuid,
               external_subscription_id: subscription.external_id,
               timestamp: Time.current.to_i,
+              precise_total_amount_cents: '123.45',
               properties: {
                 foo: 'bar'
               }
@@ -136,6 +139,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
           code: metric.code,
           external_subscription_id: subscription.external_id,
           transaction_id: SecureRandom.uuid,
+          precise_total_amount_cents: '123.45',
           properties: {
             foo: 'bar'
           }

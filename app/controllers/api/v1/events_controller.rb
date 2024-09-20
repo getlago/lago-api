@@ -90,6 +90,7 @@ module Api
             :code,
             :timestamp,
             :external_subscription_id,
+            :precise_total_amount_cents,
             properties: {}
           )
       end
@@ -102,6 +103,7 @@ module Api
               :code,
               :timestamp,
               :external_subscription_id,
+              :precise_total_amount_cents,
               properties: {} # rubocop:disable Style/HashAsLastArrayItem
             ]
           ).to_h.deep_symbolize_keys

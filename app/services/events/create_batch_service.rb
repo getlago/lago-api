@@ -48,6 +48,7 @@ module Events
         event.properties = event_params[:properties] || {}
         event.metadata = metadata || {}
         event.timestamp = Time.zone.at(event_params[:timestamp] ? event_params[:timestamp].to_f : timestamp)
+        event.precise_total_amount_cents = event_params[:precise_total_amount_cents]
 
         result.events.push(event)
         result.errors = result.errors.merge({index => event.errors.messages}) unless event.valid?
@@ -80,7 +81,8 @@ module Events
           timestamp: event.timestamp.to_f,
           code: event.code,
           properties: event.properties,
-          ingested_at: Time.zone.now.iso8601[...-1]
+          ingested_at: Time.zone.now.iso8601[...-1],
+          precise_total_amount_cents: event.precise_total_amount_cents
         }.to_json
       )
     end

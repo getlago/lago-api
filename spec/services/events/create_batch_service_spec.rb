@@ -17,6 +17,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
   let(:code) { 'sum_agg' }
   let(:metadata) { {} }
   let(:creation_timestamp) { Time.current.to_f }
+  let(:precise_total_amount_cents) { '123.34' }
 
   let(:events_params) do
     events = []
@@ -26,6 +27,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
         external_subscription_id: SecureRandom.uuid,
         code:,
         transaction_id: SecureRandom.uuid,
+        precise_total_amount_cents:,
         properties: {foo: 'bar'},
         timestamp:
       }
@@ -178,6 +180,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               external_subscription_id: SecureRandom.uuid,
               code:,
               transaction_id: SecureRandom.uuid,
+              precise_total_amount_cents:,
               properties: {foo: 'bar'},
               timestamp:
             }
@@ -204,6 +207,7 @@ RSpec.describe Events::CreateBatchService, type: :service do
               external_subscription_id: SecureRandom.uuid,
               code:,
               transaction_id: SecureRandom.uuid,
+              precise_total_amount_cents:,
               properties: {foo: 'bar'},
               timestamp:
             }
