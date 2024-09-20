@@ -3,20 +3,21 @@
 require 'rails_helper'
 
 RSpec.describe IntegrationCollectionMappings::CreateService, type: :service do
-  let(:service) { described_class.new(membership.user) }
-
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
   let(:add_on) { create(:add_on, organization:) }
 
   describe '#call' do
-    subject(:service_call) { service.call(**create_args) }
+    subject(:service_call) { described_class.call(params: create_args) }
 
     let(:create_args) do
       {
         mapping_type: :fallback_item,
-        integration_id: integration.id
+        integration_id: integration.id,
+        tax_nexus: '123',
+        tax_code: '456',
+        tax_type: 'tax-type-1'
       }
     end
 
@@ -30,6 +31,9 @@ RSpec.describe IntegrationCollectionMappings::CreateService, type: :service do
         aggregate_failures do
           expect(integration_collection_mapping.mapping_type).to eq('fallback_item')
           expect(integration_collection_mapping.integration_id).to eq(integration.id)
+          expect(integration_collection_mapping.tax_nexus).to eq(create_args[:tax_nexus])
+          expect(integration_collection_mapping.tax_code).to eq(create_args[:tax_code])
+          expect(integration_collection_mapping.tax_type).to eq(create_args[:tax_type])
         end
       end
 

@@ -17,8 +17,7 @@ module Mutations
 
       def resolve(**args)
         result = ::IntegrationCollectionMappings::CreateService
-          .new(context[:current_user])
-          .call(**args.merge(organization_id: current_organization.id))
+          .call(params: args.merge(organization_id: current_organization.id))
 
         result.success? ? result.integration_collection_mapping : result_error(result)
       end

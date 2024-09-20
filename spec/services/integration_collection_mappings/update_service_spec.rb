@@ -17,7 +17,10 @@ RSpec.describe IntegrationCollectionMappings::UpdateService, type: :service do
       {
         external_id: '456',
         external_name: 'Name1',
-        external_account_code: 'code-2'
+        external_account_code: 'code-2',
+        tax_nexus: 'updated-123',
+        tax_code: 'updated-456',
+        tax_type: 'updated-tax-type-1'
       }
     end
 
@@ -32,6 +35,9 @@ RSpec.describe IntegrationCollectionMappings::UpdateService, type: :service do
           expect(integration_collection_mapping.external_id).to eq('456')
           expect(integration_collection_mapping.external_name).to eq('Name1')
           expect(integration_collection_mapping.external_account_code).to eq('code-2')
+          expect(integration_collection_mapping.tax_nexus).to eq(update_args[:tax_nexus])
+          expect(integration_collection_mapping.tax_code).to eq(update_args[:tax_code])
+          expect(integration_collection_mapping.tax_type).to eq(update_args[:tax_type])
         end
       end
 
