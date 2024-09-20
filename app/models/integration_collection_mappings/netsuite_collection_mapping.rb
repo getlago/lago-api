@@ -2,6 +2,7 @@
 
 module IntegrationCollectionMappings
   class NetsuiteCollectionMapping < BaseCollectionMapping
+    settings_accessors :tax_nexus, :tax_type, :tax_code
   end
 end
 

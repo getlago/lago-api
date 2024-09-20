@@ -9,7 +9,10 @@ FactoryBot.define do
       {
         external_id: 'netsuite-123',
         external_account_code: 'netsuite-code-1',
-        external_name: 'Credits and Discounts'
+        external_name: 'Credits and Discounts',
+        tax_nexus: 'tax-nexus-1',
+        tax_type: 'tax-type-1',
+        tax_code: 'tax-code-1'
       }
     end
   end

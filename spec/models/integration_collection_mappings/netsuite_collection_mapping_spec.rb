@@ -31,4 +31,31 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping, type: :
       expect(mapping.external_name).to eq(external_name)
     end
   end
+
+  describe '#tax_nexus' do
+    let(:tax_nexus) { 'tax-nexus-1' }
+
+    it 'assigns and retrieve a setting' do
+      mapping.tax_nexus = tax_nexus
+      expect(mapping.tax_nexus).to eq(tax_nexus)
+    end
+  end
+
+  describe '#tax_type' do
+    let(:tax_type) { 'tax-type-1' }
+
+    it 'assigns and retrieve a setting' do
+      mapping.tax_type = tax_type
+      expect(mapping.tax_type).to eq(tax_type)
+    end
+  end
+
+  describe '#tax_code' do
+    let(:tax_code) { 'tax-code-1' }
+
+    it 'assigns and retrieve a setting' do
+      mapping.tax_code = tax_code
+      expect(mapping.tax_code).to eq(tax_code)
+    end
+  end
 end
