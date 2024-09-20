@@ -10,6 +10,7 @@ RSpec.describe ::V1::EventSerializer do
       :event,
       customer_id: nil,
       subscription_id: nil,
+      precise_total_amount_cents: '123.6',
       properties: {
         item_value: '12'
       }
@@ -26,6 +27,7 @@ RSpec.describe ::V1::EventSerializer do
         'lago_customer_id' => event.customer_id,
         'code' => event.code,
         'timestamp' => event.timestamp.iso8601(3),
+        'precise_total_amount_cents' => '123.6',
         'properties' => event.properties,
         'lago_subscription_id' => event.subscription_id,
         'external_subscription_id' => event.external_subscription_id,
