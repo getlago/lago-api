@@ -359,6 +359,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
           before do
             organization.update!(invoice_grace_period: 30)
           end
+
           it 'creates an invoice in :draft status' do
             result = invoice_service.call
             expect(result.invoice.status).to eq('draft')

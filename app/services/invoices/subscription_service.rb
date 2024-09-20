@@ -32,10 +32,8 @@ module Invoices
           invoice:,
           recurring:
         )
-        if invoice_status == :finalized
+        if invoice.status == :finalized
           Invoices::TransitionToFinalStatusService.call(invoice:)
-        else
-          invoice.status = :draft
         end
         invoice.save!
 
