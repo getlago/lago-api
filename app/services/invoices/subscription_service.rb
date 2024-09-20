@@ -28,16 +28,14 @@ module Invoices
 
       fee_result = ActiveRecord::Base.transaction do
         invoice.status = invoice_status
-        if invoice_status == :finalized
-          Invoices::TransitionToFinalStatusService.call(invoice:)
-        else
-          invoice.status = :draft
-        end
-
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
           recurring:
         )
+        if invoice.status == "finalized"
+          Invoices::TransitionToFinalStatusService.call(invoice:)
+        end
+        invoice.save!
 
         # NOTE: We don't want to raise error and corrupt DB commit if there is tax error.
         #       In that case we want fees to stay attached to the invoice. There is retry action that will enable users
