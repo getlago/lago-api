@@ -24,7 +24,7 @@ module RequiredOrganizationSpec
     field :renameThing, mutation: RenameThingMutation
   end
 
-  class TestApiSchema < LagoApiSchema
+  class TestApiSchema < Schemas::ApiSchema
     mutation(ThingsMutationType)
   end
 end

@@ -53,7 +53,8 @@ end
 
 RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
-  config.include GraphQLHelper, type: :graphql
+  config.include Graphql::AuthenticatedHelper, type: :graphql
+  config.include Graphql::CustomerPortalHelper, type: :graphql
   config.include AdminHelper, type: :request
   config.include ApiHelper, type: :request
   config.include ScenariosHelper

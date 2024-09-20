@@ -39,7 +39,7 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
 
   it 'generates the PDF for the given invoice' do
     freeze_time do
-      result = execute_graphql(
+      result = execute_customer_portal_graphql(
         customer_portal_user: customer,
         query: mutation,
         variables: {
@@ -57,7 +57,7 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
 
   context 'without customer portal user' do
     it 'returns an error' do
-      result = execute_graphql(
+      result = execute_customer_portal_graphql(
         query: mutation,
         variables: {
           input: {id: invoice.id}

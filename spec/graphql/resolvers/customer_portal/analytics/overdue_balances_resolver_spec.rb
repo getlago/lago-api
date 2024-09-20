@@ -30,7 +30,7 @@ RSpec.describe Resolvers::CustomerPortal::Analytics::OverdueBalancesResolver, ty
       i1 = create(:invoice, organization:, customer:, total_amount_cents: 2000, currency: "USD", payment_overdue: true)
       i2 = create(:invoice, organization:, customer:, total_amount_cents: 2000, currency: "USD", payment_overdue: true)
 
-      result = execute_graphql(customer_portal_user: customer, query:)
+      result = execute_customer_portal_graphql(customer_portal_user: customer, query:)
       overdue_balances_response = result["data"]["customerPortalOverdueBalances"]
 
       expect(overdue_balances_response["collection"]).to contain_exactly(
