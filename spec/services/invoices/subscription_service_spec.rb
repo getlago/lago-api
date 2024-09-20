@@ -335,6 +335,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       before do
         customer.update(finalize_zero_amount_invoice: :skip)
       end
+
       context 'when invoice total amount is not 0' do
         it 'creates an invoice in :finalized status' do
           result = invoice_service.call
@@ -344,6 +345,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
       context 'when invoice total amount is 0' do
         let(:plan) { create(:plan, interval: 'monthly', pay_in_advance:, amount_cents: 0) }
+
         before do
           plan
         end
@@ -361,7 +363,6 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
             result = invoice_service.call
             expect(result.invoice.status).to eq('draft')
           end
-
         end
       end
     end
