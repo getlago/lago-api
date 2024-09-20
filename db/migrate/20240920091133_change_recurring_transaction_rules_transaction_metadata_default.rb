@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 class ChangeRecurringTransactionRulesTransactionMetadataDefault < ActiveRecord::Migration[7.1]
   def up
     change_column_default :recurring_transaction_rules, :transaction_metadata, []
