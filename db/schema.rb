@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_09_17_145042) do
+ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1022,7 +1022,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_17_145042) do
     t.decimal "target_ongoing_balance", precision: 30, scale: 5
     t.datetime "started_at"
     t.boolean "invoice_requires_successful_payment", default: false, null: false
-    t.jsonb "transaction_metadata", default: {}
+    t.jsonb "transaction_metadata", default: []
     t.index ["started_at"], name: "index_recurring_transaction_rules_on_started_at"
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
   end
@@ -1128,7 +1128,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_17_145042) do
     t.integer "source", default: 0, null: false
     t.integer "transaction_status", default: 0, null: false
     t.boolean "invoice_requires_successful_payment", default: false, null: false
-    t.jsonb "metadata", default: {}
+    t.jsonb "metadata", default: []
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
   end

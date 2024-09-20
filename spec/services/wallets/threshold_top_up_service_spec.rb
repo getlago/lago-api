@@ -41,7 +41,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
             granted_credits: "3.0",
             source: :threshold,
             invoice_requires_successful_payment: false,
-            metadata: {}
+            metadata: []
           }
         )
     end
@@ -132,7 +132,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
               granted_credits: "0.0",
               source: :threshold,
               invoice_requires_successful_payment: false,
-              metadata: {}
+              metadata: []
             }
           )
       end
