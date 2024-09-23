@@ -204,7 +204,7 @@ module Events
           <<-SQL
             WITH events_data AS (
               (#{
-                events
+                events(ordered: true)
                   .select(
                     "toDateTime64(timestamp, 5, 'UTC') as timestamp, \
                     #{sanitized_property_name} AS property, \
@@ -224,7 +224,7 @@ module Events
 
           <<-SQL
             WITH events_data AS (#{
-              events
+              events(ordered: true)
                 .select(
                   "#{groups.join(", ")}, \
                   toDateTime64(timestamp, 5, 'UTC') as timestamp, \
@@ -340,7 +340,7 @@ module Events
         end
 
         def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(', ')
+          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         end
       end
     end

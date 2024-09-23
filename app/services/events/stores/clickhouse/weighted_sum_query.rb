@@ -65,7 +65,7 @@ module Events
               (#{initial_value_sql})
               UNION ALL
               (#{
-                events
+                events(ordered: true)
                   .select("timestamp, #{sanitized_numeric_property} AS difference")
                   .group(Events::Stores::ClickhouseStore::DEDUPLICATION_GROUP)
                   .to_sql
@@ -124,7 +124,7 @@ module Events
               (#{grouped_initial_value_sql(initial_values)})
               UNION ALL
               (#{
-                events
+                events(ordered: true)
                   .select("#{groups.join(", ")}, timestamp, #{sanitized_numeric_property} AS difference")
                   .group(Events::Stores::ClickhouseStore::DEDUPLICATION_GROUP)
                   .to_sql
@@ -143,9 +143,9 @@ module Events
 
             [
               groups,
-              'toDateTime64(:from_datetime, 5, \'UTC\') AS timestamp',
+              "toDateTime64(:from_datetime, 5, 'UTC') AS timestamp",
               "toDecimal128(#{initial_value[:value]}, :decimal_scale) AS difference"
-            ].flatten.join(', ')
+            ].flatten.join(", ")
           end
 
           <<-SQL
@@ -166,8 +166,8 @@ module Events
             [
               groups,
               "toDateTime64(:to_datetime, 5, 'UTC') AS timestamp",
-              'toDecimal128(0, :decimal_scale) AS difference'
-            ].flatten.join(', ')
+              "toDecimal128(0, :decimal_scale) AS difference"
+            ].flatten.join(", ")
           end
 
           <<-SQL
@@ -202,7 +202,7 @@ module Events
         end
 
         def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(', ')
+          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         end
       end
     end
