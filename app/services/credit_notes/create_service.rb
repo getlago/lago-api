@@ -60,7 +60,7 @@ module CreditNotes
         deliver_webhook
         deliver_email
         handle_refund if should_handle_refund?
-        report_to_tax_provider if should_report_to_tax_provider?
+        report_to_tax_provider
 
         if credit_note.should_sync_credit_note?
           Integrations::Aggregator::CreditNotes::CreateJob.perform_later(credit_note:)
@@ -174,12 +174,6 @@ module CreditNotes
       return false unless credit_note.invoice.payment_succeeded?
 
       invoice_payment.present?
-    end
-
-    def should_report_to_tax_provider?
-      return false unless credit_note.finalized?
-
-      credit_note.customer.anrok_customer.present?
     end
 
     def invoice_payment
