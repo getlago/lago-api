@@ -19,6 +19,9 @@ module IntegrationCollectionMappings
         integration_collection_mapping.external_account_code = params[:external_account_code]
       end
       integration_collection_mapping.external_name = params[:external_name] if params.key?(:external_name)
+      integration_collection_mapping.tax_nexus = params[:tax_nexus] if params.key?(:tax_nexus)
+      integration_collection_mapping.tax_code = params[:tax_code] if params.key?(:tax_code)
+      integration_collection_mapping.tax_type = params[:tax_type] if params.key?(:tax_type)
 
       integration_collection_mapping.save!
 
