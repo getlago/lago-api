@@ -85,7 +85,6 @@ module Fees
           amount_details: result.amount_details
         )
 
-#         byebug
         unless customer_provider_taxation?
           taxes_result = Fees::ApplyTaxesService.call(fee:)
           taxes_result.raise_if_error!

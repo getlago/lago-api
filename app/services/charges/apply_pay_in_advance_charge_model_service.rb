@@ -3,7 +3,7 @@
 module Charges
   class ApplyPayInAdvanceChargeModelService < BaseService
     CHARDE_AMOUNT_DETAILS_KEYS = %i[units free_units free_events paid_units per_unit_total_amount paid_events
-                                    fixed_fee_unit_amount fixed_fee_total_amount min_max_adjustment_total_amount]
+      fixed_fee_unit_amount fixed_fee_total_amount min_max_adjustment_total_amount]
     def initialize(charge:, aggregation_result:, properties:)
       @charge = charge
       @aggregation_result = aggregation_result
