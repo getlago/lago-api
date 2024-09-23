@@ -44,7 +44,8 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payload do
       :fee,
       invoice:,
       add_on:,
-      created_at: current_time - 3.seconds
+      created_at: current_time - 3.seconds,
+      amount_cents: 200
     )
   end
   let(:fee_add_on_two) do
@@ -52,7 +53,8 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payload do
       :fee,
       invoice:,
       add_on: add_on_two,
-      created_at: current_time - 2.seconds
+      created_at: current_time - 2.seconds,
+      amount_cents: 200
     )
   end
   let(:credit_note) do
@@ -66,10 +68,10 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payload do
   end
 
   let(:credit_note_item1) do
-    create(:credit_note_item, credit_note:, fee: fee_add_on, amount_cents: fee_add_on.amount_cents)
+    create(:credit_note_item, credit_note:, fee: fee_add_on, amount_cents: 190)
   end
   let(:credit_note_item2) do
-    create(:credit_note_item, credit_note:, fee: fee_add_on_two, amount_cents: fee_add_on_two.amount_cents)
+    create(:credit_note_item, credit_note:, fee: fee_add_on_two, amount_cents: 180)
   end
 
   let(:body) do
@@ -92,12 +94,12 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payload do
           {
             'item_id' => fee_add_on.item_id,
             'item_code' => 'm1',
-            'amount_cents' => -200
+            'amount_cents' => -190
           },
           {
             'item_id' => fee_add_on_two.item_id,
             'item_code' => '1',
-            'amount_cents' => -200
+            'amount_cents' => -180
           }
         ]
       }
