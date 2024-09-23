@@ -32,6 +32,7 @@ module Invoices
         result.invoice = invoice
       end
 
+      Invoices::NumberGenerationService.call(invoice: result.invoice)
       Utils::SegmentTrack.invoice_created(result.invoice)
       SendWebhookJob.perform_later('invoice.add_on_added', result.invoice)
       GeneratePdfAndNotifyJob.perform_later(invoice: result.invoice, email: should_deliver_email?)

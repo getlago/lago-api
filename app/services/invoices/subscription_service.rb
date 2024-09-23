@@ -46,6 +46,9 @@ module Invoices
         flag_lifetime_usage_for_refresh
         fee_result
       end
+
+      Invoices::NumberGenerationService.call(invoice:)
+
       result.non_invoiceable_fees = fee_result.non_invoiceable_fees
 
       # non-invoiceable fees are created the first time, regardless of grace period.
