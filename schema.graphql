@@ -3148,7 +3148,7 @@ type Customer {
     """
     Statuses of subscriptions to retrieve
     """
-    status: [StatusTypeEnum!]
+    status: [SubscriptionStatusTypeEnum!]
   ): [Subscription!]!
   taxIdentificationNumber: String
   taxes: [Tax!]
@@ -6205,7 +6205,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(limit: Int, page: Int, planCode: String, status: [SubscriptionStatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query a single tax of an organization
@@ -6471,13 +6471,6 @@ input RevokeMembershipInput {
   id: ID!
 }
 
-enum StatusTypeEnum {
-  active
-  canceled
-  pending
-  terminated
-}
-
 type StripeProvider {
   code: String!
   id: ID!
@@ -6504,7 +6497,7 @@ type Subscription {
   periodEndDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
-  status: StatusTypeEnum
+  status: SubscriptionStatusTypeEnum
   subscriptionAt: ISO8601DateTime
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
@@ -6532,6 +6525,13 @@ type SubscriptionLifetimeUsage {
   totalUsageAmountCents: BigInt!
   totalUsageFromDatetime: ISO8601DateTime!
   totalUsageToDatetime: ISO8601DateTime!
+}
+
+enum SubscriptionStatusTypeEnum {
+  active
+  canceled
+  pending
+  terminated
 }
 
 type Subsidiary {
