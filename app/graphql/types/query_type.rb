@@ -25,6 +25,7 @@ module Types
     field :customer_portal_invoices, resolver: Resolvers::CustomerPortal::InvoicesResolver
     field :customer_portal_organization, resolver: Resolvers::CustomerPortal::OrganizationResolver
     field :customer_portal_overdue_balances, resolver: Resolvers::CustomerPortal::Analytics::OverdueBalancesResolver
+    field :customer_portal_subscriptions, resolver: Resolvers::CustomerPortal::SubscriptionsResolver
     field :customer_portal_user, resolver: Resolvers::CustomerPortal::CustomerResolver
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
     field :customers, resolver: Resolvers::CustomersResolver
