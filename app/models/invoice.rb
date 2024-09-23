@@ -347,7 +347,7 @@ class Invoice < ApplicationRecord
   end
 
   def ensure_number
-    self.number = "#{organization.document_number_prefix}-DRAFT" if number.blank?  && !finalized?
+    self.number = "#{organization.document_number_prefix}-DRAFT" if number.blank? && !finalized?
 
     return unless finalized?
 
@@ -391,12 +391,12 @@ class Invoice < ApplicationRecord
     ) do
       # If previous invoice had different numbering, base sequential id is the total number of invoices
       organization_sequential_id = if switched_from_customer_numbering?
-        organization.invoices.with_generated_number.where.not(id: self.id).count
+        organization.invoices.with_generated_number.where.not(id:).count
       else
         organization
           .invoices
           .where.not(organization_sequential_id: 0)
-          .where.not(id: self.id)
+          .where.not(id:)
           .order(organization_sequential_id: :desc)
           .limit(1)
           .pick(:organization_sequential_id) || 0
@@ -417,7 +417,7 @@ class Invoice < ApplicationRecord
   end
 
   def switched_from_customer_numbering?
-    last_invoice = organization.invoices.where.not(id: self.id).order(created_at: :desc).with_generated_number.first
+    last_invoice = organization.invoices.where.not(id:).order(created_at: :desc).with_generated_number.first
 
     return false unless last_invoice
 
