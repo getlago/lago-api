@@ -1,6 +1,10 @@
 default: &default
   adapter: postgresql
 
+queue: &queue
+  <<: *default
+  migrations_paths: db/queue_migrate
+
 development:
   primary:
     <<: *default
@@ -9,7 +13,7 @@ development:
     password: changeme
     database: lago
     port: 5432
-    schema_search_path: 'public'
+    schema_search_path: "public"
   events:
     <<: *default
     host: db
@@ -27,6 +31,13 @@ development:
     migrations_paths: db/clickhouse_migrate
     debug: true
     database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
+  queue:
+    <<: *queue
+    host: db
+    username: lago
+    password: changeme
+    database: lago_queue
+    port: 5432
 
 test:
   primary:
@@ -69,6 +80,12 @@ staging:
     migrations_paths: db/clickhouse_migrate
     debug: false
     database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
+  queue:
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] %>
+    prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
+    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+    database: app_production_queue
 
 production:
   primary:
@@ -96,3 +113,9 @@ production:
     migrations_paths: db/clickhouse_migrate
     debug: false
     database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
+  queue:
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] %>
+    prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
+    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+    database: app_production_queue
