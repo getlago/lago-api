@@ -51,7 +51,7 @@ module Integrations
             {
               'item_id' => fee.item_id,
               'item_code' => mapped_item.external_id,
-              'amount_cents' => (fee.sub_total_excluding_taxes_amount_cents&.to_i || 0) * -1
+              'amount_cents' => (item.amount_cents&.to_i || 0) * -1
             }
           end
 

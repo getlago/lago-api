@@ -60,6 +60,7 @@ module CreditNotes
         deliver_webhook
         deliver_email
         handle_refund if should_handle_refund?
+        report_to_tax_provider if should_report_to_tax_provider?
 
         if credit_note.should_sync_credit_note?
           Integrations::Aggregator::CreditNotes::CreateJob.perform_later(credit_note:)
@@ -175,6 +176,12 @@ module CreditNotes
       invoice_payment.present?
     end
 
+    def should_report_to_tax_provider?
+      return false unless credit_note.finalized?
+
+      credit_note.customer.anrok_customer.present?
+    end
+
     def invoice_payment
       @invoice_payment ||= credit_note.invoice.payments.order(created_at: :desc).first
     end
@@ -188,6 +195,10 @@ module CreditNotes
       when PaymentProviders::AdyenProvider
         CreditNotes::Refunds::AdyenCreateJob.perform_later(credit_note)
       end
+    end
+
+    def report_to_tax_provider
+      CreditNotes::ProviderTaxes::ReportJob.perform_later(credit_note:)
     end
 
     def compute_amounts_and_taxes
