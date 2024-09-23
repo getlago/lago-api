@@ -22,6 +22,7 @@ module CreditNotes
           return result.validation_failure!(errors: {tax_error: [tax_result.error.code]})
         end
 
+        credit_note.update!(tax_provider_id: tax_result.succeeded_id)
         result.credit_note = credit_note
 
         result

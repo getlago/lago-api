@@ -53,6 +53,7 @@ module Integrations
                 tax_breakdown: tax_breakdown(fee['tax_breakdown'])
               )
             end
+            result.succeeded_id = body['succeededInvoices'].first['id']
           else
             code, message = retrieve_error_details(body['failedInvoices'].first['validation_errors'])
             deliver_tax_error_webhook(customer:, code:, message:)

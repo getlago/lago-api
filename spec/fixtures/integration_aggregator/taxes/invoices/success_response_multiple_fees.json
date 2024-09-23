@@ -1,6 +1,7 @@
 {
   "succeededInvoices": [
     {
+      "id": "transaction-id-12345",
       "issuing_date": "2024-03-07",
       "sub_total_excluding_taxes": 9900,
       "taxes_amount_cents": 99,

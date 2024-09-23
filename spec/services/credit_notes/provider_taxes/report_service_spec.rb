@@ -113,6 +113,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         aggregate_failures do
           expect(result).to be_success
           expect(result.credit_note.id).to eq(credit_note.id)
+          expect(result.credit_note.tax_provider_id).to_not be_nil
         end
       end
 
@@ -135,6 +136,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
+          expect(credit_note.reload.tax_provider_id).to be_nil
         end
       end
 

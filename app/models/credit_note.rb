@@ -173,6 +173,7 @@ end
 #  customer_id                             :uuid             not null
 #  invoice_id                              :uuid             not null
 #  sequential_id                           :integer          not null
+#  tax_provider_id                         :string
 #
 # Indexes
 #
