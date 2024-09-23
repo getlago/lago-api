@@ -118,6 +118,10 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
 
     context 'with code' do
+      let(:event2) { create(:event, organization:) }
+
+      before { event2 }
+
       it 'returns events' do
         get_with_token(organization, "/api/v1/events?code=#{event1.code}")
 
@@ -128,6 +132,10 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
 
     context 'with external subscription id' do
+      let(:event2) { create(:event, organization:) }
+
+      before { event2 }
+
       it 'returns events' do
         get_with_token(organization, "/api/v1/events?external_subscription_id=#{event1.external_subscription_id}")
 

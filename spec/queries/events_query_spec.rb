@@ -9,7 +9,7 @@ RSpec.describe EventsQuery, type: :query do
   let(:pagination) { nil }
   let(:filters) { {} }
 
-  let(:event) { create(:event, timestamp: 1.days.ago.to_date, organization:) }
+  let(:event) { create(:event, timestamp: 1.day.ago.to_date, organization:) }
 
   before { event }
 
@@ -39,7 +39,10 @@ RSpec.describe EventsQuery, type: :query do
     end
 
     context 'with code filter' do
+      let(:event2) { create(:event, organization:) }
       let(:filters) { {code: event.code} }
+
+      before { event2 }
 
       it 'applies the filter' do
         result = events_query.call
@@ -52,7 +55,10 @@ RSpec.describe EventsQuery, type: :query do
     end
 
     context 'with external subscription id filter' do
-      let(:filters) { {external_customer_id: event.external_subscription_id} }
+      let(:event2) { create(:event, organization:) }
+      let(:filters) { {external_subscription_id: event.external_subscription_id} }
+
+      before { event2 }
 
       it 'applies the filter' do
         result = events_query.call
