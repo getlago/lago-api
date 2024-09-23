@@ -147,7 +147,6 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
         expect(CreditNotes::ProviderTaxes::ReportJob).to have_received(:perform_later).once
       end
-
     end
 
     context 'when organization does not have right email settings' do
