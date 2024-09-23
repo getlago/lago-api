@@ -9,6 +9,7 @@ module V1
         lago_customer_id: model.customer_id,
         code: model.code,
         timestamp: model.timestamp.iso8601(3),
+        precise_total_amount_cents: model.precise_total_amount_cents&.to_s,
         properties: model.properties,
         lago_subscription_id: model.subscription_id,
         external_subscription_id: model.external_subscription_id,

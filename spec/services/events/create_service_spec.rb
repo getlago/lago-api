@@ -18,6 +18,7 @@ RSpec.describe Events::CreateService, type: :service do
   let(:external_subscription_id) { SecureRandom.uuid }
   let(:timestamp) { Time.current.to_f }
   let(:transaction_id) { SecureRandom.uuid }
+  let(:precise_total_amount_cents) { nil }
 
   let(:creation_timestamp) { Time.current.to_f }
 
@@ -26,6 +27,7 @@ RSpec.describe Events::CreateService, type: :service do
       external_subscription_id:,
       code:,
       transaction_id:,
+      precise_total_amount_cents:,
       properties: {foo: 'bar'},
       timestamp:
     }
@@ -46,7 +48,8 @@ RSpec.describe Events::CreateService, type: :service do
           transaction_id:,
           code:,
           timestamp: Time.zone.at(timestamp),
-          properties: {'foo' => 'bar'}
+          properties: {'foo' => 'bar'},
+          precise_total_amount_cents: nil
         )
       end
     end
@@ -129,6 +132,28 @@ RSpec.describe Events::CreateService, type: :service do
         create_service.call
 
         expect(karafka_producer).to have_received(:produce_async)
+      end
+    end
+
+    context 'with a precise_total_amount_cents' do
+      let(:precise_total_amount_cents) { "123.45" }
+
+      it 'creates an event with the precise_total_amount_cents' do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.event.precise_total_amount_cents).to eq(123.45)
+      end
+
+      context 'when precise_total_amount_cents is not a valid decimal value' do
+        let(:precise_total_amount_cents) { "asdfa" }
+
+        it 'creates an event' do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.event.precise_total_amount_cents).to eq(0)
+        end
       end
     end
   end
