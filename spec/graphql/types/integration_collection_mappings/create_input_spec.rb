@@ -10,4 +10,7 @@ RSpec.describe Types::IntegrationCollectionMappings::CreateInput do
   it { is_expected.to accept_argument(:external_account_code).of_type('String') }
   it { is_expected.to accept_argument(:external_id).of_type('String!') }
   it { is_expected.to accept_argument(:external_name).of_type('String') }
+  it { is_expected.to accept_argument(:tax_code).of_type('String') }
+  it { is_expected.to accept_argument(:tax_nexus).of_type('String') }
+  it { is_expected.to accept_argument(:tax_type).of_type('String') }
 end

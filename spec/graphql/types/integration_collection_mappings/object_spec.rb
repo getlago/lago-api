@@ -11,4 +11,7 @@ RSpec.describe Types::IntegrationCollectionMappings::Object do
   it { is_expected.to have_field(:external_account_code).of_type('String') }
   it { is_expected.to have_field(:external_id).of_type('String!') }
   it { is_expected.to have_field(:external_name).of_type('String') }
+  it { is_expected.to have_field(:tax_code).of_type('String') }
+  it { is_expected.to have_field(:tax_nexus).of_type('String') }
+  it { is_expected.to have_field(:tax_type).of_type('String') }
 end
