@@ -280,7 +280,7 @@ module Customers
 
       if billing.key?(:payment_provider)
         customer.payment_provider = nil
-        if %w[stripe gocardless adyen].include?(billing[:payment_provider])
+        if %w[stripe gocardless cashfree adyen].include?(billing[:payment_provider])
           customer.payment_provider = billing[:payment_provider]
           customer.payment_provider_code = billing[:payment_provider_code] if billing.key?(:payment_provider_code)
         end
@@ -308,6 +308,8 @@ module Customers
         PaymentProviderCustomers::StripeCustomer
       when 'gocardless'
         PaymentProviderCustomers::GocardlessCustomer
+      when 'cashfree'
+        PaymentProviderCustomers::CashfreeCustomer
       when 'adyen'
         PaymentProviderCustomers::AdyenCustomer
       end

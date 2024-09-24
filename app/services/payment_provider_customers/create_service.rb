@@ -65,10 +65,12 @@ module PaymentProviderCustomers
         return PaymentProviderCustomers::AdyenCreateJob.perform_later(result.provider_customer) if async
 
         PaymentProviderCustomers::AdyenCreateJob.perform_now(result.provider_customer)
-      else
+      elsif result.provider_customer.type == 'PaymentProviderCustomers::GocardlessCustomer'
         return PaymentProviderCustomers::GocardlessCreateJob.perform_later(result.provider_customer) if async
 
         PaymentProviderCustomers::GocardlessCreateJob.perform_now(result.provider_customer)
+      elsif result.provider_customer.type == 'PaymentProviderCustomers::CashfreeCustomer'
+        # INFO: Cashfree payment provider does not support customer creation
       end
     end
 

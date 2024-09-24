@@ -14,6 +14,11 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
               code
               __typename
             }
+            ... on CashfreeProvider {
+              id
+              code
+              __typename
+            }
             ... on GocardlessProvider {
               id
               code
@@ -34,11 +39,13 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:adyen_provider) { create(:adyen_provider, organization:) }
+  let(:cashfree_provider) { create(:cashfree_provider, organization:) }
   let(:gocardless_provider) { create(:gocardless_provider, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
 
   before do
     adyen_provider
+    cashfree_provider
     gocardless_provider
     stripe_provider
   end
@@ -54,6 +61,11 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
           paymentProviders(limit: 5, type: stripe) {
             collection {
               ... on AdyenProvider {
+                id
+                code
+                __typename
+              }
+              ... on CashfreeProvider {
                 id
                 code
                 __typename
@@ -106,6 +118,11 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
                 code
                 __typename
               }
+              ... on CashfreeProvider {
+                id
+                code
+                __typename
+              }
               ... on GocardlessProvider {
                 id
                 code
@@ -136,6 +153,9 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
       adyen_provider_result = payment_providers_response['collection'].find do |record|
         record['__typename'] == 'AdyenProvider'
       end
+      cashfree_provider_result = payment_providers_response['collection'].find do |record|
+        record['__typename'] == 'CashfreeProvider'
+      end
       gocardless_provider_result = payment_providers_response['collection'].find do |record|
         record['__typename'] == 'GocardlessProvider'
       end
@@ -144,14 +164,15 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
       end
 
       aggregate_failures do
-        expect(payment_providers_response['collection'].count).to eq(3)
+        expect(payment_providers_response['collection'].count).to eq(4)
 
         expect(adyen_provider_result['id']).to eq(adyen_provider.id)
+        expect(cashfree_provider_result['id']).to eq(cashfree_provider.id)
         expect(gocardless_provider_result['id']).to eq(gocardless_provider.id)
         expect(stripe_provider_result['id']).to eq(stripe_provider.id)
 
         expect(payment_providers_response['metadata']['currentPage']).to eq(1)
-        expect(payment_providers_response['metadata']['totalCount']).to eq(3)
+        expect(payment_providers_response['metadata']['totalCount']).to eq(4)
       end
     end
   end
@@ -164,6 +185,10 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
             collection {
               ... on AdyenProvider {
                 livePrefix
+              }
+              ... on CashfreeProvider {
+                clientId
+                clientSecret
               }
               ... on GocardlessProvider {
                 hasAccessToken
@@ -188,11 +213,13 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         )
 
         expect(adyen_provider.live_prefix).to be_a String
+        expect(cashfree_provider.client_id).to be_a String
+        expect(cashfree_provider.client_secret).to be_a String
         expect(gocardless_provider.access_token).to be_a String
         expect(stripe_provider.success_redirect_url).to be_a String
 
         payment_providers_response = result['data']['paymentProviders']['collection']
-        expect(payment_providers_response.map(&:values)).to eq [[nil], [nil], [nil]]
+        expect(payment_providers_response.map(&:values)).to eq [[nil], [nil, nil], [nil], [nil]]
       end
     end
 
@@ -206,7 +233,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         )
 
         payment_providers_response = result['data']['paymentProviders']['collection']
-        expect(payment_providers_response.map(&:values)).to eq [[adyen_provider.live_prefix], [true], [stripe_provider.success_redirect_url]]
+        expect(payment_providers_response.map(&:values)).to eq [[adyen_provider.live_prefix], [cashfree_provider.client_id, cashfree_provider.client_secret], [true], [stripe_provider.success_redirect_url]]
       end
     end
   end
