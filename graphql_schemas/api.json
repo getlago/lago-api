@@ -18335,6 +18335,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "HubspotIntegration",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "NetsuiteIntegration",
               "ofType": null
             },

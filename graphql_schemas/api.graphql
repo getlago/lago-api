@@ -3973,7 +3973,7 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime @specifiedBy(url: "https://tools.ietf.org/html/rfc3339")
 
-union Integration = AnrokIntegration | NetsuiteIntegration | OktaIntegration | XeroIntegration
+union Integration = AnrokIntegration | HubspotIntegration | NetsuiteIntegration | OktaIntegration | XeroIntegration
 
 """
 IntegrationCollection type
