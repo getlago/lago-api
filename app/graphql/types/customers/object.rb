@@ -113,6 +113,8 @@ module Types
           object.stripe_customer
         when :gocardless
           object.gocardless_customer
+        when :cashfree
+          object.cashfree_customer
         when :adyen
           object.adyen_customer
         end
