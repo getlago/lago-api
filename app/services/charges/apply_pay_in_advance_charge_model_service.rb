@@ -2,7 +2,7 @@
 
 module Charges
   class ApplyPayInAdvanceChargeModelService < BaseService
-    CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_events paid_units paid_events fixed_fee_total_amount min_max_adjustment_total_amount]
+    CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_events paid_units paid_events fixed_fee_total_amount min_max_adjustment_total_amount per_unit_total_amount]
 
     def initialize(charge:, aggregation_result:, properties:)
       @charge = charge
@@ -119,8 +119,7 @@ module Charges
       all_charges_details = applied_charge_model.amount_details
       charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
       base_details = {
-        rate: all_charges_details[:rate],
-        per_unit_total_amount: all_charges_details[:per_unit_total_amount]
+        rate: all_charges_details[:rate]
       }
 
       puts 'all_charges_details'
