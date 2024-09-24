@@ -113,6 +113,8 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         aggregate_failures do
           expect(result).to be_success
           expect(result.credit_note.id).to eq(credit_note.id)
+          expect(result.credit_note.integration_resources.last.external_id).not_to be_nil
+          expect(result.credit_note.integration_resources.last.integration_id).to eq(integration.id)
         end
       end
 
@@ -135,6 +137,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
+          expect(credit_note.reload.integration_resources.where(integration_id: integration.id).count).to eq(0)
         end
       end
 

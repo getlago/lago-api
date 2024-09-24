@@ -24,6 +24,7 @@ module Integrations
 
             process_response(body)
             assign_external_customer_id
+            create_integration_resource if result.succeeded_id
 
             result
           rescue LagoHttpClient::HttpError => e
@@ -46,6 +47,16 @@ module Integrations
               integration_customer:,
               credit_note:
             ).body
+          end
+
+          def create_integration_resource
+            IntegrationResource.create!(
+              syncable_id: credit_note.id,
+              syncable_type: 'CreditNote',
+              external_id: result.succeeded_id,
+              integration_id: integration.id,
+              resource_type: 'credit_note'
+            )
           end
         end
       end

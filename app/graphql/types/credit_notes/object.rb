@@ -48,6 +48,7 @@ module Types
       field :error_details, [Types::ErrorDetails::Object], null: true
       field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
+      field :tax_provider_id, String, null: true
       field :tax_provider_syncable, GraphQL::Types::Boolean, null: false
 
       def applied_taxes
@@ -76,6 +77,13 @@ module Types
           syncable_type: 'CreditNote',
           resource_type: :credit_note
         )&.external_id
+      end
+
+      def tax_provider_id
+        integration_customer = object.customer&.anrok_customer
+        return nil unless integration_customer
+
+        object.integration_resource.where(integration_id: integration_customer.integration_id).last&.external_id
       end
     end
   end
