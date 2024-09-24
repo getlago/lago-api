@@ -2,8 +2,8 @@
 
 module Charges
   class ApplyPayInAdvanceChargeModelService < BaseService
-    CHARDE_AMOUNT_DETAILS_KEYS = %i[units free_units free_events paid_units per_unit_total_amount paid_events
-      fixed_fee_unit_amount fixed_fee_total_amount min_max_adjustment_total_amount]
+    CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_events paid_units paid_events fixed_fee_total_amount min_max_adjustment_total_amount]
+
     def initialize(charge:, aggregation_result:, properties:)
       @charge = charge
       @aggregation_result = aggregation_result
@@ -118,10 +118,19 @@ module Charges
     def calculated_amount_details
       all_charges_details = applied_charge_model.amount_details
       charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
+      base_details = {
+        rate: all_charges_details[:rate],
+        per_unit_total_amount: all_charges_details[:per_unit_total_amount]
+      }
 
-      CHARDE_AMOUNT_DETAILS_KEYS.each_with_object({rate: all_charges_details[:rate]}) do |key, result|
+      puts 'all_charges_details'
+      puts all_charges_details
+      puts 'charges_details_without_last_event'
+      puts charges_details_without_last_event
+      result = CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(base_details) do |key, result|
         result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).to_s
       end
+      result.merge({free_units: (result[:units].to_f - result[:paid_units].to_f).to_s})
     end
   end
 end
