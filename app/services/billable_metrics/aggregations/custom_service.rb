@@ -128,7 +128,7 @@ module BillableMetrics
 
         # NOTE: Loop over events by batch
         (1..total_batches).each do |batch|
-          events_properties = store.events.page(batch).per(BATCH_SIZE)
+          events_properties = store.events(ordered: true).page(batch).per(BATCH_SIZE)
             .map { |event| {timestamp: event.timestamp, properties: event.properties} }
 
           state = sandboxed_aggregation(events_properties, state)
