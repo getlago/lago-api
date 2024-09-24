@@ -1,7 +1,6 @@
 
 - if amount_details['free_units'].to_f.positive? || amount_details['free_events'].to_f.positive?
   / Free units per transaction
-  | free units per transaction
   tr.details
     td.body-2 = I18n.t('invoice.percentage.free_units_per_transaction', count: 1)
     td.body-2 = amount_details['free_units']
