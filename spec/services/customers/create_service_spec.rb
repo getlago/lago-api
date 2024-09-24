@@ -704,23 +704,44 @@ RSpec.describe Customers::CreateService, type: :service do
 
         before { customer }
 
-        it 'updates the customer' do
-          result = customers_service.create_from_api(
-            organization:,
-            params: create_args
-          )
+        context 'when payment provider exists' do
+          let(:stripe_provider) { create(:stripe_provider, code: payment_provider_code, organization:) }
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.customer).to eq(customer)
+          before { stripe_provider }
 
-            # NOTE: It should not erase exsting properties
-            expect(result.customer.payment_provider).to eq('stripe')
-            expect(result.customer.stripe_customer).to be_present
+          it 'updates the customer' do
+            result = customers_service.create_from_api(
+              organization:,
+              params: create_args
+            )
 
-            stripe_customer = result.customer.stripe_customer
-            expect(stripe_customer.id).to be_present
-            expect(stripe_customer.provider_customer_id).to eq('stripe_id')
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.customer).to eq(customer)
+
+              # NOTE: It should not erase exsting properties
+              expect(result.customer.payment_provider).to eq('stripe')
+              expect(result.customer.stripe_customer).to be_present
+
+              stripe_customer = result.customer.stripe_customer
+              expect(stripe_customer.id).to be_present
+              expect(stripe_customer.provider_customer_id).to eq('stripe_id')
+            end
+          end
+        end
+
+        context 'when payment provider does not exists' do
+          it 'updates the customer' do
+            result = customers_service.create_from_api(
+              organization:,
+              params: create_args
+            )
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages[:base]).to include('payment_provider_not_found')
+            end
           end
         end
 
@@ -734,13 +755,9 @@ RSpec.describe Customers::CreateService, type: :service do
             )
 
             aggregate_failures do
-              expect(result).to be_success
-              expect(result.customer).to eq(customer)
-
-              # NOTE: It should not erase existing properties
-              expect(result.customer.payment_provider).to eq(nil)
-              expect(result.customer.stripe_customer).not_to be_present
-              expect(result.customer.gocardless_customer).not_to be_present
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages[:base]).to include('payment_provider_not_found')
             end
           end
         end
