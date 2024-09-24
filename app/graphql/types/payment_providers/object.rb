@@ -7,7 +7,8 @@ module Types
 
       possible_types Types::PaymentProviders::Adyen,
         Types::PaymentProviders::Gocardless,
-        Types::PaymentProviders::Stripe
+        Types::PaymentProviders::Stripe,
+        Types::PaymentProviders::Cashfree
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -17,6 +18,8 @@ module Types
           Types::PaymentProviders::Stripe
         when 'PaymentProviders::GocardlessProvider'
           Types::PaymentProviders::Gocardless
+        when 'PaymentProviders::CashfreeProvider'
+          Types::PaymentProviders::Cashfree
         else
           raise "Unexpected Payment provider type: #{object.inspect}"
         end

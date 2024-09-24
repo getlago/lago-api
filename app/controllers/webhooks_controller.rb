@@ -20,6 +20,26 @@ class WebhooksController < ApplicationController
     head(:ok)
   end
 
+  def cashfree
+    result = PaymentProviders::CashfreeService.new.handle_incoming_webhook(
+      organization_id: params[:organization_id],
+      code: params[:code].presence,
+      body: request.body.read,
+      timestamp: request.headers['X-Cashfree-Timestamp'],
+      signature: request.headers['X-Cashfree-Signature']
+    )
+
+    unless result.success?
+      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == 'webhook_error'
+        return head(:bad_request)
+      end
+
+      result.raise_if_error!
+    end
+
+    head(:ok)
+  end
+
   def gocardless
     result = PaymentProviders::GocardlessService.new.handle_incoming_webhook(
       organization_id: params[:organization_id],

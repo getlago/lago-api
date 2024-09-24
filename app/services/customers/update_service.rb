@@ -186,6 +186,12 @@ module Customers
         return unless handle_provider_customer
 
         update_gocardless_customer(customer, billing_configuration)
+      when 'cashfree'
+        handle_provider_customer ||= customer.cashfree_customer&.provider_customer_id.present?
+
+        return unless handle_provider_customer
+
+        update_cashfree_customer(customer, billing_configuration)
       when 'adyen'
         handle_provider_customer ||= customer.adyen_customer&.provider_customer_id.present?
 
@@ -217,6 +223,18 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.gocardless_customer&.reload
+    end
+
+    def update_cashfree_customer(customer, billing_configuration)
+      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
+        customer_class: PaymentProviderCustomers::CashfreeCustomer,
+        payment_provider_id: payment_provider(customer)&.id,
+        params: billing_configuration
+      )
+      create_result.raise_if_error!
+
+      # NOTE: Create service is modifying an other instance of the provider customer
+      customer.cashfree_customer&.reload
     end
 
     def update_adyen_customer(customer, billing_configuration)
