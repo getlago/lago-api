@@ -27,4 +27,3 @@ RSpec.describe CreditNoteItem, type: :model do
     end
   end
 end
-

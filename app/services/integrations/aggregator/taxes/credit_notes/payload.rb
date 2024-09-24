@@ -51,14 +51,13 @@ module Integrations
             {
               'item_id' => fee.item_id,
               'item_code' => mapped_item.external_id,
-              'amount_cents' => item.sub_total_excluding_taxes_amount_cents * -1
+              'amount_cents' => item.sub_total_excluding_taxes_amount_cents.to_i * -1
             }
           end
 
           private
 
           attr_reader :customer, :integration_customer, :credit_note
-
         end
       end
     end
