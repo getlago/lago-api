@@ -285,6 +285,7 @@ module Customers
         customer.payment_provider = nil
         if %w[stripe gocardless adyen].include?(billing[:payment_provider])
           customer.payment_provider = billing[:payment_provider]
+          customer.payment_provider_code = billing[:payment_provider_code] if billing.key?(:payment_provider_code)
         end
       end
 
@@ -338,7 +339,7 @@ module Customers
     end
 
     def should_create_billing_configuration?(billing, customer)
-      billing[:sync_with_provider] && customer.provider_customer&.provider_customer_id.nil?
+      (billing[:sync_with_provider] || billing[:provider_customer_id].present?) && customer.provider_customer&.provider_customer_id.nil?
     end
   end
 end
