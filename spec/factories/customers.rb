@@ -39,5 +39,11 @@ FactoryBot.define do
       shipping_state { state }
       shipping_country { country }
     end
+
+    trait :with_tax_integration do
+      after :create do |customer|
+        create(:anrok_customer, customer:)
+      end
+    end
   end
 end

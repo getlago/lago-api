@@ -135,6 +135,16 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       let(:service_call) { create_service.call }
     end
 
+    context 'when customer has tax_provider set up' do
+      let(:customer) { create(:customer, :with_tax_integration, organization:) }
+
+      it 'sync with tax provider' do
+        expect do
+          create_service.call
+        end.to have_enqueued_job(CreditNotes::ProviderTaxes::ReportJob)
+      end
+    end
+
     context 'when organization does not have right email settings' do
       before { invoice.organization.update!(email_settings: []) }
 

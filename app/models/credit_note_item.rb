@@ -11,6 +11,16 @@ class CreditNoteItem < ApplicationRecord
   def applied_taxes
     credit_note.applied_taxes.where(tax_code: fee.applied_taxes.select('fees_taxes.tax_code'))
   end
+
+  # This method returns item amount with coupons applied
+  # coupons are applied proportionally to the way they're applied on corresponding fee
+  # so knowing the item total proportion to fee total we can calculate item amount with coupons
+  def sub_total_excluding_taxes_amount_cents
+    return 0 if amount_cents.zero? || fee.amount_cents.zero?
+
+    item_proportion_to_fee = amount_cents.to_f / fee.amount_cents
+    item_proportion_to_fee * fee.sub_total_excluding_taxes_amount_cents
+  end
 end
 
 # == Schema Information
