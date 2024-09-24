@@ -8,9 +8,6 @@ require "graphql/rake_task"
 
 Rails.application.load_tasks
 
-# TODO(graphql_schema): This schema is deprecated and should be removed.
-GraphQL::RakeTask.new(schema_name: "LagoApiSchema")
-
 GraphQL::RakeTask.new(
   schema_name: "Schemas::ApiSchema",
   idl_outfile: "graphql_schemas/api.graphql",
