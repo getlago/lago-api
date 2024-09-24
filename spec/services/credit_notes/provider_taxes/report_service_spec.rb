@@ -113,7 +113,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         aggregate_failures do
           expect(result).to be_success
           expect(result.credit_note.id).to eq(credit_note.id)
-          expect(result.credit_note.integration_resources.last.external_id).to_not be_nil
+          expect(result.credit_note.integration_resources.last.external_id).not_to be_nil
           expect(result.credit_note.integration_resources.last.integration_id).to eq(integration.id)
         end
       end
