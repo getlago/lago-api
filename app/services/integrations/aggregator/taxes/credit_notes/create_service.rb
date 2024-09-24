@@ -51,7 +51,8 @@ module Integrations
 
           def create_integration_resource
             IntegrationResource.create!(
-              syncable: credit_note,
+              syncable_id: credit_note.id,
+              syncable_type: 'CreditNote',
               external_id: result.succeeded_id,
               integration_id: integration.id,
               resource_type: 'credit_note'

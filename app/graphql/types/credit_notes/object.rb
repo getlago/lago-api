@@ -81,15 +81,9 @@ module Types
 
       def tax_provider_id
         integration_customer = object.customer&.anrok_customer
-
         return nil unless integration_customer
 
-        IntegrationResource.find_by(
-          integration: integration_customer.integration,
-          syncable_id: object.id,
-          syncable_type: 'CreditNote',
-          resource_type: :credit_note
-        )&.external_id
+        object.integration_resource.where(integration_id: integration_customer.integration_id).last&.external_id
       end
     end
   end
