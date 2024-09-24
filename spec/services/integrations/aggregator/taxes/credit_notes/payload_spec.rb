@@ -45,7 +45,8 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payload do
       invoice:,
       add_on:,
       created_at: current_time - 3.seconds,
-      amount_cents: 200
+      amount_cents: 200,
+      precise_amount_cents: 200
     )
   end
   let(:fee_add_on_two) do
@@ -54,7 +55,9 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payload do
       invoice:,
       add_on: add_on_two,
       created_at: current_time - 2.seconds,
-      amount_cents: 200
+      amount_cents: 200,
+      precise_amount_cents: 200,
+      precise_coupons_amount_cents: 20
     )
   end
   let(:credit_note) do
@@ -99,7 +102,7 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payload do
           {
             'item_id' => fee_add_on_two.item_id,
             'item_code' => '1',
-            'amount_cents' => -180
+            'amount_cents' => -162
           }
         ]
       }

@@ -51,7 +51,7 @@ module Integrations
             {
               'item_id' => fee.item_id,
               'item_code' => mapped_item.external_id,
-              'amount_cents' => calculate_amount_with_coupons(item, fee)(item.amount_cents&.to_i || 0) * -1
+              'amount_cents' => item.sub_total_excluding_taxes_amount_cents * -1
             }
           end
 
@@ -59,10 +59,6 @@ module Integrations
 
           attr_reader :customer, :integration_customer, :credit_note
 
-          def calculate_amount_with_coupons(item, fee)
-            item_proportion_to_fee = fee.amount_cents / item.amount_cents.to_f
-            item_proportion_to_fee * fee.sub_total_excluding_taxes_amount_cents
-          end
         end
       end
     end
