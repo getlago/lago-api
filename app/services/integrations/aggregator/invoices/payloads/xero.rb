@@ -6,7 +6,7 @@ module Integrations
       module Payloads
         class Xero < BasePayload
           def initialize(integration_customer:, invoice:)
-            super(integration_customer:, invoice:)
+            super
           end
         end
       end

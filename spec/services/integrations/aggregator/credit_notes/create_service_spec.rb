@@ -135,10 +135,10 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       'columns' => {
         'tranid' => credit_note.number,
         'entity' => integration_customer.external_customer_id,
-        'istaxable' => true,
-        'taxitem' => integration_collection_mapping5&.external_id,
-        'taxamountoverride' => 80.0,
+        'taxregoverride' => true,
+        'taxdetailsoverride' => true,
         'otherrefnum' => credit_note.number,
+        'custbody_ava_disable_tax_calculation' => true,
         'custbody_lago_id' => credit_note.id,
         'tranId' => credit_note.id
       },
@@ -150,13 +150,15 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
               'item' => 'm2',
               'account' => 'm22',
               'quantity' => 1,
-              'rate' => 2.12
+              'rate' => 2.12,
+              'taxdetailsreference' => anything
             },
             {
               'item' => '2',
               'account' => '22',
               'quantity' => 1,
-              'rate' => -20.0
+              'rate' => -20.0,
+              'taxdetailsreference' => 'coupon_item'
             }
           ]
         }

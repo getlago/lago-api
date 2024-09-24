@@ -37,18 +37,6 @@ module Integrations
 
           private
 
-          def tax_line_items
-            fees.map { |fee| tax_line_item(fee) }
-          end
-
-          def fee_items
-            fees.map { |fee| item(fee) }
-          end
-
-          def fees
-            @fees ||= invoice.fees.where('amount_cents > ?', 0).order(created_at: :asc)
-          end
-
           def columns
             result = {
               'tranid' => invoice.id,
@@ -65,6 +53,25 @@ module Integrations
             end
 
             result
+          end
+
+          def tax_line_items
+            fees.map { |fee| tax_line_item(fee) }
+          end
+
+          def tax_line_item(fee)
+            {
+              'taxdetailsreference' => fee.id,
+              'taxamount' => amount(fee.taxes_amount_cents, resource: invoice),
+              'taxbasis' => 1,
+              'taxrate' => fee.taxes_rate,
+              'taxtype' => tax_item.tax_type,
+              'taxcode' => tax_item.tax_code
+            }
+          end
+
+          def fees
+            @fees ||= invoice.fees.where('amount_cents > ?', 0).order(created_at: :asc)
           end
 
           def invoice_url
@@ -100,17 +107,6 @@ module Integrations
               'quantity' => fee.units,
               'rate' => limited_rate(fee.precise_unit_amount),
               'taxdetailsreference' => fee.id
-            }
-          end
-
-          def tax_line_item(fee)
-            {
-              'taxdetailsreference' => fee.id,
-              'taxamount' => amount(fee.taxes_amount_cents, resource: invoice),
-              'taxbasis' => 1,
-              'taxrate' => fee.taxes_rate,
-              'taxtype' => tax_item.tax_type,
-              'taxcode' => tax_item.tax_code
             }
           end
 
@@ -158,7 +154,7 @@ module Integrations
 
               output << {
                 'taxbasis' => 1,
-                'taxamount' => amount((tax_diff_amount_cents || 0).abs, resource: invoice),
+                'taxamount' => amount(tax_diff_amount_cents, resource: invoice),
                 'taxrate' => invoice.taxes_rate,
                 'taxtype' => tax_item.tax_type,
                 'taxcode' => tax_item.tax_code,
