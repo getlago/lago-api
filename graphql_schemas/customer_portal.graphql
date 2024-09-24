@@ -1536,6 +1536,7 @@ type CreditNote {
   refundedAt: ISO8601DateTime
   sequentialId: ID!
   subTotalExcludingTaxesAmountCents: BigInt!
+  taxProviderId: String
   taxProviderSyncable: Boolean!
   taxesAmountCents: BigInt!
   taxesRate: Float!
