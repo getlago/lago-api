@@ -83,7 +83,7 @@ module Types
         integration_customer = object.customer&.anrok_customer
         return nil unless integration_customer
 
-        object.integration_resource.where(integration_id: integration_customer.integration_id).last&.external_id
+        object.integration_resources.where(integration_id: integration_customer.integration_id).last&.external_id
       end
     end
   end
