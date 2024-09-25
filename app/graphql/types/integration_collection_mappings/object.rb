@@ -11,6 +11,9 @@ module Types
       field :id, ID, null: false
       field :integration_id, ID, null: false
       field :mapping_type, Types::IntegrationCollectionMappings::MappingTypeEnum, null: false
+      field :tax_code, String, null: true
+      field :tax_nexus, String, null: true
+      field :tax_type, String, null: true
     end
   end
 end

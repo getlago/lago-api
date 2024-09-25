@@ -387,6 +387,9 @@ type CollectionMapping {
   id: ID!
   integrationId: ID!
   mappingType: MappingTypeEnum!
+  taxCode: String
+  taxNexus: String
+  taxType: String
 }
 
 """
@@ -2010,6 +2013,9 @@ input CreateIntegrationCollectionMappingInput {
   externalName: String
   integrationId: ID!
   mappingType: MappingTypeEnum!
+  taxCode: String
+  taxNexus: String
+  taxType: String
 }
 
 """
@@ -7630,6 +7636,9 @@ input UpdateIntegrationCollectionMappingInput {
   id: ID!
   integrationId: ID
   mappingType: MappingTypeEnum
+  taxCode: String
+  taxNexus: String
+  taxType: String
 }
 
 """

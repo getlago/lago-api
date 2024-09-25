@@ -12,6 +12,9 @@ module Types
       argument :external_name, String, required: false
       argument :integration_id, ID, required: false
       argument :mapping_type, Types::IntegrationCollectionMappings::MappingTypeEnum, required: false
+      argument :tax_code, String, required: false
+      argument :tax_nexus, String, required: false
+      argument :tax_type, String, required: false
     end
   end
 end
