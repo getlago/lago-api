@@ -23,7 +23,7 @@ module Integrations
                 'number' => invoice.number,
                 'currency' => invoice.currency,
                 'type' => 'ACCREC',
-                'fees' => (tax_adjusted_fees + discounts)
+                'fees' => (tax_adjusted_fee_items + discounts)
               }
             ]
           end
@@ -34,14 +34,18 @@ module Integrations
           attr_accessor :remaining_taxes_amount_cents
 
           def fees
-            @fees ||= invoice.fees.order(created_at: :asc).map { |fee| item(fee) }
+            @fees ||= invoice.fees.order(created_at: :asc)
           end
 
-          def tax_adjusted_fees
-            remaining_taxes_amount_cents = invoice.taxes_amount_cents - fees.sum { |f| f['taxes_amount_cents'] }.round
+          def fee_items
+            fees.map { |fee| item(fee) }
+          end
 
-            fees.map do |fee|
-              # TODO: if no coupon fix the tax rounding issue here:
+          def tax_adjusted_fee_items
+            remaining_taxes_amount_cents = invoice.taxes_amount_cents - fee_items.sum { |f| f['taxes_amount_cents'] }.round
+
+            fee_items.map do |fee|
+              # If no coupon fix the tax rounding issue here
               if remaining_taxes_amount_cents.to_i.abs > 0 &&
                   invoice.coupons_amount_cents == 0 &&
                   fee['taxes_amount_cents'] > remaining_taxes_amount_cents.to_i.abs

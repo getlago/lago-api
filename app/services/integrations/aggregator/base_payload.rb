@@ -74,6 +74,10 @@ module Integrations
       private
 
       attr_reader :integration
+
+      def tax_item_complete?
+        tax_item&.tax_nexus.present? && tax_item&.tax_type.present? && tax_item&.tax_code.present?
+      end
     end
   end
 end

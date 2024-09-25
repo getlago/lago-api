@@ -3,14 +3,28 @@
 require 'rails_helper'
 
 RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
+  let(:payload) { described_class.new(integration_customer:, invoice:) }
+  let(:integration_customer) { FactoryBot.create(:xero_customer, integration:, customer:) }
+  let(:integration) { create(:netsuite_integration, organization:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:organization) { create(:organization) }
+
+  let(:invoice) do
+    create(
+      :invoice,
+      customer:,
+      organization:,
+      coupons_amount_cents: 2000,
+      prepaid_credit_amount_cents: 4000,
+      credit_notes_amount_cents: 6000,
+      taxes_amount_cents: 200,
+      issuing_date: DateTime.new(2024, 7, 8)
+    )
+  end
+
   describe '#body' do
     subject(:body_call) { payload.body }
 
-    let(:payload) { described_class.new(integration_customer:, invoice:) }
-    let(:integration_customer) { FactoryBot.create(:xero_customer, integration:, customer:) }
-    let(:integration) { create(:netsuite_integration, organization:) }
-    let(:customer) { create(:customer, organization:) }
-    let(:organization) { create(:organization) }
     let(:add_on) { create(:add_on, organization:) }
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:charge) { create(:standard_charge, billable_metric:) }
@@ -90,19 +104,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       )
     end
 
-    let(:invoice) do
-      create(
-        :invoice,
-        customer:,
-        organization:,
-        coupons_amount_cents: 2000,
-        prepaid_credit_amount_cents: 4000,
-        credit_notes_amount_cents: 6000,
-        taxes_amount_cents: 200,
-        issuing_date: DateTime.new(2024, 7, 8)
-      )
-    end
-
     let(:fee_sub) do
       create(
         :fee,
@@ -165,37 +166,43 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 'item' => '3',
                 'account' => '33',
                 'quantity' => 0.0,
-                'rate' => 0.0
+                'rate' => 0.0,
+                'taxdetailsreference' => fee_sub.id
               },
               {
                 'item' => '4',
                 'account' => '44',
                 'quantity' => 0.0,
-                'rate' => 0.0
+                'rate' => 0.0,
+                'taxdetailsreference' => minimum_commitment_fee.id
               },
               {
                 'item' => 'm2',
                 'account' => 'm22',
                 'quantity' => 2,
-                'rate' => 4.1212121212334
+                'rate' => 4.1212121212334,
+                'taxdetailsreference' => charge_fee.id
               },
               {
                 'item' => '2',
                 'account' => '22',
                 'quantity' => 1,
-                'rate' => -20.0
+                'rate' => -20.0,
+                'taxdetailsreference' => 'coupon_item'
               },
               {
                 'item' => '6',
                 'account' => '66',
                 'quantity' => 1,
-                'rate' => -40.0
+                'rate' => -40.0,
+                'taxdetailsreference' => 'credit_item'
               },
               {
                 'item' => '1', # Fallback item instead of credit note
                 'account' => '11',
                 'quantity' => 1,
-                'rate' => -60.0
+                'rate' => -60.0,
+                'taxdetailsreference' => 'credit_note_item'
               }
             ]
           }
@@ -223,27 +230,50 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     end
 
     context 'when tax item is mapped' do
-      let(:columns) do
-        {
-          'tranid' => invoice.id,
-          'entity' => integration_customer.external_customer_id,
-          'istaxable' => true,
-          'taxitem' => integration_collection_mapping5.external_id,
-          'taxamountoverride' => 2.0,
-          'otherrefnum' => invoice.number,
-          'custbody_lago_id' => invoice.id,
-          'custbody_ava_disable_tax_calculation' => true,
-          'custbody_lago_invoice_link' => invoice_link,
-          'duedate' => due_date
-        }
-      end
-
       before do
         integration_collection_mapping5
       end
 
-      it 'returns payload body with tax columns' do
-        expect(subject).to eq(body)
+      context 'when tax nexus is not present' do
+        let(:columns) do
+          {
+            'tranid' => invoice.id,
+            'entity' => integration_customer.external_customer_id,
+            'otherrefnum' => invoice.number,
+            'custbody_lago_id' => invoice.id,
+            'custbody_ava_disable_tax_calculation' => true,
+            'custbody_lago_invoice_link' => invoice_link,
+            'duedate' => due_date
+          }
+        end
+
+        it 'returns payload body with tax columns' do
+          expect(subject).to eq(body)
+        end
+      end
+
+      context 'when tax nexus is present' do
+        let(:columns) do
+          {
+            'tranid' => invoice.id,
+            'entity' => integration_customer.external_customer_id,
+            'otherrefnum' => invoice.number,
+            'custbody_lago_id' => invoice.id,
+            'custbody_ava_disable_tax_calculation' => true,
+            'custbody_lago_invoice_link' => invoice_link,
+            'duedate' => due_date,
+            'nexus' => 'some_nexus'
+          }
+        end
+
+        before do
+          integration_collection_mapping5.tax_nexus = 'some_nexus'
+          integration_collection_mapping5.save!
+        end
+
+        it 'returns payload body with tax columns' do
+          expect(subject).to eq(body)
+        end
       end
     end
 
@@ -252,7 +282,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
         {
           'tranid' => invoice.id,
           'entity' => integration_customer.external_customer_id,
-          'istaxable' => true,
           'otherrefnum' => invoice.number,
           'custbody_lago_id' => invoice.id,
           'custbody_ava_disable_tax_calculation' => true,
@@ -263,6 +292,65 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
 
       it 'returns payload body without tax columns' do
         expect(subject).to eq(body)
+      end
+    end
+  end
+
+  describe '#tax_item_complete?' do
+    subject(:tax_item_complete_call) { payload.__send__(:tax_item_complete?) }
+
+    let(:integration_collection_mapping) do
+      create(
+        :netsuite_collection_mapping,
+        integration:,
+        mapping_type: :tax,
+        settings:
+      )
+    end
+
+    let(:settings) do
+      {external_id: '5', external_account_code: '55', external_name: '', tax_nexus:, tax_type:, tax_code:}
+    end
+
+    before { integration_collection_mapping }
+
+    context 'when tax_item has all required attributes' do
+      let(:tax_nexus) { 'some_nexus' }
+      let(:tax_type) { 'some_type' }
+      let(:tax_code) { 'some_code' }
+
+      it 'returns true' do
+        expect(subject).to be true
+      end
+    end
+
+    context 'when tax_item is missing tax_nexus' do
+      let(:tax_nexus) { [nil, ''].sample }
+      let(:tax_type) { 'some_type' }
+      let(:tax_code) { 'some_code' }
+
+      it 'returns false' do
+        expect(subject).to be false
+      end
+    end
+
+    context 'when tax_item is missing tax_type' do
+      let(:tax_nexus) { 'some_nexus' }
+      let(:tax_type) { [nil, ''].sample }
+      let(:tax_code) { 'some_code' }
+
+      it 'returns false' do
+        expect(subject).to be false
+      end
+    end
+
+    context 'when tax_item is missing tax_code' do
+      let(:tax_nexus) { 'some_nexus' }
+      let(:tax_type) { 'some_type' }
+      let(:tax_code) { [nil, ''].sample }
+
+      it 'returns false' do
+        expect(subject).to be false
       end
     end
   end

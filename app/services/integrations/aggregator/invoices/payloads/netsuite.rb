@@ -8,22 +8,31 @@ module Integrations
           MAX_DECIMALS = 15
 
           def body
-            {
+            result = {
               'type' => type,
               'isDynamic' => true,
               'columns' => columns,
               'lines' => [
                 {
                   'sublistId' => 'item',
-                  'lineItems' => invoice.fees.where('amount_cents > ?', 0).order(created_at: :asc).map do |fee|
-                    item(fee)
-                  end + discounts
+                  'lineItems' => fee_items + discounts
                 }
               ],
               'options' => {
                 'ignoreMandatoryFields' => false
               }
             }
+
+            if tax_item_complete?
+              result['taxdetails'] = [
+                {
+                  'sublistId' => 'taxdetails',
+                  'lineItems' => tax_line_items + discount_taxes
+                }
+              ]
+            end
+
+            result
           end
 
           private
@@ -32,7 +41,6 @@ module Integrations
             result = {
               'tranid' => invoice.id,
               'entity' => integration_customer.external_customer_id,
-              'istaxable' => true,
               'otherrefnum' => invoice.number,
               'custbody_lago_id' => invoice.id,
               'custbody_ava_disable_tax_calculation' => true,
@@ -40,12 +48,30 @@ module Integrations
               'duedate' => due_date
             }
 
-            if tax_item
-              result['taxitem'] = tax_item.external_id
-              result['taxamountoverride'] = amount(invoice.taxes_amount_cents, resource: invoice)
+            if tax_item&.tax_nexus.present?
+              result['nexus'] = tax_item.tax_nexus
             end
 
             result
+          end
+
+          def tax_line_items
+            fees.map { |fee| tax_line_item(fee) }
+          end
+
+          def tax_line_item(fee)
+            {
+              'taxdetailsreference' => fee.id,
+              'taxamount' => amount(fee.taxes_amount_cents, resource: invoice),
+              'taxbasis' => 1,
+              'taxrate' => fee.taxes_rate,
+              'taxtype' => tax_item.tax_type,
+              'taxcode' => tax_item.tax_code
+            }
+          end
+
+          def fees
+            @fees ||= invoice.fees.where('amount_cents > ?', 0).order(created_at: :asc)
           end
 
           def invoice_url
@@ -79,7 +105,8 @@ module Integrations
               'item' => mapped_item.external_id,
               'account' => mapped_item.external_account_code,
               'quantity' => fee.units,
-              'rate' => limited_rate(fee.precise_unit_amount)
+              'rate' => limited_rate(fee.precise_unit_amount),
+              'taxdetailsreference' => fee.id
             }
           end
 
@@ -91,7 +118,8 @@ module Integrations
                 'item' => coupon_item.external_id,
                 'account' => coupon_item.external_account_code,
                 'quantity' => 1,
-                'rate' => -amount(invoice.coupons_amount_cents, resource: invoice)
+                'rate' => -amount(invoice.coupons_amount_cents, resource: invoice),
+                'taxdetailsreference' => 'coupon_item'
               }
             end
 
@@ -100,7 +128,8 @@ module Integrations
                 'item' => credit_item.external_id,
                 'account' => credit_item.external_account_code,
                 'quantity' => 1,
-                'rate' => -amount(invoice.prepaid_credit_amount_cents, resource: invoice)
+                'rate' => -amount(invoice.prepaid_credit_amount_cents, resource: invoice),
+                'taxdetailsreference' => 'credit_item'
               }
             end
 
@@ -109,7 +138,49 @@ module Integrations
                 'item' => credit_note_item.external_id,
                 'account' => credit_note_item.external_account_code,
                 'quantity' => 1,
-                'rate' => -amount(invoice.credit_notes_amount_cents, resource: invoice)
+                'rate' => -amount(invoice.credit_notes_amount_cents, resource: invoice),
+                'taxdetailsreference' => 'credit_note_item'
+              }
+            end
+
+            output
+          end
+
+          def discount_taxes
+            output = []
+
+            if invoice.coupons_amount_cents > 0
+              tax_diff_amount_cents = invoice.taxes_amount_cents - fees.sum { |f| f['taxes_amount_cents'] }
+
+              output << {
+                'taxbasis' => 1,
+                'taxamount' => amount(tax_diff_amount_cents, resource: invoice),
+                'taxrate' => invoice.taxes_rate,
+                'taxtype' => tax_item.tax_type,
+                'taxcode' => tax_item.tax_code,
+                'taxdetailsreference' => 'coupon_item'
+              }
+            end
+
+            if credit_item && invoice.prepaid_credit_amount_cents > 0
+              output << {
+                'taxbasis' => 1,
+                'taxamount' => 0,
+                'taxrate' => invoice.taxes_rate,
+                'taxtype' => tax_item.tax_type,
+                'taxcode' => tax_item.tax_code,
+                'taxdetailsreference' => 'credit_item'
+              }
+            end
+
+            if credit_note_item && invoice.credit_notes_amount_cents > 0
+              output << {
+                'taxbasis' => 1,
+                'taxamount' => 0,
+                'taxrate' => invoice.taxes_rate,
+                'taxtype' => tax_item.tax_type,
+                'taxcode' => tax_item.tax_code,
+                'taxdetailsreference' => 'credit_note_item'
               }
             end
 
