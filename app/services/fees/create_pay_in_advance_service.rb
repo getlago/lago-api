@@ -133,9 +133,6 @@ module Fees
     end
 
     def apply_charge_model(aggregation_result:, properties:)
-      puts '=' * 80
-      puts 'aggregation_result: ' + aggregation_result.to_s
-      puts 'properties: ' + properties.to_s
       charge_model_result = Charges::ApplyPayInAdvanceChargeModelService.call(
         charge:, aggregation_result:, properties:
       )

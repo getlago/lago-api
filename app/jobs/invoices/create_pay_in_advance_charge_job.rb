@@ -9,11 +9,6 @@ module Invoices
     unique :until_executed, on_conflict: :log
 
     def perform(charge:, event:, timestamp:, invoice: nil)
-      puts '-' * 100
-      puts 'charge id: ' + charge.id.to_s
-      puts 'event id: ' + event["id"].to_s
-      # when running it from rails console, everything works fine;
-      # when running from sideqik = min/max is not applied :think:
       result = Invoices::CreatePayInAdvanceChargeService.call(charge:, event:, timestamp:, invoice:)
       return if result.success?
       # NOTE: We don't want a dead job for failed invoice due to the tax reason.
