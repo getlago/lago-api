@@ -62,7 +62,7 @@ class Charge < ApplicationRecord
   def simple_percentage?
     return false unless percentage?
 
-    properties.keys == ['charge']
+    properties.keys == ['rate']
   end
 
   private
