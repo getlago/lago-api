@@ -23,6 +23,9 @@ RSpec.describe Types::Subscriptions::Object do
   it { is_expected.to have_field(:subscription_at).of_type('ISO8601DateTime') }
   it { is_expected.to have_field(:terminated_at).of_type('ISO8601DateTime') }
 
+  it { is_expected.to have_field(:current_billing_period_started_at).of_type('ISO8601DateTime') }
+  it { is_expected.to have_field(:current_billing_period_ending_at).of_type('ISO8601DateTime') }
+
   it { is_expected.to have_field(:created_at).of_type('ISO8601DateTime!') }
   it { is_expected.to have_field(:updated_at).of_type('ISO8601DateTime!') }
 

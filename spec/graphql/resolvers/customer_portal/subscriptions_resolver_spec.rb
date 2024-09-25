@@ -7,7 +7,7 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionsResolver, type: :graphql 
     <<~GQL
       query {
         customerPortalSubscriptions(limit: 5, planCode: "#{plan.code}", status: [active]) {
-            collection { id externalId plan { code } }
+            collection { id externalId currentBillingPeriodStartedAt currentBillingPeriodEndingAt plan { code } }
             metadata { currentPage, totalCount }
         }
       }

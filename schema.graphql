@@ -6502,6 +6502,8 @@ type Subscription {
   billingTime: BillingTimeEnum
   canceledAt: ISO8601DateTime
   createdAt: ISO8601DateTime!
+  currentBillingPeriodEndingAt: ISO8601DateTime
+  currentBillingPeriodStartedAt: ISO8601DateTime
   customer: Customer!
   endingAt: ISO8601DateTime
   externalId: String!
