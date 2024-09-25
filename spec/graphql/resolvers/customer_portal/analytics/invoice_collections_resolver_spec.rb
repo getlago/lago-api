@@ -29,7 +29,7 @@ RSpec.describe Resolvers::CustomerPortal::Analytics::InvoiceCollectionsResolver,
       create(:invoice, organization:, customer:, total_amount_cents: 1000, currency: "USD")
       create(:invoice, organization:, customer:, total_amount_cents: 2000, currency: "USD")
 
-      result = execute_customer_portal_graphql(customer_portal_user: customer, query:)
+      result = execute_graphql(customer_portal_user: customer, query:)
       invoice_collections_response = result["data"]["customerPortalInvoiceCollections"]
 
       expect(invoice_collections_response["collection"]).to contain_exactly(

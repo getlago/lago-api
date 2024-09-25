@@ -21,7 +21,7 @@ module AuthenticableCustomerPortalUserSpec
     field :thing, resolver: ThingResolver
   end
 
-  class TestApiSchema < Schemas::CustomerPortalSchema
+  class TestApiSchema < LagoApiSchema
     query(ThingsQueryType)
   end
 end
