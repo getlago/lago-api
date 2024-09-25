@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::CustomerPortal::UpdateCustomer, type: :graphql do
   subject(:result) do
-    execute_customer_portal_graphql(
+    execute_graphql(
       customer_portal_user: customer,
       query: mutation,
       variables: {
