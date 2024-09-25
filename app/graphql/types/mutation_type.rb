@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# TODO(graphql_schema): This class is deprecated and should be removed.
 module Types
   class MutationType < Types::BaseObject
     field :login_user, mutation: Mutations::LoginUser

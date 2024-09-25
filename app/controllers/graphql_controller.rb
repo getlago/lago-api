@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# TODO(graphql_schema): This controller is deprecated and should be removed.
 class GraphqlController < ApplicationController
   include AuthenticableUser
   include CustomerPortalUser

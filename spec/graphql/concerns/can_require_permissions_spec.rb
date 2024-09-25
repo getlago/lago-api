@@ -26,7 +26,7 @@ module CanRequirePermissionsSpec
     field :renameThing, mutation: RenameThingMutation
   end
 
-  class TestApiSchema < Schemas::ApiSchema
+  class TestApiSchema < LagoApiSchema
     mutation(ThingsMutationType)
   end
 end

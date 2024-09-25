@@ -24,7 +24,7 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver, type: :graphql do
   it_behaves_like 'requires a customer portal user'
 
   it 'returns a single customer' do
-    result = execute_customer_portal_graphql(
+    result = execute_graphql(
       customer_portal_user: customer,
       query:
     )
@@ -40,7 +40,7 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver, type: :graphql do
 
   context 'without customer portal user' do
     it 'returns an error' do
-      result = execute_customer_portal_graphql(
+      result = execute_graphql(
         query:
       )
 
