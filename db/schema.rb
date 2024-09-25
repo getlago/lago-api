@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
+ActiveRecord::Schema[7.1].define(version: 2024_09_24_114730) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -561,6 +561,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
     t.datetime "deleted_at"
     t.decimal "precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
     t.decimal "taxes_precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
+    t.float "taxes_base_rate", default: 1.0, null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
@@ -779,10 +780,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
     t.bigint "progressive_billing_credit_amount_cents", default: 0, null: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
-    t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
-    t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.index ["status"], name: "index_invoices_on_status"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
@@ -809,6 +808,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "fees_amount_cents", default: 0, null: false
+    t.bigint "taxable_base_amount_cents", default: 0, null: false
     t.index ["invoice_id", "tax_id"], name: "index_invoices_taxes_on_invoice_id_and_tax_id", unique: true, where: "((tax_id IS NOT NULL) AND (created_at >= '2023-09-12 00:00:00'::timestamp without time zone))"
     t.index ["invoice_id"], name: "index_invoices_taxes_on_invoice_id"
     t.index ["tax_id"], name: "index_invoices_taxes_on_tax_id"
@@ -1021,7 +1021,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
     t.integer "method", default: 0, null: false
     t.decimal "target_ongoing_balance", precision: 30, scale: 5
     t.datetime "started_at"
-    t.boolean "invoice_requires_successful_payment", default: false, null: false
+    t.boolean "invoice_require_successful_payment", default: false, null: false
     t.jsonb "transaction_metadata", default: []
     t.index ["started_at"], name: "index_recurring_transaction_rules_on_started_at"
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
@@ -1127,7 +1127,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
     t.uuid "invoice_id"
     t.integer "source", default: 0, null: false
     t.integer "transaction_status", default: 0, null: false
-    t.boolean "invoice_requires_successful_payment", default: false, null: false
+    t.boolean "invoice_require_successful_payment", default: false, null: false
     t.jsonb "metadata", default: []
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
@@ -1155,7 +1155,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
     t.decimal "credits_ongoing_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "credits_ongoing_usage_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.boolean "depleted_ongoing_balance", default: false, null: false
-    t.boolean "invoice_requires_successful_payment", default: false, null: false
+    t.boolean "invoice_require_successful_payment", default: false, null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 

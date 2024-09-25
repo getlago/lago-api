@@ -123,7 +123,9 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         # setting item_id based on the test example
         response = JSON.parse(json)
         response['succeededInvoices'].first['fees'].first['item_id'] = add_on_first.id
+        response['succeededInvoices'].first['fees'].first['tax_breakdown'].first['tax_amount'] = 240
         response['succeededInvoices'].first['fees'].last['item_id'] = add_on_second.id
+        response['succeededInvoices'].first['fees'].last['tax_breakdown'].first['tax_amount'] = 60
 
         response.to_json
       end

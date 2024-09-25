@@ -28,6 +28,7 @@ module Invoices
 
         tax_amount_cents = compute_tax_amount_cents(tax)
         applied_tax.fees_amount_cents = fees_amount_cents(tax)
+        applied_tax.taxable_base_amount_cents = taxable_base_amount_cents(tax)&.round
         applied_tax.amount_cents = tax_amount_cents.round
 
         # NOTE: when applied on user current usage, the invoice is
@@ -92,7 +93,7 @@ module Invoices
       key = calculate_key(tax)
 
       indexed_fees[key]
-        .sum { |fee| fee.sub_total_excluding_taxes_amount_cents * tax.rate.to_f }
+        .sum { |fee| fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate * tax.rate.to_f }
     end
 
     def pro_rated_taxes_rate(tax)
@@ -113,6 +114,12 @@ module Invoices
       key = calculate_key(tax)
 
       indexed_fees[key].sum(&:sub_total_excluding_taxes_amount_cents)
+    end
+
+    def taxable_base_amount_cents(tax)
+      key = calculate_key(tax)
+
+      indexed_fees[key].sum { |fee| fee.sub_total_excluding_taxes_amount_cents * fee.taxes_base_rate }
     end
 
     def fetch_provider_taxes_result

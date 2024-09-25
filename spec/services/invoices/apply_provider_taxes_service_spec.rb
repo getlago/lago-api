@@ -49,8 +49,10 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
 
       context 'with non zero fees amount' do
         context 'with non-zero taxes' do
-          before do
-            fee1 = create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 0)
+          let(:fee1) do
+            create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 0)
+          end
+          let(:fee1_applied_tax1) do
             create(
               :fee_applied_tax,
               fee: fee1,
@@ -60,9 +62,11 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
               tax_rate: 10.0,
               tax_description: 'type1'
             )
-
-            fee2 = create(:fee, invoice:, amount_cents: 2000, precise_coupons_amount_cents: 0)
-
+          end
+          let(:fee2) do
+            create(:fee, invoice:, amount_cents: 2000, precise_coupons_amount_cents: 0)
+          end
+          let(:fee2_applied_tax_1) do
             create(
               :fee_applied_tax,
               fee: fee2,
@@ -72,6 +76,8 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
               tax_rate: 10.0,
               tax_description: 'type1'
             )
+          end
+          let(:fee2_applied_tax_2) do
             create(
               :fee_applied_tax,
               fee: fee2,
@@ -81,6 +87,14 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
               tax_rate: 12.0,
               tax_description: 'type2'
             )
+          end
+
+          before do
+            fee1
+            fee1_applied_tax1
+            fee2
+            fee2_applied_tax_1
+            fee2_applied_tax_2
           end
 
           it 'creates applied taxes' do
@@ -100,7 +114,8 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
                 tax_rate: 10,
                 amount_currency: invoice.currency,
                 amount_cents: 300,
-                fees_amount_cents: 3000
+                fees_amount_cents: 3000,
+                taxable_base_amount_cents: 3000
               )
 
               expect(applied_taxes.find { |item| item.tax_code == 'tax_2' }).to have_attributes(
@@ -111,7 +126,8 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
                 tax_rate: 12,
                 amount_currency: invoice.currency,
                 amount_cents: 240,
-                fees_amount_cents: 2000
+                fees_amount_cents: 2000,
+                taxable_base_amount_cents: 2000
               )
 
               expect(invoice).to have_attributes(
@@ -119,6 +135,89 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
                 taxes_rate: 18,
                 fees_amount_cents: 3000
               )
+            end
+          end
+
+          context 'when there is tax deduction' do
+            let(:fee1) do
+              create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 0, taxes_base_rate: 0.8)
+            end
+            let(:fee1_applied_tax1) do
+              create(
+                :fee_applied_tax,
+                fee: fee1,
+                amount_cents: 80,
+                tax_name: 'tax 1',
+                tax_code: 'tax_1',
+                tax_rate: 10.0,
+                tax_description: 'type1'
+              )
+            end
+            let(:fee2) do
+              create(:fee, invoice:, amount_cents: 2000, precise_coupons_amount_cents: 0, taxes_base_rate: 0.8)
+            end
+            let(:fee2_applied_tax_1) do
+              create(
+                :fee_applied_tax,
+                fee: fee2,
+                amount_cents: 160,
+                tax_name: 'tax 1',
+                tax_code: 'tax_1',
+                tax_rate: 10.0,
+                tax_description: 'type1'
+              )
+            end
+            let(:fee2_applied_tax_2) do
+              create(
+                :fee_applied_tax,
+                fee: fee2,
+                amount_cents: 192,
+                tax_name: 'tax 2',
+                tax_code: 'tax_2',
+                tax_rate: 12.0,
+                tax_description: 'type2'
+              )
+            end
+
+            it 'creates applied taxes' do
+              result = apply_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+
+                applied_taxes = result.applied_taxes
+                expect(applied_taxes.count).to eq(2)
+
+                expect(applied_taxes.find { |item| item.tax_code == 'tax_1' }).to have_attributes(
+                  invoice:,
+                  tax_description: 'type1',
+                  tax_code: 'tax_1',
+                  tax_name: 'tax 1',
+                  tax_rate: 10,
+                  amount_currency: invoice.currency,
+                  amount_cents: 240,
+                  fees_amount_cents: 3000,
+                  taxable_base_amount_cents: 2400
+                )
+
+                expect(applied_taxes.find { |item| item.tax_code == 'tax_2' }).to have_attributes(
+                  invoice:,
+                  tax_description: 'type2',
+                  tax_code: 'tax_2',
+                  tax_name: 'tax 2',
+                  tax_rate: 12,
+                  amount_currency: invoice.currency,
+                  amount_cents: 192,
+                  fees_amount_cents: 2000,
+                  taxable_base_amount_cents: 1600
+                )
+
+                expect(invoice).to have_attributes(
+                  taxes_amount_cents: 432,
+                  taxes_rate: 18,
+                  fees_amount_cents: 3000
+                )
+              end
             end
           end
         end

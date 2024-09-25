@@ -16,6 +16,7 @@ module Fees
       applied_taxes_amount_cents = 0
       applied_precise_taxes_amount_cents = 0.to_d
       applied_taxes_rate = 0
+      taxes_base_rate = taxes_base_rate(fee_taxes.tax_breakdown.first)
 
       fee_taxes.tax_breakdown.each do |tax|
         tax_rate = tax.rate.to_f * 100
@@ -29,8 +30,8 @@ module Fees
         )
         fee.applied_taxes << applied_tax
 
-        tax_amount_cents = (fee.sub_total_excluding_taxes_amount_cents * tax_rate).fdiv(100)
-        tax_precise_amount_cents = (fee.sub_total_excluding_taxes_precise_amount_cents * tax_rate).fdiv(100.to_d)
+        tax_amount_cents = (fee.sub_total_excluding_taxes_amount_cents * taxes_base_rate * tax_rate).fdiv(100)
+        tax_precise_amount_cents = (fee.sub_total_excluding_taxes_precise_amount_cents * taxes_base_rate * tax_rate).fdiv(100.to_d)
 
         applied_tax.amount_cents = tax_amount_cents.round
         applied_tax.precise_amount_cents = tax_precise_amount_cents
@@ -46,6 +47,7 @@ module Fees
       fee.taxes_amount_cents = applied_taxes_amount_cents.round
       fee.taxes_precise_amount_cents = applied_precise_taxes_amount_cents
       fee.taxes_rate = applied_taxes_rate
+      fee.taxes_base_rate = taxes_base_rate
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -55,5 +57,18 @@ module Fees
     private
 
     attr_reader :fee, :fee_taxes
+
+    def taxes_base_rate(tax)
+      return 1 unless tax
+
+      tax_rate = tax.rate.to_f * 100
+      tax_amount_cents = (fee.sub_total_excluding_taxes_amount_cents * tax_rate).fdiv(100)
+
+      if tax.tax_amount < tax_amount_cents
+        tax.tax_amount.fdiv(tax_amount_cents.round)
+      else
+        1
+      end
+    end
   end
 end

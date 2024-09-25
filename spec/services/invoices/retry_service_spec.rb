@@ -163,7 +163,7 @@ RSpec.describe Invoices::RetryService, type: :service do
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
 
           expect(result.invoice.currency).to eq('EUR')
-          expect(result.invoice.fees_amount_cents).to eq(3_000)
+          expect(result.invoice.fees_amount_cents).to eq(3_000) # 2000 + 1000
 
           expect(result.invoice.taxes_amount_cents).to eq(350)
           expect(result.invoice.taxes_rate.round(2)).to eq(11.67) # (0.667 * 10) + (0.333 * 15)

@@ -11,6 +11,7 @@ class Invoice
 
     monetize :amount_cents,
       :fees_amount_cents,
+      :taxable_base_amount_cents,
       with_model_currency: :amount_currency
 
     validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
@@ -21,6 +22,14 @@ class Invoice
     def applied_on_whole_invoice?
       TAX_CODES_APPLICABLE_ON_WHOLE_INVOICE.include?(tax_code)
     end
+
+    def taxable_base_amount_cents
+      base_amount = self[:taxable_base_amount_cents]
+
+      return fees_amount_cents if base_amount.blank? || base_amount.zero?
+
+      base_amount
+    end
   end
 end
 
@@ -28,18 +37,19 @@ end
 #
 # Table name: invoices_taxes
 #
-#  id                :uuid             not null, primary key
-#  amount_cents      :bigint           default(0), not null
-#  amount_currency   :string           not null
-#  fees_amount_cents :bigint           default(0), not null
-#  tax_code          :string           not null
-#  tax_description   :string
-#  tax_name          :string           not null
-#  tax_rate          :float            default(0.0), not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  invoice_id        :uuid             not null
-#  tax_id            :uuid
+#  id                        :uuid             not null, primary key
+#  amount_cents              :bigint           default(0), not null
+#  amount_currency           :string           not null
+#  fees_amount_cents         :bigint           default(0), not null
+#  tax_code                  :string           not null
+#  tax_description           :string
+#  tax_name                  :string           not null
+#  tax_rate                  :float            default(0.0), not null
+#  taxable_base_amount_cents :bigint           default(0), not null
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  invoice_id                :uuid             not null
+#  tax_id                    :uuid
 #
 # Indexes
 #
