@@ -21,7 +21,9 @@ module V1
         created_at: model.created_at.iso8601,
         previous_plan_code: model.previous_subscription&.plan&.code,
         next_plan_code: model.next_subscription&.plan&.code,
-        downgrade_plan_date: model.downgrade_plan_date&.iso8601
+        downgrade_plan_date: model.downgrade_plan_date&.iso8601,
+        current_billing_period_started_at: dates_service.charges_from_datetime&.iso8601,
+        current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601
       }
 
       payload = payload.merge(customer:) if include?(:customer)
@@ -46,6 +48,10 @@ module V1
 
     def usage_threshold
       ::V1::UsageThresholdSerializer.new(options[:usage_threshold]).serialize
+    end
+
+    def dates_service
+      @dates_service ||= ::Subscriptions::DatesService.new_instance(model, Time.current, current_usage: true)
     end
   end
 end
