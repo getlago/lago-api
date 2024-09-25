@@ -49,6 +49,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         result.unit_amount = 0.01111111111
         result.count = 1
         result.units = 9
+        result.amount_details = {}
       end
     end
 

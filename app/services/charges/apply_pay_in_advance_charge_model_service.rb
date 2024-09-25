@@ -119,8 +119,9 @@ module Charges
     def calculated_amount_details
       all_charges_details = applied_charge_model.amount_details
       charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
+      return {} if all_charges_details.blank? || charges_details_without_last_event.blank?
 
-      CHARGE_AMOUNT_DETAILS_KEYS.each_with_object({ rate: all_charges_details[:rate] }) do |key, result|
+      CHARGE_AMOUNT_DETAILS_KEYS.each_with_object({rate: all_charges_details[:rate]}) do |key, result|
         result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).to_s
       end
     end
