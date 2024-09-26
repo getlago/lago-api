@@ -122,9 +122,12 @@ module Charges
       return {} if all_charges_details.blank? || charges_details_without_last_event.blank?
 
       fixed_values  = { rate: all_charges_details[:rate], fixed_fee_unit_amount: all_charges_details[:fixed_fee_unit_amount] }
-      CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
+      details = CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
         result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).to_s
       end
+      # TODO: remove this when Charges::ChargeModels::PercentageService#free_units_value respects :exclude_event flag
+      details[:free_units] = (details[:units].to_f - details[:paid_units].to_f).to_s
+      details
     end
   end
 end
