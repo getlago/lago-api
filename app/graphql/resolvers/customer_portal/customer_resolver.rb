@@ -5,9 +5,9 @@ module Resolvers
     class CustomerResolver < Resolvers::BaseResolver
       include AuthenticableCustomerPortalUser
 
-      description 'Query a customer portal user'
+      description "Query a customer portal user"
 
-      type Types::Customers::Object, null: true
+      type Types::CustomerPortal::Customers::Object, null: true
 
       def resolve
         context[:customer_portal_user]
