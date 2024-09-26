@@ -548,15 +548,15 @@ RSpec.describe Charge, type: :model do
 
   describe '#simple_percentage?' do
     it 'returns false if charge model is not percentage' do
-      expect(build(:standard_charge).simple_percentage?).to be_falsey
+      expect(build(:standard_charge)).not_to be_simple_percentage
     end
 
     it 'returns false if charge model is percentage but has other properties except rate' do
-      expect(build(:charge, charge_model: 'percentage', properties: {fixed_amount: '20'}).simple_percentage?).to be_falsey
+      expect(build(:charge, charge_model: 'percentage', properties: {fixed_amount: '20'})).not_to be_simple_percentage
     end
 
     it 'returns true only if properties of percentage charge contain only rate' do
-      expect(build(:charge, charge_model: 'percentage', properties: {rate: '0.20'}).simple_percentage?).to be_truthy
+      expect(build(:charge, charge_model: 'percentage', properties: {rate: '0.20'})).to be_simple_percentage
     end
   end
 end

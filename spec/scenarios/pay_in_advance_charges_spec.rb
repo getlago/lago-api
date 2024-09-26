@@ -772,10 +772,10 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             events_count: 1,
             amount_cents: 0,
             amount_details: {
-              "rate"=>"5.0", "units"=>"8.0", "free_units"=>"8.0", "paid_units"=>"0.0",
-              "free_events"=>"1.0", "paid_events"=>"0.0", "fixed_fee_unit_amount"=>"0.0",
-              "per_unit_total_amount"=>"0.0", "fixed_fee_total_amount"=>"0.0",
-              "min_max_adjustment_total_amount"=>"0.0"
+              "rate" => "5.0", "units" => "8.0", "free_units" => "8.0", "paid_units" => "0.0",
+              "free_events" => "1.0", "paid_events" => "0.0", "fixed_fee_unit_amount" => "0.0",
+              "per_unit_total_amount" => "0.0", "fixed_fee_total_amount" => "0.0",
+              "min_max_adjustment_total_amount" => "0.0"
             }
           )
         end
@@ -805,10 +805,10 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             events_count: 1,
             amount_cents: 0,
             amount_details: {
-              "rate"=>"5.0", "units"=>"5.0", "free_units"=>"5.0", "paid_units"=>"0.0",
-              "free_events"=>"1.0", "paid_events"=>"0.0", "fixed_fee_unit_amount"=>"0.0",
-              "per_unit_total_amount"=>"0.0", "fixed_fee_total_amount"=>"0.0",
-              "min_max_adjustment_total_amount"=>"0.0"
+              "rate" => "5.0", "units" => "5.0", "free_units" => "5.0", "paid_units" => "0.0",
+              "free_events" => "1.0", "paid_events" => "0.0", "fixed_fee_unit_amount" => "0.0",
+              "per_unit_total_amount" => "0.0", "fixed_fee_total_amount" => "0.0",
+              "min_max_adjustment_total_amount" => "0.0"
             }
           )
         end
@@ -833,10 +833,10 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             events_count: 1,
             amount_cents: 100 + 15,
             amount_details: {
-              "rate"=>"5.0", "units"=>"3.0", "free_units"=>"0.0", "paid_units"=>"3.0",
-              "free_events"=>"0.0", "paid_events"=>"1.0", "fixed_fee_unit_amount"=>"1.0",
-              "per_unit_total_amount"=>"0.15", "fixed_fee_total_amount"=>"1.0",
-              "min_max_adjustment_total_amount"=>"0.0"
+              "rate" => "5.0", "units" => "3.0", "free_units" => "0.0", "paid_units" => "3.0",
+              "free_events" => "0.0", "paid_events" => "1.0", "fixed_fee_unit_amount" => "1.0",
+              "per_unit_total_amount" => "0.15", "fixed_fee_total_amount" => "1.0",
+              "min_max_adjustment_total_amount" => "0.0"
             }
           )
         end
@@ -893,10 +893,10 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             events_count: 1,
             amount_cents: 0,
             amount_details: {
-              "rate"=>"5.0", "units"=>"100.0", "free_units"=>"100.0", "paid_units"=>"0.0",
-              "free_events"=>"1.0", "paid_events"=>"0.0", "fixed_fee_unit_amount"=>"0.0",
-              "per_unit_total_amount"=>"0.0", "fixed_fee_total_amount"=>"0.0",
-              "min_max_adjustment_total_amount"=>"0.0"
+              "rate" => "5.0", "units" => "100.0", "free_units" => "100.0", "paid_units" => "0.0",
+              "free_events" => "1.0", "paid_events" => "0.0", "fixed_fee_unit_amount" => "0.0",
+              "per_unit_total_amount" => "0.0", "fixed_fee_total_amount" => "0.0",
+              "min_max_adjustment_total_amount" => "0.0"
             }
           )
         end
@@ -926,10 +926,10 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             events_count: 1,
             amount_cents: 0,
             amount_details: {
-              "rate"=>"5.0", "units"=>"10.0", "free_units"=>"10.0", "paid_units"=>"0.0",
-              "free_events"=>"1.0", "paid_events"=>"0.0", "fixed_fee_unit_amount"=>"0.0",
-              "per_unit_total_amount"=>"0.0", "fixed_fee_total_amount"=>"0.0",
-              "min_max_adjustment_total_amount"=>"0.0"
+              "rate" => "5.0", "units" => "10.0", "free_units" => "10.0", "paid_units" => "0.0",
+              "free_events" => "1.0", "paid_events" => "0.0", "fixed_fee_unit_amount" => "0.0",
+              "per_unit_total_amount" => "0.0", "fixed_fee_total_amount" => "0.0",
+              "min_max_adjustment_total_amount" => "0.0"
             }
           )
         end
@@ -959,10 +959,10 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             events_count: 1,
             amount_cents: 150,
             amount_details: {
-              "rate"=>"5.0", "units"=>"20.0", "free_units"=>"10.0", "paid_units"=>"10.0",
-              "free_events"=>"0.0", "paid_events"=>"1.0", "fixed_fee_unit_amount"=>"1.0",
-              "per_unit_total_amount"=>"0.5", "fixed_fee_total_amount"=>"1.0",
-              "min_max_adjustment_total_amount"=>"0.0"
+              "rate" => "5.0", "units" => "20.0", "free_units" => "10.0", "paid_units" => "10.0",
+              "free_events" => "0.0", "paid_events" => "1.0", "fixed_fee_unit_amount" => "1.0",
+              "per_unit_total_amount" => "0.5", "fixed_fee_total_amount" => "1.0",
+              "min_max_adjustment_total_amount" => "0.0"
             }
           )
         end
@@ -992,12 +992,12 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             events_count: 1,
             amount_cents: 200,
             amount_details: {
-              "rate"=>"5.0", "units"=>"20.0", "free_units"=>"0.0", "paid_units"=>"20.0",
-              "free_events"=>"0.0", "paid_events"=>"1.0", "fixed_fee_unit_amount"=>"1.0",
-              "per_unit_total_amount"=>"1.0", "fixed_fee_total_amount"=>"1.0",
-              "min_max_adjustment_total_amount"=>"0.0"
+              "rate" => "5.0", "units" => "20.0", "free_units" => "0.0", "paid_units" => "20.0",
+              "free_events" => "0.0", "paid_events" => "1.0", "fixed_fee_unit_amount" => "1.0",
+              "per_unit_total_amount" => "1.0", "fixed_fee_total_amount" => "1.0",
+              "min_max_adjustment_total_amount" => "0.0"
             }
-         )
+          )
         end
       end
     end
