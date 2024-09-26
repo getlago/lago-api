@@ -20,20 +20,7 @@ module Charges
         free_events = if aggregation_result.count >= free_units_count
           free_units_count
         else
-          # [aggregation_result.count - free_units_count, 0].max
-          # if we have 1 event, but we accept 3 free events, this event should be recorded as free.
-          # with current logic it is:
-          # 1 - 3 = -2
-          # [-2, 0].max => 0. and we have stored 0 free events, but 1 paid event
-          # but
-          # as result if our charge allows 3 free transactions, when we calculate 3rd values, we're getting this:
-          # all_charges_details
-          # {:units=>"4500.0", :free_units=>"4500.0", :free_events=>3, :paid_units=>"0.0", :rate=>0.2e2, :per_unit_total_amount=>0.0, :paid_events=>0, :fixed_fee_unit_amount=>0.0, :fixed_fee_total_amount=>"0.0", :min_max_adjustment_total_amount=>"0.0"}
-          # charges_details_without_last_event
-          # {:units=>"3000.0", :free_units=>"4500.0", :free_events=>0, :paid_units=>"0.0", :rate=>0.2e2, :per_unit_total_amount=>0, :paid_events=>2, :fixed_fee_unit_amount=>0.1e2, :fixed_fee_total_amount=>"0.0", :min_max_adjustment_total_amount=>"0.0"}
-          # so all events charge returns us {free_events: 3, paid_events: 0}
-          # all without last returns us {free_events: 0, paid_events: 2}
-          [aggregation_result.count, 0].max
+          aggregation_result.count
         end
         paid_events = aggregation_result.count - free_events
 
@@ -72,6 +59,8 @@ module Charges
         (aggregation_result.count - free_units_count) * fixed_amount
       end
 
+      # TODO: add memoization as this method is being called 4 times in the class
+      # TODO: resect properties[:exclude_event] flag
       def free_units_value
         return 0 if last_running_total.zero?
         if free_units_per_events > 0 && free_units_per_events < (aggregation_result.options[:running_total]&.count || 0)

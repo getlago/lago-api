@@ -713,6 +713,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
     end
   end
 
+  # TODO: Add free_units calculation fix
   describe "with sum_agg / percentage" do
     let(:aggregation_type) { "sum_agg" }
     let(:field_name) { "amount" }
@@ -741,8 +742,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
           properties: {
             rate: "5",
             fixed_amount: "1",
-            free_units_per_events: 2,
-            free_units_per_total_aggregation: "120.0"
+            free_units_per_events: 2
           }
         )
 
@@ -755,6 +755,22 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
               transaction_id: SecureRandom.uuid,
               external_subscription_id: subscription.external_id,
               properties: {amount: "8"}
+            }
+          )
+          fee = subscription.fees.order(created_at: :desc).first
+          expect(fee).to have_attributes(
+            invoice_id: nil,
+            charge_id: charge.id,
+            fee_type: "charge",
+            pay_in_advance: true,
+            units: 8,
+            events_count: 1,
+            amount_cents: 0,
+            amount_details: {
+              "rate"=>"5.0", "units"=>"8.0", "free_units"=>"0.0", "paid_units"=>"0.0",
+              "free_events"=>"1.0", "paid_events"=>"0.0", "fixed_fee_unit_amount"=>"0.0",
+              "per_unit_total_amount"=>"0.0", "fixed_fee_total_amount"=>"0.0",
+              "min_max_adjustment_total_amount"=>"0.0"
             }
           )
         end
@@ -782,7 +798,13 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 5,
             events_count: 1,
-            amount_cents: 0
+            amount_cents: 0,
+            amount_details: {
+              "rate"=>"5.0", "units"=>"5.0", "free_units"=>"0.0", "paid_units"=>"0.0",
+              "free_events"=>"1.0", "paid_events"=>"0.0", "fixed_fee_unit_amount"=>"0.0",
+              "per_unit_total_amount"=>"0.0", "fixed_fee_total_amount"=>"0.0",
+              "min_max_adjustment_total_amount"=>"0.0"
+            }
           )
         end
 
@@ -804,7 +826,13 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             pay_in_advance: true,
             units: 3,
             events_count: 1,
-            amount_cents: 100 + 15
+            amount_cents: 100 + 15,
+            amount_details: {
+              "rate"=>"5.0", "units"=>"3.0", "free_units"=>"0.0", "paid_units"=>"3.0",
+              "free_events"=>"0.0", "paid_events"=>"1.0", "fixed_fee_unit_amount"=>"1.0",
+              "per_unit_total_amount"=>"0.15", "fixed_fee_total_amount"=>"1.0",
+              "min_max_adjustment_total_amount"=>"0.0"
+            }
           )
         end
       end
@@ -834,20 +862,36 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
           properties: {
             rate: "5",
             fixed_amount: "1",
-            free_units_per_events: 1,
             free_units_per_total_aggregation: "120.0"
           }
         )
 
         subscription = customer.subscriptions.first
 
+        ### 14 february: Send an event.
         travel_to(DateTime.new(2023, 2, 14)) do
           create_event(
             {
               code: billable_metric.code,
               transaction_id: SecureRandom.uuid,
               external_subscription_id: subscription.external_id,
-              properties: {amount: "2"}
+              properties: {amount: "100"}
+            }
+          )
+          fee = subscription.fees.order(created_at: :desc).first
+          expect(fee).to have_attributes(
+            invoice_id: nil,
+            charge_id: charge.id,
+            fee_type: "charge",
+            pay_in_advance: true,
+            units: 100,
+            events_count: 1,
+            amount_cents: 0,
+            amount_details: {
+              "rate"=>"5.0", "units"=>"100.0", "free_units"=>"0.0", "paid_units"=>"0.0",
+              "free_events"=>"1.0", "paid_events"=>"0.0", "fixed_fee_unit_amount"=>"0.0",
+              "per_unit_total_amount"=>"0.0", "fixed_fee_total_amount"=>"0.0",
+              "min_max_adjustment_total_amount"=>"0.0"
             }
           )
         end
@@ -862,7 +906,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: {amount: "1"}
+                properties: {amount: "10"}
               }
             )
           end.to change { subscription.reload.fees.count }.from(1).to(2)
@@ -873,9 +917,48 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
             charge_id: charge.id,
             fee_type: "charge",
             pay_in_advance: true,
-            units: 1,
+            units: 10,
             events_count: 1,
-            amount_cents: 100 + 5
+            amount_cents: 0,
+            amount_details: {
+              "rate"=>"5.0", "units"=>"10.0", "free_units"=>"0.0", "paid_units"=>"0.0",
+              "free_events"=>"1.0", "paid_events"=>"0.0", "fixed_fee_unit_amount"=>"0.0",
+              "per_unit_total_amount"=>"0.0", "fixed_fee_total_amount"=>"0.0",
+              "min_max_adjustment_total_amount"=>"0.0"
+            }
+          )
+        end
+
+        ### 16 february: Send an event.
+        feb16 = DateTime.new(2023, 2, 16)
+
+        travel_to(feb16) do
+          expect do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: subscription.external_id,
+                properties: {amount: "20"}
+              }
+            )
+          end.to change { subscription.reload.fees.count }.from(2).to(3)
+
+          fee = subscription.fees.order(created_at: :desc).first
+          expect(fee).to have_attributes(
+            invoice_id: nil,
+            charge_id: charge.id,
+            fee_type: "charge",
+            pay_in_advance: true,
+            units: 20,
+            events_count: 1,
+            amount_cents: 150,
+            amount_details: {
+              "rate"=>"5.0", "units"=>"20.0", "free_units"=>"0.0", "paid_units"=>"10.0",
+              "free_events"=>"0.0", "paid_events"=>"1.0", "fixed_fee_unit_amount"=>"1.0",
+              "per_unit_total_amount"=>"0.5", "fixed_fee_total_amount"=>"1.0",
+              "min_max_adjustment_total_amount"=>"0.0"
+            }
           )
         end
       end
