@@ -71,6 +71,14 @@ module Events
         raise NotImplementedError
       end
 
+      def sum_precise_total_amount_cents
+        raise NotImplementedError
+      end
+
+      def grouped_sum_precise_total_amount_cents
+        raise NotImplementedError
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         raise NotImplementedError
       end

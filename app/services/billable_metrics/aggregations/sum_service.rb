@@ -58,14 +58,24 @@ module BillableMetrics
           group_result.count = count[:value] || 0
           group_result
         end
-
-        result
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: 'aggregation_failure', message: e.message)
       end
 
       def compute_precise_total_amount_cents(options: {})
         result.precise_total_amount_cents = event_store.sum_precise_total_amount_cents
+      end
+
+      def compute_grouped_by_precise_total_amount_cents(options: {})
+        aggregations = event_store.grouped_sum_precise_total_amount_cents
+        return result if aggregations.blank?
+
+        aggregations.each do |aggregation|
+          group_result = result.aggregations.find { |group_result| group_result.grouped_by == aggregation[:groups] }
+          next unless group_result
+
+          group_result.precise_total_amount_cents = aggregation[:value]
+        end
       end
 
       # NOTE: Return cumulative sum of field_name based on the number of free units

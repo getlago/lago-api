@@ -7,6 +7,7 @@ module Events
 
       DEDUPLICATION_GROUP = 'events_raw.transaction_id, events_raw.properties, events_raw.timestamp'
       PRECISE_TOTAL_AMOUNT_DEDUPLICATION_GROUP = 'events_raw.transaction_id, events_raw.precise_total_amount_cents, events_raw.timestamp'
+      GROUPED_PRECISE_TOTAL_AMOUNT_DEDUPLICATION_GROUP = 'events_raw.transaction_id, events_raw.properties, events_raw.precise_total_amount_cents, events_raw.timestamp'
 
       # NOTE: keeps in mind that events could contains duplicated transaction_id
       #       and should be deduplicated depending on the aggregation logic
@@ -279,6 +280,28 @@ module Events
         SQL
 
         ::Clickhouse::EventsRaw.connection.select_value(sql)
+      end
+
+      def grouped_sum_precise_total_amount_cents
+        groups = grouped_by.map.with_index do |group, index|
+          "#{sanitized_property_name(group)} AS g_#{index}"
+        end
+        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
+
+        cte_sql = events.group(GROUPED_PRECISE_TOTAL_AMOUNT_DEDUPLICATION_GROUP)
+          .select((groups + [Arel.sql("precise_total_amount_cents as property")]).join(", "))
+
+        sql = <<-SQL
+          with events as (#{cte_sql.to_sql})
+
+          select
+            #{group_names},
+            sum(events.property)
+          from events
+          group by #{group_names}
+        SQL
+
+        prepare_grouped_result(::Clickhouse::EventsRaw.connection.select_all(sql).rows)
       end
 
       def sum

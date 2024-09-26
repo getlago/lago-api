@@ -55,6 +55,10 @@ class Charge < ApplicationRecord
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
+  def supports_grouped_by?
+    standard? || dynamic?
+  end
+
   private
 
   def validate_amount

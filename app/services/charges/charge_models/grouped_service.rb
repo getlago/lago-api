@@ -2,22 +2,16 @@
 
 module Charges
   module ChargeModels
-    class GroupedStandardService < BaseService
-      def self.apply(...)
-        new(...).apply
-      end
+    class GroupedService < BaseService
+      def initialize(charge_model:, charge:, aggregation_result:, properties:)
+        super(charge:, aggregation_result:, properties:)
 
-      def initialize(charge:, aggregation_result:, properties:)
-        super
-
-        @charge = charge
-        @aggregation_result = aggregation_result
-        @properties = properties
+        @charge_model = charge_model
       end
 
       def apply
         result.grouped_results = aggregation_result.aggregations.map do |aggregation|
-          group_result = Charges::ChargeModels::StandardService.apply(
+          group_result = charge_model.apply(
             charge:,
             aggregation_result: aggregation,
             properties:
@@ -31,7 +25,7 @@ module Charges
 
       protected
 
-      attr_accessor :charge, :aggregation_result, :properties
+      attr_accessor :charge_model
     end
   end
 end

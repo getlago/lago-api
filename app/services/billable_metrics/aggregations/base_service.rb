@@ -23,11 +23,14 @@ module BillableMetrics
       def aggregate(options: {})
         if grouped_by.present?
           compute_grouped_by_aggregation(options:)
+          if charge.dynamic?
+            compute_grouped_by_precise_total_amount_cents(options:)
+          end
         else
           compute_aggregation(options:)
-        end
-        if charge.dynamic?
-          compute_precise_total_amount_cents(options:)
+          if charge.dynamic?
+            compute_precise_total_amount_cents(options:)
+          end
         end
         result
       end
@@ -41,6 +44,10 @@ module BillableMetrics
       end
 
       def compute_precise_total_amount_cents(options: {})
+        raise NotImplementedError
+      end
+
+      def compute_grouped_by_precise_total_amount_cents(options: {})
         raise NotImplementedError
       end
 
