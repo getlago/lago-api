@@ -117,6 +117,8 @@ module Charges
     end
 
     def calculated_amount_details
+      return {} unless charge.percentage?
+
       all_charges_details = applied_charge_model.amount_details
       charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
       return {} if all_charges_details.blank? || charges_details_without_last_event.blank?

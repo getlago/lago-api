@@ -59,6 +59,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1000)
+        expect(fee.amount_details).to eq({})
       end
 
       ### 17 february: Send an other event.
@@ -139,6 +140,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1200)
+        expect(fee.amount_details).to eq({})
       end
 
       ### 16 february: Send an event.
@@ -344,6 +346,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.units).to eq(10)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(1000)
+        expect(fee.amount_details).to eq({})
       end
 
       travel_to(DateTime.new(2023, 2, 17)) do
@@ -566,6 +569,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.units).to eq(3)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(0) # free units
+        expect(fee.amount_details).to eq({})
       end
 
       travel_to(DateTime.new(2023, 2, 17)) do
@@ -673,6 +677,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.units).to eq(3)
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(2 * 3 + 1)
+        expect(fee.amount_details).to eq({})
       end
 
       travel_to(DateTime.new(2023, 2, 17)) do

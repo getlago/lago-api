@@ -457,7 +457,7 @@ html
             tr
               - if fee.charge.percentage?
                 - if fee.charge.simple_percentage?
-                  tr.charge-name
+                  tr
                     td.body-1
                       = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
                     td.body-2 = fee.amount_details['paid_units']
