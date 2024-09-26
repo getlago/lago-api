@@ -1,6 +1,7 @@
 ---
 en:
   invoice:
+    already_paid: Already paid
     all_subscriptions: All Subscriptions
     all_usage_based_fees: All usage based fees
     amount: Amount
@@ -40,6 +41,7 @@ en:
       fee_per_package: Fee per package
       fee_per_package_unit_price: "%{amount} per %{package_size}"
       free_units_for_the_first: Free units for the first %{count}
+    paid_invoice: Paid invoice
     payment_term: Payment term
     payment_term_days: "%{net_payment_term} days"
     percentage:

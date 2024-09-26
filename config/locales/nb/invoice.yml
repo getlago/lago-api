@@ -1,6 +1,7 @@
 ---
 nb:
   invoice:
+    already_paid: Allerede betalt
     all_subscriptions: Alle Abonnement
     all_usage_based_fees: Alle bruksbaserte kostnader
     amount: Beløp
@@ -40,6 +41,7 @@ nb:
       fee_per_package: Gebyr per pakke
       fee_per_package_unit_price: "%{amount} per %{package_size}"
       free_units_for_the_first: Gratis enheter for de første %{count}
+    paid_invoice: Betalt faktura
     payment_term: Betalingsperiode
     payment_term_days: "%{net_payment_term} dager"
     percentage:

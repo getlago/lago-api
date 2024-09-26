@@ -1,6 +1,7 @@
 ---
 fr:
   invoice:
+    already_paid: Déjà payé
     all_subscriptions: Tous les abonnements
     all_usage_based_fees: Tous les frais de consommation
     amount: Montant
@@ -40,6 +41,7 @@ fr:
       fee_per_package: Frais par tranche
       fee_per_package_unit_price: "%{amount} par tranche de %{package_size}"
       free_units_for_the_first: Unités gratuites pour les premiers %{count}
+    paid_invoice: Facture payée
     payment_term: Délai de paiement
     payment_term_days: "%{net_payment_term} jours"
     percentage:

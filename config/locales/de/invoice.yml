@@ -1,6 +1,7 @@
 ---
 de:
   invoice:
+    already_paid: Bereits bezahlt
     all_subscriptions: Alle Abonnements
     all_usage_based_fees: Alle nutzungsabhängigen Gebühren
     amount: Betrag
@@ -40,6 +41,7 @@ de:
       fee_per_package: Gebühr pro Paket
       fee_per_package_unit_price: "%{amount} pro %{package_size}"
       free_units_for_the_first: Gebühr pro Einheit für die ersten %{count}
+    paid_invoice: Bezahlte Rechnung
     payment_term: Zahlungsfrist
     payment_term_days: "%{net_payment_term} Tage"
     percentage:

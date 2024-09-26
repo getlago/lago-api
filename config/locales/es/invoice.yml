@@ -1,6 +1,7 @@
 ---
 es:
   invoice:
+    already_paid: Ya pagado
     all_subscriptions: Todos los suscripciones
     all_usage_based_fees: Todos los cargos basados en el uso
     amount: Total (excl. impuestos)
@@ -39,6 +40,7 @@ es:
       fee_per_package: Tarifa por paquete
       fee_per_package_unit_price: "%{amount} por %{package_size}"
       free_units_for_the_first: Unidades gratuitas para las %{count} primeras
+    paid_invoice: Factura pagada
     payment_term: Plazo de pago neto
     payment_term_days: "%{net_payment_term} días"
     percentage:
