@@ -65,7 +65,7 @@ module Fees
       tax_amount_cents = (fee.sub_total_excluding_taxes_amount_cents * tax_rate).fdiv(100)
 
       if tax.tax_amount < tax_amount_cents
-        tax.tax_amount.fdiv(tax_amount_cents.round)
+        tax.tax_amount.fdiv(tax_amount_cents)
       else
         1
       end
