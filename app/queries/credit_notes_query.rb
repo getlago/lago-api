@@ -4,7 +4,7 @@ class CreditNotesQuery < BaseQuery
   def call
     credit_notes = base_scope.result
     credit_notes = paginate(credit_notes)
-    credit_notes = credit_notes.order(issuing_date: :desc)
+    credit_notes = credit_notes.order(created_at: :desc)
 
     credit_notes = with_customer_id(credit_notes) if filters.customer_id.present?
 
