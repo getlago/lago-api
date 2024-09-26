@@ -1,9 +1,9 @@
 ---
 fr:
   invoice:
-    already_paid: Déjà payé
     all_subscriptions: Tous les abonnements
     all_usage_based_fees: Tous les frais de consommation
+    already_paid: Déjà payé
     amount: Montant
     amount_with_tax: Montant (TTC)
     amount_without_tax: Montant (HT)

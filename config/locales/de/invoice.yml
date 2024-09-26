@@ -1,9 +1,9 @@
 ---
 de:
   invoice:
-    already_paid: Bereits bezahlt
     all_subscriptions: Alle Abonnements
     all_usage_based_fees: Alle nutzungsabhängigen Gebühren
+    already_paid: Bereits bezahlt
     amount: Betrag
     amount_with_tax: Betrag (inkl. Steuern)
     amount_without_tax: Betrag (ohne Steuern)

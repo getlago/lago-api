@@ -1,9 +1,9 @@
 ---
 sv:
   invoice:
-    already_paid: Redan betalt
     all_subscriptions: Alla prenumerationer
     all_usage_based_fees: Alla avgifter baserade på användning
+    already_paid: Redan betalt
     amount: Belopp (exkl. moms)
     amount_with_tax: Belopp (inkl. moms)
     amount_without_tax: Belopp (exkl. moms)

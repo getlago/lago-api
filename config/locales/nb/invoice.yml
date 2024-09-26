@@ -1,9 +1,9 @@
 ---
 nb:
   invoice:
-    already_paid: Allerede betalt
     all_subscriptions: Alle Abonnement
     all_usage_based_fees: Alle bruksbaserte kostnader
+    already_paid: Allerede betalt
     amount: Beløp
     amount_with_tax: Beløp (inkl. MVA)
     amount_without_tax: Beløp (ekskl. MVA)

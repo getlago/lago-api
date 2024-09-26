@@ -1,9 +1,9 @@
 ---
 es:
   invoice:
-    already_paid: Ya pagado
     all_subscriptions: Todos los suscripciones
     all_usage_based_fees: Todos los cargos basados en el uso
+    already_paid: Ya pagado
     amount: Total (excl. impuestos)
     amount_with_tax: Total (impuestos incl.)
     amount_without_tax: Total (impuestos excl.)
