@@ -23,6 +23,7 @@ module Types
     field :update_customer, mutation: Mutations::Customers::Update
     field :update_customer_invoice_grace_period, mutation: Mutations::Customers::UpdateInvoiceGracePeriod
 
+    field :create_customer_portal_wallet_transaction, mutation: Mutations::CustomerPortal::WalletTransactions::Create
     field :download_customer_portal_invoice, mutation: Mutations::CustomerPortal::DownloadInvoice
     field :generate_customer_portal_url, mutation: Mutations::CustomerPortal::GenerateUrl
     field :update_customer_portal_customer, mutation: Mutations::CustomerPortal::UpdateCustomer
