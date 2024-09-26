@@ -47,6 +47,7 @@ module Subscriptions
 
     def from_datetime
       return @from_datetime if @from_datetime
+      return unless subscription.started_at
 
       @from_datetime = customer_timezone_shift(compute_from_date)
 
@@ -62,6 +63,7 @@ module Subscriptions
 
     def to_datetime
       return @to_datetime if @to_datetime
+      return unless subscription.started_at
 
       @to_datetime = customer_timezone_shift(compute_to_date, end_of_day: true)
       terminated_at = subscription.terminated_at&.to_time&.round
@@ -75,6 +77,8 @@ module Subscriptions
     end
 
     def charges_from_datetime
+      return unless subscription.started_at
+
       datetime = customer_timezone_shift(compute_charges_from_date)
 
       # NOTE: If customer applicable timezone changes during a billing period, there is a risk to double count events
@@ -94,6 +98,8 @@ module Subscriptions
     end
 
     def charges_to_datetime
+      return unless subscription.started_at
+
       datetime = customer_timezone_shift(compute_charges_to_date, end_of_day: true)
       datetime = subscription.terminated_at if subscription.terminated_at?(datetime)
       datetime = subscription.started_at if datetime < subscription.started_at

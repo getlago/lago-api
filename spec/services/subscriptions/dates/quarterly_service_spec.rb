@@ -37,6 +37,14 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
         expect(result).to eq('2022-04-01 00:00:00 UTC')
       end
 
+      context 'when subscription is not yet started' do
+        let(:started_at) { nil }
+
+        it 'returns nil' do
+          expect(date_service.from_datetime).to be_nil
+        end
+      end
+
       context 'with customer timezone' do
         let(:timezone) { 'America/New_York' }
 
@@ -195,6 +203,14 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
         expect(result).to eq('2022-06-30 23:59:59 UTC')
       end
 
+      context 'when subscription is not yet started' do
+        let(:started_at) { nil }
+
+        it 'returns nil' do
+          expect(date_service.to_datetime).to be_nil
+        end
+      end
+
       context 'with customer timezone' do
         let(:timezone) { 'America/New_York' }
 
@@ -312,6 +328,14 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
         expect(result).to eq(date_service.from_datetime.to_s)
       end
 
+      context 'when subscription is not yet started' do
+        let(:started_at) { nil }
+
+        it 'returns nil' do
+          expect(date_service.charges_from_datetime).to be_nil
+        end
+      end
+
       context 'with customer timezone' do
         let(:timezone) { 'America/New_York' }
 
@@ -395,6 +419,14 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
 
       it 'returns to_date' do
         expect(result).to eq(date_service.to_datetime.to_s)
+      end
+
+      context 'when subscription is not yet started' do
+        let(:started_at) { nil }
+
+        it 'returns nil' do
+          expect(date_service.charges_to_datetime).to be_nil
+        end
       end
 
       context 'with customer timezone' do
