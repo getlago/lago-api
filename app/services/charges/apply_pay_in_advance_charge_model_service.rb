@@ -12,7 +12,7 @@ module Charges
 
     def call
       unless charge.pay_in_advance?
-        return result.service_failure!(code: 'apply_charge_model_error', message: 'Charge is not pay_in_advance')
+        return result.service_failure!(code: "apply_charge_model_error", message: "Charge is not pay_in_advance")
       end
 
       amount = amount_including_event - amount_excluding_event
@@ -26,7 +26,7 @@ module Charges
       result.count = 1
       result.amount = amount_cents
       result.precise_amount = amount * currency.subunit_to_unit.to_d
-      result.unit_amount = rounded_amount.zero? ? BigDecimal(0) : rounded_amount / compute_units
+      result.unit_amount = rounded_amount.zero? ? BigDecimal("0") : rounded_amount / compute_units
       result
     end
 
@@ -48,15 +48,19 @@ module Charges
         Charges::ChargeModels::PercentageService
       when :custom
         Charges::ChargeModels::CustomService
+      when :dynamic
+        Charges::ChargeModels::DynamicService
       else
         raise(NotImplementedError)
       end
     end
 
+    # Compute aggregation and apply charge for all events including the current one
     def amount_including_event
       @amount_including_event ||= charge_model.apply(charge:, aggregation_result:, properties:).amount
     end
 
+    # Compute aggregation and apply charge for all events excluding the current one
     def amount_excluding_event
       return @amount_excluding_event if defined?(@amount_excluding_event)
 
@@ -65,6 +69,12 @@ module Charges
       previous_result.count = aggregation_result.count - 1
       previous_result.options = aggregation_result.options
       previous_result.aggregator = aggregation_result.aggregator
+
+      if aggregation_result.precise_total_amount_cents
+        previous_result.precise_total_amount_cents = (
+          aggregation_result.precise_total_amount_cents - aggregation_result.pay_in_advance_precise_total_amount_cents
+        )
+      end
 
       @amount_excluding_event ||= charge_model.apply(
         charge:,

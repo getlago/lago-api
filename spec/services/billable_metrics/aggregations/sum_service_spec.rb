@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transaction: false do
   subject(:sum_service) do
@@ -33,8 +33,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     create(
       :billable_metric,
       organization:,
-      aggregation_type: 'sum_agg',
-      field_name: 'total_count'
+      aggregation_type: "sum_agg",
+      field_name: "total_count"
     )
   end
 
@@ -86,7 +86,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     latest_events
   end
 
-  it 'aggregates the events' do
+  it "aggregates the events" do
     result = sum_service.aggregate(options:)
 
     expect(result.aggregation).to eq(48)
@@ -95,10 +95,10 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     expect(result.options).to eq({running_total: [12, 24]})
   end
 
-  context 'when billable metric is recurring' do
+  context "when billable metric is recurring" do
     before { billable_metric.update!(recurring: true) }
 
-    it 'aggregates the events' do
+    it "aggregates the events" do
       result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(53)
@@ -108,43 +108,43 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when options are not present' do
+  context "when options are not present" do
     let(:options) { {} }
 
-    it 'returns an empty running total array' do
+    it "returns an empty running total array" do
       result = sum_service.aggregate(options:)
       expect(result.options).to eq({running_total: []})
     end
   end
 
-  context 'when option values are nil' do
+  context "when option values are nil" do
     let(:options) do
       {free_units_per_events: nil, free_units_per_total_aggregation: nil}
     end
 
-    it 'returns an empty running total array' do
+    it "returns an empty running total array" do
       result = sum_service.aggregate(options:)
       expect(result.options).to eq({running_total: []})
     end
   end
 
-  context 'when free_units_per_events is nil' do
+  context "when free_units_per_events is nil" do
     let(:options) do
       {free_units_per_events: nil, free_units_per_total_aggregation: 30}
     end
 
-    it 'returns running total based on per total aggregation' do
+    it "returns running total based on per total aggregation" do
       result = sum_service.aggregate(options:)
       expect(result.options).to eq({running_total: [12, 24, 36]})
     end
   end
 
-  context 'when free_units_per_total_aggregation is nil' do
+  context "when free_units_per_total_aggregation is nil" do
     let(:options) do
       {free_units_per_events: 2, free_units_per_total_aggregation: nil}
     end
 
-    it 'returns running total based on per events' do
+    it "returns running total based on per events" do
       result = sum_service.aggregate(options:)
       expect(result.options).to eq({running_total: [12, 24]})
     end
@@ -158,7 +158,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       expect(result.precise_total_amount_cents).to be_zero
     end
 
-    context 'with events that specify a precise_total_amount_cents' do
+    context "with events that specify a precise_total_amount_cents" do
       let(:old_events) do
         create_list(
           :event,
@@ -197,8 +197,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       end
     end
 
-    context 'when filters are given' do
-      let(:matching_filters) { {region: ['europe']} }
+    context "when filters are given" do
+      let(:matching_filters) { {region: ["europe"]} }
 
       before do
         create(
@@ -210,7 +210,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           timestamp: to_datetime - 1.day,
           properties: {
             total_count: 12,
-            region: 'europe'
+            region: "europe"
           },
           precise_total_amount_cents: 5
         )
@@ -224,7 +224,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           timestamp: to_datetime - 1.day,
           properties: {
             total_count: 8,
-            region: 'europe'
+            region: "europe"
           },
           precise_total_amount_cents: 7
         )
@@ -238,13 +238,13 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           timestamp: to_datetime - 1.day,
           properties: {
             total_count: 12,
-            region: 'africa'
+            region: "africa"
           },
           precise_total_amount_cents: 9
         )
       end
 
-      it 'aggregates the events matching the filter' do
+      it "aggregates the events matching the filter" do
         result = sum_service.aggregate(options:)
 
         expect(result.aggregation).to eq(20)
@@ -255,7 +255,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when events are out of bounds' do
+  context "when events are out of bounds" do
     let(:latest_events) do
       create_list(
         :event,
@@ -271,7 +271,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       )
     end
 
-    it 'does not take events into account' do
+    it "does not take events into account" do
       result = sum_service.aggregate
 
       expect(result.aggregation).to eq(0)
@@ -280,12 +280,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when properties is not found on events' do
+  context "when properties is not found on events" do
     before do
-      billable_metric.update!(field_name: 'foo_bar')
+      billable_metric.update!(field_name: "foo_bar")
     end
 
-    it 'counts as zero' do
+    it "counts as zero" do
       result = sum_service.aggregate
 
       expect(result.aggregation).to eq(0)
@@ -294,7 +294,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when properties is a float' do
+  context "when properties is a float" do
     before do
       create(
         :event,
@@ -309,14 +309,14 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       )
     end
 
-    it 'aggregates the events' do
+    it "aggregates the events" do
       result = sum_service.aggregate
 
       expect(result.aggregation).to eq(52.5)
     end
   end
 
-  context 'when properties is not a number' do
+  context "when properties is not a number" do
     before do
       create(
         :event,
@@ -326,12 +326,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         subscription:,
         timestamp: to_datetime - 1.day,
         properties: {
-          total_count: 'foo_bar'
+          total_count: "foo_bar"
         }
       )
     end
 
-    it 'ignores the event' do
+    it "ignores the event" do
       result = sum_service.aggregate
 
       aggregate_failures do
@@ -342,7 +342,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when current usage context and charge is pay in advance' do
+  context "when current usage context and charge is pay in advance" do
     let(:options) do
       {is_pay_in_advance: true, is_current_usage: true}
     end
@@ -370,8 +370,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         event_transaction_id: latest_events.transaction_id,
         external_subscription_id: subscription.external_id,
         timestamp: to_datetime - 3.days,
-        current_aggregation: '4',
-        max_aggregation: '6'
+        current_aggregation: "4",
+        max_aggregation: "6"
       )
     end
 
@@ -380,19 +380,19 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       cached_aggregation
     end
 
-    it 'returns period maximum as aggregation' do
+    it "returns period maximum as aggregation" do
       result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(11)
     end
 
-    context 'when cached aggregation does not exist' do
+    context "when cached aggregation does not exist" do
       let(:latest_events) { nil }
       let(:cached_aggregation) { nil }
 
       before { billable_metric.update!(recurring: false) }
 
-      it 'returns zero as aggregation' do
+      it "returns zero as aggregation" do
         result = sum_service.aggregate(options:)
 
         expect(result.aggregation).to eq(0)
@@ -400,8 +400,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when filters are given' do
-    let(:matching_filters) { {region: ['europe']} }
+  context "when filters are given" do
+    let(:matching_filters) { {region: ["europe"]} }
 
     before do
       create(
@@ -413,7 +413,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 1.day,
         properties: {
           total_count: 12,
-          region: 'europe'
+          region: "europe"
         }
       )
 
@@ -426,7 +426,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 1.day,
         properties: {
           total_count: 8,
-          region: 'europe'
+          region: "europe"
         }
       )
 
@@ -439,12 +439,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 1.day,
         properties: {
           total_count: 12,
-          region: 'africa'
+          region: "africa"
         }
       )
     end
 
-    it 'aggregates the events' do
+    it "aggregates the events" do
       result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(20)
@@ -453,11 +453,11 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when filter is given' do
+  context "when filter is given" do
     let(:filter) do
-      create(:billable_metric_filter, billable_metric:, key: 'region', values: ['north america', 'europe', 'africa'])
+      create(:billable_metric_filter, billable_metric:, key: "region", values: ["north america", "europe", "africa"])
     end
-    let(:matching_filters) { {'region' => ['europe']} }
+    let(:matching_filters) { {"region" => ["europe"]} }
     let(:ignored_filters) { [] }
     let(:charge_filter) { create(:charge_filter, charge:) }
     let(:filter_value) do
@@ -465,7 +465,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         :charge_filter_value,
         charge_filter:,
         billable_metric_filter: filter,
-        values: ['europe']
+        values: ["europe"]
       )
     end
 
@@ -481,7 +481,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 1.day,
         properties: {
           total_count: 12,
-          region: 'europe'
+          region: "europe"
         }
       )
 
@@ -494,7 +494,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 1.day,
         properties: {
           total_count: 8,
-          region: 'europe'
+          region: "europe"
         }
       )
 
@@ -507,12 +507,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         timestamp: to_datetime - 1.day,
         properties: {
           total_count: 12,
-          region: 'africa'
+          region: "africa"
         }
       )
     end
 
-    it 'aggregates the events' do
+    it "aggregates the events" do
       result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(20)
@@ -521,7 +521,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when subscription was upgraded in the period' do
+  context "when subscription was upgraded in the period" do
     let(:old_subscription) do
       create(
         :subscription,
@@ -551,14 +551,14 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       )
     end
 
-    it 'returns the correct number' do
+    it "returns the correct number" do
       result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(63)
     end
   end
 
-  context 'when event is given' do
+  context "when event is given" do
     let(:old_events) { nil }
     let(:latest_events) { nil }
     let(:pay_in_advance_event) do
@@ -575,13 +575,13 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
     let(:properties) { {total_count: 10} }
 
-    it 'assigns a pay_in_advance aggregation' do
+    it "assigns a pay_in_advance aggregation" do
       result = sum_service.aggregate
 
       expect(result.pay_in_advance_aggregation).to eq(10)
     end
 
-    context 'when current period aggregation is greater than period maximum' do
+    context "when current period aggregation is greater than period maximum" do
       let(:latest_events) do
         create(
           :event,
@@ -603,21 +603,21 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           charge:,
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 3.days,
-          current_aggregation: '4',
-          max_aggregation: '10'
+          current_aggregation: "4",
+          max_aggregation: "10"
         )
       end
 
       before { cached_aggregation }
 
-      it 'assigns a pay_in_advance aggregation' do
+      it "assigns a pay_in_advance aggregation" do
         result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(4)
       end
     end
 
-    context 'when current period aggregation is less than period maximum' do
+    context "when current period aggregation is less than period maximum" do
       let(:properties) { {total_count: -2} }
       let(:latest_events) do
         create(
@@ -642,61 +642,91 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           event_transaction_id: latest_events.transaction_id,
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 3.days,
-          current_aggregation: '4',
-          max_aggregation: '10'
+          current_aggregation: "4",
+          max_aggregation: "10"
         )
       end
 
       before { cached_aggregation }
 
-      it 'assigns a pay_in_advance aggregation' do
+      it "assigns a pay_in_advance aggregation" do
         result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0)
       end
     end
 
-    context 'when properties is a float' do
+    context "when properties is a float" do
       let(:properties) { {total_count: 12.4} }
 
-      it 'assigns a pay_in_advance aggregation' do
+      it "assigns a pay_in_advance aggregation" do
         result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(12.4)
       end
     end
 
-    context 'when event property does not match metric field name' do
+    context "when event property does not match metric field name" do
       let(:properties) { {final_count: 10} }
 
-      it 'assigns 0 as pay_in_advance aggregation' do
+      it "assigns 0 as pay_in_advance aggregation" do
         result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to be_zero
       end
     end
 
-    context 'when event is missing properties' do
+    context "when event is missing properties" do
       let(:properties) { {} }
 
-      it 'assigns 0 as pay_in_advance aggregation' do
+      it "assigns 0 as pay_in_advance aggregation" do
         result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to be_zero
+      end
+    end
+
+    context "when a precise_total_amount_cents is present" do
+      let(:charge) do
+        create(
+          :dynamic_charge,
+          billable_metric:
+        )
+      end
+
+      let(:pay_in_advance_event) do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: to_datetime - 2.days,
+          properties:,
+          precise_total_amount_cents: 1234.02
+        )
+      end
+
+      it "computes the precise_total_amount_cents" do
+        result = sum_service.aggregate
+
+        expect(result.pay_in_advance_aggregation).to eq(10)
+        expect(result.precise_total_amount_cents).to eq(1234.02)
+        expect(result.pay_in_advance_precise_total_amount_cents).to eq(1234.02)
       end
     end
   end
 
-  describe '.per_event_aggregation' do
-    it 'aggregates per events' do
+  describe ".per_event_aggregation" do
+    it "aggregates per events" do
       result = sum_service.per_event_aggregation
 
       expect(result.event_aggregation).to eq([12, 12, 12, 12])
     end
   end
 
-  describe '.grouped_by aggregation' do
-    let(:grouped_by) { ['agent_name'] }
+  describe ".grouped_by aggregation" do
+    let(:grouped_by) { ["agent_name"] }
 
     let(:agent_names) { %w[aragorn frodo gimli legolas] }
 
@@ -719,22 +749,22 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       end
     end
 
-    it 'returns a grouped aggregations' do
+    it "returns a grouped aggregations" do
       result = sum_service.aggregate(options:)
 
       expect(result.aggregations.count).to eq(4)
 
-      result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+      result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, index|
         expect(aggregation.aggregation).to eq(12)
         expect(aggregation.count).to eq(1)
-        expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+        expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
       end
     end
 
-    context 'without events' do
+    context "without events" do
       let(:latest_events) { [] }
 
-      it 'returns an empty result' do
+      it "returns an empty result" do
         result = sum_service.aggregate(options:)
 
         expect(result.aggregations.count).to eq(1)
@@ -742,11 +772,11 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({'agent_name' => nil})
+        expect(aggregation.grouped_by).to eq({"agent_name" => nil})
       end
     end
 
-    context 'when current usage context and charge is pay in advance' do
+    context "when current usage context and charge is pay in advance" do
       let(:options) do
         {is_pay_in_advance: true, is_current_usage: true}
       end
@@ -758,8 +788,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           charge:,
           external_subscription_id: subscription.external_id,
           timestamp: to_datetime - 3.days,
-          current_aggregation: '4',
-          max_aggregation: '6'
+          current_aggregation: "4",
+          max_aggregation: "6"
         )
       end
 
@@ -768,25 +798,25 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         cached_aggregation
       end
 
-      it 'returns period maximum as aggregation' do
+      it "returns period maximum as aggregation" do
         result = sum_service.aggregate(options:)
 
         expect(result.aggregations.count).to eq(4)
 
-        result.aggregations.sort_by { |a| a.grouped_by['agent_name'] }.each_with_index do |aggregation, index|
+        result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, index|
           expect(aggregation.aggregation).to eq(12)
           expect(aggregation.count).to eq(1)
-          expect(aggregation.grouped_by['agent_name']).to eq(agent_names[index])
+          expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
         end
       end
 
-      context 'when cached aggregation does not exist' do
+      context "when cached aggregation does not exist" do
         let(:latest_events) { nil }
         let(:cached_aggregation) { nil }
 
         before { billable_metric.update!(recurring: false) }
 
-        it 'returns an empty result' do
+        it "returns an empty result" do
           result = sum_service.aggregate(options:)
 
           expect(result.aggregations.count).to eq(1)
@@ -795,7 +825,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
           expect(aggregation.aggregation).to eq(0)
           expect(aggregation.count).to eq(0)
           expect(aggregation.current_usage_units).to eq(0)
-          expect(aggregation.grouped_by).to eq({'agent_name' => nil})
+          expect(aggregation.grouped_by).to eq({"agent_name" => nil})
         end
       end
     end

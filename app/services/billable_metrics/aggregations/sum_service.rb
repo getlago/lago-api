@@ -25,7 +25,7 @@ module BillableMetrics
         result.options = {running_total: running_total(options)}
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -59,11 +59,12 @@ module BillableMetrics
           group_result
         end
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       def compute_precise_total_amount_cents(options: {})
         result.precise_total_amount_cents = event_store.sum_precise_total_amount_cents
+        result.pay_in_advance_precise_total_amount_cents = event&.precise_total_amount_cents || 0
       end
 
       def compute_grouped_by_precise_total_amount_cents(options: {})
@@ -105,8 +106,8 @@ module BillableMetrics
       end
 
       def compute_pay_in_advance_aggregation
-        return BigDecimal(0) unless event
-        return BigDecimal(0) if event.properties.blank?
+        return BigDecimal("0") unless event
+        return BigDecimal("0") if event.properties.blank?
 
         value = event.properties.fetch(billable_metric.field_name, 0).to_s
 
@@ -117,7 +118,7 @@ module BillableMetrics
         )
 
         unless cached_aggregation
-          return_value = BigDecimal(value).negative? ? '0' : value
+          return_value = BigDecimal(value).negative? ? "0" : value
           handle_event_metadata(current_aggregation: value, max_aggregation: value, units_applied: value)
 
           return BigDecimal(return_value)
