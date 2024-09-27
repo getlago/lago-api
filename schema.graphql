@@ -6070,6 +6070,11 @@ type Query {
   customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
 
   """
+  Query the usage of the customer on the current billing period
+  """
+  customerPortalCustomerUsage(subscriptionId: ID!): CustomerUsage!
+
+  """
   Query invoice collections of a customer portal user
   """
   customerPortalInvoiceCollections(expireCache: Boolean, months: Int): FinalizedInvoiceCollectionCollection!
