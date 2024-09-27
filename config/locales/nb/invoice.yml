@@ -3,6 +3,7 @@ nb:
   invoice:
     all_subscriptions: Alle Abonnement
     all_usage_based_fees: Alle bruksbaserte kostnader
+    already_paid: Allerede betalt
     amount: Beløp
     amount_with_tax: Beløp (inkl. MVA)
     amount_without_tax: Beløp (ekskl. MVA)
@@ -40,6 +41,8 @@ nb:
       fee_per_package: Gebyr per pakke
       fee_per_package_unit_price: "%{amount} per %{package_size}"
       free_units_for_the_first: Gratis enheter for de første %{count}
+    paid_invoice: Betalt faktura
+    paid_tax_invoice: Betalt skattefaktura
     payment_term: Betalingsperiode
     payment_term_days: "%{net_payment_term} dager"
     percentage:

@@ -3,6 +3,7 @@ it:
   invoice:
     all_subscriptions: Tutti gli abbonamenti
     all_usage_based_fees: Tutte le tariffe basate sull'utilizzo
+    already_paid: Già pagato
     amount: Importo
     amount_with_tax: Importo (incl. tasse)
     amount_without_tax: Importo (escl. tasse)
@@ -40,6 +41,8 @@ it:
       fee_per_package: Tassa per pacchetto
       fee_per_package_unit_price: "%{amount} per %{package_size}"
       free_units_for_the_first: Unità gratuite per il primo %{count}
+    paid_invoice: Fattura pagata
+    paid_tax_invoice: Fattura fiscale pagata
     payment_term: Termine di pagamento
     payment_term_days: "%{net_payment_term} giorni"
     percentage:

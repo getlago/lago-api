@@ -3,6 +3,7 @@ de:
   invoice:
     all_subscriptions: Alle Abonnements
     all_usage_based_fees: Alle nutzungsabhängigen Gebühren
+    already_paid: Bereits bezahlt
     amount: Betrag
     amount_with_tax: Betrag (inkl. Steuern)
     amount_without_tax: Betrag (ohne Steuern)
@@ -40,6 +41,8 @@ de:
       fee_per_package: Gebühr pro Paket
       fee_per_package_unit_price: "%{amount} pro %{package_size}"
       free_units_for_the_first: Gebühr pro Einheit für die ersten %{count}
+    paid_invoice: Bezahlte Rechnung
+    paid_tax_invoice: Bezahlte Steuerrechnung
     payment_term: Zahlungsfrist
     payment_term_days: "%{net_payment_term} Tage"
     percentage:

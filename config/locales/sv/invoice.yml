@@ -3,6 +3,7 @@ sv:
   invoice:
     all_subscriptions: Alla prenumerationer
     all_usage_based_fees: Alla avgifter baserade på användning
+    already_paid: Redan betalt
     amount: Belopp (exkl. moms)
     amount_with_tax: Belopp (inkl. moms)
     amount_without_tax: Belopp (exkl. moms)
@@ -39,6 +40,8 @@ sv:
       fee_per_package: Avgift per paket
       fee_per_package_unit_price: "%{amount} per %{package_size}"
       free_units_for_the_first: Gratis enheter för de första %{count}
+    paid_invoice: Betald faktura
+    paid_tax_invoice: Betald skattefaktura
     payment_term: Betalningsvillkor
     payment_term_days: "%{net_payment_term} dagar"
     percentage:

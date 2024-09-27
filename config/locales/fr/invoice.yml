@@ -3,6 +3,7 @@ fr:
   invoice:
     all_subscriptions: Tous les abonnements
     all_usage_based_fees: Tous les frais de consommation
+    already_paid: Déjà payé
     amount: Montant
     amount_with_tax: Montant (TTC)
     amount_without_tax: Montant (HT)
@@ -40,6 +41,8 @@ fr:
       fee_per_package: Frais par tranche
       fee_per_package_unit_price: "%{amount} par tranche de %{package_size}"
       free_units_for_the_first: Unités gratuites pour les premiers %{count}
+    paid_invoice: Facture payée
+    paid_tax_invoice: Facture fiscale payée
     payment_term: Délai de paiement
     payment_term_days: "%{net_payment_term} jours"
     percentage:
