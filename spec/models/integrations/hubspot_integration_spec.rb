@@ -32,8 +32,8 @@ RSpec.describe Integrations::HubspotIntegration, type: :model do
 
   describe '#default_targeted_object' do
     it 'assigns and retrieve a setting' do
-      hubspot_integration.default_targeted_object = 'Companies'
-      expect(hubspot_integration.default_targeted_object).to eq('Companies')
+      hubspot_integration.default_targeted_object = 'companies'
+      expect(hubspot_integration.default_targeted_object).to eq('companies')
     end
   end
 
@@ -48,6 +48,60 @@ RSpec.describe Integrations::HubspotIntegration, type: :model do
     it 'assigns and retrieve a setting' do
       hubspot_integration.sync_subscriptions = true
       expect(hubspot_integration.sync_subscriptions).to eq(true)
+    end
+  end
+
+  describe '#subscriptions_object_type_id' do
+    it 'assigns and retrieve a setting' do
+      hubspot_integration.subscriptions_object_type_id = '123'
+      expect(hubspot_integration.subscriptions_object_type_id).to eq('123')
+    end
+  end
+
+  describe '#invoices_object_type_id' do
+    it 'assigns and retrieve a setting' do
+      hubspot_integration.invoices_object_type_id = '123'
+      expect(hubspot_integration.invoices_object_type_id).to eq('123')
+    end
+  end
+
+  describe '#companies_properties_version' do
+    it 'assigns and retrieve a setting' do
+      hubspot_integration.companies_properties_version = 5
+      expect(hubspot_integration.companies_properties_version).to eq(5)
+    end
+  end
+
+  describe '#contacts_properties_version' do
+    it 'assigns and retrieve a setting' do
+      hubspot_integration.contacts_properties_version = 6
+      expect(hubspot_integration.contacts_properties_version).to eq(6)
+    end
+  end
+
+  describe '#subscriptions_properties_version' do
+    it 'assigns and retrieve a setting' do
+      hubspot_integration.subscriptions_properties_version = 7
+      expect(hubspot_integration.subscriptions_properties_version).to eq(7)
+    end
+  end
+
+  describe '#invoices_properties_version' do
+    it 'assigns and retrieve a setting' do
+      hubspot_integration.invoices_properties_version = 8
+      expect(hubspot_integration.invoices_properties_version).to eq(8)
+    end
+  end
+
+  describe '#companies_object_type_id' do
+    it 'returns the correct object type id for companies' do
+      expect(hubspot_integration.companies_object_type_id).to eq('0-2')
+    end
+  end
+
+  describe '#contacts_object_type_id' do
+    it 'returns the correct object type id for contacts' do
+      expect(hubspot_integration.contacts_object_type_id).to eq('0-1')
     end
   end
 end

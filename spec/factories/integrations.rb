@@ -60,7 +60,17 @@ FactoryBot.define do
     name { 'Hubspot Integration' }
 
     settings do
-      {default_targeted_object: 'Companies', sync_subscriptions: true, sync_invoices: true}
+      {
+        default_targeted_object: 'companies',
+        sync_subscriptions: true,
+        sync_invoices: true,
+        subscriptions_object_type_id: Faker::Number.number(digits: 2),
+        invoices_object_type_id: Faker::Number.number(digits: 2),
+        companies_properties_version: 1,
+        contacts_properties_version: 1,
+        subscriptions_properties_version: 1,
+        invoices_properties_version: 1
+      }
     end
 
     secrets do
