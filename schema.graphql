@@ -6763,8 +6763,8 @@ type SyncIntegrationInvoicePayload {
 }
 
 enum TargetedObjectsEnum {
-  Companies
-  Contacts
+  companies
+  contacts
 }
 
 type Tax {

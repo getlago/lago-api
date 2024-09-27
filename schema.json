@@ -35002,13 +35002,13 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "Companies",
+              "name": "companies",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "Contacts",
+              "name": "contacts",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
