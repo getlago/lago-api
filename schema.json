@@ -30619,6 +30619,39 @@
               ]
             },
             {
+              "name": "customerPortalCustomerUsage",
+              "description": "Query the usage of the customer on the current billing period",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CustomerUsage",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "subscriptionId",
+                  "description": null,
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "customerPortalInvoiceCollections",
               "description": "Query invoice collections of a customer portal user",
               "type": {

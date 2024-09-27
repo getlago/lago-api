@@ -18,8 +18,8 @@ module Invoices
       result.not_found_failure!(resource: 'customer')
     end
 
-    def self.with_ids(current_user, customer_id:, subscription_id:, apply_taxes: true)
-      customer = Customer.find_by(id: customer_id, organization_id: current_user.organization_ids)
+    def self.with_ids(current_user:, organization_id:, customer_id:, subscription_id:, apply_taxes: true)
+      customer = Customer.find_by(id: customer_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
       new(current_user, customer:, subscription:, apply_taxes:)
     rescue ActiveRecord::RecordNotFound

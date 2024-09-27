@@ -16,7 +16,8 @@ module Resolvers
 
       def resolve(customer_id:, subscription_id:)
         result = Invoices::CustomerUsageService.with_ids(
-          context[:current_user],
+          current_user: context[:current_user],
+          organization_id: context[:current_user].organization_ids,
           customer_id:,
           subscription_id:,
           apply_taxes: false
