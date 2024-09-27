@@ -10,7 +10,7 @@ class Event < EventsRecord
   belongs_to :organization
 
   validates :transaction_id, presence: true, uniqueness: {scope: %i[organization_id external_subscription_id]}
-  validates :code, :external_subscription_id, presence: true
+  validates :code, presence: true
 
   default_scope -> { kept }
   scope :from_datetime, ->(from_datetime) { where('events.timestamp >= ?', from_datetime) }

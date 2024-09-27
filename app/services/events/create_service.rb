@@ -11,6 +11,8 @@ module Events
     end
 
     def call
+      validate_create
+
       event = Event.new
       event.organization_id = organization.id
       event.code = params[:code]
@@ -38,6 +40,16 @@ module Events
     private
 
     attr_reader :organization, :params, :timestamp, :metadata
+
+    def validate_create
+      if params[:external_subscription_id].blank?
+        missing_subscription_error
+      end
+    end
+
+    def missing_subscription_error
+      result.not_found_failure!(resource: 'subscription')
+    end
 
     def produce_kafka_event(event)
       return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?
