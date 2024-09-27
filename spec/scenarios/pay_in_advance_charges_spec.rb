@@ -1123,10 +1123,10 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(5)
         expect(fee.events_count).to eq(1)
-        #expect(fee.amount_cents).to eq(1234) # TODO
+        expect(fee.amount_cents).to eq(1235)
       end
 
-      travel_to(Time.zone.parse('2024-09-30')) do
+      travel_to(Time.zone.parse("2024-09-30")) do
         expect do
           create_event(
             {
@@ -1142,7 +1142,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         fee = subscription.fees.order(created_at: :desc).first
         expect(fee.units).to eq(1)
         expect(fee.events_count).to eq(1)
-        #expect(fee.amount_cents).to eq(2) # TODO
+        expect(fee.amount_cents).to eq(2)
       end
     end
   end

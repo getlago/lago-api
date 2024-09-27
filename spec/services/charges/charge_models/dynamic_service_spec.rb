@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Charges::ChargeModels::DynamicService, type: :service do
   subject(:apply_dynamic_service) do
@@ -21,17 +21,17 @@ RSpec.describe Charges::ChargeModels::DynamicService, type: :service do
   let(:charge) { create(:dynamic_charge) }
 
   let(:aggregation) { 20 }
-  let(:precise_total_amount_cents) { 40.2.to_d }
+  let(:precise_total_amount_cents) { BigDecimal("40.2") }
 
-  it 'applies the model to the values' do
-    expect(apply_dynamic_service.amount).to eq(40.2)
-    expect(apply_dynamic_service.unit_amount).to eq(2.01)
+  it "applies the model to the values" do
+    expect(apply_dynamic_service.amount).to eq(0.402)
+    expect(apply_dynamic_service.unit_amount).to eq(0.0201)
   end
 
-  context 'when aggregation is zero' do
+  context "when aggregation is zero" do
     let(:aggregation) { 0 }
 
-    it 'applies the model to the values' do
+    it "applies the model to the values" do
       expect(apply_dynamic_service.amount).to eq(0)
       expect(apply_dynamic_service.unit_amount).to eq(0)
     end

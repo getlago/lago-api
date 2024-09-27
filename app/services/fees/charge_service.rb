@@ -267,7 +267,7 @@ module Fees
       filters = {}
 
       properties = charge_filter&.properties || charge.properties
-      filters[:grouped_by] = properties['grouped_by'] if charge.standard? && properties['grouped_by'].present?
+      filters[:grouped_by] = properties['grouped_by'] if charge.supports_grouped_by? && properties['grouped_by'].present?
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)

@@ -9,7 +9,8 @@ module Charges
         total_units = aggregation_result.full_units_number || units
         return 0 if total_units.zero?
 
-        aggregation_result.precise_total_amount_cents
+        amount_cents = aggregation_result.precise_total_amount_cents
+        amount_cents / currency.subunit_to_unit
       end
 
       def unit_amount
@@ -18,6 +19,12 @@ module Charges
         return 0 if total_units.zero?
 
         compute_amount / total_units
+      end
+
+      private
+
+      def currency
+        charge.plan.amount.currency
       end
     end
   end

@@ -3,7 +3,7 @@
 module Charges
   class ChargeModelFactory
     def self.new_instance(charge:, aggregation_result:, properties:)
-      charge_model = charge_model_class(charge:, aggregation_result:, properties:)
+      charge_model = charge_model_class(charge:)
       if properties['grouped_by'].present? && !aggregation_result.aggregations.nil?
         Charges::ChargeModels::GroupedService.new(charge_model: charge_model, charge:, aggregation_result:, properties:)
       else
@@ -11,7 +11,7 @@ module Charges
       end
     end
 
-    def self.charge_model_class(charge:, aggregation_result:, properties:)
+    def self.charge_model_class(charge:)
       case charge.charge_model.to_sym
       when :standard
         Charges::ChargeModels::StandardService
