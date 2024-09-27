@@ -106,7 +106,7 @@ module CreditNotes
     def taxes_base_rate(applied_tax)
       return 1 if applied_tax.fees_amount_cents.blank? || applied_tax.fees_amount_cents.zero?
 
-      applied_tax.taxable_base_amount_cents.fdiv(applied_tax.fees_amount_cents)
+      applied_tax.taxable_amount_cents.fdiv(applied_tax.fees_amount_cents)
     end
   end
 end

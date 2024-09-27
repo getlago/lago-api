@@ -16,6 +16,10 @@ module Types
         def enumed_tax_code
           object.tax_code if object.applied_on_whole_invoice?
         end
+
+        def taxable_base_amount_cents
+          object.taxable_amount_cents
+        end
       end
     end
   end

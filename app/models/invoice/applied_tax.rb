@@ -11,7 +11,7 @@ class Invoice
 
     monetize :amount_cents,
       :fees_amount_cents,
-      :taxable_base_amount_cents,
+      :taxable_amount_cents,
       with_model_currency: :amount_currency
 
     validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
@@ -23,8 +23,8 @@ class Invoice
       TAX_CODES_APPLICABLE_ON_WHOLE_INVOICE.include?(tax_code)
     end
 
-    def taxable_base_amount_cents
-      base_amount = self[:taxable_base_amount_cents]
+    def taxable_amount_cents
+      base_amount = taxable_base_amount_cents
 
       return fees_amount_cents if base_amount.blank? || base_amount.zero?
 

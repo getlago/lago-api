@@ -24,4 +24,26 @@ RSpec.describe Invoice::AppliedTax, type: :model do
       end
     end
   end
+
+  describe '#taxable_amount_cents' do
+    before do
+      applied_tax.fees_amount_cents = 150
+    end
+
+    context 'when taxable_base_amount_cents is zero' do
+      it 'returns fees_amount_cents' do
+        applied_tax.taxable_base_amount_cents = 0
+
+        expect(applied_tax.taxable_amount_cents).to eq(150)
+      end
+    end
+
+    context 'when taxable_base_amount_cents is NOT zero' do
+      it 'returns taxable_base_amount_cents' do
+        applied_tax.taxable_base_amount_cents = 100
+
+        expect(applied_tax.taxable_amount_cents).to eq(100)
+      end
+    end
+  end
 end
