@@ -11,14 +11,10 @@ module Types
         field :enumed_tax_code, Types::Invoices::AppliedTaxes::WholeInvoiceApplicableTaxCodeEnum, null: true
         field :fees_amount_cents, GraphQL::Types::BigInt, null: false
         field :invoice, Types::Invoices::Object, null: false
-        field :taxable_base_amount_cents, GraphQL::Types::BigInt, null: false
+        field :taxable_amount_cents, GraphQL::Types::BigInt, null: false
 
         def enumed_tax_code
           object.tax_code if object.applied_on_whole_invoice?
-        end
-
-        def taxable_base_amount_cents
-          object.taxable_amount_cents
         end
       end
     end

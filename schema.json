@@ -21009,7 +21009,7 @@
               ]
             },
             {
-              "name": "taxableBaseAmountCents",
+              "name": "taxableAmountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
