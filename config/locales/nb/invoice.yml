@@ -42,6 +42,7 @@ nb:
       fee_per_package_unit_price: "%{amount} per %{package_size}"
       free_units_for_the_first: Gratis enheter for de første %{count}
     paid_invoice: Betalt faktura
+    paid_tax_invoice: Betalt skattefaktura
     payment_term: Betalingsperiode
     payment_term_days: "%{net_payment_term} dager"
     percentage:

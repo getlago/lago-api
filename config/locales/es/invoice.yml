@@ -41,6 +41,7 @@ es:
       fee_per_package_unit_price: "%{amount} por %{package_size}"
       free_units_for_the_first: Unidades gratuitas para las %{count} primeras
     paid_invoice: Factura pagada
+    paid_tax_invoice: Factura fiscal pagada
     payment_term: Plazo de pago neto
     payment_term_days: "%{net_payment_term} días"
     percentage:

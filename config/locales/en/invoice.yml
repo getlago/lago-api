@@ -42,6 +42,7 @@ en:
       fee_per_package_unit_price: "%{amount} per %{package_size}"
       free_units_for_the_first: Free units for the first %{count}
     paid_invoice: Paid invoice
+    paid_tax_invoice: Paid tax invoice
     payment_term: Payment term
     payment_term_days: "%{net_payment_term} days"
     percentage:

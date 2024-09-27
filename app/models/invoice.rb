@@ -325,9 +325,12 @@ class Invoice < ApplicationRecord
   def document_invoice_name
     return I18n.t('invoice.prepaid_credit_invoice') if credit?
 
-    return I18n.t('invoice.paid_invoice') if advance_charges?
+    if %w[AU AE ID NZ].include?(organization.country)
+      return I18n.t('invoice.paid_tax_invoice') if advance_charges?
+      return I18n.t('invoice.document_tax_name')
+    end
 
-    return I18n.t('invoice.document_tax_name') if %w[AU AE ID NZ].include?(organization.country)
+    return I18n.t('invoice.paid_invoice') if advance_charges?
 
     I18n.t('invoice.document_name')
   end
