@@ -59,6 +59,7 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
         before do
           organization.update!(premium_integrations: ['hubspot'])
           allow(Integrations::Aggregator::SendPrivateAppTokenJob).to receive(:perform_later)
+          allow(Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
@@ -82,11 +83,12 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
             expect(result.integration).to be_a(Integrations::HubspotIntegration)
           end
 
-          it 'calls Integrations::Aggregator::SendPrivateAppTokenJob' do
+          it 'enqueues jobs to send token and sync objects to Hubspot' do
             service_call
 
             integration = Integrations::HubspotIntegration.order(:created_at).last
             expect(Integrations::Aggregator::SendPrivateAppTokenJob).to have_received(:perform_later).with(integration:)
+            expect(Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob).to have_received(:perform_later).with(integration:)
           end
         end
 
