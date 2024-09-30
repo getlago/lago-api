@@ -66,7 +66,8 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         external_customer_id: customer.external_id,
         code:,
         timestamp: boundaries[:from_datetime] + (i + 1).days,
-        properties:
+        properties:,
+        precise_total_amount_cents: i + 1
       )
     end
 
@@ -163,6 +164,54 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           expect(row[:groups]['cloud']).not_to be_nil
           expect(row[:groups]['region']).not_to be_nil
           expect(row[:value]).to eq(1)
+        end
+      end
+    end
+  end
+
+  describe '#sum_precise_total_amount_cents' do
+    it 'returns the sum of precise_total_amount_cent values' do
+      expect(event_store.sum_precise_total_amount_cents).to eq(15)
+    end
+  end
+
+  describe '#grouped_sum_precise_total_amount_cents' do
+    let(:grouped_by) { %w[cloud] }
+
+    it 'returns the sum of values grouped by the provided group' do
+      result = event_store.grouped_sum_precise_total_amount_cents
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]['cloud'].nil? }
+      expect(null_group[:value]).to eq(6)
+
+      result[...-1].each do |row|
+        next if row[:groups]['cloud'].nil?
+
+        expect(row[:groups]['cloud']).not_to be_nil
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context 'with multiple groups' do
+      let(:grouped_by) { %w[cloud region] }
+
+      it 'returns the sum of values grouped by the provided groups' do
+        result = event_store.grouped_sum_precise_total_amount_cents
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]['cloud'].nil? }
+        expect(null_group[:groups]['region']).to be_nil
+        expect(null_group[:value]).to eq(6)
+
+        result[...-1].each do |row|
+          next if row[:groups]['cloud'].nil?
+
+          expect(row[:groups]['cloud']).not_to be_nil
+          expect(row[:groups]['region']).not_to be_nil
+          expect(row[:value]).not_to be_nil
         end
       end
     end

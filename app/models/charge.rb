@@ -10,10 +10,10 @@ class Charge < ApplicationRecord
   belongs_to :billable_metric, -> { with_discarded }
 
   has_many :fees
-  has_many :filters, dependent: :destroy, class_name: 'ChargeFilter'
-  has_many :filter_values, through: :filters, class_name: 'ChargeFilterValue', source: :values
+  has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
+  has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values
 
-  has_many :applied_taxes, class_name: 'Charge::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   CHARGE_MODELS = %i[
@@ -24,6 +24,7 @@ class Charge < ApplicationRecord
     volume
     graduated_percentage
     custom
+    dynamic
   ].freeze
 
   REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
@@ -37,6 +38,7 @@ class Charge < ApplicationRecord
   validate :validate_percentage, if: -> { percentage? }
   validate :validate_volume, if: -> { volume? }
   validate :validate_graduated_percentage, if: -> { graduated_percentage? }
+  validate :validate_dynamic, if: -> { dynamic? }
 
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
@@ -52,6 +54,10 @@ class Charge < ApplicationRecord
   default_scope -> { kept }
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
+
+  def supports_grouped_by?
+    standard? || dynamic?
+  end
 
   private
 
@@ -77,6 +83,13 @@ class Charge < ApplicationRecord
 
   def validate_graduated_percentage
     validate_charge_model(Charges::Validators::GraduatedPercentageService)
+  end
+
+  def validate_dynamic
+    # Only sum aggregation is compatible with Dynamic Pricing for now
+    return if billable_metric.sum_agg?
+
+    errors.add(:charge_model, :invalid_aggregation_type_or_charge_model)
   end
 
   def validate_charge_model(validator)

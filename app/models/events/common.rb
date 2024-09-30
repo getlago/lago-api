@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Events
-  Common = Struct.new(:id, :organization_id, :transaction_id, :external_subscription_id, :timestamp, :code, :properties) do
+  Common = Struct.new(:id, :organization_id, :transaction_id, :external_subscription_id, :timestamp, :code, :properties, :precise_total_amount_cents) do
     def event_id
       id || transaction_id
     end

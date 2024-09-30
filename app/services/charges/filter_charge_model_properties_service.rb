@@ -26,7 +26,7 @@ module Charges
       attributes += charge_model_attributes || []
 
       sliced_attributes = properties.slice(*attributes)
-      sliced_attributes[:grouped_by].reject!(&:empty?) if charge.standard? && sliced_attributes[:grouped_by].present?
+      sliced_attributes[:grouped_by].reject!(&:empty?) if charge.supports_grouped_by? && sliced_attributes[:grouped_by].present?
       sliced_attributes
     end
 
@@ -54,6 +54,10 @@ module Charges
         ]
       when :volume
         %i[volume_ranges]
+      when :dynamic
+        if properties[:grouped_by].present?
+          [:grouped_by]
+        end
       end
     end
   end

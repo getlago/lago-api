@@ -53,6 +53,14 @@ FactoryBot.define do
       end
     end
 
+    factory :dynamic_charge do
+      charge_model { 'dynamic' }
+      billable_metric { create(:sum_billable_metric) }
+      properties do
+        {}
+      end
+    end
+
     factory :graduated_percentage_charge do
       charge_model { 'graduated_percentage' }
       properties do

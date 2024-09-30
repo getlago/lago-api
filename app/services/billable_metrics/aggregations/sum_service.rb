@@ -4,7 +4,7 @@ module BillableMetrics
   module Aggregations
     class SumService < BillableMetrics::Aggregations::BaseService
       def initialize(...)
-        super(...)
+        super
 
         event_store.numeric_property = true
         event_store.aggregation_property = billable_metric.field_name
@@ -25,7 +25,7 @@ module BillableMetrics
         result.options = {running_total: running_total(options)}
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -58,10 +58,25 @@ module BillableMetrics
           group_result.count = count[:value] || 0
           group_result
         end
-
-        result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
+      end
+
+      def compute_precise_total_amount_cents(options: {})
+        result.precise_total_amount_cents = event_store.sum_precise_total_amount_cents
+        result.pay_in_advance_precise_total_amount_cents = event&.precise_total_amount_cents || 0
+      end
+
+      def compute_grouped_by_precise_total_amount_cents(options: {})
+        aggregations = event_store.grouped_sum_precise_total_amount_cents
+        return result if aggregations.blank?
+
+        aggregations.each do |aggregation|
+          group_result = result.aggregations.find { |group_result| group_result.grouped_by == aggregation[:groups] }
+          next unless group_result
+
+          group_result.precise_total_amount_cents = aggregation[:value]
+        end
       end
 
       # NOTE: Return cumulative sum of field_name based on the number of free units
@@ -91,8 +106,8 @@ module BillableMetrics
       end
 
       def compute_pay_in_advance_aggregation
-        return BigDecimal(0) unless event
-        return BigDecimal(0) if event.properties.blank?
+        return BigDecimal("0") unless event
+        return BigDecimal("0") if event.properties.blank?
 
         value = event.properties.fetch(billable_metric.field_name, 0).to_s
 
@@ -103,7 +118,7 @@ module BillableMetrics
         )
 
         unless cached_aggregation
-          return_value = BigDecimal(value).negative? ? '0' : value
+          return_value = BigDecimal(value).negative? ? "0" : value
           handle_event_metadata(current_aggregation: value, max_aggregation: value, units_applied: value)
 
           return BigDecimal(return_value)

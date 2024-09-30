@@ -188,6 +188,19 @@ module Events
         prepare_grouped_result(Event.connection.select_all(sql).rows)
       end
 
+      def sum_precise_total_amount_cents
+        events.sum(:precise_total_amount_cents)
+      end
+
+      def grouped_sum_precise_total_amount_cents
+        results = events
+          .group(sanitized_grouped_by)
+          .sum(:precise_total_amount_cents)
+          .map { |group, value| [group, value].flatten }
+
+        prepare_grouped_result(results)
+      end
+
       def sum
         events.sum("(#{sanitized_property_name})::numeric")
       end
