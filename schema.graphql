@@ -6097,6 +6097,16 @@ type Query {
   customerPortalOverdueBalances(expireCache: Boolean, months: Int): OverdueBalanceCollection!
 
   """
+  Query a single subscription from the customer portal
+  """
+  customerPortalSubscription(
+    """
+    Uniq ID of the subscription
+    """
+    id: ID!
+  ): Subscription
+
+  """
   Query customer portal subscriptions
   """
   customerPortalSubscriptions(limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
