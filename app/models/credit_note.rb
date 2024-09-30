@@ -129,6 +129,18 @@ class CreditNote < ApplicationRecord
   end
   alias_method :sub_total_excluding_taxes_amount_currency, :currency
 
+  def precise_total
+    items.sum(&:precise_amount_cents) + precise_taxes_amount_cents
+  end
+
+  def taxes_rounding_adjustment
+    taxes_amount_cents - precise_taxes_amount_cents
+  end
+
+  def rounding_adjustment
+    total_amount_cents - precise_total
+  end
+
   private
 
   def ensure_number

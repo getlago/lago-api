@@ -7,7 +7,7 @@ module CreditNotes
 
       valid_item_amount?
       valid_individual_amount?
-      valid_global_amount?
+      # valid_global_amount?
 
       if errors?
         result.validation_failure!(errors:)
@@ -42,9 +42,13 @@ module CreditNotes
       credited_invoice_amount_cents + refunded_invoice_amount_cents
     end
 
-    def total_item_amount_cents
-      (item.amount_cents + (item.amount_cents * fee.taxes_rate).fdiv(100)).round
-    end
+    # QUESTION HERE:
+    # we don't save taxes on the credit_note item. does it make sense then to check taxes on credit note level rather
+    # than on item level?
+    #
+    # def total_item_amount_cents
+    #   (item.amount_cents + (item.amount_cents * fee.taxes_rate).fdiv(100)).round
+    # end
 
     def valid_fee?
       return true if item.fee.present?
