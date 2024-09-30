@@ -468,7 +468,7 @@ html
                   td.body-2
                 - else
                   td.body-2
-                  td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.fees_amount))
+                  td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
                   td.body-2 = MoneyHelper.format(applied_tax.amount)
           - else
             tr

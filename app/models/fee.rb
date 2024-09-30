@@ -194,6 +194,7 @@ end
 #  refunded_at                         :datetime
 #  succeeded_at                        :datetime
 #  taxes_amount_cents                  :bigint           not null
+#  taxes_base_rate                     :float            default(1.0), not null
 #  taxes_precise_amount_cents          :decimal(40, 15)  default(0.0), not null
 #  taxes_rate                          :float            default(0.0), not null
 #  total_aggregated_units              :decimal(, )

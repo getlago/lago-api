@@ -41,6 +41,36 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
           expect(fee).to have_attributes(taxes_amount_cents: 170, taxes_precise_amount_cents: 170.0, taxes_rate: 17)
         end
       end
+
+      context 'when there is tax deduction' do
+        let(:fee_taxes) do
+          OpenStruct.new(
+            tax_breakdown: [
+              OpenStruct.new(name: 'tax 2', type: 'type2', rate: '0.12', tax_amount: 96),
+              OpenStruct.new(name: 'tax 3', type: 'type3', rate: '0.05', tax_amount: 40)
+            ]
+          )
+        end
+
+        it 'creates applied_taxes based on the provider taxes' do
+          result = apply_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            applied_taxes = result.applied_taxes
+            expect(applied_taxes.count).to eq(2)
+
+            expect(applied_taxes.map(&:tax_code)).to contain_exactly('tax_2', 'tax_3')
+            expect(fee).to have_attributes(
+              taxes_amount_cents: 136,
+              taxes_precise_amount_cents: 136.0,
+              taxes_rate: 17,
+              taxes_base_rate: 0.8
+            )
+          end
+        end
+      end
     end
 
     context 'when fee already have taxes' do

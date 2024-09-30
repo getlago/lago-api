@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
+ActiveRecord::Schema[7.1].define(version: 2024_09_24_114730) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -561,6 +561,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
     t.datetime "deleted_at"
     t.decimal "precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
     t.decimal "taxes_precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
+    t.float "taxes_base_rate", default: 1.0, null: false
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
@@ -809,6 +810,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_20_091133) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "fees_amount_cents", default: 0, null: false
+    t.bigint "taxable_base_amount_cents", default: 0, null: false
     t.index ["invoice_id", "tax_id"], name: "index_invoices_taxes_on_invoice_id_and_tax_id", unique: true, where: "((tax_id IS NOT NULL) AND (created_at >= '2023-09-12 00:00:00'::timestamp without time zone))"
     t.index ["invoice_id"], name: "index_invoices_taxes_on_invoice_id"
     t.index ["tax_id"], name: "index_invoices_taxes_on_tax_id"

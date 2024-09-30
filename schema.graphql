@@ -4246,6 +4246,7 @@ type InvoiceAppliedTax implements AppliedTax {
   taxDescription: String
   taxName: String!
   taxRate: Float!
+  taxableAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
 }
 

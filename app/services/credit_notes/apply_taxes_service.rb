@@ -30,9 +30,9 @@ module CreditNotes
         result.applied_taxes << applied_tax
 
         base_amount_cents = compute_base_amount_cents(tax_code)
-        applied_tax.base_amount_cents = base_amount_cents.round
+        applied_tax.base_amount_cents = (base_amount_cents.round * taxes_base_rate(invoice_applied_tax)).round
 
-        tax_amount_cents = (base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
+        tax_amount_cents = (applied_tax.base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
         applied_tax.amount_cents = tax_amount_cents.round
 
         applied_taxes_amount_cents += tax_amount_cents
@@ -101,6 +101,12 @@ module CreditNotes
 
     def find_invoice_applied_tax(tax_code)
       invoice.applied_taxes.find_by(tax_code: tax_code)
+    end
+
+    def taxes_base_rate(applied_tax)
+      return 1 if applied_tax.fees_amount_cents.blank? || applied_tax.fees_amount_cents.zero?
+
+      applied_tax.taxable_amount_cents.fdiv(applied_tax.fees_amount_cents)
     end
   end
 end

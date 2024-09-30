@@ -152,7 +152,9 @@ RSpec.describe Fees::OneOffService do
         # setting item_id based on the test example
         response = JSON.parse(json)
         response['succeededInvoices'].first['fees'].first['item_id'] = add_on_first.id
+        response['succeededInvoices'].first['fees'].first['tax_breakdown'].first['tax_amount'] = 240
         response['succeededInvoices'].first['fees'].last['item_id'] = add_on_second.id
+        response['succeededInvoices'].first['fees'].last['tax_breakdown'].first['tax_amount'] = 60
 
         response.to_json
       end
@@ -195,7 +197,8 @@ RSpec.describe Fees::OneOffService do
             amount_currency: 'EUR',
             fee_type: 'add_on',
             payment_status: 'pending',
-            taxes_rate: 10
+            taxes_rate: 10,
+            taxes_base_rate: 1.0
           )
           expect(first_fee.applied_taxes.first.amount_cents).to eq(240)
           expect(first_fee.applied_taxes.first.precise_amount_cents).to eq(240.0)
@@ -213,12 +216,79 @@ RSpec.describe Fees::OneOffService do
             amount_currency: 'EUR',
             fee_type: 'add_on',
             payment_status: 'pending',
-            taxes_rate: 15
+            taxes_rate: 15,
+            taxes_base_rate: 1.0
           )
           expect(second_fee.applied_taxes.first.amount_cents).to eq(60)
           expect(second_fee.applied_taxes.first.precise_amount_cents).to eq(60.0)
 
           expect(invoice.reload.error_details.count).to eq(0)
+        end
+      end
+
+      context 'when there is tax deduction' do
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
+          json = File.read(p)
+
+          # setting item_id based on the test example
+          response = JSON.parse(json)
+          response['succeededInvoices'].first['fees'].first['item_id'] = add_on_first.id
+          response['succeededInvoices'].first['fees'].first['tax_breakdown'].first['tax_amount'] = 192
+          response['succeededInvoices'].first['fees'].last['item_id'] = add_on_second.id
+          response['succeededInvoices'].first['fees'].last['tax_breakdown'].first['tax_amount'] = 48
+
+          response.to_json
+        end
+
+        it 'creates fees' do
+          result = one_off_service.create
+
+          first_fee = result.fees[0].reload
+          second_fee = result.fees[1].reload
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            expect(first_fee).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              add_on_id: add_on_first.id,
+              description: 'desc-123',
+              unit_amount_cents: 1200,
+              precise_unit_amount: 12,
+              units: 2,
+              amount_cents: 2400,
+              amount_currency: 'EUR',
+              fee_type: 'add_on',
+              payment_status: 'pending',
+              taxes_rate: 10,
+              taxes_base_rate: 0.8
+            )
+            expect(first_fee.applied_taxes.first.amount_cents).to eq(192)
+            expect(first_fee.applied_taxes.first.precise_amount_cents).to eq(192.0)
+
+            expect(second_fee).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              add_on_id: add_on_second.id,
+              description: add_on_second.description,
+              unit_amount_cents: 400,
+              precise_unit_amount: 4,
+              units: 1,
+              amount_cents: 400,
+              precise_amount_cents: 400.0,
+              amount_currency: 'EUR',
+              fee_type: 'add_on',
+              payment_status: 'pending',
+              taxes_rate: 15,
+              taxes_base_rate: 0.8
+            )
+            expect(second_fee.applied_taxes.first.amount_cents).to eq(48)
+            expect(second_fee.applied_taxes.first.precise_amount_cents).to eq(48.0)
+
+            expect(invoice.reload.error_details.count).to eq(0)
+          end
         end
       end
 
