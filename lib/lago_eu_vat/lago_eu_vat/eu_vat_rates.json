@@ -169,11 +169,11 @@
     ],
     "FI": [
       {
-        "effective_from": "0000-01-01",
+        "effective_from": "2024-09-01",
         "rates": {
           "reduced1": 10,
           "reduced2": 14,
-          "standard": 24
+          "standard": 25.5
         }
       }
     ],
