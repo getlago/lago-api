@@ -25,6 +25,7 @@ module PaymentProviders
       end
 
       secret_key = stripe_provider.secret_key
+      old_code = stripe_provider.code
 
       stripe_provider.secret_key = args[:secret_key] if args.key?(:secret_key)
       stripe_provider.code = args[:code] if args.key?(:code)
@@ -43,6 +44,10 @@ module PaymentProviders
           organization_id: args[:organization_id],
           stripe_provider:
         )
+      end
+
+      if payment_provider_code_changed?(stripe_provider, old_code, args)
+        stripe_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
       end
 
       result.stripe_provider = stripe_provider

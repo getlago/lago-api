@@ -20,6 +20,39 @@ RSpec.describe PaymentProviders::AdyenService, type: :service do
       end.to change(PaymentProviders::AdyenProvider, :count).by(1)
     end
 
+    context 'when code was changed' do
+      let(:new_code) { 'updated_code_1' }
+      let(:adyen_customer) { create(:adyen_customer, payment_provider:, customer:) }
+      let(:customer) { create(:customer, organization:) }
+
+      let(:payment_provider) do
+        create(
+          :adyen_provider,
+          organization:,
+          code:,
+          name:,
+          api_key: 'secret'
+        )
+      end
+
+      before { adyen_customer }
+
+      it 'updates payment provider codes of all customers' do
+        result = adyen_service.create_or_update(
+          id: payment_provider.id,
+          organization:,
+          code: new_code,
+          name:,
+          api_key: 'secret'
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.adyen_provider.customers.first.payment_provider_code).to eq(new_code)
+        end
+      end
+    end
+
     context 'when organization already has an adyen provider' do
       let(:adyen_provider) do
         create(:adyen_provider, organization:, api_key: 'api_key_789', code:)

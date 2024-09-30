@@ -27,6 +27,7 @@ module PaymentProviders
       end
 
       api_key = adyen_provider.api_key
+      old_code = adyen_provider.code
 
       adyen_provider.api_key = args[:api_key] if args.key?(:api_key)
       adyen_provider.code = args[:code] if args.key?(:code)
@@ -44,6 +45,10 @@ module PaymentProviders
           organization_id: args[:organization_id],
           adyen_provider:
         )
+      end
+
+      if payment_provider_code_changed?(adyen_provider, old_code, args)
+        adyen_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
       end
 
       result.adyen_provider = adyen_provider

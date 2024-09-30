@@ -15,6 +15,7 @@ module PaymentProviders
       class_name: 'PaymentProviderCustomers::BaseCustomer',
       foreign_key: :payment_provider_id
 
+    has_many :customers, through: :payment_provider_customers
     has_many :payments, dependent: :nullify, foreign_key: :payment_provider_id
     has_many :refunds, dependent: :nullify, foreign_key: :payment_provider_id
 
