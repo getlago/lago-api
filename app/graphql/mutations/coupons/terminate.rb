@@ -5,17 +5,18 @@ module Mutations
     class Terminate < BaseMutation
       include AuthenticableApiUser
 
-      REQUIRED_PERMISSION = 'coupons:update'
+      REQUIRED_PERMISSION = "coupons:update"
 
-      graphql_name 'TerminateCoupon'
-      description 'Deletes a coupon'
+      graphql_name "TerminateCoupon"
+      description "Deletes a coupon"
 
       argument :id, ID, required: true
 
       type Types::Coupons::Object
 
       def resolve(id:)
-        result = ::Coupons::TerminateService.new(context[:current_user]).terminate(id)
+        coupon = context[:current_user].coupons.find_by(id:)
+        result = ::Coupons::TerminateService.call(coupon)
 
         result.success? ? result.coupon : result_error(result)
       end

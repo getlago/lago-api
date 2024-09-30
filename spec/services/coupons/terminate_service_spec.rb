@@ -1,29 +1,29 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Coupons::TerminateService, type: :service do
-  subject(:terminate_service) { described_class.new(membership.user) }
+  subject(:terminate_service) { described_class.new(coupon) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
   let(:coupon) { create(:coupon, organization:) }
 
-  describe 'terminate' do
-    it 'terminates the coupon' do
-      result = terminate_service.terminate(coupon.id)
+  describe "terminate" do
+    it "terminates the coupon" do
+      result = terminate_service.call
 
       expect(result).to be_success
       expect(result.coupon).to be_terminated
     end
 
-    context 'when coupon is already terminated' do
+    context "when coupon is already terminated" do
       before { coupon.mark_as_terminated! }
 
-      it 'does not impact the coupon' do
+      it "does not impact the coupon" do
         terminated_at = coupon.terminated_at
-        result = terminate_service.terminate(coupon.id)
+        result = terminate_service.call
 
         expect(result).to be_success
         expect(result.coupon).to be_terminated
@@ -32,14 +32,14 @@ RSpec.describe Coupons::TerminateService, type: :service do
     end
   end
 
-  describe 'terminate_all_expired' do
+  describe "terminate_all_expired" do
     let(:to_expire_coupons) do
       create_list(
         :coupon,
         3,
         organization:,
-        status: 'active',
-        expiration: 'time_limit',
+        status: "active",
+        expiration: "time_limit",
         expiration_at: Time.current - 30.days,
         created_at: Time.zone.now - 40.days
       )
@@ -50,8 +50,8 @@ RSpec.describe Coupons::TerminateService, type: :service do
         :coupon,
         3,
         organization:,
-        status: 'active',
-        expiration: 'time_limit',
+        status: "active",
+        expiration: "time_limit",
         expiration_at: Time.current + 15.days,
         created_at: Time.zone.now
       )
@@ -61,10 +61,10 @@ RSpec.describe Coupons::TerminateService, type: :service do
       to_expire_coupons
       to_keep_active_coupons
 
-      terminate_service.terminate_all_expired
+      described_class.terminate_all_expired
     end
 
-    it 'terminates the expired coupons' do
+    it "terminates the expired coupons" do
       expect(Coupon.terminated.count).to eq(3)
     end
   end

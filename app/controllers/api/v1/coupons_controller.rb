@@ -4,8 +4,7 @@ module Api
   module V1
     class CouponsController < Api::BaseController
       def create
-        service = Coupons::CreateService.new
-        result = service.create(
+        result = Coupons::CreateService.call(
           input_params.merge(organization_id: current_organization.id).to_h
         )
 
@@ -47,7 +46,7 @@ module Api
           code: params[:code]
         )
 
-        return not_found_error(resource: 'coupon') unless coupon
+        return not_found_error(resource: "coupon") unless coupon
 
         render_coupon(coupon)
       end
@@ -62,7 +61,7 @@ module Api
           json: ::CollectionSerializer.new(
             coupons,
             ::V1::CouponSerializer,
-            collection_name: 'coupons',
+            collection_name: "coupons",
             meta: pagination_metadata(coupons)
           )
         )
@@ -95,7 +94,7 @@ module Api
         render(
           json: ::V1::CouponSerializer.new(
             coupon,
-            root_name: 'coupon'
+            root_name: "coupon"
           )
         )
       end

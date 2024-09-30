@@ -2,7 +2,12 @@
 
 module BillableMetrics
   class CreateService < BaseService
-    def create(args)
+    def initialize(args = {})
+      @args = args
+      super
+    end
+
+    def call
       organization = Organization.find_by(id: args[:organization_id])
 
       if args[:aggregation_type]&.to_sym == :custom_agg && !organization&.custom_aggregation
@@ -40,10 +45,12 @@ module BillableMetrics
 
     private
 
+    attr_reader :args
+
     def track_billable_metric_created(metric)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'billable_metric_created',
+        event: "billable_metric_created",
         properties: {
           code: metric.code,
           name: metric.name,

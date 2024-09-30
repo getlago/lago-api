@@ -2,7 +2,12 @@
 
 module AddOns
   class CreateService < BaseService
-    def create(**args)
+    def initialize(args)
+      @args = args
+      super
+    end
+
+    def call
       ActiveRecord::Base.transaction do
         add_on = AddOn.create!(
           organization_id: args[:organization_id],
@@ -32,10 +37,12 @@ module AddOns
 
     private
 
+    attr_reader :args
+
     def track_add_on_created(add_on)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'add_on_created',
+        event: "add_on_created",
         properties: {
           addon_code: add_on.code,
           addon_name: add_on.name,

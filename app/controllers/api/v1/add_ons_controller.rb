@@ -4,9 +4,8 @@ module Api
   module V1
     class AddOnsController < Api::BaseController
       def create
-        service = AddOns::CreateService.new
-        result = service.create(
-          **input_params
+        result = AddOns::CreateService.call(
+          input_params
             .merge(organization_id: current_organization.id)
             .to_h
             .symbolize_keys
@@ -46,7 +45,7 @@ module Api
           code: params[:code]
         )
 
-        return not_found_error(resource: 'add_on') unless add_on
+        return not_found_error(resource: "add_on") unless add_on
 
         render_add_on(add_on)
       end
@@ -61,7 +60,7 @@ module Api
           json: ::CollectionSerializer.new(
             add_ons.includes(:taxes),
             ::V1::AddOnSerializer,
-            collection_name: 'add_ons',
+            collection_name: "add_ons",
             meta: pagination_metadata(add_ons),
             includes: %i[taxes]
           )
@@ -86,7 +85,7 @@ module Api
         render(
           json: ::V1::AddOnSerializer.new(
             add_on,
-            root_name: 'add_on',
+            root_name: "add_on",
             includes: %i[taxes]
           )
         )

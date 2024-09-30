@@ -4,8 +4,7 @@ module Api
   module V1
     class BillableMetricsController < Api::BaseController
       def create
-        service = ::BillableMetrics::CreateService.new
-        result = service.create(
+        result = ::BillableMetrics::CreateService.call(
           input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys
         )
 
@@ -13,7 +12,7 @@ module Api
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: 'billable_metric'
+              root_name: "billable_metric"
             )
           )
         else
@@ -36,7 +35,7 @@ module Api
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: 'billable_metric'
+              root_name: "billable_metric"
             )
           )
         else
@@ -53,7 +52,7 @@ module Api
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: 'billable_metric'
+              root_name: "billable_metric"
             )
           )
         else
@@ -66,12 +65,12 @@ module Api
           code: params[:code]
         )
 
-        return not_found_error(resource: 'billable_metric') unless metric
+        return not_found_error(resource: "billable_metric") unless metric
 
         render(
           json: ::V1::BillableMetricSerializer.new(
             metric,
-            root_name: 'billable_metric'
+            root_name: "billable_metric"
           )
         )
       end
@@ -87,7 +86,7 @@ module Api
           json: ::CollectionSerializer.new(
             metrics,
             ::V1::BillableMetricSerializer,
-            collection_name: 'billable_metrics',
+            collection_name: "billable_metrics",
             meta: pagination_metadata(metrics)
           )
         )
