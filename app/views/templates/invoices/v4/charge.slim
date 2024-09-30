@@ -455,8 +455,8 @@ html
             td.body-2 = I18n.t('invoice.amount')
           - fees.order(:succeeded_at, :created_at).each do |fee|
             tr
-              - if fee.charge.percentage?
-                - if fee.charge.simple_percentage?
+              - if fee.charge.percentage? && fee.amount_details.present?
+                - if fee.charge.basic_rate_percentage?
                   tr
                     td.body-1
                       = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
