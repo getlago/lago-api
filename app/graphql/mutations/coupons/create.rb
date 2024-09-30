@@ -6,19 +6,17 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'coupons:create'
+      REQUIRED_PERMISSION = "coupons:create"
 
-      graphql_name 'CreateCoupon'
-      description 'Creates a new Coupon'
+      graphql_name "CreateCoupon"
+      description "Creates a new Coupon"
 
       input_object_class Types::Coupons::CreateInput
 
       type Types::Coupons::Object
 
       def resolve(**args)
-        result = ::Coupons::CreateService
-          .new(context[:current_user])
-          .create(args.merge(organization_id: current_organization.id))
+        result = ::Coupons::CreateService.call(args.merge(organization_id: current_organization.id))
 
         result.success? ? result.coupon : result_error(result)
       end

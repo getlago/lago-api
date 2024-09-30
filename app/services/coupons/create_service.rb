@@ -2,7 +2,12 @@
 
 module Coupons
   class CreateService < BaseService
-    def create(args)
+    def initialize(args)
+      @args = args
+      super
+    end
+
+    def call
       return result unless valid?(args)
 
       @limitations = args[:applies_to]&.to_h&.deep_symbolize_keys || {}
@@ -29,15 +34,15 @@ module Coupons
       )
 
       if plan_identifiers.present? && plans.count != plan_identifiers.count
-        return result.not_found_failure!(resource: 'plans')
+        return result.not_found_failure!(resource: "plans")
       end
 
       if billable_metric_identifiers.present? && billable_metrics.count != billable_metric_identifiers.count
-        return result.not_found_failure!(resource: 'billable_metrics')
+        return result.not_found_failure!(resource: "billable_metrics")
       end
 
       if billable_metrics.present? && plans.present?
-        return result.not_allowed_failure!(code: 'only_one_limitation_type_per_coupon_allowed')
+        return result.not_allowed_failure!(code: "only_one_limitation_type_per_coupon_allowed")
       end
 
       ActiveRecord::Base.transaction do
@@ -59,12 +64,12 @@ module Coupons
 
     private
 
-    attr_reader :limitations, :organization_id
+    attr_reader :args, :limitations, :organization_id
 
     def track_coupon_created(coupon)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'coupon_created',
+        event: "coupon_created",
         properties: {
           coupon_code: coupon.code,
           coupon_name: coupon.name,

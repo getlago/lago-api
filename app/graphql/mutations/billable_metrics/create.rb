@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'billable_metrics:create'
+      REQUIRED_PERMISSION = "billable_metrics:create"
 
-      graphql_name 'CreateBillableMetric'
-      description 'Creates a new Billable metric'
+      graphql_name "CreateBillableMetric"
+      description "Creates a new Billable metric"
 
       input_object_class Types::BillableMetrics::CreateInput
 
@@ -17,8 +17,7 @@ module Mutations
 
       def resolve(**args)
         result = ::BillableMetrics::CreateService
-          .new(context[:current_user])
-          .create(**args.merge(organization_id: current_organization.id))
+          .call(**args.merge(organization_id: current_organization.id))
 
         result.success? ? result.billable_metric : result_error(result)
       end
