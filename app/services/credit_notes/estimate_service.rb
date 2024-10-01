@@ -23,14 +23,10 @@ module CreditNotes
         balance_amount_currency: invoice.currency
       )
 
-      # byebug
       validate_items
       return result unless result.success?
 
       compute_amounts_and_taxes
-      valid_credit_note?
-      # byebug
-      return result unless result.success?
 
       result.credit_note = credit_note
       result
