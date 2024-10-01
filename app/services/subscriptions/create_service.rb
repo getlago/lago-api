@@ -34,11 +34,9 @@ module Subscriptions
       customer.save! if api_context?
 
       ActiveRecord::Base.transaction do
-        currency_result = Customers::UpdateService.new(nil).update_currency(
-          customer:,
-          currency: plan.amount_currency
-        )
-        currency_result.raise_if_error!
+        Customers::UpdateCurrencyService
+          .call(customer:, currency: plan.amount_currency)
+          .raise_if_error!
 
         result.subscription = handle_subscription
       end

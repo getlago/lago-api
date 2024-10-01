@@ -63,12 +63,9 @@ module Customers
         assign_premium_attributes(customer, params)
 
         if params.key?(:currency)
-          currency_result = Customers::UpdateService.new(nil).update_currency(
-            customer:,
-            currency: params[:currency],
-            customer_update: true
-          )
-          currency_result.raise_if_error!
+          Customers::UpdateCurrencyService
+            .call(customer:, currency: params[:currency], customer_update: true)
+            .raise_if_error!
         end
 
         customer.save!
