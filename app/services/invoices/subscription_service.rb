@@ -32,10 +32,6 @@ module Invoices
           invoice:,
           recurring:
         )
-        if invoice.status == "finalized"
-          Invoices::TransitionToFinalStatusService.call(invoice:)
-        end
-        invoice.save!
 
         # NOTE: We don't want to raise error and corrupt DB commit if there is tax error.
         #       In that case we want fees to stay attached to the invoice. There is retry action that will enable users
@@ -124,7 +120,9 @@ module Invoices
     end
 
     def invoice_status
-      grace_period? ? :draft : :finalized
+      return :draft if grace_period?
+
+      Invoices::TransitionToFinalStatusService.call(invoice:)
     end
 
     def should_deliver_finalized_email?
