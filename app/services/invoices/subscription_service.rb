@@ -27,7 +27,7 @@ module Invoices
       result.invoice = invoice
 
       fee_result = ActiveRecord::Base.transaction do
-        invoice.status = invoice_status
+        set_invoice_status
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
           recurring:
@@ -119,8 +119,8 @@ module Invoices
       @grace_period ||= customer.applicable_invoice_grace_period.positive?
     end
 
-    def invoice_status
-      return :draft if grace_period?
+    def set_invoice_status
+      return invoice.assign_attributes(status: :draft) if grace_period?
 
       Invoices::TransitionToFinalStatusService.call(invoice:)
     end
