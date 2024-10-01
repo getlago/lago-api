@@ -272,8 +272,8 @@ class Invoice < ApplicationRecord
       fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
       prorated_credit_amount = credit_adjustement * fee_rate
       (fee.creditable_amount_cents - prorated_credit_amount) * (fee.taxes_rate || 0)
-    end.fdiv(100)
-    # end.fdiv(100).round
+    end.fdiv(100).round
+    # end.fdiv(100)
     # BECAUE OF THIS ROUND the returned value is not precise
 
     fees_total_creditable - credit_adjustement + vat
