@@ -26,7 +26,7 @@ module PaymentProviders
         )
       end
 
-      api_key = adyen_provider.api_key
+      # api_key = adyen_provider.api_key
       old_code = adyen_provider.code
 
       adyen_provider.api_key = args[:api_key] if args.key?(:api_key)
@@ -38,14 +38,14 @@ module PaymentProviders
       adyen_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       adyen_provider.save!
 
-      if api_key != adyen_provider.api_key
-        # NOTE: ensure existing payment_provider_customers are
-        #       attached to the provider
-        reattach_provider_customers(
-          organization_id: args[:organization_id],
-          adyen_provider:
-        )
-      end
+      # if api_key != adyen_provider.api_key
+      #   # NOTE: ensure existing payment_provider_customers are
+      #   #       attached to the provider
+      #   reattach_provider_customers(
+      #     organization_id: args[:organization_id],
+      #     adyen_provider:
+      #   )
+      # end
 
       if payment_provider_code_changed?(adyen_provider, old_code, args)
         adyen_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
@@ -132,13 +132,13 @@ module PaymentProviders
       end
     end
 
-    def reattach_provider_customers(organization_id:, adyen_provider:)
-      PaymentProviderCustomers::AdyenCustomer
-        .joins(:customer)
-        .where(payment_provider_id: nil, customers: {organization_id:}).find_each do |c|
-          c.update(payment_provider_id: adyen_provider.id)
-        end
-    end
+    # def reattach_provider_customers(organization_id:, adyen_provider:)
+    #   PaymentProviderCustomers::AdyenCustomer
+    #     .joins(:customer)
+    #     .where(payment_provider_id: nil, customers: {organization_id:}).find_each do |c|
+    #       c.update(payment_provider_id: adyen_provider.id)
+    #     end
+    # end
 
     private
 

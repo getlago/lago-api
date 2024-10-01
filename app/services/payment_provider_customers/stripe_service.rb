@@ -29,7 +29,7 @@ module PaymentProviderCustomers
     end
 
     def update
-      return result unless stripe_payment_provider
+      return result if !stripe_payment_provider || stripe_customer.provider_customer_id.blank?
 
       Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, {api_key:})
       result
@@ -176,7 +176,7 @@ module PaymentProviderCustomers
         stripe_create_payload,
         {
           api_key:,
-          idempotency_key: customer.id
+          idempotency_key: [customer.id, customer.updated_at.to_i].join('-')
         }
       )
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
