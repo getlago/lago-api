@@ -3,17 +3,11 @@
 module CreditNotes
   class ValidateService < BaseValidator
     def valid?
-      # byebug
       valid_invoice_status?
-#       byebug
       valid_items_amount?
-#       byebug
       valid_refund_amount?
-#       byebug
       valid_credit_amount?
-#       byebug
       valid_global_amount?
-#       byebug
 
       if errors?
         result.validation_failure!(errors:)

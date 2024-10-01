@@ -67,7 +67,6 @@ module CreditNotes
     end
 
     def valid_item?(item)
-      # byebug
       CreditNotes::ValidateItemService.new(result, item:).valid?
     end
 
@@ -80,7 +79,7 @@ module CreditNotes
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
       credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
       credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
-      # adjust_credit_note_tax_precise_rounding(taxes_result) if credit_note_for_all_remaining_amount?
+      adjust_credit_note_tax_precise_rounding if credit_note_for_all_remaining_amount?
 
       credit_note.taxes_amount_cents = credit_note.precise_taxes_amount_cents.round
       credit_note.taxes_rate = taxes_result.taxes_rate
@@ -101,9 +100,8 @@ module CreditNotes
       credit_note.items.sum(&:precise_amount_cents) == credit_note.invoice.fees.sum(&:creditable_amount_cents)
     end
 
-    def adjust_credit_note_tax_precise_rounding(taxes_result)
+    def adjust_credit_note_tax_precise_rounding
       credit_note.precise_taxes_amount_cents -= all_rounding_tax_adjustments
-      credit_note.taxes_amount_cents = taxes_result.taxes_amount_cents.round
     end
 
     def all_rounding_tax_adjustments
@@ -113,8 +111,7 @@ module CreditNotes
     def compute_refundable_amount
       credit_note.refund_amount_cents = credit_note.credit_amount_cents
 
-      # byebug
-      # invoice.refundable_amount_cents is incorrect - in our case it returns 82.00
+      # invoice.refundable_amount_cents is incorrect - in our case it returns 8200, but it should be 8199...
       refundable_amount_cents = invoice.refundable_amount_cents
       return unless credit_note.credit_amount_cents > refundable_amount_cents
 
