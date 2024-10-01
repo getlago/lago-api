@@ -17,8 +17,9 @@ module Invoices
       return result.not_found_failure!(resource: 'add_on') unless add_ons.count == add_on_identifiers.count
 
       ActiveRecord::Base.transaction do
-        currency_result = Customers::UpdateService.new(nil).update_currency(customer:, currency:)
-        currency_result.raise_if_error!
+        Customers::UpdateCurrencyService
+          .call(customer:, currency:)
+          .raise_if_error!
 
         create_generating_invoice
 

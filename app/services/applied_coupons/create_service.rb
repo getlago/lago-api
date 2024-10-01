@@ -27,11 +27,9 @@ module AppliedCoupons
 
       if coupon.fixed_amount?
         ActiveRecord::Base.transaction do
-          currency_result = Customers::UpdateService.new(nil).update_currency(
-            customer:,
-            currency: params[:amount_currency] || coupon.amount_currency
-          )
-          currency_result.raise_if_error!
+          Customers::UpdateCurrencyService
+            .call(customer:, currency: params[:amount_currency] || coupon.amount_currency)
+            .raise_if_error!
 
           applied_coupon.save!
         end

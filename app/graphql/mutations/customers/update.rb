@@ -21,7 +21,8 @@ module Mutations
       type Types::Customers::Object
 
       def resolve(**args)
-        result = ::Customers::UpdateService.new(context[:current_user]).update(**args)
+        customer = context[:current_user].customers.find_by(id: args[:id])
+        result = ::Customers::UpdateService.call(customer:, args:)
 
         result.success? ? result.customer : result_error(result)
       end

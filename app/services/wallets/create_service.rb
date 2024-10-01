@@ -25,11 +25,9 @@ module Wallets
       wallet = Wallet.new(attributes)
 
       ActiveRecord::Base.transaction do
-        currency_result = Customers::UpdateService.new(nil).update_currency(
-          customer: result.current_customer,
-          currency: params[:currency]
-        )
-        currency_result.raise_if_error!
+        Customers::UpdateCurrencyService
+          .call(customer: result.current_customer, currency: params[:currency])
+          .raise_if_error!
 
         wallet.currency = wallet.customer.currency
         wallet.save!

@@ -4,8 +4,14 @@ module Customers
   class UpdateService < BaseService
     include Customers::PaymentProviderFinder
 
-    def update(**args)
-      customer = result.user.customers.find_by(id: args[:id])
+    def initialize(customer:, args:)
+      @customer = customer
+      @args = args
+
+      super
+    end
+
+    def call
       return result.not_found_failure!(resource: 'customer') unless customer
 
       unless valid_metadata_count?(metadata: args[:metadata])
@@ -22,8 +28,9 @@ module Customers
         shipping_address = args[:shipping_address]&.to_h || {}
 
         if args.key?(:currency)
-          update_currency(customer:, currency: args[:currency], customer_update: true)
-          result.raise_if_error!
+          Customers::UpdateCurrencyService
+            .call(customer:, currency: args[:currency], customer_update: true)
+            .raise_if_error!
         end
 
         customer.name = args[:name] if args.key?(:name)
@@ -94,7 +101,7 @@ module Customers
         end
 
         customer.save!
-        customer = customer.reload
+        customer.reload
 
         if customer.organization.eu_tax_management
           eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
@@ -136,32 +143,9 @@ module Customers
       e.result
     end
 
-    def update_currency(customer:, currency:, customer_update: false)
-      return result if customer.currency == currency
-
-      if customer_update
-        # NOTE: direct update of the customer currency
-        unless customer.editable?
-          return result.single_validation_failure!(
-            field: :currency,
-            error_code: 'currencies_does_not_match'
-          )
-        end
-      elsif customer.currency.present? || !customer.editable?
-        # NOTE: Assign currency from another resource
-        return result.single_validation_failure!(
-          field: :currency,
-          error_code: 'currencies_does_not_match'
-        )
-      end
-
-      customer.update!(currency:)
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
-    end
-
     private
+
+    attr_reader :customer, :args
 
     def valid_metadata_count?(metadata:)
       return true if metadata.blank?

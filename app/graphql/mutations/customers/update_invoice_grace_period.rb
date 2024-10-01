@@ -18,7 +18,8 @@ module Mutations
       type Types::Customers::Object
 
       def resolve(id:, invoice_grace_period:)
-        result = ::Customers::UpdateService.new(context[:current_user]).update(id:, invoice_grace_period:)
+        customer = context[:current_user].customers.find_by(id:)
+        result = ::Customers::UpdateService.call(customer:, args: {invoice_grace_period:})
 
         result.success? ? result.customer : result_error(result)
       end

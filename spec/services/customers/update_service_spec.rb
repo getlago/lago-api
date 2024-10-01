@@ -3,16 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe Customers::UpdateService, type: :service do
-  subject(:customers_service) { described_class.new(user) }
+  subject(:customers_service) { described_class.new(customer:, args: update_args) }
 
-  let(:user) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:payment_provider_code) { 'stripe_1' }
 
   describe 'update' do
-    let(:user) { membership.user }
-
     let(:customer) { create(:customer, organization:, payment_provider: 'stripe', payment_provider_code:) }
     let(:external_id) { SecureRandom.uuid }
 
@@ -33,7 +30,7 @@ RSpec.describe Customers::UpdateService, type: :service do
     end
 
     it 'updates a customer' do
-      result = customers_service.update(**update_args)
+      result = customers_service.call
 
       updated_customer = result.customer
       aggregate_failures do
@@ -62,7 +59,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
 
       it 'updates a customer' do
-        result = customers_service.update(**update_args)
+        result = customers_service.call
 
         updated_customer = result.customer
         aggregate_failures do
@@ -103,7 +100,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
 
       it 'updates metadata' do
-        result = customers_service.update(**update_args)
+        result = customers_service.call
 
         metadata_keys = result.customer.metadata.pluck(:key)
         metadata_ids = result.customer.metadata.pluck(:id)
@@ -119,7 +116,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       let(:external_id) { nil }
 
       it 'returns an error' do
-        result = customers_service.update(**update_args)
+        result = customers_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -136,7 +133,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
 
       it 'updates only the name' do
-        result = customers_service.update(**update_args)
+        result = customers_service.call
 
         updated_customer = result.customer
         aggregate_failures do
@@ -154,7 +151,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
 
         it 'fails' do
-          result = customers_service.update(**update_args)
+          result = customers_service.call
 
           aggregate_failures do
             expect(result).not_to be_success
@@ -187,8 +184,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
 
       it 'creates a payment provider customer' do
-        result = customers_service.update(**update_args)
-
+        result = customers_service.call
         expect(result).to be_success
 
         updated_customer = result.customer
@@ -199,7 +195,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
 
       it 'does not call payment provider customer update service' do
-        customers_service.update(**update_args)
+        customers_service.call
         expect(PaymentProviderCustomers::UpdateService).not_to have_received(:call).with(customer)
       end
 
@@ -216,12 +212,12 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
 
         it 'calls payment provider customer update service' do
-          customers_service.update(**update_args)
+          customers_service.call
           expect(PaymentProviderCustomers::UpdateService).to have_received(:call).with(customer)
         end
 
         it 'creates a payment provider customer' do
-          result = customers_service.update(**update_args)
+          result = customers_service.call
 
           aggregate_failures do
             expect(result).to be_success
@@ -254,7 +250,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           end
 
           it 'removes the provider customer id' do
-            result = customers_service.update(**update_args)
+            result = customers_service.call
 
             aggregate_failures do
               expect(result).to be_success
@@ -285,7 +281,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       before { stripe_customer }
 
       it 'updates only the updated args' do
-        result = customers_service.update(**update_args)
+        result = customers_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -302,7 +298,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         create(:invoice, customer:, net_payment_term: 30)
         create(:invoice, :draft, customer:, net_payment_term: 30)
 
-        result = customers_service.update(**update_args)
+        result = customers_service.call
 
         aggregate_failures do
           expect(result).to be_success
@@ -323,7 +319,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
 
       it 'assigns the right tax to the customer' do
-        result = customers_service.update(**update_args)
+        result = customers_service.call
 
         aggregate_failures do
           expect(result).to be_success
