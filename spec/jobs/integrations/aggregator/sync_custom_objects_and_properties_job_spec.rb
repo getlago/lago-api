@@ -16,7 +16,7 @@ RSpec.describe Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob, type
     end
 
     it 'schedules all jobs needed with the current integration' do
-      described_class.perform_now(integration: integration)
+      sync_job.perform_now(integration: integration)
 
       expect(Integrations::Hubspot::Objects::DeploySubscriptionsJob).to have_received(:perform_later).with(integration:)
       expect(Integrations::Hubspot::Objects::DeployInvoicesJob).to have_received(:perform_later).with(integration:)

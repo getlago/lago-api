@@ -15,8 +15,8 @@ RSpec.describe Integrations::Hubspot::Objects::DeployInvoicesJob, type: :job do
       allow(deploy_invoices_service).to receive(:call).and_return(result)
     end
 
-    it 'calls the DeployInvoicesService to deploy invoices' do
-      described_class.perform_now(integration:)
+    it 'calls the DeployInvoicesService to deploy invoice custom object' do
+      deploy_invoices_job.perform_now(integration:)
 
       expect(Integrations::Hubspot::Objects::DeployInvoicesService).to have_received(:new)
       expect(deploy_invoices_service).to have_received(:call)
