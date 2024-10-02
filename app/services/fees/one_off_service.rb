@@ -42,11 +42,7 @@ module Fees
           fee.precise_unit_amount = fee.unit_amount.to_f
 
           unless customer_provider_taxation?
-            taxes_result = if tax_codes
-              Fees::ApplyTaxesService.call(fee:, tax_codes:)
-            else
-              Fees::ApplyTaxesService.call(fee:)
-            end
+            taxes_result = Fees::ApplyTaxesService.call(fee:, tax_codes:)
 
             taxes_result.raise_if_error!
           end
@@ -94,13 +90,8 @@ module Fees
     end
 
     def apply_provider_taxes(fees_result)
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
-
-      unless taxes_result.success?
-        create_error_detail(taxes_result.error.code)
-
-        return taxes_result
-      end
+      taxes_result = Invoices::GetProviderTaxesService.call(invoice:, fees: fees_result)
+      taxes_result.raise_if_error!
 
       result.fees_taxes = taxes_result.fees
 

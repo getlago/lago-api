@@ -47,23 +47,19 @@ module Invoices
         Credits::ProgressiveBillingService.call(invoice:)
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
 
-        if customer_provider_taxation?
-          taxes_result = fetch_taxes_for_invoice
+        taxes_result = fetch_taxes_for_invoice
 
-          unless taxes_result.success?
-            create_error_detail(taxes_result.error.code)
+        if taxes_result.present? && taxes_result.failure?
+          create_error_detail(taxes_result.error.code)
 
-            # only fail invoices that are finalizing
-            invoice.failed! if finalizing_invoice?
+          # only fail invoices that are finalizing
+          invoice.failed! if finalizing_invoice?
 
-            invoice.save!
-            return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
-          end
-
-          Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: taxes_result.fees)
-        else
-          Invoices::ComputeAmountsFromFees.call(invoice:)
+          invoice.save!
+          return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
         end
+
+        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: taxes_result&.fees)
 
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
@@ -353,6 +349,7 @@ module Invoices
     end
 
     def fetch_taxes_for_invoice
+      return nil unless customer_provider_taxation?
       if finalizing_invoice?
         return Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
       end

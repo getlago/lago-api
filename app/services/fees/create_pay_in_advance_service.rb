@@ -25,13 +25,7 @@ module Fees
 
         if customer_provider_taxation?
           fee_taxes_result = apply_provider_taxes(fees)
-
-          unless fee_taxes_result.success?
-            result.validation_failure!(errors: {tax_error: [fee_taxes_result.error.code]})
-            result.raise_if_error! unless charge.invoiceable?
-
-            return result
-          end
+          return fee_taxes_result unless fee_taxes_result.success?
         end
       end
 
@@ -185,9 +179,8 @@ module Fees
     end
 
     def apply_provider_taxes(fees_result)
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
-
-      return taxes_result unless taxes_result.success?
+      taxes_result = Invoices::GetProviderTaxesService.call(invoice:, fees: fees_result)
+      taxes_result.raise_if_error!
 
       result.fees_taxes = taxes_result.fees
 
