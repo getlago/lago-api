@@ -13684,6 +13684,24 @@
               ]
             },
             {
+              "name": "applicableTimezone",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "TimezoneEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "billingConfiguration",
               "description": null,
               "type": {

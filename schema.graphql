@@ -3240,6 +3240,7 @@ input CustomerMetadataInput {
 type CustomerPortalCustomer {
   addressLine1: String
   addressLine2: String
+  applicableTimezone: TimezoneEnum!
   billingConfiguration: CustomerBillingConfiguration
   city: String
   country: CountryCode

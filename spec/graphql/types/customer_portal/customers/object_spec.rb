@@ -7,6 +7,7 @@ RSpec.describe Types::CustomerPortal::Customers::Object do
 
   it { is_expected.to have_field(:id).of_type("ID!") }
 
+  it { is_expected.to have_field(:applicable_timezone).of_type("TimezoneEnum!") }
   it { is_expected.to have_field(:display_name).of_type("String!") }
   it { is_expected.to have_field(:firstname).of_type("String") }
   it { is_expected.to have_field(:lastname).of_type("String") }

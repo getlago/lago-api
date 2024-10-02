@@ -8,6 +8,7 @@ module Types
 
         field :id, ID, null: false
 
+        field :applicable_timezone, Types::TimezoneEnum, null: false
         field :currency, Types::CurrencyEnum, null: true
         field :display_name, String, null: false
         field :email, String, null: true
