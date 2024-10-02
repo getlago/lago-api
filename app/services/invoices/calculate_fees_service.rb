@@ -324,7 +324,6 @@ module Invoices
 
     def not_in_finalizing_process?
       !finalizing_invoice?
-      # (invoice.draft? || invoice.voided?) && context != :finalize
     end
 
     def in_trial_period_not_ending_today?(subscription, timestamp)
