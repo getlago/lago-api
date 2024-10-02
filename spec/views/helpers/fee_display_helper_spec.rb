@@ -36,7 +36,7 @@ RSpec.describe FeeDisplayHelper do
       end
 
       it 'returns valid response' do
-        expect(helper.grouped_by_display(fee)).to eq('')
+        expect(helper.grouped_by_display(fee)).to eq(' • mercredi • week_01 • 2024')
       end
     end
 
