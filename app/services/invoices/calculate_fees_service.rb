@@ -361,7 +361,7 @@ module Invoices
     end
 
     def finalizing_invoice?
-      context == :finalize || Invoice::COMPLETE_INVOICE_STATUSES.include?(invoice.status)
+      context == :finalize || Invoice::GENERATED_INVOICE_STATUSES.include?(invoice.status)
     end
   end
 end
