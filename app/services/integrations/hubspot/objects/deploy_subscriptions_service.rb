@@ -18,8 +18,6 @@ module Integrations
           if response.success?
             integration.subscriptions_properties_version = VERSION
             integration.save!
-          else
-
           end
           result.response = response
           result
