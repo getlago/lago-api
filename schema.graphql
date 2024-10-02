@@ -3259,6 +3259,19 @@ type CustomerPortalCustomer {
 }
 
 """
+CustomerPortalOrganization
+"""
+type CustomerPortalOrganization {
+  billingConfiguration: OrganizationBillingConfiguration
+  defaultCurrency: CurrencyEnum!
+  id: ID!
+  logoUrl: String
+  name: String!
+  premiumIntegrations: [PremiumIntegrationTypeEnum!]!
+  timezone: TimezoneEnum
+}
+
+"""
 CustomerPortalWallet
 """
 type CustomerPortalWallet {
@@ -6089,7 +6102,7 @@ type Query {
   """
   Query customer portal organization
   """
-  customerPortalOrganization: Organization
+  customerPortalOrganization: CustomerPortalOrganization
 
   """
   Query overdue balances of a customer portal user
