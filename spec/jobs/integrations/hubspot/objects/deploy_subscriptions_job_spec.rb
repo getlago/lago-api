@@ -15,8 +15,8 @@ RSpec.describe Integrations::Hubspot::Objects::DeploySubscriptionsJob, type: :jo
       allow(deploy_subscriptions_service).to receive(:call).and_return(result)
     end
 
-    it 'calls the DeploySubscriptionsService to deploy subscriptions' do
-      described_class.perform_now(integration:)
+    it 'calls the DeploySubscriptionsService to deploy subscription custom object' do
+      deploy_subscriptions_job.perform_now(integration:)
 
       expect(Integrations::Hubspot::Objects::DeploySubscriptionsService).to have_received(:new)
       expect(deploy_subscriptions_service).to have_received(:call)
