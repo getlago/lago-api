@@ -9,7 +9,7 @@ development:
     password: changeme
     database: lago
     port: 5432
-    schema_search_path: 'public'
+    schema_search_path: "public"
   events:
     <<: *default
     host: db
@@ -19,7 +19,7 @@ development:
     port: 5432
   clickhouse:
     adapter: clickhouse
-    database: default
+    database: lago
     host: clickhouse
     port: 8123
     username: default

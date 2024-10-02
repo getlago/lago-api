@@ -3,13 +3,20 @@
 class CreateEventsEnriched < ActiveRecord::Migration[7.1]
   def change
     options = <<-SQL
-    ReplacingMergeTree
+    ReplacingMergeTree(timestamp)
+    PRIMARY KEY (
+      organization_id,
+      code,
+      external_subscription_id,
+      toDate(timestamp)
+    )
     ORDER BY (
       organization_id,
+      code
       external_subscription_id,
-      code,
-      charge_id,
-      transaction_id
+      toDate(timestamp),
+      transaction_id,
+      timestamp
     )
     SQL
 
@@ -20,11 +27,9 @@ class CreateEventsEnriched < ActiveRecord::Migration[7.1]
       t.datetime :timestamp, null: false, precision: 3
       t.string :transaction_id, null: false
       t.string :properties, map: true, null: false
+      t.string :ingested_at, null: false
       t.string :value
-      t.string :charge_id, null: false
-      t.string :aggregation_type
-      t.string :filters, map: :array, null: false
-      t.string :grouped_by, map: true, null: false
+      t.decimal :numeric_value, precision: 26
     end
   end
 end

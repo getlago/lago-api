@@ -21,13 +21,14 @@ module Events
         scope = scope.where("events_raw.timestamp >= ?", from_datetime) if force_from || use_from_boundary
         scope = scope.where("events_raw.timestamp <= ?", to_datetime) if to_datetime
         scope = scope.where(numeric_condition) if numeric_property
+        scope = scope.limit('1 BY transaction_id')
 
         scope = with_grouped_by_values(scope) if grouped_by_values?
         filters_scope(scope)
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)
-        scope = events(force_from:, ordered: true).group(DEDUPLICATION_GROUP)
+        scope = events(force_from:, ordered: true, limit: false)
 
         scope = scope.where("events_raw.transaction_id != ?", filters[:event].transaction_id) if exclude_event
         scope = scope.limit(limit) if limit
