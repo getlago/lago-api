@@ -22,7 +22,7 @@ RSpec.describe Integrations::Hubspot::Properties::DeployCompaniesService do
       integration.save!
     end
 
-    it 'successfully deploys companies and updates the companies_properties_version' do
+    it 'successfully deploys companies properties and updates the companies_properties_version' do
       deploy_companies_service.call
 
       aggregate_failures do
@@ -55,7 +55,7 @@ RSpec.describe Integrations::Hubspot::Properties::DeployCompaniesService do
     context 'when the API call fails' do
       let(:response) { instance_double('Response', success?: false) }
 
-      it 'does not update the contacts_properties_version' do
+      it 'does not update the companies_properties_version' do
         deploy_companies_service.call
 
         aggregate_failures do

@@ -22,7 +22,7 @@ RSpec.describe Integrations::Hubspot::Objects::DeployInvoicesService do
       integration.save!
     end
 
-    it 'successfully deploys invoices and updates the invoices_properties_version' do
+    it 'successfully deploys invoice custom object and updates the invoices_properties_version' do
       deploy_invoices_service.call
 
       aggregate_failures do

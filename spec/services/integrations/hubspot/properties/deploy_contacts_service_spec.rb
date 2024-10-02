@@ -22,7 +22,7 @@ RSpec.describe Integrations::Hubspot::Properties::DeployContactsService do
       integration.save!
     end
 
-    it 'successfully deploys contacts and updates the contacts_properties_version' do
+    it 'successfully deploys contacts properties and updates the contacts_properties_version' do
       deploy_contacts_service.call
 
       aggregate_failures do

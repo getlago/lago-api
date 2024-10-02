@@ -22,7 +22,7 @@ RSpec.describe Integrations::Hubspot::Objects::DeploySubscriptionsService do
       integration.save!
     end
 
-    it 'successfully deploys subscriptions and updates the subscriptions_properties_version' do
+    it 'successfully deploys subscription custom object and updates the subscriptions_properties_version' do
       deploy_subscriptions_service.call
 
       aggregate_failures do
