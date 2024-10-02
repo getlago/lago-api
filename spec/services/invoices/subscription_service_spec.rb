@@ -340,6 +340,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         it 'creates an invoice in :finalized status' do
           result = invoice_service.call
           expect(result.invoice.status).to eq('finalized')
+          expect(result.invoice.number).not_to include('DRAFT')
         end
       end
 
@@ -353,6 +354,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         it 'creates an invoice in :closed status' do
           result = invoice_service.call
           expect(result.invoice.status).to eq('closed')
+          expect(result.invoice.number).to include('DRAFT')
         end
 
         context 'when organization gas grace period' do

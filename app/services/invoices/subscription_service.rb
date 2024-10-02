@@ -27,14 +27,14 @@ module Invoices
       result.invoice = invoice
 
       fee_result = ActiveRecord::Base.transaction do
-        invoice.status = invoice_status
+        context = grace_period? ? :draft : :finalize
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
-          recurring:
+          recurring:,
+          context:
         )
-        if invoice.status == "finalized"
-          Invoices::TransitionToFinalStatusService.call(invoice:)
-        end
+
+        set_invoice_generated_status unless invoice.failed?
         invoice.save!
 
         # NOTE: We don't want to raise error and corrupt DB commit if there is tax error.
@@ -123,8 +123,10 @@ module Invoices
       @grace_period ||= customer.applicable_invoice_grace_period.positive?
     end
 
-    def invoice_status
-      grace_period? ? :draft : :finalized
+    def set_invoice_generated_status
+      return invoice.status = :draft if grace_period?
+
+      Invoices::TransitionToFinalStatusService.call(invoice:)
     end
 
     def should_deliver_finalized_email?

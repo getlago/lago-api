@@ -323,7 +323,7 @@ module Invoices
     end
 
     def not_in_finalizing_process?
-      (invoice.draft? || invoice.voided?) && context != :finalize
+      !finalizing_invoice?
     end
 
     def in_trial_period_not_ending_today?(subscription, timestamp)
@@ -360,7 +360,7 @@ module Invoices
     end
 
     def finalizing_invoice?
-      context == :finalize || invoice.status == 'finalized'
+      context == :finalize || Invoice::GENERATED_INVOICE_STATUSES.include?(invoice.status)
     end
   end
 end

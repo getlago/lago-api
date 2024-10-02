@@ -65,6 +65,7 @@ class Invoice < ApplicationRecord
   VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4}.freeze
   INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6}.freeze
   STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
+  GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
 
   enum invoice_type: INVOICE_TYPES
   enum payment_status: PAYMENT_STATUS, _prefix: :payment
