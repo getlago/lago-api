@@ -34,7 +34,7 @@ module Invoices
           context:
         )
 
-        set_invoice_status
+        set_invoice_generated_status unless invoice.failed?
         invoice.save!
 
         # NOTE: We don't want to raise error and corrupt DB commit if there is tax error.
@@ -123,7 +123,7 @@ module Invoices
       @grace_period ||= customer.applicable_invoice_grace_period.positive?
     end
 
-    def set_invoice_status
+    def set_invoice_generated_status
       return invoice.status = :draft if grace_period?
 
       Invoices::TransitionToFinalStatusService.call(invoice:)
