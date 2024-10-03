@@ -2,14 +2,23 @@
 
 module Invites
   class RevokeService < BaseService
-    def call(**args)
-      invite = args[:current_organization].invites.pending.find_by(id: args[:id], status: :pending)
+    def initialize(invite)
+      @invite = invite
+      super
+    end
+
+    def call
       return result.not_found_failure!(resource: 'invite') unless invite
+      return result.not_found_failure!(resource: 'invite') unless invite.pending?
 
       invite.mark_as_revoked!
 
       result.invite = invite
       result
     end
+
+    private
+
+    attr_reader :invite
   end
 end

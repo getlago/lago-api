@@ -2,7 +2,12 @@
 
 module Plans
   class CreateService < BaseService
-    def create(args)
+    def initialize(args)
+      @args = args
+      super
+    end
+
+    def call
       plan = Plan.new(
         organization_id: args[:organization_id],
         name: args[:name],
@@ -75,6 +80,8 @@ module Plans
     end
 
     private
+
+    attr_reader :args
 
     def create_commitment(plan, args, commitment_type)
       Commitment.create!(
