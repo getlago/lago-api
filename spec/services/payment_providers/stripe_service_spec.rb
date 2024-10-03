@@ -30,6 +30,39 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
     end
 
+    context 'when code was changed' do
+      let(:new_code) { 'updated_code_2' }
+      let(:stripe_customer) { create(:stripe_customer, payment_provider:, customer:) }
+      let(:customer) { create(:customer, organization:) }
+
+      let(:payment_provider) do
+        create(
+          :stripe_provider,
+          organization:,
+          code:,
+          name:,
+          secret_key: 'secret'
+        )
+      end
+
+      before { stripe_customer }
+
+      it 'updates payment provider codes of all customers' do
+        result = stripe_service.create_or_update(
+          id: payment_provider.id,
+          organization_id: organization.id,
+          code: new_code,
+          name:,
+          secret_key: 'secret'
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.stripe_provider.customers.first.payment_provider_code).to eq(new_code)
+        end
+      end
+    end
+
     context 'when organization already have a stripe provider' do
       let(:stripe_provider) do
         create(

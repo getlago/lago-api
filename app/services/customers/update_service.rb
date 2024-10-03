@@ -96,7 +96,7 @@ module Customers
 
       ActiveRecord::Base.transaction do
         if old_provider_customer && args[:payment_provider].nil? && args[:payment_provider_code].present?
-          old_provider_customer.destroy!
+          old_provider_customer.discard!
           customer.payment_provider_code = nil
         end
 

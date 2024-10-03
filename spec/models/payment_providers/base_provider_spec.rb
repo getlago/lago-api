@@ -13,6 +13,11 @@ RSpec.describe PaymentProviders::BaseProvider, type: :model do
     {secrets: secrets.to_json}
   end
 
+  it { is_expected.to have_many(:payment_provider_customers).dependent(:nullify) }
+  it { is_expected.to have_many(:customers).through(:payment_provider_customers) }
+  it { is_expected.to have_many(:payments).dependent(:nullify) }
+  it { is_expected.to have_many(:refunds).dependent(:nullify) }
+
   describe '.json_secrets' do
     it { expect(provider.secrets_json).to eq(secrets) }
   end

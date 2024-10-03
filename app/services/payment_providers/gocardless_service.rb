@@ -32,12 +32,18 @@ module PaymentProviders
         )
       end
 
+      old_code = gocardless_provider.code
+
       gocardless_provider.access_token = access_token if access_token
       gocardless_provider.webhook_secret = SecureRandom.alphanumeric(50) if gocardless_provider.webhook_secret.blank?
       gocardless_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       gocardless_provider.code = args[:code] if args.key?(:code)
       gocardless_provider.name = args[:name] if args.key?(:name)
       gocardless_provider.save!
+
+      if payment_provider_code_changed?(gocardless_provider, old_code, args)
+        gocardless_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
+      end
 
       result.gocardless_provider = gocardless_provider
       result

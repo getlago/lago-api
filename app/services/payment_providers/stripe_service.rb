@@ -25,6 +25,7 @@ module PaymentProviders
       end
 
       secret_key = stripe_provider.secret_key
+      old_code = stripe_provider.code
 
       stripe_provider.secret_key = args[:secret_key] if args.key?(:secret_key)
       stripe_provider.code = args[:code] if args.key?(:code)
@@ -36,13 +37,10 @@ module PaymentProviders
         unregister_webhook(stripe_provider, secret_key)
 
         PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
+      end
 
-        # NOTE: ensure existing payment_provider_customers are
-        #       attached to the provider
-        reattach_provider_customers(
-          organization_id: args[:organization_id],
-          stripe_provider:
-        )
+      if payment_provider_code_changed?(stripe_provider, old_code, args)
+        stripe_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
       end
 
       result.stripe_provider = stripe_provider
@@ -187,13 +185,6 @@ module PaymentProviders
       Rails.logger.error(e.backtrace.join("\n"))
 
       Sentry.capture_exception(e)
-    end
-
-    def reattach_provider_customers(organization_id:, stripe_provider:)
-      PaymentProviderCustomers::StripeCustomer
-        .joins(:customer)
-        .where(payment_provider_id: nil, customers: {organization_id:})
-        .update_all(payment_provider_id: stripe_provider.id) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def payment_service_klass(event)

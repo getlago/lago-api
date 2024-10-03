@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_09_24_114730) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_01_112117) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -903,7 +903,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_24_114730) do
     t.jsonb "settings", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["customer_id", "type"], name: "index_payment_provider_customers_on_customer_id_and_type", unique: true
+    t.datetime "deleted_at"
+    t.index ["customer_id", "type"], name: "index_payment_provider_customers_on_customer_id_and_type", unique: true, where: "(deleted_at IS NULL)"
     t.index ["payment_provider_id"], name: "index_payment_provider_customers_on_payment_provider_id"
     t.index ["provider_customer_id"], name: "index_payment_provider_customers_on_provider_customer_id"
   end
@@ -917,7 +918,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_24_114730) do
     t.datetime "updated_at", null: false
     t.string "code", null: false
     t.string "name", null: false
-    t.index ["code", "organization_id"], name: "index_payment_providers_on_code_and_organization_id", unique: true
+    t.datetime "deleted_at"
+    t.index ["code", "organization_id"], name: "index_payment_providers_on_code_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_payment_providers_on_organization_id"
   end
 

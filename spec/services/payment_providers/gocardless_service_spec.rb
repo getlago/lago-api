@@ -40,6 +40,39 @@ RSpec.describe PaymentProviders::GocardlessService, type: :service do
       end.to change(PaymentProviders::GocardlessProvider, :count).by(1)
     end
 
+    context 'when code was changed' do
+      let(:new_code) { 'updated_code_3' }
+      let(:gocardless_customer) { create(:gocardless_customer, payment_provider:, customer:) }
+      let(:customer) { create(:customer, organization:) }
+
+      let(:payment_provider) do
+        create(
+          :gocardless_provider,
+          organization:,
+          code:,
+          name:,
+          access_token: 'secret'
+        )
+      end
+
+      before { gocardless_customer }
+
+      it 'updates payment provider codes of all customers' do
+        result = gocardless_service.create_or_update(
+          id: payment_provider.id,
+          organization:,
+          code: new_code,
+          name:,
+          access_token: 'secret'
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.gocardless_provider.customers.first.payment_provider_code).to eq(new_code)
+        end
+      end
+    end
+
     context 'when organization already have a gocardless provider' do
       let(:gocardless_provider) do
         create(:gocardless_provider, organization:, access_token: 'access_token_123', code:)
