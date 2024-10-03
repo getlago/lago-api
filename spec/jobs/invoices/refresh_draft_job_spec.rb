@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Invoices::RefreshDraftJob, type: :job do
-  let(:invoice) { create(:invoice) }
+  let(:invoice) { create(:invoice, ready_to_be_refreshed: true) }
   let(:result) { BaseService::Result.new }
 
   let(:refresh_service) do
@@ -18,6 +18,24 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
 
     expect(Invoices::RefreshDraftService).to have_received(:new)
     expect(refresh_service).to have_received(:call)
+  end
+
+  it 'does not delegate to the RefreshDraft service if the ready_to_be_refreshed? is false' do
+    allow(Invoices::RefreshDraftService).to receive(:new).with(invoice:).and_return(refresh_service)
+    allow(refresh_service).to receive(:call)
+
+    invoice.update ready_to_be_refreshed: false
+    described_class.perform_now(invoice)
+
+    expect(Invoices::RefreshDraftService).not_to have_received(:new)
+    expect(refresh_service).not_to have_received(:call)
+  end
+
+  it 'has a lock_ttl of 6.hours' do
+    # When there's lots of draft invoices to be refreshed, we might end up enqueueing multiple of them.
+    # This will block all queues with lower prio than the `invoices` queue. (e.g. wallets). This is undesirable,
+    # so we bump the lock_ttl for this job to 6 hours
+    expect(described_class.new.lock_options[:lock_ttl]).to eq(6.hours)
   end
 
   context 'when there was a tax fetching error in RefreshDraft service' do
