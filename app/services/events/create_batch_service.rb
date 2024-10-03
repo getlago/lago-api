@@ -82,7 +82,7 @@ module Events
           code: event.code,
           properties: event.properties,
           ingested_at: Time.zone.now.iso8601[...-1],
-          precise_total_amount_cents: event.precise_total_amount_cents
+          precise_total_amount_cents: event.precise_total_amount_cents || 0.0
         }.to_json
       )
     end

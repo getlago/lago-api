@@ -37,19 +37,18 @@ end
 #
 # Table name: invoices_taxes
 #
-#  id                        :uuid             not null, primary key
-#  amount_cents              :bigint           default(0), not null
-#  amount_currency           :string           not null
-#  fees_amount_cents         :bigint           default(0), not null
-#  tax_code                  :string           not null
-#  tax_description           :string
-#  tax_name                  :string           not null
-#  tax_rate                  :float            default(0.0), not null
-#  taxable_base_amount_cents :bigint           default(0), not null
-#  created_at                :datetime         not null
-#  updated_at                :datetime         not null
-#  invoice_id                :uuid             not null
-#  tax_id                    :uuid
+#  id                :uuid             not null, primary key
+#  amount_cents      :bigint           default(0), not null
+#  amount_currency   :string           not null
+#  fees_amount_cents :bigint           default(0), not null
+#  tax_code          :string           not null
+#  tax_description   :string
+#  tax_name          :string           not null
+#  tax_rate          :float            default(0.0), not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  invoice_id        :uuid             not null
+#  tax_id            :uuid
 #
 # Indexes
 #

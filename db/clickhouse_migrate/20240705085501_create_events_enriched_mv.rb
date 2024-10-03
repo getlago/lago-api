@@ -11,10 +11,7 @@ class CreateEventsEnrichedMv < ActiveRecord::Migration[7.1]
         code,
         JSONExtract(properties, 'Map(String, String)') AS properties,
         value,
-        charge_id,
-        aggregation_type,
-        JSONExtract(coalesce(filters, '{}'), 'Map(String, Array(String))') AS filters,
-        JSONExtract(coalesce(grouped_by, '{}'), 'Map(String, String)') AS grouped_by
+        precise_total_amount_cents
       FROM events_enriched_queue
     SQL
 

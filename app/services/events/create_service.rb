@@ -51,9 +51,11 @@ module Events
           external_customer_id: event.external_customer_id,
           external_subscription_id: event.external_subscription_id,
           transaction_id: event.transaction_id,
-          timestamp: event.timestamp.iso8601[...-1], # NOTE: Removes trailing 'Z' to allow clickhouse parsing
+          # NOTE: Removes trailing 'Z' to allow clickhouse parsing
+          timestamp: event.timestamp.iso8601[...-1],
           code: event.code,
-          precise_total_amount_cents: event.precise_total_amount_cents,
+          # NOTE: Default value to 0.0 is required for clickhouse parsing
+          precise_total_amount_cents: event.precise_total_amount_cents || 0.0,
           properties: event.properties,
           ingested_at: Time.zone.now.iso8601[...-1]
         }.to_json

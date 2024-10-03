@@ -10,7 +10,8 @@ class CreateEventsRawMv < ActiveRecord::Migration[7.0]
         transaction_id,
         toDateTime64(timestamp, 3) as timestamp,
         code,
-        JSONExtract(properties, 'Map(String, String)') as properties
+        JSONExtract(properties, 'Map(String, String)') as properties,
+        precise_total_amount_cents
       FROM events_raw_queue
     SQL
 

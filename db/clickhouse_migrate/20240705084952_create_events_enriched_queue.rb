@@ -19,10 +19,7 @@ class CreateEventsEnrichedQueue < ActiveRecord::Migration[7.1]
       t.string :transaction_id, null: false
       t.string :properties, null: false
       t.string :value
-      t.string :charge_id, null: false
-      t.string :aggregation_type, null: false
-      t.string :filters
-      t.string :grouped_by
+      t.decimal :precise_total_amount_cents, precision: 40, scale: 15
     end
   end
 end
