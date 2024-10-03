@@ -2,8 +2,13 @@
 
 module Invites
   class CreateService < BaseService
-    def call(**args)
-      return result unless valid?(**args)
+    def initialize(args)
+      @args = args
+      super
+    end
+
+    def call
+      return result unless valid?(args)
 
       result.invite = Invite.create!(
         organization_id: args[:current_organization].id,
@@ -19,6 +24,8 @@ module Invites
 
     private
 
+    attr_reader :args
+
     def generate_token
       token = SecureRandom.hex(20)
 
@@ -27,7 +34,7 @@ module Invites
       token
     end
 
-    def valid?(**args)
+    def valid?(args)
       Invites::ValidateService.new(result, **args).valid?
     end
   end

@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Plans::CreateService, type: :service do
-  subject(:plans_service) { described_class.new(membership.user) }
+  subject(:plans_service) { described_class.new(create_args) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -109,7 +109,7 @@ RSpec.describe Plans::CreateService, type: :service do
     end
 
     it 'creates a plan' do
-      expect { plans_service.create(**create_args) }
+      expect { plans_service.call }
         .to change(Plan, :count).by(1)
 
       plan = Plan.order(:created_at).last
@@ -118,7 +118,7 @@ RSpec.describe Plans::CreateService, type: :service do
     end
 
     it 'does not create minimum commitment' do
-      plans_service.create(**create_args)
+      plans_service.call
 
       plan = Plan.order(:created_at).last
 
@@ -127,7 +127,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
     context 'without premium license' do
       it 'does not create progressive billing thresholds' do
-        plans_service.create(**create_args)
+        plans_service.call
 
         plan = Plan.order(:created_at).last
 
@@ -140,7 +140,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
       context 'when progressive billing premium integration is not present' do
         it 'does not create progressive billing thresholds' do
-          plans_service.create(**create_args)
+          plans_service.call
 
           plan = Plan.order(:created_at).last
 
@@ -154,7 +154,7 @@ RSpec.describe Plans::CreateService, type: :service do
         end
 
         it 'creates progressive billing thresholds' do
-          plans_service.create(**create_args)
+          plans_service.call
 
           plan = Plan.order(:created_at).last
           usage_thresholds = plan.usage_thresholds.order(threshold_display_name: :asc)
@@ -170,7 +170,7 @@ RSpec.describe Plans::CreateService, type: :service do
     end
 
     it 'creates charges' do
-      plans_service.create(**create_args)
+      plans_service.call
 
       plan = Plan.order(:created_at).last
       expect(plan.charges.count).to eq(2)
@@ -199,7 +199,7 @@ RSpec.describe Plans::CreateService, type: :service do
     end
 
     it 'calls SegmentTrackJob' do
-      plan = plans_service.create(**create_args).plan
+      plan = plans_service.call.plan
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -262,7 +262,7 @@ RSpec.describe Plans::CreateService, type: :service do
       end
 
       it 'saves premium attributes' do
-        plan = plans_service.create(**create_args).plan
+        plan = plans_service.call.plan
 
         expect(plan.minimum_commitment).to have_attributes(
           {
@@ -294,7 +294,7 @@ RSpec.describe Plans::CreateService, type: :service do
       it 'creates a plan with the same code' do
         create(:plan, organization:, code: 'new_plan', deleted_at: Time.current)
 
-        expect { plans_service.create(**create_args) }.to change(Plan, :count).by(1)
+        expect { plans_service.call }.to change(Plan, :count).by(1)
 
         plans = organization.plans.with_discarded
         expect(plans.count).to eq(2)
@@ -306,7 +306,7 @@ RSpec.describe Plans::CreateService, type: :service do
       let(:plan_name) { nil }
 
       it 'returns an error' do
-        result = plans_service.create(**create_args)
+        result = plans_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -345,7 +345,7 @@ RSpec.describe Plans::CreateService, type: :service do
         end
 
         it 'returns an error' do
-          result = plans_service.create(**create_args)
+          result = plans_service.call
 
           aggregate_failures do
             expect(result).not_to be_success
@@ -360,7 +360,7 @@ RSpec.describe Plans::CreateService, type: :service do
       let(:billable_metric) { create(:billable_metric) }
 
       it 'returns an error' do
-        result = plans_service.create(**create_args)
+        result = plans_service.call
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('billable_metrics_not_found')

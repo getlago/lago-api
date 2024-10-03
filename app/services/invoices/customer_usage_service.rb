@@ -2,8 +2,8 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(current_user, customer:, subscription:, apply_taxes: true)
-      super(current_user)
+    def initialize(customer:, subscription:, apply_taxes: true)
+      super
 
       @apply_taxes = apply_taxes
       @customer = customer
@@ -13,15 +13,15 @@ module Invoices
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(nil, customer:, subscription:, apply_taxes:)
+      new(customer:, subscription:, apply_taxes:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: 'customer')
     end
 
-    def self.with_ids(current_user:, organization_id:, customer_id:, subscription_id:, apply_taxes: true)
+    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true)
       customer = Customer.find_by(id: customer_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
-      new(current_user, customer:, subscription:, apply_taxes:)
+      new(customer:, subscription:, apply_taxes:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: 'customer')
     end

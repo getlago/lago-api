@@ -50,7 +50,6 @@ module LifetimeUsages
 
     def calculate_current_usage_amount_cents
       result = Invoices::CustomerUsageService.call(
-        nil, # current_user
         customer: subscription.customer,
         subscription: subscription,
         apply_taxes: false

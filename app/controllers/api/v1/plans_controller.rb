@@ -4,8 +4,7 @@ module Api
   module V1
     class PlansController < Api::BaseController
       def create
-        service = ::Plans::CreateService.new
-        result = service.create(
+        result = ::Plans::CreateService.call(
           input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys
         )
 

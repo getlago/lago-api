@@ -17,9 +17,7 @@ module Mutations
       type Types::Invites::Object
 
       def resolve(**args)
-        result = ::Invites::CreateService
-          .new(context[:current_user])
-          .call(**args.merge(current_organization:))
+        result = ::Invites::CreateService.call(args.merge(current_organization:))
 
         result.success? ? result.invite : result_error(result)
       end
