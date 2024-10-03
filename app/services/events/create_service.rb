@@ -21,6 +21,8 @@ module Events
       event.timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
+      pre_ingest(event, params)
+
       event.save! unless organization.clickhouse_aggregation?
 
       result.event = event
@@ -36,6 +38,20 @@ module Events
     end
 
     private
+
+    def pre_ingest(event, params)
+      billable_metric = organization.billable_metrics.find_by(code: params[:code])
+      return if billable_metric.expression.blank?
+
+      parser = LagoFormulaParser.new
+      result = parser.parse(billable_metric.expression)
+      value = result.evaluate(event.properties)
+      if value.is_a? Numeric
+        event.value_numeric = value.to_d
+      end
+
+      event.value = value.to_s
+    end
 
     attr_reader :organization, :params, :timestamp, :metadata
 

@@ -71,6 +71,8 @@ end
 #  precise_total_amount_cents :decimal(40, 15)
 #  properties                 :jsonb            not null
 #  timestamp                  :datetime
+#  value                      :string
+#  value_numeric              :decimal(40, 15)
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  customer_id                :uuid

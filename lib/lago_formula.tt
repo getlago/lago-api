@@ -1,28 +1,31 @@
 grammar LagoFormula
 
   rule formula
-    function / variable
+    function / expression / variables
   end
 
   rule function
     b:function_name "(" function_args ")" {
-      def evaluate(variables)
-        puts b.text_value
-        function_args.formula.evaluate(variables)
+      def evaluate(context)
+        function_args.formula.evaluate(context)
       end
     }
   end
 
   rule variable
-    val:([a-z_]+) {
-      def evaluate(variables)
-        variables.fetch(val.text_value)
+    val:([a-z] [a-zA-Z0-9_]*) {
+      def evaluate(context)
+        context.fetch(val.text_value)
       end
     }
   end
 
-  rule spaces
-    " "*
+  rule variables
+    variable vars:(space "," space variable)* {
+      def evaluate(context)
+        [variable.evaluate(context)] + vars.elements.map {|e| e.variable.evaluate(context)}
+      end
+    }
   end
 
   rule function_name
@@ -30,6 +33,77 @@ grammar LagoFormula
   end
 
   rule function_args
-    spaces formula spaces
+    space formula space
   end
+
+  rule expression
+    additive
+  end
+
+  rule additive
+    head:multitive
+    tail:(
+      space operator:additive_op
+      space operand:multitive)* <BinaryOperation>
+  end
+
+  rule additive_op
+    '+' {
+      def apply(a, b)
+        a + b
+      end
+    }
+    /
+    '-' {
+      def apply(a, b)
+        a - b
+      end
+    }
+  end
+
+  rule multitive
+    head:primary
+    tail:(
+      space operator:multitive_op
+      space operand:primary)* <BinaryOperation>
+  end
+
+  rule multitive_op
+    '*' {
+      def apply(a, b)
+        a * b
+      end
+    }
+    /
+    '/' {
+      def apply(a, b)
+        a / b
+      end
+    }
+  end
+
+  rule primary
+    variable
+    /
+    number
+    /
+    '(' space expression space ')' {
+      def evaluate(context={})
+        expression.evaluate(context)
+      end
+    }
+  end
+
+  rule number
+    ([1-9] [0-9]* / '0') {
+      def evaluate(context={})
+        text_value.to_i
+      end
+    }
+  end
+
+  rule space
+    ' '*
+  end
+
 end

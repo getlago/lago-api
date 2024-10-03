@@ -87,6 +87,7 @@ end
 #  custom_aggregator :text
 #  deleted_at        :datetime
 #  description       :string
+#  expression        :string
 #  field_name        :string
 #  name              :string           not null
 #  properties        :jsonb

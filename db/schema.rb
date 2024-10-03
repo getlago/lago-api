@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_09_24_114730) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_03_130917) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -167,6 +167,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_24_114730) do
     t.boolean "recurring", default: false, null: false
     t.enum "weighted_interval", enum_type: "billable_metric_weighted_interval"
     t.text "custom_aggregator"
+    t.string "expression"
     t.index ["deleted_at"], name: "index_billable_metrics_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
@@ -507,6 +508,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_09_24_114730) do
     t.string "external_customer_id"
     t.string "external_subscription_id"
     t.decimal "precise_total_amount_cents", precision: 40, scale: 15
+    t.decimal "value_numeric", precision: 40, scale: 15
+    t.string "value"
     t.index ["customer_id"], name: "index_events_on_customer_id"
     t.index ["deleted_at"], name: "index_events_on_deleted_at"
     t.index ["external_subscription_id", "code", "timestamp"], name: "index_events_on_external_subscription_id_precise_amount", where: "((deleted_at IS NULL) AND (precise_total_amount_cents IS NOT NULL))", include: ["organization_id", "precise_total_amount_cents"]
