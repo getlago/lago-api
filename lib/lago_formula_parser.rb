@@ -30,13 +30,19 @@ module LagoFormula
         r2 = SyntaxNode.new(input, (index-1)...index) if r2 == true
         r0 = r2
       else
-        r3 = _nt_variables
+        r3 = _nt_variable
         if r3
           r3 = SyntaxNode.new(input, (index-1)...index) if r3 == true
           r0 = r3
         else
-          @index = i0
-          r0 = nil
+          r4 = _nt_string
+          if r4
+            r4 = SyntaxNode.new(input, (index-1)...index) if r4 == true
+            r0 = r4
+          else
+            @index = i0
+            r0 = nil
+          end
         end
       end
     end
@@ -47,7 +53,7 @@ module LagoFormula
   end
 
   module Function0
-    def b
+    def function_name
       elements[0]
     end
 
@@ -59,7 +65,7 @@ module LagoFormula
 
   module Function1
     def evaluate(context)
-      function_args.formula.evaluate(context)
+      function_name.apply(*function_args.evaluate(context))
     end
   end
 
@@ -192,77 +198,77 @@ module LagoFormula
     r0
   end
 
-  module Variables0
-    def space1
-      elements[0]
-    end
-
-    def space2
-      elements[2]
-    end
-
-    def variable
-      elements[3]
-    end
+  module String0
   end
 
-  module Variables1
-    def variable
-      elements[0]
-    end
-
-    def vars
+  module String1
+    def val
       elements[1]
     end
+
   end
 
-  module Variables2
+  module String2
     def evaluate(context)
-      [variable.evaluate(context)] + vars.elements.map {|e| e.variable.evaluate(context)}
+      val.text_value
     end
   end
 
-  def _nt_variables
+  def _nt_string
     start_index = index
-    if node_cache[:variables].has_key?(index)
-      cached = node_cache[:variables][index]
+    if node_cache[:string].has_key?(index)
+      cached = node_cache[:string][index]
       if cached
-        node_cache[:variables][index] = cached = SyntaxNode.new(input, index...(index + 1)) if cached == true
+        node_cache[:string][index] = cached = SyntaxNode.new(input, index...(index + 1)) if cached == true
         @index = cached.interval.end
       end
       return cached
     end
 
     i0, s0 = index, []
-    r1 = _nt_variable
+    if (match_len = has_terminal?("'", false, index))
+      r1 = true
+      @index += match_len
+    else
+      terminal_parse_failure('"\'"')
+      r1 = nil
+    end
     s0 << r1
     if r1
       s2, i2 = [], index
       loop do
         i3, s3 = index, []
-        r4 = _nt_space
+        i4 = index
+        if (match_len = has_terminal?("'", false, index))
+          r5 = true
+          @index += match_len
+        else
+          terminal_parse_failure('"\'"')
+          r5 = nil
+        end
+        if r5
+          @index = i4
+          r4 = nil
+          terminal_parse_failure('"\'"', true)
+        else
+          @terminal_failures.pop
+          @index = i4
+          r4 = instantiate_node(SyntaxNode,input, index...index)
+        end
         s3 << r4
         if r4
-          if (match_len = has_terminal?(",", false, index))
-            r5 = true
-            @index += match_len
+          if index < input_length
+            r6 = true
+            @index += 1
           else
-            terminal_parse_failure('","')
-            r5 = nil
+            terminal_parse_failure("any character")
+            r6 = nil
           end
-          s3 << r5
-          if r5
-            r6 = _nt_space
-            s3 << r6
-            if r6
-              r7 = _nt_variable
-              s3 << r7
-            end
-          end
+          s3 << r6
         end
         if s3.last
           r3 = instantiate_node(SyntaxNode,input, i3...index, s3)
-          r3.extend(Variables0)
+          r3.extend(String0)
         else
           @index = i3
           r3 = nil
@@ -275,19 +281,47 @@ module LagoFormula
       end
       r2 = instantiate_node(SyntaxNode,input, i2...index, s2)
       s0 << r2
+      if r2
+        if (match_len = has_terminal?("'", false, index))
+          r7 = true
+          @index += match_len
+        else
+          terminal_parse_failure('"\'"')
+          r7 = nil
+        end
+        s0 << r7
+      end
     end
     if s0.last
       r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
-      r0.extend(Variables1)
-      r0.extend(Variables2)
+      r0.extend(String1)
+      r0.extend(String2)
     else
       @index = i0
       r0 = nil
     end
 
-    node_cache[:variables][start_index] = r0
+    node_cache[:string][start_index] = r0
 
     r0
+  end
+
+  module FunctionName0
+    def apply(a)
+      a.ceil
+    end
+  end
+
+  module FunctionName1
+    def apply(*args)
+      args.map(&:to_s).reduce(&:+)
+    end
+  end
+
+  module FunctionName2
+    def apply(a,b)
+      a.round(b)
+    end
   end
 
   def _nt_function_name
@@ -302,30 +336,45 @@ module LagoFormula
     end
 
     i0 = index
-    if (match_len = has_terminal?("ceil", false, index))
+    if (match_len = has_terminal?('ceil', false, index))
       r1 = instantiate_node(SyntaxNode,input, index...(index + match_len))
+      r1.extend(FunctionName0)
       @index += match_len
     else
-      terminal_parse_failure('"ceil"')
+      terminal_parse_failure('\'ceil\'')
       r1 = nil
     end
     if r1
       r1 = SyntaxNode.new(input, (index-1)...index) if r1 == true
       r0 = r1
     else
-      if (match_len = has_terminal?("concat", false, index))
+      if (match_len = has_terminal?('concat', false, index))
         r2 = instantiate_node(SyntaxNode,input, index...(index + match_len))
+        r2.extend(FunctionName1)
         @index += match_len
       else
-        terminal_parse_failure('"concat"')
+        terminal_parse_failure('\'concat\'')
         r2 = nil
       end
       if r2
         r2 = SyntaxNode.new(input, (index-1)...index) if r2 == true
         r0 = r2
       else
-        @index = i0
-        r0 = nil
+        if (match_len = has_terminal?('round', false, index))
+          r3 = instantiate_node(SyntaxNode,input, index...(index + match_len))
+          r3.extend(FunctionName2)
+          @index += match_len
+        else
+          terminal_parse_failure('\'round\'')
+          r3 = nil
+        end
+        if r3
+          r3 = SyntaxNode.new(input, (index-1)...index) if r3 == true
+          r0 = r3
+        else
+          @index = i0
+          r0 = nil
+        end
       end
     end
 
@@ -336,15 +385,39 @@ module LagoFormula
 
   module FunctionArgs0
     def space1
-      elements[0]
+      elements[1]
     end
 
     def formula
+      elements[2]
+    end
+
+    def space2
+      elements[3]
+    end
+  end
+
+  module FunctionArgs1
+    def space1
+      elements[0]
+    end
+
+    def head
       elements[1]
     end
 
     def space2
       elements[2]
+    end
+
+    def tail
+      elements[3]
+    end
+  end
+
+  module FunctionArgs2
+    def evaluate(context)
+      [head.evaluate(context)] + tail.elements.map {|e| e.formula.evaluate(context)}
     end
   end
 
@@ -368,11 +441,52 @@ module LagoFormula
       if r2
         r3 = _nt_space
         s0 << r3
+        if r3
+          s4, i4 = [], index
+          loop do
+            i5, s5 = index, []
+            if (match_len = has_terminal?(",", false, index))
+              r6 = true
+              @index += match_len
+            else
+              terminal_parse_failure('","')
+              r6 = nil
+            end
+            s5 << r6
+            if r6
+              r7 = _nt_space
+              s5 << r7
+              if r7
+                r8 = _nt_formula
+                s5 << r8
+                if r8
+                  r9 = _nt_space
+                  s5 << r9
+                end
+              end
+            end
+            if s5.last
+              r5 = instantiate_node(SyntaxNode,input, i5...index, s5)
+              r5.extend(FunctionArgs0)
+            else
+              @index = i5
+              r5 = nil
+            end
+            if r5
+              s4 << r5
+            else
+              break
+            end
+          end
+          r4 = instantiate_node(SyntaxNode,input, i4...index, s4)
+          s0 << r4
+        end
       end
     end
     if s0.last
       r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
-      r0.extend(FunctionArgs0)
+      r0.extend(FunctionArgs1)
+      r0.extend(FunctionArgs2)
     else
       @index = i0
       r0 = nil
@@ -797,7 +911,7 @@ module LagoFormula
 
   module Number1
     def evaluate(context={})
-      text_value.to_i
+      text_value.to_d
     end
   end
 

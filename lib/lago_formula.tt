@@ -1,13 +1,13 @@
 grammar LagoFormula
 
   rule formula
-    function / expression / variables
+    function / expression / variable / string
   end
 
   rule function
-    b:function_name "(" function_args ")" {
+    function_name "(" function_args ")" {
       def evaluate(context)
-        function_args.formula.evaluate(context)
+        function_name.apply(*function_args.evaluate(context))
       end
     }
   end
@@ -20,20 +20,40 @@ grammar LagoFormula
     }
   end
 
-  rule variables
-    variable vars:(space "," space variable)* {
+  rule string
+    "'" val:(!"'" .)* "'" {
       def evaluate(context)
-        [variable.evaluate(context)] + vars.elements.map {|e| e.variable.evaluate(context)}
+        val.text_value
       end
     }
   end
 
   rule function_name
-    "ceil" / "concat"
+    'ceil' {
+      def apply(a)
+        a.ceil
+      end
+    }
+    /
+    'concat' {
+      def apply(*args)
+        args.map(&:to_s).reduce(&:+)
+      end
+    }
+    /
+    'round' {
+      def apply(a,b)
+        a.round(b)
+      end
+    }
   end
 
   rule function_args
-    space formula space
+    space head:formula space tail:("," space formula space)* {
+      def evaluate(context)
+        [head.evaluate(context)] + tail.elements.map {|e| e.formula.evaluate(context)}
+      end
+    }
   end
 
   rule expression
@@ -97,7 +117,7 @@ grammar LagoFormula
   rule number
     ([1-9] [0-9]* / '0') {
       def evaluate(context={})
-        text_value.to_i
+        text_value.to_d
       end
     }
   end

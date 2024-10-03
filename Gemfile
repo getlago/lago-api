@@ -131,6 +131,7 @@ group :development do
   gem 'uglifier'
 
   gem 'treetop'
+  gem 'benchmark-ips'
 
   gem 'ruby-lsp-rails', require: false
 end

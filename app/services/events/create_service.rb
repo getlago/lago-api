@@ -51,6 +51,7 @@ module Events
       end
 
       event.value = value.to_s
+      event.properties[billable_metric.field_name] = event.value
     end
 
     attr_reader :organization, :params, :timestamp, :metadata
