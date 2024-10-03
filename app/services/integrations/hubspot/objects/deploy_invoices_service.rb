@@ -12,7 +12,7 @@ module Integrations
 
         def call
           return unless integration.type == 'Integrations::HubspotIntegration'
-          #return result if integration.invoices_properties_version == VERSION
+          return result if integration.invoices_properties_version == VERSION
           response = nil
           ActiveRecord::Base.transaction do
             response = http_client.post_with_response(payload, headers)
@@ -22,10 +22,9 @@ module Integrations
           result.response = response
           result
         rescue LagoHttpClient::HttpError => e
-          code = code(e)
-          message = message(e)
-          pp "deu bue erros aqui"
-          deliver_integration_error_webhook(code:, message:)
+          # code = code(e)
+          # message = message(e)
+          # deliver_error_webhook(customer:, code:, message:)
         end
 
         private
