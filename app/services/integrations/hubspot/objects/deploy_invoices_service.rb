@@ -24,7 +24,7 @@ module Integrations
         rescue LagoHttpClient::HttpError => e
           code = code(e)
           message = message(e)
-          deliver_error_webhook(customer:, code:, message:)
+          deliver_error_webhook(code:, message:)
           return result if e.error_code.to_i < 500
           raise e
         end
