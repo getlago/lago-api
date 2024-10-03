@@ -37,13 +37,6 @@ module PaymentProviders
         unregister_webhook(stripe_provider, secret_key)
 
         PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
-
-        # NOTE: ensure existing payment_provider_customers are
-        #       attached to the provider
-        # reattach_provider_customers(
-        #   organization_id: args[:organization_id],
-        #   stripe_provider:
-        # )
       end
 
       if payment_provider_code_changed?(stripe_provider, old_code, args)
@@ -193,13 +186,6 @@ module PaymentProviders
 
       Sentry.capture_exception(e)
     end
-
-    # def reattach_provider_customers(organization_id:, stripe_provider:)
-    #   PaymentProviderCustomers::StripeCustomer
-    #     .joins(:customer)
-    #     .where(payment_provider_id: nil, customers: {organization_id:})
-    #     .update_all(payment_provider_id: stripe_provider.id) # rubocop:disable Rails/SkipsModelValidations
-    # end
 
     def payment_service_klass(event)
       payable_type = event.data.object.metadata.to_h[:lago_payable_type] || "Invoice"

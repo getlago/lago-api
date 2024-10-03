@@ -38,15 +38,6 @@ module PaymentProviders
       adyen_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       adyen_provider.save!
 
-      # if api_key != adyen_provider.api_key
-      #   # NOTE: ensure existing payment_provider_customers are
-      #   #       attached to the provider
-      #   reattach_provider_customers(
-      #     organization_id: args[:organization_id],
-      #     adyen_provider:
-      #   )
-      # end
-
       if payment_provider_code_changed?(adyen_provider, old_code, args)
         adyen_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
       end
@@ -131,14 +122,6 @@ module PaymentProviders
         result.raise_if_error!
       end
     end
-
-    # def reattach_provider_customers(organization_id:, adyen_provider:)
-    #   PaymentProviderCustomers::AdyenCustomer
-    #     .joins(:customer)
-    #     .where(payment_provider_id: nil, customers: {organization_id:}).find_each do |c|
-    #       c.update(payment_provider_id: adyen_provider.id)
-    #     end
-    # end
 
     private
 
