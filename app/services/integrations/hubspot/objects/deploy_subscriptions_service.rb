@@ -13,12 +13,18 @@ module Integrations
         def call
           return unless integration.type == 'Integrations::HubspotIntegration'
           return result if integration.subscriptions_properties_version == VERSION
-
-          response = http_client.post_with_response(payload, headers)
-          integration.subscriptions_properties_version = VERSION
-          integration.save!
+          response = nil
+          ActiveRecord::Base.transaction do
+            response = http_client.post_with_response(payload, headers)
+            integration.subscriptions_properties_version = VERSION
+            integration.save!
+          end
           result.response = response
           result
+        rescue LagoHttpClient::HttpError => e
+          # code = code(e)
+          # message = message(e)
+          # deliver_error_webhook(customer:, code:, message:)
         end
 
         private
