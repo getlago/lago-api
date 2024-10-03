@@ -15,10 +15,8 @@ module Integrations
           return result if integration.companies_properties_version == VERSION
 
           response = http_client.post_with_response(payload, headers)
-          if response.success?
-            integration.companies_properties_version = VERSION
-            integration.save!
-          end
+          integration.companies_properties_version = VERSION
+          integration.save!
           result.response = response
           result
         end

@@ -15,10 +15,8 @@ module Integrations
           return result if integration.subscriptions_properties_version == VERSION
 
           response = http_client.post_with_response(payload, headers)
-          if response.success?
-            integration.subscriptions_properties_version = VERSION
-            integration.save!
-          end
+          integration.subscriptions_properties_version = VERSION
+          integration.save!
           result.response = response
           result
         end
