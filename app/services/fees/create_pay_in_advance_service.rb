@@ -81,7 +81,8 @@ module Fees
           taxes_precise_amount_cents: 0.to_d,
           unit_amount_cents:,
           precise_unit_amount: result.unit_amount,
-          grouped_by: format_grouped_by
+          grouped_by: format_grouped_by,
+          amount_details: result.amount_details || {}
         )
 
         unless customer_provider_taxation?

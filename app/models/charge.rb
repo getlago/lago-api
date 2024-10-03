@@ -59,6 +59,12 @@ class Charge < ApplicationRecord
     standard? || dynamic?
   end
 
+  def basic_rate_percentage?
+    return false unless percentage?
+
+    properties.keys == ['rate']
+  end
+
   private
 
   def validate_amount

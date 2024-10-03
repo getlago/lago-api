@@ -20,7 +20,7 @@ module Charges
         free_events = if aggregation_result.count >= free_units_count
           free_units_count
         else
-          [aggregation_result.count - free_units_count, 0].max
+          aggregation_result.count
         end
         paid_events = aggregation_result.count - free_events
 
@@ -59,6 +59,8 @@ module Charges
         (aggregation_result.count - free_units_count) * fixed_amount
       end
 
+      # TODO: add memoization as this method is being called 4 times in the class
+      # TODO: resect properties[:exclude_event] flag
       def free_units_value
         return 0 if last_running_total.zero?
         if free_units_per_events > 0 && free_units_per_events < (aggregation_result.options[:running_total]&.count || 0)

@@ -2,6 +2,9 @@
 
 module Charges
   class ApplyPayInAdvanceChargeModelService < BaseService
+    CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_units paid_units free_events paid_events fixed_fee_total_amount
+      min_max_adjustment_total_amount per_unit_total_amount]
+
     def initialize(charge:, aggregation_result:, properties:)
       @charge = charge
       @aggregation_result = aggregation_result
@@ -27,6 +30,7 @@ module Charges
       result.amount = amount_cents
       result.precise_amount = amount * currency.subunit_to_unit.to_d
       result.unit_amount = rounded_amount.zero? ? BigDecimal("0") : rounded_amount / compute_units
+      result.amount_details = calculated_amount_details
       result
     end
 
@@ -55,15 +59,17 @@ module Charges
       end
     end
 
-    # Compute aggregation and apply charge for all events including the current one
-    def amount_including_event
-      @amount_including_event ||= charge_model.apply(charge:, aggregation_result:, properties:).amount
+    def applied_charge_model
+      @applied_charge_model ||= charge_model.apply(charge:, aggregation_result:, properties:)
     end
 
-    # Compute aggregation and apply charge for all events excluding the current one
-    def amount_excluding_event
-      return @amount_excluding_event if defined?(@amount_excluding_event)
+    # Compute aggregation and apply charge for all events including the current one
+    def amount_including_event
+      @amount_including_event ||= applied_charge_model.amount
+    end
 
+    def applied_charge_model_excluding_event
+      return @applied_charge_model_excluding_event if defined?(@applied_charge_model_excluding_event)
       previous_result = BaseService::Result.new
       previous_result.aggregation = aggregation_result.aggregation - aggregation_result.pay_in_advance_aggregation
       previous_result.count = aggregation_result.count - 1
@@ -76,11 +82,16 @@ module Charges
         )
       end
 
-      @amount_excluding_event ||= charge_model.apply(
+      @applied_charge_model_excluding_event ||= charge_model.apply(
         charge:,
         aggregation_result: previous_result,
         properties: (properties || {}).merge(exclude_event: true)
-      ).amount
+      )
+    end
+
+    # Compute aggregation and apply charge for all events excluding the current one
+    def amount_excluding_event
+      @amount_excluding_event ||= applied_charge_model_excluding_event.amount
     end
 
     def currency
@@ -103,6 +114,22 @@ module Charges
         aggregation_result.max_aggregation &&
         aggregation_result.units_applied &&
         aggregation_result.current_aggregation <= aggregation_result.max_aggregation
+    end
+
+    def calculated_amount_details
+      return {} unless charge.percentage?
+
+      all_charges_details = applied_charge_model.amount_details
+      charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
+      return {} if all_charges_details.blank? || charges_details_without_last_event.blank?
+
+      fixed_values = {rate: all_charges_details[:rate], fixed_fee_unit_amount: all_charges_details[:fixed_fee_unit_amount]}
+      details = CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
+        result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).to_s
+      end
+      # TODO: remove this when Charges::ChargeModels::PercentageService#free_units_value respects :exclude_event flag
+      details[:free_units] = (details[:units].to_f - details[:paid_units].to_f).to_s
+      details
     end
   end
 end
