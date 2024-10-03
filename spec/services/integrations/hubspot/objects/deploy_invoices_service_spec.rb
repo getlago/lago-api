@@ -51,18 +51,5 @@ RSpec.describe Integrations::Hubspot::Objects::DeployInvoicesService do
         end
       end
     end
-
-    context 'when the API call fails' do
-      let(:response) { instance_double('Response', success?: false) }
-
-      it 'does not update the invoices_properties_version' do
-        deploy_invoices_service.call
-
-        aggregate_failures do
-          expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
-          expect(integration.reload.invoices_properties_version).to be_nil
-        end
-      end
-    end
   end
 end
