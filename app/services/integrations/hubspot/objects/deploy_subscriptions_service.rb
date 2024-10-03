@@ -28,7 +28,8 @@ module Integrations
         def headers
           {
             'Provider-Config-Key' => 'hubspot',
-            'Authorization' => "Bearer #{secret_key}"
+            'Authorization' => "Bearer #{secret_key}",
+            'Connection-Id' => integration.connection_id
           }
         end
 
