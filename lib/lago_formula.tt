@@ -5,11 +5,20 @@ grammar LagoFormula
   end
 
   rule function
-    function_name "(" function_args ")"
+    b:function_name "(" function_args ")" {
+      def evaluate(variables)
+        puts b.text_value
+        function_args.formula.evaluate(variables)
+      end
+    }
   end
 
   rule variable
-    [a-z]+
+    val:([a-z_]+) {
+      def evaluate(variables)
+        variables.fetch(val.text_value)
+      end
+    }
   end
 
   rule spaces
