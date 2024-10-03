@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
   let(:payload) { described_class.new(integration_customer:, invoice:) }
-  let(:integration_customer) { FactoryBot.create(:xero_customer, integration:, customer:) }
+  let(:integration_customer) { create(:xero_customer, integration:, customer:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
