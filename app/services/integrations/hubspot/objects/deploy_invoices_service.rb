@@ -27,8 +27,6 @@ module Integrations
           deliver_error_webhook(customer:, code:, message:)
           return result if e.error_code.to_i < 500
           raise e
-        rescue Integrations::Aggregator::BasePayload::Failure => e
-          deliver_error_webhook(code: e.code, message: e.code.humanize)
         end
 
         private
