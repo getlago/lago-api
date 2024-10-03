@@ -1,0 +1,26 @@
+grammar LagoFormula
+
+  rule formula
+    function / variable
+  end
+
+  rule function
+    function_name "(" function_args ")"
+  end
+
+  rule variable
+    [a-z]+
+  end
+
+  rule spaces
+    " "*
+  end
+
+  rule function_name
+    "ceil" / "concat"
+  end
+
+  rule function_args
+    spaces formula spaces
+  end
+end
