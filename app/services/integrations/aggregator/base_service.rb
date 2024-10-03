@@ -66,7 +66,7 @@ module Integrations
       end
 
       def deliver_integration_error_webhook(code:, message:)
-        SendWebhookJob.perform_later(
+        SendWebhookJob.perform_now(
           'customer.accounting_provider_error',
           Customer.last,
           provider:,
