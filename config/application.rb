@@ -39,7 +39,6 @@ module LagoApi
       g.orm(:active_record, primary_key_type: :uuid)
     end
 
-    # TODO: turn this value to 7.1 after upgrading to Rails 7.1
-    config.active_support.cache_format_version = 7.0
+    config.active_support.cache_format_version = 7.1
   end
 end
