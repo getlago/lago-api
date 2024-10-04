@@ -69,7 +69,7 @@ module ScenariosHelper
     put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: params})
   end
 
-  def create_one_off_invoice(customer,addons)
+  def create_one_off_invoice(customer, addons)
     create_invoice_params = {
       customer: customer,
       currency: "EUR",
@@ -78,11 +78,12 @@ module ScenariosHelper
     }
     addons.each do |fee|
       fee_addon_params = {
-        "add_on_id": fee.id,
-        "name": fee.name,
-        "units": 1,
-        "unit_amount_cents": fee.amount_cents,
-        "tax_codes": [
+        add_on_id: fee.id,
+        add_on_code: fee.code,
+        name: fee.name,
+        units: 1,
+        unit_amount_cents: fee.amount_cents,
+        tax_codes: [
           tax.code
         ]
       }

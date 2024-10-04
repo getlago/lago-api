@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe CreditNote, type: :model do
   subject(:credit_note) do
     create :credit_note, credit_amount_cents: 11000, total_amount_cents: 11000, taxes_amount_cents: 1000,
-           taxes_rate: 10.0, precise_taxes_amount_cents: 1000
+      taxes_rate: 10.0, precise_taxes_amount_cents: 1000
   end
 
   let(:item) { create(:credit_note_item, credit_note:, precise_amount_cents: 10000, amount_cents: 1000) }
@@ -357,7 +357,6 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 
-
   context 'when taxes are not precise' do
     subject(:credit_note) do
       create :credit_note, credit_amount_cents: 8200, total_amount_cents: 8200, taxes_amount_cents: 1367,
@@ -389,5 +388,3 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 end
-
-
