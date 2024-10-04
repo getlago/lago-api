@@ -10,12 +10,11 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'credit_note') if credit_note.blank?
-      return result.not_found_failure!(resource: 'credit_note') unless credit_note.finalized?
+      return result.not_found_failure!(resource: 'credit_note') if credit_note.blank? || !credit_note.finalized?
 
-      generate_pdf(credit_note) if credit_note.file.blank?
+      generate_pdf(credit_note) if should_generate_pdf?
 
-      SendWebhookJob.perform_later('credit_note.generated', credit_note) if should_send_webhook?
+      SendWebhookJob.perform_later('credit_note.generated', credit_note)
 
       result.credit_note = credit_note
       result
@@ -40,8 +39,8 @@ module CreditNotes
       credit_note.save!
     end
 
-    def should_send_webhook?
-      context == 'api'
+    def should_generate_pdf?
+      context == 'admin' || credit_note.file.blank?
     end
   end
 end
