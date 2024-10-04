@@ -69,6 +69,28 @@ module ScenariosHelper
     put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: params})
   end
 
+  def create_one_off_invoice(customer,addons)
+    create_invoice_params = {
+      customer: customer,
+      currency: "EUR",
+      fees: [],
+      timestamp: Time.zone.now.to_i
+    }
+    addons.each do |fee|
+      fee_addon_params = {
+        "add_on_id": fee.id,
+        "name": fee.name,
+        "units": 1,
+        "unit_amount_cents": fee.amount_cents,
+        "tax_codes": [
+          tax.code
+        ]
+      }
+      create_invoice_params[:fees].push(fee_addon_params)
+    end
+    Invoices::CreateOneOffService.call(**create_invoice_params)
+  end
+
   ### Coupons
 
   def create_coupon(params)

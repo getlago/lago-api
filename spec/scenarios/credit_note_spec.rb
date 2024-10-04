@@ -336,4 +336,336 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       end
     end
   end
+
+  context 'when creating credit notes for small items with taxes, so sum of items with their taxes is bigger than invoice total amount' do
+    let(:tax) { create(:tax, organization:, rate: 20) }
+
+    context 'two similar items are refunded separately' do
+      let(:add_ons) do
+        [ create(:add_on, organization:, amount_cents: 68_33),
+          create(:add_on, organization:, amount_cents: 68_33)]
+      end
+
+      it 'solves the rounding issue' do
+        #  create a one off invoice with two addons and small amounts as feed
+        create_one_off_invoice(customer, add_ons)
+        # invoice amount should be with taxes calculated on items sum:
+        invoice = customer.invoices.order(:created_at).last
+        expect(invoice.total_amount_cents).to eq(163_99)
+        expect(invoice.taxes_amount_cents).to eq(27_33)
+        fees = invoice.fees
+        invoice.update(payment_status: 'succeeded')
+
+        # estimate and create credit notes for first item - full refund; the taxes are rounded to higher number
+        estimate_credit_note(
+          invoice_id: invoice.id,
+          items: [
+            {
+              fee_id: fees[0].id,
+              amount_cents: 68_33
+            }
+          ]
+        )
+
+        # Estimate the credit notes amount on one fee rounds the taxes to higher number
+        estimate = json[:estimated_credit_note]
+        expect(estimate).to include(
+          taxes_amount_cents: 13_67,
+          precise_taxes_amount_cents: "1366.6",
+          sub_total_excluding_taxes_amount_cents: 6833,
+          max_creditable_amount_cents: 8200,
+          max_refundable_amount_cents: 8200,
+          taxes_rate: 20.0
+        )
+
+        # Emit a credit note on only one fee
+        create_credit_note(
+          invoice_id: invoice.id,
+          reason: :other,
+          credit_amount_cents: 0,
+          refund_amount_cents: 82_00,
+          items: [
+            {
+              fee_id: fees[0].id,
+              amount_cents: 68_33
+            }
+          ]
+        )
+
+        credit_note = invoice.credit_notes.order(:created_at).last
+        expect(credit_note).to have_attributes(
+          refund_amount_cents: 82_00,
+          total_amount_cents: 82_00,
+          taxes_amount_cents: 13_67,
+          precise_taxes_amount_cents: 1366.6,
+        )
+        expect(credit_note.precise_total).to eq(8199.6)
+        expect(credit_note.taxes_rounding_adjustment).to eq(0.4)
+
+        #when issuing second credit note, it should be rounded to lower number
+        estimate_credit_note(
+          invoice_id: invoice.id,
+          items: [
+            {
+              fee_id: fees[1].id,
+              amount_cents: 68_33
+            }
+          ]
+        )
+
+        estimate = json[:estimated_credit_note]
+        expect(estimate).to include(
+          taxes_amount_cents: 13_66,
+          precise_taxes_amount_cents: "1366.2",
+          sub_total_excluding_taxes_amount_cents: 6833,
+          max_creditable_amount_cents: 8199,
+          max_refundable_amount_cents: 8199,
+          taxes_rate: 20.0
+        )
+
+        # Emit a credit note on only one fee
+        create_credit_note(
+          invoice_id: invoice.id,
+          reason: :other,
+          credit_amount_cents: 0,
+          refund_amount_cents: 81_99,
+          items: [
+            {
+              fee_id: fees[1].id,
+              amount_cents: 68_33
+            }
+          ]
+        )
+
+        credit_note = invoice.credit_notes.order(:created_at).last
+        expect(credit_note).to have_attributes(
+          refund_amount_cents: 8199,
+          total_amount_cents: 8199,
+          taxes_amount_cents: 13_66,
+          precise_taxes_amount_cents: 1366.2,
+        )
+        expect(credit_note.precise_total).to eq(8199.2)
+        expect(credit_note.taxes_rounding_adjustment).to eq(-0.2)
+      end
+
+    end
+
+    context 'four items are refunded separately, some whole, some in parts' do
+      let(:add_ons) do
+        [ create(:add_on, organization:, amount_cents: 68_33),
+          create(:add_on, organization:, amount_cents: 68_33),
+          create(:add_on, organization:, amount_cents: 68_33),
+          create(:add_on, organization:, amount_cents: 68_33)]
+      end
+
+
+      it 'solves the rounding issue' do
+        #  create a one off invoice with two addons and small amounts as feed
+        create_one_off_invoice(customer, add_ons)
+        # invoice amount should be with taxes calculated on items sum:
+        invoice = customer.invoices.order(:created_at).last
+        expect(invoice.total_amount_cents).to eq(327_98)
+        expect(invoice.taxes_amount_cents).to eq(54_66)
+        fees = invoice.fees
+        invoice.update(payment_status: 'succeeded')
+
+        # estimate and create credit notes for first three items - full refund; the taxes are rounded to higher number
+        3.times do |i|
+          estimate_credit_note(
+            invoice_id: invoice.id,
+            items: [
+              {
+                fee_id: fees[i].id,
+                amount_cents: 68_33
+              }
+            ]
+          )
+
+          # Estimate the credit notes amount on one fee rounds the taxes to higher number
+          estimate = json[:estimated_credit_note]
+          expect(estimate).to include(
+            taxes_amount_cents: 13_67,
+            precise_taxes_amount_cents: "1366.6",
+            sub_total_excluding_taxes_amount_cents: 6833,
+            max_creditable_amount_cents: 8200,
+            max_refundable_amount_cents: 8200,
+            taxes_rate: 20.0
+          )
+
+          # Emit a credit note on only one fee
+          create_credit_note(
+            invoice_id: invoice.id,
+            reason: :other,
+            credit_amount_cents: 0,
+            refund_amount_cents: 82_00,
+            items: [
+              {
+                fee_id: fees[i].id,
+                amount_cents: 68_33
+              }
+            ]
+          )
+
+          credit_note = invoice.credit_notes.order(:created_at).last
+          expect(credit_note).to have_attributes(
+            refund_amount_cents: 82_00,
+            total_amount_cents: 82_00,
+            taxes_amount_cents: 13_67,
+            precise_taxes_amount_cents: 1366.6,
+          )
+          expect(credit_note.precise_total).to eq(8199.6)
+          expect(credit_note.taxes_rounding_adjustment).to eq(0.4)
+        end
+        # this value is wrong because of all rounding because if we subtract issued credit notes from the invoice, it
+        # will result in 327_98 - 82_00 * 3 = 81_98
+        expect(invoice.creditable_amount_cents).to eq(8200)
+
+        # split last refundable item into three chunks, first's taxes are rounded to lower number
+        # next two are rounded to higher number
+        # cn_1 => 13.67, cn2 => 22.33, cn3 => 32.33
+        # CN1
+        estimate_credit_note(
+          invoice_id: invoice.id,
+          items: [
+            {
+              fee_id: fees[3].id,
+              amount_cents: 13_67
+            }
+          ]
+        )
+
+        estimate = json[:estimated_credit_note]
+        expect(estimate).to include(
+          taxes_amount_cents: 273,
+          precise_taxes_amount_cents: "273.4",
+          sub_total_excluding_taxes_amount_cents: 1367,
+          max_creditable_amount_cents: 1640,
+          max_refundable_amount_cents: 1640,
+          taxes_rate: 20.0
+        )
+
+        # Emit a credit note on only one fee
+        create_credit_note(
+          invoice_id: invoice.id,
+          reason: :other,
+          credit_amount_cents: 0,
+          refund_amount_cents: 1640,
+          items: [
+            {
+              fee_id: fees[3].id,
+              amount_cents: 1367
+            }
+          ]
+        )
+
+        credit_note = invoice.credit_notes.order(:created_at).last
+        expect(credit_note).to have_attributes(
+          refund_amount_cents: 1640,
+          total_amount_cents: 1640,
+          taxes_amount_cents: 273,
+          precise_taxes_amount_cents: 273.4,
+        )
+        expect(credit_note.precise_total).to eq(1640.4)
+        expect(credit_note.taxes_rounding_adjustment).to eq(-0.4)
+        # real remaining: 81_98 - 16_40 = 65_58
+        expect(invoice.creditable_amount_cents).to eq(6559)
+
+        # cn_1 => 13.67, cn2 => 22.33, cn3 => 32.33
+        # CN2
+        estimate_credit_note(
+          invoice_id: invoice.id,
+          items: [
+            {
+              fee_id: fees[3].id,
+              amount_cents: 22_33
+            }
+          ]
+        )
+
+        estimate = json[:estimated_credit_note]
+        expect(estimate).to include(
+          taxes_amount_cents: 447,
+          precise_taxes_amount_cents: "446.6",
+          sub_total_excluding_taxes_amount_cents: 2233,
+          max_creditable_amount_cents: 2680,
+          max_refundable_amount_cents: 2680,
+          taxes_rate: 20.0
+        )
+
+        # Emit a credit note on only one fee
+        create_credit_note(
+          invoice_id: invoice.id,
+          reason: :other,
+          credit_amount_cents: 0,
+          refund_amount_cents: 2680,
+          items: [
+            {
+              fee_id: fees[3].id,
+              amount_cents: 2233
+            }
+          ]
+        )
+
+        credit_note = invoice.credit_notes.order(:created_at).last
+        expect(credit_note).to have_attributes(
+          refund_amount_cents: 2680,
+          total_amount_cents: 2680,
+          taxes_amount_cents: 447,
+          precise_taxes_amount_cents: 446.6,
+        )
+        expect(credit_note.precise_total).to eq(2679.6)
+        expect(credit_note.taxes_rounding_adjustment).to eq(0.4)
+        # real remaining: 65_58 - 26_80 = 38_78
+        expect(invoice.creditable_amount_cents).to eq(3880)
+
+        # cn_1 => 13.67, cn2 => 22.33, cn3 => 32.33
+        # CN3
+        estimate_credit_note(
+          invoice_id: invoice.id,
+          items: [
+            {
+              fee_id: fees[3].id,
+              amount_cents: 32_33
+            }
+          ]
+        )
+
+        estimate = json[:estimated_credit_note]
+        expect(estimate).to include(
+          taxes_amount_cents: 645,
+          precise_taxes_amount_cents: "645.4",
+          sub_total_excluding_taxes_amount_cents: 3233,
+          max_creditable_amount_cents: 3878,
+          max_refundable_amount_cents: 3878,
+          taxes_rate: 20.0
+        )
+
+        # Emit a credit note on only one fee
+        create_credit_note(
+          invoice_id: invoice.id,
+          reason: :other,
+          credit_amount_cents: 0,
+          refund_amount_cents: 3878,
+          items: [
+            {
+              fee_id: fees[3].id,
+              amount_cents: 3233
+            }
+          ]
+        )
+
+        credit_note = invoice.credit_notes.order(:created_at).last
+        expect(credit_note).to have_attributes(
+          refund_amount_cents: 3878,
+          total_amount_cents: 3878,
+          taxes_amount_cents: 645,
+          precise_taxes_amount_cents: 645.4,
+        )
+        expect(credit_note.precise_total).to eq(3878.4)
+        expect(credit_note.taxes_rounding_adjustment).to eq(-0.4)
+        expect(invoice.creditable_amount_cents).to eq(0)
+      end
+    end
+  end
 end
+

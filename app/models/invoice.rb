@@ -274,7 +274,7 @@ class Invoice < ApplicationRecord
       (fee.creditable_amount_cents - prorated_credit_amount) * (fee.taxes_rate || 0)
     end.fdiv(100).round
     # end.fdiv(100)
-    # BECAUE OF THIS ROUND the returned value is not precise
+    # BECAUSE OF THIS ROUND the returned value is not precise
 
     fees_total_creditable - credit_adjustement + vat
   end
