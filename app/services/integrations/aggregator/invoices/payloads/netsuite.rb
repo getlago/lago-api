@@ -70,10 +70,6 @@ module Integrations
             }
           end
 
-          def fees
-            @fees ||= invoice.fees.where('amount_cents > ?', 0).order(created_at: :asc)
-          end
-
           def invoice_url
             url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 

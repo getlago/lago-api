@@ -34,7 +34,11 @@ module Integrations
           attr_accessor :remaining_taxes_amount_cents
 
           def fees
-            @fees ||= invoice.fees.order(created_at: :asc)
+            @fees ||= if invoice.fees.where('amount_cents > ?', 0).exists?
+              invoice.fees.where('amount_cents > ?', 0).order(created_at: :asc)
+            else
+              invoice.fees.order(created_at: :asc)
+            end
           end
 
           def fee_items
