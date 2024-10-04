@@ -41,7 +41,7 @@ module Events
 
     def pre_ingest(event, params)
       billable_metric = organization.billable_metrics.find_by(code: params[:code])
-      return if billable_metric.expression.blank?
+      return if billable_metric.nil? || billable_metric.expression.blank?
 
       parser = LagoFormulaParser.new
       result = parser.parse(billable_metric.expression)
