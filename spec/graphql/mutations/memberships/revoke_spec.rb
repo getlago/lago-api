@@ -19,13 +19,15 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
   end
 
   it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'organization:members:update'
 
   it 'Revokes a membership' do
     user = create(:user)
-    create(:membership, organization: organization, role: :admin)
+    create(:membership, organization:, role: :admin, user:)
 
     result = execute_graphql(
+      current_organization: organization,
       current_user: user,
       permissions: required_permission,
       query: mutation,
@@ -42,6 +44,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
 
   it 'Cannot Revoke my own membership' do
     result = execute_graphql(
+      current_organization: organization,
       current_user: membership.user,
       permissions: required_permission,
       query: mutation,
@@ -63,6 +66,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
     other_user = create(:membership, organization: organization, role: :finance)
 
     result = execute_graphql(
+      current_organization: organization,
       current_user: other_user.user,
       permissions: required_permission,
       query: mutation,

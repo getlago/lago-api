@@ -4,6 +4,7 @@ module Mutations
   module Memberships
     class Revoke < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = 'organization:members:update'
 
@@ -15,7 +16,8 @@ module Mutations
       type Types::MembershipType
 
       def resolve(id:)
-        result = ::Memberships::RevokeService.new(context[:current_user]).call(id)
+        membership = current_organization.memberships.find_by(id: id)
+        result = ::Memberships::RevokeService.call(user: context[:current_user], membership:)
 
         result.success? ? result.membership : result_error(result)
       end
