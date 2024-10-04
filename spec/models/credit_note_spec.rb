@@ -10,11 +10,6 @@ RSpec.describe CreditNote, type: :model do
 
   let(:item) { create(:credit_note_item, credit_note:, precise_amount_cents: 10000, amount_cents: 1000) }
 
-  before do
-    item
-    credit_note.reload
-  end
-
   it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to have_many(:integration_resources) }
@@ -253,16 +248,23 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 
-  describe '#sub_total_excluding_taxes_amount_cents' do
-    it 'returs the total amount without the taxes' do
-      expect(credit_note.sub_total_excluding_taxes_amount_cents)
-        .to eq(credit_note.items.sum(&:precise_amount_cents) - credit_note.precise_coupons_adjustment_amount_cents)
+  context 'when calculating depends on related items' do
+    before do
+      item
+      credit_note.reload
     end
-  end
 
-  describe '#precise_total' do
-    it 'returns the total precise amount including precise taxes' do
-      expect(credit_note.precise_total).to eq(11000)
+    describe '#sub_total_excluding_taxes_amount_cents' do
+      it 'returs the total amount without the taxes' do
+        expect(credit_note.sub_total_excluding_taxes_amount_cents)
+          .to eq(credit_note.items.sum(&:precise_amount_cents) - credit_note.precise_coupons_adjustment_amount_cents)
+      end
+    end
+
+    describe '#precise_total' do
+      it 'returns the total precise amount including precise taxes' do
+        expect(credit_note.precise_total).to eq(11000)
+      end
     end
   end
 
@@ -367,6 +369,7 @@ RSpec.describe CreditNote, type: :model do
 
     before do
       item
+      credit_note.reload
     end
 
     describe '#precise_total' do
