@@ -3705,7 +3705,7 @@ input DownloadInvoiceInput {
 }
 
 type DunningCampaign {
-  appliedToOrganization: String!
+  appliedToOrganization: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
   daysBetweenAttempts: Int!
@@ -3714,6 +3714,21 @@ type DunningCampaign {
   maxAttempts: Int!
   name: String!
   updatedAt: ISO8601DateTime!
+}
+
+"""
+DunningCampaignCollection type
+"""
+type DunningCampaignCollection {
+  """
+  A collection of paginated DunningCampaignCollection
+  """
+  collection: [DunningCampaign!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 """
@@ -6184,6 +6199,11 @@ type Query {
   Query customers of an organization
   """
   customers(limit: Int, page: Int, searchTerm: String): CustomerCollection!
+
+  """
+  Query dunning campaigns of an organization
+  """
+  dunningCampaigns(appliedToOrganization: Boolean, limit: Int, order: String, page: Int, searchTerm: String): DunningCampaignCollection!
 
   """
   Query events of an organization

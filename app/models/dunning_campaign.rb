@@ -3,12 +3,18 @@
 class DunningCampaign < ApplicationRecord
   include PaperTrailTraceable
 
+  ORDERS = %w[name code].freeze
+
   belongs_to :organization
 
   validates :name, presence: true
   validates :days_between_attempts, numericality: {greater_than: 0}
   validates :max_attempts, numericality: {greater_than: 0}
   validates :code, uniqueness: {scope: :organization_id}
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
 end
 
 # == Schema Information
