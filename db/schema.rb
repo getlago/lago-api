@@ -477,6 +477,20 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
     t.index ["organization_id"], name: "index_data_exports_on_organization_id"
   end
 
+  create_table "dunning_campaigns", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "name", null: false
+    t.string "code", null: false
+    t.text "description"
+    t.boolean "applied_to_organization", default: false, null: false
+    t.integer "days_between_attempts", default: 1, null: false
+    t.integer "max_attempts", default: 1, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "code"], name: "index_dunning_campaigns_on_organization_id_and_code", unique: true
+    t.index ["organization_id"], name: "index_dunning_campaigns_on_organization_id"
+  end
+
   create_table "error_details", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "owner_type", null: false
     t.uuid "owner_id", null: false
@@ -1237,6 +1251,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
   add_foreign_key "customers_taxes", "taxes"
   add_foreign_key "data_exports", "memberships"
   add_foreign_key "data_exports", "organizations"
+  add_foreign_key "dunning_campaigns", "organizations"
   add_foreign_key "error_details", "organizations"
   add_foreign_key "fees", "add_ons"
   add_foreign_key "fees", "applied_add_ons"
