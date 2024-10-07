@@ -16,7 +16,8 @@ module Mutations
       type Types::DunningCampaigns::Object
 
       def resolve(**args)
-        # TODO: Implement the resolver via ::DunningCampaigns::CreateService.call
+        result = ::DunningCampaigns::CreateService.call(organization: current_organization, params: args)
+        result.success? ? result.dunning_campaign : result_error(result)
       end
     end
   end
