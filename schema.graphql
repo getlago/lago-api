@@ -3726,6 +3726,21 @@ type DunningCampaign {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+DunningCampaignCollection type
+"""
+type DunningCampaignCollection {
+  """
+  A collection of paginated DunningCampaignCollection
+  """
+  collection: [DunningCampaign!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type DunningCampaignThreshold {
   amountCents: BigInt!
   currency: CurrencyEnum!
@@ -6199,6 +6214,11 @@ type Query {
   Query customers of an organization
   """
   customers(limit: Int, page: Int, searchTerm: String): CustomerCollection!
+
+  """
+  Query dunning campaigns of an organization
+  """
+  dunningCampaigns(appliedToOrganization: Boolean, limit: Int, order: String, page: Int, searchTerm: String): DunningCampaignCollection!
 
   """
   Query events of an organization
