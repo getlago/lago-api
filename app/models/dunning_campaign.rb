@@ -4,6 +4,7 @@ class DunningCampaign < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :organization
+  has_many :thresholds, class_name: "DunningCampaignThreshold", dependent: :destroy
 
   validates :name, presence: true
   validates :days_between_attempts, numericality: {greater_than: 0}

@@ -9,7 +9,6 @@ class DunningCampaignThreshold < ApplicationRecord
   validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :currency, inclusion: {in: currency_list}
   validates :currency, uniqueness: {scope: :dunning_campaign_id}
-  validates :dunning_campaign_id, presence: true
 end
 
 # == Schema Information
