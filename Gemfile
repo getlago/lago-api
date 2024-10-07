@@ -15,6 +15,7 @@ gem 'puma', '~> 6.4'
 gem 'rails', '~> 7.1.3.4'
 gem 'redis'
 gem 'sidekiq'
+gem 'solid_queue'
 
 # Security
 gem 'bcrypt'
@@ -101,6 +102,7 @@ group :development, :test do
   gem 'debug', platforms: %i[mri mingw x64_mingw], require: false
   gem 'dotenv'
   gem 'i18n-tasks', git: 'https://github.com/glebm/i18n-tasks.git'
+  gem "mission_control-jobs", github: "zavan/mission_control-jobs", branch: "api-only"
   gem 'rspec-rails'
   gem 'simplecov', require: false
   gem 'webmock'
