@@ -10,7 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
+<<<<<<< HEAD
 ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
+=======
+ActiveRecord::Schema[7.1].define(version: 2024_10_07_092701) do
+>>>>>>> d8a761eb1 (feat(dunning): Add table dunning_campaign_thresholds)
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -475,6 +479,16 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
     t.uuid "organization_id"
     t.index ["membership_id"], name: "index_data_exports_on_membership_id"
     t.index ["organization_id"], name: "index_data_exports_on_organization_id"
+  end
+
+  create_table "dunning_campaign_thresholds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "dunning_campaign_id", null: false
+    t.string "currency", null: false
+    t.bigint "amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["dunning_campaign_id", "currency"], name: "idx_on_dunning_campaign_id_currency_fbf233b2ae", unique: true
+    t.index ["dunning_campaign_id"], name: "index_dunning_campaign_thresholds_on_dunning_campaign_id"
   end
 
   create_table "dunning_campaigns", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1251,6 +1265,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
   add_foreign_key "customers_taxes", "taxes"
   add_foreign_key "data_exports", "memberships"
   add_foreign_key "data_exports", "organizations"
+  add_foreign_key "dunning_campaign_thresholds", "dunning_campaigns"
   add_foreign_key "dunning_campaigns", "organizations"
   add_foreign_key "error_details", "organizations"
   add_foreign_key "fees", "add_ons"
