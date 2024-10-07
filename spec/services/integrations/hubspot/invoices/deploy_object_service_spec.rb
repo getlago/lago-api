@@ -51,5 +51,27 @@ RSpec.describe Integrations::Hubspot::Invoices::DeployObjectService do
         end
       end
     end
+
+    context 'when an HTTP error occurs' do
+      let(:error) { LagoHttpClient::HttpError.new('error message', '{"error": {"message": "unknown failure"}}', nil) }
+
+      before do
+        allow(http_client).to receive(:post_with_response).and_raise(error)
+      end
+
+      it 'delivers an integration error webhook' do
+        expect { deploy_object_service.call }.to enqueue_job(SendWebhookJob)
+          .with(
+            'integration.provider_error',
+            integration,
+            provider: 'hubspot',
+            provider_code: integration.code,
+            provider_error: {
+              message: 'unknown failure',
+              error_code: 'integration_error'
+            }
+          )
+      end
+    end
   end
 end

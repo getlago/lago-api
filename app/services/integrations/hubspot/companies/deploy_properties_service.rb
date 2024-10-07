@@ -16,15 +16,15 @@ module Integrations
           response = nil
           ActiveRecord::Base.transaction do
             response = http_client.post_with_response(payload, headers)
+            integration.settings = integration.reload.settings
             integration.companies_properties_version = VERSION
             integration.save!
           end
           result.response = response
           result
-        rescue LagoHttpClient::HttpError
-          # code = code(e)
-          # message = message(e)
-          # deliver_error_webhook(customer:, code:, message:)
+        rescue LagoHttpClient::HttpError => e
+          message = message(e)
+          deliver_integration_error_webhook(integration:, code: 'integration_error', message:)
         end
 
         private
