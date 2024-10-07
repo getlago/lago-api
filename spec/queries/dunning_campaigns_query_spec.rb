@@ -17,7 +17,7 @@ RSpec.describe DunningCampaignsQuery, type: :query do
     create(:dunning_campaign, organization:, name: "defgh", code: "11", applied_to_organization: true)
   end
   let(:dunning_campaign_second) do
-    create(:dunning_campaign, organization:, name: "abcde", code: "22", applied_to_organization: true)
+    create(:dunning_campaign, organization:, name: "abcde", code: "22", applied_to_organization: false)
   end
 
   let(:dunning_campaign_third) do
@@ -45,7 +45,7 @@ RSpec.describe DunningCampaignsQuery, type: :query do
   context "with pagination" do
     let(:pagination) { {page: 2, limit: 2} }
 
-    it "applies the pagination" do
+    it "applies the pagination", :aggregate_failures do
       aggregate_failures do
         expect(result).to be_success
         expect(result.dunning_campaigns.count).to eq(1)
@@ -66,11 +66,19 @@ RSpec.describe DunningCampaignsQuery, type: :query do
     end
   end
 
-  context "with a filter on applied by default" do
+  context "with applied_to_organization is false" do
     let(:filters) { {applied_to_organization: false} }
 
-    it "returns only one dunning campaign" do
-      expect(result.dunning_campaigns).to eq([dunning_campaign_third])
+    it "returns second and third campaigns" do
+      expect(result.dunning_campaigns).to eq([dunning_campaign_second, dunning_campaign_third])
+    end
+  end
+
+  context "with applied_to_organization is true" do
+    let(:filters) { {applied_to_organization: true} }
+
+    it "returns only the first dunning campaign" do
+      expect(result.dunning_campaigns).to eq([dunning_campaign_first])
     end
   end
 
