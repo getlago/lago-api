@@ -121,8 +121,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     it 'delivers a webhook' do
       create_service.call
 
-      expect(SendWebhookJob).to have_been_enqueued
-        .with('credit_note.created', CreditNote)
+      aggregate_failures do
+        expect(SendWebhookJob).to have_been_enqueued.with('credit_note.created', CreditNote)
+
+        expect(CreditNotes::GeneratePdfJob).to have_been_enqueued
+      end
     end
 
     it 'delivers an email' do

@@ -97,5 +97,15 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
         end.to have_enqueued_job(SendWebhookJob)
       end
     end
+
+    context 'when context is admin' do
+      let(:context) { 'admin' }
+
+      it 'calls the SendWebhook job' do
+        expect do
+          credit_note_generate_service.call
+        end.to have_enqueued_job(SendWebhookJob)
+      end
+    end
   end
 end

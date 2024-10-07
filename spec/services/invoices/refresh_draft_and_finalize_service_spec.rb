@@ -197,6 +197,12 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
           finalize_service.call
         end.to have_enqueued_job(SendWebhookJob).with('credit_note.created', CreditNote)
       end
+
+      it 'enqueues CreditNotes::GeneratePdfJob' do
+        expect do
+          finalize_service.call
+        end.to have_enqueued_job(CreditNotes::GeneratePdfJob)
+      end
     end
 
     context 'when tax integration is set up' do

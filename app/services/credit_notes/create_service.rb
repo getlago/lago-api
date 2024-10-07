@@ -58,6 +58,7 @@ module CreditNotes
       if credit_note.finalized?
         track_credit_note_created
         deliver_webhook
+        CreditNotes::GeneratePdfJob.perform_later(credit_note)
         deliver_email
         handle_refund if should_handle_refund?
         report_to_tax_provider
