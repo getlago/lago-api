@@ -146,5 +146,7 @@ module Types
     field :okta_accept_invite, mutation: Mutations::Auth::Okta::AcceptInvite
     field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize
     field :okta_login, mutation: Mutations::Auth::Okta::Login
+
+    field :create_dunning_campaign, mutation: Mutations::DunningCampaigns::Create
   end
 end

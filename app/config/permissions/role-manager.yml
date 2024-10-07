@@ -26,6 +26,8 @@ customers:
   create: true
   update: true
   delete: true
+dunning_campaigns:
+  create: false
 subscriptions:
   create: true
   update: true

@@ -30,6 +30,8 @@ customers:
   create:
   update:
   delete:
+dunning_campaigns:
+  create:
 subscriptions:
   view: true
   create:
