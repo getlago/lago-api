@@ -7,6 +7,8 @@ module Resolvers
 
     description "Query dunning campaigns of an organization"
 
+    REQUIRED_PERMISSION = "dunning_campaigns:view"
+
     argument :applied_to_organization, Boolean, required: false
     argument :limit, Integer, required: false
     argument :order, String, required: false

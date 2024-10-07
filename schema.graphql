@@ -5888,6 +5888,7 @@ type Permissions {
   developersManage: Boolean!
   draftInvoicesUpdate: Boolean!
   dunningCampaignsCreate: Boolean!
+  dunningCampaignsView: Boolean!
   invoicesCreate: Boolean!
   invoicesExport: Boolean!
   invoicesSend: Boolean!
