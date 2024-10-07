@@ -32,4 +32,25 @@ RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
     data = result['data']['destroyPaymentProvider']
     expect(data['id']).to eq(payment_provider.id)
   end
+
+  context 'when payment provider is not attached to the organization' do
+    let(:payment_provider) { create(:stripe_provider) }
+
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: payment_provider.id}
+        }
+      )
+
+      aggregate_failures do
+        expect(result['errors'].first['message']).to eq('Resource not found')
+        expect(result['errors'].first['extensions']['code']).to eq('not_found')
+        expect(result['errors'].first['extensions']['status']).to eq(404)
+      end
+    end
+  end
 end

@@ -15,9 +15,11 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        result = ::PaymentProviders::DestroyService
-          .new(context[:current_user])
-          .destroy(id:)
+        payment_provider = ::PaymentProviders::BaseProvider.find_by(
+          id:,
+          organization_id: context[:current_user].organization_ids
+        )
+        result = ::PaymentProviders::DestroyService.call(payment_provider)
 
         result.success? ? result.payment_provider : result_error(result)
       end

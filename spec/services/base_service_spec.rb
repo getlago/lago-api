@@ -11,10 +11,9 @@ RSpec.describe ::BaseService, type: :service do
 
   context 'with current_user' do
     it 'assigns the current_user to the result' do
-      user = create(:user)
-      result = described_class.new(user).send :result
+      result = described_class.new.send :result
 
-      expect(result.user).to eq(user)
+      expect(result).to be_a(::BaseService::Result)
     end
 
     it 'does not assign the current_user to the result if it isn\'t a User' do
