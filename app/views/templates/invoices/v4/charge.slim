@@ -504,7 +504,7 @@ html
                     - if fee.charge_filter_id?
                       = ' • ' + fee.filter_display_name(separator: ' • ')
                 td.body-2 = fee.units
-                td.body-2 = MoneyHelper.format(fee.unit_amount)
+                td.body-2 = MoneyHelper.format_with_precision(fee.precise_unit_amount, fee.unit_amount.currency)
                 td.body-2 == TaxHelper.applied_taxes(fee)
                 td.body-2 = MoneyHelper.format(fee.amount)
 
