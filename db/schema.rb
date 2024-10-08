@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_01_112117) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1160,6 +1160,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_01_112117) do
     t.decimal "credits_ongoing_usage_balance", precision: 30, scale: 5, default: "0.0", null: false
     t.boolean "depleted_ongoing_balance", default: false, null: false
     t.boolean "invoice_requires_successful_payment", default: false, null: false
+    t.integer "lock_version", default: 0, null: false
     t.index ["customer_id"], name: "index_wallets_on_customer_id"
   end
 
