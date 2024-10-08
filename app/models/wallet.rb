@@ -57,6 +57,7 @@ end
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
 #  last_balance_sync_at                :datetime
 #  last_consumed_credit_at             :datetime
+#  lock_version                        :integer          default(0), not null
 #  name                                :string
 #  ongoing_balance_cents               :bigint           default(0), not null
 #  ongoing_usage_balance_cents         :bigint           default(0), not null
