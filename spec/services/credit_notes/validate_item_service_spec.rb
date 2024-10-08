@@ -95,21 +95,5 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
         end
       end
     end
-
-    # this check should not be on the item level, as taxes are applied and saved on the credit note level
-    # context 'when reaching invoice creditable amount' do
-    #   before do
-    #     create(:credit_note, invoice:, total_amount_cents: 99)
-    #   end
-    #
-    #   it 'fails the validation' do
-    #     aggregate_failures do
-    #       expect(validator).not_to be_valid
-    #
-    #       expect(result.error).to be_a(BaseService::ValidationFailure)
-    #       expect(result.error.messages[:amount_cents]).to eq(['higher_than_remaining_invoice_amount'])
-    #     end
-    #   end
-    # end
   end
 end

@@ -107,7 +107,6 @@ module CreditNotes
     def compute_refundable_amount
       credit_note.refund_amount_cents = credit_note.credit_amount_cents
 
-      # invoice.refundable_amount_cents is incorrect - in our case it returns 8200, but it should be 8199...
       refundable_amount_cents = invoice.refundable_amount_cents
       return unless credit_note.credit_amount_cents > refundable_amount_cents
 

@@ -7,9 +7,6 @@ module CreditNotes
 
       valid_item_amount?
       valid_individual_amount?
-      # we don't save taxes on the credit_note item and we'll adjust them when creating credit notes, so it makes sense
-      # to check taxes on credit note level, where taxes are calculated and stored.
-      # valid_global_amount?
 
       if errors?
         result.validation_failure!(errors:)

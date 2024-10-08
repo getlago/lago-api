@@ -71,7 +71,7 @@ module ScenariosHelper
 
   def create_one_off_invoice(customer, addons)
     create_invoice_params = {
-      customer: customer,
+      external_customer_id: customer.external_id,
       currency: "EUR",
       fees: [],
       timestamp: Time.zone.now.to_i
@@ -89,7 +89,7 @@ module ScenariosHelper
       }
       create_invoice_params[:fees].push(fee_addon_params)
     end
-    Invoices::CreateOneOffService.call(**create_invoice_params)
+    post_with_token(organization, "/api/v1/invoices", {invoice: create_invoice_params})
   end
 
   ### Coupons
