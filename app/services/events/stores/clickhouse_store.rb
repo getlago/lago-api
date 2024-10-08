@@ -3,6 +3,8 @@
 module Events
   module Stores
     class ClickhouseStore < BaseStore
+      DECIMAL_SCALE = 26
+
       def events(force_from: false, ordered: false)
         scope = ::Clickhouse::EventsEnriched.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization.id)

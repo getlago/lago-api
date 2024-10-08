@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/getlago/clickhouse-activerecord.git
-  revision: 3858769945ce00573441bba6c83e827edc11dccc
-  branch: map-add-array-support
+  revision: 277b3a475040b40cc570f5bbbc586ec373b0cb93
+  branch: support-limit-by
   specs:
-    clickhouse-activerecord (1.1.1)
+    clickhouse-activerecord (1.1.3)
       activerecord (~> 7.1)
       bundler (>= 1.13.4)
 
