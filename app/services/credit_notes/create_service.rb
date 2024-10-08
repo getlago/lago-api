@@ -193,7 +193,7 @@ module CreditNotes
     end
 
     def report_to_tax_provider
-      CreditNotes::ProviderTaxes::ReportJob.perform_later(credit_note:)
+      after_commit { CreditNotes::ProviderTaxes::ReportJob.perform_later(credit_note:) }
     end
 
     def compute_amounts_and_taxes
