@@ -57,7 +57,7 @@ module Events
 
         attr_reader :store
 
-        delegate :events, :charges_duration, :sanitized_property_name, :sanitized_numeric_property, to: :store
+        delegate :events, :charges_duration, :sanitized_property_name, to: :store
 
         def events_cte_sql
           <<~SQL
@@ -66,8 +66,7 @@ module Events
               UNION ALL
               (#{
                 events(ordered: true)
-                  .select("timestamp, #{sanitized_numeric_property} AS difference")
-                  .group(Events::Stores::ClickhouseStore::DEDUPLICATION_GROUP)
+                  .select("timestamp, events_enriched.decimal_value AS difference")
                   .to_sql
               })
               UNION ALL
@@ -125,8 +124,7 @@ module Events
               UNION ALL
               (#{
                 events(ordered: true)
-                  .select("#{groups.join(", ")}, timestamp, #{sanitized_numeric_property} AS difference")
-                  .group(Events::Stores::ClickhouseStore::DEDUPLICATION_GROUP)
+                  .select("#{groups.join(", ")}, timestamp, events_enriched.decimal_value AS difference")
                   .to_sql
               })
               UNION ALL
