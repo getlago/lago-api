@@ -45,7 +45,7 @@ RSpec.describe Mutations::Integrations::Hubspot::Create, type: :graphql do
           code:,
           name:,
           connectionId: 'this-is-random-uuid',
-          defaultTargetedObject: 'Companies',
+          defaultTargetedObject: 'companies',
           privateAppToken: 'some-private-app-token'
         }
       }

@@ -4,10 +4,20 @@ module Integrations
   class HubspotIntegration < BaseIntegration
     validates :connection_id, :private_app_token, :default_targeted_object, presence: true
 
-    settings_accessors :default_targeted_object, :sync_subscriptions, :sync_invoices
+    settings_accessors :default_targeted_object, :sync_subscriptions, :sync_invoices, :subscriptions_object_type_id,
+      :invoices_object_type_id, :companies_properties_version, :contacts_properties_version,
+      :subscriptions_properties_version, :invoices_properties_version
     secrets_accessors :connection_id, :private_app_token
 
-    TARGETED_OBJECTS = %w[Companies Contacts]
+    TARGETED_OBJECTS = %w[companies contacts].freeze
+
+    def companies_object_type_id
+      '0-2'
+    end
+
+    def contacts_object_type_id
+      '0-1'
+    end
   end
 end
 

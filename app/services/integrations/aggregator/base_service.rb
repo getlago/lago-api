@@ -78,6 +78,19 @@ module Integrations
         )
       end
 
+      def deliver_integration_error_webhook(integration:, code:, message:)
+        SendWebhookJob.perform_later(
+          'integration.provider_error',
+          integration,
+          provider:,
+          provider_code: integration.code,
+          provider_error: {
+            message:,
+            error_code: code
+          }
+        )
+      end
+
       def deliver_tax_error_webhook(customer:, code:, message:)
         SendWebhookJob.perform_later(
           'customer.tax_provider_error',
