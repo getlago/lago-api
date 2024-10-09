@@ -3,7 +3,7 @@
 module Wallets
   module Balance
     class IncreaseService < BaseService
-      MAX_RETRIES = 1
+      MAX_RETRIES = 5
 
       def initialize(wallet:, credits_amount:, reset_consumed_credits: false)
         super
@@ -40,6 +40,8 @@ module Wallets
         @retries += 1
 
         if @retries <= MAX_RETRIES
+          sleep(0.5)
+
           wallet.reload
 
           retry
