@@ -16,6 +16,10 @@ module IntegrationCustomers
       where(type: %w[IntegrationCustomers::NetsuiteCustomer IntegrationCustomers::XeroCustomer])
     end
 
+    scope :crm_kind, -> do
+      where(type: %w[IntegrationCustomers::HubspotCustomer])
+    end
+
     settings_accessors :sync_with_provider
 
     def self.customer_type(type)
@@ -28,6 +32,8 @@ module IntegrationCustomers
         'IntegrationCustomers::AnrokCustomer'
       when 'xero'
         'IntegrationCustomers::XeroCustomer'
+      when 'hubspot'
+        'IntegrationCustomers::HubspotCustomer'
       else
         raise(NotImplementedError)
       end
