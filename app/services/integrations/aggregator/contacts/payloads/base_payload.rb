@@ -57,6 +57,12 @@ module Integrations
           def phone
             customer.phone.to_s.split(',').first&.strip
           end
+
+          def customer_url
+            url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+            URI.join(url, "/customer/", customer.id).to_s
+          end
         end
       end
     end

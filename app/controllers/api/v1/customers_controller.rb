@@ -121,7 +121,8 @@ module Api
             :integration_type,
             :integration_code,
             :subsidiary_id,
-            :sync_with_provider
+            :sync_with_provider,
+            :targeted_object
           ],
           billing_configuration: [
             :invoice_grace_period,
