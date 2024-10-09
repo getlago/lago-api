@@ -2006,7 +2006,7 @@ input CreateHubspotIntegrationInput {
   clientMutationId: String
   code: String!
   connectionId: String!
-  defaultTargetedObject: TargetedObjectsEnum!
+  defaultTargetedObject: HubspotTargetedObjectsEnum!
   name: String!
   privateAppToken: String!
   syncInvoices: Boolean
@@ -4086,12 +4086,17 @@ type GroupedChargeUsage {
 type HubspotIntegration {
   code: String!
   connectionId: ID!
-  defaultTargetedObject: TargetedObjectsEnum!
+  defaultTargetedObject: HubspotTargetedObjectsEnum!
   id: ID!
   name: String!
   privateAppToken: String!
   syncInvoices: Boolean
   syncSubscriptions: Boolean
+}
+
+enum HubspotTargetedObjectsEnum {
+  companies
+  contacts
 }
 
 """
@@ -6766,11 +6771,6 @@ type SyncIntegrationInvoicePayload {
   invoiceId: ID
 }
 
-enum TargetedObjectsEnum {
-  companies
-  contacts
-}
-
 type Tax {
   """
   Number of add ons using this tax
@@ -7801,7 +7801,7 @@ input UpdateHubspotIntegrationInput {
   clientMutationId: String
   code: String
   connectionId: String
-  defaultTargetedObject: TargetedObjectsEnum
+  defaultTargetedObject: HubspotTargetedObjectsEnum
   id: ID
   name: String
   privateAppToken: String

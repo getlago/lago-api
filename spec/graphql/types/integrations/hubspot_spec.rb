@@ -9,7 +9,7 @@ RSpec.describe Types::Integrations::Hubspot do
 
   it { is_expected.to have_field(:code).of_type('String!') }
   it { is_expected.to have_field(:connection_id).of_type('ID!') }
-  it { is_expected.to have_field(:default_targeted_object).of_type('TargetedObjectsEnum!') }
+  it { is_expected.to have_field(:default_targeted_object).of_type('HubspotTargetedObjectsEnum!') }
   it { is_expected.to have_field(:name).of_type('String!') }
   it { is_expected.to have_field(:private_app_token).of_type('String!') }
 
