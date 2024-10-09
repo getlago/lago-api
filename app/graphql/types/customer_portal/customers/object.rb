@@ -32,11 +32,17 @@ module Types
 
         field :shipping_address, Types::Customers::Address, null: true
 
+        field :premium, Boolean, null: false
+
         def billing_configuration
           {
             id: "#{object&.id}-c0nf",
             document_locale: object&.document_locale
           }
+        end
+
+        def premium
+          License.premium?
         end
       end
     end

@@ -29,4 +29,6 @@ RSpec.describe Types::CustomerPortal::Customers::Object do
   it { is_expected.to have_field(:shipping_address).of_type("CustomerAddress") }
 
   it { is_expected.to have_field(:billing_configuration).of_type('CustomerBillingConfiguration') }
+
+  it { is_expected.to have_field(:premium).of_type("Boolean!") }
 end

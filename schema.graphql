@@ -3254,6 +3254,7 @@ type CustomerPortalCustomer {
   legalName: String
   legalNumber: String
   name: String
+  premium: Boolean!
   shippingAddress: CustomerAddress
   state: String
   taxIdentificationNumber: String
