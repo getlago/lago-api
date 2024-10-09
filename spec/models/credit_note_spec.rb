@@ -3,7 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe CreditNote, type: :model do
-  subject(:credit_note) { create(:credit_note) }
+  subject(:credit_note) do
+    create :credit_note, credit_amount_cents: 11000, total_amount_cents: 11000, taxes_amount_cents: 1000,
+      taxes_rate: 10.0, precise_taxes_amount_cents: 1000
+  end
+
+  let(:item) { create(:credit_note_item, credit_note:, precise_amount_cents: 10000, amount_cents: 1000) }
 
   it_behaves_like 'paper_trail traceable'
 
@@ -243,10 +248,35 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 
-  describe ' #sub_total_excluding_taxes_amount_cents' do
-    it 'returs the total amount without the taxes' do
-      expect(credit_note.sub_total_excluding_taxes_amount_cents)
-        .to eq(credit_note.items.sum(&:precise_amount_cents) - credit_note.precise_coupons_adjustment_amount_cents)
+  context 'when calculating depends on related items' do
+    before do
+      item
+      credit_note.reload
+    end
+
+    describe '#sub_total_excluding_taxes_amount_cents' do
+      it 'returs the total amount without the taxes' do
+        expect(credit_note.sub_total_excluding_taxes_amount_cents)
+          .to eq(credit_note.items.sum(&:precise_amount_cents) - credit_note.precise_coupons_adjustment_amount_cents)
+      end
+    end
+
+    describe '#precise_total' do
+      it 'returns the total precise amount including precise taxes' do
+        expect(credit_note.precise_total).to eq(11000)
+      end
+    end
+  end
+
+  describe '#taxes_rounding_adjustment' do
+    it 'returns the difference between taxes and precise taxes' do
+      expect(credit_note.taxes_rounding_adjustment).to eq(0)
+    end
+  end
+
+  describe '#rounding_adjustment' do
+    it 'returns the difference between credit note total and credit note precise total' do
+      expect(credit_note.taxes_rounding_adjustment).to eq(0)
     end
   end
 
@@ -325,6 +355,38 @@ RSpec.describe CreditNote, type: :model do
             expect(method_call).to eq(false)
           end
         end
+      end
+    end
+  end
+
+  context 'when taxes are not precise' do
+    subject(:credit_note) do
+      create :credit_note, credit_amount_cents: 8200, total_amount_cents: 8200, taxes_amount_cents: 1367,
+        taxes_rate: 20.0, precise_taxes_amount_cents: 1366.6
+    end
+
+    let(:item) { create(:credit_note_item, credit_note:, precise_amount_cents: 6833, amount_cents: 6833) }
+
+    before do
+      item
+      credit_note.reload
+    end
+
+    describe '#precise_total' do
+      it 'returns the total precise amount including precise taxes' do
+        expect(credit_note.precise_total).to eq(8199.6)
+      end
+    end
+
+    describe '#taxes_rounding_adjustment' do
+      it 'returns the difference between taxes and precise taxes' do
+        expect(credit_note.taxes_rounding_adjustment).to eq(0.4)
+      end
+    end
+
+    describe '#rounding_adjustment' do
+      it 'returns the difference between credit note total and credit note precise total' do
+        expect(credit_note.taxes_rounding_adjustment).to eq(0.4)
       end
     end
   end

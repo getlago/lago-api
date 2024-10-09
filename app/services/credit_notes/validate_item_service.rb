@@ -7,7 +7,6 @@ module CreditNotes
 
       valid_item_amount?
       valid_individual_amount?
-      valid_global_amount?
 
       if errors?
         result.validation_failure!(errors:)
