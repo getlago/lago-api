@@ -8098,7 +8098,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "TargetedObjectsEnum",
+                  "name": "HubspotTargetedObjectsEnum",
                   "ofType": null
                 }
               },
@@ -19812,7 +19812,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "TargetedObjectsEnum",
+                  "name": "HubspotTargetedObjectsEnum",
                   "ofType": null
                 }
               },
@@ -19907,6 +19907,29 @@
           ],
           "inputFields": null,
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "HubspotTargetedObjectsEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "companies",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contacts",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "SCALAR",
@@ -35532,29 +35555,6 @@
           "enumValues": null
         },
         {
-          "kind": "ENUM",
-          "name": "TargetedObjectsEnum",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "companies",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "contacts",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
-        },
-        {
           "kind": "OBJECT",
           "name": "Tax",
           "description": null,
@@ -38687,7 +38687,7 @@
               "description": null,
               "type": {
                 "kind": "ENUM",
-                "name": "TargetedObjectsEnum",
+                "name": "HubspotTargetedObjectsEnum",
                 "ofType": null
               },
               "defaultValue": null,
