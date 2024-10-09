@@ -3245,6 +3245,7 @@ type CustomerPortalCustomer {
   city: String
   country: CountryCode
   currency: CurrencyEnum
+  customerType: CustomerTypeEnum
   displayName: String!
   email: String
   firstname: String
@@ -3284,6 +3285,7 @@ type CustomerPortalWallet {
   currency: CurrencyEnum!
   expirationAt: ISO8601DateTime
   id: ID!
+  lastBalanceSyncAt: ISO8601DateTime
   name: String
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
@@ -7746,6 +7748,7 @@ input UpdateCustomerPortalCustomerInput {
   """
   clientMutationId: String
   country: CountryCode
+  customerType: CustomerTypeEnum
   documentLocale: String
   email: String
   firstname: String
