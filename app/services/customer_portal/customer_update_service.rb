@@ -13,6 +13,7 @@ module CustomerPortal
       return result.not_found_failure!(resource: "customer") unless customer
 
       ActiveRecord::Base.transaction do
+        customer.customer_type = args[:customer_type] if args.key?(:customer_type)
         customer.name = args[:name] if args.key?(:name)
         customer.firstname = args[:firstname] if args.key?(:firstname)
         customer.lastname = args[:lastname] if args.key?(:lastname)

@@ -7,6 +7,7 @@ module Types
         graphql_name "UpdateCustomerPortalCustomerInput"
         description "Customer Portal Customer Update input arguments"
 
+        argument :customer_type, Types::Customers::CustomerTypeEnum, required: false
         argument :document_locale, String, required: false
         argument :email, String, required: false
         argument :firstname, String, required: false

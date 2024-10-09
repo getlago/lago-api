@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe Types::CustomerPortal::Customers::UpdateInput do
   subject { described_class }
 
+  it { is_expected.to accept_argument(:customer_type).of_type("CustomerTypeEnum") }
   it { is_expected.to accept_argument(:document_locale).of_type("String") }
   it { is_expected.to accept_argument(:email).of_type("String") }
   it { is_expected.to accept_argument(:firstname).of_type("String") }

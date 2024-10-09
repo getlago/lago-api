@@ -9,6 +9,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService, type: :service do
 
   let(:update_args) do
     {
+      customer_type: "individual",
       document_locale: "es",
       name: "Updated customer name",
       firstname: "Updated customer firstname",
@@ -38,6 +39,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService, type: :service do
 
     updated_customer = result.customer
 
+    expect(updated_customer.customer_type).to eq(update_args[:customer_type])
     expect(updated_customer.name).to eq(update_args[:name])
     expect(updated_customer.firstname).to eq(update_args[:firstname])
     expect(updated_customer.lastname).to eq(update_args[:lastname])

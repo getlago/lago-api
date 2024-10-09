@@ -10,6 +10,7 @@ module Types
 
         field :applicable_timezone, Types::TimezoneEnum, null: false
         field :currency, Types::CurrencyEnum, null: true
+        field :customer_type, Types::Customers::CustomerTypeEnum
         field :display_name, String, null: false
         field :email, String, null: true
         field :firstname, String
