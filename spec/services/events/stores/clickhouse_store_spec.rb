@@ -93,21 +93,21 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
   describe '.events' do
     it 'returns a list of events' do
-      expect(event_store.events.count).to eq(5)
+      expect(event_store.count).to eq(5)
     end
 
     context 'with grouped_by_values' do
       let(:grouped_by_values) { {'region' => 'europe'} }
 
       it 'returns a list of events' do
-        expect(event_store.events.count).to eq(3)
+        expect(event_store.count).to eq(3)
       end
 
       context 'when grouped_by_values value is nil' do
         let(:grouped_by_values) { {'region' => nil} }
 
         it 'returns a list of events' do
-          expect(event_store.events.count).to eq(5)
+          expect(event_store.count).to eq(5)
         end
       end
     end
@@ -117,7 +117,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       let(:ignored_filters) { [{'city' => ['paris']}, {'city' => ['londons'], 'country' => ['united kingdom']}] }
 
       it 'returns a list of events' do
-        expect(event_store.events.count).to eq(2) # 1st event is ignored
+        expect(event_store.count).to eq(2) # 1st event is ignored
       end
     end
   end
@@ -368,6 +368,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
+          transaction_id: SecureRandom.uuid,
           timestamp: boundaries[:from_datetime] + 1.hour,
           properties: {
             billable_metric.field_name => 2,
@@ -380,6 +381,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
+          transaction_id: SecureRandom.uuid,
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
@@ -392,6 +394,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
+          transaction_id: SecureRandom.uuid,
           timestamp: boundaries[:from_datetime] + 2.days,
           properties: {
             billable_metric.field_name => 2,
@@ -405,6 +408,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
+          transaction_id: SecureRandom.uuid,
           timestamp: boundaries[:from_datetime] + 2.days,
           properties: {billable_metric.field_name => 2},
           value: "2",
@@ -449,6 +453,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
+          transaction_id: SecureRandom.uuid,
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
@@ -461,6 +466,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
+          transaction_id: SecureRandom.uuid,
           timestamp: boundaries[:from_datetime] + 1.day,
           properties: {
             billable_metric.field_name => 2,
@@ -473,6 +479,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
+          transaction_id: SecureRandom.uuid,
           timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
           properties: {
             billable_metric.field_name => 2,
@@ -486,6 +493,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
+          transaction_id: SecureRandom.uuid,
           timestamp: boundaries[:from_datetime] + 2.days,
           properties: {billable_metric.field_name => 2},
           value: "2",

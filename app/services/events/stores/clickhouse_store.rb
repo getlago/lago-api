@@ -14,7 +14,7 @@ module Events
 
         scope = scope.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
         scope = scope.where("events_enriched.timestamp <= ?", to_datetime) if to_datetime
-        scope = scope.limit_by(1, :transaction_id)
+        scope = scope.limit_by(1, 'events_enriched.transaction_id')
 
         scope = with_grouped_by_values(scope) if grouped_by_values?
         filters_scope(scope)
@@ -45,13 +45,13 @@ module Events
           .to_sql
 
         sql = <<-SQL
-          with events as (#{cte_sql})
+          WITH events AS (#{cte_sql})
 
-          select
+          SELECT
             DISTINCT ON (#{group_names}) #{group_names},
             events.timestamp,
             property
-          from events
+          FROM events
           ORDER BY #{group_names}, events.timestamp DESC
         SQL
 
@@ -65,7 +65,14 @@ module Events
       end
 
       def count
-        events.count.to_i
+        sql = <<-SQL
+          WITH events AS (#{events.to_sql})
+
+          SELECT count()
+          FROM events
+        SQL
+
+        ::Clickhouse::EventsEnriched.connection.select_value(sql).to_i
       end
 
       def grouped_count
@@ -78,13 +85,13 @@ module Events
           .select((groups + ["events_enriched.transaction_id"]).join(", "))
 
         sql = <<-SQL
-          with events as (#{cte_sql.to_sql})
+          WITH events AS (#{cte_sql.to_sql})
 
-          select
+          SELECT
             #{group_names.join(", ")},
             toDecimal128(count(), #{DECIMAL_SCALE})
-          from events
-          group by #{group_names.join(",")}
+          FROM events
+          GROUP BY #{group_names.join(",")}
         SQL
 
         prepare_grouped_result(::Clickhouse::EventsEnriched.connection.select_all(sql).rows)
@@ -198,7 +205,14 @@ module Events
       end
 
       def max
-        events.maximum("events_enriched.decimal_value")
+        sql = <<-SQL
+          WITH events AS (#{events.to_sql})
+
+          SELECT max(events.decimal_value)
+          FROM events
+        SQL
+
+        ::Clickhouse::EventsEnriched.connection.select_value(sql)
       end
 
       def grouped_max
@@ -213,13 +227,13 @@ module Events
           .to_sql
 
         sql = <<-SQL
-          with events as (#{cte_sql})
+          WITH events AS (#{cte_sql})
 
-          select
+          SELECT
             #{group_names},
             MAX(property)
-          from events
-          group by #{group_names}
+          FROM events
+          GROUP BY #{group_names}
         SQL
 
         prepare_grouped_result(::Clickhouse::EventsEnriched.connection.select_all(sql).rows)
@@ -244,12 +258,12 @@ module Events
           .to_sql
 
         sql = <<-SQL
-          with events as (#{cte_sql})
+          WITH events AS (#{cte_sql})
 
-          select
+          SELECT
             DISTINCT ON (#{group_names}) #{group_names},
             property
-          from events
+          FROM events
           ORDER BY #{group_names}, events.timestamp DESC
         SQL
 
@@ -257,7 +271,14 @@ module Events
       end
 
       def sum_precise_total_amount_cents
-        events.sum("events_enriched.precise_total_amount_cents")
+        sql = <<-SQL
+          WITH events AS (#{events.to_sql})
+
+          SELECT SUM(events.precise_total_amount_cents)
+          FROM events
+        SQL
+
+        ::Clickhouse::EventsEnriched.connection.select_value(sql)
       end
 
       def grouped_sum_precise_total_amount_cents
@@ -270,20 +291,27 @@ module Events
           .select((groups + [Arel.sql("precise_total_amount_cents as property")]).join(", "))
 
         sql = <<-SQL
-          with events as (#{cte_sql.to_sql})
+          WITH events AS (#{cte_sql.to_sql})
 
-          select
+          SELECT
             #{group_names},
             sum(events.property)
-          from events
-          group by #{group_names}
+          FROM events
+          GROUP BY #{group_names}
         SQL
 
         prepare_grouped_result(::Clickhouse::EventsEnriched.connection.select_all(sql).rows)
       end
 
       def sum
-        events.sum("events_enriched.decimal_value")
+        sql = <<-SQL
+          WITH events AS (#{events.to_sql})
+          
+          SELECT sum(events.decimal_value)
+          FROM events
+        SQL
+
+        ::Clickhouse::EventsEnriched.connection.select_value(sql)
       end
 
       def grouped_sum
@@ -296,13 +324,13 @@ module Events
           .select((groups + [Arel.sql("events_enriched.decimal_value AS property")]).join(", "))
 
         sql = <<-SQL
-          with events as (#{cte_sql.to_sql})
+          WITH events AS (#{cte_sql.to_sql})
 
-          select
+          SELECT
             #{group_names},
             sum(events.property)
-          from events
-          group by #{group_names}
+          FROM events
+          GROUP BY #{group_names}
         SQL
 
         prepare_grouped_result(::Clickhouse::EventsEnriched.connection.select_all(sql).rows)
@@ -320,10 +348,10 @@ module Events
           .to_sql
 
         sql = <<-SQL
-          with events as (#{cte_sql})
+          WITH events AS (#{cte_sql})
 
-          select sum(events.prorated_value)
-          from events
+          SELECT sum(events.prorated_value)
+          FROM events
         SQL
 
         ::Clickhouse::EventsEnriched.connection.select_value(sql)
@@ -346,13 +374,13 @@ module Events
           .to_sql
 
         sql = <<-SQL
-          with events as (#{cte_sql})
+          WITH events AS (#{cte_sql})
 
-          select
+          SELECT
             #{group_names},
             sum(events.prorated_value)
-          from events
-          group by #{group_names}
+          FROM events
+          GROUP BY #{group_names}
         SQL
 
         prepare_grouped_result(::Clickhouse::EventsEnriched.connection.select_all(sql).rows)
@@ -362,18 +390,18 @@ module Events
         date_field = date_in_customer_timezone_sql("events_enriched.timestamp")
 
         cte_sql = events
-          .select("toDate(#{date_field}) as day, events_enriched.decimal_value as property")
+          .select("toDate(#{date_field}) as day, events_enriched.decimal_value AS property")
           .to_sql
 
         sql = <<-SQL
-          with events as (#{cte_sql})
+          WITH events AS (#{cte_sql})
 
-          select
+          SELECT
             events.day,
-            sum(events.property) as day_sum
-          from events
-          group by events.day
-          order by events.day asc
+            sum(events.property) AS day_sum
+          FROM events
+          GROUP BY events.day
+          ORDER BY events.day asc
         SQL
 
         ::Clickhouse::EventsEnriched.connection.select_all(Arel.sql(sql)).rows.map do |row|
