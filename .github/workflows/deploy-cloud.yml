@@ -1,0 +1,142 @@
+name: Deploy Cloud (SaaS) Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  # Send a message to Slack when the workflow starts, including the GitHub username
+  notify-start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send start message to Slack
+        uses: rtCamp/action-slack-notify@v2.0.4
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          message: "🚀 Deployment workflow has started by @${{ github.actor }}!"
+
+  # 1. Deploy lago-migrate job
+  lago-migrate:
+    runs-on: ubuntu-latest
+    needs: notify-start
+    steps:
+      - name: Trigger lago-migrate deployment on Porter
+        uses: porter-dev/porter-cli-action@v1
+        with:
+          command: deploy
+          project-id: ${{ secrets.PORTER_PROJECT_ID }}
+          deployment-id: ${{ secrets.PORTER_DEPLOYMENT_ID_MIGRATE }}
+        env:
+          PORTER_TOKEN: ${{ secrets.PORTER_API_TOKEN }}
+
+      - name: Send Slack notification for lago-migrate
+        uses: rtCamp/action-slack-notify@v2.0.4
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          message: "🔄 lago-migrate deployment in progress..."
+
+  # 2. Deploy lago-api job
+  lago-api:
+    runs-on: ubuntu-latest
+    needs: lago-migrate
+    steps:
+      - name: Trigger lago-api deployment on Porter
+        uses: porter-dev/porter-cli-action@v1
+        with:
+          command: deploy
+          project-id: ${{ secrets.PORTER_PROJECT_ID }}
+          deployment-id: ${{ secrets.PORTER_DEPLOYMENT_ID_API }}
+        env:
+          PORTER_TOKEN: ${{ secrets.PORTER_API_TOKEN }}
+
+      - name: Send Slack notification for lago-api
+        uses: rtCamp/action-slack-notify@v2.0.4
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          message: "🔄 lago-api deployment in progress..."
+
+  # 3. Deploy lago-api-worker job
+  lago-api-worker:
+    runs-on: ubuntu-latest
+    needs: lago-api
+    steps:
+      - name: Trigger lago-api-worker deployment on Porter
+        uses: porter-dev/porter-cli-action@v1
+        with:
+          command: deploy
+          project-id: ${{ secrets.PORTER_PROJECT_ID }}
+          deployment-id: ${{ secrets.PORTER_DEPLOYMENT_ID_WORKER }}
+        env:
+          PORTER_TOKEN: ${{ secrets.PORTER_API_TOKEN }}
+
+      - name: Send Slack notification for lago-api-worker
+        uses: rtCamp/action-slack-notify@v2.0.4
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          message: "🔄 lago-api-worker deployment in progress..."
+
+  # 4. Deploy lago-front job
+  lago-front:
+    runs-on: ubuntu-latest
+    needs: lago-api-worker
+    steps:
+      - name: Trigger lago-front deployment on Porter
+        uses: porter-dev/porter-cli-action@v1
+        with:
+          command: deploy
+          project-id: ${{ secrets.PORTER_PROJECT_ID }}
+          deployment-id: ${{ secrets.PORTER_DEPLOYMENT_ID_FRONT }}
+        env:
+          PORTER_TOKEN: ${{ secrets.PORTER_API_TOKEN }}
+
+      - name: Send Slack notification for lago-front
+        uses: rtCamp/action-slack-notify@v2.0.4
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          message: "🔄 lago-front deployment in progress..."
+
+  # 5. Deploy api-clock job, which depends on lago-front
+  api-clock:
+    runs-on: ubuntu-latest
+    needs: lago-front
+    steps:
+      - name: Trigger api-clock deployment on Porter
+        uses: porter-dev/porter-cli-action@v1
+        with:
+          command: deploy
+          project-id: ${{ secrets.PORTER_PROJECT_ID }}
+          deployment-id: ${{ secrets.PORTER_DEPLOYMENT_ID_API_CLOCK }}
+        env:
+          PORTER_TOKEN: ${{ secrets.PORTER_API_TOKEN }}
+
+      - name: Send Slack notification for api-clock
+        uses: rtCamp/action-slack-notify@v2.0.4
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          message: "🔄 api-clock deployment in progress..."
+
+  # 6. Deploy pdf job, which also depends on lago-front and runs in parallel with api-clock
+  pdf:
+    runs-on: ubuntu-latest
+    needs: lago-front
+    steps:
+      - name: Trigger pdf deployment on Porter
+        uses: porter-dev/porter-cli-action@v1
+        with:
+          command: deploy
+          project-id: ${{ secrets.PORTER_PROJECT_ID }}
+          deployment-id: ${{ secrets.PORTER_DEPLOYMENT_ID_PDF }}
+        env:
+          PORTER_TOKEN: ${{ secrets.PORTER_API_TOKEN }}
+
+      - name: Send Slack notification for pdf
+        uses: rtCamp/action-slack-notify@v2.0.4
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          message: "🔄 pdf deployment in progress..."
