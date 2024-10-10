@@ -11,9 +11,6 @@ class Invoice < ApplicationRecord
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
 
-  before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
-  before_save :ensure_number
-
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
 
@@ -336,20 +333,23 @@ class Invoice < ApplicationRecord
     I18n.t('invoice.document_name')
   end
 
-  private
+  def ensure_organization_sequential_id
+    return if organization_sequential_id.present? && organization_sequential_id.positive?
+    return unless finalized?
 
-  def should_assign_sequential_id?
-    status_changed_to_finalized?
+    self.organization_sequential_id = generate_organization_sequential_id
   end
 
-  def void_invoice!
-    update!(ready_for_payment_processing: false)
+  def ensure_invoice_sequential_id
+    return if sequential_id.present?
+
+    self.sequential_id = generate_sequential_id
   end
 
   def ensure_number
-    self.number = "#{organization.document_number_prefix}-DRAFT" if number.blank? && !status_changed_to_finalized?
+    self.number = "#{organization.document_number_prefix}-DRAFT" if number.blank? && !finalized?
 
-    return unless status_changed_to_finalized?
+    return unless finalized?
 
     if organization.per_customer?
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
@@ -365,11 +365,15 @@ class Invoice < ApplicationRecord
     end
   end
 
-  def ensure_organization_sequential_id
-    return if organization_sequential_id.present? && organization_sequential_id.positive?
-    return unless status_changed_to_finalized?
+  private
 
-    self.organization_sequential_id = generate_organization_sequential_id
+  # For invoices we want to skip callback and set sequential_id from the dedicated service
+  def should_assign_sequential_id?
+    false
+  end
+
+  def void_invoice!
+    update!(ready_for_payment_processing: false)
   end
 
   def generate_organization_sequential_id
@@ -387,11 +391,12 @@ class Invoice < ApplicationRecord
     ) do
       # If previous invoice had different numbering, base sequential id is the total number of invoices
       organization_sequential_id = if switched_from_customer_numbering?
-        organization.invoices.with_generated_number.count
+        organization.invoices.with_generated_number.where.not(id:).count
       else
         organization
           .invoices
           .where.not(organization_sequential_id: 0)
+          .where.not(id:)
           .order(organization_sequential_id: :desc)
           .limit(1)
           .pick(:organization_sequential_id) || 0
@@ -412,18 +417,11 @@ class Invoice < ApplicationRecord
   end
 
   def switched_from_customer_numbering?
-    last_invoice = organization.invoices.order(created_at: :desc).with_generated_number.first
+    last_invoice = organization.invoices.where.not(id:).order(created_at: :desc).with_generated_number.first
 
     return false unless last_invoice
 
     last_invoice&.organization_sequential_id&.zero?
-  end
-
-  def status_changed_to_finalized?
-    status_changed?(from: 'draft', to: 'finalized') ||
-      status_changed?(from: 'generating', to: 'finalized') ||
-      status_changed?(from: 'open', to: 'finalized') ||
-      status_changed?(from: 'failed', to: 'finalized')
   end
 end
 

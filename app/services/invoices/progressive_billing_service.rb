@@ -45,6 +45,7 @@ module Invoices
 
       # TODO: deduct previous progressive billing invoices
 
+      Invoices::NumberGenerationService.call(invoice:)
       Utils::SegmentTrack.invoice_created(invoice)
       SendWebhookJob.perform_later('invoice.created', invoice)
       Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)

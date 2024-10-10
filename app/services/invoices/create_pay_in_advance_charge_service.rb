@@ -47,6 +47,8 @@ module Invoices
         invoice.save!
       end
 
+      Invoices::NumberGenerationService.call(invoice:)
+
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
