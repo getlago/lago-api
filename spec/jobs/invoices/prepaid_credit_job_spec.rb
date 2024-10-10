@@ -48,7 +48,7 @@ RSpec.describe Invoices::PrepaidCreditJob, type: :job do
   it 'does not retry the job' do
     expect {
       described_class.perform_now(invoice)
-    }.not_to have_enqueued_job(Invoices::PrepaidCreditJob)
+    }.not_to have_enqueued_job(described_class)
   end
 
   context 'when there is race condition error' do
@@ -59,7 +59,7 @@ RSpec.describe Invoices::PrepaidCreditJob, type: :job do
     it 'retries the job' do
       expect {
         described_class.perform_now(invoice)
-      }.to have_enqueued_job(Invoices::PrepaidCreditJob)
+      }.to have_enqueued_job(described_class)
     end
   end
 end
