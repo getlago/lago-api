@@ -226,6 +226,50 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is customer.accounting_provider_created' do
+    let(:webhook_service) { instance_double(Webhooks::Integrations::AccountingCustomerCreatedService) }
+    let(:customer) { create(:customer) }
+
+    before do
+      allow(Webhooks::Integrations::AccountingCustomerCreatedService).to receive(:new)
+        .with(object: customer, options: {})
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook event service' do
+      send_webhook_job.perform_now(
+        'customer.accounting_provider_created',
+        customer
+      )
+
+      expect(Webhooks::Integrations::AccountingCustomerCreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
+  context 'when webhook_type is customer.crm_provider_created' do
+    let(:webhook_service) { instance_double(Webhooks::Integrations::CrmCustomerCreatedService) }
+    let(:customer) { create(:customer) }
+
+    before do
+      allow(Webhooks::Integrations::CrmCustomerCreatedService).to receive(:new)
+        .with(object: customer, options: {})
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook event service' do
+      send_webhook_job.perform_now(
+        'customer.crm_provider_created',
+        customer
+      )
+
+      expect(Webhooks::Integrations::CrmCustomerCreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook_type is customer.checkout_url_generated' do
     let(:webhook_service) { instance_double(Webhooks::PaymentProviders::CustomerCheckoutService) }
     let(:customer) { create(:customer) }

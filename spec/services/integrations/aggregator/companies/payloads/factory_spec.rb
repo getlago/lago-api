@@ -15,21 +15,10 @@ RSpec.describe Integrations::Aggregator::Companies::Payloads::Factory do
     context 'when customer is a hubspot customer' do
       let(:integration_customer) { FactoryBot.create(:hubspot_customer, customer:) }
       let(:customer) { FactoryBot.create(:customer) }
+      let(:customer_type) { ['company', nil].sample }
 
-      context 'when customer is an individual' do
-        let(:customer_type) { 'individual' }
-
-        it 'returns payload' do
-          expect(subject).to be_a(Integrations::Aggregator::Contacts::Payloads::Hubspot)
-        end
-      end
-
-      context 'when customer is a company' do
-        let(:customer_type) { ['company', nil].sample }
-
-        it 'returns payload' do
-          expect(subject).to be_a(Integrations::Aggregator::Companies::Payloads::Hubspot)
-        end
+      it 'returns payload' do
+        expect(subject).to be_a(Integrations::Aggregator::Companies::Payloads::Hubspot)
       end
     end
   end

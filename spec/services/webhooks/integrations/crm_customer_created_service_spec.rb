@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Webhooks::Integrations::CustomerCreatedService do
+RSpec.describe Webhooks::Integrations::CrmCustomerCreatedService do
   subject(:webhook_service) { described_class.new(object: customer) }
 
   let(:customer) { create(:customer, organization:) }
@@ -10,7 +10,7 @@ RSpec.describe Webhooks::Integrations::CustomerCreatedService do
 
   describe '.call' do
     it_behaves_like 'creates webhook',
-      'customer.accounting_provider_created',
+      'customer.crm_provider_created',
       'customer',
       {'integration_customers' => []}
   end
