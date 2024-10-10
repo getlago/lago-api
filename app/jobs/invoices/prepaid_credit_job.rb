@@ -4,6 +4,7 @@ module Invoices
   class PrepaidCreditJob < ApplicationJob
     queue_as 'wallets'
 
+    retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
     unique :until_executed, on_conflict: :log
 
     def perform(invoice)
