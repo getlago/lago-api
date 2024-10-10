@@ -18,18 +18,21 @@ module Integrations
           }
         end
 
-        def deliver_success_webhook(customer:)
+        def deliver_success_webhook(customer:, webhook_code:)
           SendWebhookJob.perform_later(
-            'customer.accounting_provider_created',
+            webhook_code,
             customer
           )
         end
 
         def process_hash_result(body)
-          contact_id = body['succeededContacts']&.first.try(:[], 'id')
+          contact = body['succeededContacts']&.first
+          contact_id = contact&.dig('id')
+          email = contact&.dig('email')
 
           if contact_id
             result.contact_id = contact_id
+            result.email = email if email.present?
           else
             message = body['failedContacts'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
             code = 'Validation error'
