@@ -53,13 +53,15 @@ end
 #  transaction_type                    :integer          not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
+#  credit_note_id                      :uuid
 #  invoice_id                          :uuid
 #  wallet_id                           :uuid             not null
 #
 # Indexes
 #
-#  index_wallet_transactions_on_invoice_id  (invoice_id)
-#  index_wallet_transactions_on_wallet_id   (wallet_id)
+#  index_wallet_transactions_on_credit_note_id  (credit_note_id)
+#  index_wallet_transactions_on_invoice_id      (invoice_id)
+#  index_wallet_transactions_on_wallet_id       (wallet_id)
 #
 # Foreign Keys
 #
