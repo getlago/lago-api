@@ -67,7 +67,7 @@ module Integrations
 
       def deliver_error_webhook(customer:, code:, message:)
         SendWebhookJob.perform_later(
-          'customer.accounting_provider_error',
+          webhook_code,
           customer,
           provider:,
           provider_code: integration.code,
@@ -106,6 +106,15 @@ module Integrations
 
       def secret_key
         ENV['NANGO_SECRET_KEY']
+      end
+
+      def webhook_code
+        case provider
+        when 'hubspot'
+          'customer.crm_provider_error'
+        else
+          'customer.accounting_provider_error'
+        end
       end
 
       def code(error)

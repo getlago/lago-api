@@ -23,7 +23,7 @@ module Integrations
 
           return result unless result.contact_id
 
-          deliver_success_webhook(customer:)
+          deliver_success_webhook(customer:, webhook_code: 'customer.accounting_provider_created')
 
           result
         rescue LagoHttpClient::HttpError => e

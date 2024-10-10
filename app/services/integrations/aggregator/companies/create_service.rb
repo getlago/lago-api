@@ -2,16 +2,19 @@
 
 module Integrations
   module Aggregator
-    module Contacts
-      class UpdateService < BaseService
-        def initialize(integration:, integration_customer:)
-          @integration_customer = integration_customer
+    module Companies
+      class CreateService < BaseService
+        def initialize(integration:, customer:, subsidiary_id:)
+          @customer = customer
+          @subsidiary_id = subsidiary_id
+
+          raise ArgumentError, 'Customer is not a company' if customer.customer_type_individual?
 
           super(integration:)
         end
 
         def call
-          response = http_client.put_with_response(params, headers)
+          response = http_client.post_with_response(params, headers)
           body = JSON.parse(response.body)
 
           if body.is_a?(Hash)
@@ -22,7 +25,7 @@ module Integrations
 
           return result unless result.contact_id
 
-          deliver_success_webhook(customer:, webhook_code: 'customer.accounting_provider_created')
+          deliver_success_webhook(customer:, webhook_code: 'customer.crm_provider_created')
 
           result
         rescue LagoHttpClient::HttpError => e
@@ -36,19 +39,17 @@ module Integrations
           result.service_failure!(code:, message:)
         end
 
-        delegate :customer, to: :integration_customer
-
         private
 
-        attr_reader :integration_customer, :subsidiary_id
+        attr_reader :customer, :subsidiary_id
 
         def params
-          Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
+          Integrations::Aggregator::Companies::Payloads::Factory.new_instance(
             integration:,
-            integration_customer:,
+            integration_customer: nil,
             customer:,
             subsidiary_id:
-          ).update_body
+          ).create_body
         end
       end
     end

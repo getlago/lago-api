@@ -17,6 +17,7 @@ module Integrations
           ActiveRecord::Base.transaction do
             response = http_client.post_with_response(payload, headers)
             integration.settings = integration.reload.settings
+            integration.subscriptions_object_type_id = response['objectTypeId']
             integration.subscriptions_properties_version = VERSION
             integration.save!
           end
