@@ -23,6 +23,8 @@ module V1
         'anrok'
       when 'IntegrationCustomers::XeroCustomer'
         'xero'
+      when 'IntegrationCustomers::HubspotCustomer'
+        'hubspot'
       end
     end
   end

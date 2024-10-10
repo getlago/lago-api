@@ -13,6 +13,42 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
   it { is_expected.to belong_to(:integration) }
   it { is_expected.to belong_to(:customer) }
 
+  describe '.accounting_kind' do
+    let(:netsuite_customer) { create(:netsuite_customer) }
+    let(:xero_customer) { create(:xero_customer) }
+    let(:anrok_customer) { create(:anrok_customer) }
+    let(:hubspot_customer) { create(:hubspot_customer) }
+
+    before do
+      netsuite_customer
+      xero_customer
+      anrok_customer
+      hubspot_customer
+    end
+
+    it 'returns only accounting kind customers' do
+      expect(described_class.accounting_kind).to contain_exactly(netsuite_customer, xero_customer)
+    end
+  end
+
+  describe '.crm_kind' do
+    let(:netsuite_customer) { create(:netsuite_customer) }
+    let(:xero_customer) { create(:xero_customer) }
+    let(:anrok_customer) { create(:anrok_customer) }
+    let(:hubspot_customer) { create(:hubspot_customer) }
+
+    before do
+      netsuite_customer
+      xero_customer
+      anrok_customer
+      hubspot_customer
+    end
+
+    it 'returns only crm kind customers' do
+      expect(described_class.crm_kind).to contain_exactly(hubspot_customer)
+    end
+  end
+
   describe '.customer_type' do
     subject(:customer_type_call) { described_class.customer_type(type) }
 
@@ -46,6 +82,15 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
     context 'when type is xero' do
       let(:type) { 'xero' }
       let(:customer_type) { 'IntegrationCustomers::XeroCustomer' }
+
+      it 'returns customer type' do
+        expect(subject).to eq(customer_type)
+      end
+    end
+
+    context 'when type is hubspot' do
+      let(:type) { 'hubspot' }
+      let(:customer_type) { 'IntegrationCustomers::HubspotCustomer' }
 
       it 'returns customer type' do
         expect(subject).to eq(customer_type)

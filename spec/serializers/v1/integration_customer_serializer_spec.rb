@@ -45,5 +45,13 @@ RSpec.describe ::V1::IntegrationCustomerSerializer do
         expect(subject).to eq('xero')
       end
     end
+
+    context 'when customer is a hubspot customer' do
+      let(:integration_customer) { create(:hubspot_customer) }
+
+      it 'returns hubspot' do
+        expect(subject).to eq('hubspot')
+      end
+    end
   end
 end

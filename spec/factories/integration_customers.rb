@@ -33,4 +33,19 @@ FactoryBot.define do
       {sync_with_provider: true}
     end
   end
+
+  factory :hubspot_customer, class: 'IntegrationCustomers::HubspotCustomer' do
+    association :integration, factory: :hubspot_integration
+    customer
+    type { 'IntegrationCustomers::HubspotCustomer' }
+    external_customer_id { SecureRandom.uuid }
+
+    settings do
+      {
+        sync_with_provider: true,
+        email: Faker::Internet.email,
+        targeted_object: Integrations::HubspotIntegration::TARGETED_OBJECTS.sample
+      }
+    end
+  end
 end
