@@ -22,6 +22,8 @@ module Types
         field :ongoing_balance_cents, GraphQL::Types::BigInt, null: false
         field :ongoing_usage_balance_cents, GraphQL::Types::BigInt, null: false
         field :rate_amount, GraphQL::Types::Float, null: false
+
+        field :last_balance_sync_at, GraphQL::Types::ISO8601DateTime, null: true
       end
     end
   end

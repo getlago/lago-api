@@ -10,6 +10,7 @@ module Types
 
         field :applicable_timezone, Types::TimezoneEnum, null: false
         field :currency, Types::CurrencyEnum, null: true
+        field :customer_type, Types::Customers::CustomerTypeEnum
         field :display_name, String, null: false
         field :email, String, null: true
         field :firstname, String
@@ -31,11 +32,17 @@ module Types
 
         field :shipping_address, Types::Customers::Address, null: true
 
+        field :premium, Boolean, null: false
+
         def billing_configuration
           {
             id: "#{object&.id}-c0nf",
             document_locale: object&.document_locale
           }
+        end
+
+        def premium
+          License.premium?
         end
       end
     end

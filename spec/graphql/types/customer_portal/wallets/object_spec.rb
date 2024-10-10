@@ -20,4 +20,5 @@ RSpec.describe Types::CustomerPortal::Wallets::Object do
   it { is_expected.to have_field(:ongoing_balance_cents).of_type("BigInt!") }
   it { is_expected.to have_field(:ongoing_usage_balance_cents).of_type("BigInt!") }
   it { is_expected.to have_field(:rate_amount).of_type("Float!") }
+  it { is_expected.to have_field(:last_balance_sync_at).of_type('ISO8601DateTime') }
 end

@@ -13758,6 +13758,20 @@
               ]
             },
             {
+              "name": "customerType",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CustomerTypeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "displayName",
               "description": null,
               "type": {
@@ -13870,6 +13884,24 @@
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "premium",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -14214,6 +14246,20 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "lastBalanceSyncAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -37740,6 +37786,18 @@
           "possibleTypes": null,
           "fields": null,
           "inputFields": [
+            {
+              "name": "customerType",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CustomerTypeEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "documentLocale",
               "description": null,

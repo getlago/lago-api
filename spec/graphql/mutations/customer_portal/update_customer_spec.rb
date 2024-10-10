@@ -19,6 +19,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer, type: :graphql do
     <<~GQL
       mutation($input: UpdateCustomerPortalCustomerInput!) {
         updateCustomerPortalCustomer(input: $input) {
+          customerType
           name
           firstname
           lastname
@@ -49,6 +50,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer, type: :graphql do
 
   let(:input) do
     {
+      customerType: "company",
       name: "Updated customer name",
       firstname: "Updated customer firstname",
       lastname: "Updated customer lastname",
@@ -78,6 +80,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer, type: :graphql do
   it "updates a customer", :aggregate_failures do
     result_data = result["data"]["updateCustomerPortalCustomer"]
 
+    expect(result_data["customerType"]).to eq(input[:customerType])
     expect(result_data["name"]).to eq(input[:name])
     expect(result_data["firstname"]).to eq(input[:firstname])
     expect(result_data["lastname"]).to eq(input[:lastname])
