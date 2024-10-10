@@ -2,10 +2,12 @@
 
 module Integrations
   module Aggregator
-    module Contacts
+    module Companies
       class UpdateService < BaseService
         def initialize(integration:, integration_customer:)
           @integration_customer = integration_customer
+
+          raise ArgumentError, 'Integration customer is not a company' if customer.customer_type_individual?
 
           super(integration:)
         end
@@ -22,7 +24,7 @@ module Integrations
 
           return result unless result.contact_id
 
-          deliver_success_webhook(customer:, webhook_code: 'customer.accounting_provider_created')
+          deliver_success_webhook(customer:, webhook_code: 'customer.crm_provider_created')
 
           result
         rescue LagoHttpClient::HttpError => e
@@ -43,7 +45,7 @@ module Integrations
         attr_reader :integration_customer, :subsidiary_id
 
         def params
-          Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
+          Integrations::Aggregator::Companies::Payloads::Factory.new_instance(
             integration:,
             integration_customer:,
             customer:,
