@@ -12,6 +12,7 @@ module Types
       field :days_between_attempts, Integer, null: false
       field :max_attempts, Integer, null: false
       field :name, String, null: false
+      field :thresholds, [Types::DunningCampaignThresholds::Object], null: false
 
       field :description, String, null: true
 

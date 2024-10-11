@@ -12,6 +12,7 @@ RSpec.describe Types::DunningCampaigns::Object do
   it { is_expected.to have_field(:days_between_attempts).of_type("Int!") }
   it { is_expected.to have_field(:max_attempts).of_type("Int!") }
   it { is_expected.to have_field(:name).of_type("String!") }
+  it { is_expected.to have_field(:thresholds).of_type("[DunningCampaignThreshold!]!") }
 
   it { is_expected.to have_field(:description).of_type("String") }
 
