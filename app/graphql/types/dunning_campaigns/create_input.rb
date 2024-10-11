@@ -10,6 +10,7 @@ module Types
       argument :days_between_attempts, Integer, required: true
       argument :max_attempts, Integer, required: true
       argument :name, String, required: true
+      argument :thresholds, [Types::DunningCampaignThresholds::CreateInput], required: true
 
       argument :description, String, required: false
     end

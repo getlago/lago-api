@@ -2011,6 +2011,12 @@ input CreateDunningCampaignInput {
   description: String
   maxAttempts: Int!
   name: String!
+  thresholds: [CreateDunningCampaignThresholdInput!]!
+}
+
+input CreateDunningCampaignThresholdInput {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
 }
 
 """
@@ -3708,7 +3714,7 @@ input DownloadInvoiceInput {
 }
 
 type DunningCampaign {
-  appliedToOrganization: String!
+  appliedToOrganization: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
   daysBetweenAttempts: Int!
@@ -3716,7 +3722,13 @@ type DunningCampaign {
   id: ID!
   maxAttempts: Int!
   name: String!
+  thresholds: [DunningCampaignThreshold!]!
   updatedAt: ISO8601DateTime!
+}
+
+type DunningCampaignThreshold {
+  amountCents: BigInt!
+  currency: CurrencyEnum!
 }
 
 """

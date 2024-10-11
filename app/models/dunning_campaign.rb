@@ -5,6 +5,7 @@ class DunningCampaign < ApplicationRecord
 
   belongs_to :organization
   has_many :thresholds, class_name: "DunningCampaignThreshold", dependent: :destroy
+  accepts_nested_attributes_for :thresholds
 
   validates :name, presence: true
   validates :days_between_attempts, numericality: {greater_than: 0}

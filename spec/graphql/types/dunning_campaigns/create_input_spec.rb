@@ -10,6 +10,7 @@ RSpec.describe Types::DunningCampaigns::CreateInput do
   it { is_expected.to accept_argument(:days_between_attempts).of_type('Int!') }
   it { is_expected.to accept_argument(:max_attempts).of_type('Int!') }
   it { is_expected.to accept_argument(:name).of_type('String!') }
+  it { is_expected.to accept_argument(:thresholds).of_type('[CreateDunningCampaignThresholdInput!]!') }
 
   it { is_expected.to accept_argument(:description).of_type('String') }
 end

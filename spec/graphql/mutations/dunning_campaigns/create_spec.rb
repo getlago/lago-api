@@ -12,7 +12,13 @@ RSpec.describe Mutations::DunningCampaigns::Create, type: :graphql do
       description: "Dunning campaign description",
       maxAttempts: 3,
       daysBetweenAttempts: 1,
-      appliedToOrganization: false
+      appliedToOrganization: false,
+      thresholds: [
+        {
+          amountCents: 10000,
+          currency: "EUR"
+        }
+      ]
     }
   end
 
@@ -20,7 +26,17 @@ RSpec.describe Mutations::DunningCampaigns::Create, type: :graphql do
     <<-GQL
       mutation($input: CreateDunningCampaignInput!) {
         createDunningCampaign(input: $input) {
-          id name code description maxAttempts daysBetweenAttempts appliedToOrganization
+          id
+          name
+          code
+          description
+          maxAttempts
+          daysBetweenAttempts
+          appliedToOrganization
+          thresholds {
+            amountCents
+            currency
+          }
         }
       }
     GQL
@@ -46,7 +62,13 @@ RSpec.describe Mutations::DunningCampaigns::Create, type: :graphql do
       "description" => "Dunning campaign description",
       "maxAttempts" => 3,
       "daysBetweenAttempts" => 1,
-      "appliedToOrganization" => false
+      "appliedToOrganization" => false,
+      "thresholds" => [
+        {
+          "amountCents" => "10000",
+          "currency" => "EUR"
+        }
+      ]
     )
   end
 end
