@@ -4,6 +4,6 @@ class AddReferenceToCreditNoteFromWalletTransaction < ActiveRecord::Migration[7.
   disable_ddl_transaction!
 
   def change
-    add_reference :wallet_transactions, :credit_note, type: :uuid, null: true, index: { algorithm: :concurrently }
+    add_reference :wallet_transactions, :credit_note, type: :uuid, null: true, index: {algorithm: :concurrently}
   end
 end

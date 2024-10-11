@@ -4,7 +4,7 @@ class WalletTransaction < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :wallet
-  
+
   # these two relationships are populated only for outbound transactions
   belongs_to :invoice, optional: true
   belongs_to :credit_note, optional: true
