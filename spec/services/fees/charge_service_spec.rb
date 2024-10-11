@@ -4,11 +4,12 @@ require 'rails_helper'
 
 RSpec.describe Fees::ChargeService do
   subject(:charge_subscription_service) do
-    described_class.new(invoice:, charge:, subscription:, boundaries:)
+    described_class.new(invoice:, charge:, subscription:, boundaries:, current_usage:)
   end
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
+  let(:current_usage) { false }
 
   let(:subscription) do
     create(
@@ -1858,124 +1859,126 @@ RSpec.describe Fees::ChargeService do
         expect(aggregator_service).to have_received(:aggregate)
       end
     end
-  end
 
-  describe '.current_usage' do
-    context 'with all types of aggregation' do
-      BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|
-        before do
-          billable_metric.update!(
-            aggregation_type:,
-            field_name: 'foo_bar',
-            weighted_interval: 'seconds',
-            custom_aggregator: 'def aggregate(event, agg, aggregation_properties); agg; end'
+    context 'when current usage' do
+      let(:current_usage) { true }
+
+      context 'with all types of aggregation' do
+        BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|
+          before do
+            billable_metric.update!(
+              aggregation_type:,
+              field_name: 'foo_bar',
+              weighted_interval: 'seconds',
+              custom_aggregator: 'def aggregate(event, agg, aggregation_properties); agg; end'
+            )
+
+            charge.update!(min_amount_cents: 1000)
+          end
+
+          it 'initializes fees' do
+            result = charge_subscription_service.call
+
+            expect(result).to be_success
+
+            usage_fee = result.fees.first
+
+            aggregate_failures do
+              expect(result.fees.count).to eq(1)
+              expect(usage_fee.id).to be_nil
+              expect(usage_fee.invoice_id).to eq(invoice.id)
+              expect(usage_fee.charge_id).to eq(charge.id)
+              expect(usage_fee.amount_cents).to eq(0)
+              expect(usage_fee.precise_amount_cents).to eq(0.0)
+              expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
+              expect(usage_fee.amount_currency).to eq('EUR')
+              expect(usage_fee.units).to eq(0)
+            end
+          end
+        end
+      end
+
+      context 'with graduated charge model' do
+        let(:charge) do
+          create(
+            :graduated_charge,
+            plan: subscription.plan,
+            charge_model: 'graduated',
+            billable_metric:,
+            properties: {
+              graduated_ranges: [
+                {
+                  from_value: 0,
+                  to_value: nil,
+                  per_unit_amount: '0.01',
+                  flat_amount: '0.01'
+                }
+              ]
+            }
           )
-
-          charge.update!(min_amount_cents: 1000)
         end
 
-        it 'initializes fees' do
-          result = charge_subscription_service.current_usage
+        before do
+          create_list(
+            :event,
+            4,
+            organization: subscription.organization,
+            customer: subscription.customer,
+            subscription:,
+            code: charge.billable_metric.code,
+            timestamp: DateTime.parse('2022-03-16')
+          )
+        end
+
+        it 'initialize a fee' do
+          result = charge_subscription_service.call
 
           expect(result).to be_success
 
           usage_fee = result.fees.first
 
           aggregate_failures do
-            expect(result.fees.count).to eq(1)
             expect(usage_fee.id).to be_nil
             expect(usage_fee.invoice_id).to eq(invoice.id)
             expect(usage_fee.charge_id).to eq(charge.id)
-            expect(usage_fee.amount_cents).to eq(0)
-            expect(usage_fee.precise_amount_cents).to eq(0.0)
+            expect(usage_fee.amount_cents).to eq(5)
+            expect(usage_fee.precise_amount_cents).to eq(5.0)
             expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
             expect(usage_fee.amount_currency).to eq('EUR')
-            expect(usage_fee.units).to eq(0)
+            expect(usage_fee.units.to_s).to eq('4.0')
           end
         end
       end
-    end
 
-    context 'with graduated charge model' do
-      let(:charge) do
-        create(
-          :graduated_charge,
-          plan: subscription.plan,
-          charge_model: 'graduated',
-          billable_metric:,
-          properties: {
-            graduated_ranges: [
-              {
-                from_value: 0,
-                to_value: nil,
-                per_unit_amount: '0.01',
-                flat_amount: '0.01'
-              }
-            ]
-          }
-        )
-      end
-
-      before do
-        create_list(
-          :event,
-          4,
-          organization: subscription.organization,
-          customer: subscription.customer,
-          subscription:,
-          code: charge.billable_metric.code,
-          timestamp: DateTime.parse('2022-03-16')
-        )
-      end
-
-      it 'initialize a fee' do
-        result = charge_subscription_service.current_usage
-
-        expect(result).to be_success
-
-        usage_fee = result.fees.first
-
-        aggregate_failures do
-          expect(usage_fee.id).to be_nil
-          expect(usage_fee.invoice_id).to eq(invoice.id)
-          expect(usage_fee.charge_id).to eq(charge.id)
-          expect(usage_fee.amount_cents).to eq(5)
-          expect(usage_fee.precise_amount_cents).to eq(5.0)
-          expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
-          expect(usage_fee.amount_currency).to eq('EUR')
-          expect(usage_fee.units.to_s).to eq('4.0')
+      context 'with aggregation error' do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            aggregation_type: 'max_agg',
+            field_name: 'foo_bar'
+          )
         end
-      end
-    end
+        let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
+        let(:error_result) do
+          BaseService::Result.new.service_failure!(code: 'aggregation_failure', message: 'Test message')
+        end
 
-    context 'with aggregation error' do
-      let(:billable_metric) do
-        create(
-          :billable_metric,
-          aggregation_type: 'max_agg',
-          field_name: 'foo_bar'
-        )
-      end
-      let(:aggregator_service) { instance_double(BillableMetrics::Aggregations::MaxService) }
-      let(:error_result) do
-        BaseService::Result.new.service_failure!(code: 'aggregation_failure', message: 'Test message')
-      end
+        it 'returns an error' do
+          allow(BillableMetrics::Aggregations::MaxService).to receive(:new)
+            .and_return(aggregator_service)
+          allow(aggregator_service).to receive(:aggregate)
+            .and_return(error_result)
 
-      it 'returns an error' do
-        allow(BillableMetrics::Aggregations::MaxService).to receive(:new)
-          .and_return(aggregator_service)
-        allow(aggregator_service).to receive(:aggregate)
-          .and_return(error_result)
+          result = charge_subscription_service.call
 
-        result = charge_subscription_service.current_usage
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq('aggregation_failure')
+          expect(result.error.error_message).to eq('Test message')
 
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ServiceFailure)
-        expect(result.error.code).to eq('aggregation_failure')
-        expect(result.error.error_message).to eq('Test message')
-
-        expect(BillableMetrics::Aggregations::MaxService).to have_received(:new)
-        expect(aggregator_service).to have_received(:aggregate)
+          expect(BillableMetrics::Aggregations::MaxService).to have_received(:new)
+          expect(aggregator_service).to have_received(:aggregate)
+        end
       end
     end
   end

@@ -86,29 +86,17 @@ module Invoices
     end
 
     def charge_usage(charge)
-      return charge_usage_without_cache(charge) if organization.clickhouse_events_store?
+      cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
+        subscription:,
+        charge:,
+        to_datetime: boundaries[:charges_to_datetime],
+        cache: !organization.clickhouse_events_store? # NOTE: Will be turned on in the future
+      )
 
-      json = Rails.cache.fetch(charge_cache_key(charge), expires_in: charge_cache_expiration) do
-        fees_result = Fees::ChargeService.new(
-          invoice:, charge:, subscription:, boundaries:
-        ).current_usage
-
-        fees_result.raise_if_error!
-
-        fees_result.fees.to_json
-      end
-
-      JSON.parse(json).map { |j| Fee.new(j.slice(*Fee.column_names)) }
-    end
-
-    def charge_usage_without_cache(charge)
-      fees_result = Fees::ChargeService.new(
-        invoice:, charge:, subscription:, boundaries:
-      ).current_usage
-
-      fees_result.raise_if_error!
-
-      fees_result.fees
+      Fees::ChargeService
+        .call(invoice:, charge:, subscription:, boundaries:, current_usage: true, cache_middleware:)
+        .raise_if_error!
+        .fees
     end
 
     def boundaries
@@ -181,20 +169,12 @@ module Invoices
       invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
     end
 
-    def charge_cache_key(charge)
-      Subscriptions::ChargeCacheService.new(subscription:, charge:).cache_key
-    end
-
     def provider_taxes_cache_key
       [
         'provider-taxes',
         subscription.id,
         plan.updated_at.iso8601
       ].join('/')
-    end
-
-    def charge_cache_expiration
-      (boundaries[:charges_to_datetime] - Time.current).to_i.seconds
     end
 
     def format_usage

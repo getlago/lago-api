@@ -7,7 +7,7 @@ namespace :cache do
 
     Charge.where(id: charge_id).includes(plan: :subscriptions).find_each do |charge|
       charge.plan.subscriptions.find_each do |subscription|
-        Subscriptions::ChargeCacheService.new(subscription:, charge:).expire_cache
+        Subscriptions::ChargeCacheService.expire_for_subscription_charge(subscription:, charge:)
       end
     end
   end

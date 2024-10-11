@@ -2,21 +2,26 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:)
+    def initialize(invoice:, charge:, subscription:, boundaries:, current_usage: false, cache_middleware: nil)
       @invoice = invoice
       @charge = charge
       @subscription = subscription
-      @is_current_usage = false
       @boundaries = OpenStruct.new(boundaries)
       @currency = subscription.plan.amount.currency
+
+      @current_usage = current_usage
+      @cache_middleware = cache_middleware || Subscriptions::ChargeCacheMiddleware.new(
+        subscription:, charge:, to_datetime: boundaries[:charges_to_datetime], cache: false
+      )
 
       super(nil)
     end
 
     def call
-      return result if already_billed?
+      return result if !current_usage && already_billed?
 
       init_fees
+      return result if current_usage
 
       if invoice.nil? || !invoice.progressive_billing?
         init_true_up_fee(
@@ -45,16 +50,9 @@ module Fees
       result.record_validation_failure!(record: e.record)
     end
 
-    def current_usage
-      @is_current_usage = true
-
-      init_fees
-      result
-    end
-
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :is_current_usage, :currency
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :current_usage, :currency, :cache_middleware
 
     delegate :billable_metric, to: :charge
     delegate :plan, to: :subscription
@@ -74,18 +72,26 @@ module Fees
     end
 
     def init_charge_fees(properties:, charge_filter: nil)
-      charge_model_result = apply_aggregation_and_charge_model(properties:, charge_filter:)
-      return result.fail_with_error!(charge_model_result.error) unless charge_model_result.success?
+      fees = cache_middleware.call(charge_filter:) do
+        charge_model_result = apply_aggregation_and_charge_model(properties:, charge_filter:)
 
-      (charge_model_result.grouped_results || [charge_model_result]).each do |amount_result|
-        init_fee(amount_result, properties:, charge_filter:)
+        unless charge_model_result.success?
+          result.fail_with_error!(charge_model_result.error)
+          return []
+        end
+
+        (charge_model_result.grouped_results || [charge_model_result]).map do |amount_result|
+          init_fee(amount_result, properties:, charge_filter:)
+        end
       end
+
+      result.fees.concat(fees.compact)
     end
 
     def init_fee(amount_result, properties:, charge_filter:)
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
-      if invoice&.draft? && (adjusted = adjusted_fee(
+      if !current_usage && invoice&.draft? && (adjusted = adjusted_fee(
         charge_filter:,
         grouped_by: amount_result.grouped_by
       )) && !adjusted.adjusted_display_name?
@@ -107,7 +113,7 @@ module Fees
       precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
 
-      units = if is_current_usage && (charge.pay_in_advance? || charge.prorated?)
+      units = if current_usage && (charge.pay_in_advance? || charge.prorated?)
         amount_result.current_usage_units
       elsif charge.prorated?
         amount_result.full_units_number.nil? ? amount_result.units : amount_result.full_units_number
@@ -147,7 +153,7 @@ module Fees
         new_fee.invoice_display_name = adjusted.invoice_display_name
       end
 
-      result.fees << new_fee
+      new_fee
     end
 
     def adjusted_fee(charge_filter:, grouped_by:)
@@ -197,7 +203,7 @@ module Fees
       {
         free_units_per_events: properties['free_units_per_events'].to_i,
         free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0),
-        is_current_usage:,
+        is_current_usage: current_usage,
         is_pay_in_advance: charge.pay_in_advance?
       }
     end
@@ -227,7 +233,7 @@ module Fees
     def aggregator(charge_filter:)
       BillableMetrics::AggregationFactory.new_instance(
         charge:,
-        current_usage: is_current_usage,
+        current_usage:,
         subscription:,
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
@@ -239,7 +245,7 @@ module Fees
     end
 
     def persist_recurring_value(aggregation_results, charge_filter)
-      return if is_current_usage
+      return if current_usage
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
