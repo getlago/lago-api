@@ -25,7 +25,7 @@ gem 'rack-cors'
 
 # Database
 gem 'after_commit_everywhere'
-gem 'clickhouse-activerecord', git: 'https://github.com/getlago/clickhouse-activerecord.git', branch: 'support-limit-by'
+gem 'clickhouse-activerecord', git: 'https://github.com/getlago/clickhouse-activerecord.git'
 gem 'discard', '~> 1.2'
 gem 'kaminari-activerecord'
 gem 'paper_trail', '~> 15.1'
