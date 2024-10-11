@@ -52,7 +52,6 @@ module Invoices
         invoice.invoice_subscriptions.each do |is|
           is.subscription.fees
             .where(invoice: nil, payment_status: :succeeded)
-            .where("CAST(fees.properties->>'timestamp' AS timestamp) <= ?", is.charges_to_datetime)
             .update_all(invoice_id: invoice.id) # rubocop:disable Rails/SkipsModelValidations
         end
 
