@@ -30,6 +30,7 @@ module Invoices
           invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
           invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
           invoice.failed!
+          Invoices::NumberGenerationService.call(invoice:)
 
           return result
         end
