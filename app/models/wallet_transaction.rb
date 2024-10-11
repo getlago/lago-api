@@ -68,6 +68,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (credit_note_id => credit_notes.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (wallet_id => wallets.id)
 #

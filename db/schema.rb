@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_10_055733) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_11_123621) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1298,6 +1298,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_10_055733) do
   add_foreign_key "subscriptions", "plans"
   add_foreign_key "taxes", "organizations"
   add_foreign_key "usage_thresholds", "plans"
+  add_foreign_key "wallet_transactions", "credit_notes"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
