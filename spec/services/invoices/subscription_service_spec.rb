@@ -214,6 +214,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
             invoice = customer.invoices.order(created_at: :desc).first
 
             expect(invoice.status).to eq('failed')
+            expect(invoice.number).to end_with '-DRAFT'
             expect(invoice.error_details.count).to eq(1)
             expect(invoice.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
           end
