@@ -29,8 +29,8 @@ module Invoices
         if tax_error?(fees_result)
           invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
           invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-          invoice.ensure_number
           invoice.failed!
+          Invoices::NumberGenerationService.call(invoice:)
 
           return result
         end

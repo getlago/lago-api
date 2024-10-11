@@ -31,8 +31,8 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
         if tax_error?(fee_result)
-          invoice.ensure_number
           invoice.failed!
+          Invoices::NumberGenerationService.call(invoice:)
           invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
           create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
 

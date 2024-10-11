@@ -27,8 +27,8 @@ module Invoices
 
           unless taxes_result.success?
             create_error_detail(taxes_result.error.code)
-            invoice.ensure_number
             invoice.failed!
+            Invoices::NumberGenerationService.call(invoice:)
 
             return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
           end
