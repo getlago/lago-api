@@ -6,9 +6,6 @@ FactoryBot.define do
       subscription { create(:subscription, customer:) }
       customer { create(:customer) }
       organization { customer.organization }
-      billable_metric { create(:billable_metric, organization:) }
-      plan { create(:plan, organization:) }
-      charge { create(:standard_charge, billable_metric:, plan:) }
     end
 
     organization_id { organization.id }
@@ -17,10 +14,7 @@ FactoryBot.define do
     timestamp { Time.current }
     transaction_id { "tr_#{SecureRandom.hex}" }
     properties { {} }
-    value { 21.0 }
-    charge_id { charge.id }
-    aggregation_type { billable_metric.aggregation_type }
-    filters { {} }
-    grouped_by { {} }
+    value { "21.0" }
+    decimal_value { 21.0 }
   end
 end
