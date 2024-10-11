@@ -232,7 +232,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         properties: {
           billable_metric.field_name => bm_value
         },
-        value: bm_value 
+        value: bm_value
       )
 
       expect(event_store).not_to be_active_unique_property(event)
