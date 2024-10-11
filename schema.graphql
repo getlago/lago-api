@@ -3164,6 +3164,7 @@ type Customer {
   Define if a customer has overdue invoices
   """
   hasOverdueInvoices: Boolean!
+  hubspotCustomer: HubspotCustomer
   id: ID!
   invoiceGracePeriod: Int
   invoices: [Invoice!]
@@ -4122,6 +4123,16 @@ type GroupedChargeUsage {
   groupedBy: JSON
   id: ID!
   units: Float!
+}
+
+type HubspotCustomer {
+  externalCustomerId: String
+  id: ID!
+  integrationCode: String
+  integrationId: ID
+  integrationType: IntegrationTypeEnum
+  syncWithProvider: Boolean
+  targetedObject: HubspotTargetedObjectsEnum
 }
 
 type HubspotIntegration {
