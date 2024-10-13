@@ -313,6 +313,54 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(Stripe::PaymentIntent).to have_received(:create)
       end
     end
+
+    context '#payment_intent_payload' do
+      let(:payment_intent_payload) { stripe_service.__send__(:payment_intent_payload) }
+      let(:payload) do
+        {
+          amount: invoice.total_amount_cents,
+          currency: invoice.currency.downcase,
+          customer: customer.stripe_customer.provider_customer_id,
+          payment_method: customer.stripe_customer.payment_method_id,
+          payment_method_types: customer.stripe_customer.provider_payment_methods,
+          confirm: true,
+          off_session: true,
+          return_url: stripe_service.__send__(:success_redirect_url),
+          error_on_requires_action: true,
+          description: stripe_service.__send__(:description),
+          metadata: {
+            lago_customer_id: customer.id,
+            lago_invoice_id: invoice.id,
+            invoice_issuing_date: invoice.issuing_date.iso8601,
+            invoice_type: invoice.invoice_type
+          }
+        }
+      end
+
+      it 'returns the payload' do
+        expect(payment_intent_payload).to eq(payload)
+      end
+
+      context 'when customers country is IN' do
+        before do
+          payload[:off_session] = false
+          customer.update!(country: 'IN')
+        end
+
+        it 'returns the payload' do
+          expect(payment_intent_payload).to eq(payload)
+        end
+      end
+    end
+
+    context '#description' do
+      let(:description_call) { stripe_service.__send__(:description) }
+      let(:description) { "#{organization.name} - Invoice #{invoice.number}" }
+
+      it 'returns the description' do
+        expect(description_call).to eq(description)
+      end
+    end
   end
 
   describe '#generate_payment_url' do
@@ -349,67 +397,43 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(Stripe::Checkout::Session).not_to have_received(:create)
       end
     end
-  end
 
-  describe '#payment_url_payload' do
-    subject(:payment_url_payload_call) { stripe_service.__send__(:payment_url_payload) }
-
-    let(:payload) do
-      {
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: invoice.currency.downcase,
-              unit_amount: invoice.total_amount_cents,
-              product_data: {
-                name: invoice.number
+    context '#payment_url_payload' do
+      let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload) }
+      let(:payload) do
+        {
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency: invoice.currency.downcase,
+                unit_amount: invoice.total_amount_cents,
+                product_data: {
+                  name: invoice.number
+                }
               }
             }
-          }
-        ],
-        mode: 'payment',
-        success_url:,
-        customer: customer.stripe_customer.provider_customer_id,
-        payment_method_types: customer.stripe_customer.provider_payment_methods,
-        payment_intent_data: {
-          description:,
-          metadata: {
-            lago_customer_id: customer.id,
-            lago_invoice_id: invoice.id,
-            invoice_issuing_date: invoice.issuing_date.iso8601,
-            invoice_type: invoice.invoice_type,
-            payment_type: 'one-time'
+          ],
+          mode: 'payment',
+          success_url: stripe_service.__send__(:success_redirect_url),
+          customer: customer.stripe_customer.provider_customer_id,
+          payment_method_types: customer.stripe_customer.provider_payment_methods,
+          payment_intent_data: {
+            description: stripe_service.__send__(:description),
+            metadata: {
+              lago_customer_id: customer.id,
+              lago_invoice_id: invoice.id,
+              invoice_issuing_date: invoice.issuing_date.iso8601,
+              invoice_type: invoice.invoice_type,
+              payment_type: 'one-time'
+            }
           }
         }
-      }
-    end
+      end
 
-    let(:success_url) { stripe_service.__send__(:success_redirect_url) }
-    let(:description) { stripe_service.__send__(:description) }
-
-    before do
-      stripe_payment_provider
-      stripe_customer
-    end
-
-    it 'returns payload' do
-      expect(subject).to eq(payload)
-    end
-  end
-
-  describe '#description' do
-    subject(:description_call) { stripe_service.__send__(:description) }
-
-    let(:description) { "#{organization.name} - Invoice #{invoice.number}" }
-
-    before do
-      stripe_payment_provider
-      stripe_customer
-    end
-
-    it 'returns description' do
-      expect(subject).to eq(description)
+      it 'returns the payload' do
+        expect(payment_url_payload).to eq(payload)
+      end
     end
   end
 

@@ -27,7 +27,7 @@ module Invoices
 
         increment_payment_attempts
 
-        stripe_result = create_stripe_payment
+        stripe_result = create_payment_intent
         # NOTE: return if payment was not processed
         return result unless stripe_result
 
@@ -190,11 +190,11 @@ module Invoices
         end
       end
 
-      def create_stripe_payment
+      def create_payment_intent
         update_payment_method_id
 
         Stripe::PaymentIntent.create(
-          stripe_payment_payload,
+          payment_intent_payload,
           {
             api_key: stripe_api_key,
             idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}"
@@ -202,7 +202,7 @@ module Invoices
         )
       end
 
-      def stripe_payment_payload
+      def payment_intent_payload
         {
           amount: invoice.total_amount_cents,
           currency: invoice.currency.downcase,
@@ -210,7 +210,8 @@ module Invoices
           payment_method: stripe_payment_method,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
           confirm: true,
-          off_session: true,
+          off_session: off_session_payment?,
+          return_url: success_redirect_url,
           error_on_requires_action: true,
           description:,
           metadata: {
@@ -305,6 +306,13 @@ module Invoices
         return result if invoice.payment_failed?
 
         result.not_found_failure!(resource: 'stripe_payment')
+      end
+
+      # NOTE: Due to RBI limitation, all indians payment should be off_session
+      # to permit 3D secure authentication
+      # https://docs.stripe.com/india-recurring-payments
+      def off_session_payment?
+        invoice.customer.country != 'IN'
       end
 
       def stripe_payment_provider
