@@ -24,7 +24,7 @@ module WalletTransactions
       if params[:paid_credits]
         transaction = handle_paid_credits(
           wallet: result.current_wallet,
-          paid_credits: params[:paid_credits],
+          credits_amount: BigDecimal(params[:paid_credits]).floor(5),
           invoice_requires_successful_payment:
         )
         wallet_transactions << transaction
@@ -33,7 +33,7 @@ module WalletTransactions
       if params[:granted_credits]
         transaction = handle_granted_credits(
           wallet: result.current_wallet,
-          granted_credits: params[:granted_credits],
+          credits_amount: BigDecimal(params[:granted_credits]).floor(5),
           reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits]),
           invoice_requires_successful_payment:
         )
@@ -43,7 +43,7 @@ module WalletTransactions
       if params[:voided_credits]
         void_result = WalletTransactions::VoidService.call(
           wallet: result.current_wallet,
-          credits: params[:voided_credits],
+          credits_amount: BigDecimal(params[:voided_credits]).floor(5),
           from_source: source, metadata:
         )
         wallet_transactions << void_result.wallet_transaction
@@ -61,16 +61,14 @@ module WalletTransactions
 
     attr_reader :organization, :params, :source, :metadata
 
-    def handle_paid_credits(wallet:, paid_credits:, invoice_requires_successful_payment:)
-      paid_credits_amount = BigDecimal(paid_credits)
-
-      return if paid_credits_amount.zero?
+    def handle_paid_credits(wallet:, credits_amount:, invoice_requires_successful_payment:)
+      return if credits_amount.zero?
 
       wallet_transaction = WalletTransaction.create!(
         wallet:,
         transaction_type: :inbound,
-        amount: wallet.rate_amount * paid_credits_amount,
-        credit_amount: paid_credits_amount,
+        amount: wallet.rate_amount * credits_amount,
+        credit_amount: credits_amount,
         status: :pending,
         source:,
         transaction_status: :purchased,
@@ -83,17 +81,15 @@ module WalletTransactions
       wallet_transaction
     end
 
-    def handle_granted_credits(wallet:, granted_credits:, invoice_requires_successful_payment:, reset_consumed_credits: false)
-      granted_credits_amount = BigDecimal(granted_credits)
-
-      return if granted_credits_amount.zero?
+    def handle_granted_credits(wallet:, credits_amount:, invoice_requires_successful_payment:, reset_consumed_credits: false)
+      return if credits_amount.zero?
 
       ActiveRecord::Base.transaction do
         wallet_transaction = WalletTransaction.create!(
           wallet:,
           transaction_type: :inbound,
-          amount: wallet.rate_amount * granted_credits_amount,
-          credit_amount: granted_credits_amount,
+          amount: wallet.rate_amount * credits_amount,
+          credit_amount: credits_amount,
           status: :settled,
           settled_at: Time.current,
           source:,
@@ -104,7 +100,7 @@ module WalletTransactions
 
         Wallets::Balance::IncreaseService.new(
           wallet:,
-          credits_amount: granted_credits_amount,
+          credits_amount:,
           reset_consumed_credits:
         ).call
 

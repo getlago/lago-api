@@ -2,9 +2,9 @@
 
 module WalletTransactions
   class VoidService < BaseService
-    def initialize(wallet:, credits:, from_source: :manual, metadata: {})
+    def initialize(wallet:, credits_amount:, from_source: :manual, metadata: {})
       @wallet = wallet
-      @credits = credits
+      @credits_amount = credits_amount
       @from_source = from_source
       @metadata = metadata
 
@@ -34,10 +34,6 @@ module WalletTransactions
 
     private
 
-    attr_reader :wallet, :credits, :from_source, :metadata
-
-    def credits_amount
-      @credits_amount ||= BigDecimal(credits)
-    end
+    attr_reader :wallet, :credits_amount, :from_source, :metadata
   end
 end

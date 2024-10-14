@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe WalletTransactions::VoidService, type: :service do
-  subject(:void_service) { described_class.call(wallet:, credits:) }
+  subject(:void_service) { described_class.call(wallet:, credits_amount:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -19,7 +19,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
       credits_ongoing_balance: 10.0
     )
   end
-  let(:credits) { '10.00' }
+  let(:credits_amount) { BigDecimal('10.00') }
 
   before do
     subscription
@@ -27,7 +27,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
 
   describe '#call' do
     context 'when credits amount is zero' do
-      let(:credits) { '0.00' }
+      let(:credits_amount) { BigDecimal('0.00') }
 
       it 'does not create a wallet transaction' do
         expect { void_service }.not_to change(WalletTransaction, :count)
@@ -35,7 +35,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
     end
 
     context 'when transaction have metadata' do
-      subject(:void_service) { described_class.call(wallet:, credits:, metadata:) }
+      subject(:void_service) { described_class.call(wallet:, credits_amount:, metadata:) }
 
       let(:metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
 

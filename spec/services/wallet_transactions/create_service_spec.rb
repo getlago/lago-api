@@ -112,5 +112,14 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
         expect(result.error.messages[:paid_credits]).to eq(['invalid_paid_credits'])
       end
     end
+
+    context 'with decimal value' do
+      let(:paid_credits) { '4.399999' }
+
+      it 'creates wallet transaction with floored value' do
+        result = create_service
+        expect(result.wallet_transactions.first.credit_amount).to eq(4.39999)
+      end
+    end
   end
 end
