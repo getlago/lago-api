@@ -38,7 +38,7 @@ module Invoices
           amount_cents: stripe_result.amount,
           amount_currency: stripe_result.currency&.upcase,
           provider_payment_id: stripe_result.id,
-          status: stripe_result.status,
+          status: stripe_result.status
         )
 
         payment.provider_payment_data = stripe_result.next_action if stripe_result.status == 'requires_action'
@@ -52,7 +52,7 @@ module Invoices
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
 
-        handle_requires_action(payment)
+        handle_requires_action(payment) if payment.status == 'requires_action'
 
         result.payment = payment
         result
@@ -272,7 +272,7 @@ module Invoices
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true, processing: false)
-        result = Invoices::UpdateService.hoo(
+        result = Invoices::UpdateService.call(
           invoice: invoice.presence || @result.invoice,
           params: {
             payment_status:,
@@ -316,7 +316,7 @@ module Invoices
       # NOTE: Due to RBI limitation, all indians payment should be off_session
       # to permit 3D secure authentication
       # https://docs.stripe.com/india-recurring-payments
-      def off_session_payment
+      def off_session?
         invoice.customer.country != 'IN'
       end
 
@@ -325,8 +325,12 @@ module Invoices
         invoice.customer.country != 'IN'
       end
 
-      def handle_requires_action
-        SendWebhookJob.set(wait: 5.seconds).perform_later('payment.requires_action', invoice)
+      def handle_requires_action(payment)
+        params = {
+          provider_customer_id: customer.stripe_customer.provider_customer_id
+        }
+
+        SendWebhookJob.perform_later('payment.requires_action', payment, params)
       end
 
       def stripe_payment_provider

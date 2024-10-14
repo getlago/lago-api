@@ -344,6 +344,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       context 'when customers country is IN' do
         before do
           payload[:off_session] = false
+          payload[:error_on_requires_action] = false
           customer.update!(country: 'IN')
         end
 
