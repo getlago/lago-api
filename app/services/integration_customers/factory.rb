@@ -14,6 +14,8 @@ module IntegrationCustomers
         IntegrationCustomers::AnrokService
       when 'Integrations::XeroIntegration'
         IntegrationCustomers::XeroService
+      when 'Integrations::HubspotIntegration'
+        IntegrationCustomers::HubspotService
       else
         raise(NotImplementedError)
       end

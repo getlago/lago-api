@@ -85,7 +85,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
         end
 
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/contacts/success_hash_response.json')
+          path = Rails.root.join('spec/fixtures/integration_aggregator/companies/success_hash_response.json')
           File.read(path)
         end
 
@@ -129,7 +129,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
 
         context 'when contact is succesfully created' do
           let(:body) do
-            path = Rails.root.join('spec/fixtures/integration_aggregator/contacts/success_hash_response.json')
+            path = Rails.root.join('spec/fixtures/integration_aggregator/companies/success_hash_response.json')
             File.read(path)
           end
 
@@ -153,7 +153,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
 
         context 'when contact is not created' do
           let(:body) do
-            path = Rails.root.join('spec/fixtures/integration_aggregator/contacts/failure_hash_response.json')
+            path = Rails.root.join('spec/fixtures/integration_aggregator/companies/failure_hash_response.json')
             File.read(path)
           end
 

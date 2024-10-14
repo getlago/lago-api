@@ -49,6 +49,15 @@ module Integrations
         def process_string_result(body)
           result.contact_id = body
         end
+
+        def webhook_code
+          case provider
+          when 'hubspot'
+            'customer.crm_provider_created'
+          else
+            'customer.accounting_provider_created'
+          end
+        end
       end
     end
   end

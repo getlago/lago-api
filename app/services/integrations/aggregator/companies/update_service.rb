@@ -24,8 +24,6 @@ module Integrations
 
           return result unless result.contact_id
 
-          deliver_success_webhook(customer:, webhook_code: 'customer.crm_provider_created')
-
           result
         rescue LagoHttpClient::HttpError => e
           raise RequestLimitError(e) if request_limit_error?(e)
