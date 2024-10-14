@@ -1181,4 +1181,111 @@ RSpec.describe Invoice, type: :model do
       expect(file_url).to include(ENV['LAGO_API_URL'])
     end
   end
+
+  describe '#refundable_amount_cents' do
+    let(:invoice) { create(:invoice, version_number:, status:, payment_status:, prepaid_credit_amount_cents:) }
+    let(:creditable_amount_cents) { 1000}
+    let(:prepaid_credit_amount_cents) { 200 }
+
+    before do
+      allow(invoice).to receive(:creditable_amount_cents).and_return(creditable_amount_cents)
+    end
+
+    context 'when version_number is less than CREDIT_NOTES_MIN_VERSION' do
+      let(:version_number) { 1 }
+      let(:status) { :finalized }
+      let(:payment_status) { :succeeded }
+
+      it 'returns 0' do
+        expect(invoice.refundable_amount_cents).to eq(0)
+      end
+    end
+
+    context 'when invoice is a draft' do
+      let(:version_number) { 2 }
+      let(:status) { :draft }
+      let(:payment_status) { :succeeded }
+
+      it 'returns 0' do
+        expect(invoice.refundable_amount_cents).to eq(0)
+      end
+    end
+
+    context 'when payment is not succeeded' do
+      let(:version_number) { 2 }
+      let(:status) { :finalized }
+      let(:payment_status) { :pending }
+
+      it 'returns 0' do
+        expect(invoice.refundable_amount_cents).to eq(0)
+      end
+    end
+
+    context 'when all conditions are met' do
+      let(:version_number) { 2 }
+      let(:status) { :finalized }
+      let(:payment_status) { :succeeded }
+
+      it 'returns the correct refundable amount' do
+        expect(invoice.refundable_amount_cents).to eq(800)
+      end
+    end
+
+    context 'when invoice is a credit' do
+      let(:invoice) { create(:invoice, :credit, version_number: 2, status: :finalized, payment_status: :succeeded, prepaid_credit_amount_cents: 200) }
+      let(:associated_active_wallet) { double('Wallet', balance_amount_cents: 500) }
+
+      before do
+        allow(invoice).to receive(:associated_active_wallet).and_return(associated_active_wallet)
+      end
+
+      it 'returns the minimum of refundable amount and wallet balance' do
+        expect(invoice.refundable_amount_cents).to eq(500)
+      end
+    end
+  end
+
+  describe '#associated_active_wallet' do
+    context 'when invoice is not a credit' do
+
+      it 'returns nil' do
+        expect(invoice.associated_active_wallet).to be_nil
+      end
+    end
+
+    context 'when customer has no wallet' do
+      it 'returns nil' do
+        expect(invoice.associated_active_wallet).to be_nil
+      end
+    end
+
+    context 'when customer has an active wallet that is not associated with this invoice' do
+      let(:wallet) { create(:wallet, customer: invoice.customer) }
+
+      it 'returns nil' do
+        expect(invoice.associated_active_wallet).to be_nil
+      end
+    end
+
+    context 'when there is a wallet associated with this credit invoice' do
+      let(:wallet) { create(:wallet, customer: invoice.customer) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet: wallet) }
+      let(:fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
+      let(:invoice) { create(:invoice, :credit, version_number: 2, status: :finalized, payment_status: :succeeded) }
+
+      before { fee }
+
+      it 'returns the wallet' do
+        expect(invoice.associated_active_wallet).to eq(wallet)
+      end
+
+      context 'when wallet is not active' do
+        let(:wallet) { create(:wallet, customer: invoice.customer, status: :terminated) }
+
+        it 'returns nil' do
+          expect(invoice.associated_active_wallet).to be_nil
+        end
+      end
+    end
+  end
 end

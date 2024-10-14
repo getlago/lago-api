@@ -37,7 +37,7 @@ module CreditNotes
     attr_reader :invoice, :items, :credit_note
 
     def valid_type_or_status?
-      return false if invoice.credit?
+      # return false if invoice.credit?
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
@@ -87,8 +87,8 @@ module CreditNotes
         taxes_result.coupons_adjustment_amount_cents +
         credit_note.precise_taxes_amount_cents
       ).round
-
       compute_refundable_amount
+      credit_note.credit_amount_cents = 0 if invoice.credit?
       credit_note.total_amount_cents = credit_note.credit_amount_cents
     end
 

@@ -276,12 +276,22 @@ class Invoice < ApplicationRecord
   end
 
   def refundable_amount_cents
-    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft? || !payment_succeeded?
+    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft? || !payment_succeeded?
 
     amount = creditable_amount_cents -
       credits.where(before_taxes: false).sum(:amount_cents) -
       prepaid_credit_amount_cents
-    amount.negative? ? 0 : amount
+    amount = amount.negative? ? 0 : amount
+
+    return [amount, (associated_active_wallet&.balance_amount_cents || 0)].min if credit?
+    amount
+  end
+
+  def associated_active_wallet
+    return if !credit?  || customer.wallets.active.empty?
+
+    wallet = fees.credit.first&.invoiceable&.wallet
+    wallet if wallet.active?
   end
 
   def payment_dispute_losable?
