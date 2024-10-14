@@ -29,8 +29,6 @@ module Invoices
       end
 
       result.invoice = invoice.reload
-      Invoices::NumberGenerationService.call(invoice:)
-
       unless invoice.closed?
         SendWebhookJob.perform_later('invoice.created', invoice)
         GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)

@@ -18,7 +18,6 @@ RSpec.describe Invoices::RetryService, type: :service do
         organization:,
         subscriptions: [subscription],
         currency: 'EUR',
-        number: "#{organization.document_number_prefix}-DRAFT",
         issuing_date: Time.zone.at(timestamp).to_date
       )
     end

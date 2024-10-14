@@ -40,8 +40,6 @@ module Invoices
         invoice.save!
       end
 
-      Invoices::NumberGenerationService.call(invoice:)
-
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
         SendWebhookJob.perform_later('invoice.one_off_created', invoice)
