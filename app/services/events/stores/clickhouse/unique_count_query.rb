@@ -206,7 +206,7 @@ module Events
               (#{
                 events(ordered: true)
                   .select(
-                    "toDateTime64(timestamp, 5, 'UTC') as timestamp, \
+                    "timestamp, \
                     #{sanitized_property_name} AS property, \
                     coalesce(NULLIF(events_enriched.properties['operation_type'], ''), 'add') AS operation_type"
                   )
@@ -226,7 +226,7 @@ module Events
               events(ordered: true)
                 .select(
                   "#{groups.join(", ")}, \
-                  toDateTime64(timestamp, 5, 'UTC') as timestamp, \
+                  timestamp, \
                   #{sanitized_property_name} AS property, \
                   coalesce(NULLIF(events_enriched.properties['operation_type'], ''), 'add') AS operation_type"
                 ).to_sql
@@ -287,11 +287,11 @@ module Events
                 ceil(
                   date_diff(
                     'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 5, 'UTC'), toDateTime64(:from_datetime, 5, 'UTC'), timestamp),
+                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
                     if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 5, 'UTC'),
-                      toDateTime64(:to_datetime, 5, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
+                      toDateTime64(:to_datetime, 3, 'UTC'),
+                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                     ),
                     :timezone
                   ) / 86400
@@ -317,11 +317,11 @@ module Events
                 ceil(
                   date_diff(
                     'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 5, 'UTC'), toDateTime64(:from_datetime, 5, 'UTC'), timestamp),
+                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
                     if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 5, 'UTC'),
-                      toDateTime64(:to_datetime, 5, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
+                      toDateTime64(:to_datetime, 3, 'UTC'),
+                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                     ),
                     :timezone
                   ) / 86400
