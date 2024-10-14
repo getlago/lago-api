@@ -1072,25 +1072,40 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#creditable_amount_cents' do
-    context 'when invoice v1' do
-      it 'returns 0' do
-        invoice = build(:invoice, version_number: 1)
-        expect(invoice.creditable_amount_cents).to eq(0)
+  describe '#available_to_credit_amount_cents' do
+    context 'with created one fee' do
+      before do
+        invoice_subscription = create(:invoice_subscription, invoice:)
+        subscription = invoice_subscription.subscription
+        billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
+        charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20)
+        invoice.update(fees_amount_cents: 160)
       end
-    end
 
-    context 'when credit' do
-      it 'returns 0' do
-        invoice = build(:invoice, :credit)
-        expect(invoice.creditable_amount_cents).to eq(0)
+      context 'when invoice v1' do
+        let(:invoice) { create(:invoice, version_number: 1) }
+        it 'returns 0' do
+          expect(invoice.available_to_credit_amount_cents).to eq(0)
+        end
       end
-    end
 
-    context 'when draft' do
-      it 'returns 0' do
-        invoice = build(:invoice, :draft)
-        expect(invoice.creditable_amount_cents).to eq(0)
+      context 'when credit' do
+        let(:invoice) { create(:invoice, :credit) }
+        it 'returns 0' do
+          expect(invoice.available_to_credit_amount_cents).to eq(160)
+        end
+      end
+
+      context 'when draft' do
+        let(:invoice) { create(:invoice, :draft) }
+        it 'returns 0' do
+          expect(invoice.available_to_credit_amount_cents).to eq(0)
+        end
+      end
+
+      it 'returns the expected creditable amount in cents' do
+        expect(invoice.available_to_credit_amount_cents).to eq(160)
       end
     end
 
@@ -1106,19 +1121,8 @@ RSpec.describe Invoice, type: :model do
       end
 
       it 'returns 0' do
-        expect(invoice.creditable_amount_cents).to eq(0)
+        expect(invoice.available_to_credit_amount_cents).to eq(0)
       end
-    end
-
-    it 'returns the expected creditable amount in cents' do
-      invoice = create(:invoice, version_number: 2)
-      invoice_subscription = create(:invoice_subscription, invoice:)
-      subscription = invoice_subscription.subscription
-      billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
-      charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
-      create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20)
-
-      expect(invoice.creditable_amount_cents).to eq(160)
     end
 
     context 'when invoice v3 with coupons' do
@@ -1152,14 +1156,14 @@ RSpec.describe Invoice, type: :model do
       before { fee }
 
       it 'returns the expected creditable amount in cents' do
-        expect(invoice.creditable_amount_cents).to eq(216)
+        expect(invoice.available_to_credit_amount_cents).to eq(216)
       end
 
       context 'with progressive billing credit' do
         let(:progressive_billing_credit_amount_cents) { 2 }
 
         it 'returns the expected creditable amount in cents' do
-          expect(invoice.creditable_amount_cents).to eq(214)
+          expect(invoice.available_to_credit_amount_cents).to eq(214)
         end
       end
     end
@@ -1184,11 +1188,11 @@ RSpec.describe Invoice, type: :model do
 
   describe '#refundable_amount_cents' do
     let(:invoice) { create(:invoice, version_number:, status:, payment_status:, prepaid_credit_amount_cents:) }
-    let(:creditable_amount_cents) { 1000}
+    let(:available_to_credit_amount_cents) { 1000}
     let(:prepaid_credit_amount_cents) { 200 }
 
     before do
-      allow(invoice).to receive(:creditable_amount_cents).and_return(creditable_amount_cents)
+      allow(invoice).to receive(:available_to_credit_amount_cents).and_return(available_to_credit_amount_cents)
     end
 
     context 'when version_number is less than CREDIT_NOTES_MIN_VERSION' do
@@ -1237,6 +1241,7 @@ RSpec.describe Invoice, type: :model do
 
       before do
         allow(invoice).to receive(:associated_active_wallet).and_return(associated_active_wallet)
+        allow(invoice).to receive(:available_to_credit_amount_cents).and_return(1000)
       end
 
       it 'returns the minimum of refundable amount and wallet balance' do

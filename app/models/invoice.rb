@@ -251,8 +251,9 @@ class Invoice < ApplicationRecord
     }
   end
 
-  def creditable_amount_cents
-    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || credit? || draft?
+  # amount cents onto which we can issue a credit note
+  def available_to_credit_amount_cents
+    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
 
     fees_total_creditable = fees.sum(&:creditable_amount_cents)
     return 0 if fees_total_creditable.zero?
@@ -275,10 +276,17 @@ class Invoice < ApplicationRecord
     fees_total_creditable - credit_adjustement + vat
   end
 
+  # amount cents onto which we can issue a credit note as credit
+  def creditable_amount_cents
+    return 0 if credit?
+    available_to_credit_amount_cents
+  end
+
+  # amount cents onto which we can issue a credit note as refund
   def refundable_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft? || !payment_succeeded?
 
-    amount = creditable_amount_cents -
+    amount = available_to_credit_amount_cents -
       credits.where(before_taxes: false).sum(:amount_cents) -
       prepaid_credit_amount_cents
     amount = amount.negative? ? 0 : amount
