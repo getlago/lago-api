@@ -10,15 +10,15 @@ end
 #
 # Table name: events_enriched
 #
-#  code                       :string           not null, primary key
-#  decimal_value              :decimal(26, )
-#  enriched_at                :datetime         not null
-#  precise_total_amount_cents :decimal(40, 15)
-#  properties                 :string           not null
-#  sorted_properties          :string           not null
-#  timestamp                  :datetime         not null, primary key
-#  value                      :string
-#  external_subscription_id   :string           not null, primary key
-#  organization_id            :string           not null, primary key
-#  transaction_id             :string           not null
+#  aggregation_type         :string
+#  code                     :string           not null, primary key
+#  filters                  :string           not null
+#  grouped_by               :string           not null
+#  properties               :string           not null
+#  timestamp                :datetime         not null
+#  value                    :string
+#  charge_id                :string           not null, primary key
+#  external_subscription_id :string           not null, primary key
+#  organization_id          :string           not null, primary key
+#  transaction_id           :string           not null, primary key
 #
