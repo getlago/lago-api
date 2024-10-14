@@ -20,8 +20,6 @@ module Invoices
         invoice.save!
       end
 
-      Invoices::NumberGenerationService.call(invoice:)
-
       SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice)
       GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?

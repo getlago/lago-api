@@ -30,8 +30,6 @@ module Invoices
         end
       end
 
-      Invoices::NumberGenerationService.call(invoice:)
-
       if invoice.finalized?
         Utils::SegmentTrack.invoice_created(result.invoice)
         SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice)

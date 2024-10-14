@@ -20,8 +20,6 @@ module Invoices
 
       invoice = create_group_invoice
 
-      Invoices::NumberGenerationService.call(invoice:) if invoice
-
       if invoice && !invoice.closed?
         SendWebhookJob.perform_later('invoice.created', invoice)
         Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: false)
