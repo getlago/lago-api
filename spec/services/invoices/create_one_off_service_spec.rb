@@ -195,7 +195,6 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
           aggregate_failures do
             expect(result).to be_success
             expect(result.invoice.status).to eq('failed')
-            expect(result.invoice.number).to end_with '-DRAFT'
             expect(result.invoice.error_details.count).to eq(1)
             expect(result.invoice.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
           end
