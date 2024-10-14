@@ -80,6 +80,10 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      return result if invoicing_reason.to_sym == :subscription_periodic
+
+      raise
     rescue BaseService::ServiceFailure => e
       raise unless e.code.to_s == 'duplicated_invoices'
       raise unless invoicing_reason.to_sym == :subscription_periodic
