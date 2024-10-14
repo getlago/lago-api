@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_11_123621) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1157,6 +1157,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
     t.integer "transaction_status", default: 0, null: false
     t.boolean "invoice_requires_successful_payment", default: false, null: false
     t.jsonb "metadata", default: []
+    t.uuid "credit_note_id"
+    t.index ["credit_note_id"], name: "index_wallet_transactions_on_credit_note_id"
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"
   end
@@ -1322,6 +1324,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_08_080209) do
   add_foreign_key "subscriptions", "plans"
   add_foreign_key "taxes", "organizations"
   add_foreign_key "usage_thresholds", "plans"
+  add_foreign_key "wallet_transactions", "credit_notes"
   add_foreign_key "wallet_transactions", "invoices"
   add_foreign_key "wallet_transactions", "wallets"
   add_foreign_key "wallets", "customers"
