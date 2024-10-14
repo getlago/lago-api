@@ -17,6 +17,7 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
         .with(endpoint)
         .and_return(http_client)
       allow(http_client).to receive(:post_with_response).and_return(response)
+      allow(response).to receive(:[]).with('objectTypeId').and_return('123')
 
       integration.subscriptions_properties_version = nil
       integration.save!
