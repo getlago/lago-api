@@ -38,8 +38,11 @@ module Invoices
           amount_cents: stripe_result.amount,
           amount_currency: stripe_result.currency&.upcase,
           provider_payment_id: stripe_result.id,
-          status: stripe_result.status
+          status: stripe_result.status,
         )
+
+        payment.provider_payment_data = stripe_result.next_action if stripe_result.status == 'requires_action'
+
         payment.save!
 
         update_invoice_payment_status(
@@ -48,6 +51,8 @@ module Invoices
         )
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
+
+        handle_requires_action(payment)
 
         result.payment = payment
         result
@@ -210,9 +215,9 @@ module Invoices
           payment_method: stripe_payment_method,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
           confirm: true,
-          off_session: off_session_payment?,
+          off_session: off_session?,
           return_url: success_redirect_url,
-          error_on_requires_action: true,
+          error_on_requires_action: error_on_requires_action?,
           description:,
           metadata: {
             lago_customer_id: customer.id,
@@ -267,7 +272,7 @@ module Invoices
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true, processing: false)
-        result = Invoices::UpdateService.call(
+        result = Invoices::UpdateService.hoo(
           invoice: invoice.presence || @result.invoice,
           params: {
             payment_status:,
@@ -311,8 +316,17 @@ module Invoices
       # NOTE: Due to RBI limitation, all indians payment should be off_session
       # to permit 3D secure authentication
       # https://docs.stripe.com/india-recurring-payments
-      def off_session_payment?
+      def off_session_payment
         invoice.customer.country != 'IN'
+      end
+
+      # NOTE: Same as off_session?
+      def error_on_requires_action?
+        invoice.customer.country != 'IN'
+      end
+
+      def handle_requires_action
+        SendWebhookJob.set(wait: 5.seconds).perform_later('payment.requires_action', invoice)
       end
 
       def stripe_payment_provider

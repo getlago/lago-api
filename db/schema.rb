@@ -974,6 +974,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_14_093451) do
     t.datetime "updated_at", null: false
     t.string "payable_type", default: "Invoice", null: false
     t.uuid "payable_id"
+    t.jsonb "provider_payment_data", default: {}
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
