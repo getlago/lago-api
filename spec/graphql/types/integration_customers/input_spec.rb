@@ -12,4 +12,5 @@ RSpec.describe Types::IntegrationCustomers::Input do
   it { is_expected.to accept_argument(:integration_code).of_type('String') }
   it { is_expected.to accept_argument(:subsidiary_id).of_type('String') }
   it { is_expected.to accept_argument(:sync_with_provider).of_type('Boolean') }
+  it { is_expected.to accept_argument(:targeted_object).of_type('HubspotTargetedObjectsEnum') }
 end
