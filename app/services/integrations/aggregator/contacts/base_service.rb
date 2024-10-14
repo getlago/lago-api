@@ -28,13 +28,18 @@ module Integrations
         def process_hash_result(body)
           contact = body['succeededContacts']&.first
           contact_id = contact&.dig('id')
-          email = contact&.dig('email')
+          email = contact&.dig('lago_billing_email')
 
           if contact_id
             result.contact_id = contact_id
             result.email = email if email.present?
           else
-            message = body['failedContacts'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
+            message = if body.key?('failedContacts')
+              body['failedContacts'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
+            else
+              body.dig('error', 'payload', 'message')
+            end
+
             code = 'Validation error'
 
             deliver_error_webhook(customer:, code:, message:)
