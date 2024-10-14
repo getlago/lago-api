@@ -291,7 +291,7 @@ class Invoice < ApplicationRecord
       prepaid_credit_amount_cents
     amount = amount.negative? ? 0 : amount
 
-    return [amount, (associated_active_wallet&.balance_amount_cents || 0)].min if credit?
+    return [amount, (associated_active_wallet&.balance_cents || 0)].min if credit?
     amount
   end
 

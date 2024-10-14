@@ -1293,7 +1293,7 @@ RSpec.describe Invoice, type: :model do
 
     context 'when invoice is a credit' do
       let(:invoice) { create(:invoice, :credit, version_number: 2, status: :finalized, payment_status: :succeeded, prepaid_credit_amount_cents: 200) }
-      let(:associated_active_wallet) { double('Wallet', balance_amount_cents: 500) }
+      let(:associated_active_wallet) { double('Wallet', balance_cents: 500) }
 
       before do
         allow(invoice).to receive(:associated_active_wallet).and_return(associated_active_wallet)
