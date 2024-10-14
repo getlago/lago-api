@@ -4199,6 +4199,7 @@ input IntegrationCustomerInput {
   integrationType: IntegrationTypeEnum
   subsidiaryId: String
   syncWithProvider: Boolean
+  targetedObject: HubspotTargetedObjectsEnum
 }
 
 type IntegrationItem {

@@ -20307,6 +20307,18 @@
               "defaultValue": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "targetedObject",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "HubspotTargetedObjectsEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "enumValues": null
