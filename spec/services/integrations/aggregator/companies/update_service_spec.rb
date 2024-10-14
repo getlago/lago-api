@@ -78,7 +78,7 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
         end
 
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/contacts/success_string_response.json')
+          path = Rails.root.join('spec/fixtures/integration_aggregator/companies/success_string_response.json')
           File.read(path)
         end
 
@@ -118,7 +118,7 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
         end
 
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/contacts/success_hash_response.json')
+          path = Rails.root.join('spec/fixtures/integration_aggregator/companies/success_hash_response.json')
           File.read(path)
         end
 
