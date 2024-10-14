@@ -123,9 +123,7 @@ module Integrations
       def request_limit_error?(http_error)
         return false unless http_error.error_code.to_i == 500
 
-        http_error.json_message.dig('error', 'payload', 'error', 'code') == REQUEST_LIMIT_ERROR_CODE
-      rescue JSON::ParserError
-        false
+        http_error.error_body.include?(REQUEST_LIMIT_ERROR_CODE)
       end
     end
   end
