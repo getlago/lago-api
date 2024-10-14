@@ -47,6 +47,12 @@ RSpec.describe Events::PostProcessService, type: :service do
       expect(subscription.lifetime_usage.recalculate_current_usage).to be(true)
     end
 
+    it 'flags wallets for refresh' do
+      wallet = create(:wallet, customer:)
+
+      expect { process_service.call }.to change { wallet.reload.ready_to_be_refreshed }.from(false).to(true)
+    end
+
     context 'when event matches an pay_in_advance charge' do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id') }

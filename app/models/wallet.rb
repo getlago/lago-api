@@ -28,6 +28,7 @@ class Wallet < ApplicationRecord
   end
 
   scope :expired, -> { where('wallets.expiration_at::timestamp(0) <= ?', Time.current) }
+  scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
 
   def currency=(currency)
     self.balance_currency = currency
@@ -62,6 +63,7 @@ end
 #  ongoing_balance_cents               :bigint           default(0), not null
 #  ongoing_usage_balance_cents         :bigint           default(0), not null
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
+#  ready_to_be_refreshed               :boolean          default(FALSE), not null
 #  status                              :integer          not null
 #  terminated_at                       :datetime
 #  created_at                          :datetime         not null
@@ -70,7 +72,8 @@ end
 #
 # Indexes
 #
-#  index_wallets_on_customer_id  (customer_id)
+#  index_wallets_on_customer_id            (customer_id)
+#  index_wallets_on_ready_to_be_refreshed  (ready_to_be_refreshed) WHERE ready_to_be_refreshed
 #
 # Foreign Keys
 #
