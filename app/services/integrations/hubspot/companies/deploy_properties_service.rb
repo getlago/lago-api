@@ -79,6 +79,15 @@ module Integrations
                 fieldType: "text",
                 searchableInGlobalSearch: true,
                 formField: true
+              },
+              {
+                groupName: "companyinformation",
+                name: "lago_customer_link",
+                label: "Lago Customer Link",
+                type: "string",
+                fieldType: "text",
+                searchableInGlobalSearch: true,
+                formField: true
               }
             ]
           }.freeze
