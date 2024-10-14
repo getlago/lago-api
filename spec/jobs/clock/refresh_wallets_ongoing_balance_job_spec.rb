@@ -8,7 +8,7 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
   describe '.perform' do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
-    let(:wallet) { create(:wallet, customer:) }
+    let(:wallet) { create(:wallet, customer:, ready_to_be_refreshed: true) }
 
     before do
       wallet
@@ -30,8 +30,8 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
         expect(Wallets::RefreshOngoingBalanceJob).to have_been_enqueued.with(wallet)
       end
 
-      context 'when not active' do
-        let(:wallet) { create(:wallet, :terminated) }
+      context 'when not ready to be refreshed' do
+        let(:wallet) { create(:wallet, customer:, ready_to_be_refreshed: false) }
 
         it 'does not call the refresh service' do
           described_class.perform_now

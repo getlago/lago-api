@@ -13,7 +13,8 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
       ongoing_usage_balance_cents: 200,
       credits_balance: 10.0,
       credits_ongoing_balance: 8.0,
-      credits_ongoing_usage_balance: 2.0
+      credits_ongoing_usage_balance: 2.0,
+      ready_to_be_refreshed: true
     )
   end
   let(:total_usage_amount_cents) { 450 }
@@ -28,6 +29,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
         .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(4.5)
         .and change(wallet, :ongoing_balance_cents).from(800).to(550)
         .and change(wallet, :credits_ongoing_balance).from(8.0).to(5.5)
+        .and change(wallet, :ready_to_be_refreshed).from(true).to(false)
 
       expect(wallet).not_to be_depleted_ongoing_balance
     end

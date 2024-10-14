@@ -11,7 +11,7 @@ module Clock
     def perform
       return unless License.premium?
 
-      Wallet.active.find_each do |wallet|
+      Wallet.active.ready_to_be_refreshed.find_each do |wallet|
         Wallets::RefreshOngoingBalanceJob.perform_later(wallet)
       end
     end
