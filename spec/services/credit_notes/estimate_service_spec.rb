@@ -173,17 +173,22 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         customer:,
         currency: 'EUR',
         fees_amount_cents: 20,
-        coupons_amount_cents: 10,
-        taxes_amount_cents: 2,
         total_amount_cents: 12,
         payment_status: :succeeded,
-        taxes_rate: 20,
         version_number: 3
       )
     end
     let(:wallet) { create(:wallet, customer:, balance_cents: 3) }
     let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
     let(:credit_fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
+    let(:items) do
+      [
+        {
+          fee_id: credit_fee.id,
+          amount_cents: 10
+        }
+      ]
+    end
 
     before { credit_fee }
 
@@ -201,9 +206,9 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
             currency: invoice.currency,
             credit_amount_cents: 0,
             refund_amount_cents: 3,
-            coupons_adjustment_amount_cents: 8,
-            taxes_amount_cents: 2,
-            taxes_rate: 20
+            coupons_adjustment_amount_cents: 0,
+            taxes_amount_cents: 0,
+            taxes_rate: 0
           )
         end
       end
@@ -225,9 +230,9 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
             currency: invoice.currency,
             credit_amount_cents: 0,
             refund_amount_cents: 0,
-            coupons_adjustment_amount_cents: 8,
-            taxes_amount_cents: 2,
-            taxes_rate: 20
+            coupons_adjustment_amount_cents: 0,
+            taxes_amount_cents: 0,
+            taxes_rate: 0
           )
         end
       end
