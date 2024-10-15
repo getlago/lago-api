@@ -104,9 +104,7 @@ RSpec.describe WebhooksController, type: :request do
     end
 
     before do
-      allow(PaymentProviders::GocardlessService).to receive(:new)
-        .and_return(gocardless_service)
-      allow(gocardless_service).to receive(:handle_incoming_webhook)
+      allow(PaymentProviders::Gocardless::HandleIncomingWebhookService).to receive(:call)
         .with(
           organization_id: organization.id,
           code: nil,
@@ -128,8 +126,7 @@ RSpec.describe WebhooksController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      expect(PaymentProviders::GocardlessService).to have_received(:new)
-      expect(gocardless_service).to have_received(:handle_incoming_webhook)
+      expect(PaymentProviders::Gocardless::HandleIncomingWebhookService).to have_received(:call)
     end
 
     context 'when failing to handle gocardless event' do
@@ -149,8 +146,7 @@ RSpec.describe WebhooksController, type: :request do
 
         expect(response).to have_http_status(:bad_request)
 
-        expect(PaymentProviders::GocardlessService).to have_received(:new)
-        expect(gocardless_service).to have_received(:handle_incoming_webhook)
+        expect(PaymentProviders::Gocardless::HandleIncomingWebhookService).to have_received(:call)
       end
     end
   end
