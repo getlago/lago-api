@@ -14,6 +14,12 @@ RSpec.describe Resolvers::PaymentProviderResolver, type: :graphql do
             name
             __typename
           }
+          ... on CashfreeProvider {
+            id
+            code
+            name
+            __typename
+          }
           ... on GocardlessProvider {
             id
             code

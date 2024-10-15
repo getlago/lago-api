@@ -34,6 +34,22 @@ input AddAdyenPaymentProviderInput {
 }
 
 """
+Cashfree input arguments
+"""
+input AddCashfreePaymentProviderInput {
+  clientId: String!
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  clientSecret: String!
+  code: String!
+  name: String!
+  successRedirectUrl: String
+}
+
+"""
 Gocardless input arguments
 """
 input AddGocardlessPaymentProviderInput {
@@ -284,6 +300,15 @@ input BillableMetricFiltersInput {
 enum BillingTimeEnum {
   anniversary
   calendar
+}
+
+type CashfreeProvider {
+  clientId: String
+  clientSecret: String
+  code: String!
+  id: ID!
+  name: String!
+  successRedirectUrl: String
 }
 
 type Charge {
@@ -3068,6 +3093,7 @@ type CurrentOrganization {
   adyenPaymentProviders: [AdyenProvider!]
   apiKey: String
   billingConfiguration: OrganizationBillingConfiguration
+  cashfreePaymentProviders: [CashfreeProvider!]
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
@@ -4615,6 +4641,16 @@ type Mutation {
   ): AdyenProvider
 
   """
+  Add or update Cashfree payment provider
+  """
+  addCashfreePaymentProvider(
+    """
+    Parameters for AddCashfreePaymentProvider
+    """
+    input: AddCashfreePaymentProviderInput!
+  ): CashfreeProvider
+
+  """
   Add or update Gocardless payment provider
   """
   addGocardlessPaymentProvider(
@@ -5417,6 +5453,16 @@ type Mutation {
   ): BillableMetric
 
   """
+  Update Cashfree payment provider
+  """
+  updateCashfreePaymentProvider(
+    """
+    Parameters for UpdateCashfreePaymentProvider
+    """
+    input: UpdateCashfreePaymentProviderInput!
+  ): CashfreeProvider
+
+  """
   Update an existing coupon
   """
   updateCoupon(
@@ -5779,7 +5825,7 @@ type OverdueBalanceCollection {
   metadata: CollectionMetadata!
 }
 
-union PaymentProvider = AdyenProvider | GocardlessProvider | StripeProvider
+union PaymentProvider = AdyenProvider | CashfreeProvider | GocardlessProvider | StripeProvider
 
 """
 PaymentProviderCollection type
@@ -6045,6 +6091,7 @@ enum ProviderPaymentMethodsEnum {
 
 enum ProviderTypeEnum {
   adyen
+  cashfree
   gocardless
   stripe
 }
@@ -7693,6 +7740,20 @@ input UpdateBillableMetricInput {
   name: String!
   recurring: Boolean
   weightedInterval: WeightedIntervalEnum
+}
+
+"""
+Update input arguments
+"""
+input UpdateCashfreePaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  id: ID!
+  name: String
+  successRedirectUrl: String
 }
 
 """
