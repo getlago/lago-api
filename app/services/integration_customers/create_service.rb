@@ -26,7 +26,9 @@ module IntegrationCustomers
     attr_reader :customer
 
     def sync_customer!
-      integration_customer_service = IntegrationCustomers::Factory.new_instance(integration:, customer:, subsidiary_id:)
+      integration_customer_service = IntegrationCustomers::Factory.new_instance(
+        integration:, customer:, subsidiary_id:, **params
+      )
 
       return result unless integration_customer_service
 

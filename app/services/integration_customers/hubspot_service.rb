@@ -2,10 +2,11 @@
 
 module IntegrationCustomers
   class HubspotService < ::BaseService
-    def initialize(integration:, customer:, subsidiary_id:)
+    def initialize(integration:, customer:, subsidiary_id:, **params)
       @customer = customer
       @subsidiary_id = subsidiary_id
       @integration = integration
+      @params = params&.with_indifferent_access
 
       super(nil)
     end
@@ -25,7 +26,8 @@ module IntegrationCustomers
         external_customer_id: create_result.contact_id,
         email: create_result.email,
         type: 'IntegrationCustomers::HubspotCustomer',
-        sync_with_provider: true
+        sync_with_provider: true,
+        targeted_object:
       )
 
       result.integration_customer = new_integration_customer
@@ -34,14 +36,18 @@ module IntegrationCustomers
 
     private
 
-    attr_reader :integration, :customer, :subsidiary_id
+    attr_reader :integration, :customer, :subsidiary_id, :params
 
     def create_service_class
-      @create_service_class ||= if customer.customer_type_individual?
+      @create_service_class ||= if targeted_object == 'contacts'
         Integrations::Aggregator::Contacts::CreateService
       else
         Integrations::Aggregator::Companies::CreateService
       end
+    end
+
+    def targeted_object
+      @targeted_object ||= params[:targeted_object]
     end
   end
 end
