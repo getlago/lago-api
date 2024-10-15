@@ -2031,7 +2031,6 @@ input CreateHubspotIntegrationInput {
   connectionId: String!
   defaultTargetedObject: HubspotTargetedObjectsEnum!
   name: String!
-  privateAppToken: String!
   syncInvoices: Boolean
   syncSubscriptions: Boolean
 }
@@ -4142,7 +4141,6 @@ type HubspotIntegration {
   id: ID!
   name: String!
   portalId: String
-  privateAppToken: String!
   syncInvoices: Boolean
   syncSubscriptions: Boolean
 }
@@ -7869,7 +7867,6 @@ input UpdateHubspotIntegrationInput {
   defaultTargetedObject: HubspotTargetedObjectsEnum
   id: ID
   name: String
-  privateAppToken: String
   syncInvoices: Boolean
   syncSubscriptions: Boolean
 }

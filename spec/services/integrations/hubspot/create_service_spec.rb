@@ -18,7 +18,6 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
         code: 'hubspot1',
         organization_id: organization.id,
         connection_id: 'conn1',
-        private_app_token: 'token',
         client_secret: 'secret',
         default_targeted_object: "test",
         sync_invoices: false,
@@ -70,7 +69,6 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
             expect(integration.name).to eq(name)
             expect(integration.code).to eq(create_args[:code])
             expect(integration.connection_id).to eq(create_args[:connection_id])
-            expect(integration.private_app_token).to eq(create_args[:private_app_token])
             expect(integration.default_targeted_object).to eq(create_args[:default_targeted_object])
             expect(integration.sync_invoices).to eq(create_args[:sync_invoices])
             expect(integration.sync_subscriptions).to eq(create_args[:sync_subscriptions])

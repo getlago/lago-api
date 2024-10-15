@@ -16,8 +16,7 @@ RSpec.describe Integrations::Hubspot::UpdateService, type: :service do
     let(:update_args) do
       {
         name:,
-        code: 'hubspot1',
-        private_app_token: 'new_token'
+        code: 'hubspot1'
       }
     end
 
@@ -58,7 +57,6 @@ RSpec.describe Integrations::Hubspot::UpdateService, type: :service do
 
             integration = Integrations::HubspotIntegration.order(:updated_at).last
             expect(integration.name).to eq(name)
-            expect(integration.private_app_token).to eq(update_args[:private_app_token])
           end
 
           it 'returns an integration in result object' do

@@ -22,7 +22,6 @@ module Integrations
           name: params[:name],
           code: params[:code],
           connection_id: params[:connection_id],
-          private_app_token: params[:private_app_token],
           default_targeted_object: params[:default_targeted_object],
           sync_invoices: ActiveModel::Type::Boolean.new.cast(params[:sync_invoices]),
           sync_subscriptions: ActiveModel::Type::Boolean.new.cast(params[:sync_subscriptions])
