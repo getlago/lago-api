@@ -6,6 +6,8 @@ module Wallets
 
     unique :until_executed, on_conflict: :log
 
+    retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
+
     def perform(wallet)
       return unless wallet.ready_to_be_refreshed?
 
