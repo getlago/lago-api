@@ -4141,6 +4141,7 @@ type HubspotIntegration {
   defaultTargetedObject: HubspotTargetedObjectsEnum!
   id: ID!
   name: String!
+  portalId: String
   privateAppToken: String!
   syncInvoices: Boolean
   syncSubscriptions: Boolean
