@@ -16,7 +16,7 @@ module IntegrationCustomers
 
       if external_customer_id.present?
         integration_customer.external_customer_id = external_customer_id
-        integration_customer.targeted_object = targeted_object
+        integration_customer.targeted_object = targeted_object if targeted_object.present?
         integration_customer.save!
       end
 

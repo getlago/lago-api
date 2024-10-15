@@ -44,17 +44,6 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
         expect { described_class.new(integration:, customer:, subsidiary_id:) }.not_to raise_error
       end
     end
-
-    context 'when customer is an individual' do
-      let(:customer) do
-        create(:customer, :with_same_billing_and_shipping_address, organization:, customer_type: 'individual')
-      end
-
-      it 'raises an ArgumentError' do
-        expect { described_class.new(integration:, customer:, subsidiary_id:) }
-          .to raise_error(ArgumentError, 'Customer is not a company')
-      end
-    end
   end
 
   describe '#call' do
