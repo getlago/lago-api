@@ -321,7 +321,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
     context 'when contact is successfully created' do
       let(:body) do
         {
-          'succeededContacts' => [
+          'succeededCompanies' => [
             {
               'id' => '2e50c200-9a54-4a66-b241-1e75fb87373f',
               'email' => 'billing@example.com'
@@ -341,7 +341,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
     context 'when contact creation fails' do
       let(:body) do
         {
-          'failedContacts' => [
+          'failedCompanies' => [
             {
               'validation_errors' => [
                 {'Message' => 'Email is invalid'},
