@@ -15,7 +15,7 @@ FactoryBot.define do
       status { 'requires_action' }
       provider_payment_data do
         {
-          redirect_to_url: { url: 'https://foo.bar' }
+          redirect_to_url: {url: 'https://foo.bar'}
         }
       end
     end

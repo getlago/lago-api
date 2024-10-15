@@ -326,7 +326,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           amount: invoice.total_amount_cents,
           currency: invoice.currency,
           next_action: {
-            redirect_to_url: { url: 'https://foo.bar' }
+            redirect_to_url: {url: 'https://foo.bar'}
           }
         )
       end
@@ -358,7 +358,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
     end
 
-    context '#payment_intent_payload' do
+    context 'with #payment_intent_payload' do
       let(:payment_intent_payload) { stripe_service.__send__(:payment_intent_payload) }
       let(:payload) do
         {
@@ -398,7 +398,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
     end
 
-    context '#description' do
+    context 'with #description' do
       let(:description_call) { stripe_service.__send__(:description) }
       let(:description) { "#{organization.name} - Invoice #{invoice.number}" }
 
@@ -443,7 +443,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
     end
 
-    context '#payment_url_payload' do
+    context 'with #payment_url_payload' do
       let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload) }
       let(:payload) do
         {
