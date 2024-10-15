@@ -9,7 +9,7 @@ RSpec.describe IntegrationCustomers::HubspotService, type: :service do
   let(:customer) { create(:customer, organization:, customer_type: 'individual') }
 
   describe '#create' do
-    subject(:service_call) { described_class.new(integration:, customer:, subsidiary_id: nil).create }
+    subject(:service_call) { described_class.new(integration:, customer:, subsidiary_id: nil, targeted_object: 'contacts').create }
 
     let(:contact_id) { SecureRandom.uuid }
     let(:create_result) do
