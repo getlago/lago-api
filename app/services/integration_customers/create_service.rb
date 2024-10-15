@@ -51,6 +51,12 @@ module IntegrationCustomers
 
       if integration&.type&.to_s == 'Integrations::NetsuiteIntegration'
         new_integration_customer.subsidiary_id = subsidiary_id
+        new_integration_customer.save!
+      end
+
+      if integration&.type&.to_s == 'Integrations::HubspotIntegration'
+        new_integration_customer.targeted_object = targeted_object
+        new_integration_customer.save!
       end
 
       result.integration_customer = new_integration_customer
