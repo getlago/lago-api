@@ -35,6 +35,15 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       File.read(Rails.root.join('spec/fixtures/stripe/customer_retrieve_response.json'))
     end
 
+    let(:stripe_payment_intent) do
+      Stripe::PaymentIntent.construct_from(
+        id: 'ch_123456',
+        status: payment_status,
+        amount: invoice.total_amount_cents,
+        currency: invoice.currency
+      )
+    end
+
     let(:payment_status) { 'succeeded' }
 
     before do
@@ -42,14 +51,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       stripe_customer
 
       allow(Stripe::PaymentIntent).to receive(:create)
-        .and_return(
-          Stripe::PaymentIntent.construct_from(
-            id: 'ch_123456',
-            status: payment_status,
-            amount: invoice.total_amount_cents,
-            currency: invoice.currency
-          )
-        )
+        .and_return(stripe_payment_intent)
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
 
@@ -311,6 +313,48 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         end
 
         expect(Stripe::PaymentIntent).to have_received(:create)
+      end
+    end
+
+    context 'when customers country is IN' do
+      let(:payment_status) { 'requires_action' }
+
+      let(:stripe_payment_intent) do
+        Stripe::PaymentIntent.construct_from(
+          id: 'ch_123456',
+          status: payment_status,
+          amount: invoice.total_amount_cents,
+          currency: invoice.currency,
+          next_action: {
+            redirect_to_url: { url: 'https://foo.bar' }
+          }
+        )
+      end
+
+      before do
+        customer.update(country: 'IN')
+      end
+
+      it 'creates a stripe payment and payment with requires_action status' do
+        result = stripe_service.create
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          expect(result.payment.status).to eq('requires_action')
+          expect(result.payment.provider_payment_data).not_to be_empty
+        end
+      end
+
+      it 'has enqueued a SendWebhookJob' do
+        result = stripe_service.create
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            'payment.requires_action',
+            result.payment,
+            provider_customer_id: stripe_customer.provider_customer_id
+          )
       end
     end
 
