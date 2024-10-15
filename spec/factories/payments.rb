@@ -10,5 +10,14 @@ FactoryBot.define do
     amount_currency { 'EUR' }
     provider_payment_id { SecureRandom.uuid }
     status { 'pending' }
+
+    trait :requires_action do
+      status { 'requires_action' }
+      provider_payment_data do
+        {
+          redirect_to_url: { url: 'https://foo.bar' }
+        }
+      end
+    end
   end
 end
