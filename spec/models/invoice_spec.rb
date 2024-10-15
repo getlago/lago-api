@@ -1085,6 +1085,7 @@ RSpec.describe Invoice, type: :model do
 
       context 'when invoice v1' do
         let(:invoice) { create(:invoice, version_number: 1) }
+
         it 'returns 0' do
           expect(invoice.available_to_credit_amount_cents).to eq(0)
         end
@@ -1100,6 +1101,7 @@ RSpec.describe Invoice, type: :model do
 
       context 'when draft' do
         let(:invoice) { create(:invoice, :draft) }
+
         it 'returns 0' do
           expect(invoice.available_to_credit_amount_cents).to eq(0)
         end
@@ -1244,7 +1246,7 @@ RSpec.describe Invoice, type: :model do
 
   describe '#refundable_amount_cents' do
     let(:invoice) { create(:invoice, version_number:, status:, payment_status:, prepaid_credit_amount_cents:) }
-    let(:available_to_credit_amount_cents) { 1000}
+    let(:available_to_credit_amount_cents) { 1000 }
     let(:prepaid_credit_amount_cents) { 200 }
 
     before do
@@ -1293,7 +1295,7 @@ RSpec.describe Invoice, type: :model do
 
     context 'when invoice is a credit' do
       let(:invoice) { create(:invoice, :credit, version_number: 2, status: :finalized, payment_status: :succeeded, prepaid_credit_amount_cents: 200) }
-      let(:associated_active_wallet) { double('Wallet', balance_cents: 500) }
+      let(:associated_active_wallet) { create(:wallet, balance_cents: 500) }
 
       before do
         allow(invoice).to receive(:associated_active_wallet).and_return(associated_active_wallet)
@@ -1316,13 +1318,23 @@ RSpec.describe Invoice, type: :model do
 
   describe '#associated_active_wallet' do
     context 'when invoice is not a credit' do
+      let(:wallet) { create(:wallet) }
+
+      before { wallet }
 
       it 'returns nil' do
         expect(invoice.associated_active_wallet).to be_nil
       end
     end
 
-    context 'when customer has no wallet' do
+    context 'when customer has no active wallet' do
+      let(:invoice) { create :invoice, invoice_type: :credit }
+      let(:wallet) { create :wallet, status: :terminated }
+      let(:wallet_transaction) { create :wallet_transaction, wallet: wallet }
+      let(:fee) { create :fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction }
+
+      before { fee }
+
       it 'returns nil' do
         expect(invoice.associated_active_wallet).to be_nil
       end

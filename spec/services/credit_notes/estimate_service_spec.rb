@@ -182,7 +182,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       )
     end
     let(:wallet) { create(:wallet, customer:, balance_cents: 3) }
-    let(:wallet_transaction) { create(:wallet_transaction, wallet:)}
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
     let(:credit_fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
 
     before { credit_fee }
@@ -211,6 +211,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
 
     context 'when wallet for the credits is not active' do
       let(:wallet) { create(:wallet, customer:, balance_cents: 3, status: :terminated) }
+
       it 'estimates the credit and refund amount hot higher than wallet.balance_amount_cents' do
         result = estimate_service.call
 

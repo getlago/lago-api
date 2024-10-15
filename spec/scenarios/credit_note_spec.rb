@@ -920,13 +920,11 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       )
       expect(response).to have_http_status(:method_not_allowed)
 
-
       # pay the invoice
       update_invoice(invoice, payment_status: :succeeded)
       perform_all_enqueued_jobs
       wallet.reload
       expect(wallet.balance_cents).to eq 1500
-
 
       # it allows to estimate a credit notes on credit invoices with payment status succeeded
       estimate_credit_note(
@@ -942,7 +940,6 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
       expect(estimate[:max_refundable_amount_cents]).to eq(10)
       expect(estimate[:max_creditable_amount_cents]).to eq(0)
-
 
       # when estimating a credit note with amount higher than the remaining balance, it will return the remaining balance
       wallet.update(balance_cents: 5)
