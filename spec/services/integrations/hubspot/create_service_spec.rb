@@ -57,8 +57,8 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
       context 'with hubspot premium integration present' do
         before do
           organization.update!(premium_integrations: ['hubspot'])
-          allow(Integrations::Aggregator::SendPrivateAppTokenJob).to receive(:perform_later)
           allow(Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob).to receive(:perform_later)
+          allow(Integrations::Hubspot::SavePortalIdJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
@@ -85,7 +85,6 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
             service_call
 
             integration = Integrations::HubspotIntegration.order(:created_at).last
-            expect(Integrations::Aggregator::SendPrivateAppTokenJob).to have_received(:perform_later).with(integration:)
             expect(Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob).to have_received(:perform_later).with(integration:)
             expect(Integrations::Hubspot::SavePortalIdJob).to have_received(:perform_later).with(integration:)
           end
