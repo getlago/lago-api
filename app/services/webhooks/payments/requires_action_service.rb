@@ -1,4 +1,4 @@
-# # frozen_string_literal: true
+# frozen_string_literal: true
 
 module Webhooks
   module Payments
@@ -27,4 +27,3 @@ module Webhooks
     end
   end
 end
-
