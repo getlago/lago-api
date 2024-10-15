@@ -291,12 +291,12 @@ class Invoice < ApplicationRecord
       prepaid_credit_amount_cents
     amount = amount.negative? ? 0 : amount
 
-    return [amount, (associated_active_wallet&.balance_cents || 0)].min if credit?
+    return [amount, associated_active_wallet&.balance_cents || 0].min if credit?
     amount
   end
 
   def associated_active_wallet
-    return if !credit?  || customer.wallets.active.empty?
+    return if !credit? || customer.wallets.active.empty?
 
     wallet = fees.credit.first&.invoiceable&.wallet
     wallet if wallet.active?

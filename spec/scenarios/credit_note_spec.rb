@@ -879,4 +879,86 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       end
     end
   end
+
+  context 'when invoice is prepaid credit' do
+    it 'behaves differently depending on the invoice payment status, wallet balance and wallet status' do
+      # Create a prepaid credit invoice for 15 credits
+      create_wallet({
+        external_customer_id: customer.external_id,
+        rate_amount: '1',
+        name: 'Wallet1',
+        currency: 'EUR',
+        invoice_requires_successful_payment: false # default
+      })
+      wallet = customer.wallets.sole
+
+      create_wallet_transaction({
+        wallet_id: wallet.id,
+        paid_credits: '15'
+      })
+      wt = WalletTransaction.find json[:wallet_transactions].first[:lago_id]
+
+      expect(wt.status).to eq 'pending'
+      expect(wt.transaction_status).to eq 'purchased'
+
+      # Customer does not have a payment_provider set yet
+      invoice = customer.invoices.credit.sole
+      expect(invoice.status).to eq 'finalized'
+
+      # it does not allow to create credit notes on invoices with payment status pending
+      expect(invoice.creditable_amount_cents).to eq 0
+      expect(invoice.refundable_amount_cents).to eq 0
+
+      estimate_credit_note(
+        invoice_id: invoice.id,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 15
+          }
+        ]
+      )
+      expect(response).to have_http_status(:method_not_allowed)
+
+
+      # pay the invoice
+      update_invoice(invoice, payment_status: :succeeded)
+      perform_all_enqueued_jobs
+      wallet.reload
+      expect(wallet.balance_cents).to eq 1500
+
+
+      # it allows to estimate a credit notes on credit invoices with payment status succeeded
+      estimate_credit_note(
+        invoice_id: invoice.id,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 10
+          }
+        ]
+      )
+      estimate = json[:estimated_credit_note]
+      expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
+      expect(estimate[:max_refundable_amount_cents]).to eq(10)
+      expect(estimate[:max_creditable_amount_cents]).to eq(0)
+
+
+      # when estimating a credit note with amount higher than the remaining balance, it will return the remaining balance
+      wallet.update(balance_cents: 5)
+      estimate_credit_note(
+        invoice_id: invoice.id,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 10
+          }
+        ]
+      )
+      estimate = json[:estimated_credit_note]
+      expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
+      expect(estimate[:max_refundable_amount_cents]).to eq(5)
+      expect(estimate[:max_creditable_amount_cents]).to eq(0)
+    end
+  end
 end
