@@ -336,7 +336,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
     subject(:process_hash_result) { service.send(:process_hash_result, body) }
 
     let(:result) { service.instance_variable_get(:@result) }
-    let(:integration) { create(:netsuite_integration, organization:) }
+    let(:integration) { create(:hubspot_integration, organization:) }
     let(:integration_type) { 'hubspot' }
     let(:integration_type_key) { 'hubspot' }
 
@@ -350,7 +350,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
           'succeededContacts' => [
             {
               'id' => '2e50c200-9a54-4a66-b241-1e75fb87373f',
-              'lago_billing_email' => 'billing@example.com'
+              'email' => 'billing@example.com'
             }
           ]
         }

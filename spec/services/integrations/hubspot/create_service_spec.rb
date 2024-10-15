@@ -89,6 +89,7 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
             integration = Integrations::HubspotIntegration.order(:created_at).last
             expect(Integrations::Aggregator::SendPrivateAppTokenJob).to have_received(:perform_later).with(integration:)
             expect(Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob).to have_received(:perform_later).with(integration:)
+            expect(Integrations::Hubspot::SavePortalIdJob).to have_received(:perform_later).with(integration:)
           end
         end
 

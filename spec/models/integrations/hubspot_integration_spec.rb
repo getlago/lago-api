@@ -37,6 +37,13 @@ RSpec.describe Integrations::HubspotIntegration, type: :model do
     end
   end
 
+  describe '#portal_id' do
+    it 'assigns and retrieve a setting' do
+      hubspot_integration.portal_id = '123456789'
+      expect(hubspot_integration.portal_id).to eq('123456789')
+    end
+  end
+
   describe '#sync_invoices' do
     it 'assigns and retrieve a setting' do
       hubspot_integration.sync_invoices = true

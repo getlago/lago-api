@@ -33,6 +33,7 @@ module Integrations
         if integration.type == 'Integrations::HubspotIntegration'
           Integrations::Aggregator::SendPrivateAppTokenJob.perform_later(integration:)
           Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob.perform_later(integration:)
+          Integrations::Hubspot::SavePortalIdJob.perform_later(integration:)
         end
 
         result.integration = integration

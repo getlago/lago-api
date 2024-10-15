@@ -28,7 +28,7 @@ module Integrations
         def process_hash_result(body)
           contact = body['succeededContacts']&.first
           contact_id = contact&.dig('id')
-          email = contact&.dig('lago_billing_email')
+          email = contact&.dig('email')
 
           if contact_id
             result.contact_id = contact_id
