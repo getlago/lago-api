@@ -17,6 +17,8 @@ module Integrations
 
         result.custom_object = OpenStruct.new(response)
         result
+      rescue LagoHttpClient::HttpError => e
+        result.service_failure!(code: e.error_code, message: e.message)
       end
 
       private
