@@ -8,8 +8,6 @@ module Integrations
           @customer = customer
           @subsidiary_id = subsidiary_id
 
-          raise ArgumentError, 'Customer is not a company' if customer.customer_type_individual?
-
           super(integration:)
         end
 
