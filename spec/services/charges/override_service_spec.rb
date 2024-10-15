@@ -49,21 +49,22 @@ RSpec.describe Charges::OverrideService, type: :service do
 
         expect { override_service.call }.to change(Charge, :count).by(1)
 
-        charge = Charge.order(:created_at).last
-        expect(charge).to have_attributes(
-          amount_currency: charge.amount_currency,
-          billable_metric_id: charge.billable_metric.id,
-          charge_model: charge.charge_model,
-          invoiceable: charge.invoiceable,
-          pay_in_advance: charge.pay_in_advance,
-          prorated: charge.prorated,
+        new_charge = Charge.order(:created_at).last
+        expect(new_charge).to have_attributes(
+          amount_currency: new_charge.amount_currency,
+          billable_metric_id: new_charge.billable_metric.id,
+          charge_model: new_charge.charge_model,
+          invoiceable: new_charge.invoiceable,
+          parent_id: charge.id,
+          pay_in_advance: new_charge.pay_in_advance,
+          prorated: new_charge.prorated,
           # Overriden attributes
           plan_id: plan.id,
           # invoice_display_name: 'invoice display name',
           min_amount_cents: 1000,
           properties: {'amount' => '200'}
         )
-        expect(charge.taxes).to contain_exactly(tax)
+        expect(new_charge.taxes).to contain_exactly(tax)
       end
 
       context 'with charge filters' do

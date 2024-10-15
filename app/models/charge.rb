@@ -8,7 +8,9 @@ class Charge < ApplicationRecord
 
   belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :billable_metric, -> { with_discarded }
+  belongs_to :parent, class_name: 'Charge', optional: true
 
+  has_many :children, class_name: 'Charge', foreign_key: :parent_id, dependent: :nullify
   has_many :fees
   has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
   has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values
@@ -170,16 +172,19 @@ end
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  billable_metric_id   :uuid
+#  parent_id            :uuid
 #  plan_id              :uuid
 #
 # Indexes
 #
 #  index_charges_on_billable_metric_id  (billable_metric_id)
 #  index_charges_on_deleted_at          (deleted_at)
+#  index_charges_on_parent_id           (parent_id)
 #  index_charges_on_plan_id             (plan_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (billable_metric_id => billable_metrics.id)
+#  fk_rails_...  (parent_id => charges.id)
 #  fk_rails_...  (plan_id => plans.id)
 #
