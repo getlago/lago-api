@@ -7,7 +7,6 @@ RSpec.describe Integrations::HubspotIntegration, type: :model do
 
   it { is_expected.to validate_presence_of(:name) }
   it { is_expected.to validate_presence_of(:connection_id) }
-  it { is_expected.to validate_presence_of(:private_app_token) }
   it { is_expected.to validate_presence_of(:default_targeted_object) }
 
   describe 'validations' do
@@ -20,13 +19,6 @@ RSpec.describe Integrations::HubspotIntegration, type: :model do
     it 'assigns and retrieve a secret pair' do
       hubspot_integration.connection_id = 'connection_id'
       expect(hubspot_integration.connection_id).to eq('connection_id')
-    end
-  end
-
-  describe '#private_app_token' do
-    it 'assigns and retrieve a secret pair' do
-      hubspot_integration.private_app_token = 'secret_token'
-      expect(hubspot_integration.private_app_token).to eq('secret_token')
     end
   end
 

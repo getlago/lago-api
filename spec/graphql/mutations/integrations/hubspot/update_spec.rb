@@ -19,7 +19,6 @@ RSpec.describe Mutations::Integrations::Hubspot::Update, type: :graphql do
           name,
           connectionId,
           defaultTargetedObject,
-          privateAppToken,
           syncInvoices,
           syncSubscriptions
         }

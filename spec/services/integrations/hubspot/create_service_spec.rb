@@ -18,7 +18,6 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
         code: 'hubspot1',
         organization_id: organization.id,
         connection_id: 'conn1',
-        private_app_token: 'token',
         client_secret: 'secret',
         default_targeted_object: "test",
         sync_invoices: false,
@@ -58,8 +57,8 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
       context 'with hubspot premium integration present' do
         before do
           organization.update!(premium_integrations: ['hubspot'])
-          allow(Integrations::Aggregator::SendPrivateAppTokenJob).to receive(:perform_later)
           allow(Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob).to receive(:perform_later)
+          allow(Integrations::Hubspot::SavePortalIdJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
@@ -70,7 +69,6 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
             expect(integration.name).to eq(name)
             expect(integration.code).to eq(create_args[:code])
             expect(integration.connection_id).to eq(create_args[:connection_id])
-            expect(integration.private_app_token).to eq(create_args[:private_app_token])
             expect(integration.default_targeted_object).to eq(create_args[:default_targeted_object])
             expect(integration.sync_invoices).to eq(create_args[:sync_invoices])
             expect(integration.sync_subscriptions).to eq(create_args[:sync_subscriptions])
@@ -87,7 +85,6 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
             service_call
 
             integration = Integrations::HubspotIntegration.order(:created_at).last
-            expect(Integrations::Aggregator::SendPrivateAppTokenJob).to have_received(:perform_later).with(integration:)
             expect(Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob).to have_received(:perform_later).with(integration:)
             expect(Integrations::Hubspot::SavePortalIdJob).to have_received(:perform_later).with(integration:)
           end

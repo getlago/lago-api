@@ -10,7 +10,6 @@ module Types
       field :default_targeted_object, Types::Integrations::Hubspot::TargetedObjectsEnum, null: false
       field :id, ID, null: false
       field :name, String, null: false
-      field :private_app_token, String, null: false
       field :sync_invoices, Boolean
       field :sync_subscriptions, Boolean
     end
