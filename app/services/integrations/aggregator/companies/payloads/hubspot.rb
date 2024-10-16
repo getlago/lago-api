@@ -21,7 +21,7 @@ module Integrations
 
           def update_body
             {
-              'contactId' => integration_customer.external_customer_id,
+              'companyId' => integration_customer.external_customer_id,
               'input' => {
                 'properties' => {
                   'name' => customer.name,
