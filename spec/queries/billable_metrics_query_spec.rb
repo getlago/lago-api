@@ -37,6 +37,21 @@ RSpec.describe BillableMetricsQuery, type: :query do
     end
   end
 
+  context "when filters validation fails" do
+    let(:filters) do
+      {
+        recurring: "unexpected_value",
+        aggregation_types: ["unexpected_value"]
+      }
+    end
+
+    it "captures all validation errors" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:filters][:recurring]).to include("must be boolean")
+      expect(result.error.messages[:filters][:aggregation_types][0]).to include("must be one of: max_agg, count_agg")
+    end
+  end
+
   context 'with pagination' do
     let(:pagination) { {page: 2, limit: 3} }
 
