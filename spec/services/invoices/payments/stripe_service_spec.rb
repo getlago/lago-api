@@ -35,6 +35,15 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       File.read(Rails.root.join('spec/fixtures/stripe/customer_retrieve_response.json'))
     end
 
+    let(:stripe_payment_intent) do
+      Stripe::PaymentIntent.construct_from(
+        id: 'ch_123456',
+        status: payment_status,
+        amount: invoice.total_amount_cents,
+        currency: invoice.currency
+      )
+    end
+
     let(:payment_status) { 'succeeded' }
 
     before do
@@ -42,14 +51,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       stripe_customer
 
       allow(Stripe::PaymentIntent).to receive(:create)
-        .and_return(
-          Stripe::PaymentIntent.construct_from(
-            id: 'ch_123456',
-            status: payment_status,
-            amount: invoice.total_amount_cents,
-            currency: invoice.currency
-          )
-        )
+        .and_return(stripe_payment_intent)
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
 
@@ -313,6 +315,97 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(Stripe::PaymentIntent).to have_received(:create)
       end
     end
+
+    context 'when customers country is IN' do
+      let(:payment_status) { 'requires_action' }
+
+      let(:stripe_payment_intent) do
+        Stripe::PaymentIntent.construct_from(
+          id: 'ch_123456',
+          status: payment_status,
+          amount: invoice.total_amount_cents,
+          currency: invoice.currency,
+          next_action: {
+            redirect_to_url: {url: 'https://foo.bar'}
+          }
+        )
+      end
+
+      before do
+        customer.update(country: 'IN')
+      end
+
+      it 'creates a stripe payment and payment with requires_action status' do
+        result = stripe_service.create
+
+        expect(result).to be_success
+
+        aggregate_failures do
+          expect(result.payment.status).to eq('requires_action')
+          expect(result.payment.provider_payment_data).not_to be_empty
+        end
+      end
+
+      it 'has enqueued a SendWebhookJob' do
+        result = stripe_service.create
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            'payment.requires_action',
+            result.payment,
+            provider_customer_id: stripe_customer.provider_customer_id
+          )
+      end
+    end
+
+    context 'with #payment_intent_payload' do
+      let(:payment_intent_payload) { stripe_service.__send__(:payment_intent_payload) }
+      let(:payload) do
+        {
+          amount: invoice.total_amount_cents,
+          currency: invoice.currency.downcase,
+          customer: customer.stripe_customer.provider_customer_id,
+          payment_method: customer.stripe_customer.payment_method_id,
+          payment_method_types: customer.stripe_customer.provider_payment_methods,
+          confirm: true,
+          off_session: true,
+          return_url: stripe_service.__send__(:success_redirect_url),
+          error_on_requires_action: true,
+          description: stripe_service.__send__(:description),
+          metadata: {
+            lago_customer_id: customer.id,
+            lago_invoice_id: invoice.id,
+            invoice_issuing_date: invoice.issuing_date.iso8601,
+            invoice_type: invoice.invoice_type
+          }
+        }
+      end
+
+      it 'returns the payload' do
+        expect(payment_intent_payload).to eq(payload)
+      end
+
+      context 'when customers country is IN' do
+        before do
+          payload[:off_session] = false
+          payload[:error_on_requires_action] = false
+          customer.update!(country: 'IN')
+        end
+
+        it 'returns the payload' do
+          expect(payment_intent_payload).to eq(payload)
+        end
+      end
+    end
+
+    context 'with #description' do
+      let(:description_call) { stripe_service.__send__(:description) }
+      let(:description) { "#{organization.name} - Invoice #{invoice.number}" }
+
+      it 'returns the description' do
+        expect(description_call).to eq(description)
+      end
+    end
   end
 
   describe '#generate_payment_url' do
@@ -349,67 +442,43 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         expect(Stripe::Checkout::Session).not_to have_received(:create)
       end
     end
-  end
 
-  describe '#payment_url_payload' do
-    subject(:payment_url_payload_call) { stripe_service.__send__(:payment_url_payload) }
-
-    let(:payload) do
-      {
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: invoice.currency.downcase,
-              unit_amount: invoice.total_amount_cents,
-              product_data: {
-                name: invoice.number
+    context 'with #payment_url_payload' do
+      let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload) }
+      let(:payload) do
+        {
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency: invoice.currency.downcase,
+                unit_amount: invoice.total_amount_cents,
+                product_data: {
+                  name: invoice.number
+                }
               }
             }
-          }
-        ],
-        mode: 'payment',
-        success_url:,
-        customer: customer.stripe_customer.provider_customer_id,
-        payment_method_types: customer.stripe_customer.provider_payment_methods,
-        payment_intent_data: {
-          description:,
-          metadata: {
-            lago_customer_id: customer.id,
-            lago_invoice_id: invoice.id,
-            invoice_issuing_date: invoice.issuing_date.iso8601,
-            invoice_type: invoice.invoice_type,
-            payment_type: 'one-time'
+          ],
+          mode: 'payment',
+          success_url: stripe_service.__send__(:success_redirect_url),
+          customer: customer.stripe_customer.provider_customer_id,
+          payment_method_types: customer.stripe_customer.provider_payment_methods,
+          payment_intent_data: {
+            description: stripe_service.__send__(:description),
+            metadata: {
+              lago_customer_id: customer.id,
+              lago_invoice_id: invoice.id,
+              invoice_issuing_date: invoice.issuing_date.iso8601,
+              invoice_type: invoice.invoice_type,
+              payment_type: 'one-time'
+            }
           }
         }
-      }
-    end
+      end
 
-    let(:success_url) { stripe_service.__send__(:success_redirect_url) }
-    let(:description) { stripe_service.__send__(:description) }
-
-    before do
-      stripe_payment_provider
-      stripe_customer
-    end
-
-    it 'returns payload' do
-      expect(subject).to eq(payload)
-    end
-  end
-
-  describe '#description' do
-    subject(:description_call) { stripe_service.__send__(:description) }
-
-    let(:description) { "#{organization.name} - Invoice #{invoice.number}" }
-
-    before do
-      stripe_payment_provider
-      stripe_customer
-    end
-
-    it 'returns description' do
-      expect(subject).to eq(description)
+      it 'returns the payload' do
+        expect(payment_url_payload).to eq(payload)
+      end
     end
   end
 

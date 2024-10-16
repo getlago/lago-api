@@ -56,7 +56,6 @@ Rails.application.configure do
 
   config.hosts << 'api.lago.dev'
   config.hosts << 'api'
-  config.hosts << 'lago.ngrok.dev'
 
   config.license_url = 'http://license:3000'
 

@@ -27,7 +27,7 @@ module Invoices
 
         increment_payment_attempts
 
-        stripe_result = create_stripe_payment
+        stripe_result = create_payment_intent
         # NOTE: return if payment was not processed
         return result unless stripe_result
 
@@ -40,6 +40,9 @@ module Invoices
           provider_payment_id: stripe_result.id,
           status: stripe_result.status
         )
+
+        payment.provider_payment_data = stripe_result.next_action if stripe_result.status == 'requires_action'
+
         payment.save!
 
         update_invoice_payment_status(
@@ -48,6 +51,8 @@ module Invoices
         )
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
+
+        handle_requires_action(payment) if payment.status == 'requires_action'
 
         result.payment = payment
         result
@@ -190,11 +195,11 @@ module Invoices
         end
       end
 
-      def create_stripe_payment
+      def create_payment_intent
         update_payment_method_id
 
         Stripe::PaymentIntent.create(
-          stripe_payment_payload,
+          payment_intent_payload,
           {
             api_key: stripe_api_key,
             idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}"
@@ -202,7 +207,7 @@ module Invoices
         )
       end
 
-      def stripe_payment_payload
+      def payment_intent_payload
         {
           amount: invoice.total_amount_cents,
           currency: invoice.currency.downcase,
@@ -210,8 +215,9 @@ module Invoices
           payment_method: stripe_payment_method,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
           confirm: true,
-          off_session: true,
-          error_on_requires_action: true,
+          off_session: off_session?,
+          return_url: success_redirect_url,
+          error_on_requires_action: error_on_requires_action?,
           description:,
           metadata: {
             lago_customer_id: customer.id,
@@ -305,6 +311,26 @@ module Invoices
         return result if invoice.payment_failed?
 
         result.not_found_failure!(resource: 'stripe_payment')
+      end
+
+      # NOTE: Due to RBI limitation, all indians payment should be off_session
+      # to permit 3D secure authentication
+      # https://docs.stripe.com/india-recurring-payments
+      def off_session?
+        invoice.customer.country != 'IN'
+      end
+
+      # NOTE: Same as off_session?
+      def error_on_requires_action?
+        invoice.customer.country != 'IN'
+      end
+
+      def handle_requires_action(payment)
+        params = {
+          provider_customer_id: customer.stripe_customer.provider_customer_id
+        }
+
+        SendWebhookJob.perform_later('payment.requires_action', payment, params)
       end
 
       def stripe_payment_provider
