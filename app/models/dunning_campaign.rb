@@ -6,7 +6,10 @@ class DunningCampaign < ApplicationRecord
   ORDERS = %w[name code].freeze
 
   belongs_to :organization
+
   has_many :thresholds, class_name: "DunningCampaignThreshold", dependent: :destroy
+  has_many :customers, foreign_key: :applied_dunning_campaign_id, dependent: :nullify
+
   accepts_nested_attributes_for :thresholds
 
   validates :name, presence: true
