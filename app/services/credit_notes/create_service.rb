@@ -53,6 +53,10 @@ module CreditNotes
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents
         )
+        if invoice.credit?
+          WalletTransactions::VoidService.call(wallet: associated_wallet,
+            credits: voiding_credits, credit_note_id: credit_note.id)
+        end
       end
 
       if credit_note.finalized?
@@ -225,6 +229,18 @@ module CreditNotes
 
     def all_rounding_tax_adjustments
       credit_note.invoice.credit_notes.sum(&:taxes_rounding_adjustment)
+    end
+
+    def associated_wallet
+      @associated_wallet ||= invoice.associated_active_wallet
+    end
+
+    def voiding_credits
+      return 0 unless invoice.credit? && associated_wallet.present?
+
+      # wallet transactions don't have cents amount, so we have to convert value into full amount
+      # and then convert money into amount of credits
+      credit_note.refund_amount_cents / 100 / associated_wallet.rate_amount
     end
   end
 end

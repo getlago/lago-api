@@ -962,21 +962,26 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         invoice_id: invoice.id,
         reason: :other,
         credit_amount_cents: 0,
-        refund_amount_cents: 5,
+        refund_amount_cents: 500,
         items: [
           {
             fee_id: invoice.fees.first.id,
-            amount_cents: 5
+            amount_cents: 500
           }
         ]
       )
+      perform_all_enqueued_jobs
       credit_note = invoice.credit_notes.order(:created_at).last
-      expect(credit_note.refund_amount_cents).to eq(5)
-      expect(credit_note.total_amount_cents).to eq(5)
-      expect(invoice.associated_active_wallet.balance_cents).to eq(10)
+      expect(credit_note.refund_amount_cents).to eq(500)
+      expect(credit_note.total_amount_cents).to eq(500)
+      expect(wallet.reload.balance_cents).to eq(1000)
+      wallet_transaction = wallet.wallet_transactions.order(:created_at).last
+      expect(wallet_transaction.status).to eq('settled')
+      expect(wallet_transaction.transaction_status).to eq('voided')
+      expect(wallet_transaction.credit_note_id).to eq(credit_note.id)
 
 
-      # when estimating a credit note with amount higher than the remaining balance, it will return the remaining balance
+      # when estimating a credit note with amount higher than the remaining balance, it throws an error
       wallet.update(balance_cents: 5)
       estimate_credit_note(
         invoice_id: invoice.id,
@@ -987,10 +992,24 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
           }
         ]
       )
-      estimate = json[:estimated_credit_note]
-      expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
-      expect(estimate[:max_refundable_amount_cents]).to eq(5)
-      expect(estimate[:max_creditable_amount_cents]).to eq(0)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include('higher_than_wallet_balance')
+
+      # when creating a credit note with amount higher than remaining balance, it throws an error
+      create_credit_note(
+        invoice_id: invoice.id,
+        reason: :other,
+        refund_amount_cents: 10,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 10
+          }
+        ]
+      )
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include('higher_than_wallet_balance')
+
     end
   end
 end
