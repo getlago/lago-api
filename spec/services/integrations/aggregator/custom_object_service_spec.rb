@@ -20,7 +20,7 @@ RSpec.describe Integrations::Aggregator::CustomObjectService do
       }
     end
 
-    let(:params) do
+    let(:body) do
       {
         'name' => name
       }
@@ -33,7 +33,7 @@ RSpec.describe Integrations::Aggregator::CustomObjectService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
-      allow(lago_client).to receive(:get).with(headers:, params:).and_return(aggregator_response)
+      allow(lago_client).to receive(:get).with(headers:, body:).and_return(aggregator_response)
     end
 
     it 'successfully fetches custom object' do

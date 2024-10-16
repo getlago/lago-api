@@ -13,7 +13,7 @@ module Integrations
       end
 
       def call
-        response = http_client.get(headers:, params:)
+        response = http_client.get(headers:, body:)
 
         result.custom_object = OpenStruct.new(response)
         result
@@ -33,7 +33,7 @@ module Integrations
         }
       end
 
-      def params
+      def body
         {
           'name' => name
         }

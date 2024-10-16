@@ -30,6 +30,7 @@ module Integrations
         rescue LagoHttpClient::HttpError => e
           message = message(e)
           deliver_integration_error_webhook(integration:, code: 'integration_error', message:)
+          result
         end
 
         private
