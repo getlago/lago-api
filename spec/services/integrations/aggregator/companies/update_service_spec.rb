@@ -65,14 +65,17 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
 
         let(:params) do
           {
-            'properties' => {
-              'name' => customer.name,
-              'domain' => customer.url,
-              'lago_customer_id' => customer.id,
-              'lago_customer_external_id' => customer.external_id,
-              'lago_billing_email' => customer.email,
-              'lago_tax_identification_number' => customer.tax_identification_number,
-              'lago_customer_link' => anything
+            'companyId' => integration_customer.external_customer_id,
+            'input' => {
+              'properties' => {
+                'name' => customer.name,
+                'domain' => customer.url,
+                'lago_customer_id' => customer.id,
+                'lago_customer_external_id' => customer.external_id,
+                'lago_billing_email' => customer.email,
+                'lago_tax_identification_number' => customer.tax_identification_number,
+                'lago_customer_link' => anything
+              }
             }
           }
         end
@@ -105,14 +108,17 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
 
         let(:params) do
           {
-            'properties' => {
-              'name' => customer.name,
-              'domain' => customer.url,
-              'lago_customer_id' => customer.id,
-              'lago_customer_external_id' => customer.external_id,
-              'lago_billing_email' => customer.email,
-              'lago_tax_identification_number' => customer.tax_identification_number,
-              'lago_customer_link' => anything
+            'companyId' => integration_customer.external_customer_id,
+            'input' => {
+              'properties' => {
+                'name' => customer.name,
+                'domain' => customer.url,
+                'lago_customer_id' => customer.id,
+                'lago_customer_external_id' => customer.external_id,
+                'lago_billing_email' => customer.email,
+                'lago_tax_identification_number' => customer.tax_identification_number,
+                'lago_customer_link' => anything
+              }
             }
           }
         end
@@ -146,14 +152,17 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
 
       let(:params) do
         {
-          'properties' => {
-            'name' => customer.name,
-            'domain' => customer.url,
-            'lago_customer_id' => customer.id,
-            'lago_customer_external_id' => customer.external_id,
-            'lago_billing_email' => customer.email,
-            'lago_tax_identification_number' => customer.tax_identification_number,
-            'lago_customer_link' => anything
+          'companyId' => integration_customer.external_customer_id,
+          'input' => {
+            'properties' => {
+              'name' => customer.name,
+              'domain' => customer.url,
+              'lago_customer_id' => customer.id,
+              'lago_customer_external_id' => customer.external_id,
+              'lago_billing_email' => customer.email,
+              'lago_tax_identification_number' => customer.tax_identification_number,
+              'lago_customer_link' => anything
+            }
           }
         }
       end
