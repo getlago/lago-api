@@ -25,13 +25,13 @@ class ChargeFilter < ApplicationRecord
   end
 
   def to_h
-    values.each_with_object({}) do |filter_value, result|
+    @to_h ||= values.each_with_object({}) do |filter_value, result|
       result[filter_value.billable_metric_filter.key] = filter_value.values
     end
   end
 
   def to_h_with_all_values
-    values.each_with_object({}) do |filter_value, result|
+    @to_h_with_all_values ||= values.each_with_object({}) do |filter_value, result|
       values = filter_value.values
       values = filter_value.billable_metric_filter.values if values == [ChargeFilterValue::ALL_FILTER_VALUES]
 

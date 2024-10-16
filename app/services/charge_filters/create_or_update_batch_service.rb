@@ -18,23 +18,22 @@ module ChargeFilters
         return result
       end
 
+      # We only care about order when you have less than 100 filters.
+      touch = filters_params.size < 100
+
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
           # NOTE: since a filter could be a refinement of another one, we have to make sure
           #       that we are targeting the right one
           filter = filters.find do |f|
-            next unless f.to_h.sort == filter_param[:values].sort
-
-            f.values.all? do |value|
-              filter_param[:values][value.key].sort == value.values.sort
-            end
+            f.to_h.sort == filter_param[:values].sort
           end
 
           filter ||= charge.filters.new
 
           filter.invoice_display_name = filter_param[:invoice_display_name]
           filter.properties = filter_param[:properties]
-          if filter.save! && !filter.changed?
+          if filter.save! && touch && !filter.changed?
             # NOTE: Make sure update_at is touched even if not changed to keep the right order
             filter.touch # rubocop:disable Rails/SkipsModelValidations
           end
@@ -48,7 +47,7 @@ module ChargeFilters
             )
 
             filter_value.values = values
-            if filter_value.save! && !filter_value.changed?
+            if filter_value.save! && touch && !filter_value.changed?
               # NOTE: Make sure update_at is touched even if not changed to keep the right order
               filter_value.touch # rubocop:disable Rails/SkipsModelValidations
             end
