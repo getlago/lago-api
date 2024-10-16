@@ -24,13 +24,16 @@ module Integrations
 
           def update_body
             {
-              'properties' => {
-                'email' => customer.email,
-                'firstname' => customer.firstname,
-                'lastname' => customer.lastname,
-                'phone' => customer.phone,
-                'company' => customer.legal_name,
-                'website' => customer.url
+              'contactId' => integration_customer.external_customer_id,
+              'input' => {
+                'properties' => {
+                  'email' => customer.email,
+                  'firstname' => customer.firstname,
+                  'lastname' => customer.lastname,
+                  'phone' => customer.phone,
+                  'company' => customer.legal_name,
+                  'website' => customer.url
+                }
               }
             }
           end
