@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_14_093451) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_15_132635) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -239,8 +239,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_14_093451) do
     t.boolean "prorated", default: false, null: false
     t.string "invoice_display_name"
     t.integer "regroup_paid_fees"
+    t.uuid "parent_id"
     t.index ["billable_metric_id"], name: "index_charges_on_billable_metric_id"
     t.index ["deleted_at"], name: "index_charges_on_deleted_at"
+    t.index ["parent_id"], name: "index_charges_on_parent_id"
     t.index ["plan_id"], name: "index_charges_on_plan_id"
   end
 
@@ -1240,6 +1242,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_14_093451) do
   add_foreign_key "charge_filter_values", "charge_filters"
   add_foreign_key "charge_filters", "charges"
   add_foreign_key "charges", "billable_metrics"
+  add_foreign_key "charges", "charges", column: "parent_id"
   add_foreign_key "charges", "plans"
   add_foreign_key "charges_taxes", "charges"
   add_foreign_key "charges_taxes", "taxes"

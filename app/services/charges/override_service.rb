@@ -17,6 +17,7 @@ module Charges
           c.properties = params[:properties] if params.key?(:properties)
           c.min_amount_cents = params[:min_amount_cents] if params.key?(:min_amount_cents)
           c.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
+          c.parent_id = charge.id
           c.filters = charge.filters.map do |filter|
             f = filter.dup
             f.values = filter.values.map(&:dup)
