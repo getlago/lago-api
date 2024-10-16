@@ -46,6 +46,7 @@ RSpec.describe Types::Customers::Object do
   it { is_expected.to have_field(:shipping_address).of_type('CustomerAddress') }
 
   it { is_expected.to have_field(:anrok_customer).of_type('AnrokCustomer') }
+  it { is_expected.to have_field(:hubspot_customer).of_type('HubspotCustomer') }
   it { is_expected.to have_field(:netsuite_customer).of_type('NetsuiteCustomer') }
   it { is_expected.to have_field(:provider_customer).of_type('ProviderCustomer') }
   it { is_expected.to have_field(:subscriptions).of_type('[Subscription!]!') }

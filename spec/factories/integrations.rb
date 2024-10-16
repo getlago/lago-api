@@ -74,7 +74,7 @@ FactoryBot.define do
     end
 
     secrets do
-      {connection_id: SecureRandom.uuid, private_app_token: SecureRandom.uuid}.to_json
+      {connection_id: SecureRandom.uuid}.to_json
     end
   end
 end

@@ -2029,9 +2029,8 @@ input CreateHubspotIntegrationInput {
   clientMutationId: String
   code: String!
   connectionId: String!
-  defaultTargetedObject: TargetedObjectsEnum!
+  defaultTargetedObject: HubspotTargetedObjectsEnum!
   name: String!
-  privateAppToken: String!
   syncInvoices: Boolean
   syncSubscriptions: Boolean
 }
@@ -3164,6 +3163,7 @@ type Customer {
   Define if a customer has overdue invoices
   """
   hasOverdueInvoices: Boolean!
+  hubspotCustomer: HubspotCustomer
   id: ID!
   invoiceGracePeriod: Int
   invoices: [Invoice!]
@@ -4124,15 +4124,30 @@ type GroupedChargeUsage {
   units: Float!
 }
 
+type HubspotCustomer {
+  externalCustomerId: String
+  id: ID!
+  integrationCode: String
+  integrationId: ID
+  integrationType: IntegrationTypeEnum
+  syncWithProvider: Boolean
+  targetedObject: HubspotTargetedObjectsEnum
+}
+
 type HubspotIntegration {
   code: String!
   connectionId: ID!
-  defaultTargetedObject: TargetedObjectsEnum!
+  defaultTargetedObject: HubspotTargetedObjectsEnum!
   id: ID!
   name: String!
-  privateAppToken: String!
+  portalId: String
   syncInvoices: Boolean
   syncSubscriptions: Boolean
+}
+
+enum HubspotTargetedObjectsEnum {
+  companies
+  contacts
 }
 
 """
@@ -4170,6 +4185,7 @@ input IntegrationCustomerInput {
   integrationType: IntegrationTypeEnum
   subsidiaryId: String
   syncWithProvider: Boolean
+  targetedObject: HubspotTargetedObjectsEnum
 }
 
 type IntegrationItem {
@@ -6818,11 +6834,6 @@ type SyncIntegrationInvoicePayload {
   invoiceId: ID
 }
 
-enum TargetedObjectsEnum {
-  companies
-  contacts
-}
-
 type Tax {
   """
   Number of add ons using this tax
@@ -7853,10 +7864,9 @@ input UpdateHubspotIntegrationInput {
   clientMutationId: String
   code: String
   connectionId: String
-  defaultTargetedObject: TargetedObjectsEnum
+  defaultTargetedObject: HubspotTargetedObjectsEnum
   id: ID
   name: String
-  privateAppToken: String
   syncInvoices: Boolean
   syncSubscriptions: Boolean
 }

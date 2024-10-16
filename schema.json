@@ -8098,23 +8098,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "TargetedObjectsEnum",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "privateAppToken",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
+                  "name": "HubspotTargetedObjectsEnum",
                   "ofType": null
                 }
               },
@@ -12871,6 +12855,20 @@
                   "name": "Boolean",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "hubspotCustomer",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "HubspotCustomer",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -19761,6 +19759,121 @@
         },
         {
           "kind": "OBJECT",
+          "name": "HubspotCustomer",
+          "description": null,
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "externalCustomerId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "integrationCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "integrationId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "integrationType",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "IntegrationTypeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "syncWithProvider",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "targetedObject",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "HubspotTargetedObjectsEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
           "name": "HubspotIntegration",
           "description": null,
           "interfaces": [
@@ -19812,7 +19925,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "TargetedObjectsEnum",
+                  "name": "HubspotTargetedObjectsEnum",
                   "ofType": null
                 }
               },
@@ -19859,16 +19972,12 @@
               ]
             },
             {
-              "name": "privateAppToken",
+              "name": "portalId",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -19907,6 +20016,29 @@
           ],
           "inputFields": null,
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "HubspotTargetedObjectsEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "companies",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contacts",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "SCALAR",
@@ -20127,6 +20259,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "targetedObject",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "HubspotTargetedObjectsEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -35532,29 +35676,6 @@
           "enumValues": null
         },
         {
-          "kind": "ENUM",
-          "name": "TargetedObjectsEnum",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "companies",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "contacts",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
-        },
-        {
           "kind": "OBJECT",
           "name": "Tax",
           "description": null,
@@ -38687,19 +38808,7 @@
               "description": null,
               "type": {
                 "kind": "ENUM",
-                "name": "TargetedObjectsEnum",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "privateAppToken",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
+                "name": "HubspotTargetedObjectsEnum",
                 "ofType": null
               },
               "defaultValue": null,
