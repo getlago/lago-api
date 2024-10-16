@@ -920,6 +920,21 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       )
       expect(response).to have_http_status(:method_not_allowed)
 
+      # it does not allow to create credit notes on invoices with payment status pending
+      create_credit_note(
+        invoice_id: invoice.id,
+        reason: :other,
+        credit_amount_cents: 0,
+        refund_amount_cents: 15,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 15
+          }
+        ]
+      )
+      expect(response).to have_http_status(:method_not_allowed)
+
       # pay the invoice
       update_invoice(invoice, payment_status: :succeeded)
       perform_all_enqueued_jobs
@@ -940,6 +955,26 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
       expect(estimate[:max_refundable_amount_cents]).to eq(10)
       expect(estimate[:max_creditable_amount_cents]).to eq(0)
+
+      # it allows to create credit notes on credit invoices with payment status succeeded
+      # and voids the corresponding amount of credits in the associated active wallet
+      create_credit_note(
+        invoice_id: invoice.id,
+        reason: :other,
+        credit_amount_cents: 0,
+        refund_amount_cents: 5,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 5
+          }
+        ]
+      )
+      credit_note = invoice.credit_notes.order(:created_at).last
+      expect(credit_note.refund_amount_cents).to eq(5)
+      expect(credit_note.total_amount_cents).to eq(5)
+      expect(invoice.associated_active_wallet.balance_cents).to eq(10)
+
 
       # when estimating a credit note with amount higher than the remaining balance, it will return the remaining balance
       wallet.update(balance_cents: 5)
