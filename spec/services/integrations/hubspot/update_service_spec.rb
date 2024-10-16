@@ -48,7 +48,6 @@ RSpec.describe Integrations::Hubspot::UpdateService, type: :service do
       context 'with hubspot premium integration present' do
         before do
           organization.update!(premium_integrations: ['hubspot'])
-          allow(Integrations::Aggregator::SendPrivateAppTokenJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
@@ -63,12 +62,6 @@ RSpec.describe Integrations::Hubspot::UpdateService, type: :service do
             result = service_call
 
             expect(result.integration).to be_a(Integrations::HubspotIntegration)
-          end
-
-          it 'calls Integrations::Aggregator::SendPrivateAppTokenJob' do
-            service_call
-
-            expect(Integrations::Aggregator::SendPrivateAppTokenJob).to have_received(:perform_later).with(integration:)
           end
         end
 
