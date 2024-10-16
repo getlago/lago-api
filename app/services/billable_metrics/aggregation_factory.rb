@@ -11,7 +11,7 @@ module BillableMetrics
     def self.new_instance(charge:, current_usage: false, **attributes)
       event_store = Events::Stores::PostgresStore
 
-      if !charge.pay_in_advance? && supports_clickhouse? && charge.billable_metric.organization.clickhouse_aggregation?
+      if !charge.pay_in_advance? && supports_clickhouse? && charge.billable_metric.organization.clickhouse_events_store?
         event_store = Events::Stores::ClickhouseStore
       end
 

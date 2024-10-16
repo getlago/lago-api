@@ -140,7 +140,7 @@ RSpec.describe Events::PayInAdvanceService, type: :service do
       end
 
       context 'when organization is using clickhouse' do
-        before { organization.update!(clickhouse_aggregation: true) }
+        before { organization.update!(clickhouse_events_store: true) }
 
         it 'enqueues a job to perform the pay_in_advance aggregation' do
           expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
