@@ -42,6 +42,7 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :available_to_credit_amount_cents, GraphQL::Types::BigInt, null: false
       field :associated_active_wallet_present, Boolean, null: false
       field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
       field :refundable_amount_cents, GraphQL::Types::BigInt, null: false
