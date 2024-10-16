@@ -74,7 +74,7 @@ module Integrations
                 formField: true
               },
               {
-                groupName: "companyinformation",
+                groupName: "contactinformation",
                 name: "lago_customer_link",
                 label: "Lago Customer Link",
                 type: "string",
