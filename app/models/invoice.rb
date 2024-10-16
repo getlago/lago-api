@@ -299,7 +299,7 @@ class Invoice < ApplicationRecord
     return if !credit? || customer.wallets.active.empty?
 
     wallet = fees.credit.first&.invoiceable&.wallet
-    wallet if wallet.active?
+    wallet if wallet&.active?
   end
 
   def payment_dispute_losable?
