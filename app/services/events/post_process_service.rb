@@ -84,10 +84,13 @@ module Events
       charges = billable_metric.charges
         .joins(:plan)
         .where(plans: {id: active_subscription.map(&:plan_id)})
+        .includes(filters: {values: :billable_metric_filter})
 
       charges.each do |charge|
+        charge_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
+
         active_subscription.each do |subscription|
-          Subscriptions::ChargeCacheService.new(subscription:, charge:).expire_cache
+          Subscriptions::ChargeCacheService.new(subscription:, charge:, charge_filter:).expire_cache
         end
       end
     end
