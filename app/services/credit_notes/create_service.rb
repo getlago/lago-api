@@ -102,7 +102,7 @@ module CreditNotes
 
     def valid_type_or_status?
       return true if automatic
-      return false if invoice.credit?
+      return false if invoice.credit? && invoice.payment_status != 'succeeded'
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
