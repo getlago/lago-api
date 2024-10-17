@@ -90,13 +90,15 @@ module CreditNotes
       end
 
       def create_gocardless_refund
+        # NOTE: Gocarless API accepts only 3 keys at max in metadata
+        #       See https://developer.gocardless.com/api-reference#refunds-create-a-refund
+        #       for reference
         client.refunds.create(
           params: {
             amount: credit_note.refund_amount_cents,
             total_amount_confirmation: credit_note.refund_amount_cents,
             links: {payment: payment.provider_payment_id},
             metadata: {
-              lago_customer_id: customer.id,
               lago_credit_note_id: credit_note.id,
               lago_invoice_id: invoice.id,
               reason: credit_note.reason.to_s
