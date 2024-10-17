@@ -178,14 +178,14 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         version_number: 3
       )
     end
-    let(:wallet) { create(:wallet, customer:, balance_cents: 3) }
+    let(:wallet) { create(:wallet, customer:, balance_cents: 10) }
     let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
     let(:credit_fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
     let(:items) do
       [
         {
           fee_id: credit_fee.id,
-          amount_cents: 10
+          amount_cents: 3
         }
       ]
     end
@@ -193,7 +193,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     before { credit_fee }
 
     context 'when wallet for the credits is active' do
-      it 'estimates the credit and refund amount hot higher than wallet.balance_cents' do
+      it 'estimates the credit and refund amount not higher than wallet.balance_cents' do
         result = estimate_service.call
 
         aggregate_failures do
@@ -201,8 +201,6 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
 
           credit_note = result.credit_note
           expect(credit_note).to have_attributes(
-            invoice:,
-            customer:,
             currency: invoice.currency,
             credit_amount_cents: 0,
             refund_amount_cents: 3,
@@ -212,28 +210,45 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
           )
         end
       end
+
+      context 'when estimating with amount higher than in the active wallet' do
+        let(:items) do
+          [
+            {
+              fee_id: credit_fee.id,
+              amount_cents: 50
+            }
+          ]
+        end
+
+        it 'returns a failure' do
+          result = estimate_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages.keys).to include(:amount_cents)
+            expect(result.error.messages[:amount_cents]).to eq(
+              %w[
+                higher_than_wallet_balance
+              ]
+            )
+          end
+        end
+      end
     end
 
     context 'when wallet for the credits is not active' do
-      let(:wallet) { create(:wallet, customer:, balance_cents: 3, status: :terminated) }
+      let(:wallet) { create(:wallet, customer:, balance_cents: 10, status: :terminated) }
 
       it 'estimates the credit and refund amount hot higher than wallet.balance_amount_cents' do
         result = estimate_service.call
 
         aggregate_failures do
-          expect(result).to be_success
+          expect(result).not_to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note).to have_attributes(
-            invoice:,
-            customer:,
-            currency: invoice.currency,
-            credit_amount_cents: 0,
-            refund_amount_cents: 0,
-            coupons_adjustment_amount_cents: 0,
-            taxes_amount_cents: 0,
-            taxes_rate: 0
-          )
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         end
       end
     end

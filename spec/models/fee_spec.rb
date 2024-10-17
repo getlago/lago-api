@@ -402,4 +402,55 @@ RSpec.describe Fee, type: :model do
       end
     end
   end
+
+  describe '#creditable_amount_cents' do
+    let(:fee) { create(:fee, fee_type:, amount_cents:, invoice:) }
+    let(:invoice) { create(:invoice, invoice_type: :credit) }
+    let(:amount_cents) { 1000 }
+
+    context 'when fee_type is subscription' do
+      let(:fee_type) { 'subscription' }
+
+      it 'returns the correct creditable amount' do
+        expect(fee.creditable_amount_cents).to eq(1000)
+      end
+    end
+
+    context 'when fee_type is credit' do
+      let(:fee_type) { 'credit' }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+
+      it 'returns the correct creditable amount when no associated wallet is found' do
+        expect(fee.creditable_amount_cents).to eq(0)
+      end
+
+      context 'when associated walled exists' do
+        before { fee.update(invoiceable: wallet_transaction, fee_type: :credit) }
+
+        context 'when associated wallet have lower amount than remaining items sum' do
+          let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
+
+          it 'returns the wallet balance' do
+            expect(fee.creditable_amount_cents).to eq(500)
+          end
+        end
+
+        context 'when associated wallet have higher amount than remaining items sum' do
+          let(:wallet) { create(:wallet, balance_cents: 1500, customer: invoice.customer) }
+
+          it 'returns the wallet balance' do
+            expect(fee.creditable_amount_cents).to eq(1000)
+          end
+        end
+
+        context 'when associated wallet is terminated' do
+          let(:wallet) { create(:wallet, balance_cents: 1500, status: :terminated, customer: invoice.customer) }
+
+          it 'returns the wallet balance' do
+            expect(fee.creditable_amount_cents).to eq(0)
+          end
+        end
+      end
+    end
+  end
 end
