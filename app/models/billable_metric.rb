@@ -33,6 +33,7 @@ class BillableMetric < ApplicationRecord
   enum weighted_interval: WEIGHTED_INTERVAL
 
   validate :validate_recurring
+  validate :validate_expression
 
   validates :name, presence: true
   validates :field_name, presence: true, if: :should_have_field_name?
@@ -74,6 +75,13 @@ class BillableMetric < ApplicationRecord
     return unless count_agg? || max_agg? || latest_agg?
 
     errors.add(:recurring, :not_compatible_with_aggregation_type)
+  end
+
+  def validate_expression
+    return if expression.blank?
+    return if Lago::ExpressionParser.validate(expression).blank?
+
+    errors.add(:expression, :invalid_expression)
   end
 end
 
