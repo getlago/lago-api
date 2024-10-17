@@ -439,7 +439,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           currency: 'EUR',
           fees_amount_cents: 1000,
           total_amount_cents: 1000,
-          payment_status: :succeeded,
+          payment_status: :succeeded
         )
       end
       let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount: }
@@ -478,8 +478,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           # in the transaction is 1, while the "money" amount is 10
           expect(wallet_transaction.credit_amount).to eq(1)
           expect(wallet_transaction.amount).to eq(10)
-          expect(wallet_transaction. transaction_status).to eq("voided")
-          expect(wallet_transaction. transaction_type).to eq("outbound")
+          expect(wallet_transaction.transaction_status).to eq("voided")
+          expect(wallet_transaction.transaction_type).to eq("outbound")
           expect(wallet.reload.balance_cents).to eq(0)
         end
       end
@@ -487,7 +487,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       context 'with different rate amount' do
         let(:rate_amount) { 20 }
 
-        it 'it calculates correct credits amount' do
+        it 'calculates correct credits amount' do
           result = create_service.call
 
           aggregate_failures do
@@ -502,10 +502,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         end
       end
 
-      context 'When wallet is terminated' do
+      context 'when wallet is terminated' do
         let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount:, status: :terminated }
 
-        it 'it returns error' do
+        it 'returns error' do
           result = create_service.call
 
           aggregate_failures do
@@ -520,7 +520,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       context 'when associated wallet balance is less than requested sum' do
         let(:wallet) { create :wallet, customer:, balance_cents: 500, rate_amount: }
 
-        it 'it returns error' do
+        it 'returns error' do
           result = create_service.call
 
           aggregate_failures do
@@ -535,7 +535,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       context 'when creating credit_note with credit amount' do
         let(:credit_amount_cents) { 10 }
 
-        it 'it returns error' do
+        it 'returns error' do
           result = create_service.call
 
           aggregate_failures do

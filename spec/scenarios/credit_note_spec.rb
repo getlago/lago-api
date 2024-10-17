@@ -1039,7 +1039,6 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       )
       expect(response).to have_http_status(:method_not_allowed)
       expect(response.body).to include('invalid_type_or_status')
-
     end
   end
 end

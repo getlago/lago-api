@@ -404,7 +404,7 @@ RSpec.describe Fee, type: :model do
   end
 
   describe '#creditable_amount_cents' do
-    let(:fee) { create(:fee, fee_type:, amount_cents:,  invoice:) }
+    let(:fee) { create(:fee, fee_type:, amount_cents:, invoice:) }
     let(:invoice) { create(:invoice, invoice_type: :credit) }
     let(:amount_cents) { 1000 }
 
