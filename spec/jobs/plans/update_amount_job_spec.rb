@@ -7,12 +7,12 @@ RSpec.describe Plans::UpdateAmountJob, type: :job do
   let(:amount_cents) { 200 }
 
   before do
-    allow(Plans::UpdateAmountJob).to receive(:call).with(plan:, amount_cents:)
+    allow(described_class).to receive(:call).with(plan:, amount_cents:)
   end
 
   it 'calls the service' do
     described_class.perform_now(plan:, amount_cents:)
 
-    expect(Plans::UpdateAmountJob).to have_received(:call)
+    expect(described_class).to have_received(:call)
   end
 end
