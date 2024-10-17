@@ -83,6 +83,7 @@ module Api
           :external_customer_id,
           :billable_metric_code,
           :currency,
+          :event_transaction_id,
           :created_at_from,
           :created_at_to,
           :failed_at_from,

@@ -189,6 +189,23 @@ RSpec.describe FeesQuery, type: :query do
       end
     end
 
+    context 'with event_transaction_id filter' do
+      let(:fee) do
+        create(:fee, subscription:, invoice: nil, pay_in_advance_event_transaction_id: 'transaction-id')
+      end
+
+      let(:filters) { {event_transaction_id: 'transaction-id'} }
+
+      it 'applies the filter' do
+        result = fees_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
+        end
+      end
+    end
+
     context 'with created_at filters' do
       let(:filters) do
         {
