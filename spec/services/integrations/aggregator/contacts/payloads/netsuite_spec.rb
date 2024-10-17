@@ -315,7 +315,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
       {
         'type' => 'customer',
         'recordId' => integration_customer.external_customer_id,
-        'values' => {
+        'columns' => {
           'isperson' => isperson,
           'subsidiary' => integration_customer.subsidiary_id,
           'custentity_lago_sf_id' => customer.external_salesforce_id,
