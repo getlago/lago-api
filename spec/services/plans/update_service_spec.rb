@@ -153,7 +153,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         it 'does not enqueue the job for updating subscription fee' do
           expect do
             plans_service.call
-          end.not_to have_enqueued_job(Plans::UpdateSubscriptionFeeJob)
+          end.not_to have_enqueued_job(Plans::UpdateAmountJob)
         end
       end
 
@@ -163,7 +163,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         it 'does not enqueue the job for updating subscription fee' do
           expect do
             plans_service.call
-          end.not_to have_enqueued_job(Plans::UpdateSubscriptionFeeJob)
+          end.not_to have_enqueued_job(Plans::UpdateAmountJob)
         end
       end
 
@@ -171,7 +171,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         it 'enqueues the job for updating subscription fee' do
           expect do
             plans_service.call
-          end.to have_enqueued_job(Plans::UpdateSubscriptionFeeJob)
+          end.to have_enqueued_job(Plans::UpdateAmountJob)
         end
       end
 
@@ -183,7 +183,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         it 'does not enqueue the job for updating subscription fee' do
           expect do
             plans_service.call
-          end.not_to have_enqueued_job(Plans::UpdateSubscriptionFeeJob)
+          end.not_to have_enqueued_job(Plans::UpdateAmountJob)
         end
       end
     end
