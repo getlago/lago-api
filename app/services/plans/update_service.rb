@@ -91,16 +91,16 @@ module Plans
 
     def cascade_subscription_fee_update(old_amount_cents)
       return unless cascade?
-      return if plan.children.empty?
       return if old_amount_cents == plan.amount_cents
+      return if plan.children.empty?
 
       plan.children.where(amount_cents: old_amount_cents).find_each do |p|
-        Plans::UpdateSubscriptionFeeJob.perform_later(plan: p, amount_cents: plan.amount_cents)
+        Plans::UpdateAmountJob.perform_later(plan: p, amount_cents: plan.amount_cents)
       end
     end
 
     def cascade?
-      params[:cascade_updates].present? && params[:cascade_updates].to_s == 'true'
+      ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
     end
 
     def create_usage_threshold(plan, params)

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Plans
-  class UpdateSubscriptionFeeService < BaseService
+  class UpdateAmountService < BaseService
     def initialize(plan:, amount_cents:)
       @plan = plan
       @amount_cents = amount_cents

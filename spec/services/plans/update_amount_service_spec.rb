@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Plans::UpdateSubscriptionFeeService, type: :service do
+RSpec.describe Plans::UpdateAmountService, type: :service do
   subject(:update_service) { described_class.new(plan:, amount_cents:) }
 
   let(:membership) { create(:membership) }
