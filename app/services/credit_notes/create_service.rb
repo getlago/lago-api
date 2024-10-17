@@ -106,7 +106,7 @@ module CreditNotes
 
     def valid_type_or_status?
       return true if automatic
-      return false if invoice.credit? && invoice.payment_status != 'succeeded'
+      return false if invoice.credit? && (invoice.payment_status != 'succeeded' || invoice.associated_active_wallet.nil?)
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end

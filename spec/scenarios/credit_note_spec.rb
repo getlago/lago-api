@@ -974,12 +974,11 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       credit_note = invoice.credit_notes.order(:created_at).last
       expect(credit_note.refund_amount_cents).to eq(500)
       expect(credit_note.total_amount_cents).to eq(500)
-      expect(wallet.reload.balance_cents).to eq(1000)
       wallet_transaction = wallet.wallet_transactions.order(:created_at).last
       expect(wallet_transaction.status).to eq('settled')
       expect(wallet_transaction.transaction_status).to eq('voided')
       expect(wallet_transaction.credit_note_id).to eq(credit_note.id)
-
+      expect(wallet.reload.balance_cents).to eq(1000)
 
       # when estimating a credit note with amount higher than the remaining balance, it throws an error
       wallet.update(balance_cents: 5)
@@ -1009,6 +1008,37 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       )
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.body).to include('higher_than_wallet_balance')
+
+      expect(wallet.reload.balance_cents).to eq(5)
+
+      # when wallet is terminated, it does not allow to create credit notes
+      wallet.update(status: :terminated)
+
+      estimate_credit_note(
+        invoice_id: invoice.id,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 1
+          }
+        ]
+      )
+      expect(response).to have_http_status(:method_not_allowed)
+      expect(response.body).to include('invalid_type_or_status')
+
+      create_credit_note(
+        invoice_id: invoice.id,
+        reason: :other,
+        refund_amount_cents: 1,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 1
+          }
+        ]
+      )
+      expect(response).to have_http_status(:method_not_allowed)
+      expect(response.body).to include('invalid_type_or_status')
 
     end
   end
