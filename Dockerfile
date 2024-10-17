@@ -5,9 +5,11 @@ WORKDIR /app
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 
-RUN apt update -qq && apt install nodejs build-essential git pkg-config libpq-dev curl -y
+RUN apt update -qq && apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev curl -y && \
+  curl https://sh.rustup.rs -sSf | bash -s -- -y
 
 ENV BUNDLER_VERSION='2.5.5'
+ENV PATH="$PATH:/root/.cargo/bin/"
 RUN gem install bundler --no-document -v '2.5.5'
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
