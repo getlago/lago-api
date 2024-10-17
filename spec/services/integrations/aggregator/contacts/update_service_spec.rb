@@ -43,7 +43,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
           {
             'type' => 'customer',
             'recordId' => integration_customer.external_customer_id,
-            'values' => {
+            'columns' => {
               'companyname' => customer.name,
               'isperson' => 'F',
               'subsidiary' => integration_customer.subsidiary_id,
@@ -132,7 +132,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         {
           'type' => 'customer',
           'recordId' => integration_customer.external_customer_id,
-          'values' => {
+          'columns' => {
             'companyname' => customer.name,
             'isperson' => 'F',
             'subsidiary' => integration_customer.subsidiary_id,
