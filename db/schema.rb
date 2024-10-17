@@ -446,6 +446,11 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_16_133129) do
     t.string "firstname"
     t.string "lastname"
     t.enum "customer_type", enum_type: "customer_type"
+    t.uuid "applied_dunning_campaign_id"
+    t.boolean "exclude_from_dunning_campaign", default: false, null: false
+    t.integer "last_dunning_campaign_attempt", default: 0, null: false
+    t.datetime "last_dunning_campaign_attempt_at", precision: nil
+    t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
@@ -1265,6 +1270,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_16_133129) do
   add_foreign_key "credits", "invoices"
   add_foreign_key "credits", "invoices", column: "progressive_billing_invoice_id"
   add_foreign_key "customer_metadata", "customers"
+  add_foreign_key "customers", "dunning_campaigns", column: "applied_dunning_campaign_id"
   add_foreign_key "customers", "organizations"
   add_foreign_key "customers_taxes", "customers"
   add_foreign_key "customers_taxes", "taxes"

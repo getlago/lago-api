@@ -9,6 +9,7 @@ RSpec.describe DunningCampaign, type: :model do
 
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:thresholds).dependent(:destroy) }
+  it { is_expected.to have_many(:customers).dependent(:nullify) }
 
   it { is_expected.to validate_presence_of(:name) }
 
