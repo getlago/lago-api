@@ -21,12 +21,12 @@ module Events
       event.timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
-      event.save! unless organization.clickhouse_aggregation?
+      event.save! unless organization.clickhouse_events_store?
 
       result.event = event
 
       produce_kafka_event(event)
-      Events::PostProcessJob.perform_later(event:) unless organization.clickhouse_aggregation?
+      Events::PostProcessJob.perform_later(event:) unless organization.clickhouse_events_store?
 
       result
     rescue ActiveRecord::RecordInvalid => e

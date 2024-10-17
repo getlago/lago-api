@@ -86,7 +86,7 @@ module Invoices
     end
 
     def charge_usage(charge)
-      return charge_usage_without_cache(charge) if organization.clickhouse_aggregation?
+      return charge_usage_without_cache(charge) if organization.clickhouse_events_store?
 
       json = Rails.cache.fetch(charge_cache_key(charge), expires_in: charge_cache_expiration) do
         fees_result = Fees::ChargeService.new(

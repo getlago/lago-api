@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_15_132635) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_16_133129) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -906,6 +906,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_15_132635) do
     t.string "premium_integrations", default: [], null: false, array: true
     t.boolean "custom_aggregation", default: false
     t.boolean "finalize_zero_amount_invoice", default: true, null: false
+    t.boolean "clickhouse_events_store", default: false, null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"

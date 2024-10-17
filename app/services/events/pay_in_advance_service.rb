@@ -15,10 +15,10 @@ module Events
       # NOTE: Temporary condition to support both Postgres and Clickhouse (via kafka)
       if kafka_producer_enabled?
         # NOTE: when clickhouse, ignore event coming from postgres (Rest API)
-        return result if event.id.present? && event.organization.clickhouse_aggregation?
+        return result if event.id.present? && event.organization.clickhouse_events_store?
 
         # NOTE: without clickhouse, ignore events coming from kafka
-        return result if event.id.nil? && !event.organization.clickhouse_aggregation?
+        return result if event.id.nil? && !event.organization.clickhouse_events_store?
       end
 
       charges.where(invoiceable: false).find_each do |charge|
