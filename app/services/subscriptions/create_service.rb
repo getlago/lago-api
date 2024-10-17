@@ -15,10 +15,9 @@ module Subscriptions
       @external_id = params[:external_id].to_s.strip
       @plan_overrides = (params[:plan_overrides].to_h || {}).with_indifferent_access
 
-      @current_subscription = if api_context?
-        editable_subscriptions&.find_by(external_id:)
-      else
-        editable_subscriptions&.find_by(id: params[:subscription_id])
+      if editable_subscriptions
+        @current_subscription = editable_subscriptions.where(id: params[:subscription_id])
+          .or(editable_subscriptions.where(external_id:)).first
       end
     end
 
