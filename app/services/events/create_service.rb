@@ -50,7 +50,8 @@ module Events
 
       evaluation_event = Lago::Event.new(event.code, event.timestamp.to_i, event.properties)
 
-      event.properties[bm.field_name] = Lago::ExpressionParser.parse(bm.expression)&.evaluate(evaluation_event)
+      value = Lago::ExpressionParser.parse(bm.expression)&.evaluate(evaluation_event)
+      event.properties[bm.field_name] = value
     end
 
     def produce_kafka_event(event)
