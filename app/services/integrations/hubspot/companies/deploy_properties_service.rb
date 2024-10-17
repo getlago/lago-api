@@ -25,6 +25,7 @@ module Integrations
         rescue LagoHttpClient::HttpError => e
           message = message(e)
           deliver_integration_error_webhook(integration:, code: 'integration_error', message:)
+          result
         end
 
         private
@@ -75,6 +76,15 @@ module Integrations
                 groupName: "companyinformation",
                 name: "lago_tax_identification_number",
                 label: "Lago Tax Identification Number",
+                type: "string",
+                fieldType: "text",
+                searchableInGlobalSearch: true,
+                formField: true
+              },
+              {
+                groupName: "companyinformation",
+                name: "lago_customer_link",
+                label: "Lago Customer Link",
                 type: "string",
                 fieldType: "text",
                 searchableInGlobalSearch: true,

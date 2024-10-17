@@ -83,7 +83,6 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
               expect(aggregator_contacts_update_service).to have_received(:call)
               expect(result).to be_success
               expect(result.integration_customer).to eq(integration_customer)
-              expect(result.integration_customer.subsidiary_id).to eq(subsidiary_id)
             end
           end
         end
@@ -99,12 +98,6 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
               expect(result).to be_success
               expect(result.integration_customer).to eq(integration_customer)
             end
-          end
-
-          it 'updates integration customer' do
-            result = service_call
-
-            expect(result.integration_customer.subsidiary_id).to eq(subsidiary_id)
           end
         end
 
@@ -132,30 +125,16 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
         context 'when customer external id is present' do
           let(:external_customer_id) { SecureRandom.uuid }
 
-          it 'does not calls aggregator update service' do
+          it 'calls aggregator update service' do
             service_call
 
-            expect(aggregator_contacts_update_service).not_to have_received(:call)
+            expect(aggregator_contacts_update_service).to have_received(:call)
           end
 
           it 'updates integration customer' do
             result = service_call
 
             expect(result.integration_customer.external_customer_id).to eq(external_customer_id)
-          end
-        end
-
-        context 'when subsidiary id is present' do
-          it 'does not calls aggregator update service' do
-            service_call
-
-            expect(aggregator_contacts_update_service).not_to have_received(:call)
-          end
-
-          it 'does not save subsidiary id' do
-            result = service_call
-
-            expect(result.integration_customer.subsidiary_id).not_to eq(subsidiary_id)
           end
         end
 

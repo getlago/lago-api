@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Integrations::Aggregator::Contacts::CreateService do
   subject(:service_call) { described_class.call(integration:, customer:, subsidiary_id:) }
 
+  let(:service) { described_class.new(integration:, customer:, subsidiary_id:) }
   let(:customer) { create(:customer, :with_same_billing_and_shipping_address, organization:) }
   let(:subsidiary_id) { '1' }
   let(:organization) { create(:organization) }
@@ -327,6 +328,86 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
               }
             )
         end
+      end
+    end
+  end
+
+  describe '#process_hash_result' do
+    subject(:process_hash_result) { service.send(:process_hash_result, body) }
+
+    let(:result) { service.instance_variable_get(:@result) }
+    let(:integration) { create(:hubspot_integration, organization:) }
+    let(:integration_type) { 'hubspot' }
+    let(:integration_type_key) { 'hubspot' }
+
+    before do
+      allow(service).to receive(:deliver_error_webhook)
+    end
+
+    context 'when contact is successfully created' do
+      let(:body) do
+        {
+          'succeededContacts' => [
+            {
+              'id' => '2e50c200-9a54-4a66-b241-1e75fb87373f',
+              'email' => 'billing@example.com'
+            }
+          ]
+        }
+      end
+
+      it 'sets the contact_id and email in the result' do
+        process_hash_result
+
+        expect(result.contact_id).to eq('2e50c200-9a54-4a66-b241-1e75fb87373f')
+        expect(result.email).to eq('billing@example.com')
+      end
+    end
+
+    context 'when contact creation fails' do
+      let(:body) do
+        {
+          'failedContacts' => [
+            {
+              'validation_errors' => [
+                {'Message' => 'Email is invalid'},
+                {'Message' => 'Name is required'}
+              ]
+            }
+          ]
+        }
+      end
+
+      it 'delivers an error webhook' do
+        process_hash_result
+
+        expect(service).to have_received(:deliver_error_webhook).with(
+          customer:,
+          code: 'Validation error',
+          message: 'Email is invalid. Name is required'
+        )
+      end
+    end
+
+    context 'when there is a general error' do
+      let(:body) do
+        {
+          'error' => {
+            'payload' => {
+              'message' => 'An unexpected error occurred'
+            }
+          }
+        }
+      end
+
+      it 'delivers an error webhook' do
+        process_hash_result
+
+        expect(service).to have_received(:deliver_error_webhook).with(
+          customer:,
+          code: 'Validation error',
+          message: 'An unexpected error occurred'
+        )
       end
     end
   end

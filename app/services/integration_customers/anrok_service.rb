@@ -2,10 +2,11 @@
 
 module IntegrationCustomers
   class AnrokService < ::BaseService
-    def initialize(integration:, customer:, subsidiary_id:)
+    def initialize(integration:, customer:, subsidiary_id:, **params)
       @customer = customer
       @subsidiary_id = subsidiary_id
       @integration = integration
+      @params = params&.with_indifferent_access
 
       super(nil)
     end
@@ -26,6 +27,6 @@ module IntegrationCustomers
 
     private
 
-    attr_reader :integration, :customer, :subsidiary_id
+    attr_reader :integration, :customer, :subsidiary_id, :params
   end
 end

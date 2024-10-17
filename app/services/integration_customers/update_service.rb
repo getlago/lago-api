@@ -14,15 +14,13 @@ module IntegrationCustomers
       return result if integration_customer.type == 'IntegrationCustomers::AnrokCustomer'
       return result.not_found_failure!(resource: 'integration_customer') unless integration_customer
 
-      integration_customer.update!(external_customer_id:) if external_customer_id.present?
+      integration_customer.external_customer_id = external_customer_id if external_customer_id.present?
+      integration_customer.targeted_object = targeted_object if targeted_object.present?
+      integration_customer.save!
 
-      if sync_with_provider
-        integration_customer.subsidiary_id = subsidiary_id if subsidiary_id.present?
-
-        update_result = Integrations::Aggregator::Contacts::UpdateService.call(integration:, integration_customer:)
+      if integration_customer.external_customer_id.present?
+        update_result = update_service_class.call(integration:, integration_customer:)
         return update_result unless update_result.success?
-
-        integration_customer.save!
       end
 
       result.integration_customer = integration_customer
@@ -34,5 +32,15 @@ module IntegrationCustomers
     attr_reader :integration_customer
 
     delegate :customer, to: :integration_customer
+
+    def update_service_class
+      @update_service_class ||= if integration_customer.type != 'IntegrationCustomers::HubspotCustomer'
+        Integrations::Aggregator::Contacts::UpdateService
+      elsif integration_customer.targeted_object == 'contacts'
+        Integrations::Aggregator::Contacts::UpdateService
+      else
+        Integrations::Aggregator::Companies::UpdateService
+      end
+    end
   end
 end

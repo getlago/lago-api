@@ -9,14 +9,26 @@ RSpec.describe Integrations::Hubspot::Invoices::DeployObjectService do
 
   describe '.call' do
     let(:http_client) { instance_double(LagoHttpClient::Client) }
+    let(:http_client_get) { instance_double(LagoHttpClient::Client) }
     let(:endpoint) { "https://api.nango.dev/v1/hubspot/object" }
+    let(:customer_object_endpoint) { "https://api.nango.dev/v1/hubspot/custom-object" }
     let(:response) { instance_double('Response', success?: true) }
+
+    let(:get_response) do
+      path = Rails.root.join('spec/fixtures/integration_aggregator/custom_object_response.json')
+      JSON.parse(File.read(path))
+    end
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
         .with(endpoint)
         .and_return(http_client)
+      allow(LagoHttpClient::Client).to receive(:new)
+        .with(customer_object_endpoint)
+        .and_return(http_client_get)
       allow(http_client).to receive(:post_with_response).and_return(response)
+      allow(http_client_get).to receive(:get).and_raise LagoHttpClient::HttpError.new('error', 'error', nil)
+      allow(response).to receive(:[]).with('objectTypeId').and_return('123')
 
       integration.invoices_properties_version = nil
       integration.save!
@@ -47,6 +59,50 @@ RSpec.describe Integrations::Hubspot::Invoices::DeployObjectService do
         aggregate_failures do
           expect(LagoHttpClient::Client).not_to have_received(:new)
           expect(http_client).not_to have_received(:post_with_response)
+          expect(integration.reload.invoices_properties_version).to eq(described_class::VERSION)
+        end
+      end
+    end
+
+    context 'when custom object service returns a valid objectTypeId' do
+      let(:custom_object_result) do
+        instance_double(
+          'CustomObjectResult',
+          success?: true,
+          custom_object: instance_double('CustomObject', objectTypeId: '123')
+        )
+      end
+
+      before do
+        allow(http_client).to receive(:get).and_return(get_response)
+        allow(Integrations::Aggregator::CustomObjectService).to receive(:call).and_return(custom_object_result)
+      end
+
+      it 'saves the objectTypeId and updates the invoices_properties_version' do
+        deploy_object_service.call
+
+        aggregate_failures do
+          expect(integration.reload.invoices_object_type_id).to eq('123')
+          expect(integration.reload.invoices_properties_version).to eq(described_class::VERSION)
+        end
+      end
+    end
+
+    context 'when custom object service does not return a valid objectTypeId' do
+      let(:custom_object_result) do
+        instance_double('CustomObjectResult', success?: false)
+      end
+
+      before do
+        allow(Integrations::Aggregator::CustomObjectService).to receive(:call).and_return(custom_object_result)
+      end
+
+      it 'makes an API call and updates the invoices_properties_version' do
+        deploy_object_service.call
+
+        aggregate_failures do
+          expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
+          expect(http_client).to have_received(:post_with_response)
           expect(integration.reload.invoices_properties_version).to eq(described_class::VERSION)
         end
       end

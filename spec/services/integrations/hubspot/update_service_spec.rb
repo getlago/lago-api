@@ -16,8 +16,7 @@ RSpec.describe Integrations::Hubspot::UpdateService, type: :service do
     let(:update_args) do
       {
         name:,
-        code: 'hubspot1',
-        private_app_token: 'new_token'
+        code: 'hubspot1'
       }
     end
 
@@ -49,7 +48,6 @@ RSpec.describe Integrations::Hubspot::UpdateService, type: :service do
       context 'with hubspot premium integration present' do
         before do
           organization.update!(premium_integrations: ['hubspot'])
-          allow(Integrations::Aggregator::SendPrivateAppTokenJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
@@ -58,19 +56,12 @@ RSpec.describe Integrations::Hubspot::UpdateService, type: :service do
 
             integration = Integrations::HubspotIntegration.order(:updated_at).last
             expect(integration.name).to eq(name)
-            expect(integration.private_app_token).to eq(update_args[:private_app_token])
           end
 
           it 'returns an integration in result object' do
             result = service_call
 
             expect(result.integration).to be_a(Integrations::HubspotIntegration)
-          end
-
-          it 'calls Integrations::Aggregator::SendPrivateAppTokenJob' do
-            service_call
-
-            expect(Integrations::Aggregator::SendPrivateAppTokenJob).to have_received(:perform_later).with(integration:)
           end
         end
 

@@ -10,7 +10,6 @@ RSpec.describe Types::Integrations::Hubspot::UpdateInput do
   it { is_expected.to accept_argument(:name).of_type('String') }
   it { is_expected.to accept_argument(:connection_id).of_type('String') }
   it { is_expected.to accept_argument(:default_targeted_object).of_type('TargetedObjectsEnum') }
-  it { is_expected.to accept_argument(:private_app_token).of_type('String') }
   it { is_expected.to accept_argument(:sync_invoices).of_type('Boolean') }
   it { is_expected.to accept_argument(:sync_subscriptions).of_type('Boolean') }
 end
