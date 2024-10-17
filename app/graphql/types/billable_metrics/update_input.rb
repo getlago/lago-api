@@ -10,6 +10,7 @@ module Types
       argument :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, required: true
       argument :code, String, required: true
       argument :description, String
+      argument :expression, String, required: false
       argument :field_name, String, required: false
       argument :name, String, required: true
       argument :recurring, Boolean, required: false

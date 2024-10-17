@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class ChargeCacheService
+  class ChargeCacheService < CacheService
     CACHE_KEY_VERSION = '1'
 
     def self.expire_for_subscription(subscription)
@@ -35,10 +35,6 @@ module Subscriptions
         charge_filter&.id,
         charge_filter&.updated_at&.iso8601
       ].compact.join('/')
-    end
-
-    def expire_cache
-      Rails.cache.delete(cache_key)
     end
 
     private

@@ -39,7 +39,9 @@ Rails.application.routes.draw do
       delete '/subscriptions/:external_id', to: 'subscriptions#terminate', as: :terminate
 
       resources :add_ons, param: :code, code: /.*/
-      resources :billable_metrics, param: :code, code: /.*/
+      resources :billable_metrics, param: :code, code: /.*/ do
+        post :evaluate_expression, on: :collection
+      end
 
       resources :coupons, param: :code, code: /.*/
       resources :credit_notes, only: %i[create update show index] do

@@ -176,7 +176,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_31_102231) do
     t.boolean "recurring", default: false, null: false
     t.enum "weighted_interval", enum_type: "billable_metric_weighted_interval"
     t.text "custom_aggregator"
+    t.string "expression"
     t.index ["deleted_at"], name: "index_billable_metrics_on_deleted_at"
+    t.index ["organization_id", "code", "expression"], name: "index_billable_metrics_on_org_id_and_code_and_expr", where: "((expression IS NOT NULL) AND ((expression)::text <> ''::text))"
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
   end
