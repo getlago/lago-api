@@ -21,7 +21,7 @@ class WebhooksController < ApplicationController
   end
 
   def gocardless
-    result = PaymentProviders::GocardlessService.new.handle_incoming_webhook(
+    result = PaymentProviders::Gocardless::HandleIncomingWebhookService.call(
       organization_id: params[:organization_id],
       code: params[:code].presence,
       body: request.body.read,

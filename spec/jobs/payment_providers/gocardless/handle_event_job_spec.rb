@@ -9,21 +9,33 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventJob, type: :job do
   let(:result) { BaseService::Result.new }
   let(:organization) { create(:organization) }
 
-  let(:gocardless_events) do
-    []
+  let(:event_json) do
+    path = Rails.root.join('spec/fixtures/gocardless/events.json')
+    JSON.parse(File.read(path))['events'].first.to_json
   end
 
-  before do
-    allow(PaymentProviders::GocardlessService).to receive(:new)
-      .and_return(gocardless_service)
-    allow(gocardless_service).to receive(:handle_event)
-      .and_return(result)
+  let(:service_result) { BaseService::Result.new }
+
+  it 'delegate to the event service' do
+    allow(PaymentProviders::Gocardless::HandleEventService).to receive(:call)
+      .with(event_json:)
+      .and_return(service_result)
+
+    handle_event_job.perform_now(organization:, event_json:)
+
+    expect(PaymentProviders::Gocardless::HandleEventService).to have_received(:call)
   end
 
-  it 'calls the handle event service' do
-    handle_event_job.perform_now(events_json: gocardless_events)
+  context 'with legacy multiple events' do
+    let(:events_json) do
+      path = Rails.root.join('spec/fixtures/gocardless/events.json')
+      File.read(path)
+    end
 
-    expect(PaymentProviders::GocardlessService).to have_received(:new)
-    expect(gocardless_service).to have_received(:handle_event)
+    it 'enqueues a job for each event' do
+      handle_event_job.perform_now(events_json:)
+
+      expect(described_class).to have_been_enqueued.exactly(JSON.parse(events_json)['events'].count).times
+    end
   end
 end
