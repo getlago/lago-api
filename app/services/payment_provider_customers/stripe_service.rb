@@ -137,6 +137,11 @@ module PaymentProviderCustomers
     rescue Stripe::InvalidRequestError, Stripe::PermissionError => e
       deliver_error_webhook(e)
       result
+    rescue Stripe::AuthenticationError => e
+      deliver_error_webhook(e)
+
+      message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
+      result.unauthorized_failure!(message:)
     end
 
     private
