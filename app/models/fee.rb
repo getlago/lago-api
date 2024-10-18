@@ -150,7 +150,10 @@ class Fee < ApplicationRecord
   alias_method :precise_total_amount_currency, :currency
 
   def creditable_amount_cents
-    amount_cents - credit_note_items.sum(:amount_cents)
+    remaining_amount = amount_cents - credit_note_items.sum(:amount_cents)
+
+    return [remaining_amount, invoice.associated_active_wallet&.balance_cents || 0].min if credit?
+    remaining_amount
   end
 
   # There are add_on type and one_off type so in order not to mix those two types with associations,
