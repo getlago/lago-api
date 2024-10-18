@@ -812,6 +812,46 @@ RSpec.describe Plans::UpdateService, type: :service do
           expect(charge.min_amount_cents).to eq(100)
         end
       end
+
+      context 'with cascade option' do
+        let(:child_plan) { create(:plan, organization:, parent_id:) }
+        let(:parent_id) { plan.id }
+
+        before do
+          child_plan
+          update_args[:cascade_updates] = true
+        end
+
+        context 'when cascade is true and there is no children plans' do
+          let(:parent_id) { nil }
+
+          it 'does not enqueue the job for creating new charge' do
+            expect do
+              plans_service.call
+            end.not_to have_enqueued_job(Charges::CreateJob)
+          end
+        end
+
+        context 'when cascade is true and there are children plans' do
+          it 'enqueues the job for creating new charge' do
+            expect do
+              plans_service.call
+            end.to have_enqueued_job(Charges::CreateJob)
+          end
+        end
+
+        context 'when cascade is false with children plans' do
+          before do
+            update_args[:cascade_updates] = false
+          end
+
+          it 'does not enqueue the job for creating new charge' do
+            expect do
+              plans_service.call
+            end.not_to have_enqueued_job(Charges::CreateJob)
+          end
+        end
+      end
     end
 
     context 'with existing charge attached to subscription' do
