@@ -4219,6 +4219,7 @@ enum IntegrationItemTypeEnum {
 
 enum IntegrationTypeEnum {
   anrok
+  auto_dunning
   hubspot
   netsuite
   okta
@@ -6008,6 +6009,7 @@ input PlanOverridesInput {
 }
 
 enum PremiumIntegrationTypeEnum {
+  auto_dunning
   hubspot
   netsuite
   okta
