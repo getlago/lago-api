@@ -7,6 +7,7 @@ module V1
 
       payload = {
         lago_id: model.id,
+        lago_charge_id: model.charge_id,
         lago_charge_filter_id: model.charge_filter_id,
         lago_invoice_id: model.invoice_id,
         lago_true_up_fee_id: model.true_up_fee&.id,

@@ -22,6 +22,7 @@ RSpec.describe ::V1::FeeSerializer do
     aggregate_failures do
       expect(result['fee']).to include(
         'lago_id' => fee.id,
+        'lago_charge_id' => fee.charge_id,
         'lago_charge_filter_id' => fee.charge_filter_id,
         'lago_invoice_id' => fee.invoice_id,
         'lago_true_up_fee_id' => fee.true_up_fee&.id,
