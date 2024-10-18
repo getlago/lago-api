@@ -11,9 +11,7 @@ module Mutations
       graphql_name "UpdateDunningCampaign"
       description "Updates a dunning campaign"
 
-      argument :applied_to_organization, Boolean, required: false
-      argument :id, ID, required: true
-
+      input_object_class Types::DunningCampaigns::UpdateInput
       type Types::DunningCampaigns::Object
 
       def resolve(**args)
