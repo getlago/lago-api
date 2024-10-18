@@ -61,14 +61,14 @@ module Integrations
             }
           end
 
+          def integration_invoice
+            @integration_invoice ||= IntegrationResource.find_by(integration:, syncable: invoice)
+          end
+
           private
 
           def formatted_date(date)
             date.strftime('%Y-%m-%d')
-          end
-
-          def integration_invoice
-            @integration_invoice ||= IntegrationResource.find_by(integration:, syncable: invoice)
           end
 
           def object_type

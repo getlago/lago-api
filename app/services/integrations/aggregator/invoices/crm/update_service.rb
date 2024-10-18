@@ -4,7 +4,7 @@ module Integrations
   module Aggregator
     module Invoices
       module Crm
-        class CreateService < BaseService
+        class UpdateService < BaseService
           def action_path
             "v1/#{provider}/records"
           end
@@ -12,22 +12,12 @@ module Integrations
           def call
             return result unless integration
             return result unless integration.sync_invoices
-            return result unless invoice.finalized?
+            return result unless integration_invoice
 
-            response = http_client.post_with_response(payload.create_body, headers)
+            response = http_client.put_with_response(payload.update_body, headers)
             body = JSON.parse(response.body)
 
             result.external_id = body['id']
-            return result unless result.external_id
-
-            IntegrationResource.create!(
-              integration:,
-              external_id: result.external_id,
-              syncable_id: invoice.id,
-              syncable_type: 'Invoice',
-              resource_type: :invoice
-            )
-
             result
           rescue LagoHttpClient::HttpError => e
             raise RequestLimitError(e) if request_limit_error?(e)
@@ -35,7 +25,6 @@ module Integrations
             code = code(e)
             message = message(e)
 
-            # TODO: Change this to crm error webhook when it is implemented
             deliver_error_webhook(customer:, code:, message:)
 
             # raise e
@@ -45,10 +34,16 @@ module Integrations
           def call_async
             return result.not_found_failure!(resource: 'invoice') unless invoice
 
-            ::Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice:)
+            ::Integrations::Aggregator::Invoices::Crm::UpdateJob.perform_later(invoice:)
 
             result.invoice_id = invoice.id
             result
+          end
+
+          private
+
+          def integration_invoice
+            invoice.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').first
           end
         end
       end
