@@ -13,22 +13,22 @@ module PaymentRequests
       check_preconditions
       return result if result.error
 
-      ActiveRecord::Base.transaction do
-        payment_request = customer.payment_requests.create!(
+      payment_request = ActiveRecord::Base.transaction do
+        customer.payment_requests.create!(
           organization:,
           amount_cents: invoices.sum(:total_amount_cents),
           amount_currency: currency,
           email:,
           invoices:
         )
-
-        SendWebhookJob.perform_later("payment_request.created", payment_request)
-
-        payment_result = Payments::CreateService.call(payment_request)
-        PaymentRequestMailer.with(payment_request:).requested.deliver_later unless payment_result.success?
-
-        result.payment_request = payment_request
       end
+
+      SendWebhookJob.perform_later("payment_request.created", payment_request)
+
+      payment_result = Payments::CreateService.call(payment_request)
+      PaymentRequestMailer.with(payment_request:).requested.deliver_later unless payment_result.success?
+
+      result.payment_request = payment_request
 
       result
     end
