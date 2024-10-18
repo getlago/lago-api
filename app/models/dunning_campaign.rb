@@ -17,6 +17,8 @@ class DunningCampaign < ApplicationRecord
   validates :max_attempts, numericality: {greater_than: 0}
   validates :code, uniqueness: {scope: :organization_id}
 
+  scope :applied_to_organization, -> { where(applied_to_organization: true) }
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end

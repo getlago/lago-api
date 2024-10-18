@@ -148,5 +148,6 @@ module Types
     field :okta_login, mutation: Mutations::Auth::Okta::Login
 
     field :create_dunning_campaign, mutation: Mutations::DunningCampaigns::Create
+    field :update_dunning_campaign, mutation: Mutations::DunningCampaigns::Update
   end
 end
