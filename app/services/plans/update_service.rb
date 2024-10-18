@@ -99,6 +99,15 @@ module Plans
       end
     end
 
+    def cascade_charge_creation(payload_charge)
+      return unless cascade?
+      return if plan.children.empty?
+
+      plan.children.find_each do |p|
+        Charges::CreateJob.perform_later(plan: p, params: payload_charge)
+      end
+    end
+
     def cascade?
       ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
     end
@@ -120,53 +129,6 @@ module Plans
 
       usage_threshold.save!
       usage_threshold
-    end
-
-    def create_charge(plan, params)
-      charge = plan.charges.new(
-        billable_metric_id: params[:billable_metric_id],
-        invoice_display_name: params[:invoice_display_name],
-        amount_currency: params[:amount_currency],
-        charge_model: charge_model(params),
-        pay_in_advance: params[:pay_in_advance] || false,
-        prorated: params[:prorated] || false
-      )
-
-      properties = params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
-      charge.properties = Charges::FilterChargeModelPropertiesService.call(
-        charge:,
-        properties:
-      ).properties
-
-      if params[:filters].present?
-        charge.save!
-        ChargeFilters::CreateOrUpdateBatchService.call(
-          charge:,
-          filters_params: params[:filters].map(&:with_indifferent_access)
-        ).raise_if_error!
-      end
-
-      if License.premium?
-        charge.invoiceable = params[:invoiceable] unless params[:invoiceable].nil?
-        charge.regroup_paid_fees = params[:regroup_paid_fees] if params.key?(:regroup_paid_fees)
-        charge.min_amount_cents = params[:min_amount_cents] || 0
-      end
-
-      charge.save!
-
-      if params[:tax_codes]
-        taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes: params[:tax_codes])
-        taxes_result.raise_if_error!
-      end
-
-      charge
-    end
-
-    def charge_model(params)
-      model = params[:charge_model]&.to_sym
-      return if model == :graduated_percentage && !License.premium?
-
-      model
     end
 
     def process_minimum_commitment(plan, params)
@@ -282,8 +244,11 @@ module Plans
           next
         end
 
-        created_charge = create_charge(plan, payload_charge)
-        created_charges_ids.push(created_charge.id)
+        create_charge_result = Charges::CreateService.call(plan:, params: payload_charge)
+        create_charge_result.raise_if_error!
+
+        cascade_charge_creation(payload_charge)
+        created_charges_ids.push(create_charge_result.charge.id)
       end
 
       # NOTE: Delete charges that are no more linked to the plan
