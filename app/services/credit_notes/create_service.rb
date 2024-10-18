@@ -240,7 +240,7 @@ module CreditNotes
 
       # wallet transactions don't have cents amount, so we have to convert value into full amount
       # and then convert money into amount of credits
-      credit_note.refund_amount_cents / 100 / associated_wallet.rate_amount
+      credit_note.refund_amount_cents / credit_note.refund_amount.currency.subunit_to_unit / associated_wallet.rate_amount
     end
   end
 end
