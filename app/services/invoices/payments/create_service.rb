@@ -13,6 +13,8 @@ module Invoices
         case payment_provider
         when :stripe
           Invoices::Payments::StripeCreateJob.perform_later(invoice)
+        when :cashfree
+          Invoices::Payments::CashfreeCreateJob.perform_later(invoice)
         when :gocardless
           Invoices::Payments::GocardlessCreateJob.perform_later(invoice)
         when :adyen
