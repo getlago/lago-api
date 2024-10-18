@@ -32,5 +32,13 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Factory do
         expect(subject).to be_a(Integrations::Aggregator::Invoices::Payloads::Anrok)
       end
     end
+
+    context 'when customer is a hubspot customer' do
+      let(:integration_customer) { FactoryBot.create(:hubspot_customer) }
+
+      it 'returns payload' do
+        expect(subject).to be_a(Integrations::Aggregator::Invoices::Payloads::Hubspot)
+      end
+    end
   end
 end
