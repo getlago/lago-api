@@ -42,11 +42,8 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def pre_ingest(event)
-      # TODO: make this efficient
-      bm = organization.billable_metrics.find_by(code: event.code)
+      bm = organization.billable_metrics.with_expression.find_by(code: event.code)
       return unless bm
-
-      return if bm.expression.blank?
 
       evaluation_event = Lago::Event.new(event.code, event.timestamp.to_i, event.properties)
 
