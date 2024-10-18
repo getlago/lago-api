@@ -108,6 +108,17 @@ module Plans
       end
     end
 
+    def cascade_charge_removal(charge)
+      return unless cascade?
+      return if plan.children.empty?
+
+      plan.children.includes(:charges).each do |p|
+        child_charge = p.charges.find { |c| c.parent_id == charge.id }
+
+        Charges::DestroyJob.perform_later(charge: child_charge) if child_charge
+      end
+    end
+
     def cascade?
       ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
     end
@@ -258,20 +269,16 @@ module Plans
     def sanitize_charges(plan, args_charges, created_charges_ids)
       args_charges_ids = args_charges.map { |c| c[:id] }.compact
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
-      plan.charges.where(id: charges_ids).find_each { |charge| discard_charge!(charge) }
+      plan.charges.where(id: charges_ids).find_each do |charge|
+        Charges::DestroyService.call(charge:)
+        cascade_charge_removal(charge)
+      end
     end
 
     def sanitize_thresholds(plan, args_thresholds, created_thresholds_ids)
       args_thresholds_ids = args_thresholds.map { |c| c[:id] }.compact
       thresholds_ids = plan.usage_thresholds.pluck(:id) - args_thresholds_ids - created_thresholds_ids
       plan.usage_thresholds.where(id: thresholds_ids).discard_all
-    end
-
-    def discard_charge!(charge)
-      charge.discard!
-
-      charge.filter_values.discard_all
-      charge.filters.discard_all
     end
 
     # NOTE: We should remove pending subscriptions
