@@ -138,6 +138,56 @@ RSpec.describe Plans::UpdateService, type: :service do
       expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
     end
 
+    context 'with cascade option' do
+      let(:child_plan) { create(:plan, organization:, parent_id:) }
+      let(:parent_id) { plan.id }
+
+      before do
+        child_plan
+        update_args[:cascade_updates] = true
+      end
+
+      context 'when cascade is true and there is no children plans' do
+        let(:parent_id) { nil }
+
+        it 'does not enqueue the job for updating subscription fee' do
+          expect do
+            plans_service.call
+          end.not_to have_enqueued_job(Plans::UpdateAmountJob)
+        end
+      end
+
+      context 'when cascade is true and child plan is already updated' do
+        let(:child_plan) { create(:plan, organization:, parent_id:, amount_cents: 150) }
+
+        it 'does not enqueue the job for updating subscription fee' do
+          expect do
+            plans_service.call
+          end.not_to have_enqueued_job(Plans::UpdateAmountJob)
+        end
+      end
+
+      context 'when cascade is true with children plans not touched' do
+        it 'enqueues the job for updating subscription fee' do
+          expect do
+            plans_service.call
+          end.to have_enqueued_job(Plans::UpdateAmountJob)
+        end
+      end
+
+      context 'when cascade is false with children plans not touched' do
+        before do
+          update_args[:cascade_updates] = false
+        end
+
+        it 'does not enqueue the job for updating subscription fee' do
+          expect do
+            plans_service.call
+          end.not_to have_enqueued_job(Plans::UpdateAmountJob)
+        end
+      end
+    end
+
     context 'when thresholds are present' do
       let(:usage_thresholds) do
         updated_plan.usage_thresholds.order(threshold_display_name: :asc)

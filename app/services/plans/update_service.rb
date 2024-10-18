@@ -65,6 +65,8 @@ module Plans
         end
       end
 
+      cascade_subscription_fee_update(old_amount_cents)
+
       plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       result.plan = plan.reload
@@ -85,6 +87,20 @@ module Plans
       return unless params[:interval]&.to_sym == :yearly
 
       params[:bill_charges_monthly] || false
+    end
+
+    def cascade_subscription_fee_update(old_amount_cents)
+      return unless cascade?
+      return if old_amount_cents == plan.amount_cents
+      return if plan.children.empty?
+
+      plan.children.where(amount_cents: old_amount_cents).find_each do |p|
+        Plans::UpdateAmountJob.perform_later(plan: p, amount_cents: plan.amount_cents)
+      end
+    end
+
+    def cascade?
+      ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
     end
 
     def create_usage_threshold(plan, params)
