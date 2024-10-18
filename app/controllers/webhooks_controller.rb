@@ -40,7 +40,7 @@ class WebhooksController < ApplicationController
   end
 
   def adyen
-    result = PaymentProviders::AdyenService.new.handle_incoming_webhook(
+    result = PaymentProviders::Adyen::HandleIncomingWebhookService.call(
       organization_id: params[:organization_id],
       code: params[:code].presence,
       body: adyen_params.to_h

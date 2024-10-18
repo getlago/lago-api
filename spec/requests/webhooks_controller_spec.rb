@@ -158,8 +158,6 @@ RSpec.describe WebhooksController, type: :request do
       create(:adyen_provider, organization:)
     end
 
-    let(:adyen_service) { instance_double(PaymentProviders::AdyenService) }
-
     let(:body) do
       path = Rails.root.join('spec/fixtures/adyen/webhook_authorisation_response.json')
       JSON.parse(File.read(path))
@@ -172,9 +170,7 @@ RSpec.describe WebhooksController, type: :request do
     end
 
     before do
-      allow(PaymentProviders::AdyenService).to receive(:new)
-        .and_return(adyen_service)
-      allow(adyen_service).to receive(:handle_incoming_webhook)
+      allow(PaymentProviders::Adyen::HandleIncomingWebhookService).to receive(:call)
         .with(
           organization_id: organization.id,
           code: nil,
@@ -193,9 +189,7 @@ RSpec.describe WebhooksController, type: :request do
       )
 
       expect(response).to have_http_status(:success)
-
-      expect(PaymentProviders::AdyenService).to have_received(:new)
-      expect(adyen_service).to have_received(:handle_incoming_webhook)
+      expect(PaymentProviders::Adyen::HandleIncomingWebhookService).to have_received(:call)
     end
 
     context 'when failing to handle adyen event' do
@@ -213,9 +207,7 @@ RSpec.describe WebhooksController, type: :request do
         )
 
         expect(response).to have_http_status(:bad_request)
-
-        expect(PaymentProviders::AdyenService).to have_received(:new)
-        expect(adyen_service).to have_received(:handle_incoming_webhook)
+        expect(PaymentProviders::Adyen::HandleIncomingWebhookService).to have_received(:call)
       end
     end
   end
