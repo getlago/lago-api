@@ -744,12 +744,10 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
   end
 
   describe '#generate_checkout_url' do
-    before do
+    it 'delivers a webhook with checkout url' do
       allow(Stripe::Checkout::Session).to receive(:create)
         .and_return({'url' => 'https://example.com'})
-    end
 
-    it 'delivers a webhook with checkout url' do
       stripe_service.generate_checkout_url
 
       aggregate_failures do
@@ -766,6 +764,34 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
 
         expect(SendWebhookJob).not_to have_been_enqueued
           .with('customer.checkout_url_generated', customer, checkout_url: 'https://example.com')
+      end
+    end
+
+    context 'when stripe raises an authentication error' do
+      let(:stripe_error) { Stripe::AuthenticationError.new('Expired API Key provided') }
+
+      before { allow(Stripe::Checkout::Session).to receive(:create).and_raise(stripe_error) }
+
+      it 'returns an error result' do
+        result = described_class.new(stripe_customer).generate_checkout_url
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+          expect(result.error.message).to eq('Stripe authentication failed. Expired API Key provided')
+        end
+      end
+
+      it 'delivers an error webhook' do
+        expect { described_class.new(stripe_customer).generate_checkout_url }.to enqueue_job(SendWebhookJob)
+          .with(
+            'customer.payment_provider_error',
+            customer,
+            provider_error: {
+              message: 'Expired API Key provided',
+              error_code: nil
+            }
+          ).on_queue(:webhook)
       end
     end
   end
