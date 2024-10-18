@@ -48,31 +48,6 @@ module PaymentProviders
       result.record_validation_failure!(record: e.record)
     end
 
-    def handle_incoming_webhook(organization_id:, body:, code: nil)
-      organization = Organization.find_by(id: organization_id)
-      return result.service_failure!(code: 'webhook_error', message: 'Organization not found') unless organization
-
-      payment_provider_result = PaymentProviders::FindService.call(
-        organization_id:,
-        code:,
-        payment_provider_type: 'adyen'
-      )
-
-      return payment_provider_result unless payment_provider_result.success?
-
-      validator = ::Adyen::Utils::HmacValidator.new
-      hmac_key = payment_provider_result.payment_provider.hmac_key
-
-      if hmac_key && !validator.valid_notification_hmac?(body, hmac_key)
-        return result.service_failure!(code: 'webhook_error', message: 'Invalid signature')
-      end
-
-      PaymentProviders::Adyen::HandleEventJob.perform_later(organization:, event_json: body.to_json)
-
-      result.event = body
-      result
-    end
-
     def handle_event(organization:, event_json:)
       event = JSON.parse(event_json)
       unless WEBHOOKS_EVENTS.include?(event['eventCode'])
