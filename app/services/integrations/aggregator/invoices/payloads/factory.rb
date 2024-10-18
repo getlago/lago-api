@@ -17,6 +17,8 @@ module Integrations
               Integrations::Aggregator::Invoices::Payloads::Xero.new(integration_customer:, invoice:)
             when 'Integrations::AnrokIntegration'
               Integrations::Aggregator::Invoices::Payloads::Anrok.new(integration_customer:, invoice:)
+            when 'Integrations::HubspotIntegration'
+              Integrations::Aggregator::Invoices::Payloads::Hubspot.new(integration_customer:, invoice:)
             else
               raise(NotImplementedError)
             end
