@@ -30,6 +30,10 @@ module IntegrationCustomers
       @subsidiary_id ||= params[:subsidiary_id]
     end
 
+    def targeted_object
+      @targeted_object ||= params[:targeted_object]
+    end
+
     def external_customer_id
       @external_customer_id ||= params[:external_customer_id]
     end

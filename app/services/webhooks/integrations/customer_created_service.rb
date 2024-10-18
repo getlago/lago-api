@@ -17,10 +17,6 @@ module Webhooks
         )
       end
 
-      def webhook_type
-        'customer.accounting_provider_created'
-      end
-
       def object_type
         'customer'
       end

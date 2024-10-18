@@ -91,9 +91,10 @@ module LagoHttpClient
       JSON.parse(response.body.presence || '{}')
     end
 
-    def get(headers: {}, params: nil)
+    def get(headers: {}, params: nil, body: nil)
       path = params ? "#{uri.path}?#{URI.encode_www_form(params)}" : uri.path
       req = Net::HTTP::Get.new(path)
+      req.body = URI.encode_www_form(body) if body.present?
 
       headers.keys.each do |key|
         req[key] = headers[key]

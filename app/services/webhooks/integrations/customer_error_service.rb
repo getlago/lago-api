@@ -18,14 +18,6 @@ module Webhooks
           provider_code: options[:provider_code]
         )
       end
-
-      def webhook_type
-        'customer.accounting_provider_error'
-      end
-
-      def object_type
-        'accounting_provider_customer_error'
-      end
     end
   end
 end
