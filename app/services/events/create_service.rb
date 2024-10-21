@@ -42,13 +42,16 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def pre_ingest(event)
-      bm = organization.billable_metrics.with_expression.find_by(code: event.code)
-      return unless bm
+      field_name, expression = Rails.cache.fetch("expression/#{organization.id}/#{event.code}") do
+        bm = organization.billable_metrics.with_expression.find_by(code: event.code)
+        [bm&.field_name, bm&.expression]
+      end
+      return if expression.blank?
 
       evaluation_event = Lago::Event.new(event.code, event.timestamp.to_i, event.properties)
 
-      value = Lago::ExpressionParser.parse(bm.expression)&.evaluate(evaluation_event)
-      event.properties[bm.field_name] = value
+      value = Lago::ExpressionParser.parse(expression).evaluate(evaluation_event)
+      event.properties[field_name] = value
     end
 
     def produce_kafka_event(event)
