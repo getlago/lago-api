@@ -5,8 +5,7 @@ module Charges
     queue_as 'default'
 
     def perform(plan:, params:)
-      create_result = Charges::CreateService.call(plan:, params:)
-      create_result.raise_if_error!
+      Charges::CreateService.call(plan:, params:).raise_if_error!
     end
   end
 end

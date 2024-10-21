@@ -932,6 +932,66 @@ RSpec.describe Plans::UpdateService, type: :service do
             .to change { charge.reload.deleted_at }.from(nil).to(Time.current)
         end
       end
+
+      context 'with cascade option' do
+        let(:child_plan) { create(:plan, organization:, parent_id:) }
+        let(:parent_id) { plan.id }
+        let(:charge_parent_id) { charge.id }
+        let(:child_charge) do
+          create(
+            :standard_charge,
+            plan_id: child_plan.id,
+            parent_id: charge_parent_id,
+            billable_metric_id: billable_metric.id,
+            properties: {amount: '300'}
+          )
+        end
+
+        before do
+          child_charge
+          update_args[:cascade_updates] = true
+        end
+
+        context 'when cascade is true and there is no children plans' do
+          let(:parent_id) { nil }
+
+          it 'does not enqueue the job for removing charge' do
+            expect do
+              plans_service.call
+            end.not_to have_enqueued_job(Charges::DestroyJob)
+          end
+        end
+
+        context 'when cascade is true and there are children plans' do
+          it 'enqueues the job for removing charge' do
+            expect do
+              plans_service.call
+            end.to have_enqueued_job(Charges::DestroyJob)
+          end
+        end
+
+        context 'when cascade is true and there are children plans without link to parent charge' do
+          let(:charge_parent_id) { nil }
+
+          it 'does not enqueue the job for removing charge' do
+            expect do
+              plans_service.call
+            end.not_to have_enqueued_job(Charges::DestroyJob)
+          end
+        end
+
+        context 'when cascade is false with children plans' do
+          before do
+            update_args[:cascade_updates] = false
+          end
+
+          it 'does not enqueue the job for removing charge' do
+            expect do
+              plans_service.call
+            end.not_to have_enqueued_job(Charges::DestroyJob)
+          end
+        end
+      end
     end
 
     context 'when attached to a subscription' do
