@@ -29,6 +29,7 @@ customers:
 dunning_campaigns:
   view: true
   create: true
+  update: true
 subscriptions:
   create: false
   update: false
