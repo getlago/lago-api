@@ -6,6 +6,7 @@ module CreditNotes
       queue_as 'integrations'
 
       def perform(credit_note:)
+        return if credit_note.invoice.credit?
         return unless credit_note.customer.anrok_customer
 
         # NOTE: We don't want to raise error here.

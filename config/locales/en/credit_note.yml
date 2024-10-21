@@ -21,3 +21,4 @@ en:
     tax: "%{name} (%{rate}% on %{amount})"
     tax_rate: Tax rate
     total: Total
+    prepaid_credits_for_wallet: "Prepaid credits - %{wallet_name}"
