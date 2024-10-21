@@ -78,5 +78,18 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
       expect(wallet.balance_cents).to eq(0)
       expect(wallet.credits_balance).to eq(0.0)
     end
+
+    context 'when credit_note_id is passed' do
+      subject(:void_service) { described_class.call(wallet:, credits_amount:, credit_note_id:) }
+
+      let(:credit_note_id) { create(:credit_note, organization: organization).id }
+
+      it 'saves credit_note_id in wallet_transaction' do
+        result = void_service
+        wallet_transaction = result.wallet_transaction
+
+        expect(wallet_transaction.credit_note_id).to eq(credit_note_id)
+      end
+    end
   end
 end
