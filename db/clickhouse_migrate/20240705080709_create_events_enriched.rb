@@ -29,7 +29,7 @@ class CreateEventsEnriched < ActiveRecord::Migration[7.1]
       t.string :properties, map: true, null: false
       t.string :sorted_properties, map: true, null: false, default: -> { 'mapSort(properties)' }
       t.string :value
-      t.decimal :decimal_value, precision: 26
+      t.decimal :decimal_value, precision: 38, scale: 26, default: -> { 'toDecimal128OrZero(value, 26)' }
       t.datetime :enriched_at, null: false, precision: 3, default: -> { 'now()' }
       t.decimal :precise_total_amount_cents, precision: 40, scale: 15
     end
