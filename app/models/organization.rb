@@ -23,6 +23,7 @@ class Organization < ApplicationRecord
   has_many :coupons
   has_many :applied_coupons, through: :coupons
   has_many :add_ons
+  has_many :daily_usages
   has_many :invites
   has_many :integrations, class_name: 'Integrations::BaseIntegration'
   has_many :payment_providers, class_name: 'PaymentProviders::BaseProvider'

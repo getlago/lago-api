@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_16_133129) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_21_095706) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -466,6 +466,22 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_16_133129) do
     t.index ["customer_id", "tax_id"], name: "index_customers_taxes_on_customer_id_and_tax_id", unique: true
     t.index ["customer_id"], name: "index_customers_taxes_on_customer_id"
     t.index ["tax_id"], name: "index_customers_taxes_on_tax_id"
+  end
+
+  create_table "daily_usages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.uuid "customer_id", null: false
+    t.uuid "subscription_id", null: false
+    t.string "external_subscription_id", null: false
+    t.datetime "from_datetime", null: false
+    t.datetime "to_datetime", null: false
+    t.jsonb "usage", default: "{}", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_daily_usages_on_customer_id"
+    t.index ["organization_id", "external_subscription_id"], name: "idx_on_organization_id_external_subscription_id_df3a30d96d"
+    t.index ["organization_id"], name: "index_daily_usages_on_organization_id"
+    t.index ["subscription_id"], name: "index_daily_usages_on_subscription_id"
   end
 
   create_table "data_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1274,6 +1290,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_16_133129) do
   add_foreign_key "customers", "organizations"
   add_foreign_key "customers_taxes", "customers"
   add_foreign_key "customers_taxes", "taxes"
+  add_foreign_key "daily_usages", "customers"
+  add_foreign_key "daily_usages", "organizations"
+  add_foreign_key "daily_usages", "subscriptions"
   add_foreign_key "data_exports", "memberships"
   add_foreign_key "data_exports", "organizations"
   add_foreign_key "dunning_campaign_thresholds", "dunning_campaigns"
