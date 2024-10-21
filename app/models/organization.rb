@@ -117,6 +117,10 @@ class Organization < ApplicationRecord
     super(value&.upcase)
   end
 
+  def auto_dunning_enabled?
+    License.premium? && premium_integrations.include?("auto_dunning")
+  end
+
   private
 
   def generate_api_key

@@ -11,7 +11,7 @@ module DunningCampaigns
     end
 
     def call
-      return result.forbidden_failure! unless auto_dunning_enabled?
+      return result.forbidden_failure! unless organization.auto_dunning_enabled?
       return result.not_found_failure!(resource: "dunning_campaign") unless dunning_campaign
 
       ActiveRecord::Base.transaction do
@@ -36,9 +36,5 @@ module DunningCampaigns
     private
 
     attr_reader :dunning_campaign, :organization, :params
-
-    def auto_dunning_enabled?
-      License.premium? && organization.premium_integrations.include?("auto_dunning")
-    end
   end
 end
