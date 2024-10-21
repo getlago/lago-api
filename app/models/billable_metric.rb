@@ -33,6 +33,7 @@ class BillableMetric < ApplicationRecord
   enum weighted_interval: WEIGHTED_INTERVAL
 
   validate :validate_recurring
+  validate :validate_expression
 
   validates :name, presence: true
   validates :field_name, presence: true, if: :should_have_field_name?
@@ -46,6 +47,8 @@ class BillableMetric < ApplicationRecord
   validates :custom_aggregator, presence: true, if: :custom_agg?
 
   default_scope -> { kept }
+
+  scope :with_expression, -> { where("expression IS NOT NULL AND expression <> ''") }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
@@ -75,6 +78,13 @@ class BillableMetric < ApplicationRecord
 
     errors.add(:recurring, :not_compatible_with_aggregation_type)
   end
+
+  def validate_expression
+    return if expression.blank?
+    return if Lago::ExpressionParser.validate(expression).blank?
+
+    errors.add(:expression, :invalid_expression)
+  end
 end
 
 # == Schema Information
@@ -87,6 +97,7 @@ end
 #  custom_aggregator :text
 #  deleted_at        :datetime
 #  description       :string
+#  expression        :string
 #  field_name        :string
 #  name              :string           not null
 #  properties        :jsonb
@@ -99,6 +110,7 @@ end
 # Indexes
 #
 #  index_billable_metrics_on_deleted_at                (deleted_at)
+#  index_billable_metrics_on_org_id_and_code_and_expr  (organization_id,code,expression) WHERE ((expression IS NOT NULL) AND ((expression)::text <> ''::text))
 #  index_billable_metrics_on_organization_id           (organization_id)
 #  index_billable_metrics_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #

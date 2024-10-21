@@ -135,6 +135,32 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
+    context "with an expression configured on the billable metric" do
+      let(:billable_metric) { create(:billable_metric, code:, organization:, field_name: "result", expression: "event.properties.left + event.properties.right") }
+
+      let(:create_args) do
+        {
+          external_subscription_id:,
+          code:,
+          transaction_id:,
+          precise_total_amount_cents:,
+          properties: {left: '1', right: '2'},
+          timestamp:
+        }
+      end
+
+      before do
+        billable_metric
+      end
+
+      it "creates an event and updates the field name with the result of the expression" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.event.properties["result"]).to eq("3.0")
+      end
+    end
+
     context 'with a precise_total_amount_cents' do
       let(:precise_total_amount_cents) { "123.45" }
 
