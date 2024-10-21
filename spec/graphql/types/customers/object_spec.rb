@@ -72,4 +72,9 @@ RSpec.describe Types::Customers::Object do
 
   it { is_expected.to have_field(:can_edit_attributes).of_type('Boolean!') }
   it { is_expected.to have_field(:finalize_zero_amount_invoice).of_type('FinalizeZeroAmountInvoiceEnum') }
+
+  it { is_expected.to have_field(:applied_dunning_campaign).of_type("DunningCampaign") }
+  it { is_expected.to have_field(:exclude_from_dunning_campaign).of_type("Boolean!") }
+  it { is_expected.to have_field(:last_dunning_campaign_attempt).of_type("Int!") }
+  it { is_expected.to have_field(:last_dunning_campaign_attempt_at).of_type("ISO8601DateTime") }
 end

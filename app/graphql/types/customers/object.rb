@@ -59,6 +59,11 @@ module Types
 
       field :credit_notes, [Types::CreditNotes::Object], null: true
 
+      field :applied_dunning_campaign, Types::DunningCampaigns::Object, null: true
+      field :exclude_from_dunning_campaign, Boolean, null: false
+      field :last_dunning_campaign_attempt, Integer, null: false
+      field :last_dunning_campaign_attempt_at, GraphQL::Types::ISO8601DateTime, null: true
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
