@@ -920,6 +920,21 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       )
       expect(response).to have_http_status(:method_not_allowed)
 
+      # it does not allow to create credit notes on invoices with payment status pending
+      create_credit_note(
+        invoice_id: invoice.id,
+        reason: :other,
+        credit_amount_cents: 0,
+        refund_amount_cents: 15,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 15
+          }
+        ]
+      )
+      expect(response).to have_http_status(:method_not_allowed)
+
       # pay the invoice
       update_invoice(invoice, payment_status: :succeeded)
       perform_all_enqueued_jobs
@@ -941,7 +956,31 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       expect(estimate[:max_refundable_amount_cents]).to eq(10)
       expect(estimate[:max_creditable_amount_cents]).to eq(0)
 
-      # when estimating a credit note with amount higher than the remaining balance, it will return the remaining balance
+      # it allows to create credit notes on credit invoices with payment status succeeded
+      # and voids the corresponding amount of credits in the associated active wallet
+      create_credit_note(
+        invoice_id: invoice.id,
+        reason: :other,
+        credit_amount_cents: 0,
+        refund_amount_cents: 500,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 500
+          }
+        ]
+      )
+      perform_all_enqueued_jobs
+      credit_note = invoice.credit_notes.order(:created_at).last
+      expect(credit_note.refund_amount_cents).to eq(500)
+      expect(credit_note.total_amount_cents).to eq(500)
+      wallet_transaction = wallet.wallet_transactions.order(:created_at).last
+      expect(wallet_transaction.status).to eq('settled')
+      expect(wallet_transaction.transaction_status).to eq('voided')
+      expect(wallet_transaction.credit_note_id).to eq(credit_note.id)
+      expect(wallet.reload.balance_cents).to eq(1000)
+
+      # when estimating a credit note with amount higher than the remaining balance, it throws an error
       wallet.update(balance_cents: 5)
       estimate_credit_note(
         invoice_id: invoice.id,
@@ -952,10 +991,54 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
           }
         ]
       )
-      estimate = json[:estimated_credit_note]
-      expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
-      expect(estimate[:max_refundable_amount_cents]).to eq(5)
-      expect(estimate[:max_creditable_amount_cents]).to eq(0)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include('higher_than_wallet_balance')
+
+      # when creating a credit note with amount higher than remaining balance, it throws an error
+      create_credit_note(
+        invoice_id: invoice.id,
+        reason: :other,
+        refund_amount_cents: 10,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 10
+          }
+        ]
+      )
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include('higher_than_wallet_balance')
+
+      expect(wallet.reload.balance_cents).to eq(5)
+
+      # when wallet is terminated, it does not allow to create credit notes
+      wallet.update(status: :terminated)
+
+      estimate_credit_note(
+        invoice_id: invoice.id,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 1
+          }
+        ]
+      )
+      expect(response).to have_http_status(:method_not_allowed)
+      expect(response.body).to include('invalid_type_or_status')
+
+      create_credit_note(
+        invoice_id: invoice.id,
+        reason: :other,
+        refund_amount_cents: 1,
+        items: [
+          {
+            fee_id: invoice.fees.first.id,
+            amount_cents: 1
+          }
+        ]
+      )
+      expect(response).to have_http_status(:method_not_allowed)
+      expect(response.body).to include('invalid_type_or_status')
     end
   end
 end
