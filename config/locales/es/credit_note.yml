@@ -23,3 +23,4 @@ es:
     tax_rate: Tasas de impuestos
     total: Total
     true_up_metric: "%{metric} • Ajuste real"
+    prepaid_credits_for_wallet: Créditos prepagados - %{wallet_name}

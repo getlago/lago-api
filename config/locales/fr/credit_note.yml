@@ -21,3 +21,4 @@ fr:
     tax: "%{name} (%{rate}% sur %{amount})"
     tax_rate: Taux de taxe
     total: Total
+    prepaid_credits_for_wallet: Crédit(s) prépayé(s) - %{wallet_name}

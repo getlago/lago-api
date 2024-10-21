@@ -21,3 +21,4 @@ nb:
     tax: "%{name} (%{rate}% on %{amount})"
     tax_rate: Tax rate
     total: Beløp
+    prepaid_credits_for_wallet: Forhåndsbetalte kreditter - %{wallet_name}
