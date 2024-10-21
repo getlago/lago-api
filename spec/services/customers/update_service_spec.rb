@@ -329,5 +329,96 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
     end
+
+    context "when dunning campaign data is provided" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          applied_dunning_campaign: dunning_campaign,
+          last_dunning_campaign_attempt: 3,
+          last_dunning_campaign_attempt_at: 2.days.ago
+        )
+      end
+      let(:dunning_campaign) { create(:dunning_campaign) }
+
+      let(:update_args) do
+        {
+          id: customer.id,
+          applied_dunning_campaign_id: dunning_campaign.id,
+          exclude_from_dunning_campaign: true
+        }
+      end
+
+      it "does not update auto dunning config", :aggregate_failures do
+        expect { customers_service.call }
+          .to not_change(customer, :applied_dunning_campaign_id)
+          .and not_change(customer, :exclude_from_dunning_campaign)
+          .and not_change(customer, :last_dunning_campaign_attempt)
+          .and not_change { customer.last_dunning_campaign_attempt_at.iso8601 }
+
+        expect(customers_service.call).to be_success
+      end
+
+      context "with auto_dunning premium integration" do
+        let(:customer) do
+          create(
+            :customer,
+            organization:,
+            exclude_from_dunning_campaign: true,
+            last_dunning_campaign_attempt: 3,
+            last_dunning_campaign_attempt_at: 2.days.ago
+          )
+        end
+
+        let(:organization) do
+          create(:organization, premium_integrations: ["auto_dunning"])
+        end
+
+        let(:membership) { create(:membership, organization: organization) }
+
+        let(:update_args) do
+          {applied_dunning_campaign_id: dunning_campaign.id}
+        end
+
+        around { |test| lago_premium!(&test) }
+
+        it "updates auto dunning config", :aggregate_failures do
+          expect { customers_service.call }
+            .to change(customer, :applied_dunning_campaign_id).to(dunning_campaign.id)
+            .and change(customer, :exclude_from_dunning_campaign).to(false)
+            .and change(customer, :last_dunning_campaign_attempt).to(0)
+            .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+
+          expect(customers_service.call).to be_success
+        end
+
+        context "with exclude from dunning campaign" do
+          let(:customer) do
+            create(
+              :customer,
+              organization:,
+              applied_dunning_campaign: dunning_campaign,
+              last_dunning_campaign_attempt: 3,
+              last_dunning_campaign_attempt_at: 2.days.ago
+            )
+          end
+
+          let(:update_args) do
+            {exclude_from_dunning_campaign: true}
+          end
+
+          it "updates auto dunning config", :aggregate_failures do
+            expect { customers_service.call }
+              .to change(customer, :applied_dunning_campaign_id).to(nil)
+              .and change(customer, :exclude_from_dunning_campaign).to(true)
+              .and change(customer, :last_dunning_campaign_attempt).to(0)
+              .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+
+            expect(customers_service.call).to be_success
+          end
+        end
+      end
+    end
   end
 end
