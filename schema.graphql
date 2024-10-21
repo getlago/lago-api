@@ -3116,6 +3116,7 @@ type Customer {
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
+  appliedDunningCampaign: DunningCampaign
   billingConfiguration: CustomerBillingConfiguration
 
   """
@@ -3141,6 +3142,7 @@ type Customer {
   deletedAt: ISO8601DateTime
   displayName: String!
   email: String
+  excludeFromDunningCampaign: Boolean!
   externalId: String!
   externalSalesforceId: String
 
@@ -3167,6 +3169,8 @@ type Customer {
   id: ID!
   invoiceGracePeriod: Int
   invoices: [Invoice!]
+  lastDunningCampaignAttempt: Int!
+  lastDunningCampaignAttemptAt: ISO8601DateTime
   lastname: String
   legalName: String
   legalNumber: String
@@ -7772,6 +7776,7 @@ Update Customer input arguments
 input UpdateCustomerInput {
   addressLine1: String
   addressLine2: String
+  appliedDunningCampaignId: ID
   billingConfiguration: CustomerBillingConfigurationInput
   city: String
 
@@ -7783,6 +7788,7 @@ input UpdateCustomerInput {
   currency: CurrencyEnum
   customerType: CustomerTypeEnum
   email: String
+  excludeFromDunningCampaign: Boolean
   externalId: String!
   externalSalesforceId: String
   finalizeZeroAmountInvoice: FinalizeZeroAmountInvoiceEnum

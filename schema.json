@@ -12555,6 +12555,20 @@
               ]
             },
             {
+              "name": "appliedDunningCampaign",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "DunningCampaign",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "billingConfiguration",
               "description": null,
               "type": {
@@ -12765,6 +12779,24 @@
               ]
             },
             {
+              "name": "excludeFromDunningCampaign",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "externalId",
               "description": null,
               "type": {
@@ -12925,6 +12957,38 @@
                     "ofType": null
                   }
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "lastDunningCampaignAttempt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "lastDunningCampaignAttemptAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -38392,6 +38456,30 @@
               "type": {
                 "kind": "ENUM",
                 "name": "FinalizeZeroAmountInvoiceEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "appliedDunningCampaignId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "excludeFromDunningCampaign",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
