@@ -5,8 +5,7 @@ module Charges
     queue_as 'default'
 
     def perform(charge:)
-      destroy_result = Charges::DestroyService.call(charge:)
-      destroy_result.raise_if_error!
+      Charges::DestroyService.call(charge:).raise_if_error!
     end
   end
 end
