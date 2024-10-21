@@ -11,7 +11,6 @@ module Types
 
         argument :connection_id, String, required: true
         argument :default_targeted_object, Types::Integrations::Hubspot::TargetedObjectsEnum, required: true
-        argument :private_app_token, String, required: true
         argument :sync_invoices, Boolean, required: false
         argument :sync_subscriptions, Boolean, required: false
       end

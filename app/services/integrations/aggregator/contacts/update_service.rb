@@ -20,10 +20,6 @@ module Integrations
             process_string_result(body)
           end
 
-          return result unless result.contact_id
-
-          deliver_success_webhook(customer:)
-
           result
         rescue LagoHttpClient::HttpError => e
           raise RequestLimitError(e) if request_limit_error?(e)
@@ -36,11 +32,11 @@ module Integrations
           result.service_failure!(code:, message:)
         end
 
+        delegate :customer, to: :integration_customer
+
         private
 
         attr_reader :integration_customer, :subsidiary_id
-
-        delegate :customer, to: :integration_customer
 
         def params
           Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(

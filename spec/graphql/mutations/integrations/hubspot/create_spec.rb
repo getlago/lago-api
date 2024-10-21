@@ -18,7 +18,6 @@ RSpec.describe Mutations::Integrations::Hubspot::Create, type: :graphql do
           name,
           connectionId,
           defaultTargetedObject,
-          privateAppToken,
           syncInvoices,
           syncSubscriptions
         }
@@ -45,8 +44,7 @@ RSpec.describe Mutations::Integrations::Hubspot::Create, type: :graphql do
           code:,
           name:,
           connectionId: 'this-is-random-uuid',
-          defaultTargetedObject: 'companies',
-          privateAppToken: 'some-private-app-token'
+          defaultTargetedObject: 'companies'
         }
       }
     )

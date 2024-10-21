@@ -2,8 +2,8 @@
 
 module IntegrationCustomers
   class Factory
-    def self.new_instance(integration:, customer:, subsidiary_id:)
-      service_class(integration).new(integration:, customer:, subsidiary_id:)
+    def self.new_instance(integration:, customer:, subsidiary_id:, **params)
+      service_class(integration).new(integration:, customer:, subsidiary_id:, **params)
     end
 
     def self.service_class(integration)
@@ -14,6 +14,8 @@ module IntegrationCustomers
         IntegrationCustomers::AnrokService
       when 'Integrations::XeroIntegration'
         IntegrationCustomers::XeroService
+      when 'Integrations::HubspotIntegration'
+        IntegrationCustomers::HubspotService
       else
         raise(NotImplementedError)
       end
