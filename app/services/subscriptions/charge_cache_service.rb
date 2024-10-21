@@ -1,16 +1,24 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class ChargeCacheService < BaseService
+  class ChargeCacheService
     def self.expire_for_subscription(subscription)
-      subscription.plan.charges.each { new(subscription: subscription, charge: _1).expire_cache }
+      subscription.plan.charges.includes(:filters)
+        .find_each { expire_for_subscription_charge(subscription:, charge: _1) }
     end
 
-    def initialize(subscription:, charge:)
+    def self.expire_for_subscription_charge(subscription:, charge:)
+      charge.filters.each do |filter|
+        new(subscription:, charge:, charge_filter: filter).expire_cache
+      end
+
+      new(subscription:, charge:).expire_cache
+    end
+
+    def initialize(subscription:, charge:, charge_filter: nil)
       @subscription = subscription
       @charge = charge
-
-      super
+      @charge_filter = charge_filter
     end
 
     def cache_key
@@ -18,8 +26,10 @@ module Subscriptions
         'charge-usage',
         charge.id,
         subscription.id,
-        charge.updated_at.iso8601
-      ].join('/')
+        charge.updated_at.iso8601,
+        charge_filter&.id,
+        charge_filter&.updated_at&.iso8601
+      ].compact.join('/')
     end
 
     def expire_cache
@@ -28,6 +38,6 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :charge
+    attr_reader :subscription, :charge, :charge_filter
   end
 end
