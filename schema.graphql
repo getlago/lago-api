@@ -4281,6 +4281,8 @@ Invoice
 """
 type Invoice {
   appliedTaxes: [InvoiceAppliedTax!]
+  associatedActiveWalletPresent: Boolean!
+  availableToCreditAmountCents: BigInt!
   chargeAmountCents: BigInt!
   couponsAmountCents: BigInt!
   createdAt: ISO8601DateTime!
