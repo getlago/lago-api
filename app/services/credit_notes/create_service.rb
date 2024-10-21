@@ -55,7 +55,7 @@ module CreditNotes
         )
         if invoice.credit?
           WalletTransactions::VoidService.call(wallet: associated_wallet,
-            credits: voiding_credits, credit_note_id: credit_note.id)
+            credits_amount: voiding_credits, credit_note_id: credit_note.id)
         end
       end
 
@@ -240,7 +240,9 @@ module CreditNotes
 
       # wallet transactions don't have cents amount, so we have to convert value into full amount
       # and then convert money into amount of credits
-      credit_note.refund_amount_cents / credit_note.refund_amount.currency.subunit_to_unit / associated_wallet.rate_amount
+      amount_cents = credit_note.refund_amount_cents
+      amount = amount_cents.fdiv(credit_note.refund_amount.currency.subunit_to_unit)
+      amount.fdiv(associated_wallet.rate_amount)
     end
   end
 end
