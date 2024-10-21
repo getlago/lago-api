@@ -46,15 +46,13 @@ RSpec.describe DunningCampaignsQuery, type: :query do
     let(:pagination) { {page: 2, limit: 2} }
 
     it "applies the pagination", :aggregate_failures do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.dunning_campaigns.count).to eq(1)
-        expect(result.dunning_campaigns.current_page).to eq(2)
-        expect(result.dunning_campaigns.prev_page).to eq(1)
-        expect(result.dunning_campaigns.next_page).to be_nil
-        expect(result.dunning_campaigns.total_pages).to eq(2)
-        expect(result.dunning_campaigns.total_count).to eq(3)
-      end
+      expect(result).to be_success
+      expect(result.dunning_campaigns.count).to eq(1)
+      expect(result.dunning_campaigns.current_page).to eq(2)
+      expect(result.dunning_campaigns.prev_page).to eq(1)
+      expect(result.dunning_campaigns.next_page).to be_nil
+      expect(result.dunning_campaigns.total_pages).to eq(2)
+      expect(result.dunning_campaigns.total_count).to eq(3)
     end
   end
 
@@ -79,6 +77,64 @@ RSpec.describe DunningCampaignsQuery, type: :query do
 
     it "returns only the first dunning campaign" do
       expect(result.dunning_campaigns).to eq([dunning_campaign_first])
+    end
+  end
+
+  context "with currency filter" do
+    let(:filters) { {currency: "USD"} }
+
+    before do
+      create(
+        :dunning_campaign_threshold,
+        dunning_campaign: dunning_campaign_first,
+        currency: "USD"
+      )
+
+      create(
+        :dunning_campaign_threshold,
+        dunning_campaign: dunning_campaign_first,
+        currency: "GBP"
+      )
+
+      create(
+        :dunning_campaign_threshold,
+        dunning_campaign: dunning_campaign_third,
+        currency: "EUR"
+      )
+    end
+
+    it "returns only dunning campaigns with a threshold matching the currency" do
+      expect(result.dunning_campaigns).to eq([dunning_campaign_first])
+    end
+
+    context "with multiple currencies" do
+      let(:filters) { {currency: ["USD", "EUR"]} }
+
+      let(:dunning_campaign_fourth) { create(:dunning_campaign, organization:) }
+
+      before do
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign: dunning_campaign_fourth,
+          currency: "EUR"
+        )
+
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign: dunning_campaign_fourth,
+          currency: "USD"
+        )
+      end
+
+      it "returns only dunning campaigns with a threshold matching the currency" do
+        expect(result.dunning_campaigns).to eq(
+          [
+            dunning_campaign_fourth,
+            dunning_campaign_first,
+            dunning_campaign_third
+          ]
+        )
+      end
     end
   end
 
