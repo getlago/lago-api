@@ -23,7 +23,7 @@ module Integrations
 
             deliver_error_webhook(customer:, code:, message:)
 
-            result
+            raise e
           rescue Integrations::Aggregator::BasePayload::Failure => e
             deliver_error_webhook(customer:, code: e.code, message: e.code.humanize)
           end

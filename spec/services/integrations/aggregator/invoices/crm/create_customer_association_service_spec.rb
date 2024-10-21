@@ -71,38 +71,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::CreateCustomerAssociatio
           expect(service_call).to be_a(BaseService::Result)
         end
       end
-
-      # context 'when request raises LagoHttpClient::HttpError' do
-      #   let(:http_error) { LagoHttpClient::HttpError.new(429, 'Too Many Requests', nil) }
-
-      #   before do
-      #     allow(service).to receive(:http_client).and_return(lago_client)
-      #     allow(lago_client).to receive(:put_with_response).with(params, headers).and_raise(http_error)
-      #   end
-
-      #   it 'raises RequestLimitError if request limit error' do
-      #     allow(service).to receive(:request_limit_error?).with(http_error).and_return(true)
-      #     expect { service_call }.to raise_error(RequestLimitError)
-      #   end
-
-      #   it 'enqueues a SendWebhookJob' do
-      #     expect { service_call }.to have_enqueued_job(SendWebhookJob)
-      #   end
-      # end
-
-      # context 'when request raises Integrations::Aggregator::BasePayload::Failure' do
-      #   let(:failure_error) { Integrations::Aggregator::BasePayload::Failure.new('error_code') }
-
-      #   before do
-      #     allow(service).to receive(:http_client).and_return(lago_client)
-      #     allow(lago_client).to receive(:put_with_response).with(params, headers).and_raise(failure_error)
-      #   end
-
-      #   it 'delivers error webhook' do
-      #     expect(service).to have_received(:deliver_error_webhook).with(customer:, code: 'error_code', message: 'Error code')
-      #     service_call
-      #   end
-      # end
     end
   end
 end

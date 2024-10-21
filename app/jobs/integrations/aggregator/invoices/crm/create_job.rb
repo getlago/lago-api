@@ -12,6 +12,11 @@ module Integrations
 
           def perform(invoice:)
             result = Integrations::Aggregator::Invoices::Crm::CreateService.call(invoice:)
+
+            if result.success?
+              Integrations::Aggregator::Invoices::Crm::CreateCustomerAssociationJob.perform_later(invoice:)
+            end
+
             result.raise_if_error!
           end
         end
