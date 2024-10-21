@@ -67,6 +67,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         customer:,
         currency: invoice.currency,
         credit_amount_cents: 9,
+        refund_amount_cents: 9,
         coupons_adjustment_amount_cents: 8,
         taxes_amount_cents: 2,
         taxes_rate: 20
@@ -138,30 +139,6 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context 'when invoice is a prepaid credit invoice' do
-    let(:invoice) do
-      create(
-        :invoice,
-        :credit,
-        currency: 'EUR',
-        total_amount_cents: 24,
-        payment_status: :succeeded,
-        taxes_rate: 20
-      )
-    end
-
-    it 'returns a failure' do
-      result = estimate_service.call
-
-      aggregate_failures do
-        expect(result).not_to be_success
-
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq('invalid_type_or_status')
-      end
-    end
-  end
-
   context 'when invoice is legacy' do
     let(:invoice) do
       create(
@@ -183,6 +160,81 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
 
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq('invalid_type_or_status')
+      end
+    end
+  end
+
+  context 'when invoice is a prepaid credit invoice' do
+    let(:invoice) do
+      create(
+        :invoice,
+        invoice_type: :credit,
+        organization:,
+        customer:,
+        currency: 'EUR',
+        fees_amount_cents: 20,
+        total_amount_cents: 12,
+        payment_status: :succeeded,
+        version_number: 3
+      )
+    end
+    let(:wallet) { create(:wallet, customer:, balance_cents: 3) }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+    let(:credit_fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
+    let(:items) do
+      [
+        {
+          fee_id: credit_fee.id,
+          amount_cents: 10
+        }
+      ]
+    end
+
+    before { credit_fee }
+
+    context 'when wallet for the credits is active' do
+      it 'estimates the credit and refund amount hot higher than wallet.balance_cents' do
+        result = estimate_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note).to have_attributes(
+            invoice:,
+            customer:,
+            currency: invoice.currency,
+            credit_amount_cents: 0,
+            refund_amount_cents: 3,
+            coupons_adjustment_amount_cents: 0,
+            taxes_amount_cents: 0,
+            taxes_rate: 0
+          )
+        end
+      end
+    end
+
+    context 'when wallet for the credits is not active' do
+      let(:wallet) { create(:wallet, customer:, balance_cents: 3, status: :terminated) }
+
+      it 'estimates the credit and refund amount hot higher than wallet.balance_amount_cents' do
+        result = estimate_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note).to have_attributes(
+            invoice:,
+            customer:,
+            currency: invoice.currency,
+            credit_amount_cents: 0,
+            refund_amount_cents: 0,
+            coupons_adjustment_amount_cents: 0,
+            taxes_amount_cents: 0,
+            taxes_rate: 0
+          )
+        end
       end
     end
   end
