@@ -8,7 +8,7 @@ GIT
 
 GIT
   remote: https://github.com/getlago/lago-expression.git
-  revision: 584f652df3cee06c39204809693ad9dfe5c6f744
+  revision: 696e8dab910359c0385ca4c030a0f576357538e0
   glob: expression-ruby/lago-expression.gemspec
   specs:
     lago-expression (0.0.1)

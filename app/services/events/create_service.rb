@@ -48,7 +48,8 @@ module Events
       end
       return if expression.blank?
 
-      evaluation_event = Lago::Event.new(event.code, event.timestamp.to_i, event.properties)
+      string_properties = event.properties.transform_values(&:to_s)
+      evaluation_event = Lago::Event.new(event.code, event.timestamp.to_i, string_properties)
 
       value = Lago::ExpressionParser.parse(expression).evaluate(evaluation_event)
       event.properties[field_name] = value
