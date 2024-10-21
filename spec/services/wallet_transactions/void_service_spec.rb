@@ -80,7 +80,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
     end
 
     context 'when credit_note_id is passed' do
-      subject(:void_service) { described_class.call(wallet:, credits:, credit_note_id:) }
+      subject(:void_service) { described_class.call(wallet:, credits_amount:, credit_note_id:) }
 
       let(:credit_note_id) { create(:credit_note, organization: organization).id }
 
