@@ -6232,7 +6232,7 @@ type Query {
   """
   Query dunning campaigns of an organization
   """
-  dunningCampaigns(appliedToOrganization: Boolean, limit: Int, order: String, page: Int, searchTerm: String): DunningCampaignCollection!
+  dunningCampaigns(appliedToOrganization: Boolean, currency: [CurrencyEnum!], limit: Int, order: String, page: Int, searchTerm: String): DunningCampaignCollection!
 
   """
   Query events of an organization

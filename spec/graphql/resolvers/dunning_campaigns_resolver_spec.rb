@@ -35,7 +35,44 @@ RSpec.describe Resolvers::DunningCampaignsResolver, type: :graphql do
 
     dunning_campaigns_response = result["data"]["dunningCampaigns"]
 
-    aggregate_failures do
+    expect(dunning_campaigns_response["collection"].first).to include(
+      "id" => dunning_campaign.id,
+      "name" => dunning_campaign.name
+    )
+
+    expect(dunning_campaigns_response["metadata"]).to include(
+      "currentPage" => 1,
+      "totalCount" => 1
+    )
+  end
+
+  context "when filtering by threshold currency" do
+    let(:query) do
+      <<~GQL
+        query {
+          dunningCampaigns(limit: 5, currency: [EUR]) {
+            collection { id name }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:dunning_campaign, organization:)
+      create(:dunning_campaign_threshold, dunning_campaign:, currency: "EUR")
+    end
+
+    it "returns all dunning campaigns with currency threshold" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      dunning_campaigns_response = result["data"]["dunningCampaigns"]
+
       expect(dunning_campaigns_response["collection"].first).to include(
         "id" => dunning_campaign.id,
         "name" => dunning_campaign.name
