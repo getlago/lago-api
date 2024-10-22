@@ -25,6 +25,8 @@ module Types
       field :charges, [Types::Charges::Object]
       field :taxes, [Types::Taxes::Object]
 
+      field :has_overridden_plans, Boolean
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
@@ -44,6 +46,10 @@ module Types
 
       def charges_count
         object.charges.count
+      end
+
+      def has_overridden_plans
+        object.children.any?
       end
 
       def subscriptions_count

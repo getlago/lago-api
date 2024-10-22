@@ -30055,6 +30055,20 @@
               ]
             },
             {
+              "name": "hasOverriddenPlans",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -40728,6 +40742,18 @@
             },
             {
               "name": "billChargesMonthly",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "cascadeUpdates",
               "description": null,
               "type": {
                 "kind": "SCALAR",
