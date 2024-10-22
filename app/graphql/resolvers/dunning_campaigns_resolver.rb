@@ -10,6 +10,7 @@ module Resolvers
     REQUIRED_PERMISSION = "dunning_campaigns:view"
 
     argument :applied_to_organization, Boolean, required: false
+    argument :currency, [Types::CurrencyEnum], required: false
     argument :limit, Integer, required: false
     argument :order, String, required: false
     argument :page, Integer, required: false
@@ -19,6 +20,7 @@ module Resolvers
 
     def resolve( # rubocop:disable Metrics/ParameterLists
       applied_to_organization: nil,
+      currency: nil,
       order: nil,
       page: nil,
       limit: nil,
@@ -29,7 +31,10 @@ module Resolvers
         search_term:,
         order:,
         pagination: {page:, limit:},
-        filters: {applied_to_organization:}
+        filters: {
+          applied_to_organization:,
+          currency:
+        }
       )
 
       result.dunning_campaigns

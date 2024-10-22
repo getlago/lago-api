@@ -9,6 +9,7 @@ class DunningCampaignsQuery < BaseQuery
     dunning_campaigns = dunning_campaigns.order(order)
 
     dunning_campaigns = with_applied_to_organization(dunning_campaigns) unless filters.applied_to_organization.nil?
+    dunning_campaigns = with_currency_threshold(dunning_campaigns) if filters.currency.present?
 
     result.dunning_campaigns = dunning_campaigns
     result
@@ -36,5 +37,12 @@ class DunningCampaignsQuery < BaseQuery
 
   def with_applied_to_organization(scope)
     scope.where(applied_to_organization: filters.applied_to_organization)
+  end
+
+  def with_currency_threshold(scope)
+    scope
+      .joins(:thresholds)
+      .where(dunning_campaign_thresholds: {currency: filters.currency})
+      .distinct
   end
 end
