@@ -12,7 +12,7 @@ module Events
           organization_id: source['organization_id'],
           transaction_id: source['transaction_id'],
           external_subscription_id: source['external_subscription_id'],
-          timestamp: Time.zone.at(source['timestamp'].to_f),
+          timestamp: Time.zone.at(source['timestamp'].to_i),
           code: source['code'],
           properties: source['properties']
         )
