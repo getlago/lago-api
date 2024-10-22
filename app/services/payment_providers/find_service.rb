@@ -27,7 +27,7 @@ module PaymentProviders
       if code.blank? && scope.count > 1
         return result.service_failure!(
           code: 'payment_provider_code_missing',
-          message: 'Code is missing'
+          message: 'Payment provider code is missing'
         )
       end
 

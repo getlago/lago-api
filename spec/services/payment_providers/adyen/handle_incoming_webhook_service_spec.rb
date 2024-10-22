@@ -55,7 +55,7 @@ RSpec.describe PaymentProviders::Adyen::HandleIncomingWebhookService, type: :ser
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq('payment_provider_not_found')
+          expect(result.error.code).to eq('webhook_error')
           expect(result.error.error_message).to eq('Payment provider not found')
         end
       end
