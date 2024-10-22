@@ -27,7 +27,6 @@ module Integrations
 
             deliver_error_webhook(customer:, code:, message:)
 
-            # raise e
             result
           end
 

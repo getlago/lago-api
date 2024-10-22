@@ -35,10 +35,8 @@ module Integrations
             code = code(e)
             message = message(e)
 
-            # TODO: Change this to crm error webhook when it is implemented
             deliver_error_webhook(customer:, code:, message:)
 
-            # raise e
             result
           end
 
