@@ -17,7 +17,13 @@ module Api
 
       def update
         plan = current_organization.plans.parents.find_by(code: params[:code])
-        result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
+
+        update_params = input_params.to_h.deep_symbolize_keys
+        if params[:plan].key?(:cascade_updates)
+          update_params[:cascade_updates] = params.require(:plan).permit(:cascade_updates)[:cascade_updates]
+        end
+
+        result = ::Plans::UpdateService.call(plan:, params: update_params)
 
         if result.success?
           render_plan(result.plan)
