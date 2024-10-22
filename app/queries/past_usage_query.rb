@@ -41,7 +41,7 @@ class PastUsageQuery < BaseQuery
   end
 
   def fees_query(invoice)
-    query = invoice.fees.charge.includes(:charge_filter)
+    query = invoice.fees.joins(:subscription).where(subscription: {external_id: filters.external_subscription_id}).charge.includes(:charge_filter)
     return query unless filters.billable_metric_code
 
     query.joins(:charge).where(charges: {billable_metric_id: billable_metric.id})

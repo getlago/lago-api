@@ -351,8 +351,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
 
     let(:invoice) { invoice_subscription.invoice }
 
-    let(:fee1) { create(:charge_fee, charge: charge1, invoice:) }
-    let(:fee2) { create(:charge_fee, charge: charge2, invoice:) }
+    let(:fee1) { create(:charge_fee, charge: charge1, subscription:, invoice:) }
+    let(:fee2) { create(:charge_fee, charge: charge2, subscription:, invoice:) }
 
     let(:path) do
       [
