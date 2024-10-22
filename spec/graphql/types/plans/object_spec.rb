@@ -12,6 +12,7 @@ RSpec.describe Types::Plans::Object do
   it { is_expected.to have_field(:bill_charges_monthly).of_type('Boolean') }
   it { is_expected.to have_field(:code).of_type('String!') }
   it { is_expected.to have_field(:description).of_type('String') }
+  it { is_expected.to have_field(:has_overridden_plans).of_type('Boolean') }
   it { is_expected.to have_field(:interval).of_type('PlanInterval!') }
   it { is_expected.to have_field(:invoice_display_name).of_type('String') }
   it { is_expected.to have_field(:minimum_commitment).of_type('Commitment') }

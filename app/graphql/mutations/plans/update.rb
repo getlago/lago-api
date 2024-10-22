@@ -13,6 +13,7 @@ module Mutations
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true
       argument :bill_charges_monthly, Boolean, required: false
+      argument :cascade_updates, Boolean, required: false
       argument :code, String, required: true
       argument :description, String, required: false
       argument :id, String, required: true
