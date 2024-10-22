@@ -148,7 +148,8 @@ module Events
               timestamp,
               property,
               operation_type,
-              #{operation_value_sql}
+              #{operation_value_sql},
+              anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)
             FROM events_data
             ORDER BY timestamp ASC
           SQL
@@ -207,8 +208,8 @@ module Events
                 events(ordered: true)
                   .select(
                     "timestamp, \
-                    #{sanitized_property_name} AS property, \
-                    coalesce(NULLIF(events_enriched.properties['operation_type'], ''), 'add') AS operation_type"
+                    value AS property, \
+                    coalesce(NULLIF(events_enriched.sorted_properties['operation_type'], ''), 'add') AS operation_type"
                   )
                   .to_sql
               })
@@ -227,8 +228,8 @@ module Events
                 .select(
                   "#{groups.join(", ")}, \
                   timestamp, \
-                  #{sanitized_property_name} AS property, \
-                  coalesce(NULLIF(events_enriched.properties['operation_type'], ''), 'add') AS operation_type"
+                  value AS property, \
+                  coalesce(NULLIF(events_enriched.sorted_properties['operation_type'], ''), 'add') AS operation_type"
                 ).to_sql
             })
           SQL
@@ -242,15 +243,15 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) = 'add',
+                (anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
-                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) = 'remove',
-                toDecimal128(-1, :decimal_scale),
-                toDecimal128(0, :decimal_scale)
+                (anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                toDecimal128(0, :decimal_scale),
+                toDecimal128(-1, :decimal_scale)
               ))
             )
           SQL
@@ -264,15 +265,15 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (lagInFrame(operation_type, 1) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) = 'add',
+                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
-                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) = 'remove',
-                toDecimal128(-1, :decimal_scale),
-                toDecimal128(0, :decimal_scale)
+                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                toDecimal128(0, :decimal_scale),
+                toDecimal128(-1, :decimal_scale)
               ))
             )
           SQL
