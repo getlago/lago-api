@@ -8,6 +8,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Hubspot do
   let(:customer) { create(:customer, customer_type: 'individual') }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:) }
   let(:customer_link) { payload.__send__(:customer_url) }
+  let(:website) { payload.__send__(:clean_url, customer.url) }
 
   describe "#create_body" do
     subject(:create_body_call) { payload.create_body }
@@ -20,7 +21,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Hubspot do
           'lastname' => customer.lastname,
           'phone' => customer.phone,
           'company' => customer.legal_name,
-          'website' => customer.url,
+          'website' => website,
           'lago_customer_id' => customer.id,
           'lago_customer_external_id' => customer.external_id,
           'lago_billing_email' => customer.email,
@@ -47,7 +48,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Hubspot do
             'lastname' => customer.lastname,
             'phone' => customer.phone,
             'company' => customer.legal_name,
-            'website' => customer.url
+            'website' => website
           }
         }
       }

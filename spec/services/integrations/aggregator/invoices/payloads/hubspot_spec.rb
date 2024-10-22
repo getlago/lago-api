@@ -8,6 +8,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
   let(:integration) { create(:hubspot_integration, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
+  let(:file_url) { Faker::Internet.url }
 
   let(:invoice) do
     create(
@@ -26,7 +27,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
     create(:integration_resource, integration:, resource_type: 'invoice', syncable: invoice)
   end
 
-  before { integration_invoice }
+  before do
+    integration_invoice
+    allow(invoice).to receive(:file_url).and_return(file_url)
+  end
 
   describe '#create_body' do
     subject(:body_call) { payload.create_body }
@@ -56,6 +60,14 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
 
     it 'returns payload body' do
       expect(subject).to eq(create_body)
+    end
+
+    context 'when invoice file_url is missing' do
+      before { allow(invoice).to receive(:file_url).and_return(nil) }
+
+      it 'raises an error' do
+        expect { subject }.to raise_error(Integrations::Aggregator::BasePayload::Failure, 'invoice.file_url missing')
+      end
     end
   end
 
@@ -87,6 +99,14 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
 
     it 'returns payload body' do
       expect(subject).to eq(update_body)
+    end
+
+    context 'when invoice file_url is missing' do
+      before { allow(invoice).to receive(:file_url).and_return(nil) }
+
+      it 'raises an error' do
+        expect { subject }.to raise_error(Integrations::Aggregator::BasePayload::Failure, 'invoice.file_url missing')
+      end
     end
   end
 

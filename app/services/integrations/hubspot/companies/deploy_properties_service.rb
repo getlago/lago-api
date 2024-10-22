@@ -13,9 +13,8 @@ module Integrations
         def call
           return unless integration.type == 'Integrations::HubspotIntegration'
           return result if integration.companies_properties_version == VERSION
-          response = nil
+          response = http_client.post_with_response(payload, headers)
           ActiveRecord::Base.transaction do
-            response = http_client.post_with_response(payload, headers)
             integration.settings = integration.reload.settings
             integration.companies_properties_version = VERSION
             integration.save!

@@ -14,6 +14,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::UpdateService do
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { 'https://api.nango.dev/v1/hubspot/records' }
   let(:invoice_file_url) { invoice.file_url }
+  let(:file_url) { Faker::Internet.url }
   let(:due_date) { invoice.payment_due_date.strftime('%Y-%m-%d') }
 
   let(:invoice) do
@@ -42,6 +43,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::UpdateService do
 
   before do
     allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(invoice).to receive(:file_url).and_return(file_url)
 
     integration_customer
     integration.sync_invoices = true

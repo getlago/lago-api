@@ -6,6 +6,10 @@ module Integrations
       module Payloads
         class Hubspot < BasePayload
           def create_body
+            unless invoice.file_url
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invoice.file_url missing')
+            end
+
             {
               'objectType' => 'LagoInvoices',
               'input' => {
@@ -29,6 +33,10 @@ module Integrations
           end
 
           def update_body
+            unless invoice.file_url
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invoice.file_url missing')
+            end
+
             {
               'objectId' => integration_invoice.external_id,
               'objectType' => 'LagoInvoices',
@@ -53,7 +61,7 @@ module Integrations
 
           def customer_association_body
             {
-              'objectType' => integration.invoices_object_type_id,
+              'objectType' => integration.reload.invoices_object_type_id,
               'objectId' => integration_invoice.external_id,
               'toObjectType' => object_type,
               'toObjectId' => integration_customer.external_customer_id,
@@ -84,7 +92,7 @@ module Integrations
           end
 
           def subtotal_excluding_taxes
-            amount(invoice.sub_total_including_taxes_amount_cents, resource: invoice)
+            amount(invoice.sub_total_excluding_taxes_amount_cents, resource: invoice)
           end
         end
       end

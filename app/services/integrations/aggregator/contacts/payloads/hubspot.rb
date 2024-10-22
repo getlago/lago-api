@@ -13,7 +13,7 @@ module Integrations
                 'lastname' => customer.lastname,
                 'phone' => customer.phone,
                 'company' => customer.legal_name,
-                'website' => customer.url,
+                'website' => clean_url(customer.url),
                 'lago_customer_id' => customer.id,
                 'lago_customer_external_id' => customer.external_id,
                 'lago_billing_email' => customer.email,
@@ -32,7 +32,7 @@ module Integrations
                   'lastname' => customer.lastname,
                   'phone' => customer.phone,
                   'company' => customer.legal_name,
-                  'website' => customer.url
+                  'website' => clean_url(customer.url)
                 }
               }
             }

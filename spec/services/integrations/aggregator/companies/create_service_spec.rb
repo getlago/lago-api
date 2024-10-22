@@ -64,7 +64,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
           {
             'properties' => {
               'name' => customer.name,
-              'domain' => customer.url,
+              'domain' => anything,
               'lago_customer_id' => customer.id,
               'lago_customer_external_id' => customer.external_id,
               'lago_billing_email' => customer.email,
@@ -107,7 +107,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
           {
             'properties' => {
               'name' => customer.name,
-              'domain' => customer.url,
+              'domain' => anything,
               'lago_customer_id' => customer.id,
               'lago_customer_external_id' => customer.external_id,
               'lago_billing_email' => customer.email,
@@ -172,7 +172,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
         {
           'properties' => {
             'name' => customer.name,
-            'domain' => customer.url,
+            'domain' => anything,
             'lago_customer_id' => customer.id,
             'lago_customer_external_id' => customer.external_id,
             'lago_billing_email' => customer.email,
