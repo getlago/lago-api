@@ -57,6 +57,7 @@ Rails.application.configure do
       ssl_params: {
         verify_mode: OpenSSL::SSL::VERIFY_NONE
       },
+      pool: {size: ENV.fetch('LAGO_REDIS_CACHE_POOL_SIZE', 5)},
       error_handler: lambda { |method:, returning:, exception:|
         Rails.logger.error(exception.message)
         Rails.logger.error(exception.backtrace.join("\n"))
