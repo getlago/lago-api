@@ -21,3 +21,4 @@ de:
     tax: "%{name} (%{rate}% on %{amount})"
     tax_rate: Tax rate
     total: Insgesamt
+    prepaid_credits_for_wallet: Prepaid-Guthaben - %{wallet_name}
