@@ -6,10 +6,10 @@ module Integrations
       queue_as 'integrations'
 
       def perform(integration:)
-        Integrations::Hubspot::Invoices::DeployObjectJob.perform_later(integration:)
-        Integrations::Hubspot::Subscriptions::DeployObjectJob.perform_later(integration:)
-        Integrations::Hubspot::Companies::DeployPropertiesJob.perform_later(integration:)
-        Integrations::Hubspot::Contacts::DeployPropertiesJob.perform_later(integration:)
+        Integrations::Hubspot::Invoices::DeployObjectService.call(integration:)
+        Integrations::Hubspot::Subscriptions::DeployObjectService.call(integration:)
+        Integrations::Hubspot::Companies::DeployPropertiesService.call(integration:)
+        Integrations::Hubspot::Contacts::DeployPropertiesService.call(integration:)
       end
     end
   end
