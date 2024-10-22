@@ -13,6 +13,7 @@ class Subscription < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :invoices, through: :invoice_subscriptions
   has_many :fees
+  has_many :daily_usages
   has_one :lifetime_usage, autosave: true
 
   validates :external_id, :billing_time, presence: true

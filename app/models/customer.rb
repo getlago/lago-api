@@ -39,6 +39,7 @@ class Customer < ApplicationRecord
   has_many :credit_notes
   has_many :applied_add_ons
   has_many :add_ons, through: :applied_add_ons
+  has_many :daily_usages
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
   has_many :payment_provider_customers,
