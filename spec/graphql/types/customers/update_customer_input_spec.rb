@@ -38,4 +38,7 @@ RSpec.describe Types::Customers::UpdateCustomerInput do
   it { is_expected.to accept_argument(:provider_customer).of_type('ProviderCustomerInput') }
   it { is_expected.to accept_argument(:integration_customers).of_type('[IntegrationCustomerInput!]') }
   it { is_expected.to accept_argument(:billing_configuration).of_type('CustomerBillingConfigurationInput') }
+
+  it { is_expected.to accept_argument(:applied_dunning_campaign_id).of_type("ID") }
+  it { is_expected.to accept_argument(:exclude_from_dunning_campaign).of_type("Boolean") }
 end

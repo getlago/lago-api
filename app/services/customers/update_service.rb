@@ -94,6 +94,25 @@ module Customers
       # NOTE: external_id is not editable if customer is attached to subscriptions
       customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
 
+      if customer.organization.auto_dunning_enabled?
+        if args.key?(:applied_dunning_campaign_id)
+          dunning_campaign = DunningCampaign.find(args[:applied_dunning_campaign_id])
+          customer.applied_dunning_campaign = dunning_campaign
+          customer.exclude_from_dunning_campaign = false
+        end
+
+        # NOTE: exclude_from_dunning_campaign has higher priority than applied campaign
+        if args.key?(:exclude_from_dunning_campaign)
+          customer.exclude_from_dunning_campaign = args[:exclude_from_dunning_campaign]
+          customer.applied_dunning_campaign = nil if args[:exclude_from_dunning_campaign]
+        end
+
+        if customer.applied_dunning_campaign_id_changed? || customer.exclude_from_dunning_campaign_changed?
+          customer.last_dunning_campaign_attempt = 0
+          customer.last_dunning_campaign_attempt_at = nil
+        end
+      end
+
       ActiveRecord::Base.transaction do
         if old_provider_customer && args[:payment_provider].nil? && args[:payment_provider_code].present?
           old_provider_customer.discard!
