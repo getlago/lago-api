@@ -5993,6 +5993,7 @@ type Plan {
   customersCount: Int!
   description: String
   draftInvoicesCount: Int!
+  hasOverriddenPlans: Boolean
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
@@ -8114,6 +8115,7 @@ input UpdatePlanInput {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
+  cascadeUpdates: Boolean
   charges: [ChargeInput!]!
 
   """
