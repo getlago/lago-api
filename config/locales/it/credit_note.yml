@@ -14,6 +14,7 @@ it:
     issue_date: Data Emissione
     item: Articolo
     powered_by: Elaborato da
+    prepaid_credits_for_wallet: Crediti prepagati - %{wallet_name}
     refunded: Rimborsato
     refunded_notice: Rimborsato il %{issuing_date}
     sub_total_without_tax: Subtotale (escl. tasse)
@@ -21,4 +22,3 @@ it:
     tax: "%{name} (%{rate}% su %{amount})"
     tax_rate: Tasso fiscale
     total: Totale
-    prepaid_credits_for_wallet: Crediti prepagati - %{wallet_name}

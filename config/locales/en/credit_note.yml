@@ -14,6 +14,7 @@ en:
     issue_date: Issue date
     item: Item
     powered_by: Powered by
+    prepaid_credits_for_wallet: Prepaid credits - %{wallet_name}
     refunded: Refunded
     refunded_notice: Refunded on %{issuing_date}
     sub_total_without_tax: Sub total (excl. tax)
@@ -21,4 +22,3 @@ en:
     tax: "%{name} (%{rate}% on %{amount})"
     tax_rate: Tax rate
     total: Total
-    prepaid_credits_for_wallet: "Prepaid credits - %{wallet_name}"

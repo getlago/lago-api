@@ -14,6 +14,7 @@ nb:
     issue_date: Dato
     item: Vare
     powered_by: Fakturering drevet av
+    prepaid_credits_for_wallet: Forhåndsbetalte kreditter - %{wallet_name}
     refunded: Refundert
     refunded_notice: Refundert %{issuing_date}
     sub_total_without_tax: Sub total (ekskl. MVA)
@@ -21,4 +22,3 @@ nb:
     tax: "%{name} (%{rate}% on %{amount})"
     tax_rate: Tax rate
     total: Beløp
-    prepaid_credits_for_wallet: Forhåndsbetalte kreditter - %{wallet_name}
