@@ -119,6 +119,19 @@ module Plans
       end
     end
 
+    def cascade_charge_update(charge, payload_charge)
+      return unless cascade?
+      return if plan.children.empty?
+
+      plan.children.includes(:charges).find_each do |p|
+        child_charge = p.charges.find { |c| c.parent_id == charge.id }
+
+        if child_charge && charge.equal_properties?(child_charge)
+          Charges::UpdateJob.perform_later(charge: child_charge, params: payload_charge, cascade: true)
+        end
+      end
+    end
+
     def cascade?
       ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
     end
@@ -212,45 +225,8 @@ module Plans
         charge = plan.charges.find_by(id: payload_charge[:id])
 
         if charge
-          charge.charge_model = payload_charge[:charge_model] unless plan.attached_to_subscriptions?
-
-          properties = payload_charge.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
-            payload_charge[:charge_model]
-          )
-
-          charge.update!(
-            invoice_display_name: payload_charge[:invoice_display_name],
-            properties: Charges::FilterChargeModelPropertiesService.call(
-              charge:,
-              properties:
-            ).properties
-          )
-
-          filters = payload_charge.delete(:filters)
-          unless filters.nil?
-            ChargeFilters::CreateOrUpdateBatchService.call(
-              charge:,
-              filters_params: filters.map(&:with_indifferent_access)
-            ).raise_if_error!
-          end
-
-          tax_codes = payload_charge.delete(:tax_codes)
-          if tax_codes
-            taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes:)
-            taxes_result.raise_if_error!
-          end
-
-          # NOTE: charges cannot be edited if plan is attached to a subscription
-          unless plan.attached_to_subscriptions?
-            invoiceable = payload_charge.delete(:invoiceable)
-            min_amount_cents = payload_charge.delete(:min_amount_cents)
-
-            charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
-            charge.min_amount_cents = min_amount_cents || 0 if License.premium?
-
-            charge.update!(payload_charge)
-            charge
-          end
+          cascade_charge_update(charge, payload_charge)
+          Charges::UpdateService.call(charge:, params: payload_charge).raise_if_error!
 
           next
         end
@@ -270,8 +246,8 @@ module Plans
       args_charges_ids = args_charges.map { |c| c[:id] }.compact
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
       plan.charges.where(id: charges_ids).find_each do |charge|
-        Charges::DestroyService.call(charge:)
         cascade_charge_removal(charge)
+        Charges::DestroyService.call(charge:)
       end
     end
 

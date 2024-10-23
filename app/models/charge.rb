@@ -67,6 +67,10 @@ class Charge < ApplicationRecord
     properties.keys == ['rate']
   end
 
+  def equal_properties?(charge)
+    charge_model == charge.charge_model && properties == charge.properties
+  end
+
   private
 
   def validate_amount
