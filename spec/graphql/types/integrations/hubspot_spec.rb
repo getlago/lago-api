@@ -13,6 +13,9 @@ RSpec.describe Types::Integrations::Hubspot do
   it { is_expected.to have_field(:name).of_type('String!') }
   it { is_expected.to have_field(:portal_id).of_type('String') }
 
+  it { is_expected.to have_field(:invoices_object_type_id).of_type('String') }
+  it { is_expected.to have_field(:subscriptions_object_type_id).of_type('String') }
+
   it { is_expected.to have_field(:sync_invoices).of_type('Boolean') }
   it { is_expected.to have_field(:sync_subscriptions).of_type('Boolean') }
 end

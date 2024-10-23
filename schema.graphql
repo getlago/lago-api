@@ -4154,8 +4154,10 @@ type HubspotIntegration {
   connectionId: ID!
   defaultTargetedObject: HubspotTargetedObjectsEnum!
   id: ID!
+  invoicesObjectTypeId: String
   name: String!
   portalId: String
+  subscriptionsObjectTypeId: String
   syncInvoices: Boolean
   syncSubscriptions: Boolean
 }
