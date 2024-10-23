@@ -82,7 +82,7 @@ RSpec.describe PaymentProviders::FindService, type: :service do
                 expect(result).not_to be_success
                 expect(result.error).to be_a(BaseService::ServiceFailure)
                 expect(result.error.code).to eq('payment_provider_code_missing')
-                expect(result.error.error_message).to eq('Code is missing')
+                expect(result.error.error_message).to eq('Payment provider code is missing')
               end
             end
           end

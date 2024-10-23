@@ -41,9 +41,8 @@ module PaymentProviders
 
       def handle_payment_provider_failure(payment_provider_result)
         return payment_provider_result unless payment_provider_result.error.is_a?(BaseService::ServiceFailure)
-        return payment_provider_result unless payment_provider_result.error.code == 'payment_provider_code_missing'
 
-        result.service_failure!(code: 'webhook_error', message: 'Payment provider code is missing')
+        result.service_failure!(code: 'webhook_error', message: payment_provider_result.error.error_message)
       end
     end
   end
