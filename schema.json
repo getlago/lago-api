@@ -20075,6 +20075,20 @@
               ]
             },
             {
+              "name": "invoicesObjectTypeId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "name",
               "description": null,
               "type": {
@@ -20094,6 +20108,20 @@
             },
             {
               "name": "portalId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "subscriptionsObjectTypeId",
               "description": null,
               "type": {
                 "kind": "SCALAR",
