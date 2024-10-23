@@ -39,12 +39,13 @@ module Integrations
 
           def columns
             result = {
-              'tranid' => invoice.id,
               'entity' => integration_customer.external_customer_id,
+              'taxregoverride' => true,
+              'taxdetailsoverride' => true,
               'otherrefnum' => invoice.number,
-              'custbody_lago_id' => invoice.id,
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_url,
+              'custbody_lago_id' => invoice.id,
               'duedate' => due_date
             }
 

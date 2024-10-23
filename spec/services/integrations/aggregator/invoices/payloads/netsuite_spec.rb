@@ -237,8 +237,9 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       context 'when tax nexus is not present' do
         let(:columns) do
           {
-            'tranid' => invoice.id,
             'entity' => integration_customer.external_customer_id,
+            'taxregoverride' => true,
+            'taxdetailsoverride' => true,
             'otherrefnum' => invoice.number,
             'custbody_lago_id' => invoice.id,
             'custbody_ava_disable_tax_calculation' => true,
@@ -253,26 +254,113 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       end
 
       context 'when tax nexus is present' do
-        let(:columns) do
-          {
-            'tranid' => invoice.id,
-            'entity' => integration_customer.external_customer_id,
-            'otherrefnum' => invoice.number,
-            'custbody_lago_id' => invoice.id,
-            'custbody_ava_disable_tax_calculation' => true,
-            'custbody_lago_invoice_link' => invoice_link,
-            'duedate' => due_date,
-            'nexus' => 'some_nexus'
-          }
+        context 'when tax item is mapped completely' do
+          before do
+            integration_collection_mapping5.update!(
+              tax_nexus: 'some_nexus',
+              tax_type: 'some_type',
+              tax_code: 'some_code'
+            )
+
+            body['taxdetails'] = taxdetails
+          end
+
+          let(:taxdetails) do
+            [
+              {
+                'lineItems' => [
+                  {
+                    'taxamount' => 2.0,
+                    'taxbasis' => 1,
+                    'taxcode' => 'some_code',
+                    'taxdetailsreference' => fee_sub.id,
+                    'taxrate' => 0.0,
+                    'taxtype' => 'some_type'
+                  },
+                  {
+                    'taxamount' => 0.02,
+                    'taxbasis' => 1,
+                    'taxcode' => 'some_code',
+                    'taxdetailsreference' => minimum_commitment_fee.id,
+                    'taxrate' => 0.0,
+                    'taxtype' => 'some_type'
+                  },
+                  {
+                    'taxamount' => 0.02,
+                    'taxbasis' => 1,
+                    'taxcode' => 'some_code',
+                    'taxdetailsreference' => charge_fee.id,
+                    'taxrate' => 0.0, 'taxtype' => 'some_type'
+                  },
+                  {
+                    'taxamount' => -0.04,
+                    'taxbasis' => 1,
+                    'taxcode' => 'some_code',
+                    'taxdetailsreference' => 'coupon_item',
+                    'taxrate' => 0.0,
+                    'taxtype' => 'some_type'
+                  },
+                  {
+                    'taxamount' => 0,
+                    'taxbasis' => 1,
+                    'taxcode' => 'some_code',
+                    'taxdetailsreference' => 'credit_item',
+                    'taxrate' => 0.0,
+                    'taxtype' => 'some_type'
+                  },
+                  {
+                    'taxamount' => 0,
+                    'taxbasis' => 1,
+                    'taxcode' => 'some_code',
+                    'taxdetailsreference' => 'credit_note_item',
+                    'taxrate' => 0.0,
+                    'taxtype' => 'some_type'
+                  }
+                ],
+                'sublistId' => 'taxdetails'
+              }
+            ]
+          end
+
+          let(:columns) do
+            {
+              'entity' => integration_customer.external_customer_id,
+              'taxregoverride' => true,
+              'taxdetailsoverride' => true,
+              'otherrefnum' => invoice.number,
+              'custbody_lago_id' => invoice.id,
+              'custbody_ava_disable_tax_calculation' => true,
+              'custbody_lago_invoice_link' => invoice_link,
+              'duedate' => due_date,
+              'nexus' => 'some_nexus'
+            }
+          end
+
+          it 'returns payload body with tax columns' do
+            expect(subject).to eq(body)
+          end
         end
 
-        before do
-          integration_collection_mapping5.tax_nexus = 'some_nexus'
-          integration_collection_mapping5.save!
-        end
+        context 'when tax item is not mapped completely' do
+          before { integration_collection_mapping5.update!(tax_nexus: 'some_nexus') }
 
-        it 'returns payload body with tax columns' do
-          expect(subject).to eq(body)
+          let(:columns) do
+            {
+              'entity' => integration_customer.external_customer_id,
+              'taxregoverride' => true,
+              'taxdetailsoverride' => true,
+              'otherrefnum' => invoice.number,
+              'custbody_lago_id' => invoice.id,
+              'custbody_ava_disable_tax_calculation' => true,
+              'custbody_lago_invoice_link' => invoice_link,
+              'duedate' => due_date,
+              'nexus' => 'some_nexus'
+            }
+          end
+
+          it 'returns payload body with tax columns' do
+            expect(subject).to eq(body)
+          end
         end
       end
     end
@@ -280,8 +368,9 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     context 'when tax item is not mapped' do
       let(:columns) do
         {
-          'tranid' => invoice.id,
           'entity' => integration_customer.external_customer_id,
+          'taxregoverride' => true,
+          'taxdetailsoverride' => true,
           'otherrefnum' => invoice.number,
           'custbody_lago_id' => invoice.id,
           'custbody_ava_disable_tax_calculation' => true,
