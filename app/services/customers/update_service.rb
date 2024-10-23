@@ -96,7 +96,7 @@ module Customers
 
       if customer.organization.auto_dunning_enabled?
         if args.key?(:applied_dunning_campaign_id)
-          dunning_campaign = DunningCampaign.find(args[:applied_dunning_campaign_id])
+          dunning_campaign = DunningCampaign.find_by(id: args[:applied_dunning_campaign_id])
           customer.applied_dunning_campaign = dunning_campaign
           customer.exclude_from_dunning_campaign = false
         end
