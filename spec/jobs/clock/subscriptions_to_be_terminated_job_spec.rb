@@ -128,5 +128,45 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
         end
       end
     end
+
+    context 'when the organization has multiple endpoints and the webhook has already been sent' do
+      let(:webhook_alert1) do
+        create(
+          :webhook,
+          :succeeded,
+          object_id: subscription1.id,
+          webhook_type: 'subscription.termination_alert',
+          created_at: ending_at - 45.days
+        )
+      end
+
+      let(:webhook_alert2) do
+        create(
+          :webhook,
+          :succeeded,
+          object_id: subscription1.id,
+          webhook_type: 'subscription.termination_alert',
+          created_at: ending_at - 45.days
+        )
+      end
+
+      before do
+        webhook_alert1
+        webhook_alert2
+      end
+
+      it 'sends webhook that subscription is going to be terminated for the right subscriptions' do
+        current_date = ending_at - 15.days
+
+        travel_to(current_date) do
+          expect do
+            described_class.perform_now
+          end
+            .to have_enqueued_job(SendWebhookJob)
+            .with('subscription.termination_alert', Subscription)
+            .exactly(:once)
+        end
+      end
+    end
   end
 end
