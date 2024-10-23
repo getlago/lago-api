@@ -5,10 +5,9 @@ require 'rails_helper'
 RSpec.describe Webhook, type: :model do
   subject(:webhook) { create(:webhook) }
 
-  let(:organization) { create(:organization, name: "sefsefs", api_key: 'the_key') }
-
   it { is_expected.to belong_to(:webhook_endpoint) }
   it { is_expected.to belong_to(:object).optional }
+  it { is_expected.to have_one(:organization).through(:webhook_endpoint) }
 
   describe '#payload' do
     it 'returns a hash' do
@@ -56,8 +55,8 @@ RSpec.describe Webhook, type: :model do
 
   describe '#hmac_signature' do
     it 'generates a correct hmac signature' do
-      webhook.webhook_endpoint.organization.api_key = 'the_key'
-      hmac = OpenSSL::HMAC.digest('sha-256', 'the_key', webhook.payload.to_json)
+      api_key_value = webhook.organization.api_keys.first.value
+      hmac = OpenSSL::HMAC.digest('sha-256', api_key_value, webhook.payload.to_json)
       base64_hmac = Base64.strict_encode64(hmac)
 
       expect(base64_hmac).to eq(webhook.hmac_signature)

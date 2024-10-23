@@ -13,7 +13,11 @@ FactoryBot.define do
     end
 
     after(:create) do |organization, evaluator|
-      organization.webhook_endpoints.create(webhook_url: evaluator.webhook_url)
+      if evaluator.webhook_url
+        organization.webhook_endpoints.create!(webhook_url: evaluator.webhook_url)
+      end
+
+      organization.api_keys.create!
     end
   end
 end

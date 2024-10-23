@@ -33,12 +33,11 @@ RSpec.describe UsersService, type: :service do
       result = user_service.register('email', 'password', 'organization_name')
       expect(result.user).to be_present
       expect(result.membership).to be_present
-      expect(result.organization).to be_present
       expect(result.token).to be_present
 
-      org = Organization.find(result.organization.id)
-      expect(org.document_number_prefix).to eq("#{org.name.first(3).upcase}-#{org.id.last(4).upcase}")
-      expect(org.document_numbering).to eq('per_organization')
+      expect(result.organization)
+        .to be_present
+        .and have_attributes(name: 'organization_name', document_numbering: 'per_organization')
     end
 
     context 'when user already exists' do

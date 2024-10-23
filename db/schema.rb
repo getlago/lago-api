@@ -101,6 +101,15 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_25_081408) do
     t.index ["subscription_id"], name: "index_adjusted_fees_on_subscription_id"
   end
 
+  create_table "api_keys", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "value", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_api_keys_on_organization_id"
+    t.index ["value"], name: "index_api_keys_on_value", unique: true
+  end
+
   create_table "applied_add_ons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "add_on_id", null: false
     t.uuid "customer_id", null: false
@@ -1266,6 +1275,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_25_081408) do
   add_foreign_key "adjusted_fees", "groups"
   add_foreign_key "adjusted_fees", "invoices"
   add_foreign_key "adjusted_fees", "subscriptions"
+  add_foreign_key "api_keys", "organizations"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
   add_foreign_key "applied_usage_thresholds", "invoices"

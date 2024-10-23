@@ -32,6 +32,6 @@ module ApiHelper
   def set_headers(organization, headers)
     headers['Content-Type'] = 'application/json'
     headers['Accept'] = 'application/json'
-    headers['Authorization'] = "Bearer #{organization.api_key}"
+    headers['Authorization'] = "Bearer #{organization.api_keys.first.value}"
   end
 end

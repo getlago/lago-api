@@ -16,6 +16,7 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:gocardless_payment_providers) }
   it { is_expected.to have_many(:adyen_payment_providers) }
 
+  it { is_expected.to have_many(:api_keys) }
   it { is_expected.to have_many(:webhook_endpoints) }
   it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
   it { is_expected.to have_many(:hubspot_integrations) }
@@ -140,11 +141,43 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe 'Callbacks' do
-    it 'generates the api key' do
-      organization.save!
+  describe '#save' do
+    subject { organization.save! }
 
-      expect(organization.api_key).to be_present
+    before do
+      allow(organization).to receive(:generate_document_number_prefix).and_call_original # rubocop:disable RSpec/SubjectStub
+      subject
+    end
+
+    context 'with a new record' do
+      let(:organization) { build(:organization) }
+
+      it 'calls #generate_document_number_prefix' do
+        expect(organization).to have_received(:generate_document_number_prefix)
+      end
+    end
+
+    context 'with a persisted record' do
+      let(:organization) { create(:organization) }
+
+      it 'does not call #generate_document_number_prefix' do
+        expect(organization).not_to have_received(:generate_document_number_prefix)
+      end
+    end
+  end
+
+  describe '#generate_document_number_prefix' do
+    subject { organization.send(:generate_document_number_prefix) }
+
+    let(:organization) { create(:organization) }
+    let(:prefix) { "#{organization.name.first(3).upcase}-#{organization.id.last(4).upcase}" }
+
+    before { organization.update!(document_number_prefix: 'invalid') }
+
+    it 'sets document number prefix of organization' do
+      expect { subject }
+        .to change(organization, :document_number_prefix)
+        .to prefix
     end
   end
 
