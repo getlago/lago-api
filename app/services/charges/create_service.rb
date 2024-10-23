@@ -18,6 +18,7 @@ module Charges
           invoice_display_name: params[:invoice_display_name],
           amount_currency: params[:amount_currency],
           charge_model: charge_model(params),
+          parent_id: params[:parent_id],
           pay_in_advance: params[:pay_in_advance] || false,
           prorated: params[:prorated] || false
         )
