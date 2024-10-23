@@ -334,6 +334,14 @@ class Invoice < ApplicationRecord
     finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
   end
 
+  def should_sync_crm_invoice?
+    finalized? && should_update_crm_invoice?
+  end
+
+  def should_update_crm_invoice?
+    customer.integration_customers.crm_kind.any? { |c| c.integration.sync_invoices }
+  end
+
   def should_sync_sales_order?
     finalized? &&
       customer.integration_customers.accounting_kind.any? do |c|

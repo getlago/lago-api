@@ -9,14 +9,25 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
 
   describe '.call' do
     let(:http_client) { instance_double(LagoHttpClient::Client) }
+    let(:http_client_get) { instance_double(LagoHttpClient::Client) }
     let(:endpoint) { "https://api.nango.dev/v1/hubspot/object" }
+    let(:customer_object_endpoint) { "https://api.nango.dev/v1/hubspot/custom-object" }
     let(:response) { instance_double('Response', success?: true) }
+
+    let(:get_response) do
+      path = Rails.root.join('spec/fixtures/integration_aggregator/custom_object_response.json')
+      JSON.parse(File.read(path))
+    end
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
         .with(endpoint)
         .and_return(http_client)
+      allow(LagoHttpClient::Client).to receive(:new)
+        .with(customer_object_endpoint)
+        .and_return(http_client_get)
       allow(http_client).to receive(:post_with_response).and_return(response)
+      allow(http_client_get).to receive(:get).and_raise LagoHttpClient::HttpError.new('error', 'error', nil)
       allow(response).to receive(:[]).with('objectTypeId').and_return('123')
 
       integration.subscriptions_properties_version = nil

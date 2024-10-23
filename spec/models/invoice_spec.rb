@@ -235,6 +235,162 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#should_sync_crm_invoice?' do
+    subject(:method_call) { invoice.should_sync_crm_invoice? }
+
+    let(:invoice) { create(:invoice, customer:, organization:, status:) }
+
+    context 'when invoice is not finalized' do
+      let(:status) { %i[draft generating voided].sample }
+
+      context 'without integration customer' do
+        let(:customer) { create(:customer, organization:) }
+
+        it 'returns false' do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context 'with integration crm customer' do
+        let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+        let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { integration_customer }
+
+        context 'when sync invoices is true' do
+          let(:sync_invoices) { true }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
+
+        context 'when sync invoices is false' do
+          let(:sync_invoices) { false }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+    end
+
+    context 'when invoice is finalized' do
+      let(:status) { :finalized }
+
+      context 'without integration customer' do
+        let(:customer) { create(:customer, organization:) }
+
+        it 'returns false' do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context 'with integration crm customer' do
+        let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+        let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { integration_customer }
+
+        context 'when sync invoices is true' do
+          let(:sync_invoices) { true }
+
+          it 'returns true' do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context 'when sync invoices is false' do
+          let(:sync_invoices) { false }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+    end
+  end
+
+  describe '#should_update_crm_invoice?' do
+    subject(:method_call) { invoice.should_update_crm_invoice? }
+
+    let(:invoice) { create(:invoice, customer:, organization:, status:) }
+
+    context 'when invoice is not finalized' do
+      let(:status) { %i[draft generating voided].sample }
+
+      context 'without integration customer' do
+        let(:customer) { create(:customer, organization:) }
+
+        it 'returns false' do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context 'with integration crm customer' do
+        let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+        let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { integration_customer }
+
+        context 'when sync invoices is true' do
+          let(:sync_invoices) { true }
+
+          it 'returns true' do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context 'when sync invoices is false' do
+          let(:sync_invoices) { false }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+    end
+
+    context 'when invoice is finalized' do
+      let(:status) { :finalized }
+
+      context 'without integration customer' do
+        let(:customer) { create(:customer, organization:) }
+
+        it 'returns false' do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context 'with integration crm customer' do
+        let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+        let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { integration_customer }
+
+        context 'when sync invoices is true' do
+          let(:sync_invoices) { true }
+
+          it 'returns true' do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context 'when sync invoices is false' do
+          let(:sync_invoices) { false }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+    end
+  end
+
   describe '#should_sync_sales_order?' do
     subject(:method_call) { invoice.should_sync_sales_order? }
 

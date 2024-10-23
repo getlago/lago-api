@@ -13,13 +13,16 @@ module Integrations
         def call
           return unless integration.type == 'Integrations::HubspotIntegration'
           return result if integration.subscriptions_properties_version == VERSION
-          response = nil
+
+          custom_object_result = Integrations::Aggregator::CustomObjectService.call(integration:, name: 'LagoSubscriptions')
+          if custom_object_result.success?
+            save_object_type_id(custom_object_result.custom_object&.objectTypeId)
+            return result
+          end
+
+          response = http_client.post_with_response(payload, headers)
           ActiveRecord::Base.transaction do
-            response = http_client.post_with_response(payload, headers)
-            integration.settings = integration.reload.settings
-            integration.subscriptions_object_type_id = response['objectTypeId']
-            integration.subscriptions_properties_version = VERSION
-            integration.save!
+            save_object_type_id(response['objectTypeId'])
           end
           result.response = response
           result
@@ -30,6 +33,13 @@ module Integrations
         end
 
         private
+
+        def save_object_type_id(object_type_id)
+          integration.settings = integration.reload.settings
+          integration.subscriptions_object_type_id = object_type_id
+          integration.subscriptions_properties_version = VERSION
+          integration.save!
+        end
 
         def headers
           {

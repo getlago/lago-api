@@ -8,6 +8,8 @@ user = User.create_with(password: 'ILoveLago')
   .find_or_create_by(email: 'gavin@hooli.com')
 
 organization = Organization.find_or_create_by!(name: 'Hooli')
+organization.premium_integrations = Organization::PREMIUM_INTEGRATIONS
+organization.save!
 Membership.find_or_create_by!(user:, organization:, role: :admin)
 
 # NOTE: define a billing model

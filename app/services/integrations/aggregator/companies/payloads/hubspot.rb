@@ -9,7 +9,7 @@ module Integrations
             {
               'properties' => {
                 'name' => customer.name,
-                'domain' => customer.url,
+                'domain' => clean_url(customer.url),
                 'lago_customer_id' => customer.id,
                 'lago_customer_external_id' => customer.external_id,
                 'lago_billing_email' => customer.email,
@@ -25,7 +25,7 @@ module Integrations
               'input' => {
                 'properties' => {
                   'name' => customer.name,
-                  'domain' => customer.url,
+                  'domain' => clean_url(customer.url),
                   'lago_customer_id' => customer.id,
                   'lago_customer_external_id' => customer.external_id,
                   'lago_billing_email' => customer.email,

@@ -54,6 +54,7 @@ module Invoices
       end
 
       result.invoice = invoice
+      Integrations::Aggregator::Invoices::Crm::UpdateJob.perform_later(invoice:) if invoice.should_update_crm_invoice?
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

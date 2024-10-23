@@ -40,6 +40,10 @@ module Invoices
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: result.invoice)
       end
 
+      if result.invoice.should_sync_crm_invoice?
+        Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice: result.invoice)
+      end
+
       if result.invoice.should_sync_sales_order?
         Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice: result.invoice)
       end

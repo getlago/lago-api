@@ -63,6 +63,13 @@ module Integrations
 
             URI.join(url, "/customer/", customer.id).to_s
           end
+
+          def clean_url(url)
+            url = "http://#{url}" unless /\Ahttps?:\/\//.match?(url)
+
+            uri = URI.parse(url.to_s)
+            uri.host
+          end
         end
       end
     end
