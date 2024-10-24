@@ -13,6 +13,7 @@ RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
           name,
           code,
           aggregationType,
+          expression,
           recurring
           organization { id },
           weightedInterval

@@ -9,6 +9,7 @@ RSpec.describe Types::BillableMetrics::UpdateInput do
   it { is_expected.to accept_argument(:aggregation_type).of_type('AggregationTypeEnum!') }
   it { is_expected.to accept_argument(:code).of_type('String!') }
   it { is_expected.to accept_argument(:description).of_type('String!') }
+  it { is_expected.to accept_argument(:expression).of_type('String') }
   it { is_expected.to accept_argument(:field_name).of_type('String') }
   it { is_expected.to accept_argument(:name).of_type('String!') }
   it { is_expected.to accept_argument(:recurring).of_type('Boolean') }
