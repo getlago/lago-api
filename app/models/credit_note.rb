@@ -141,6 +141,10 @@ class CreditNote < ApplicationRecord
     total_amount_cents - precise_total
   end
 
+  def for_credit_invoice?
+    invoice.credit?
+  end
+
   private
 
   def ensure_number

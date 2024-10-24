@@ -14,6 +14,7 @@ de:
     issue_date: Ausgabedatum
     item: Artikel
     powered_by: Bereitgestellt von
+    prepaid_credits_for_wallet: Prepaid-Guthaben - %{wallet_name}
     refunded: Erstattet
     refunded_notice: Erstattung am %{issuing_date}
     sub_total_without_tax: Zwischensumme (ohne Steuern)

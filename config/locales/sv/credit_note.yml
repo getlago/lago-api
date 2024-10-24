@@ -14,12 +14,11 @@ sv:
     issue_date: Fakturadatum
     item: Artikel
     powered_by: Genererad av
+    prepaid_credits_for_wallet: Förbetald kontobalans - %{wallet_name}
     refunded: Återbetald
     refunded_notice: Återbetald den %{issuing_date}
     sub_total_without_tax: Delsumma (exkl. moms)
     subscription: Prenumeration
     tax: "%{name} (%{rate}% på %{amount})"
-    tax_identification_number: 'Skatte ID: %{tax_identification_number}'
     tax_rate: Momssats
     total: Att betala
-    true_up_metric: "%{metric} • Justering"

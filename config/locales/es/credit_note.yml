@@ -14,12 +14,11 @@ es:
     issue_date: Fecha de emisión
     item: Item
     powered_by: Generada por
+    prepaid_credits_for_wallet: Créditos prepagados - %{wallet_name}
     refunded: Reembolso
     refunded_notice: Reembolso hecho el %{issuing_date}
     sub_total_without_tax: Subtotal (impuestos excl.)
     subscription: Suscripción
     tax: "%{name} (%{rate}% sobre %{amount})"
-    tax_identification_number: 'ID del impuesto: %{tax_identification_number}'
     tax_rate: Tasas de impuestos
     total: Total
-    true_up_metric: "%{metric} • Ajuste real"

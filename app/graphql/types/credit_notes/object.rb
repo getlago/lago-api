@@ -62,6 +62,7 @@ module Types
 
       def tax_provider_syncable
         return false unless object.finalized?
+        return false if object.invoice.credit?
 
         object.error_details.tax_error.any?
       end

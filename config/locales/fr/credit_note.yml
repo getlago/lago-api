@@ -14,6 +14,7 @@ fr:
     issue_date: Date d'émission
     item: Article
     powered_by: Généré par
+    prepaid_credits_for_wallet: Crédit(s) prépayé(s) - %{wallet_name}
     refunded: Remboursement
     refunded_notice: Remboursé le %{issuing_date}
     sub_total_without_tax: Sous total (HT)
