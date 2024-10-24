@@ -4,15 +4,17 @@ module DataExports
   class ExportResourcesService < BaseService
     EXPIRED_FAILURE_MESSAGE = 'Data Export already expired'
     PROCESSED_FAILURE_MESSAGE = 'Data Export already processed'
+    DEFAULT_BATCH_SIZE = 100
 
     ResourceTypeNotSupportedError = Class.new(StandardError)
 
     extend Forwardable
 
-    def_delegators :data_export, :resource_type, :format
+    def_delegators :data_export, :organization, :resource_query, :resource_type, :format
 
-    def initialize(data_export:)
+    def initialize(data_export:, batch_size: DEFAULT_BATCH_SIZE)
       @data_export = data_export
+      @batch_size = batch_size
 
       super
     end
@@ -22,24 +24,16 @@ module DataExports
       return result.service_failure!(code: 'data_export_processed', message: PROCESSED_FAILURE_MESSAGE) unless data_export.pending?
 
       data_export.processing!
+      result.data_export = data_export
+      result.data_export_parts = []
 
-      Tempfile.create([resource_type, ".#{format}"]) do |tempfile|
-        generate_export(tempfile)
-        tempfile.rewind
-
-        data_export.file.attach(
-          io: tempfile,
-          filename:,
-          key: "data_exports/#{data_export.id}.#{format}",
-          content_type:
-        )
-
-        data_export.completed!
+      data_export.transaction do
+        all_object_ids.each_slice(batch_size).with_index do |object_ids, index|
+          part_result = DataExports::CreatePartService.call(data_export:, object_ids:, index:).raise_if_error!
+          result.data_export_parts << part_result.data_export_part
+        end
       end
 
-      DataExportMailer.with(data_export:).completed.deliver_later
-
-      result.data_export = data_export
       result
     rescue => e
       data_export.failed!
@@ -48,12 +42,11 @@ module DataExports
 
     private
 
-    attr_reader :data_export
+    attr_reader :data_export, :batch_size
 
-    def generate_export(file)
+    def all_object_ids
       case resource_type
-      when "invoices" then Csv::Invoices.call(data_export:, output: file)
-      when "invoice_fees" then Csv::InvoiceFees.call(data_export:, output: file)
+      when "invoices", "invoice_fees" then all_invoice_ids
       else
         raise ResourceTypeNotSupportedError.new(
           "'#{resource_type}' resource not supported"
@@ -61,12 +54,16 @@ module DataExports
       end
     end
 
-    def filename
-      "#{resource_type}_export_#{Time.zone.now.to_i}.#{format}"
-    end
+    def all_invoice_ids
+      search_term = resource_query["search_term"]
+      filters = resource_query.except("search_term")
 
-    def content_type
-      'text/csv'
+      InvoicesQuery.call(
+        organization:,
+        pagination: nil,
+        search_term:,
+        filters:
+      ).invoices.pluck(:id)
     end
   end
 end

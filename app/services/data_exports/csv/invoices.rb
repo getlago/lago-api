@@ -6,22 +6,17 @@ require 'forwardable'
 module DataExports
   module Csv
     class Invoices < BaseService
-      DEFAULT_BATCH_SIZE = 100
-
       extend Forwardable
 
-      def initialize(data_export:, serializer_klass: V1::InvoiceSerializer, output: Tempfile.create)
-        @data_export = data_export
+      def initialize(data_export_part:, serializer_klass: V1::InvoiceSerializer, output: Tempfile.create)
+        @data_export_part = data_export_part
         @serializer_klass = serializer_klass
         @output = output
-        @batch_size = DEFAULT_BATCH_SIZE
       end
 
       def call
-        ::CSV.open(output, 'wb', headers: true) do |csv|
-          csv << headers
-
-          invoices.find_each(batch_size:).lazy.each do |invoice|
+        ::CSV.open(output, 'wb', headers: false) do |csv|
+          invoices.each do |invoice|
             csv << serialized_invoice(invoice)
           end
         end
@@ -29,13 +24,7 @@ module DataExports
         output.rewind
       end
 
-      private
-
-      attr_reader :data_export, :serializer_klass, :output, :batch_size
-
-      def_delegators :data_export, :organization, :resource_query
-
-      def headers
+      def self.headers
         %w[
           lago_id
           sequential_id
@@ -62,6 +51,10 @@ module DataExports
           payment_overdue
         ]
       end
+
+      private
+
+      attr_reader :data_export_part, :serializer_klass, :output, :batch_size
 
       def serialized_invoice(invoice)
         serialized_invoice = serializer_klass
@@ -96,15 +89,7 @@ module DataExports
       end
 
       def invoices
-        search_term = resource_query["search_term"]
-        filters = resource_query.except("search_term")
-
-        InvoicesQuery.call(
-          organization:,
-          pagination: nil,
-          search_term:,
-          filters:
-        ).invoices
+        Invoice.find(data_export_part.object_ids)
       end
     end
   end

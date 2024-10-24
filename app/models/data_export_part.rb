@@ -1,4 +1,7 @@
+# frozen_string_literal: true
+
 class DataExportPart < ApplicationRecord
+  scope :completed, -> { where(completed: true) }
 end
 
 # == Schema Information
