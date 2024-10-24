@@ -9,13 +9,13 @@ module DailyUsages
     end
 
     def call
-      return result unless ENV['LAGO_ENABLE_REVENUE_ANALYTICS'].present?
+      return result if ENV['LAGO_ENABLE_REVENUE_ANALYTICS'].blank?
 
       subscriptions.find_each do |subscription|
         DailyUsages::ComputeJob.perform_later(subscription, timestamp:)
       end
 
-      return result
+      result
     end
 
     private

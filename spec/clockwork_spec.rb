@@ -115,7 +115,7 @@ describe Clockwork do
     end
   end
 
-  describe 'schedule:' do
+  describe 'schedule:compute_daily_usage' do
     let(:job) { 'schedule:compute_daily_usage' }
     let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
     let(:end_time) { Time.zone.parse('1 Apr 2022 01:01:00') }
