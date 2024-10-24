@@ -3,11 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe Charges::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(charge:, params:) }
+  subject(:update_service) { described_class.new(charge:, params:, cascade:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
+  let(:cascade) { false }
 
   describe '#call' do
     let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
@@ -94,6 +95,20 @@ RSpec.describe Charges::UpdateService, type: :service do
         update_service.call
 
         expect(charge.reload).to have_attributes(pay_in_advance: true, invoiceable: false)
+      end
+    end
+
+    context 'when cascade is true' do
+      let(:cascade) { true }
+
+      it 'updates only charge properties' do
+        update_service.call
+
+        expect(charge.reload).to have_attributes(
+          properties: {'amount' => '0'}
+        )
+
+        expect(charge.filters.count).to eq(0)
       end
     end
   end

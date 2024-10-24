@@ -81,6 +81,7 @@ RSpec.describe Charges::CreateService, type: :service do
       end
 
       context 'when charge is successfully added' do
+        let(:parent_charge) { build(:standard_charge) }
         let(:billable_metric_filter) do
           create(
             :billable_metric_filter,
@@ -97,6 +98,7 @@ RSpec.describe Charges::CreateService, type: :service do
             pay_in_advance: false,
             prorated: true,
             invoiceable: false,
+            parent_id: parent_charge.id,
             min_amount_cents: 10,
             filters: [
               {
@@ -120,6 +122,7 @@ RSpec.describe Charges::CreateService, type: :service do
           expect(stored_charge.reload).to have_attributes(
             prorated: true,
             pay_in_advance: false,
+            parent_id: parent_charge.id,
             properties: {'amount' => '0'}
           )
 

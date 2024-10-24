@@ -234,7 +234,7 @@ module Plans
         create_charge_result = Charges::CreateService.call(plan:, params: payload_charge)
         create_charge_result.raise_if_error!
 
-        cascade_charge_creation(payload_charge)
+        cascade_charge_creation(payload_charge.merge(parent_id: create_charge_result.charge.id))
         created_charges_ids.push(create_charge_result.charge.id)
       end
 
