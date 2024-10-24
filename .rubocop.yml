@@ -5,6 +5,8 @@ require:
   - rubocop-rails
   - rubocop-thread_safety
   - rubocop-graphql
+  - rubocop-factory_bot
+  - rubocop-rspec_rails
   - ./dev/cops/service_call_cop.rb
 
 inherit_gem:
