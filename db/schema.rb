@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_21_095706) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_24_082941) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -482,6 +482,17 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_21_095706) do
     t.index ["organization_id", "external_subscription_id"], name: "idx_on_organization_id_external_subscription_id_df3a30d96d"
     t.index ["organization_id"], name: "index_daily_usages_on_organization_id"
     t.index ["subscription_id"], name: "index_daily_usages_on_subscription_id"
+  end
+
+  create_table "data_export_parts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "index"
+    t.uuid "data_export_id", null: false
+    t.uuid "object_ids", null: false, array: true
+    t.boolean "completed", default: false, null: false
+    t.text "csv_lines"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["data_export_id"], name: "index_data_export_parts_on_data_export_id"
   end
 
   create_table "data_exports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1293,6 +1304,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_21_095706) do
   add_foreign_key "daily_usages", "customers"
   add_foreign_key "daily_usages", "organizations"
   add_foreign_key "daily_usages", "subscriptions"
+  add_foreign_key "data_export_parts", "data_exports"
   add_foreign_key "data_exports", "memberships"
   add_foreign_key "data_exports", "organizations"
   add_foreign_key "dunning_campaign_thresholds", "dunning_campaigns"
