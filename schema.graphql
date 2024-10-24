@@ -176,6 +176,12 @@ type AnrokIntegration {
   name: String!
 }
 
+type ApiKey {
+  createdAt: ISO8601DateTime!
+  id: ID!
+  value: String!
+}
+
 type AppliedAddOn {
   addOn: AddOn!
   amountCents: BigInt!
@@ -6133,6 +6139,21 @@ type Query {
   addOns(limit: Int, page: Int, searchTerm: String): AddOnCollection!
 
   """
+  Query the API key
+  """
+  apiKey(
+    """
+    Uniq ID of the API key
+    """
+    id: ID!
+  ): ApiKey!
+
+  """
+  Query the API keys of current organization
+  """
+  apiKeys(limit: Int, page: Int): SanitizedApiKeyCollection!
+
+  """
   Query a single billable metric of an organization
   """
   billableMetric(
@@ -6759,6 +6780,27 @@ input RevokeMembershipInput {
   """
   clientMutationId: String
   id: ID!
+}
+
+type SanitizedApiKey {
+  createdAt: ISO8601DateTime!
+  id: ID!
+  value: String!
+}
+
+"""
+SanitizedApiKeyCollection type
+"""
+type SanitizedApiKeyCollection {
+  """
+  A collection of paginated SanitizedApiKeyCollection
+  """
+  collection: [SanitizedApiKey!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 enum StatusTypeEnum {
