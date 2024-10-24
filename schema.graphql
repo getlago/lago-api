@@ -3066,6 +3066,7 @@ type CurrentOrganization {
   addressLine2: String
   adyenPaymentProviders: [AdyenProvider!]
   apiKey: String
+  appliedDunningCampaign: DunningCampaign
   billingConfiguration: OrganizationBillingConfiguration
   city: String
   country: CountryCode

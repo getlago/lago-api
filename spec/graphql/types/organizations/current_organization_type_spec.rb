@@ -40,4 +40,6 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
   it { is_expected.to have_field(:adyen_payment_providers).of_type('[AdyenProvider!]').with_permission('organization:integrations:view') }
   it { is_expected.to have_field(:gocardless_payment_providers).of_type('[GocardlessProvider!]').with_permission('organization:integrations:view') }
   it { is_expected.to have_field(:stripe_payment_providers).of_type('[StripeProvider!]').with_permission('organization:integrations:view') }
+
+  it { is_expected.to have_field(:applied_dunning_campaign).of_type("DunningCampaign") }
 end

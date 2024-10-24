@@ -418,6 +418,31 @@ RSpec.describe Customers::UpdateService, type: :service do
             expect(customers_service.call).to be_success
           end
         end
+
+        context "with applied_dunning_campaign_id nil" do
+          let(:customer) do
+            create(
+              :customer,
+              organization:,
+              applied_dunning_campaign: dunning_campaign,
+              exclude_from_dunning_campaign: false,
+              last_dunning_campaign_attempt: 3,
+              last_dunning_campaign_attempt_at: 2.days.ago
+            )
+          end
+
+          let(:update_args) { {applied_dunning_campaign_id: nil} }
+
+          it "updates auto dunning config", :aggregate_failures do
+            expect { customers_service.call }
+              .to change(customer, :applied_dunning_campaign_id).to(nil)
+              .and not_change(customer, :exclude_from_dunning_campaign)
+              .and change(customer, :last_dunning_campaign_attempt).to(0)
+              .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+
+            expect(customers_service.call).to be_success
+          end
+        end
       end
     end
   end
