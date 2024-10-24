@@ -21,7 +21,7 @@ module DailyUsages
         external_subscription_id: subscription.external_id,
         usage: ::V1::Customers::UsageSerializer.new(current_usage).serialize.to_json,
         from_datetime: current_usage.from_datetime,
-        to_datetime: current_usage.to_datetime, # TODO: persist the timestamp
+        to_datetime: current_usage.to_datetime # TODO: persist the timestamp
       )
 
       result.daily_usage = daily_usage

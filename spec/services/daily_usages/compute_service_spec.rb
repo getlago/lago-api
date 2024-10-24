@@ -20,7 +20,7 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
         organization_id: organization.id,
         customer_id: customer.id,
         subscription_id: subscription.id,
-        external_subscription_id: subscription.external_id,
+        external_subscription_id: subscription.external_id
         # TODO
       )
     end

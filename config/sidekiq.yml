@@ -11,6 +11,7 @@ queues:
   - invoices
   - wallets
   - integrations
+  - low_priority
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
