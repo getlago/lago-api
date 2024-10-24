@@ -12,6 +12,7 @@ class Subscription < ApplicationRecord
   has_many :events
   has_many :invoice_subscriptions
   has_many :invoices, through: :invoice_subscriptions
+  has_many :integration_resources, as: :syncable
   has_many :fees
   has_many :daily_usages
   has_one :lifetime_usage, autosave: true
@@ -164,6 +165,10 @@ class Subscription < ApplicationRecord
     number_od_days -= 1
 
     number_od_days.negative? ? 0 : number_od_days
+  end
+
+  def should_sync_crm_subscription?
+    customer.integration_customers.crm_kind.any? { |c| c.integration.sync_subscriptions }
   end
 
   def terminated_at?(timestamp)
