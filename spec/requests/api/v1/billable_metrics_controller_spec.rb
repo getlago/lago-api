@@ -227,4 +227,25 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       end
     end
   end
+
+  describe 'evaluate_expression' do
+    let(:expression) { 'round(event.properties.value)' }
+    let(:event) { {code: 'bm_code', timestamp: Time.current.to_i, properties: {value: '2.4'}} }
+
+    it 'evaluates the expression', aggregate_failures: true do
+      post_with_token(organization, '/api/v1/billable_metrics/evaluate_expression', {expression:, event:})
+
+      expect(response).to have_http_status(:success)
+      expect(json[:expression_result][:value]).to eq("2.0")
+    end
+
+    context 'with invalid inputs' do
+      it 'returns unprocessable_entity error' do
+        post_with_token(organization, '/api/v1/billable_metrics/evaluate_expression', {expression: '', event: {}})
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:expression]).to eq(["value_is_mandatory"])
+      end
+    end
+  end
 end

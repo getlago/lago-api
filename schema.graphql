@@ -236,6 +236,7 @@ type BillableMetric {
   deletedAt: ISO8601DateTime
   description: String
   draftInvoicesCount: Int!
+  expression: String
   fieldName: String
   filters: [BillableMetricFilter!]
   id: ID!
@@ -1847,6 +1848,7 @@ input CreateBillableMetricInput {
   clientMutationId: String
   code: String!
   description: String!
+  expression: String
   fieldName: String
   filters: [BillableMetricFiltersInput!]
   name: String!
@@ -7708,6 +7710,7 @@ input UpdateBillableMetricInput {
   clientMutationId: String
   code: String!
   description: String!
+  expression: String
   fieldName: String
   filters: [BillableMetricFiltersInput!]
   id: String!
