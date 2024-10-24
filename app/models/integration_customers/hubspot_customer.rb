@@ -3,6 +3,14 @@
 module IntegrationCustomers
   class HubspotCustomer < BaseCustomer
     settings_accessors :targeted_object, :email
+
+    def object_type
+      if targeted_object == 'contacts'
+        'contact'
+      else
+        'company'
+      end
+    end
   end
 end
 

@@ -1,0 +1,32 @@
+# frozen_string_literal: true
+
+module Integrations
+  module Aggregator
+    module Subscriptions
+      module Payloads
+        class BasePayload < Integrations::Aggregator::BasePayload
+          def initialize(integration_customer:, subscription:)
+            super(integration: integration_customer.integration)
+
+            @subscription = subscription
+            @integration_customer = integration_customer
+          end
+
+          private
+
+          attr_reader :integration_customer, :subscription
+
+          def subscription_url
+            url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+            URI.join(url, "/customer/#{integration_customer.customer.id}/subscription/#{subscription.id}/overview").to_s
+          end
+
+          def integration_subscription
+            @integration_subscription ||= IntegrationResource.find_by(integration:, syncable: subscription)
+          end
+        end
+      end
+    end
+  end
+end
