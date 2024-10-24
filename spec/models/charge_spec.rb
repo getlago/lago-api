@@ -559,4 +559,32 @@ RSpec.describe Charge, type: :model do
       expect(build(:charge, charge_model: 'percentage', properties: {rate: '0.20'})).to be_basic_rate_percentage
     end
   end
+
+  describe '#equal_properties?' do
+    let(:charge1) { build(:standard_charge, properties: {amount: 100}) }
+
+    context 'when charge model is not the same' do
+      let(:charge2) { build(:percentage_charge) }
+
+      it 'returns false' do
+        expect(charge1.equal_properties?(charge2)).to eq(false)
+      end
+    end
+
+    context 'when charge model is the same and properties are different' do
+      let(:charge2) { build(:standard_charge, properties: {amount: 200}) }
+
+      it 'returns false if properties are not the same' do
+        expect(charge1.equal_properties?(charge2)).to eq(false)
+      end
+    end
+
+    context 'when charge model and properties are the same' do
+      let(:charge2) { build(:standard_charge, properties: {amount: 100}) }
+
+      it 'returns true if both charge model and properties are the same' do
+        expect(charge1.equal_properties?(charge2)).to eq(true)
+      end
+    end
+  end
 end
