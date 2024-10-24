@@ -10,6 +10,8 @@ class DataExport < ApplicationRecord
 
   has_one_attached :file
 
+  has_many :data_export_parts
+
   validates :resource_type, presence: true
   validates :format, presence: true, inclusion: {in: EXPORT_FORMATS}
   validates :status, presence: true, inclusion: {in: STATUSES}
@@ -38,8 +40,6 @@ class DataExport < ApplicationRecord
   end
 
   def filename
-    return if file.blank?
-
     "#{created_at.strftime("%Y%m%d%H%M%S")}_#{resource_type}.#{format}"
   end
 
@@ -53,6 +53,13 @@ class DataExport < ApplicationRecord
     )
 
     File.join(ENV['LAGO_API_URL'], blob_path)
+  end
+
+  def export_class
+    case resource_type
+    when "invoices" then DataExports::Csv::Invoices
+    when "invoice_fees" then DataExports::Csv::InvoiceFees
+    end
   end
 end
 
