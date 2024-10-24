@@ -3,14 +3,18 @@
 require 'rails_helper'
 
 RSpec.describe DataExports::ExportResourcesService, type: :service do
-  subject(:result) { described_class.call(data_export:) }
+  subject(:result) { described_class.call(data_export:, batch_size:) }
 
+  let(:organization) { data_export.organization }
+  let(:batch_size) { 100 }
   let(:data_export) { create :data_export, resource_type: 'invoices', format: 'csv' }
-  let(:tempfile) { Tempfile.new("test_export") }
+
+  let(:issuing_date) { Date.new(2023, 12, 1) }
+
+  let(:invoice) { create(:invoice, organization:, issuing_date:) }
 
   before do
-    allow(Tempfile).to receive(:create).and_yield(tempfile)
-    allow(DataExports::Csv::Invoices).to receive(:call).and_return(nil)
+    invoice
   end
 
   describe '#call' do
@@ -21,30 +25,48 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
       expect(data_export).to have_received(:processing!)
     end
 
-    it 'attaches the generated file to the data export' do
+    it 'splits up the data export into parts' do
       result
-      expect(data_export.file).to be_attached
+      expect(data_export.data_export_parts).not_to be_empty
+      # only 1 export part should be create
+      part = data_export.data_export_parts.sole
+      expect(part.object_ids).to eq([invoice.id])
     end
 
-    it 'updates the data export status to completed' do
-      allow(data_export).to receive(:completed!)
+    context 'when there are many invoices' do
+      # small batch size for easier testing
+      let(:batch_size) { 2 }
+      let(:invoice2) { create(:invoice, organization:, issuing_date: issuing_date + 1.day) }
+      let(:invoice3) { create(:invoice, organization:, issuing_date: issuing_date + 2.days) }
+      let(:invoice4) { create(:invoice, organization:, issuing_date: issuing_date + 3.days) }
+      let(:invoice5) { create(:invoice, organization:, issuing_date: issuing_date + 4.days) }
 
-      result
-      expect(data_export).to have_received(:completed!)
+      before do
+        invoice2
+        invoice3
+        invoice4
+        invoice5
+      end
+
+      it 'splits up into many parts' do
+        result
+
+        expect(data_export.data_export_parts.size).to eq(3)
+        part1 = data_export.data_export_parts.find_by index: 0
+        part2 = data_export.data_export_parts.find_by index: 1
+        part3 = data_export.data_export_parts.find_by index: 2
+        expect(part1.object_ids).to eq([invoice5.id, invoice4.id])
+        expect(part2.object_ids).to eq([invoice3.id, invoice2.id])
+        expect(part3.object_ids).to eq([invoice.id])
+      end
     end
 
-    it 'sends a completion email' do
-      expect { result }
-        .to have_enqueued_mail(DataExportMailer, :completed)
-        .with(params: {data_export:}, args: [])
-    end
-
-    it 'retunrs the data export result' do
+    it 'returns the data export result' do
       expect(result).to be_success
 
       aggregate_failures do
-        expect(result.data_export).to be_completed
-        expect(result.data_export.file).to be_present
+        expect(result.data_export).to be_processing
+        expect(result.data_export.file).not_to be_present
       end
     end
 
@@ -73,7 +95,7 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
     context 'when an error occurs during processing' do
       before do
         allow(data_export)
-          .to receive(:file)
+          .to receive(:transaction)
           .and_raise(StandardError.new('error_message'))
       end
 
@@ -97,38 +119,6 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
           )
           expect(data_export).to be_failed
         end
-      end
-    end
-
-    context "when resource type is invoices" do
-      let(:data_export) { create :data_export, resource_type: 'invoices', format: 'csv' }
-
-      before do
-        allow(DataExports::Csv::Invoices).to receive(:call).and_return(nil)
-      end
-
-      it "calls the Csv::Invoices exporter" do
-        result
-
-        expect(DataExports::Csv::Invoices)
-          .to have_received(:call)
-          .with(data_export:, output: tempfile)
-      end
-    end
-
-    context "when resource type is invoice_fees" do
-      let(:data_export) { create :data_export, resource_type: 'invoice_fees', format: 'csv' }
-
-      before do
-        allow(DataExports::Csv::InvoiceFees).to receive(:call).and_return(nil)
-      end
-
-      it "calls the Csv::InvoiceFees exporter" do
-        result
-
-        expect(DataExports::Csv::InvoiceFees)
-          .to have_received(:call)
-          .with(data_export:, output: tempfile)
       end
     end
   end

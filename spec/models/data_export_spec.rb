@@ -60,6 +60,34 @@ RSpec.describe DataExport, type: :model do
     end
   end
 
+  describe "#export_class" do
+    let(:data_export) { create :data_export, resource_type: }
+
+    context "when resource_type is invoices" do
+      let(:resource_type) { "invoices" }
+
+      it "returns DataExports::Csv::Invoices" do
+        expect(data_export.export_class).to eq(DataExports::Csv::Invoices)
+      end
+    end
+
+    context "when resource_type is invoice_fees" do
+      let(:resource_type) { "invoice_fees" }
+
+      it "returns DataExports::Csv::InvoiceFees" do
+        expect(data_export.export_class).to eq(DataExports::Csv::InvoiceFees)
+      end
+    end
+
+    context "when resource_type is an unsupported value" do
+      let(:resource_type) { "unsupported" }
+
+      it "returns nil" do
+        expect(data_export.export_class).to eq(nil)
+      end
+    end
+  end
+
   describe '.filename' do
     subject(:filename) { data_export.filename }
 
@@ -75,7 +103,12 @@ RSpec.describe DataExport, type: :model do
     context 'when data export does not have a file' do
       let(:data_export) { create :data_export }
 
-      it { is_expected.to be_nil }
+      it 'returns the file name' do
+        freeze_time do
+          timestamp = Time.zone.now.strftime('%Y%m%d%H%M%S')
+          expect(filename).to eq("#{timestamp}_invoices.csv")
+        end
+      end
     end
   end
 
