@@ -28,14 +28,14 @@ module Integrations
             ]
           end
 
+          def integration_invoice
+            @integration_invoice ||= IntegrationResource.find_by(integration:, syncable: invoice)
+          end
+
           private
 
           attr_reader :integration_customer, :invoice, :type
           attr_accessor :remaining_taxes_amount_cents
-
-          def integration_invoice
-            @integration_invoice ||= IntegrationResource.find_by(integration:, syncable: invoice)
-          end
 
           def fees
             @fees ||= if invoice.fees.where('amount_cents > ?', 0).exists?
