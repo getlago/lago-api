@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module DataExports
-  class ProcessPartService
+  class ProcessPartService < BaseService
     def initialize(data_export_part:)
       super(nil)
 
@@ -14,16 +14,15 @@ module DataExports
 
       data_export_part.transaction do
         # produce CSV lines into StringIO
-        output = StringIO.new
-        data_export.export_class.call(data_export_part:, output:).raise_if_error!
-
-        data_export_part.update!(csv_lines: output, completed: true)
+        export_result = data_export.export_class.call(data_export_part:).raise_if_error!
+        data_export_part.update!(csv_lines: export_result.csv_lines, completed: true)
       end
 
       # check if we are the last one to finish
       if last_completed
         DataExports::CombinePartsJob.perform_later(data_export_part.data_export)
       end
+      result
     end
 
     private

@@ -22,7 +22,7 @@ module DataExports
       end
 
       def call
-        ::CSV.open(output, 'wb', headers: false) do |csv|
+        result.csv_lines = ::CSV.generate(headers: false) do |csv|
           invoices.each do |invoice|
             serialized_invoice = serializer_klass.new(invoice).serialize
 
@@ -69,8 +69,7 @@ module DataExports
             end
           end
         end
-
-        output.rewind
+        result
       end
 
       def self.headers

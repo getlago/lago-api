@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class DataExportPart < ApplicationRecord
+  belongs_to :data_export
+
   scope :completed, -> { where(completed: true) }
 end
 

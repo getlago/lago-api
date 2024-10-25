@@ -8,20 +8,19 @@ module DataExports
     class Invoices < BaseService
       extend Forwardable
 
-      def initialize(data_export_part:, serializer_klass: V1::InvoiceSerializer, output: Tempfile.create)
+      def initialize(data_export_part:, serializer_klass: V1::InvoiceSerializer)
         @data_export_part = data_export_part
         @serializer_klass = serializer_klass
-        @output = output
+        super
       end
 
       def call
-        ::CSV.open(output, 'wb', headers: false) do |csv|
+        result.csv_lines = ::CSV.generate(headers: false) do |csv|
           invoices.each do |invoice|
             csv << serialized_invoice(invoice)
           end
         end
-
-        output.rewind
+        result
       end
 
       def self.headers
