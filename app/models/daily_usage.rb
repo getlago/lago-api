@@ -12,6 +12,7 @@ end
 #
 #  id                       :uuid             not null, primary key
 #  from_datetime            :datetime         not null
+#  refreshed_at             :datetime         not null
 #  to_datetime              :datetime         not null
 #  usage                    :jsonb            not null
 #  created_at               :datetime         not null
