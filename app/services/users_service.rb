@@ -32,6 +32,7 @@ class UsersService < BaseService
 
       result.organization = Organizations::CreateService
         .call(name: organization_name, document_numbering: 'per_organization')
+        .raise_if_error!
         .organization
 
       result.membership = Membership.create!(

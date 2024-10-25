@@ -5,7 +5,7 @@ class CreateApiKeys < ActiveRecord::Migration[7.1]
     create_table :api_keys, id: :uuid do |t|
       t.references :organization, type: :uuid, null: false, foreign_key: true
 
-      t.string :value, null: false
+      t.string :value, null: false, index: {unique: true}
 
       t.timestamps
     end

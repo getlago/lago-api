@@ -2,6 +2,6 @@
 
 FactoryBot.define do
   factory :api_key do
-    organization { association(:organization) }
+    organization { association(:organization, api_keys: []) }
   end
 end

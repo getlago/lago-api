@@ -50,12 +50,13 @@ end
 #
 # Table name: events_raw
 #
-#  code                       :string           not null
+#  code                       :string           not null, primary key
+#  ingested_at                :datetime         not null
 #  precise_total_amount_cents :decimal(40, 15)
 #  properties                 :string           not null
-#  timestamp                  :datetime         not null
+#  timestamp                  :datetime         not null, primary key
 #  external_customer_id       :string           not null
-#  external_subscription_id   :string           not null
-#  organization_id            :string           not null
-#  transaction_id             :string           not null
+#  external_subscription_id   :string           not null, primary key
+#  organization_id            :string           not null, primary key
+#  transaction_id             :string           not null, primary key
 #

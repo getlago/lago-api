@@ -7,19 +7,16 @@ class ApiKey < ApplicationRecord
 
   before_create :set_value
 
-  def generate_value
-    value = SecureRandom.uuid
-    api_key = ApiKey.find_by(value:)
-
-    return generate_value if api_key.present?
-
-    value
-  end
+  validates :value, uniqueness: true
+  validates :value, presence: true, on: :update
 
   private
 
   def set_value
-    self.value = generate_value
+    loop do
+      self.value = SecureRandom.uuid
+      break unless self.class.exists?(value:)
+    end
   end
 end
 

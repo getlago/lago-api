@@ -7,7 +7,12 @@ RSpec.describe Organizations::CreateService, type: :service do
     subject(:service_result) { described_class.call(params) }
 
     context 'with valid params' do
-      let(:params) { attributes_for(:organization) }
+      let(:params) do
+        {
+          name: Faker::Company.name,
+          document_numbering: Organization::DOCUMENT_NUMBERINGS.sample.to_s
+        }
+      end
 
       it 'creates an organization with provided params' do
         expect { service_result }.to change(Organization, :count).by(1)

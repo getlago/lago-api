@@ -11,7 +11,7 @@ end
 # Table name: events_enriched
 #
 #  code                       :string           not null, primary key
-#  decimal_value              :decimal(26, )
+#  decimal_value              :decimal(38, 26)
 #  enriched_at                :datetime         not null
 #  precise_total_amount_cents :decimal(40, 15)
 #  properties                 :string           not null

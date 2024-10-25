@@ -144,40 +144,23 @@ RSpec.describe Organization, type: :model do
   describe '#save' do
     subject { organization.save! }
 
-    before do
-      allow(organization).to receive(:generate_document_number_prefix).and_call_original # rubocop:disable RSpec/SubjectStub
-      subject
-    end
-
     context 'with a new record' do
       let(:organization) { build(:organization) }
 
-      it 'calls #generate_document_number_prefix' do
-        expect(organization).to have_received(:generate_document_number_prefix)
+      it 'sets document number prefix of organization' do
+        subject
+
+        expect(organization.document_number_prefix)
+          .to eq "#{organization.name.first(3).upcase}-#{organization.id.last(4).upcase}"
       end
     end
 
     context 'with a persisted record' do
       let(:organization) { create(:organization) }
 
-      it 'does not call #generate_document_number_prefix' do
-        expect(organization).not_to have_received(:generate_document_number_prefix)
+      it 'does not change document number prefix of organization' do
+        expect { subject }.not_to change(organization, :document_number_prefix)
       end
-    end
-  end
-
-  describe '#generate_document_number_prefix' do
-    subject { organization.send(:generate_document_number_prefix) }
-
-    let(:organization) { create(:organization) }
-    let(:prefix) { "#{organization.name.first(3).upcase}-#{organization.id.last(4).upcase}" }
-
-    before { organization.update!(document_number_prefix: 'invalid') }
-
-    it 'sets document number prefix of organization' do
-      expect { subject }
-        .to change(organization, :document_number_prefix)
-        .to prefix
     end
   end
 

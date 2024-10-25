@@ -31,20 +31,10 @@ RSpec.describe Api::BaseController, type: :controller do
     end
 
     context 'with valid authorization header' do
-      context 'when authorization token matching api key' do
-        let(:token) { api_key.value }
+      let(:token) { api_key.value }
 
-        it 'returns success response' do
-          expect(response).to have_http_status(:success)
-        end
-      end
-
-      context 'when authorization token matching organization api_key' do
-        let(:token) { create(:organization, api_key: 'api_key').api_key }
-
-        it 'returns success response' do
-          expect(response).to have_http_status(:success)
-        end
+      it 'returns success response' do
+        expect(response).to have_http_status(:success)
       end
     end
 

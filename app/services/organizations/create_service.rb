@@ -8,7 +8,9 @@ module Organizations
     end
 
     def call
-      organization = Organization.new(params)
+      organization = Organization.new(
+        params.slice(:name, :document_numbering)
+      )
 
       ActiveRecord::Base.transaction do
         organization.save!
