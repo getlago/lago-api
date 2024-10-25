@@ -33,6 +33,10 @@ module ChargeFilters
     end
 
     def filters
+      # NOTE: when called from the cache invalidator, filters are already pre-loaded,
+      #       we just return the preloaded list to avoid N+1 queries
+      return charge.filters if charge.association_cached?(:filters)
+
       charge.filters.includes(values: :billable_metric_filter)
     end
   end
