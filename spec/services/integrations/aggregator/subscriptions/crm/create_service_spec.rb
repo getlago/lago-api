@@ -13,7 +13,9 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Crm::CreateService do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
+  let(:lago_properties_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { 'https://api.nango.dev/v1/hubspot/records' }
+  let(:properties_endpoint) { 'https://api.nango.dev/v1/hubspot/properties' }
   let(:subscription_file_url) { subscription.file_url }
   let(:file_url) { Faker::Internet.url }
   let(:due_date) { subscription.payment_due_date.strftime('%Y-%m-%d') }
@@ -29,6 +31,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Crm::CreateService do
 
   before do
     allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new).with(properties_endpoint).and_return(lago_properties_client)
 
     integration_customer
     integration.sync_subscriptions = true
@@ -82,6 +85,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Crm::CreateService do
 
         before do
           allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+          allow(lago_properties_client).to receive(:post_with_response)
           allow(response).to receive(:body).and_return(body)
         end
 
@@ -142,6 +146,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Crm::CreateService do
 
         before do
           allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
+          allow(lago_properties_client).to receive(:post_with_response)
         end
 
         context 'when it is a server error' do
