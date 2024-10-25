@@ -43,7 +43,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::UpdateService do
 
   before do
     allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
-    allow(invoice).to receive(:file_url).and_return(file_url)
 
     integration_customer
     integration.sync_invoices = true
@@ -54,6 +53,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::UpdateService do
     subject(:service_call_async) { described_class.new(invoice:).call_async }
 
     context 'when invoice exists' do
+      before { allow(invoice).to receive(:file_url).and_return(file_url) }
+
       it 'enqueues invoice update job' do
         expect { service_call_async }.to enqueue_job(Integrations::Aggregator::Invoices::Crm::UpdateJob)
       end
@@ -74,7 +75,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::UpdateService do
   end
 
   describe '#call' do
-    before { integration_invoice }
+    before do
+      allow(invoice).to receive(:file_url).and_return(file_url)
+      integration_invoice
+    end
 
     context 'when sync_invoices is false' do
       before { integration.update!(sync_invoices: false) }
