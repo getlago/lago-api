@@ -17,5 +17,9 @@ FactoryBot.define do
       started_at { 1.month.ago }
       terminated_at { Time.zone.now }
     end
+
+    trait :calendar do
+      billing_time { :calendar }
+    end
   end
 end

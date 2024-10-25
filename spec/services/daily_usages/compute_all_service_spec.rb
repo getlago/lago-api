@@ -33,7 +33,7 @@ RSpec.describe DailyUsages::ComputeAllService, type: :service do
       end
 
       context 'when subscription usage was already computed' do
-        before { create(:daily_usage, subscription:, created_at: timestamp + 2.minutes) }
+        before { create(:daily_usage, subscription:, refreshed_at: timestamp + 2.minutes) }
 
         it 'does not enqueue any job' do
           expect(compute_service.call).to be_success

@@ -23,7 +23,7 @@ module DailyUsages
     attr_reader :timestamp
 
     def subscriptions
-      # TODO: Filter subscriptions based on the feature availability at organization level
+      # TODO(DailyUsage): Filter subscriptions based on the feature availability at organization level - Not Decided Yet
       Subscription
         .with(already_refreshed_today: already_refreshed_today)
         .joins(customer: :organization)
@@ -36,7 +36,7 @@ module DailyUsages
     def already_refreshed_today
       where_clause = <<-SQL
         DATE(
-          (daily_usages.created_at)#{at_time_zone(customer: "cus", organization: "org")}
+          (daily_usages.refreshed_at)#{at_time_zone(customer: "cus", organization: "org")}
         ) = DATE(:timestamp#{at_time_zone(customer: "cus", organization: "org")})
       SQL
 

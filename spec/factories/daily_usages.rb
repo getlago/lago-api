@@ -9,6 +9,7 @@ FactoryBot.define do
     external_subscription_id { subscription.external_id }
     from_datetime { Time.current.beginning_of_month }
     to_datetime { Time.current.end_of_month }
+    refreshed_at { Time.current }
     usage { {} }
   end
 end

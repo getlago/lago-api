@@ -19,9 +19,10 @@ module DailyUsages
         customer: subscription.customer,
         subscription:,
         external_subscription_id: subscription.external_id,
-        usage: ::V1::Customers::UsageSerializer.new(current_usage).serialize.to_json,
+        usage: ::V1::Customers::UsageSerializer.new(current_usage).serialize,
         from_datetime: current_usage.from_datetime,
-        to_datetime: current_usage.to_datetime # TODO: persist the timestamp
+        to_datetime: current_usage.to_datetime,
+        refreshed_at: timestamp
       )
 
       result.daily_usage = daily_usage
@@ -44,7 +45,7 @@ module DailyUsages
       @existing_daily_usage ||= DailyUsage
         .joins(customer: :organization)
         .where(subscription_id: subscription.id)
-        .where("DATE((daily_usages.created_at)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
+        .where("DATE((daily_usages.refreshed_at)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
         .first
     end
   end
