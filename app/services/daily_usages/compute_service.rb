@@ -27,6 +27,8 @@ module DailyUsages
 
       result.daily_usage = daily_usage
       result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
     end
 
     private
