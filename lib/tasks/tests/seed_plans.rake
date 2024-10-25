@@ -13,7 +13,7 @@ namespace :tests do
     create_plans = args[:num_plans].to_i || 10
     create_plans.times do |i|
       args = build_plan_args(organization, all_metrics, i)
-      result = Plans::CreateService.call(args: args)
+      result = Plans::CreateService.call(args)
       plan = result.plan
       generate_children_plans(plan, all_metrics, delete_charge_parents)
     end
