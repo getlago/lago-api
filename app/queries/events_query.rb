@@ -2,9 +2,11 @@
 
 class EventsQuery < BaseQuery
   def call
-    events = organization.events
+    events = organization.clickhouse_events_store? ? Clickhouse::EventsRaw : Event
+    events = events.where(organization_id: organization.id)
     events = paginate(events)
-    events = events.order(created_at: :desc)
+
+    events = events.order(created_at: :desc) unless organization.clickouse_events_store?
 
     events = with_code(events) if filters.code
     events = with_external_subscription_id(events) if filters.external_subscription_id

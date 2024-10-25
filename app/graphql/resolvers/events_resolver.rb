@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    MAX_LIMIT = 1000
+
     description 'Query events of an organization'
 
     argument :limit, Integer, required: false
@@ -13,10 +15,16 @@ module Resolvers
     type Types::Events::Object.collection_type, null: true
 
     def resolve(page: nil, limit: nil)
-      Event.where(organization_id: current_organization.id)
-        .order(timestamp: :desc)
-        .page(page)
-        .per(limit)
+      if current_organization.clickhouse_events_store?
+        Clickhouse::EventsRaw.where(organization_id: current_organization.id)
+          .page(page)
+          .per((limit >= MAX_LIMIT) ? MAX_LIMIT : limit)
+      else
+        Event.where(organization_id: current_organization.id)
+          .order(timestamp: :desc)
+          .page(page)
+          .per((limit >= MAX_LIMIT) ? MAX_LIMIT : limit)
+      end
     end
   end
 end
