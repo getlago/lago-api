@@ -4,7 +4,7 @@ require 'faker'
 require 'factory_bot_rails'
 
 namespace :tests do
-  desc 'creates plans with children plans - creates [<num_plans>] of parents plans and 15 children for each plan; <delete_charge_parents> decides if charges of children plans will be unlinked from parent charges'
+  desc 'creates plans with children plans - creates [<num_plans>] of parents plans and 10 children for each plan; <delete_charge_parents> decides if charges of children plans will be unlinked from parent charges'
   task :seed_plans, [:num_plans, :delete_charge_parents] => :environment do |_task, args|
     organization = Organization.find_or_create_by!(name: 'Hooli')
     all_metrics = find_or_create_metrics(organization)
@@ -21,37 +21,24 @@ namespace :tests do
 end
 
 def find_or_create_metrics(organization)
-  metered_metrics_params = [
-    { name: 'metered_count', agg_type: :count_agg},
-    { name: 'metered_count_uniq', agg_type: :unique_count_agg },
-    { name: 'metered_latest', agg_type: :latest_agg},
-    { name: 'metered_max', agg_type: :max_agg },
-    { name: 'metered_sum', agg_type: :sum_agg },
-    { name: 'metered_weighted_sum', agg_type: :weighted_sum_agg }
+  metrics_params = [
+    { name: 'metered_count', agg_type: :count_agg, recurring: false},
+    { name: 'metered_count_uniq', agg_type: :unique_count_agg, recurring: false },
+    { name: 'metered_latest', agg_type: :latest_agg, recurring: false },
+    { name: 'metered_max', agg_type: :max_agg, recurring: false },
+    { name: 'metered_sum', agg_type: :sum_agg, recurring: false },
+    { name: 'metered_weighted_sum', agg_type: :weighted_sum_agg, recurring: false },
+    {name: 'recurring_sum', agg_type: :sum_agg, recurring: true },
+    {name: 'recurring_weighted_sum', agg_type: :weighted_sum_agg, recurring: true }
   ]
-  metered_metrics = metered_metrics_params.map do |params|
+  metered_metrics = metrics_params.map do |params|
     organization.billable_metrics.find_or_create_by!(name: params[:name],
                                                      code: params[:name],
-                                                     recurring: false,
+                                                     recurring: params[:recurring],
                                                      aggregation_type: params[:agg_type],
                                                      field_name: 'test',
                                                      weighted_interval: "seconds")
   end
-
-  recurring_metrics_params = [
-    {name: 'recurring_sum', agg_type: :sum_agg},
-    {name: 'recurring_weighted_sum', agg_type: :weighted_sum_agg}
-  ]
-  recurring_metrics = recurring_metrics_params.map do |params|
-    organization.billable_metrics.find_or_create_by!(name: params[:name],
-                                                     code: params[:name],
-                                                     recurring: true,
-                                                     aggregation_type: params[:agg_type],
-                                                     field_name: 'test',
-                                                     weighted_interval: "seconds")
-  end
-
-  all_metrics = metered_metrics + recurring_metrics
 end
 
 def build_plan_args(organization, all_metrics, i)
@@ -100,7 +87,6 @@ def can_be_prorated?(charge_model, billable_metric, pay_in_advance)
   false
 end
 
-
 def generate_children_plans(plan, all_metrics, delete_charge_parents)
   5.times do
     # change plan, do not change charges
@@ -108,28 +94,10 @@ def generate_children_plans(plan, all_metrics, delete_charge_parents)
     pl = res.plan
     pl.charges.update_all(parent_id: nil) if delete_charge_parents
 
-    # change charges, not properties do not change plan
-    res = Plans::OverrideService.call(plan: plan, params: {charges: override_charges(plan, all_metrics)})
-    pl = res.plan
-    pl.charges.update_all(parent_id: nil) if delete_charge_parents
-
     # change charges models and properties (randomly)
     res = Plans::OverrideService.call(plan: plan, params: {charges: override_charges_rand(plan, all_metrics)})
     pl = res.plan
     pl.charges.update_all(parent_id: nil) if delete_charge_parents
-  end
-end
-
-def override_charges(plan, all_metrics)
-  plan.charges.map do |charge|
-    {
-      id: charge.id,
-      billable_metric_id: charge.billable_metric_id,
-      charge_model: charge.charge_model,
-      pay_in_advance: charge.pay_in_advance,
-      prorated: charge.prorated,
-      properties: charge.properties
-    }
   end
 end
 
