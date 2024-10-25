@@ -12,10 +12,9 @@ module DataExports
         data_export_part:,
         invoice_serializer_klass: V1::InvoiceSerializer,
         fee_serializer_klass: V1::FeeSerializer,
-        subscription_serializer_klass: V1::SubscriptionSerializer,
-        output: Tempfile.create
+        subscription_serializer_klass: V1::SubscriptionSerializer
       )
-        super(data_export_part:, serializer_klass: invoice_serializer_klass, output:)
+        super(data_export_part:, serializer_klass: invoice_serializer_klass)
 
         @fee_serializer_klass = fee_serializer_klass
         @subscription_serializer_klass = subscription_serializer_klass
