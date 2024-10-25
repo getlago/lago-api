@@ -16,7 +16,12 @@ module DataExports
         tempfile.write("\n")
 
         # Note the order here, this is crucial to make sure the data is in the expected order
-        data_export.data_export_parts.order(:index).find_each { |part| tempfile.write(part.csv_lines) }
+        ids = data_export.data_export_parts.order(index: :asc).ids
+        # This is not the most optimal and will do N+1 queries, but the whole point is to not load the entire CSV in memory
+        # we're trading speed for reliability here.
+        ids.each do |id|
+          tempfile.write(data_export.data_export_parts.find(id).csv_lines)
+        end
 
         tempfile.rewind
 
