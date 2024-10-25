@@ -60,4 +60,14 @@ RSpec.describe DataExports::ProcessPartService, type: :service do
       expect { result }.to have_enqueued_job(DataExports::CombinePartsJob).with(data_export_part.data_export)
     end
   end
+
+  context 'when other parts have not been complete' do
+    let(:other_part) { create :data_export_part, data_export:, object_ids: [invoice.id], index: 2 }
+
+    before { other_part }
+
+    it "does not enqueue a job" do
+      expect { result }.not_to have_enqueued_job(DataExports::CombinePartsJob).with(data_export_part.data_export)
+    end
+  end
 end
