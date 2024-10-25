@@ -5,6 +5,9 @@ module Dunning
     queue_as :default
 
     def perform
+      return unless License.premium?
+
+      DunningCampaigns::BulkProcessService.call.raise_if_error!
     end
   end
 end
