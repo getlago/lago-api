@@ -29,7 +29,8 @@ module Integrations
           end
 
           def integration_invoice
-            @integration_invoice ||= IntegrationResource.find_by(integration:, syncable: invoice)
+            @integration_invoice ||=
+              IntegrationResource.find_by(integration:, syncable: invoice, resource_type: 'invoice')
           end
 
           private

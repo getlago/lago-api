@@ -2,15 +2,15 @@
 
 module Integrations
   module Aggregator
-    module Invoices
+    module Subscriptions
       module Crm
         class UpdateService < BaseService
           def call
             return result unless integration
-            return result unless integration.sync_invoices
-            return result unless payload.integration_invoice
+            return result unless integration.sync_subscriptions
+            return result unless payload.integration_subscription
 
-            Integrations::Hubspot::Invoices::DeployPropertiesService.call(integration:)
+            Integrations::Hubspot::Subscriptions::DeployPropertiesService.call(integration:)
 
             response = http_client.put_with_response(payload.update_body, headers)
             body = JSON.parse(response.body)
@@ -29,11 +29,11 @@ module Integrations
           end
 
           def call_async
-            return result.not_found_failure!(resource: 'invoice') unless invoice
+            return result.not_found_failure!(resource: 'subscription') unless subscription
 
-            ::Integrations::Aggregator::Invoices::Crm::UpdateJob.perform_later(invoice:)
+            ::Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
 
-            result.invoice_id = invoice.id
+            result.subscription_id = subscription.id
             result
           end
         end

@@ -2,15 +2,14 @@
 
 module Integrations
   module Aggregator
-    module Invoices
+    module Subscriptions
       module Crm
         class CreateService < BaseService
           def call
             return result unless integration
-            return result unless integration.sync_invoices
-            return result unless invoice.finalized?
+            return result unless integration.sync_subscriptions
 
-            Integrations::Hubspot::Invoices::DeployPropertiesService.call(integration:)
+            Integrations::Hubspot::Subscriptions::DeployPropertiesService.call(integration:)
 
             response = http_client.post_with_response(payload.create_body, headers)
             body = JSON.parse(response.body)
@@ -21,9 +20,9 @@ module Integrations
             IntegrationResource.create!(
               integration:,
               external_id: result.external_id,
-              syncable_id: invoice.id,
-              syncable_type: 'Invoice',
-              resource_type: :invoice
+              syncable_id: subscription.id,
+              syncable_type: 'Subscription',
+              resource_type: :subscription
             )
 
             result
@@ -39,11 +38,11 @@ module Integrations
           end
 
           def call_async
-            return result.not_found_failure!(resource: 'invoice') unless invoice
+            return result.not_found_failure!(resource: 'subscription') unless subscription
 
-            ::Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice:)
+            ::Integrations::Aggregator::Subscriptions::Crm::CreateJob.perform_later(subscription:)
 
-            result.invoice_id = invoice.id
+            result.subscription_id = subscription.id
             result
           end
         end

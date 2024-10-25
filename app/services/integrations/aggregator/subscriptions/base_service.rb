@@ -24,15 +24,14 @@ module Integrations
           }
         end
 
-        def integration_customer
-          @integration_customer ||= customer&.integration_customers&.accounting_kind&.first
+        def integration
+          return nil unless integration_customer
+
+          integration_customer&.integration
         end
 
-        def payload
-          Integrations::Aggregator::Subscriptions::Payloads::Factory.new_instance(
-            integration_customer:,
-            subscription:
-          ).body
+        def integration_customer
+          @integration_customer ||= customer&.integration_customers&.accounting_kind&.first
         end
       end
     end
