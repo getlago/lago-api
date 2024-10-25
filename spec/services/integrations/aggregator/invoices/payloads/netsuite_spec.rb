@@ -237,6 +237,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       context 'when tax nexus is not present' do
         let(:columns) do
           {
+            'tranid' => invoice.id,
             'entity' => integration_customer.external_customer_id,
             'taxregoverride' => true,
             'taxdetailsoverride' => true,
@@ -324,6 +325,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
 
           let(:columns) do
             {
+              'tranid' => invoice.id,
               'entity' => integration_customer.external_customer_id,
               'taxregoverride' => true,
               'taxdetailsoverride' => true,
@@ -346,6 +348,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
 
           let(:columns) do
             {
+              'tranid' => invoice.id,
               'entity' => integration_customer.external_customer_id,
               'taxregoverride' => true,
               'taxdetailsoverride' => true,
@@ -368,6 +371,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     context 'when tax item is not mapped' do
       let(:columns) do
         {
+          'tranid' => invoice.id,
           'entity' => integration_customer.external_customer_id,
           'taxregoverride' => true,
           'taxdetailsoverride' => true,
