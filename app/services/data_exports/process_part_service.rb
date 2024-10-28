@@ -11,15 +11,13 @@ module DataExports
     def call
       result.data_export_part = data_export_part
 
-      data_export_part.transaction do
-        # produce CSV lines into StringIO
-        export_result = data_export.export_class.call(data_export_part:).raise_if_error!
-        data_export_part.update!(csv_lines: export_result.csv_lines, completed: true)
-      end
+      # produce CSV lines into StringIO
+      export_result = data_export.export_class.call(data_export_part:).raise_if_error!
+      data_export_part.update!(csv_lines: export_result.csv_lines, completed: true)
 
       # check if we are the last one to finish
       if last_completed
-        DataExports::CombinePartsJob.perform_later(data_export_part.data_export)
+        after_commit { DataExports::CombinePartsJob.perform_later(data_export_part.data_export) }
       end
       result
     end
