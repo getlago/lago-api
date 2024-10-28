@@ -2,10 +2,11 @@
 
 module Charges
   class UpdateService < BaseService
-    def initialize(charge:, params:, cascade: false)
+    def initialize(charge:, params:, options: {})
       @charge = charge
       @params = params
-      @cascade = cascade
+      @options = options
+      @cascade = options[:cascade]
 
       super
     end
@@ -29,18 +30,19 @@ module Charges
           ).properties
         )
 
-        result.charge = charge
-
-        # In cascade mode it is allowed only to change properties
-        return result if cascade
-
         filters = params.delete(:filters)
         unless filters.nil?
           ChargeFilters::CreateOrUpdateBatchService.call(
             charge:,
-            filters_params: filters.map(&:with_indifferent_access)
+            filters_params: filters.map(&:with_indifferent_access),
+            options:
           ).raise_if_error!
         end
+
+        result.charge = charge
+
+        # In cascade mode it is allowed only to change properties
+        return result if cascade
 
         tax_codes = params.delete(:tax_codes)
         if tax_codes
@@ -69,7 +71,7 @@ module Charges
 
     private
 
-    attr_reader :charge, :params, :cascade
+    attr_reader :charge, :params, :options, :cascade
 
     delegate :plan, to: :charge
   end

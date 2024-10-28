@@ -127,7 +127,14 @@ module Plans
         child_charge = p.charges.find { |c| c.parent_id == charge.id }
 
         if child_charge && charge.equal_properties?(child_charge)
-          Charges::UpdateJob.perform_later(charge: child_charge, params: payload_charge, cascade: true)
+          Charges::UpdateJob.perform_later(
+            charge: child_charge,
+            params: payload_charge,
+            options: {
+              cascade: true,
+              parent_filters: charge.filters.map(&:attributes)
+            }
+          )
         end
       end
     end
