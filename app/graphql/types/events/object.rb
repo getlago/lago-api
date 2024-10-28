@@ -8,13 +8,12 @@ module Types
       field :code, String, null: false
       field :id, ID, null: false
 
-      field :external_customer_id, String, null: true
       field :external_subscription_id, String, null: true
       field :transaction_id, String, null: true
 
       field :customer_timezone, Types::TimezoneEnum, null: false
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
-      field :received_at, GraphQL::Types::ISO8601DateTime, null: false, method: :created_at
+      field :received_at, GraphQL::Types::ISO8601DateTime, null: true, method: :created_at
       field :timestamp, GraphQL::Types::ISO8601DateTime, null: true
 
       field :api_client, String, null: true
@@ -23,10 +22,10 @@ module Types
       field :billable_metric_name, String, null: true
       field :payload, GraphQL::Types::JSON, null: false
 
-      field :match_billable_metric, Boolean, null: false
-      field :match_custom_field, Boolean, null: false
-      field :match_customer, Boolean, null: false
-      field :match_subscription, Boolean, null: false
+      field :match_billable_metric, Boolean, null: true
+      field :match_custom_field, Boolean, null: true
+      field :match_customer, Boolean, null: true
+      field :match_subscription, Boolean, null: true
 
       def payload
         {

@@ -16,6 +16,7 @@ class CreateEventsRaw < ActiveRecord::Migration[7.0]
       t.string :code, null: false
       t.string :properties, map: true, null: false
       t.decimal :precise_total_amount_cents, precision: 40, scale: 15
+      t.datetime :ingested_at, null: false, precision: 3
     end
   end
 end

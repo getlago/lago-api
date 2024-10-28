@@ -3,6 +3,37 @@
 module Clickhouse
   class EventsRaw < BaseRecord
     self.table_name = 'events_raw'
+
+    def created_at
+      ingested_at
+    end
+
+    def billable_metric
+      BillableMetric.find_by(code:, organization_id:)
+    end
+
+    def api_client
+    end
+
+    def ip_address
+    end
+
+    def subscription
+      organization.subscriptions
+        .where(external_id: external_subscription_id)
+        .where("date_trunc('millisecond', started_at::timestamp) <= ?::timestamp", timestamp)
+        .where("terminated_at is NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?::timestamp", timestamp)
+        .order('terminated_at DESC NULLS FIRST, started_at DESC')
+        .first
+    end
+
+    def organization
+      Organization.find_by(id: organization_id)
+    end
+
+    private
+
+    delegate :customer, to: :subscription, allow_nil: true
   end
 end
 
@@ -11,6 +42,7 @@ end
 # Table name: events_raw
 #
 #  code                       :string           not null, primary key
+#  ingested_at                :datetime         not null
 #  precise_total_amount_cents :decimal(40, 15)
 #  properties                 :string           not null
 #  timestamp                  :datetime         not null, primary key
