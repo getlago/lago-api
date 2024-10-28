@@ -18,6 +18,7 @@ guard :rspec, cmd: 'bundle exec rspec' do
   end
   watch('app/services/integrations/aggregator/base_service.rb') { 'spec/services/integrations/aggregator/' }
   watch('app/services/base_service.rb') { 'spec/services/' }
+  watch('app/jobs/application_job.rb') { 'spec/jobs/' }
   watch('app/models/application_record.rb') { 'spec/models/' }
   watch('app/serializers/model_serializer.rb') { 'spec/serializers/' }
   watch(%r{^spec/.+_spec\.rb$})
