@@ -3,10 +3,9 @@
 module DataExports
   class ProcessPartService < BaseService
     def initialize(data_export_part:)
-      super(nil)
-
       @data_export_part = data_export_part
       @data_export = data_export_part.data_export
+      super(nil)
     end
 
     def call
