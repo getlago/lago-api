@@ -10,8 +10,8 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
           collection {
             id
             code
-            externalCustomerId
             transactionId
+            externalSubscriptionId
             timestamp
             receivedAt
             customerTimezone
@@ -31,15 +31,16 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-
+  let(:plan) { create(:plan, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:subscription) { create(:subscription, customer:, plan:) }
 
   let(:event) do
     create(
       :event,
       code: billable_metric.code,
       organization:,
-      external_customer_id: customer.external_id,
+      external_subscription_id: subscription.external_id,
       timestamp: 2.days.ago,
       properties: {foo_bar: 1234},
       metadata: {user_agent: 'Lago Ruby v0.0.1', ip_address: '182.11.32.11'}
@@ -61,7 +62,7 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
       expect(events_response['collection'].count).to eq(Event.where(organization_id: organization.id).count)
       expect(events_response['collection'].first['id']).to eq(event.id)
       expect(events_response['collection'].first['code']).to eq(event.code)
-      expect(events_response['collection'].first['externalCustomerId']).to eq(customer.external_id)
+      expect(events_response['collection'].first['externalSubscriptionId']).to eq(subscription.external_id)
       expect(events_response['collection'].first['transactionId']).to eq(event.transaction_id)
       expect(events_response['collection'].first['timestamp']).to eq(event.timestamp.iso8601)
       expect(events_response['collection'].first['receivedAt']).to eq(event.created_at.iso8601)
@@ -132,25 +133,6 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false do
 
       events_response = result['data']['events']
       expect(events_response['collection'].first['matchCustomField']).to be_falsey
-    end
-  end
-
-  context 'with deleted customer' do
-    before { customer.discard! }
-
-    it 'returns the customer details' do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        query:
-      )
-
-      events_response = result['data']['events']
-
-      aggregate_failures do
-        expect(events_response['collection'].first['externalCustomerId']).to eq(customer.external_id)
-        expect(events_response['collection'].first['customerTimezone']).to eq('TZ_UTC')
-      end
     end
   end
 end
