@@ -3,6 +3,7 @@
 module Clickhouse
   class EventsRaw < BaseRecord
     self.table_name = 'events_raw'
+    self.primary_key = nil
 
     def id
       "#{organization_id}-#{external_subscription_id}-#{transaction_id}-#{ingested_at.to_i}"
