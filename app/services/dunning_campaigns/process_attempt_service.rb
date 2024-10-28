@@ -14,7 +14,7 @@ module DunningCampaigns
     def call
       return unless organization.auto_dunning_enabled?
       return unless applicable_dunning_campaign?
-      # TODO: ensure campaign thresold is still meet
+      return unless dunning_campaign_threshold_reached?
       # TODO: ensure customer does not use all attempts
       # TODO: ensure time now > last attempt + delay
 
@@ -51,6 +51,10 @@ module DunningCampaigns
       default_campaign = organization.applied_dunning_campaign
 
       custom_campaign == dunning_campaign || (!custom_campaign && default_campaign == dunning_campaign)
+    end
+
+    def dunning_campaign_threshold_reached?
+      overdue_invoices.sum(:total_amount_cents) >= dunning_campaign_threshold.amount_cents
     end
 
     def overdue_invoices

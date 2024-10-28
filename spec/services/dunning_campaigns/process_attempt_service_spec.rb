@@ -78,7 +78,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
         create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 99_01
       end
 
-      xit "does nothing" do
+      it "does nothing" do
         result
         expect(PaymentRequests::CreateService).not_to have_received(:call)
       end
