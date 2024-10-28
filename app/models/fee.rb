@@ -59,10 +59,15 @@ class Fee < ApplicationRecord
   #       so we need a bit of logic to find the fee in the right organization scope
   scope :from_organization,
     lambda { |organization|
-      left_joins(:invoice)
-        .left_joins(subscription: :customer)
-        .where('COALESCE(invoices.organization_id, customers.organization_id) = ?', organization.id)
+      union = [from_organization_invoice(organization), from_pay_in_advance(organization)]
+        .map(&:to_sql)
+        .join(") UNION (")
+      unionized_sql = "((#{union})) #{table_name}"
+      from(unionized_sql)
     }
+
+  scope :from_organization_invoice, ->(org) { joins(:invoice).where(invoice: {organization: org}) }
+  scope :from_pay_in_advance, ->(org) { joins(subscription: :customer).where("customers.organization_id = ?", org.id).where(invoice_id: nil) }
 
   def item_id
     return billable_metric.id if charge?
