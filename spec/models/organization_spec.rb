@@ -25,7 +25,7 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:dunning_campaigns) }
   it { is_expected.to have_many(:daily_usages) }
 
-  it { is_expected.to have_one(:applied_dunning_campaign).conditions("applied_to_organization = true") }
+  it { is_expected.to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true) }
 
   it { is_expected.to validate_inclusion_of(:default_currency).in_array(described_class.currency_list) }
 
