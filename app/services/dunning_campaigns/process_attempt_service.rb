@@ -15,7 +15,7 @@ module DunningCampaigns
       return unless organization.auto_dunning_enabled?
       return unless applicable_dunning_campaign?
       return unless dunning_campaign_threshold_reached?
-      # TODO: ensure customer does not use all attempts
+      return if dunning_campaign_completed?
       # TODO: ensure time now > last attempt + delay
 
       ActiveRecord::Base.transaction do
@@ -55,6 +55,10 @@ module DunningCampaigns
 
     def dunning_campaign_threshold_reached?
       overdue_invoices.sum(:total_amount_cents) >= dunning_campaign_threshold.amount_cents
+    end
+
+    def dunning_campaign_completed?
+      customer.last_dunning_campaign_attempt >= dunning_campaign.max_attempts
     end
 
     def overdue_invoices
