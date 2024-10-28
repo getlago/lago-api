@@ -2,11 +2,16 @@
 
 class FeesQuery < BaseQuery
   def call
-    fees = paginate(Fee.from_organization(organization))
+    base_scope = if filters.external_customer_id
+      Fee.from_customer(organization, filters.external_customer_id)
+    else
+      Fee.from_organization(organization)
+    end
+
+    fees = paginate(base_scope)
     fees = fees.order(created_at: :asc, id: :asc)
 
     fees = with_external_subscription(fees) if filters.external_subscription_id
-    fees = with_external_customer(fees) if filters.external_customer_id
 
     fees = fees.where(amount_currency: filters.currency.upcase) if filters.currency
     fees = with_billable_metric_code(fees) if filters.billable_metric_code
@@ -29,16 +34,6 @@ class FeesQuery < BaseQuery
 
   def with_external_subscription(scope)
     scope.joins(:subscription).where(subscription: {external_id: filters.external_subscription_id})
-  end
-
-  def with_external_customer(scope)
-    # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
-    #       so we need a bit of logic to find the fee in the right customer scope
-    #       - Add ons and regular fees: customers linked to the invoice
-    #       - Instant: customers linked to the subscription
-    scope
-      .joins('LEFT JOIN customers AS invoice_customers ON invoice_customers.id = invoices.customer_id')
-      .where('COALESCE(customers.external_id, invoice_customers.external_id) = ?', filters.external_customer_id)
   end
 
   def with_billable_metric_code(scope)
