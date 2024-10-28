@@ -6,32 +6,24 @@ require 'forwardable'
 module DataExports
   module Csv
     class InvoiceFees < Invoices
-      DEFAULT_BATCH_SIZE = 50
-
       extend Forwardable
 
       def initialize(
-        data_export:,
+        data_export_part:,
         invoice_serializer_klass: V1::InvoiceSerializer,
         fee_serializer_klass: V1::FeeSerializer,
-        subscription_serializer_klass: V1::SubscriptionSerializer,
-        output: Tempfile.create
+        subscription_serializer_klass: V1::SubscriptionSerializer
       )
+        super(data_export_part:, serializer_klass: invoice_serializer_klass)
 
-        @data_export = data_export
-        @invoice_serializer_klass = invoice_serializer_klass
         @fee_serializer_klass = fee_serializer_klass
         @subscription_serializer_klass = subscription_serializer_klass
-        @output = output
-        @batch_size = DEFAULT_BATCH_SIZE
       end
 
       def call
-        ::CSV.open(output, 'wb', headers: true) do |csv|
-          csv << headers
-
-          invoices.find_each(batch_size:).lazy.each do |invoice|
-            serialized_invoice = invoice_serializer_klass.new(invoice).serialize
+        result.csv_lines = ::CSV.generate(headers: false) do |csv|
+          invoices.each do |invoice|
+            serialized_invoice = serializer_klass.new(invoice).serialize
 
             invoice
               .fees
@@ -44,7 +36,7 @@ module DataExports
                 :billable_metric,
                 {charge_filter: {values: :billable_metric_filter}}
               )
-              .find_each(batch_size:)
+              .find_each
               .lazy
               .each do |fee|
               serialized_fee = fee_serializer_klass.new(fee).serialize
@@ -76,15 +68,10 @@ module DataExports
             end
           end
         end
-
-        output.rewind
+        result
       end
 
-      private
-
-      attr_reader :invoice_serializer_klass, :fee_serializer_klass, :subscription_serializer_klass
-
-      def headers
+      def self.headers
         %w[
           invoice_lago_id
           invoice_number
@@ -108,6 +95,10 @@ module DataExports
           fee_total_amount_cents
         ]
       end
+
+      private
+
+      attr_reader :invoice_serializer_klass, :fee_serializer_klass, :subscription_serializer_klass
     end
   end
 end

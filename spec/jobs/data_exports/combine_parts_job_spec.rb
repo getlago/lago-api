@@ -2,22 +2,22 @@
 
 require 'rails_helper'
 
-RSpec.describe DataExports::ExportResourcesJob, type: :job do
+RSpec.describe DataExports::CombinePartsJob, type: :job do
   let(:data_export) { create(:data_export) }
   let(:result) { BaseService::Result.new }
 
   before do
-    allow(DataExports::ExportResourcesService)
+    allow(DataExports::CombinePartsService)
       .to receive(:call)
-      .with(data_export:, batch_size: 100)
+      .with(data_export:)
       .and_return(result)
   end
 
-  it "calls ExportResources service" do
+  it "calls ProcessPart service" do
     described_class.perform_now(data_export)
 
-    expect(DataExports::ExportResourcesService)
+    expect(DataExports::CombinePartsService)
       .to have_received(:call)
-      .with(data_export:, batch_size: 100)
+      .with(data_export:)
   end
 end

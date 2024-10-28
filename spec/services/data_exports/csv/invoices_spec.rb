@@ -5,6 +5,8 @@ require 'rails_helper'
 RSpec.describe DataExports::Csv::Invoices do
   let(:data_export) { create :data_export, :processing, resource_query: }
 
+  let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1) }
+
   let(:resource_query) do
     {
       currency:,
@@ -33,31 +35,9 @@ RSpec.describe DataExports::Csv::Invoices do
   let(:search_term) { 'service ABC' }
   let(:status) { 'finalized' }
 
-  let(:filters) do
-    {
-      "currency" => currency,
-      "customer_external_id" => customer_external_id,
-      "customer_id" => customer_id,
-      "invoice_type" => invoice_type,
-      "issuing_date_from" => issuing_date_from,
-      "issuing_date_to" => issuing_date_to,
-      "payment_dispute_lost" => payment_dispute_lost,
-      "payment_overdue" => payment_overdue,
-      "payment_status" => payment_status,
-      "status" => status
-    }
-  end
-
-  let(:tempfile) { Tempfile.create("test_export") }
   let(:serializer_klass) { class_double('V1::InvoiceSerializer') }
   let(:invoice_serializer) do
     instance_double('V1::InvoiceSerializer', serialize: serialized_invoice)
-  end
-
-  let(:invoices_query_results) do
-    BaseService::Result.new.tap do |result|
-      result.invoices = Invoice.all
-    end
   end
 
   let(:invoice) { create :invoice }
@@ -97,32 +77,20 @@ RSpec.describe DataExports::Csv::Invoices do
     allow(serializer_klass)
       .to receive(:new)
       .and_return(invoice_serializer)
-
-    allow(InvoicesQuery)
-      .to receive(:call)
-      .with(
-        organization: data_export.organization,
-        pagination: nil,
-        search_term:,
-        filters:
-      )
-      .and_return(invoices_query_results)
   end
 
   describe '#call' do
-    subject(:call) do
-      described_class.new(data_export:, serializer_klass:, output: tempfile).call
+    subject(:result) do
+      described_class.new(data_export_part:, serializer_klass:).call
     end
 
     it 'generates the correct CSV output' do
       expected_csv = <<~CSV
-        lago_id,sequential_id,issuing_date,customer_lago_id,customer_external_id,customer_name,customer_country,customer_tax_identification_number,invoice_number,invoice_type,payment_status,status,file_url,currency,fees_amount_cents,coupons_amount_cents,taxes_amount_cents,credit_notes_amount_cents,prepaid_credit_amount_cents,total_amount_cents,payment_due_date,payment_dispute_lost_at,payment_overdue
         invoice-lago-id-123,SEQ123,2023-01-01,customer-lago-id-456,CUST123,customer name,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
       CSV
 
-      call
-      tempfile.rewind
-      generated_csv = tempfile.read
+      expect(result).to be_success
+      generated_csv = result.csv_lines
 
       expect(generated_csv).to eq(expected_csv)
     end
