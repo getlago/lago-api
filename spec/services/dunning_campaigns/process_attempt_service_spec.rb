@@ -116,6 +116,22 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
+    context "when the customer reaches dunning campaign max attempts" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          currency:,
+          last_dunning_campaign_attempt: dunning_campaign.max_attempts
+        )
+      end
+
+      it "does nothing" do
+        result
+        expect(PaymentRequests::CreateService).not_to have_received(:call)
+      end
+    end
+
     context "when payment request creation fails" do
       before do
         payment_request_result.service_failure!(code: "error", message: "failure")
