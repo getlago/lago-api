@@ -4,6 +4,10 @@ module Clickhouse
   class EventsRaw < BaseRecord
     self.table_name = 'events_raw'
 
+    def id
+      "#{organization_id}-#{external_subscription_id}-#{transaction_id}-#{ingested_at.to_i}"
+    end
+
     def created_at
       ingested_at
     end
@@ -27,13 +31,17 @@ module Clickhouse
         .first
     end
 
+    def subscription_id
+      subscription&.id
+    end
+
     def organization
       Organization.find_by(id: organization_id)
     end
 
     private
 
-    delegate :customer, to: :subscription, allow_nil: true
+    delegate :customer, :customer_id, to: :subscription, allow_nil: true
   end
 end
 
