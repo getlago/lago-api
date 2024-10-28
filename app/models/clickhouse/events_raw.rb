@@ -19,10 +19,12 @@ module Clickhouse
     end
 
     def subscription
-      organization.subscriptions.find_by(external_id: external_subscription_id)
-    end
-
-    def customer_timezone
+      organization.subscriptions
+        .where(external_id: external_subscription_id)
+        .where("date_trunc('millisecond', started_at::timestamp) <= ?::timestamp", timestamp)
+        .where("terminated_at is NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?::timestamp", timestamp)
+        .order('terminated_at DESC NULLS FIRST, started_at DESC')
+        .first
     end
 
     def organization
@@ -31,7 +33,7 @@ module Clickhouse
 
     private
 
-    delegate :customer, to: :subscription
+    delegate :customer, to: :subscription, allow_nil: true
   end
 end
 
