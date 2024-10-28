@@ -13,7 +13,7 @@ module DunningCampaigns
 
     def call
       return unless organization.auto_dunning_enabled?
-      # TODO: ensure the campaign is still applicable to customer
+      return unless applicable_dunning_campaign?
       # TODO: ensure campaign thresold is still meet
       # TODO: ensure customer does not use all attempts
       # TODO: ensure time now > last attempt + delay
@@ -43,6 +43,15 @@ module DunningCampaigns
     private
 
     attr_reader :customer, :dunning_campaign, :dunning_campaign_threshold, :organization
+
+    def applicable_dunning_campaign?
+      return false if customer.exclude_from_dunning_campaign?
+
+      custom_campaign = customer.applied_dunning_campaign
+      default_campaign = organization.applied_dunning_campaign
+
+      custom_campaign == dunning_campaign || (!custom_campaign && default_campaign == dunning_campaign)
+    end
 
     def overdue_invoices
       customer

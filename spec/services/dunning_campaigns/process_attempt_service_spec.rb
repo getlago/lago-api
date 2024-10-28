@@ -8,7 +8,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
   let(:customer) { create :customer, organization:, currency: }
   let(:organization) { create :organization }
   let(:currency) { "EUR" }
-  let(:dunning_campaign) { create :dunning_campaign, organization: }
+  let(:dunning_campaign) { create :dunning_campaign, organization:, applied_to_organization: true }
   let(:dunning_campaign_threshold) do
     create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 99_00
   end
@@ -70,6 +70,49 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
         expect { result }
           .to change(customer.reload, :last_dunning_campaign_attempt).by(1)
           .and change(customer.reload, :last_dunning_campaign_attempt_at).to(Time.zone.now)
+      end
+    end
+
+    context "when the campaign threshold is not reached" do
+      let(:dunning_campaign_threshold) do
+        create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 99_01
+      end
+
+      xit "does nothing" do
+        result
+        expect(PaymentRequests::CreateService).not_to have_received(:call)
+      end
+    end
+
+    context "when the campaign is not applicable anymore" do
+      let(:customer) do
+        create :customer, organization:, currency:, applied_dunning_campaign:
+      end
+
+      let(:applied_dunning_campaign) { create :dunning_campaign, organization: }
+      let(:applied_dunning_campaign_threshold) do
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign: applied_dunning_campaign,
+          currency:,
+          amount_cents: 10_00
+        )
+      end
+
+      it "does nothing" do
+        result
+        expect(PaymentRequests::CreateService).not_to have_received(:call)
+      end
+    end
+
+    context "when the customer is excluded from auto dunning" do
+      let(:customer) do
+        create :customer, organization:, currency:, exclude_from_dunning_campaign: true
+      end
+
+      it "does nothing" do
+        result
+        expect(PaymentRequests::CreateService).not_to have_received(:call)
       end
     end
 
