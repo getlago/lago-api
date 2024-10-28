@@ -31,7 +31,6 @@ module Types
         {
           event: {
             transaction_id: object.transaction_id,
-            external_customer_id: object.external_customer_id,
             external_subscription_id: object.external_subscription_id,
             code: object.code,
             timestamp: object.timestamp.to_i,

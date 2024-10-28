@@ -17,11 +17,12 @@ module Resolvers
     def resolve(page: nil, limit: nil)
       if current_organization.clickhouse_events_store?
         Clickhouse::EventsRaw.where(organization_id: current_organization.id)
+          .order(ingested_at: :desc)
           .page(page)
           .per((limit >= MAX_LIMIT) ? MAX_LIMIT : limit)
       else
         Event.where(organization_id: current_organization.id)
-          .order(timestamp: :desc)
+          .order(created_at: :desc)
           .page(page)
           .per((limit >= MAX_LIMIT) ? MAX_LIMIT : limit)
       end

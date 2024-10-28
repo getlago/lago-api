@@ -45,7 +45,8 @@ module Api
       end
 
       def show
-        event = Event.find_by(
+        event_scope = current_organization.clickhouse_events_store? ? Clickhouse::EventsRaw : Event
+        event = event_scope.find_by(
           organization: current_organization,
           transaction_id: params[:id]
         )
