@@ -28,6 +28,11 @@ module Integrations
             ]
           end
 
+          def integration_invoice
+            @integration_invoice ||=
+              IntegrationResource.find_by(integration:, syncable: invoice, resource_type: 'invoice')
+          end
+
           private
 
           attr_reader :integration_customer, :invoice, :type

@@ -63,29 +63,13 @@ module Integrations
             {
               'objectType' => integration.reload.invoices_object_type_id,
               'objectId' => integration_invoice.external_id,
-              'toObjectType' => object_type,
+              'toObjectType' => integration_customer.object_type,
               'toObjectId' => integration_customer.external_customer_id,
               'input' => []
             }
           end
 
-          def integration_invoice
-            @integration_invoice ||= IntegrationResource.find_by(integration:, syncable: invoice)
-          end
-
           private
-
-          def formatted_date(date)
-            date.strftime('%Y-%m-%d')
-          end
-
-          def object_type
-            if integration_customer.targeted_object == 'contacts'
-              'contact'
-            else
-              'company'
-            end
-          end
 
           def total_amount
             amount(invoice.total_amount_cents, resource: invoice)

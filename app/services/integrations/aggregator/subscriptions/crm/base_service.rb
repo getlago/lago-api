@@ -2,9 +2,9 @@
 
 module Integrations
   module Aggregator
-    module Invoices
+    module Subscriptions
       module Crm
-        class BaseService < Integrations::Aggregator::Invoices::BaseService
+        class BaseService < Integrations::Aggregator::Subscriptions::BaseService
           def action_path
             "v1/#{provider}/records"
           end
@@ -16,7 +16,10 @@ module Integrations
           end
 
           def payload
-            Integrations::Aggregator::Invoices::Payloads::Factory.new_instance(integration_customer:, invoice:)
+            Integrations::Aggregator::Subscriptions::Payloads::Factory.new_instance(
+              integration_customer:,
+              subscription:
+            )
           end
         end
       end

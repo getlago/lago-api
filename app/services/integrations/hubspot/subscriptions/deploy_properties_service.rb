@@ -4,7 +4,7 @@ module Integrations
   module Hubspot
     module Subscriptions
       class DeployPropertiesService < Integrations::Aggregator::BaseService
-        VERSION = 1
+        VERSION = 2
 
         def action_path
           "v1/hubspot/properties"
@@ -43,8 +43,8 @@ module Integrations
             inputs: [
               {
                 groupName: "lagosubscriptions_information",
-                name: "example",
-                label: "example label",
+                name: "lago_subscription_link",
+                label: "Lago Subscription Link",
                 type: "string",
                 fieldType: "text"
               }

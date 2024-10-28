@@ -11,7 +11,7 @@ module Integrations
         end
 
         def call
-          return unless integration.type == 'Integrations::HubspotIntegration'
+          return result unless integration.type == 'Integrations::HubspotIntegration'
           return result if integration.contacts_properties_version == VERSION
           response = http_client.post_with_response(payload, headers)
           ActiveRecord::Base.transaction do

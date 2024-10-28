@@ -113,13 +113,11 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
   describe '#customer_association_body' do
     subject(:body_call) { payload.customer_association_body }
 
-    let(:object_type) { payload.__send__(:object_type) }
-
     let(:customer_association_body) do
       {
         'objectType' => integration.invoices_object_type_id,
         'objectId' => integration_invoice.external_id,
-        'toObjectType' => object_type,
+        'toObjectType' => integration_customer.object_type,
         'toObjectId' => integration_customer.external_customer_id,
         'input' => []
       }
