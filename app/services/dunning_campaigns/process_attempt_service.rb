@@ -5,6 +5,9 @@ module DunningCampaigns
     def initialize(customer:, dunning_campaign_threshold:)
       @customer = customer
       @dunning_campaign_threshold = dunning_campaign_threshold
+      @dunning_campaign = dunning_campaign_threshold.dunning_campaign
+      @organization = customer.organization
+
       super
     end
 
@@ -39,15 +42,7 @@ module DunningCampaigns
 
     private
 
-    attr_reader :customer, :dunning_campaign_threshold
-
-    def organization
-      customer.organization
-    end
-
-    def dunning_campaign
-      dunning_campaign_threshold.dunning_campaign
-    end
+    attr_reader :customer, :dunning_campaign, :dunning_campaign_threshold, :organization
 
     def overdue_invoices
       customer
