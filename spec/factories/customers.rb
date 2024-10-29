@@ -45,5 +45,11 @@ FactoryBot.define do
         create(:anrok_customer, customer:)
       end
     end
+
+    trait :with_hubspot_integration do
+      after :create do |customer|
+        create(:hubspot_customer, customer:)
+      end
+    end
   end
 end
