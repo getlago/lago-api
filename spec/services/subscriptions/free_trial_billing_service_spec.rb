@@ -66,12 +66,13 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
       it 'calls the CRM update job' do
         customer = create(:customer)
         plan = create(:plan, trial_period: 10, pay_in_advance: true)
-        subscription = create(:subscription, customer:, plan:, started_at: 10.days.ago)
-        allow(subscription).to receive(:should_sync_crm_subscription?).and_return(true)
+        subscription = create(:subscription, customer:, plan:, started_at: 15.days.ago)
+        allow_any_instance_of(Subscription).to receive(:should_sync_crm_subscription?).and_return(true)
+        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
 
-        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
-          .to have_received(:perform_later).with(subscription:)
         service.call
+        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+          .to have_received(:perform_later).with(subscription: subscription)
       end
     end
   end
