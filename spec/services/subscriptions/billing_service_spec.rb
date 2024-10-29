@@ -457,7 +457,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
         travel_to(current_date) do
           billing_service.call
           expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
-            .to have_received(:perform_later).with(subscription:)
+            .to have_received(:perform_later).with(subscription: previous_subscription)
         end
       end
     end
