@@ -49,6 +49,8 @@ module Types
       field :gocardless_payment_providers, [Types::PaymentProviders::Gocardless], permission: 'organization:integrations:view'
       field :stripe_payment_providers, [Types::PaymentProviders::Stripe], permission: 'organization:integrations:view'
 
+      field :applied_dunning_campaign, Types::DunningCampaigns::Object
+
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first
       end

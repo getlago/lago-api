@@ -11822,6 +11822,20 @@
               ]
             },
             {
+              "name": "appliedDunningCampaign",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "DunningCampaign",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "billingConfiguration",
               "description": null,
               "type": {
