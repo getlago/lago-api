@@ -672,8 +672,7 @@ GEM
     request_store (1.7.0)
       rack (>= 1.4)
     retriable (3.1.2)
-    rexml (3.3.6)
-      strscan
+    rexml (3.3.9)
     roda (3.83.0)
       rack
     rspec (3.13.0)
@@ -820,7 +819,6 @@ GEM
     stripe (6.5.0)
     strong_migrations (2.0.0)
       activerecord (>= 6.1)
-    strscan (3.1.0)
     temple (0.8.2)
     terminal-table (3.0.2)
       unicode-display_width (>= 1.1.1, < 3)
