@@ -450,13 +450,13 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       context 'when plan is not the same' do
         context 'when we upgrade the plan' do
           let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: 'EUR') }
-          before do
-            subscription.mark_as_active!
-          end
-
           let(:plan) { create(:plan, amount_cents: 200, organization:) }
           let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
           let(:name) { 'invoice display name new' }
+
+          before do
+            subscription.mark_as_active!
+          end
 
           it 'terminates the existing subscription' do
             expect { create_service.call }.to change { subscription.reload.status }.from('active').to('terminated')
