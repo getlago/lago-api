@@ -3,6 +3,11 @@
 class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
   disable_ddl_transaction!
 
+  class BillableMetric < ApplicationRecord
+    has_many :groups
+    has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: 'BillableMetricFilter'
+  end
+
   class BillableMetricFilter < ApplicationRecord
     belongs_to :billable_metric
   end
@@ -24,11 +29,6 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
     belongs_to :billable_metric
     has_many :filters, class_name: 'ChargeFilter'
     has_many :filter_values, through: :filters, class_name: 'ChargeFilterValue', source: :values
-  end
-
-  class BillableMetric < ApplicationRecord
-    has_many :groups
-    has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: 'BillableMetricFilter'
   end
 
   class ChargeFilter < ApplicationRecord

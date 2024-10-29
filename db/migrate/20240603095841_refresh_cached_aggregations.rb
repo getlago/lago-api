@@ -1,6 +1,18 @@
 # frozen_string_literal: true
 
 class RefreshCachedAggregations < ActiveRecord::Migration[7.0]
+  class BillableMetric < ApplicationRecord
+    enum aggregation_type: {
+      count_agg: 0,
+      sum_agg: 1,
+      max_agg: 2,
+      unique_count_agg: 3,
+      weighted_sum_agg: 5,
+      latest_agg: 6,
+      custom_agg: 7
+    }
+  end
+
   class Subscription < ApplicationRecord
     belongs_to :plan
   end

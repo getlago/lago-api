@@ -13,7 +13,7 @@ class BillableMetric < ApplicationRecord
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :groups, dependent: :delete_all
-  has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: 'BillableMetricFilter'
+  has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: "BillableMetricFilter"
 
   AGGREGATION_TYPES = {
     count_agg: 0,
@@ -27,9 +27,12 @@ class BillableMetric < ApplicationRecord
   }.freeze
   AGGREGATION_TYPES_PAYABLE_IN_ADVANCE = %i[count_agg sum_agg unique_count_agg custom_agg].freeze
 
-  WEIGHTED_INTERVAL = {seconds: 'seconds'}.freeze
+  ROUNDING_FUNCTIONS = {round: "round", ceil: "ceil", floor: "floor"}.freeze
+
+  WEIGHTED_INTERVAL = {seconds: "seconds"}.freeze
 
   enum aggregation_type: AGGREGATION_TYPES
+  enum rounding_function: ROUNDING_FUNCTIONS
   enum weighted_interval: WEIGHTED_INTERVAL
 
   validate :validate_recurring
@@ -45,6 +48,7 @@ class BillableMetric < ApplicationRecord
     inclusion: {in: WEIGHTED_INTERVAL.values},
     if: :weighted_sum_agg?
   validates :custom_aggregator, presence: true, if: :custom_agg?
+  validates :rounding_function, inclusion: {in: ROUNDING_FUNCTIONS.values}, allow_nil: true
 
   default_scope -> { kept }
 
@@ -91,21 +95,23 @@ end
 #
 # Table name: billable_metrics
 #
-#  id                :uuid             not null, primary key
-#  aggregation_type  :integer          not null
-#  code              :string           not null
-#  custom_aggregator :text
-#  deleted_at        :datetime
-#  description       :string
-#  expression        :string
-#  field_name        :string
-#  name              :string           not null
-#  properties        :jsonb
-#  recurring         :boolean          default(FALSE), not null
-#  weighted_interval :enum
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  organization_id   :uuid             not null
+#  id                 :uuid             not null, primary key
+#  aggregation_type   :integer          not null
+#  code               :string           not null
+#  custom_aggregator  :text
+#  deleted_at         :datetime
+#  description        :string
+#  expression         :string
+#  field_name         :string
+#  name               :string           not null
+#  properties         :jsonb
+#  recurring          :boolean          default(FALSE), not null
+#  rounding_function  :enum
+#  rounding_precision :integer
+#  weighted_interval  :enum
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  organization_id    :uuid             not null
 #
 # Indexes
 #

@@ -18,6 +18,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_31_102231) do
 
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
+  create_enum "billable_metric_rounding_function", ["round", "floor", "ceil"]
   create_enum "billable_metric_weighted_interval", ["seconds"]
   create_enum "customer_type", ["company", "individual"]
   create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
@@ -177,6 +178,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_31_102231) do
     t.enum "weighted_interval", enum_type: "billable_metric_weighted_interval"
     t.text "custom_aggregator"
     t.string "expression"
+    t.enum "rounding_function", enum_type: "billable_metric_rounding_function"
+    t.integer "rounding_precision"
     t.index ["deleted_at"], name: "index_billable_metrics_on_deleted_at"
     t.index ["organization_id", "code", "expression"], name: "index_billable_metrics_on_org_id_and_code_and_expr", where: "((expression IS NOT NULL) AND ((expression)::text <> ''::text))"
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
