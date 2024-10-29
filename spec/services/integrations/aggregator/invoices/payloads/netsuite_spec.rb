@@ -237,11 +237,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       context 'when tax nexus is not present' do
         let(:columns) do
           {
-            'tranid' => invoice.id,
+            'tranid' => invoice.number,
             'entity' => integration_customer.external_customer_id,
             'taxregoverride' => true,
             'taxdetailsoverride' => true,
-            'otherrefnum' => invoice.number,
             'custbody_lago_id' => invoice.id,
             'custbody_ava_disable_tax_calculation' => true,
             'custbody_lago_invoice_link' => invoice_link,
@@ -325,11 +324,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
 
           let(:columns) do
             {
-              'tranid' => invoice.id,
+              'tranid' => invoice.number,
               'entity' => integration_customer.external_customer_id,
               'taxregoverride' => true,
               'taxdetailsoverride' => true,
-              'otherrefnum' => invoice.number,
               'custbody_lago_id' => invoice.id,
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_link,
@@ -348,11 +346,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
 
           let(:columns) do
             {
-              'tranid' => invoice.id,
+              'tranid' => invoice.number,
               'entity' => integration_customer.external_customer_id,
               'taxregoverride' => true,
               'taxdetailsoverride' => true,
-              'otherrefnum' => invoice.number,
               'custbody_lago_id' => invoice.id,
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_link,
@@ -371,11 +368,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     context 'when tax item is not mapped' do
       let(:columns) do
         {
-          'tranid' => invoice.id,
+          'tranid' => invoice.number,
           'entity' => integration_customer.external_customer_id,
           'taxregoverride' => true,
           'taxdetailsoverride' => true,
-          'otherrefnum' => invoice.number,
           'custbody_lago_id' => invoice.id,
           'custbody_ava_disable_tax_calculation' => true,
           'custbody_lago_invoice_link' => invoice_link,

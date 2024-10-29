@@ -136,11 +136,10 @@ RSpec.describe Integrations::Aggregator::SalesOrders::CreateService do
       'type' => 'salesorder',
       'isDynamic' => true,
       'columns' => {
-        'tranid' => invoice.id,
+        'tranid' => invoice.number,
         'taxregoverride' => true,
         'taxdetailsoverride' => true,
         'entity' => integration_customer.external_customer_id,
-        'otherrefnum' => invoice.number,
         'custbody_lago_id' => invoice.id,
         'custbody_ava_disable_tax_calculation' => true,
         'custbody_lago_invoice_link' => invoice_url,
