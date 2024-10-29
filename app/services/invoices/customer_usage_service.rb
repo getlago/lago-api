@@ -2,12 +2,16 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(customer:, subscription:, apply_taxes: true)
+    def initialize(customer:, subscription:, apply_taxes: true, with_cache: true, max_to_datetime: nil)
       super
 
       @apply_taxes = apply_taxes
       @customer = customer
       @subscription = subscription
+      @with_cache = with_cache
+
+      # NOTE: used to force charges_to_datetime boundary
+      @max_to_datetime = max_to_datetime
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true)
@@ -15,7 +19,7 @@ module Invoices
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
       new(customer:, subscription:, apply_taxes:)
     rescue ActiveRecord::RecordNotFound
-      result.not_found_failure!(resource: 'customer')
+      result.not_found_failure!(resource: "customer")
     end
 
     def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true)
@@ -23,12 +27,12 @@ module Invoices
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
       new(customer:, subscription:, apply_taxes:)
     rescue ActiveRecord::RecordNotFound
-      result.not_found_failure!(resource: 'customer')
+      result.not_found_failure!(resource: "customer")
     end
 
     def call
-      return result.not_found_failure!(resource: 'customer') unless @customer
-      return result.not_allowed_failure!(code: 'no_active_subscription') if subscription.blank?
+      return result.not_found_failure!(resource: "customer") unless @customer
+      return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
 
       result.usage = compute_usage
       result.invoice = invoice
@@ -37,8 +41,7 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :subscription, :apply_taxes
-
+    attr_reader :invoice, :subscription, :apply_taxes, :with_cache, :max_to_datetime
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
 
@@ -71,12 +74,12 @@ module Invoices
     def add_charge_fees
       query = subscription.plan.charges.joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-        .order(Arel.sql('lower(unaccent(billable_metrics.name)) ASC'))
+        .order(Arel.sql("lower(unaccent(billable_metrics.name)) ASC"))
 
       # we're capturing the context here so we can re-use inside the threads. This will correctly propagate spans to this current span
       context = OpenTelemetry::Context.current
 
-      invoice.fees = Parallel.flat_map(query.all, in_threads: ENV['LAGO_PARALLEL_THREADS_COUNT']&.to_i || 0) do |charge|
+      invoice.fees = Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
         OpenTelemetry::Context.with_current(context) do
           ActiveRecord::Base.connection_pool.with_connection do
             charge_usage(charge)
@@ -90,11 +93,15 @@ module Invoices
         subscription:,
         charge:,
         to_datetime: boundaries[:charges_to_datetime],
-        cache: !organization.clickhouse_events_store? # NOTE: Will be turned on in the future
+        # NOTE: Will be turned on for clickhouse in the future
+        cache: organization.clickhouse_events_store? ? false : with_cache
       )
 
+      applied_boundaries = boundaries
+      applied_boundaries = applied_boundaries.merge(charges_to_datetime: max_to_datetime) if max_to_datetime
+
       Fees::ChargeService
-        .call(invoice:, charge:, subscription:, boundaries:, current_usage: true, cache_middleware:)
+        .call(invoice:, charge:, subscription:, boundaries: applied_boundaries, current_usage: true, cache_middleware:)
         .raise_if_error!
         .fees
     end
@@ -171,10 +178,10 @@ module Invoices
 
     def provider_taxes_cache_key
       [
-        'provider-taxes',
+        "provider-taxes",
         subscription.id,
         plan.updated_at.iso8601
-      ].join('/')
+      ].join("/")
     end
 
     def format_usage
