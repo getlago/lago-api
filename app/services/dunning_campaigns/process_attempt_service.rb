@@ -12,11 +12,11 @@ module DunningCampaigns
     end
 
     def call
-      return unless organization.auto_dunning_enabled?
-      return unless applicable_dunning_campaign?
-      return unless dunning_campaign_threshold_reached?
-      return unless days_between_attempts_passed?
-      return if dunning_campaign_completed?
+      return result unless organization.auto_dunning_enabled?
+      return result unless applicable_dunning_campaign?
+      return result unless dunning_campaign_threshold_reached?
+      return result unless days_between_attempts_passed?
+      return result if dunning_campaign_completed?
 
       ActiveRecord::Base.transaction do
         payment_request_result = PaymentRequests::CreateService.call(
