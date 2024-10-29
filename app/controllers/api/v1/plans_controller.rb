@@ -17,13 +17,7 @@ module Api
 
       def update
         plan = current_organization.plans.parents.find_by(code: params[:code])
-
-        update_params = input_params.to_h.deep_symbolize_keys
-        if params[:plan].key?(:cascade_updates)
-          update_params[:cascade_updates] = params.require(:plan).permit(:cascade_updates)[:cascade_updates]
-        end
-
-        result = ::Plans::UpdateService.call(plan:, params: update_params)
+        result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
 
         if result.success?
           render_plan(result.plan)
@@ -83,6 +77,7 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
+          :cascade_updates,
           tax_codes: [],
           minimum_commitment: [
             :id,
