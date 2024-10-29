@@ -116,4 +116,10 @@ module Clockwork
       Sentry.capture_exception(e)
     end
   end
+
+  every(1.hour, 'schedule:compute_daily_usage', at: '*:15') do
+    Clock::ComputeAllDailyUsagesJob
+      .set(sentry: {"slug" => 'lago_compute_daily_usage', "cron" => '15 */1 * * *'})
+      .perform_later
+  end
 end

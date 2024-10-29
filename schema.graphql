@@ -4245,6 +4245,7 @@ enum IntegrationTypeEnum {
   netsuite
   okta
   progressive_billing
+  revenue_analytics
   xero
 }
 
@@ -6049,6 +6050,7 @@ enum PremiumIntegrationTypeEnum {
   netsuite
   okta
   progressive_billing
+  revenue_analytics
   xero
 }
 

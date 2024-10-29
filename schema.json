@@ -20644,6 +20644,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "revenue_analytics",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -30481,6 +30487,12 @@
             },
             {
               "name": "auto_dunning",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "revenue_analytics",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

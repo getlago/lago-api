@@ -4,6 +4,14 @@ class DailyUsage < ApplicationRecord
   belongs_to :organization
   belongs_to :customer
   belongs_to :subscription
+
+  scope :refreshed_at_in_timezone, ->(timestamp) do
+    at_time_zone = Utils::Timezone.at_time_zone_sql(customer: "cus", organization: "org")
+
+    joins("INNER JOIN customers AS cus ON daily_usages.customer_id = cus.id")
+      .joins("INNER JOIN organizations AS org ON daily_usages.organization_id = org.id")
+      .where("DATE((daily_usages.refreshed_at)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
+  end
 end
 
 # == Schema Information
@@ -12,6 +20,7 @@ end
 #
 #  id                       :uuid             not null, primary key
 #  from_datetime            :datetime         not null
+#  refreshed_at             :datetime         not null
 #  to_datetime              :datetime         not null
 #  usage                    :jsonb            not null
 #  created_at               :datetime         not null

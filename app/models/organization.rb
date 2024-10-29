@@ -6,8 +6,8 @@ class Organization < ApplicationRecord
   include Currencies
 
   EMAIL_SETTINGS = [
-    'invoice.finalized',
-    'credit_note.created'
+    "invoice.finalized",
+    "credit_note.created"
   ].freeze
 
   has_many :memberships
@@ -25,8 +25,8 @@ class Organization < ApplicationRecord
   has_many :add_ons
   has_many :daily_usages
   has_many :invites
-  has_many :integrations, class_name: 'Integrations::BaseIntegration'
-  has_many :payment_providers, class_name: 'PaymentProviders::BaseProvider'
+  has_many :integrations, class_name: "Integrations::BaseIntegration"
+  has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
   has_many :payment_requests
   has_many :taxes
   has_many :wallets, through: :customers
@@ -38,13 +38,13 @@ class Organization < ApplicationRecord
   has_many :error_details
   has_many :dunning_campaigns
 
-  has_many :stripe_payment_providers, class_name: 'PaymentProviders::StripeProvider'
-  has_many :gocardless_payment_providers, class_name: 'PaymentProviders::GocardlessProvider'
-  has_many :adyen_payment_providers, class_name: 'PaymentProviders::AdyenProvider'
+  has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"
+  has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
+  has_many :adyen_payment_providers, class_name: "PaymentProviders::AdyenProvider"
 
-  has_many :hubspot_integrations, class_name: 'Integrations::HubspotIntegration'
-  has_many :netsuite_integrations, class_name: 'Integrations::NetsuiteIntegration'
-  has_many :xero_integrations, class_name: 'Integrations::XeroIntegration'
+  has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
+  has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
+  has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
 
   has_one_attached :logo
 
@@ -53,7 +53,7 @@ class Organization < ApplicationRecord
     :per_organization
   ].freeze
 
-  INTEGRATIONS = %w[netsuite okta anrok xero progressive_billing hubspot auto_dunning].freeze
+  INTEGRATIONS = %w[netsuite okta anrok xero progressive_billing hubspot auto_dunning revenue_analytics].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
   enum document_numbering: DOCUMENT_NUMBERINGS
@@ -87,7 +87,7 @@ class Organization < ApplicationRecord
   def logo_url
     return if logo.blank?
 
-    Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV['LAGO_API_URL'])
+    Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV["LAGO_API_URL"])
   end
 
   def base64_logo
@@ -105,11 +105,11 @@ class Organization < ApplicationRecord
 
   def payment_provider(provider)
     case provider
-    when 'stripe'
+    when "stripe"
       stripe_payment_provider
-    when 'gocardless'
+    when "gocardless"
       gocardless_payment_provider
-    when 'adyen'
+    when "adyen"
       adyen_payment_provider
     end
   end
