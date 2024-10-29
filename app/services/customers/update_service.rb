@@ -96,8 +96,7 @@ module Customers
 
       if customer.organization.auto_dunning_enabled?
         if args.key?(:applied_dunning_campaign_id)
-          dunning_campaign = DunningCampaign.find_by(id: args[:applied_dunning_campaign_id])
-          customer.applied_dunning_campaign = dunning_campaign
+          customer.applied_dunning_campaign = applied_dunning_campaign
           customer.exclude_from_dunning_campaign = false
         end
 
@@ -158,6 +157,8 @@ module Customers
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotFound => e
+      result.not_found_failure!(resource: e.model.underscore)
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -239,6 +240,13 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.adyen_customer&.reload
+    end
+
+    def applied_dunning_campaign
+      return customer.applied_dunning_campaign unless args.key?(:applied_dunning_campaign_id)
+      return unless args[:applied_dunning_campaign_id]
+
+      DunningCampaign.find(args[:applied_dunning_campaign_id])
     end
   end
 end

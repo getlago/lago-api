@@ -443,6 +443,35 @@ RSpec.describe Customers::UpdateService, type: :service do
             expect(customers_service.call).to be_success
           end
         end
+
+        context "when dunning campaign can not be found" do
+          let(:customer) do
+            create(
+              :customer,
+              organization:,
+              applied_dunning_campaign: dunning_campaign,
+              exclude_from_dunning_campaign: false,
+              last_dunning_campaign_attempt: 3,
+              last_dunning_campaign_attempt_at: 2.days.ago
+            )
+          end
+
+          let(:update_args) { {applied_dunning_campaign_id: "not_found_id"} }
+
+          it "does not update auto dunning config", :aggregate_failures do
+            expect { customers_service.call }
+              .to not_change(customer, :applied_dunning_campaign_id)
+              .and not_change(customer, :exclude_from_dunning_campaign)
+              .and not_change(customer, :last_dunning_campaign_attempt)
+              .and not_change(customer, :last_dunning_campaign_attempt_at)
+
+            result = customers_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.error_code).to eq("dunning_campaign_not_found")
+          end
+        end
       end
     end
   end
