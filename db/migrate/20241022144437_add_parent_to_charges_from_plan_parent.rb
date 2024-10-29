@@ -20,12 +20,18 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
       plan.charges.each do |child_charge|
         next if child_charge.parent_id.present?
 
-        parent_charges = parent.charges.select do |charge|
-          charge.charge_model == child_charge.charge_model && charge.properties == child_charge.properties
+        matches_without_properties = parent.charges.select do |charge|
+          charge.charge_model == child_charge.charge_model &&
+            charge.billable_metric_id == child_charge.billable_metric_id
         end
-        next if parent_charges.length != 1
-
-        child_charge.update_columns(parent_id: parent_charges[0].id) # rubocop:disable Rails/SkipsModelValidations
+        full_matches = matches_without_properties.select do |charge|
+          charge.properties == child_charge.properties
+        end
+        if full_matches.length == 1
+          child_charge.update_columns(parent_id: full_matches[0].id) # rubocop:disable Rails/SkipsModelValidations
+        elsif matches_without_properties.length == 1
+          child_charge.update_columns(parent_id: matches_without_properties[0].id) # rubocop:disable Rails/SkipsModelValidations
+        end
       end
     end
     Rails.logger.info('=' * 80)
