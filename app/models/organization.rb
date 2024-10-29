@@ -48,6 +48,8 @@ class Organization < ApplicationRecord
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
 
+  has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
+
   has_one_attached :logo
 
   DOCUMENT_NUMBERINGS = [
