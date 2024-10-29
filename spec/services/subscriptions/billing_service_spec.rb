@@ -415,9 +415,11 @@ RSpec.describe Subscriptions::BillingService, type: :service do
     end
 
     context 'when downgraded' do
+      let(:customer) { create(:customer, :with_hubspot_integration) }
       let(:subscription) do
         create(
           :subscription,
+          customer:,
           subscription_at:,
           started_at: Time.zone.now,
           previous_subscription:,
@@ -428,6 +430,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       let(:previous_subscription) do
         create(
           :subscription,
+          customer:,
           subscription_at:,
           started_at: Time.zone.now,
           billing_time: :anniversary
@@ -444,6 +447,17 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(Subscriptions::TerminateJob).to have_been_enqueued
             .with(previous_subscription, current_date.to_i)
+        end
+      end
+
+      it 'enqueues Integrations::Aggregator::Subscriptions::Crm::UpdateJob' do
+        current_date = DateTime.parse('20 Feb 2022')
+        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+
+        travel_to(current_date) do
+          billing_service.call
+          expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+            .to have_received(:perform_later).with(subscription:)
         end
       end
     end
@@ -516,31 +530,6 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             expect { billing_service.call }.not_to have_enqueued_job
           end
         end
-      end
-    end
-
-    context 'when a subscription should sync CRM subscription' do
-      let(:interval) { :weekly }
-
-      let(:subscription) do
-        create(
-          :subscription,
-          customer:,
-          plan:,
-          subscription_at:,
-          started_at: Time.zone.now
-        )
-      end
-
-      before do
-        allow(subscription).to receive(:should_sync_crm_subscription?).and_return(true)
-        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
-      end
-
-      it 'enqueues Integrations::Aggregator::Subscriptions::Crm::UpdateJob' do
-        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
-          .to have_received(:perform_later).with(subscription:)
-        billing_service.call
       end
     end
   end
