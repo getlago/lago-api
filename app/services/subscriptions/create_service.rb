@@ -128,7 +128,7 @@ module Subscriptions
         after_commit { SendWebhookJob.perform_later('subscription.started', new_subscription) }
       end
 
-      if new_subscription.active? && new_subscription.should_sync_crm_subscription?
+      if new_subscription.should_sync_crm_subscription?
         after_commit { Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription: new_subscription) }
       end
 
