@@ -26,6 +26,12 @@ module Invoices
       )
     end
 
+    def lock_key_arguments
+      args = arguments.first
+      event = Events::CommonFactory.new_instance(source: args[:event])
+      [args[:charge], event.organization_id, event.external_subscription_id, event.transaction_id]
+    end
+
     private
 
     def tax_error?(result)
