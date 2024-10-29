@@ -21,7 +21,7 @@ module DailyUsages
     attr_reader :timestamp
 
     def subscriptions
-      # NOTE(DailyUsage): Filter organizations having revenue_analytics premium integrations
+      # NOTE(DailyUsage): For now the query filters organizations having revenue_analytics premium integrations
       #                   This might change in the future
       Subscription
         .with(already_refreshed_today: already_refreshed_today)
@@ -34,17 +34,7 @@ module DailyUsages
     end
 
     def already_refreshed_today
-      where_clause = <<-SQL
-        DATE(
-          (daily_usages.refreshed_at)#{at_time_zone(customer: "cus", organization: "org")}
-        ) = DATE(:timestamp#{at_time_zone(customer: "cus", organization: "org")})
-      SQL
-
-      DailyUsage
-        .joins("INNER JOIN customers AS cus ON daily_usages.customer_id = cus.id")
-        .joins("INNER JOIN organizations AS org ON daily_usages.organization_id = org.id")
-        .select(:subscription_id)
-        .where(where_clause, timestamp:)
+      DailyUsage.refreshed_at_in_timezone(timestamp).select(:subscription_id)
     end
   end
 end

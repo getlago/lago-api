@@ -44,11 +44,8 @@ module DailyUsages
     end
 
     def existing_daily_usage
-      @existing_daily_usage ||= DailyUsage
-        .joins(customer: :organization)
-        .where(subscription_id: subscription.id)
-        .where("DATE((daily_usages.refreshed_at)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
-        .first
+      @existing_daily_usage ||= DailyUsage.refreshed_at_in_timezone(timestamp)
+        .find_by(subscription_id: subscription.id)
     end
   end
 end
