@@ -2,10 +2,11 @@
 
 module Charges
   class UpdateService < BaseService
-    def initialize(charge:, params:, cascade: false)
+    def initialize(charge:, params:, options: {})
       @charge = charge
       @params = params
-      @cascade = cascade
+      @options = options
+      @cascade = options[:cascade]
 
       super
     end
@@ -18,29 +19,28 @@ module Charges
         charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
         charge.invoice_display_name = params[:invoice_display_name] unless cascade
 
-        properties = params.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
-          params[:charge_model]
-        )
+        if !cascade || options[:equal_properties]
+          properties = params.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
+            params[:charge_model]
+          )
+          charge.properties = Charges::FilterChargeModelPropertiesService.call(charge:, properties:).properties
+        end
 
-        charge.update!(
-          properties: Charges::FilterChargeModelPropertiesService.call(
-            charge:,
-            properties:
-          ).properties
-        )
-
-        result.charge = charge
-
-        # In cascade mode it is allowed only to change properties
-        return result if cascade
+        charge.save!
 
         filters = params.delete(:filters)
         unless filters.nil?
           ChargeFilters::CreateOrUpdateBatchService.call(
             charge:,
-            filters_params: filters.map(&:with_indifferent_access)
+            filters_params: filters.map(&:with_indifferent_access),
+            options:
           ).raise_if_error!
         end
+
+        result.charge = charge
+
+        # In cascade mode it is allowed only to change properties
+        return result if cascade
 
         tax_codes = params.delete(:tax_codes)
         if tax_codes
@@ -69,7 +69,7 @@ module Charges
 
     private
 
-    attr_reader :charge, :params, :cascade
+    attr_reader :charge, :params, :options, :cascade
 
     delegate :plan, to: :charge
   end

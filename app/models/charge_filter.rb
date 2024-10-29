@@ -30,6 +30,12 @@ class ChargeFilter < ApplicationRecord
     end
   end
 
+  def to_h_with_discarded
+    @to_h_with_discarded ||= values.with_discarded.each_with_object({}) do |filter_value, result|
+      result[filter_value.billable_metric_filter.key] = filter_value.values
+    end
+  end
+
   def to_h_with_all_values
     @to_h_with_all_values ||= values.each_with_object({}) do |filter_value, result|
       values = filter_value.values

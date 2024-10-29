@@ -4,8 +4,8 @@ module Charges
   class UpdateJob < ApplicationJob
     queue_as 'default'
 
-    def perform(charge:, params:, cascade:)
-      Charges::UpdateService.call(charge:, params:, cascade:).raise_if_error!
+    def perform(charge:, params:, options:)
+      Charges::UpdateService.call(charge:, params:, options:).raise_if_error!
     end
   end
 end

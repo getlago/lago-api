@@ -2,9 +2,13 @@
 
 module ChargeFilters
   class CreateOrUpdateBatchService < BaseService
-    def initialize(charge:, filters_params:)
+    def initialize(charge:, filters_params:, options: {})
       @charge = charge
       @filters_params = filters_params
+      @options = options
+      @cascade_updates = options[:cascade]
+      @parent_filters_attributes = options[:parent_filters] || []
+      @parent_filters = ChargeFilter.with_discarded.where(id: parent_filters_attributes.map { |f| f['id']})
 
       super
     end
@@ -27,6 +31,20 @@ module ChargeFilters
           #       that we are targeting the right one
           filter = filters.find do |f|
             f.to_h.sort == filter_param[:values].sort
+          end
+
+          # Skip cascade update if properties are already touched
+          if cascade_updates && filter && parent_filters
+            parent_filter = parent_filters.find do |pf|
+              pf.to_h.sort == filter.to_h.sort
+            end
+
+            if parent_filter.blank? || parent_filter_properties(parent_filter) != filter.properties
+              filter.touch
+              result.filters << filter
+
+              next
+            end
           end
 
           filter ||= charge.filters.new
@@ -57,7 +75,9 @@ module ChargeFilters
         end
 
         # NOTE: remove old filters that were not created or updated
-        charge.filters.where.not(id: result.filters.map(&:id)).find_each do
+        remove_query = charge.filters
+        remove_query = remove_query.where(id: inherited_filter_ids) if cascade_updates && parent_filters
+        remove_query.where.not(id: result.filters.map(&:id)).find_each do
           remove_filter(_1)
         end
       end
@@ -67,21 +87,53 @@ module ChargeFilters
 
     private
 
-    attr_reader :charge, :filters_params
+    attr_reader :charge, :filters_params, :cascade_updates, :options, :parent_filters, :parent_filters_attributes
 
     def filters
       @filters ||= charge.filters.includes(values: :billable_metric_filter)
     end
 
+    def parent_filter_properties(parent_filter)
+      match = parent_filters_attributes.find do |f|
+        f['id'] == parent_filter.id
+      end
+
+      match['properties']
+    end
+
     def remove_all
       ActiveRecord::Base.transaction do
-        charge.filters.each { remove_filter(_1) }
+        if cascade_updates
+          charge.filters.where(id: inherited_filter_ids).each { remove_filter(_1) }
+        else
+          charge.filters.each { remove_filter(_1) }
+        end
       end
     end
 
     def remove_filter(filter)
       filter.values.each(&:discard!)
       filter.discard!
+    end
+
+    def inherited_filter_ids
+      return @inherited_filter_ids if defined? @inherited_filter_ids
+
+      @inherited_filter_ids = []
+
+      return @inherited_filter_ids if parent_filters.blank? || !cascade_updates
+
+      parent_filters.find_each do |pf|
+        value = pf.to_h_with_discarded.sort
+
+        match = filters.find do |f|
+          value == f.to_h.sort
+        end
+
+        @inherited_filter_ids << match.id if match
+      end
+
+      @inherited_filter_ids
     end
   end
 end
