@@ -128,6 +128,10 @@ module Subscriptions
         after_commit { SendWebhookJob.perform_later('subscription.started', new_subscription) }
       end
 
+      if new_subscription.should_sync_crm_subscription?
+        after_commit { Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:) }
+      end
+
       new_subscription
     end
 
@@ -245,6 +249,10 @@ module Subscriptions
       current_subscription.plan = plan
       current_subscription.name = name if name.present?
       current_subscription.save!
+
+      if current_subscription.should_sync_crm_subscription?
+        Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+      end
     end
 
     def editable_subscriptions

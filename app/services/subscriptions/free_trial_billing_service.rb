@@ -24,6 +24,10 @@ module Subscriptions
         subscription.update!(trial_ended_at: subscription.trial_end_utc_date_from_query)
 
         SendWebhookJob.perform_later('subscription.trial_ended', subscription)
+
+        if subscription.should_sync_crm_subscription?
+          Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+        end
       end
     end
 

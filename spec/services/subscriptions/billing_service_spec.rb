@@ -518,5 +518,30 @@ RSpec.describe Subscriptions::BillingService, type: :service do
         end
       end
     end
+
+    context 'when a subscription should sync CRM subscription' do
+      let(:interval) { :weekly }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: Time.zone.now
+        )
+      end
+
+      before do
+        allow(subscription).to receive(:should_sync_crm_subscription?).and_return(true)
+        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+      end
+
+      it 'enqueues Integrations::Aggregator::Subscriptions::Crm::UpdateJob' do
+        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+          .to have_received(:perform_later).with(subscription:)
+        billing_service.call
+      end
+    end
   end
 end
