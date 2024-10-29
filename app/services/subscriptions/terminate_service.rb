@@ -44,7 +44,7 @@ module Subscriptions
       next_subscription&.mark_as_canceled!
 
       if next_subscription&.should_sync_crm_subscription?
-        Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(next_subscription)
+        Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription: next_subscription)
       end
 
       # NOTE: Wait to ensure job is performed at the end of the database transaction.
