@@ -253,21 +253,137 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
     end
 
     context "when customer has an applied dunning campaign" do
-      context "when a customer has overdue balance exceeding threshold in same currency" do
-        it "enqueues an ProcessAttemptJob with the customer and customer's campaign threshold"
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          currency:,
+          applied_dunning_campaign: dunning_campaign
+        )
       end
 
-      context "when overdue balance currency does not match threshold currency" do
+      let(:dunning_campaign) do
+        create(:dunning_campaign, organization:, applied_to_organization: false)
+      end
+
+      let(:dunning_campaign_threshold) do
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign:,
+          currency:,
+          amount_cents: 49_99
+        )
+      end
+
+      before do
+        dunning_campaign
+        dunning_campaign_threshold
+      end
+
+      context "when a customer has overdue balance exceeding threshold in same currency" do
+        before do
+          invoice_1
+        end
+
+        it "enqueues an ProcessAttemptJob with the customer and customer's campaign threshold" do
+          expect(result).to be_success
+          expect(DunningCampaigns::ProcessAttemptJob)
+            .to have_been_enqueued
+            .with(customer:, dunning_campaign_threshold:)
+        end
+
+        context "when organization does not have auto_dunning feature enabled" do
+          let(:organization) { create(:organization, premium_integrations: []) }
+
+          it "does not queue a job for the customer" do
+            result
+            expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+          end
+        end
+
+        context "when maximum attempts are reached" do
+          let(:customer) { create :customer, organization:, last_dunning_campaign_attempt: 5 }
+
+          let(:dunning_campaign) do
+            create(
+              :dunning_campaign,
+              organization:,
+              max_attempts: 5,
+              applied_to_organization: true
+            )
+          end
+
+          it "does not queue a job for the customer" do
+            result
+            expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+          end
+        end
+
+        context "when not enough days have passed since last attempt" do
+          let(:customer) { create :customer, organization:, last_dunning_campaign_attempt_at: 3.days.ago }
+
+          let(:dunning_campaign) do
+            create(
+              :dunning_campaign,
+              organization:,
+              days_between_attempts: 4,
+              applied_to_organization: true
+            )
+          end
+
+          it "does not queue a job for the customer" do
+            result
+            expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+          end
+        end
+
+        context "when enough days have passed since last attempt" do
+          let(:customer) { create :customer, organization:, last_dunning_campaign_attempt_at: 4.days.ago - 1.second }
+
+          let(:dunning_campaign) do
+            create(
+              :dunning_campaign,
+              organization:,
+              days_between_attempts: 4,
+              applied_to_organization: true
+            )
+          end
+
+          it "enqueues an ProcessAttemptJob with the customer and threshold" do
+            expect(result).to be_success
+            expect(DunningCampaigns::ProcessAttemptJob)
+              .to have_been_enqueued
+              .with(customer:, dunning_campaign_threshold:)
+          end
+        end
+      end
+
+      context "when customer has overdue balance below threshold" do
+        before do
+          invoice_2
+        end
+
+        it "does not queue a job for the customer" do
+          result
+          expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when there is no matching threshold for customer overdue balance" do
         let(:dunning_campaign_threshold) do
           create(
             :dunning_campaign_threshold,
             dunning_campaign:,
-            currency:,
-            amount_cents: 100_00
+            currency: "GBP",
+            amount_cents: 1
           )
         end
 
-        xit "does not queue a job for the customer" do
+        before do
+          invoice_1
+        end
+
+        it "does not queue a job for the customer" do
           result
           expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
         end
