@@ -121,7 +121,23 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         context "when enough days have passed since last attempt" do
-          it "enqueues an ProcessAttemptJob with the customer and threshold"
+          let(:customer) { create :customer, organization:, last_dunning_campaign_attempt_at: 4.days.ago - 1.second }
+
+          let(:dunning_campaign) do
+            create(
+              :dunning_campaign,
+              organization:,
+              days_between_attempts: 4,
+              applied_to_organization: true
+            )
+          end
+
+          it "enqueues an ProcessAttemptJob with the customer and threshold" do
+            expect(result).to be_success
+            expect(DunningCampaigns::ProcessAttemptJob)
+              .to have_been_enqueued
+              .with(customer:, dunning_campaign_threshold:)
+          end
         end
       end
 
