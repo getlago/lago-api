@@ -203,6 +203,17 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
+        context "when customer has overdue balance below threshold" do
+          before do
+            invoice_2
+          end
+
+          it "does not queue a job for the customer" do
+            result
+            expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+          end
+        end
+
         context "when overdue balance currency does not match threshold currency" do
           it "does not queue a job for the customer"
         end
