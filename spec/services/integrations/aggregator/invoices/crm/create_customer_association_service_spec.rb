@@ -73,7 +73,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::CreateCustomerAssociatio
           expect(Integrations::Hubspot::Invoices::DeployObjectService).to have_received(:call).with(integration: integration)
         end
 
-
         it 'returns result' do
           expect(service_call).to be_a(BaseService::Result)
         end
