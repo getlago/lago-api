@@ -80,7 +80,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         allow(Integrations::Aggregator::Subscriptions::Crm::CreateJob).to receive(:perform_later)
       end
 
-      it 'enqueues the CRM update job for a new subscription' do
+      it 'enqueues the CRM create job for a new subscription' do
         create_service.call
         expect(Integrations::Aggregator::Subscriptions::Crm::CreateJob).to have_received(:perform_later)
       end
