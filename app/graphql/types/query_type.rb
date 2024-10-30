@@ -11,6 +11,8 @@ module Types
 
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
+    field :api_key, resolver: Resolvers::ApiKeyResolver
+    field :api_keys, resolver: Resolvers::ApiKeysResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :coupon, resolver: Resolvers::CouponResolver
