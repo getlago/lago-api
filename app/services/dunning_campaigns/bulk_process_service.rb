@@ -32,6 +32,7 @@ module DunningCampaigns
     def eligible_customers
       Customer
         .joins(:organization)
+        .where(exclude_from_dunning_campaign: false)
         .where("organizations.premium_integrations @> ARRAY[?]::varchar[]", ['auto_dunning'])
     end
 
