@@ -12,7 +12,7 @@ RSpec.describe Subscriptions::ChargeCacheService, type: :service do
   describe '#cache_key' do
     it 'returns the cache key' do
       expect(cache_service.cache_key)
-        .to eq("charge-usage/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}")
+        .to eq("charge-usage/#{described_class::CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}")
     end
 
     context 'with a charge filter' do
@@ -20,7 +20,7 @@ RSpec.describe Subscriptions::ChargeCacheService, type: :service do
 
       it 'returns the cache key with the charge filter' do
         expect(cache_service.cache_key)
-          .to eq("charge-usage/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}/#{charge_filter.id}/#{charge_filter.updated_at.iso8601}")
+          .to eq("charge-usage/#{described_class::CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}/#{charge_filter.id}/#{charge_filter.updated_at.iso8601}")
       end
     end
   end
