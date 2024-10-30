@@ -129,7 +129,7 @@ module Subscriptions
       end
 
       if new_subscription.should_sync_crm_subscription?
-        after_commit { Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription: new_subscription) }
+        after_commit { Integrations::Aggregator::Subscriptions::Crm::CreateJob.perform_later(subscription: new_subscription) }
       end
 
       new_subscription

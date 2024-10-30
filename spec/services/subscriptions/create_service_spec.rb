@@ -77,12 +77,12 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: 'EUR') }
 
       before do
-        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+        allow(Integrations::Aggregator::Subscriptions::Crm::CreateJob).to receive(:perform_later)
       end
 
       it 'enqueues the CRM update job for a new subscription' do
         create_service.call
-        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to have_received(:perform_later)
+        expect(Integrations::Aggregator::Subscriptions::Crm::CreateJob).to have_received(:perform_later)
       end
     end
 
