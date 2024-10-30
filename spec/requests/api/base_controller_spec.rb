@@ -14,10 +14,10 @@ RSpec.describe Api::BaseController, type: :controller do
     end
   end
 
-  let(:organization) { create(:organization) }
+  let(:api_key) { create(:api_key) }
 
   it 'sets the context source to api' do
-    request.headers['Authorization'] = "Bearer #{organization.api_key}"
+    request.headers['Authorization'] = "Bearer #{api_key.value}"
 
     get :index
 
@@ -25,25 +25,30 @@ RSpec.describe Api::BaseController, type: :controller do
   end
 
   describe 'authenticate' do
-    it 'validates the organization api key' do
-      request.headers['Authorization'] = "Bearer #{organization.api_key}"
-
+    before do
+      request.headers['Authorization'] = "Bearer #{token}"
       get :index
-
-      expect(response).to have_http_status(:success)
     end
 
-    context 'without authentication header' do
-      it 'returns an authentication error' do
-        get :index
+    context 'with valid authorization header' do
+      let(:token) { api_key.value }
 
+      it 'returns success response' do
+        expect(response).to have_http_status(:success)
+      end
+    end
+
+    context 'with invalid authentication header' do
+      let(:token) { SecureRandom.uuid }
+
+      it 'returns an authentication error' do
         expect(response).to have_http_status(:unauthorized)
       end
     end
   end
 
   it 'catches the missing parameters error' do
-    request.headers['Authorization'] = "Bearer #{organization.api_key}"
+    request.headers['Authorization'] = "Bearer #{api_key.value}"
 
     post :create
 

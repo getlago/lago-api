@@ -16,6 +16,7 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:gocardless_payment_providers) }
   it { is_expected.to have_many(:adyen_payment_providers) }
 
+  it { is_expected.to have_many(:api_keys) }
   it { is_expected.to have_many(:webhook_endpoints) }
   it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
   it { is_expected.to have_many(:hubspot_integrations) }
@@ -140,11 +141,26 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe 'Callbacks' do
-    it 'generates the api key' do
-      organization.save!
+  describe '#save' do
+    subject { organization.save! }
 
-      expect(organization.api_key).to be_present
+    context 'with a new record' do
+      let(:organization) { build(:organization) }
+
+      it 'sets document number prefix of organization' do
+        subject
+
+        expect(organization.document_number_prefix)
+          .to eq "#{organization.name.first(3).upcase}-#{organization.id.last(4).upcase}"
+      end
+    end
+
+    context 'with a persisted record' do
+      let(:organization) { create(:organization) }
+
+      it 'does not change document number prefix of organization' do
+        expect { subject }.not_to change(organization, :document_number_prefix)
+      end
     end
   end
 

@@ -10,6 +10,7 @@ class Organization < ApplicationRecord
     "credit_note.created"
   ].freeze
 
+  has_many :api_keys
   has_many :memberships
   has_many :users, through: :memberships
   has_many :billable_metrics
@@ -61,8 +62,6 @@ class Organization < ApplicationRecord
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
   enum document_numbering: DOCUMENT_NUMBERINGS
-
-  before_create :generate_api_key
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
@@ -127,15 +126,6 @@ class Organization < ApplicationRecord
   end
 
   private
-
-  def generate_api_key
-    api_key = SecureRandom.uuid
-    orga = Organization.find_by(api_key:)
-
-    return generate_api_key if orga.present?
-
-    self.api_key = SecureRandom.uuid
-  end
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
   # Example of expected format is ORG-4321

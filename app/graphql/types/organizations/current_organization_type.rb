@@ -54,6 +54,10 @@ module Types
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first
       end
+
+      def api_key
+        object.api_keys.first.value
+      end
     end
   end
 end
