@@ -56,8 +56,7 @@ class Webhook < ApplicationRecord
   end
 
   def hmac_signature
-    api_key_value = organization.api_keys.first.value
-    hmac = OpenSSL::HMAC.digest('sha-256', api_key_value, payload.to_json)
+    hmac = OpenSSL::HMAC.digest('sha-256', organization.hmac_key, payload.to_json)
     Base64.strict_encode64(hmac)
   end
 

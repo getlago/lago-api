@@ -25,6 +25,7 @@ end
 # Table name: api_keys
 #
 #  id              :uuid             not null, primary key
+#  expires_at      :datetime
 #  value           :string           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
