@@ -12,6 +12,8 @@ module Integrations
           def call
             return result if !integration || !integration.sync_invoices || !payload.integration_invoice
 
+            Integrations::Hubspot::Invoices::DeployObjectService.call(integration:)
+
             http_client.put_with_response(payload.customer_association_body, headers)
 
             result

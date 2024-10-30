@@ -12,7 +12,10 @@ module Integrations
 
         def call
           return result unless integration.type == 'Integrations::HubspotIntegration'
-          return result if integration.subscriptions_properties_version == VERSION
+          if integration.subscriptions_properties_version == VERSION &&
+              integration.subscriptions_object_type_id.present?
+            return result
+          end
 
           custom_object_result = Integrations::Aggregator::CustomObjectService.call(integration:, name: 'LagoSubscriptions')
           if custom_object_result.success?
