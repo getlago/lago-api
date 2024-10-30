@@ -495,4 +495,49 @@ RSpec.describe Customer, type: :model do
       end
     end
   end
+
+  describe "#overdue_balance_cents" do
+    subject(:overdue_balance_cents) { customer.overdue_balance_cents }
+
+    let(:customer) { create(:customer, currency: "USD") }
+
+    context "when there are no overdue invoices" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: false, currency: "USD", total_amount_cents: 5_00)
+      end
+
+      it { is_expected.to be_zero }
+    end
+
+    context "when there are overdue invoices in the customer's currency" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 3_00)
+      end
+
+      it { is_expected.to eq 5_00 }
+    end
+
+    context "when there are overdue invoices in a different currency" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 4_00)
+        create(:invoice, customer: customer, payment_overdue: true, currency: "EUR", total_amount_cents: 3_00)
+      end
+
+      it "ignores invoices in other currencies" do
+        expect(customer.overdue_balance_cents).to eq 4_00
+      end
+    end
+
+    context "when there are both overdue and non-overdue invoices" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, customer: customer, payment_overdue: false, currency: "USD", total_amount_cents: 1_00)
+      end
+
+      it "only sums the overdue invoices" do
+        expect(customer.overdue_balance_cents).to eq 2_00
+      end
+    end
+  end
 end

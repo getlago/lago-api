@@ -179,6 +179,10 @@ class Customer < ApplicationRecord
       country.blank?
   end
 
+  def overdue_balance_cents
+    invoices.payment_overdue.where(currency:).sum(:total_amount_cents)
+  end
+
   private
 
   def ensure_slug
