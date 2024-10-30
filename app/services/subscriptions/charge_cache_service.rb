@@ -2,6 +2,8 @@
 
 module Subscriptions
   class ChargeCacheService
+    CACHE_KEY_VERSION = '1'
+
     def self.expire_for_subscription(subscription)
       subscription.plan.charges.includes(:filters)
         .find_each { expire_for_subscription_charge(subscription:, charge: _1) }
@@ -21,9 +23,12 @@ module Subscriptions
       @charge_filter = charge_filter
     end
 
+    # IMPORTANT
+    # when making changes here, please make sure to bump the cache key so old values are immediately invalidated!
     def cache_key
       [
         'charge-usage',
+        CACHE_KEY_VERSION,
         charge.id,
         subscription.id,
         charge.updated_at.iso8601,

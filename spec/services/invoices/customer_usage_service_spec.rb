@@ -68,6 +68,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
     it 'uses the Rails cache' do
       key = [
         'charge-usage',
+        Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
         charge.id,
         subscription.id,
         charge.updated_at.iso8601
