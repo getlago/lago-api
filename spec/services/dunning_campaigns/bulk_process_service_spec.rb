@@ -9,7 +9,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
 
   context "when premium features are enabled" do
     let(:organization) { create :organization, premium_integrations: %w[auto_dunning] }
-    let(:customer) { create :customer, organization: }
+    let(:customer) { create :customer, organization:, currency: }
 
     let(:invoice_1) do
       create(
@@ -33,17 +33,6 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       )
     end
 
-    let(:invoice_3) do
-      create(
-        :invoice,
-        organization:,
-        customer:,
-        currency:,
-        payment_overdue: false,
-        total_amount_cents: 100_00
-      )
-    end
-
     around { |test| lago_premium!(&test) }
 
     context "when organization has an applied dunning campaign" do
@@ -59,6 +48,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
 
       before do
+        dunning_campaign
         dunning_campaign_threshold
       end
 
@@ -153,8 +143,44 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
 
       context "when customer has an applied dunning campaign overwriting organization's default campaign" do
+        let(:customer) do
+          create(
+            :customer,
+            organization:,
+            currency:,
+            applied_dunning_campaign: customer_dunning_campaign
+          )
+        end
+
+        let(:customer_dunning_campaign) do
+          create(:dunning_campaign, organization:, applied_to_organization: false)
+        end
+
+        let(:customer_dunning_campaign_threshold) do
+          create(
+            :dunning_campaign_threshold,
+            dunning_campaign: customer_dunning_campaign,
+            currency:,
+            amount_cents: 49_99
+          )
+        end
+
+        before do
+          customer_dunning_campaign
+          customer_dunning_campaign_threshold
+        end
+
         context "when a customer has overdue balance exceeding threshold in same currency" do
-          it "enqueues an ProcessAttemptJob with the customer and customer's campaign threshold"
+          before do
+            invoice_1
+          end
+
+          it "enqueues an ProcessAttemptJob with the customer and customer's campaign threshold" do
+            expect(result).to be_success
+            expect(DunningCampaigns::ProcessAttemptJob)
+              .to have_been_enqueued
+              .with(customer:, dunning_campaign_threshold: customer_dunning_campaign_threshold)
+          end
         end
 
         context "when overdue balance currency does not match threshold currency" do
