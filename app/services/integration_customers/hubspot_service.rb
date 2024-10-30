@@ -47,7 +47,11 @@ module IntegrationCustomers
     end
 
     def targeted_object
-      @targeted_object ||= params[:targeted_object]
+      @targeted_object ||=
+        params[:targeted_object].presence ||
+        ((customer.customer_type == 'individual') ? 'contacts' : nil) ||
+        ((customer.customer_type == 'company') ? 'companies' : nil) ||
+        integration.default_targeted_object
     end
   end
 end
