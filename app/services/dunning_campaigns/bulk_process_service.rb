@@ -16,6 +16,7 @@ module DunningCampaigns
 
         next unless dunning_campaign_threshold
         next if max_attempts_reached?(customer, dunning_campaign)
+        next unless days_between_attempts_satisfied?(customer, dunning_campaign)
 
         DunningCampaigns::ProcessAttemptJob.perform_later(
           customer:,
@@ -51,6 +52,14 @@ module DunningCampaigns
 
     def max_attempts_reached?(customer, dunning_campaign)
       customer.last_dunning_campaign_attempt >= dunning_campaign.max_attempts
+    end
+
+    def days_between_attempts_satisfied?(customer, dunning_campaign)
+      return true unless customer.last_dunning_campaign_attempt_at
+
+      next_attempt_date = customer.last_dunning_campaign_attempt_at + dunning_campaign.days_between_attempts.days
+
+      Time.zone.today >= next_attempt_date
     end
   end
 end

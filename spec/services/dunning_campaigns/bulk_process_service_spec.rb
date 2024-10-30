@@ -103,7 +103,21 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         context "when not enough days have passed since last attempt" do
-          it "does not queue a job for the customer"
+          let(:customer) { create :customer, organization:, last_dunning_campaign_attempt_at: 3.days.ago }
+
+          let(:dunning_campaign) do
+            create(
+              :dunning_campaign,
+              organization:,
+              days_between_attempts: 4,
+              applied_to_organization: true
+            )
+          end
+
+          it "does not queue a job for the customer" do
+            result
+            expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+          end
         end
 
         context "when enough days have passed since last attempt" do
