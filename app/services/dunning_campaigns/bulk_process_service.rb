@@ -11,8 +11,8 @@ module DunningCampaigns
       return result unless License.premium?
 
       eligible_customers.find_each do |customer|
-        dunning_campaign_threshold = find_applicable_dunning_campaign_threshold(customer)
-        dunning_campaign = dunning_campaign_threshold.dunning_campaign
+        dunning_campaign = find_dunning_campaign(customer)
+        dunning_campaign_threshold = find_applicable_dunning_campaign_threshold(customer, dunning_campaign)
 
         next unless dunning_campaign_threshold
         next if max_attempts_reached?(customer, dunning_campaign)
@@ -35,9 +35,7 @@ module DunningCampaigns
         .where("organizations.premium_integrations @> ARRAY[?]::varchar[]", ['auto_dunning'])
     end
 
-    def find_applicable_dunning_campaign_threshold(customer)
-      dunning_campaign = find_dunning_campaign(customer)
-
+    def find_applicable_dunning_campaign_threshold(customer, dunning_campaign)
       dunning_campaign
         .thresholds
         .where(currency: customer.currency)
