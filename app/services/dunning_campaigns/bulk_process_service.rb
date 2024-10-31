@@ -6,17 +6,7 @@ module DunningCampaigns
       return result unless License.premium?
 
       eligible_customers.find_each do |customer|
-        dunning_campaign = find_dunning_campaign(customer)
-        dunning_campaign_threshold = find_applicable_dunning_campaign_threshold(customer, dunning_campaign)
-
-        next unless dunning_campaign_threshold
-        next if max_attempts_reached?(customer, dunning_campaign)
-        next unless days_between_attempts_satisfied?(customer, dunning_campaign)
-
-        DunningCampaigns::ProcessAttemptJob.perform_later(
-          customer:,
-          dunning_campaign_threshold:
-        )
+        CustomerDunningEvaluator.call(customer)
       end
 
       result
@@ -31,31 +21,55 @@ module DunningCampaigns
         .where("organizations.premium_integrations @> ARRAY[?]::varchar[]", ['auto_dunning'])
     end
 
-    def find_applicable_dunning_campaign_threshold(customer, dunning_campaign)
-      return unless dunning_campaign
+    class CustomerDunningEvaluator < BaseService
+      def initialize(customer)
+        @customer = customer
+        @organization = customer.organization
+        @dunning_campaign = applicable_dunning_campaign
+        @threshold = applicable_dunning_campaign_threshold
+      end
 
-      dunning_campaign
-        .thresholds
-        .where(currency: customer.currency)
-        .find_by("amount_cents <= ?", customer.overdue_balance_cents)
-    end
+      def call
+        return result unless threshold
+        return result if max_attempts_reached?
+        return result unless days_between_attempts_satisfied?
 
-    def find_dunning_campaign(customer)
-      organization = customer.organization
+        DunningCampaigns::ProcessAttemptJob.perform_later(
+          customer: customer,
+          dunning_campaign_threshold: threshold
+        )
 
-      customer.applied_dunning_campaign || organization.applied_dunning_campaign
-    end
+        result
+      end
 
-    def max_attempts_reached?(customer, dunning_campaign)
-      customer.last_dunning_campaign_attempt >= dunning_campaign.max_attempts
-    end
+      private
 
-    def days_between_attempts_satisfied?(customer, dunning_campaign)
-      return true unless customer.last_dunning_campaign_attempt_at
+      attr_reader :customer, :dunning_campaign, :threshold, :organization
 
-      next_attempt_date = customer.last_dunning_campaign_attempt_at + dunning_campaign.days_between_attempts.days
+      def applicable_dunning_campaign
+        customer.applied_dunning_campaign || organization.applied_dunning_campaign
+      end
 
-      Time.zone.now >= next_attempt_date
+      def applicable_dunning_campaign_threshold
+        return unless dunning_campaign
+
+        dunning_campaign
+          .thresholds
+          .where(currency: customer.currency)
+          .find_by("amount_cents <= ?", customer.overdue_balance_cents)
+      end
+
+      def max_attempts_reached?
+        customer.last_dunning_campaign_attempt >= dunning_campaign.max_attempts
+      end
+
+      def days_between_attempts_satisfied?
+        return true unless customer.last_dunning_campaign_attempt_at
+
+        next_attempt_date = customer.last_dunning_campaign_attempt_at + dunning_campaign.days_between_attempts.days
+
+        Time.zone.now >= next_attempt_date
+      end
     end
   end
 end
