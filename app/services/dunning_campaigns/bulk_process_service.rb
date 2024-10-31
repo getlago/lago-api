@@ -2,11 +2,6 @@
 
 module DunningCampaigns
   class BulkProcessService < BaseService
-    # Find all eligible customers
-    # Find applicable dunning campaign
-    # next step?
-    # Queue job for next step; customer, campaign
-
     def call
       return result unless License.premium?
 
