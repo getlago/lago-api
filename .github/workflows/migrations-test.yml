@@ -47,7 +47,8 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3.4'
-          bundler-cache: true
+      - name: Run bundle isntall
+        run: bundle install
       - name: Start Clickhouse database
         run: |
           docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml clickhouse/clickhouse-server
