@@ -178,6 +178,7 @@ type AnrokIntegration {
 
 type ApiKey {
   createdAt: ISO8601DateTime!
+  expiresAt: ISO8601DateTime
   id: ID!
   value: String!
 }
@@ -6802,6 +6803,7 @@ enum RoundingFunctionEnum {
 
 type SanitizedApiKey {
   createdAt: ISO8601DateTime!
+  expiresAt: ISO8601DateTime
   id: ID!
   value: String!
 }

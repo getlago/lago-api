@@ -26,12 +26,12 @@ RSpec.describe Api::BaseController, type: :controller do
 
   describe 'authenticate' do
     before do
-      request.headers['Authorization'] = "Bearer #{token}"
+      request.headers['Authorization'] = "Bearer #{api_key.value}"
       get :index
     end
 
     context 'with valid authorization header' do
-      let(:token) { api_key.value }
+      let(:api_key) { [create(:api_key), create(:api_key, :expiring)].sample }
 
       it 'returns success response' do
         expect(response).to have_http_status(:success)
@@ -39,7 +39,7 @@ RSpec.describe Api::BaseController, type: :controller do
     end
 
     context 'with invalid authentication header' do
-      let(:token) { SecureRandom.uuid }
+      let(:api_key) { create(:api_key, :expired) }
 
       it 'returns an authentication error' do
         expect(response).to have_http_status(:unauthorized)

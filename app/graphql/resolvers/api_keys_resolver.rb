@@ -15,7 +15,7 @@ module Resolvers
     type Types::ApiKeys::SanitizedObject.collection_type, null: false
 
     def resolve(page: nil, limit: nil)
-      current_organization.api_keys.page(page).limit(limit)
+      current_organization.api_keys.active.page(page).limit(limit)
     end
   end
 end

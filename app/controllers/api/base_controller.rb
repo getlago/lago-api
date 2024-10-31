@@ -28,7 +28,7 @@ module Api
     end
 
     def current_organization(api_key_value = nil)
-      @current_organization ||= ApiKey.find_by(value: api_key_value)&.organization
+      @current_organization ||= ApiKey.active.find_by(value: api_key_value)&.organization
     end
 
     def set_context_source
