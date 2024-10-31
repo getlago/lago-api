@@ -26,7 +26,7 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
 
   def parents_less_than_children_migration
     now = Time.current
-    Plan.includes(:charges, children: :charges).where(parent_id: nil).find_each(batch_size: 500) do |parent_plan|
+    Plan.where(parent_id: nil).includes(:charges, children: :charges).find_each(batch_size: 500) do |parent_plan|
       next if parent_plan.children.empty?
       next if parent_plan.charges.empty?
 
@@ -55,8 +55,8 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
   def assign_children_for_parent_charge(parent_charge, children_plans, parent_plan)
     return if charge_has_copy?(parent_charge, parent_plan, :full)
 
-    # process full match children
-    full_match_ids = children_plans.map(&:charges).flatten.select do |child_charge|
+    children_charges = children_plans.flat_map(&:charges)
+    full_match_ids = children_charges.select do |child_charge|
       child_charge.parent_id.nil? &&
         child_charge.charge_model == parent_charge.charge_model &&
         child_charge.billable_metric_id == parent_charge.billable_metric_id &&
@@ -67,7 +67,7 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
     # process matching without properties
     return if charge_has_copy?(parent_charge, parent_plan, :without_properties)
 
-    partial_match_id = children_plans.map(&:charges).flatten.select do |child_charge|
+    partial_match_id = children_charges.select do |child_charge|
       child_charge.parent_id.nil? &&
         child_charge.charge_model == parent_charge.charge_model &&
         child_charge.billable_metric_id == parent_charge.billable_metric_id
@@ -81,12 +81,12 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
         charge.charge_model == parent_charge.charge_model &&
           charge.billable_metric_id == parent_charge.billable_metric_id &&
           charge.properties == parent_charge.properties
-      end.length > 1
+      end.count > 1
     elsif mode == :without_properties
       parent_plan.charges.select do |charge|
         charge.charge_model == parent_charge.charge_model &&
           charge.billable_metric_id == parent_charge.billable_metric_id
-      end.length > 1
+      end.count > 1
     end
   end
 end
