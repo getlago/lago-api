@@ -134,4 +134,10 @@ module Clockwork
       .set(sentry: {"slug" => 'lago_compute_daily_usage', "cron" => '15 */1 * * *'})
       .perform_later
   end
+
+  every(1.hour, "schedule:process_dunning_campaigns", at: "*:45") do
+    Clock::ProcessDunningCampaignsJob
+      .set(sentry: {"slug" => "lago_process_dunning_campaigns", "cron" => "45 */1 * * *"})
+      .perform_later
+  end
 end
