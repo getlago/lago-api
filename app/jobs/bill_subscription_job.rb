@@ -19,10 +19,10 @@ class BillSubscriptionJob < ApplicationJob
     return if tax_error?(result)
 
     # If the invoice was passed as an argument, it means the job was already retried (see end of function)
-    result.raise_if_error! if invoice
-
-    # If the invoice is in a retryable state, we'll re-enqueue the job manually, otherwise the job fails
-    result.raise_if_error! unless result.invoice&.generating?
+    if invoice || !result.invoice&.generating?
+      InvoiceError.create_for(invoice: result.invoice, error: result.error)
+      return result.raise_if_error!
+    end
 
     # On billing day, we'll retry the job further in the future because the system is typically under heavy load
     is_billing_date = invoicing_reason.to_sym == :subscription_periodic

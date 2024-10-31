@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_10_25_081408) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_31_102231) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -777,6 +777,15 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_25_081408) do
     t.index ["membership_id"], name: "index_invites_on_membership_id"
     t.index ["organization_id"], name: "index_invites_on_organization_id"
     t.index ["token"], name: "index_invites_on_token", unique: true
+  end
+
+  create_table "invoice_errors", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "backtrace"
+    t.json "invoice"
+    t.json "subscriptions"
+    t.json "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "invoice_metadata", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
