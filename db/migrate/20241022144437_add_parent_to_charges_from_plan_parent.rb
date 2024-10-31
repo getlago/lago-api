@@ -26,12 +26,12 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
 
   def parents_less_than_children_migration
     now = Time.current
-    Plan.includes(:charges, children: :charges).where(parent_id: nil).find_each(batch_size: 250) do |parent_plan|
+    Plan.includes(:charges, children: :charges).where(parent_id: nil).find_each(batch_size: 500) do |parent_plan|
       next if parent_plan.children.empty?
       next if parent_plan.charges.empty?
 
       parent_plan.charges.each do |parent_charge|
-        assign_children_for_parent_charge(parent_charge, children_plans)
+        assign_children_for_parent_charge(parent_charge, parent_plan.children, parent_plan)
       end
     end
     puts 'Migration took: ' + (Time.current - now).to_s + ' seconds'
@@ -42,7 +42,7 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
     Plan.where.not(parent_id: nil).order(:parent_id).includes(:charges, parent: :charges).in_batches(of: 2000).each do |plans_group|
       plans_group.group_by(&:parent).each do |parent_plan, children_plans|
         parent_plan.charges.each do |parent_charge|
-          assign_children_for_parent_charge(parent_charge, children_plans)
+          assign_children_for_parent_charge(parent_charge, children_plans, parent_plan)
         end
       end
     end
@@ -52,7 +52,7 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
   # find full matches in children plans and update parent_id (use update_all to not have separate requests)
   # then if there are no similar charges in parent plan (having different properties) - select charges for children with
   # similar attributes, ignoring the properties
-  def assign_children_for_parent_charge(parent_charge, children_plans)
+  def assign_children_for_parent_charge(parent_charge, children_plans, parent_plan)
     return if charge_has_copy?(parent_charge, parent_plan, :full)
 
     # process full match children
