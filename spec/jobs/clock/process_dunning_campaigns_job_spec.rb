@@ -11,13 +11,13 @@ describe Clock::ProcessDunningCampaignsJob, job: true do
 
       it "queue a DunningCampaigns::ProcessDunningCampaignsJob" do
         described_class.perform_now
-        expect(Dunning::ProcessCampaignsJob).to have_been_enqueued
+        expect(DunningCampaigns::BulkProcessJob).to have_been_enqueued
       end
     end
 
     it "does nothing" do
       described_class.perform_now
-      expect(Dunning::ProcessCampaignsJob).not_to have_been_enqueued
+      expect(DunningCampaigns::BulkProcessJob).not_to have_been_enqueued
     end
   end
 end

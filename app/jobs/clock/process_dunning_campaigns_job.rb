@@ -11,7 +11,7 @@ module Clock
     def perform
       return unless License.premium?
 
-      Dunning::ProcessCampaignsJob.perform_later
+      DunningCampaigns::BulkProcessJob.perform_later
     end
   end
 end
