@@ -18,6 +18,7 @@ module Currencies
     BBD: 'Barbadian Dollar',
     BDT: 'Bangladeshi Taka',
     BGN: 'Bulgarian Lev',
+    BHD: 'Bahraini Dinar',
     BIF: 'Burundian Franc',
     BMD: 'Bermudian Dollar',
     BND: 'Brunei Dollar',
