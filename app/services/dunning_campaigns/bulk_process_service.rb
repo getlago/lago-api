@@ -37,6 +37,8 @@ module DunningCampaigns
     end
 
     def find_applicable_dunning_campaign_threshold(customer, dunning_campaign)
+      return unless dunning_campaign
+
       dunning_campaign
         .thresholds
         .where(currency: customer.currency)

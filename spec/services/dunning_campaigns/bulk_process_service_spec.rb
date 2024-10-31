@@ -391,7 +391,27 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
     end
 
     context "when neither organizaiton nor customer has an applied dunning campaign" do
-      it "does not queue a job for the customer"
+      let(:dunning_campaign) { create :dunning_campaign, organization:, applied_to_organization: false }
+
+      let(:dunning_campaign_threshold) do
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign:,
+          currency:,
+          amount_cents: 1
+        )
+      end
+
+      before do
+        dunning_campaign
+        dunning_campaign_threshold
+        invoice_1
+      end
+
+      it "does not queue a job for the customer" do
+        result
+        expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+      end
     end
   end
 
