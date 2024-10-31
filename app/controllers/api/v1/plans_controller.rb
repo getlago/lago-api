@@ -77,6 +77,7 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
+          :cascade_updates,
           tax_codes: [],
           minimum_commitment: [
             :id,
