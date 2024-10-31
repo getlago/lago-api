@@ -11058,6 +11058,12 @@
               "deprecationReason": null
             },
             {
+              "name": "BHD",
+              "description": "Bahraini Dinar",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "BIF",
               "description": "Burundian Franc",
               "isDeprecated": false,

@@ -2434,6 +2434,11 @@ enum CurrencyEnum {
   BGN
 
   """
+  Bahraini Dinar
+  """
+  BHD
+
+  """
   Burundian Franc
   """
   BIF
