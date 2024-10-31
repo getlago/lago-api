@@ -14,8 +14,8 @@ module Clock
         invoicing_reasons = invoice.invoice_subscriptions.pluck(:invoicing_reason).uniq
         invoicing_reason = (invoicing_reasons.size == 1) ? invoicing_reasons.first : :upgrading
         BillSubscriptionJob.perform_later(
-          subscriptions: invoice.subscriptions.to_a,
-          timestamp: invoice.invoice_subscriptions.first.timestamp,
+          invoice.subscriptions.to_a,
+          invoice.invoice_subscriptions.first.timestamp,
           invoicing_reason:,
           invoice:,
           skip_charges: invoice.skip_charges
