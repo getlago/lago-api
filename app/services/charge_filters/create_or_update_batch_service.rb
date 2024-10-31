@@ -8,7 +8,7 @@ module ChargeFilters
       @options = options
       @cascade_updates = options[:cascade]
       @parent_filters_attributes = options[:parent_filters] || []
-      @parent_filters = ChargeFilter.with_discarded.where(id: parent_filters_attributes.map { |f| f['id']})
+      @parent_filters = ChargeFilter.with_discarded.where(id: parent_filters_attributes.map { |f| f['id'] })
 
       super
     end
@@ -40,7 +40,7 @@ module ChargeFilters
             end
 
             if parent_filter.blank? || parent_filter_properties(parent_filter) != filter.properties
-              filter.touch
+              filter.touch # rubocop:disable Rails/SkipsModelValidations
               result.filters << filter
 
               next
@@ -104,7 +104,7 @@ module ChargeFilters
     def remove_all
       ActiveRecord::Base.transaction do
         if cascade_updates
-          charge.filters.where(id: inherited_filter_ids).each { remove_filter(_1) }
+          charge.filters.where(id: inherited_filter_ids).find_each { remove_filter(_1) }
         else
           charge.filters.each { remove_filter(_1) }
         end

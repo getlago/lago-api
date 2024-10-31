@@ -83,7 +83,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
         let(:options) do
           {
             cascade: true,
-            parent_filters: charge_parent.filters.map(&:attributes),
+            parent_filters: charge_parent.filters.map(&:attributes)
           }
         end
 
@@ -278,7 +278,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       let(:options) do
         {
           cascade: true,
-          parent_filters: charge_parent.filters.map(&:attributes),
+          parent_filters: charge_parent.filters.map(&:attributes)
         }
       end
 
