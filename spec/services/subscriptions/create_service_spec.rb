@@ -73,6 +73,19 @@ RSpec.describe Subscriptions::CreateService, type: :service do
       )
     end
 
+    context 'when subscription should sync with CRM' do
+      let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: 'EUR') }
+
+      before do
+        allow(Integrations::Aggregator::Subscriptions::Crm::CreateJob).to receive(:perform_later)
+      end
+
+      it 'enqueues the CRM create job for a new subscription' do
+        create_service.call
+        expect(Integrations::Aggregator::Subscriptions::Crm::CreateJob).to have_received(:perform_later)
+      end
+    end
+
     context 'when ending_at is passed' do
       let(:params) do
         {
@@ -436,13 +449,14 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
       context 'when plan is not the same' do
         context 'when we upgrade the plan' do
-          before do
-            subscription.mark_as_active!
-          end
-
+          let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: 'EUR') }
           let(:plan) { create(:plan, amount_cents: 200, organization:) }
           let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
           let(:name) { 'invoice display name new' }
+
+          before do
+            subscription.mark_as_active!
+          end
 
           it 'terminates the existing subscription' do
             expect { create_service.call }.to change { subscription.reload.status }.from('active').to('terminated')
@@ -459,6 +473,11 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             result = create_service.call
             expect(SendWebhookJob).to have_been_enqueued.with('subscription.terminated', subscription)
             expect(SendWebhookJob).to have_been_enqueued.with('subscription.started', result.subscription)
+          end
+
+          it 'enqueues the CRM update job', :aggregate_failures do
+            create_service.call
+            expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to have_been_enqueued.with(subscription:)
           end
 
           it 'creates a new subscription' do

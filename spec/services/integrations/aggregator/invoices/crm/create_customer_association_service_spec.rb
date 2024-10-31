@@ -65,6 +65,12 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::CreateCustomerAssociatio
       context 'when request is successful' do
         before do
           allow(service).to receive(:http_client).and_return(lago_client)
+          allow(Integrations::Hubspot::Invoices::DeployObjectService).to receive(:call)
+        end
+
+        it 'calls the DeployObjectService' do
+          service_call
+          expect(Integrations::Hubspot::Invoices::DeployObjectService).to have_received(:call).with(integration: integration)
         end
 
         it 'returns result' do

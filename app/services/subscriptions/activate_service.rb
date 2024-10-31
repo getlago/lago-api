@@ -21,6 +21,10 @@ module Subscriptions
         .find_each do |subscription|
           subscription.mark_as_active!(Time.zone.at(timestamp))
 
+          if subscription.should_sync_crm_subscription?
+            Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+          end
+
           SendWebhookJob.perform_later('subscription.started', subscription)
 
           if subscription.plan.pay_in_advance? && !subscription.in_trial_period?

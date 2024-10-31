@@ -18,6 +18,10 @@ module Subscriptions
       elsif !subscription.terminated?
         subscription.mark_as_terminated!
 
+        if subscription.should_sync_crm_subscription?
+          Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+        end
+
         if subscription.plan.pay_in_advance? && pay_in_advance_invoice_issued?
           # NOTE: As subscription was payed in advance and terminated before the end of the period,
           #       we have to create a credit note for the days that were not consumed
@@ -36,7 +40,12 @@ module Subscriptions
       end
 
       # NOTE: Pending next subscription should be canceled as well
-      subscription.next_subscription&.mark_as_canceled!
+      next_subscription = subscription.next_subscription
+      next_subscription&.mark_as_canceled!
+
+      if next_subscription&.should_sync_crm_subscription?
+        Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription: next_subscription)
+      end
 
       # NOTE: Wait to ensure job is performed at the end of the database transaction.
       # See https://github.com/getlago/lago-api/blob/main/app/services/subscriptions/create_service.rb#L46.
@@ -56,7 +65,15 @@ module Subscriptions
 
       ActiveRecord::Base.transaction do
         subscription.mark_as_terminated!(rotation_date)
+
+        if subscription.should_sync_crm_subscription?
+          Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+        end
+
         next_subscription.mark_as_active!(rotation_date)
+        if next_subscription.should_sync_crm_subscription?
+          Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(next_subscription)
+        end
       end
 
       # NOTE: Create an invoice for the terminated subscription

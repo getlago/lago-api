@@ -36,6 +36,10 @@ module Subscriptions
         process_subscription_at_change(subscription)
       else
         subscription.save!
+
+        if subscription.should_sync_crm_subscription?
+          Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+        end
       end
 
       result.subscription = subscription

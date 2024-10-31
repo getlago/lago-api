@@ -12,6 +12,8 @@ module Integrations
           def call
             return result if !integration || !integration.sync_subscriptions || !payload.integration_subscription
 
+            Integrations::Hubspot::Subscriptions::DeployObjectService.call(integration:)
+
             http_client.put_with_response(payload.customer_association_body, headers)
 
             result

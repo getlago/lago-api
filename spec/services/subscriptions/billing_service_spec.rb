@@ -415,9 +415,11 @@ RSpec.describe Subscriptions::BillingService, type: :service do
     end
 
     context 'when downgraded' do
+      let(:customer) { create(:customer, :with_hubspot_integration) }
       let(:subscription) do
         create(
           :subscription,
+          customer:,
           subscription_at:,
           started_at: Time.zone.now,
           previous_subscription:,
@@ -428,6 +430,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       let(:previous_subscription) do
         create(
           :subscription,
+          customer:,
           subscription_at:,
           started_at: Time.zone.now,
           billing_time: :anniversary
@@ -444,6 +447,17 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
           expect(Subscriptions::TerminateJob).to have_been_enqueued
             .with(previous_subscription, current_date.to_i)
+        end
+      end
+
+      it 'enqueues Integrations::Aggregator::Subscriptions::Crm::UpdateJob' do
+        current_date = DateTime.parse('20 Feb 2022')
+        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+
+        travel_to(current_date) do
+          billing_service.call
+          expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+            .to have_received(:perform_later).with(subscription: previous_subscription)
         end
       end
     end
