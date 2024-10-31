@@ -10,7 +10,7 @@ module DunningCampaigns
     end
 
     def call
-      # TODO: Restrict to dunning premium add-on
+      return result.forbidden_failure! unless organization.auto_dunning_enabled?
       # TODO: At least one threshold currency/amount pair is needed
 
       ActiveRecord::Base.transaction do

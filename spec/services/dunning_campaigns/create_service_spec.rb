@@ -2,11 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::CreateService, type: :service do
+RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failures: true do
   subject(:create_service) { described_class.new(organization:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create :organization }
   let(:params) do
     {
       name: "Dunning Campaign",
@@ -27,27 +26,59 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
   end
 
   describe "#call" do
-    it "creates a dunning campaign" do
-      expect { create_service.call }.to change(DunningCampaign, :count).by(1)
-        .and change(DunningCampaignThreshold, :count).by(2)
-    end
-
-    it "returns dunning campaign in the result" do
-      result = create_service.call
-      expect(result.dunning_campaign).to be_a(DunningCampaign)
-      expect(result.dunning_campaign.thresholds.first).to be_a(DunningCampaignThreshold)
-    end
-
-    context "with validation error" do
-      before { create(:dunning_campaign, organization: organization, code: "dunning-campaign") }
-
+    context "when lago freemium" do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+
+      it "does not update the dunning campaign" do
+        expect { create_service.call }.not_to change(DunningCampaign, :count)
+      end
+    end
+
+    context "when lago premium" do
+      around { |test| lago_premium!(&test) }
+
+      context "when no auto_dunning premium integration" do
+        it "returns an error" do
+          result = create_service.call
+
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:code]).to eq(["value_already_exist"])
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+
+      context "when auto_dunning premium integration" do
+        let(:organization) do
+          create(:organization, premium_integrations: ["auto_dunning"])
+        end
+
+        it "creates a dunning campaign" do
+          expect { create_service.call }.to change(DunningCampaign, :count).by(1)
+            .and change(DunningCampaignThreshold, :count).by(2)
+        end
+
+        it "returns dunning campaign in the result" do
+          result = create_service.call
+          expect(result.dunning_campaign).to be_a(DunningCampaign)
+          expect(result.dunning_campaign.thresholds.first).to be_a(DunningCampaignThreshold)
+        end
+
+        context "with validation error" do
+          before do
+            create(:dunning_campaign, organization:, code: "dunning-campaign")
+          end
+
+          it "returns an error" do
+            result = create_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:code]).to eq(["value_already_exist"])
+          end
         end
       end
     end
