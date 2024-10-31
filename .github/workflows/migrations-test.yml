@@ -42,7 +42,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Rust
-        run: rustup update stable && rustup default stable
+        run: rustup default 1.81
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:

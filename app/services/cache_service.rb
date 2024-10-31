@@ -18,8 +18,6 @@ class CacheService < BaseService
     Rails.cache.fetch(cache_key, expires_in:, &)
   end
 
-  protected
-
   def expire_cache
     Rails.cache.delete(cache_key)
   end

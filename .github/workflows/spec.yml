@@ -2,7 +2,7 @@ name: Run Spec
 on:
   push:
     branches:
-      - "main"
+      - 'main'
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
@@ -13,7 +13,7 @@ jobs:
       postgres:
         image: postgres:14-alpine
         ports:
-          - "5432:5432"
+          - '5432:5432'
         env:
           POSTGRES_DB: lago
           POSTGRES_USER: lago
@@ -30,8 +30,8 @@ jobs:
 
     env:
       RAILS_ENV: test
-      DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
-      LAGO_REDIS_CACHE_URL: "redis://localhost:6379"
+      DATABASE_URL: 'postgres://lago:lago@localhost:5432/lago'
+      LAGO_REDIS_CACHE_URL: 'redis://localhost:6379'
       RAILS_MASTER_KEY: ${{ secrets.RAILS_TEST_KEY }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
       LAGO_API_URL: https://api.lago.dev
@@ -42,16 +42,18 @@ jobs:
       LAGO_CLICKHOUSE_MIGRATIONS_ENABLED: true
       LAGO_CLICKHOUSE_HOST: localhost
       LAGO_CLICKHOUSE_DATABASE: default
-      LAGO_CLICKHOUSE_USERNAME: ""
-      LAGO_CLICKHOUSE_PASSWORD: ""
+      LAGO_CLICKHOUSE_USERNAME: ''
+      LAGO_CLICKHOUSE_PASSWORD: ''
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup default 1.81
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.3.4"
+          ruby-version: '3.3.4'
           bundler-cache: true
       - name: Start Clickhouse database
         run: |
