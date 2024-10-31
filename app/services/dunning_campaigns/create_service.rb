@@ -14,6 +14,13 @@ module DunningCampaigns
       # TODO: At least one threshold currency/amount pair is needed
 
       ActiveRecord::Base.transaction do
+        if params[:applied_to_organization]
+          organization
+            .dunning_campaigns
+            .applied_to_organization
+            .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
+        end
+
         dunning_campaign = organization.dunning_campaigns.create!(
           applied_to_organization: params[:applied_to_organization],
           code: params[:code],
@@ -23,8 +30,6 @@ module DunningCampaigns
           description: params[:description],
           thresholds_attributes: params[:thresholds].map(&:to_h)
         )
-
-        # TODO: If the dunning campaign is applied to the organization, we need to remove the flag from all other dunning campaigns.
 
         result.dunning_campaign = dunning_campaign
       end
