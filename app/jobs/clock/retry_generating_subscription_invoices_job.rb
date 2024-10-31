@@ -15,7 +15,7 @@ module Clock
         invoicing_reason = (invoicing_reasons.size == 1) ? invoicing_reasons.first : :upgrading
         BillSubscriptionJob.perform_later(
           invoice.subscriptions.to_a,
-          invoice.invoice_subscriptions.first.timestamp,
+          invoice.invoice_subscriptions.first.timestamp.to_i,
           invoicing_reason:,
           invoice:,
           skip_charges: invoice.skip_charges
