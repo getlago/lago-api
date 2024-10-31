@@ -21,6 +21,8 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         organization_id: organization.id,
         aggregation_type: "count_agg",
         expression: "1 + 2",
+        rounding_function: "ceil",
+        rounding_precision: 2,
         recurring: false
       }
     end

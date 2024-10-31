@@ -38,6 +38,8 @@ module BillableMetrics
         billable_metric.weighted_interval = params[:weighted_interval]&.to_sym if params.key?(:weighted_interval)
         billable_metric.field_name = params[:field_name] if params.key?(:field_name)
         billable_metric.recurring = params[:recurring] if params.key?(:recurring)
+        billable_metric.rounding_function = params[:rounding_function] if params.key?(:rounding_function)
+        billable_metric.rounding_precision = params[:rounding_precision] if params.key?(:rounding_precision)
         billable_metric.weighted_interval = params[:weighted_interval]&.to_sym if params.key?(:weighted_interval)
         billable_metric.expression = params[:expression] if params.key?(:expression)
 

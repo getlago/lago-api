@@ -16,7 +16,9 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       description: 'New metric description',
       aggregation_type: 'sum_agg',
       field_name: 'field_value',
-      expression: '1 + 3'
+      expression: '1 + 3',
+      rounding_function: 'ceil',
+      rounding_precision: 2
     }.tap do |p|
       p[:filters] = filters unless filters.nil?
     end
@@ -24,19 +26,20 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
   let(:filters) { nil }
 
   describe '#call' do
-    it 'updates the billable metric' do
+    it 'updates the billable metric', aggregate_failures: true do
       result = update_service.call
+      expect(result).to be_success
 
-      aggregate_failures do
-        expect(result).to be_success
-
-        metric = result.billable_metric
-        expect(metric.id).to eq(billable_metric.id)
-        expect(metric.name).to eq('New Metric')
-        expect(metric.code).to eq('new_metric')
-        expect(metric.aggregation_type).to eq('sum_agg')
-        expect(metric.expression).to eq('1 + 3')
-      end
+      metric = result.billable_metric
+      expect(metric).to have_attributes(
+        id: billable_metric.id,
+        name: 'New Metric',
+        code: 'new_metric',
+        aggregation_type: 'sum_agg',
+        rounding_function: 'ceil',
+        rounding_precision: 2,
+        expression: '1 + 3'
+      )
     end
 
     context 'with filters arguments' do
@@ -106,7 +109,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
 
       before { charge }
 
-      it 'updates only name and description' do
+      it 'updates only name and description', aggregate_failures: true do
         result = update_service.call
 
         aggregate_failures do
@@ -120,7 +123,9 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
           expect(result.billable_metric).not_to have_attributes(
             code: 'new_metric',
             aggregation_type: 'sum_agg',
-            field_name: 'field_value'
+            field_name: 'field_value',
+            rounding_function: 'ceil',
+            rounding_precision: 2
           )
         end
       end

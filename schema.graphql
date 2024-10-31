@@ -251,6 +251,8 @@ type BillableMetric {
   organization: Organization
   plansCount: Int!
   recurring: Boolean!
+  roundingFunction: RoundingFunctionEnum
+  roundingPrecision: Int
   subscriptionsCount: Int!
   updatedAt: ISO8601DateTime!
   weightedInterval: WeightedIntervalEnum
@@ -1859,6 +1861,8 @@ input CreateBillableMetricInput {
   filters: [BillableMetricFiltersInput!]
   name: String!
   recurring: Boolean
+  roundingFunction: RoundingFunctionEnum
+  roundingPrecision: Int
   weightedInterval: WeightedIntervalEnum
 }
 
@@ -6790,6 +6794,12 @@ input RevokeMembershipInput {
   id: ID!
 }
 
+enum RoundingFunctionEnum {
+  ceil
+  floor
+  round
+}
+
 type SanitizedApiKey {
   createdAt: ISO8601DateTime!
   id: ID!
@@ -7832,6 +7842,8 @@ input UpdateBillableMetricInput {
   id: String!
   name: String!
   recurring: Boolean
+  roundingFunction: RoundingFunctionEnum
+  roundingPrecision: Int
   weightedInterval: WeightedIntervalEnum
 }
 

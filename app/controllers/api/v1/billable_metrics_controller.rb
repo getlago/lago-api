@@ -122,6 +122,8 @@ module Api
           :recurring,
           :field_name,
           :expression,
+          :rounding_function,
+          :rounding_precision,
           filters: [:key, {values: []}]
         )
       end

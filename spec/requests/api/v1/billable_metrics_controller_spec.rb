@@ -14,7 +14,9 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
         aggregation_type: 'sum_agg',
         field_name: 'amount_sum',
         expression: '1 + 2',
-        recurring: true
+        recurring: true,
+        rounding_function: 'round',
+        rounding_precision: 2
       }
     end
 
@@ -28,6 +30,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect(json[:billable_metric][:created_at]).to be_present
       expect(json[:billable_metric][:recurring]).to eq(create_params[:recurring])
       expect(json[:billable_metric][:expression]).to eq(create_params[:expression])
+      expect(json[:billable_metric][:rounding_function]).to eq(create_params[:rounding_function])
+      expect(json[:billable_metric][:rounding_precision]).to eq(create_params[:rounding_precision])
       expect(json[:billable_metric][:filters]).to eq([])
     end
 
@@ -49,10 +53,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metric][:lago_id]).to be_present
-        expect(json[:billable_metric][:recurring]).to eq(
-          create_params[:recurring
-                    ]
-        )
+        expect(json[:billable_metric][:recurring]).to eq(create_params[:recurring])
         expect(json[:billable_metric][:aggregation_type]).to eq('weighted_sum_agg')
         expect(json[:billable_metric][:weighted_interval]).to eq('seconds')
       end

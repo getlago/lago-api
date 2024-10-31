@@ -12,6 +12,8 @@ module Types
       argument :field_name, String, required: false
       argument :name, String, required: true
       argument :recurring, Boolean, required: false
+      argument :rounding_function, Types::BillableMetrics::RoundingFunctionEnum, required: false
+      argument :rounding_precision, Integer, required: false
       argument :weighted_interval, Types::BillableMetrics::WeightedIntervalEnum, required: false
 
       argument :filters, [Types::BillableMetricFilters::Input], required: false
