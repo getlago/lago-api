@@ -46,8 +46,9 @@ end
 #
 # Indexes
 #
-#  index_dunning_campaigns_on_organization_id           (organization_id)
-#  index_dunning_campaigns_on_organization_id_and_code  (organization_id,code) UNIQUE
+#  index_dunning_campaigns_on_organization_id             (organization_id)
+#  index_dunning_campaigns_on_organization_id_and_code    (organization_id,code) UNIQUE
+#  index_unique_applied_to_organization_per_organization  (organization_id) UNIQUE WHERE (applied_to_organization = true)
 #
 # Foreign Keys
 #
