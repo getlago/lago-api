@@ -58,6 +58,11 @@ module Clockwork
       .set(sentry: {"slug" => 'lago_bill_customers', "cron" => '10 */1 * * *'})
       .perform_later
   end
+  every(1.hour, 'schedule:retry_generating_subscription_invoices', at: '*:30') do
+    Clock::RetryGeneratingSubscriptionInvoicesJob
+      .set(sentry: {"slug" => 'lago_retry_invoices', "cron" => '30 */1 * * *'})
+      .perform_later
+  end
 
   every(1.hour, 'schedule:finalize_invoices', at: '*:20') do
     Clock::FinalizeInvoicesJob

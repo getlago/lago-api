@@ -24,7 +24,9 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
   context 'when result is a failure' do
     let(:result) do
-      BaseService::Result.new.single_validation_failure!(error_code: 'error')
+      result = BaseService::Result.new
+      result.invoice = invoice
+      result.single_validation_failure!(error_code: 'error')
     end
 
     it 'raises an error' do
@@ -57,6 +59,15 @@ RSpec.describe BillSubscriptionJob, type: :job do
 
         expect(Invoices::SubscriptionService).to have_received(:call)
       end
+
+      it 'creates an InvoiceError' do
+        expect do
+          described_class.perform_now(subscriptions, timestamp, invoicing_reason:, invoice:)
+        end.to raise_error(BaseService::FailedResult)
+
+        expect(InvoiceError.all.size).to eq(1)
+        expect(InvoiceError.first.id).to eq(invoice.id)
+      end
     end
 
     context 'when a generating invoice is attached to the result' do
@@ -85,6 +96,15 @@ RSpec.describe BillSubscriptionJob, type: :job do
         end.to raise_error(BaseService::FailedResult)
 
         expect(Invoices::SubscriptionService).to have_received(:call)
+      end
+
+      it 'creates an InvoiceError' do
+        expect do
+          described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
+        end.to raise_error(BaseService::FailedResult)
+
+        expect(InvoiceError.all.size).to eq(1)
+        expect(InvoiceError.first.id).to eq(result_invoice.id)
       end
     end
   end

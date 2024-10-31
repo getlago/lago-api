@@ -115,6 +115,27 @@ describe Clockwork do
     end
   end
 
+  describe 'schedule:retry_generating_subscription_invoices' do
+    let(:job) { 'schedule:retry_generating_subscription_invoices' }
+    let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
+    let(:end_time) { Time.zone.parse('1 Apr 2022 01:01:00') }
+
+    it 'enqueues a Clock::RetryGeneratingSubscriptionInvoiceJob' do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::RetryGeneratingSubscriptionInvoicesJob).to have_been_enqueued
+    end
+  end
+
   describe 'schedule:compute_daily_usage' do
     let(:job) { 'schedule:compute_daily_usage' }
     let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
