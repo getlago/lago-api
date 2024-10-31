@@ -182,81 +182,18 @@ module Customers
     def create_or_update_provider_customer(customer, payment_provider, billing_configuration = {})
       handle_provider_customer = customer.payment_provider.present?
       handle_provider_customer ||= (billing_configuration || {})[:provider_customer_id].present?
+      handle_provider_customer ||= customer.send("#{payment_provider}_customer")&.provider_customer_id.present?
+      return unless handle_provider_customer
 
-      case payment_provider
-      when 'stripe'
-        handle_provider_customer ||= customer.stripe_customer&.provider_customer_id.present?
-
-        return unless handle_provider_customer
-
-        update_stripe_customer(customer, billing_configuration)
-      when 'gocardless'
-        handle_provider_customer ||= customer.gocardless_customer&.provider_customer_id.present?
-
-        return unless handle_provider_customer
-
-        update_gocardless_customer(customer, billing_configuration)
-      when 'cashfree'
-        handle_provider_customer ||= customer.cashfree_customer&.provider_customer_id.present?
-
-        return unless handle_provider_customer
-
-        update_cashfree_customer(customer, billing_configuration)
-      when 'adyen'
-        handle_provider_customer ||= customer.adyen_customer&.provider_customer_id.present?
-
-        return unless handle_provider_customer
-
-        update_adyen_customer(customer, billing_configuration)
-      end
-    end
-
-    def update_stripe_customer(customer, billing_configuration)
-      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-        customer_class: PaymentProviderCustomers::StripeCustomer,
+      PaymentProviders::CreateCustomerFactory.new_instance(
+        provider: payment_provider,
+        customer:,
         payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration
-      )
-      create_result.raise_if_error!
+      ).call.raise_if_error!
 
       # NOTE: Create service is modifying an other instance of the provider customer
-      customer.stripe_customer&.reload
-    end
-
-    def update_gocardless_customer(customer, billing_configuration)
-      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-        customer_class: PaymentProviderCustomers::GocardlessCustomer,
-        payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration
-      )
-      create_result.raise_if_error!
-
-      # NOTE: Create service is modifying an other instance of the provider customer
-      customer.gocardless_customer&.reload
-    end
-
-    def update_cashfree_customer(customer, billing_configuration)
-      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-        customer_class: PaymentProviderCustomers::CashfreeCustomer,
-        payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration
-      )
-      create_result.raise_if_error!
-
-      # NOTE: Create service is modifying an other instance of the provider customer
-      customer.cashfree_customer&.reload
-    end
-
-    def update_adyen_customer(customer, billing_configuration)
-      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-        customer_class: PaymentProviderCustomers::AdyenCustomer,
-        payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration
-      )
-      create_result.raise_if_error!
-
-      # NOTE: Create service is modifying an other instance of the provider customer
-      customer.adyen_customer&.reload
+      customer.reload
     end
 
     def applied_dunning_campaign

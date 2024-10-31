@@ -4,7 +4,7 @@ module PaymentProviders
   module Stripe
     module Webhooks
       class SetupIntentSucceededService < BaseService
-        include Customers::PaymentProviderFinder
+        include ::Customers::PaymentProviderFinder
 
         def call
           return result if stripe_customer_id.nil?
