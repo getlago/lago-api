@@ -13,10 +13,12 @@ RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failur
       days_between_attempts: 1,
       max_attempts: 3,
       description: "Dunning Campaign Description",
-      applied_to_organization: true,
+      applied_to_organization:,
       thresholds:
     }
   end
+
+  let(:applied_to_organization) { false }
 
   let(:thresholds) do
     [
@@ -65,6 +67,45 @@ RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failur
           result = create_service.call
           expect(result.dunning_campaign).to be_a(DunningCampaign)
           expect(result.dunning_campaign.thresholds.first).to be_a(DunningCampaignThreshold)
+        end
+
+        context "with a previous dunning campaign set as applied_to_organization" do
+          let(:dunning_campaign_2) do
+            create(:dunning_campaign, organization:, applied_to_organization: true)
+          end
+
+          before { dunning_campaign_2 }
+
+          it "does not change previous dunning campaign applied_to_organization" do
+            expect { create_service.call }
+              .not_to change(dunning_campaign_2.reload, :applied_to_organization)
+          end
+        end
+
+        context "with applied_to_organization true" do
+          let(:applied_to_organization) { true }
+
+          it "updates the dunning campaign" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.dunning_campaign.applied_to_organization).to eq(true)
+          end
+
+          context "with a previous dunning campaign set as applied_to_organization" do
+            let(:dunning_campaign_2) do
+              create(:dunning_campaign, organization:, applied_to_organization: true)
+            end
+
+            before { dunning_campaign_2 }
+
+            it "removes applied_to_organization from previous dunning campaign" do
+              expect { create_service.call }
+                .to change { dunning_campaign_2.reload.applied_to_organization }
+                .from(true)
+                .to(false)
+            end
+          end
         end
 
         context "with validation error" do
