@@ -26,11 +26,15 @@ module BillableMetrics
           if charge.dynamic?
             compute_grouped_by_precise_total_amount_cents(options:)
           end
+
+          result.aggregations.each { apply_rounding(_1) }
         else
           compute_aggregation(options:)
           if charge.dynamic?
             compute_precise_total_amount_cents(options:)
           end
+
+          apply_rounding(result)
         end
         result
       end
@@ -141,6 +145,27 @@ module BillableMetrics
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter
 
         query.first
+      end
+
+      def apply_rounding(result)
+        return if billable_metric.rounding_function.blank?
+        return if event.present? # Rouding does not apply to the in advance billing
+
+        result.aggregation = BillableMetrics::Aggregations::ApplyRoundingService
+          .call(billable_metric:, units: result.aggregation)
+          .units
+
+        if result.full_units_number.present?
+          result.full_units_number = BillableMetrics::Aggregations::ApplyRoundingService
+            .call(billable_metric:, units: result.full_units_number)
+            .units
+        end
+
+        if result.current_usage_units.present?
+          result.current_usage_units = BillableMetrics::Aggregations::ApplyRoundingService
+            .call(billable_metric:, units: result.current_usage_units)
+            .units
+        end
       end
     end
   end
