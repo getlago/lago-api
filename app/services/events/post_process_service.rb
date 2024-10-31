@@ -90,7 +90,7 @@ module Events
         charge_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
 
         active_subscription.each do |subscription|
-          Subscriptions::ChargeCacheService.new(subscription:, charge:, charge_filter:).expire_cache
+          Subscriptions::ChargeCacheService.expire_cache(subscription:, charge:, charge_filter:)
         end
       end
     end

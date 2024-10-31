@@ -42,7 +42,7 @@ module BillableMetrics
         billable_metric.expression = params[:expression] if params.key?(:expression)
 
         if params.key?(:expression) || params.key?(:field_name)
-          Rails.cache.delete("expression/#{organization.id}/#{billable_metric.code}")
+          BillableMetrics::ExpressionCacheService.expire_cache(organization.id, billable_metric.code)
         end
       end
 

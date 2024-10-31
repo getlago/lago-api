@@ -12,7 +12,7 @@ module Subscriptions
     def call(charge_filter:)
       return yield unless cache
 
-      json = Rails.cache.fetch(cache_key(charge_filter), expires_in: cache_expiration) do
+      json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, expires_in: cache_expiration) do
         yield.to_json
       end
 
@@ -22,10 +22,6 @@ module Subscriptions
     private
 
     attr_reader :subscription, :charge, :to_datetime, :cache
-
-    def cache_key(charge_filter)
-      Subscriptions::ChargeCacheService.new(subscription:, charge:, charge_filter:).cache_key
-    end
 
     def cache_expiration
       (to_datetime - Time.current).to_i.seconds

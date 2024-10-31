@@ -42,7 +42,7 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def pre_ingest(event)
-      field_name, expression = Rails.cache.fetch("expression/#{organization.id}/#{event.code}") do
+      field_name, expression = BillableMetrics::ExpressionCacheService.call(organization.id, event.code) do
         bm = organization.billable_metrics.with_expression.find_by(code: event.code)
         [bm&.field_name, bm&.expression]
       end
