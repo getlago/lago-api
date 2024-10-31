@@ -236,4 +236,20 @@ RSpec.describe Organization, type: :model do
       end
     end
   end
+
+  describe '#admins' do
+    subject { organization.admins }
+
+    let(:organization) { create(:organization) }
+    let(:scoped) { create(:membership, organization:).user }
+
+    before do
+      create(:membership)
+      create(:membership, organization:, role: [:manager, :finance].sample)
+    end
+
+    it 'returns admins of the organization' do
+      expect(subject).to contain_exactly scoped
+    end
+  end
 end

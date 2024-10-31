@@ -90,6 +90,10 @@ class Organization < ApplicationRecord
     scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
   end
 
+  def admins
+    users.joins(:memberships).merge!(memberships.admin)
+  end
+
   def logo_url
     return if logo.blank?
 
