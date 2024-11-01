@@ -38,5 +38,13 @@ RSpec.describe InvoiceError, type: :model do
       invoice_error = described_class.create_for(invoice:, error:)
       expect(invoice_error.subscriptions).to eq("[]")
     end
+
+    it "updates when create_for is called with the same invoice" do
+      invoice_error = described_class.create_for(invoice:, error:)
+      expect(invoice_error.id).to eq(invoice.id)
+
+      invoice_error = described_class.create_for(invoice:, error:)
+      expect(invoice_error.id).to eq(invoice.id)
+    end
   end
 end
