@@ -47,6 +47,12 @@ module Clockwork
     end
   end
 
+  every(5.minutes, 'schedule:api_keys_track_usage') do
+    Clock::ApiKeys::TrackUsageJob
+      .set(sentry: {"slug" => 'lago_api_keys_track_usage', "cron" => '*/5 * * * *'})
+      .perform_later
+  end
+
   every(1.hour, 'schedule:terminate_ended_subscriptions', at: '*:05') do
     Clock::TerminateEndedSubscriptionsJob
       .set(sentry: {"slug" => 'lago_terminate_ended_subscriptions', "cron" => '5 */1 * * *'})

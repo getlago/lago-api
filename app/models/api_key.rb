@@ -28,6 +28,7 @@ end
 #
 #  id              :uuid             not null, primary key
 #  expires_at      :datetime
+#  last_used_at    :datetime
 #  value           :string           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
