@@ -41,14 +41,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install Rust
-        run: rustup default 1.81
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3.4'
-      - name: Run bundle isntall
-        run: bundle install
+          bundler-cache: true
       - name: Start Clickhouse database
         run: |
           docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml clickhouse/clickhouse-server

@@ -2,15 +2,15 @@ FROM ruby:3.3.4-slim
 
 WORKDIR /app
 
-COPY ./Gemfile /app/Gemfile
-COPY ./Gemfile.lock /app/Gemfile.lock
-
 RUN apt update -qq && \
   apt install nodejs build-essential curl git pkg-config libpq-dev libclang-dev -y && \
-  curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain 1.81
+  curl https://sh.rustup.rs -sSf | bash -s -- -y
 
 ENV BUNDLER_VERSION='2.5.5'
 ENV PATH="$PATH:/root/.cargo/bin/"
+
+COPY ./Gemfile /app/Gemfile
+COPY ./Gemfile.lock /app/Gemfile.lock
 
 RUN gem install bundler --no-document -v '2.5.5'
 

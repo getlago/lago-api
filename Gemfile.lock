@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/getlago/lago-expression.git
-  revision: 76a676544ee71f9476d8c6d7b6bb20a254ac2a90
+  revision: a096edf11524bfda7d7f196ddb7722b6c5b8eeae
   glob: expression-ruby/lago-expression.gemspec
   specs:
     lago-expression (0.0.1)
