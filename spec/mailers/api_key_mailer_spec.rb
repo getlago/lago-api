@@ -8,6 +8,8 @@ RSpec.describe ApiKeyMailer, type: :mailer do
     let(:api_key) { create(:api_key) }
     let(:organization) { api_key.organization }
 
+    before { create(:membership, organization:, role: :admin) }
+
     describe 'subject' do
       subject { mail.subject }
 
@@ -17,7 +19,13 @@ RSpec.describe ApiKeyMailer, type: :mailer do
     describe 'recipients' do
       subject { mail.bcc }
 
-      it { is_expected.to eq organization.admins.pluck(:email) }
+      before { create(:membership, organization:, role: :manager) }
+
+      specify do
+        expect(subject)
+          .to be_present
+          .and eq organization.admins.pluck(:email)
+      end
     end
 
     describe 'body' do

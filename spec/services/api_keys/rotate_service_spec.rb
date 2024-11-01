@@ -31,6 +31,14 @@ RSpec.describe ApiKeys::RotateService, type: :service do
     context 'when API key is missing' do
       let(:api_key) { nil }
 
+      it 'does not creates a new API key for organization' do
+        expect { service_result }.not_to change(ApiKey, :count)
+      end
+
+      it 'does not send an API key rotated email' do
+        expect { service_result }.not_to have_enqueued_mail(ApiKeyMailer, :rotated)
+      end
+
       it 'returns an error' do
         aggregate_failures do
           expect(service_result).not_to be_success
