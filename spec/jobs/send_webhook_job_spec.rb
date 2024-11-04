@@ -570,4 +570,28 @@ RSpec.describe SendWebhookJob, type: :job do
       expect(webhook_service).to have_received(:call)
     end
   end
+
+  context "when webhook_type is dunning.attempted" do
+    let(:webhook_service) { instance_double(Webhooks::Dunning::AttemptedService) }
+    let(:webhook_options) do
+      {
+        provider_customer_id: "customer_id"
+      }
+    end
+
+    before do
+      allow(Webhooks::Dunning::AttemptedService)
+        .to receive(:new)
+        .with(object: payment, options: webhook_options)
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it "calls the webhook dunning.attempted" do
+      send_webhook_job.perform_now("dunning.attempted", payment, webhook_options)
+
+      expect(Webhooks::Dunning::AttemptedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
 end
