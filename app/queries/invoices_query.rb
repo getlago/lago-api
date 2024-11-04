@@ -2,7 +2,7 @@
 
 class InvoicesQuery < BaseQuery
   def call
-    invoices = base_scope.result.includes(:customer)
+    invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
     invoices = paginate(invoices)
     invoices = invoices.order(issuing_date: :desc, created_at: :desc)
 
