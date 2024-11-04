@@ -14,19 +14,21 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
 
   describe '#call' do
     it 'creates a daily usage', aggregate_failures: true do
-      expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+      travel_to(timestamp) do
+        expect { compute_service.call }.to change(DailyUsage, :count).by(1)
 
-      daily_usage = DailyUsage.order(created_at: :asc).last
-      expect(daily_usage).to have_attributes(
-        organization_id: organization.id,
-        customer_id: customer.id,
-        subscription_id: subscription.id,
-        external_subscription_id: subscription.external_id,
-        usage: Hash
-      )
-      expect(daily_usage.refreshed_at).to match_datetime(timestamp)
-      expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
-      expect(daily_usage.to_datetime).to match_datetime(timestamp.end_of_month)
+        daily_usage = DailyUsage.order(created_at: :asc).last
+        expect(daily_usage).to have_attributes(
+          organization_id: organization.id,
+          customer_id: customer.id,
+          subscription_id: subscription.id,
+          external_subscription_id: subscription.external_id,
+          usage: Hash
+        )
+        expect(daily_usage.refreshed_at).to match_datetime(timestamp)
+        expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
+        expect(daily_usage.to_datetime).to match_datetime(timestamp.end_of_month)
+      end
     end
 
     context 'when a daily usage already exists' do
