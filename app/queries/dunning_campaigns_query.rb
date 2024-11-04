@@ -40,9 +40,6 @@ class DunningCampaignsQuery < BaseQuery
   end
 
   def with_currency_threshold(scope)
-    scope
-      .joins(:thresholds)
-      .where(dunning_campaign_thresholds: {currency: filters.currency})
-      .distinct
+    scope.with_currency_threshold(filters.currency)
   end
 end

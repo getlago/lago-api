@@ -18,6 +18,11 @@ class DunningCampaign < ApplicationRecord
   validates :code, uniqueness: {scope: :organization_id}
 
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
+  scope :with_currency_threshold, ->(currencies) {
+    joins(:thresholds)
+      .where(dunning_campaign_thresholds: {currency: currencies})
+      .distinct
+  }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
