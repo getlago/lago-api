@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
+  disable_ddl_transaction!
+
   class Plan < ApplicationRecord
     has_many :charges, dependent: :destroy
     belongs_to :parent, class_name: 'Plan', optional: true
