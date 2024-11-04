@@ -31,6 +31,18 @@ module DunningCampaigns
         customer.last_dunning_campaign_attempt_at = Time.zone.now
         customer.save!
 
+        SendWebhookJob.perform_later(
+          "dunning.attempt",
+          {
+            customer_id: customer.id,
+            dunning_campaign_id: dunning_campaign.id,
+            payment_request_id: payment_request_result.payment_request.id,
+            attempt_position: customer.last_dunning_campaign_attempt,
+            max_attempt: dunning_campaign.max_attempt,
+            next_attempt_at: customer.last_dunning_campaign_attempt < dunning_campaign.max_attempt ? Time.zone.today + dunning_campaign.days_between_attempts.days : nil
+          }
+        )
+
         result.customer = customer
         result.payment_request = payment_request_result.payment_request
       end

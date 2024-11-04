@@ -73,6 +73,22 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
+    it "delivers a webhook" do
+      result
+
+      expect(SendWebhookJob).to have_been_enqueued.with(
+        "dunning.attempt",
+        {
+          customer_id: customer.id,
+          dunning_campaign_id: dunning_campaign.id,
+          payment_request_id: result.payment_request.id,
+          attempt_position: customer.last_dunning_campaign_attempt,
+          max_attempt: dunning_campaign.max_attempt,
+          next_attempt_at: Time.zone.today + dunning_campaign.days_between_attempts.days
+        }
+      )
+    end
+
     context "when the campaign threshold is not reached" do
       let(:dunning_campaign_threshold) do
         create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 99_01
