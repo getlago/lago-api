@@ -43,6 +43,7 @@ class Organization < ApplicationRecord
   has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
   has_many :adyen_payment_providers, class_name: "PaymentProviders::AdyenProvider"
 
+  has_many :salesforce_integrations, class_name: "Integrations::SalesforceIntegration"
   has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
   has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
