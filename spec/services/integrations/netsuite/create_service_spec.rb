@@ -63,7 +63,6 @@ RSpec.describe Integrations::Netsuite::CreateService, type: :service do
           allow(Integrations::Aggregator::SendRestletEndpointJob).to receive(:perform_later)
           allow(Integrations::Aggregator::PerformSyncJob).to receive(:perform_later)
           allow(Integrations::Aggregator::FetchItemsJob).to receive(:perform_later)
-          allow(Integrations::Aggregator::FetchTaxItemsJob).to receive(:perform_later)
         end
 
         context 'without validation errors' do
