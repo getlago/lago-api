@@ -27,7 +27,6 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
   end
 
   def parents_less_than_children_migration
-    now = Time.current
     Plan.where(parent_id: nil).includes(:charges, children: :charges).find_each(batch_size: 500) do |parent_plan|
       next if parent_plan.children.empty?
       next if parent_plan.charges.empty?
@@ -36,11 +35,9 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
         assign_children_for_parent_charge(parent_charge, parent_plan.children, parent_plan)
       end
     end
-    puts 'Migration took: ' + (Time.current - now).to_s + ' seconds'
   end
 
   def children_less_than_parents_migration
-    now = Time.current
     Plan.where.not(parent_id: nil).order(:parent_id).includes(:charges, parent: :charges).in_batches(of: 2000).each do |plans_group|
       plans_group.group_by(&:parent).each do |parent_plan, children_plans|
         parent_plan.charges.each do |parent_charge|
@@ -48,7 +45,6 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
         end
       end
     end
-    puts 'Migration took: ' + (Time.current - now).to_s + ' seconds'
   end
 
   # find full matches in children plans and update parent_id (use update_all to not have separate requests)
@@ -58,37 +54,42 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
     return if charge_has_copy?(parent_charge, parent_plan, :full)
 
     children_charges = children_plans.flat_map(&:charges)
+    # find full charge matches
     full_match_ids = children_charges.select do |child_charge|
       child_charge.parent_id.nil? &&
         child_charge.charge_model == parent_charge.charge_model &&
         child_charge.billable_metric_id == parent_charge.billable_metric_id &&
         child_charge.properties == parent_charge.properties
     end.map(&:id)
-    Charge.where(id: full_match_ids).update_all(parent_id: parent_charge.id)
 
-    # process matching without properties
-    return if charge_has_copy?(parent_charge, parent_plan, :without_properties)
+    # find matching charges without properties
+    partial_match_ids = []
+    unless charge_has_copy?(parent_charge, parent_plan, :without_properties)
+      partial_match_ids = children_charges.select do |child_charge|
+        child_charge.parent_id.nil? &&
+          child_charge.charge_model == parent_charge.charge_model &&
+          child_charge.billable_metric_id == parent_charge.billable_metric_id
+      end.map(&:id)
+    end
 
-    partial_match_id = children_charges.select do |child_charge|
-      child_charge.parent_id.nil? &&
-        child_charge.charge_model == parent_charge.charge_model &&
-        child_charge.billable_metric_id == parent_charge.billable_metric_id
-    end.map(&:id)
-    Charge.where(id: partial_match_id).update_all(parent_id: parent_charge.id)
+    # write only once for all children charges
+    Charge.where(id: full_match_ids.concat(partial_match_ids)).update_all(parent_id: parent_charge.id) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def charge_has_copy?(parent_charge, parent_plan, mode)
     if mode == :full
-      parent_plan.charges.select do |charge|
+      parent_plan.charges.any? do |charge|
         charge.charge_model == parent_charge.charge_model &&
           charge.billable_metric_id == parent_charge.billable_metric_id &&
-          charge.properties == parent_charge.properties
-      end.count > 1
+          charge.properties == parent_charge.properties &&
+          charge.id != parent_charge.id
+      end
     elsif mode == :without_properties
-      parent_plan.charges.select do |charge|
+      parent_plan.charges.any? do |charge|
         charge.charge_model == parent_charge.charge_model &&
-          charge.billable_metric_id == parent_charge.billable_metric_id
-      end.count > 1
+          charge.billable_metric_id == parent_charge.billable_metric_id &&
+          charge.id != parent_charge.id
+      end
     end
   end
 end
