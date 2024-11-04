@@ -13,6 +13,7 @@ module V1
         recurring: model.recurring,
         created_at: model.created_at.iso8601,
         field_name: model.field_name,
+        expression: model.expression,
         active_subscriptions_count:,
         draft_invoices_count:,
         plans_count:

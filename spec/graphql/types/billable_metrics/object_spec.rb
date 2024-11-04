@@ -11,6 +11,7 @@ RSpec.describe Types::BillableMetrics::Object do
   it { is_expected.to have_field(:name).of_type('String!') }
   it { is_expected.to have_field(:description).of_type('String') }
   it { is_expected.to have_field(:aggregation_type).of_type('AggregationTypeEnum!') }
+  it { is_expected.to have_field(:expression).of_type('String') }
   it { is_expected.to have_field(:field_name).of_type('String') }
   it { is_expected.to have_field(:weighted_interval).of_type('WeightedIntervalEnum') }
   it { is_expected.to have_field(:filters).of_type('[BillableMetricFilter!]') }

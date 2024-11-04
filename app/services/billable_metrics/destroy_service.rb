@@ -10,6 +10,8 @@ module BillableMetrics
     def call
       return result.not_found_failure!(resource: 'billable_metric') unless metric
 
+      BillableMetrics::ExpressionCacheService.expire_cache(metric.organization.id, metric.code)
+
       draft_invoice_ids = Invoice.draft.joins(plans: [:billable_metrics])
         .where(billable_metrics: {id: metric.id}).distinct.pluck(:id)
 

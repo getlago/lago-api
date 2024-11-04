@@ -1,4 +1,15 @@
 GIT
+  remote: https://github.com/getlago/lago-expression.git
+  revision: a096edf11524bfda7d7f196ddb7722b6c5b8eeae
+  glob: expression-ruby/lago-expression.gemspec
+  specs:
+    lago-expression (0.0.1)
+      bigdecimal
+      rake (~> 13)
+      rake-compiler (~> 1.2)
+      rb_sys (~> 0.9.63)
+
+GIT
   remote: https://github.com/glebm/i18n-tasks.git
   revision: 2cba1093e3c555b6664f62604a2e2f2dfe6f1a6e
   specs:
@@ -640,6 +651,8 @@ GEM
       zeitwerk (~> 2.6)
     rainbow (3.1.1)
     rake (13.2.1)
+    rake-compiler (1.2.8)
+      rake
     ransack (4.1.1)
       activerecord (>= 6.1.5)
       activesupport (>= 6.1.5)
@@ -647,6 +660,7 @@ GEM
     rb-fsevent (0.11.2)
     rb-inotify (0.11.1)
       ffi (~> 1.0)
+    rb_sys (0.9.102)
     rbs (3.6.1)
       logger
     rdoc (6.7.0)
@@ -898,6 +912,7 @@ DEPENDENCIES
   kaminari-activerecord
   karafka (~> 2.4.0)
   karafka-web (~> 0.9.0)
+  lago-expression!
   lograge
   logstash-event
   money-rails

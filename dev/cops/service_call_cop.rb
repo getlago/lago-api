@@ -16,6 +16,7 @@ module Cops
       return unless inherits_base_service?(node)
       return unless call_method?(node)
       return unless node.arguments?
+      return if node.block_argument? && node.arguments.size == 1
 
       add_offense(node)
     end

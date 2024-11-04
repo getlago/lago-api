@@ -92,6 +92,24 @@ module Api
         )
       end
 
+      def evaluate_expression
+        result = ::BillableMetrics::EvaluateExpressionService.call(
+          expression: params[:expression],
+          event: expression_event_params[:event]
+        )
+
+        if result.success?
+          render(
+            json: ::V1::BillableMetricExpressionResultSerializer.new(
+              result,
+              root_name: "expression_result"
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def input_params
@@ -103,8 +121,17 @@ module Api
           :weighted_interval,
           :recurring,
           :field_name,
+          :expression,
           filters: [:key, {values: []}]
         )
+      end
+
+      def expression_event_params
+        params.permit(event: [
+          :code,
+          :timestamp,
+          properties: {}
+        ])
       end
     end
   end

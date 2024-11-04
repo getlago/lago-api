@@ -39,6 +39,11 @@ module BillableMetrics
         billable_metric.field_name = params[:field_name] if params.key?(:field_name)
         billable_metric.recurring = params[:recurring] if params.key?(:recurring)
         billable_metric.weighted_interval = params[:weighted_interval]&.to_sym if params.key?(:weighted_interval)
+        billable_metric.expression = params[:expression] if params.key?(:expression)
+
+        if params.key?(:expression) || params.key?(:field_name)
+          BillableMetrics::ExpressionCacheService.expire_cache(organization.id, billable_metric.code)
+        end
       end
 
       billable_metric.save!

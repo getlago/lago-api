@@ -21,6 +21,8 @@ module Events
       event.timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
+      pre_ingest(event)
+
       event.save! unless organization.clickhouse_events_store?
 
       result.event = event
@@ -38,6 +40,20 @@ module Events
     private
 
     attr_reader :organization, :params, :timestamp, :metadata
+
+    def pre_ingest(event)
+      field_name, expression = BillableMetrics::ExpressionCacheService.call(organization.id, event.code) do
+        bm = organization.billable_metrics.with_expression.find_by(code: event.code)
+        [bm&.field_name, bm&.expression]
+      end
+      return if expression.blank?
+
+      string_properties = event.properties.transform_values(&:to_s)
+      evaluation_event = Lago::Event.new(event.code, event.timestamp.to_i, string_properties)
+
+      value = Lago::ExpressionParser.parse(expression).evaluate(evaluation_event)
+      event.properties[field_name] = value
+    end
 
     def produce_kafka_event(event)
       return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?

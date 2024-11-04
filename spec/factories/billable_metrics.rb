@@ -9,6 +9,7 @@ FactoryBot.define do
     aggregation_type { 'count_agg' }
     recurring { false }
     properties { {} }
+    expression { "" }
 
     trait :recurring do
       recurring { true }

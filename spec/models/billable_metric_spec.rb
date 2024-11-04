@@ -71,6 +71,34 @@ RSpec.describe BillableMetric, type: :model do
     end
   end
 
+  describe '#validate_expression' do
+    let(:expression) { "" }
+    let(:billable_metric) { build(:max_billable_metric, expression:) }
+
+    it 'does not return an error if expression is blank' do
+      expect(billable_metric).to be_valid
+    end
+
+    context "with valid expression" do
+      let(:expression) { "1 + event.timestamp" }
+
+      it 'does not return an error' do
+        expect(billable_metric).to be_valid
+      end
+    end
+
+    context 'when expression is not valid' do
+      let(:expression) { "1+" }
+
+      it 'returns an error for expression' do
+        aggregate_failures do
+          expect(billable_metric).not_to be_valid
+          expect(billable_metric.errors.messages[:expression]).to include('invalid_expression')
+        end
+      end
+    end
+  end
+
   describe '#payable_in_advance?' do
     it do
       described_class::AGGREGATION_TYPES_PAYABLE_IN_ADVANCE.each do |agg|

@@ -89,6 +89,8 @@ gem "valvat", require: false
 # Data Export
 gem "csv", "~> 3.0"
 
+gem 'lago-expression', github: 'getlago/lago-expression', glob: 'expression-ruby/lago-expression.gemspec'
+
 group :development, :test, :staging do
   gem "factory_bot_rails"
   gem "faker"

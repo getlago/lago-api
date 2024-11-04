@@ -20,6 +20,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         description: "New metric description",
         organization_id: organization.id,
         aggregation_type: "count_agg",
+        expression: "1 + 2",
         recurring: false
       }
     end

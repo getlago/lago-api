@@ -15,7 +15,8 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       code: 'new_metric',
       description: 'New metric description',
       aggregation_type: 'sum_agg',
-      field_name: 'field_value'
+      field_name: 'field_value',
+      expression: '1 + 3'
     }.tap do |p|
       p[:filters] = filters unless filters.nil?
     end
@@ -34,6 +35,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         expect(metric.name).to eq('New Metric')
         expect(metric.code).to eq('new_metric')
         expect(metric.aggregation_type).to eq('sum_agg')
+        expect(metric.expression).to eq('1 + 3')
       end
     end
 

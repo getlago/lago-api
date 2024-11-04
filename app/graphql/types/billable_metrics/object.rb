@@ -15,6 +15,7 @@ module Types
       field :description, String
 
       field :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, null: false
+      field :expression, String, null: true
       field :field_name, String, null: true
       field :weighted_interval, Types::BillableMetrics::WeightedIntervalEnum, null: true
 
