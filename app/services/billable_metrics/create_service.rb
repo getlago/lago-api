@@ -23,6 +23,8 @@ module BillableMetrics
           recurring: args[:recurring] || false,
           aggregation_type: args[:aggregation_type]&.to_sym,
           field_name: args[:field_name],
+          rounding_function: args[:rounding_function]&.to_sym,
+          rounding_precision: args[:rounding_precision],
           weighted_interval: args[:weighted_interval]&.to_sym,
           expression: args[:expression]
         )

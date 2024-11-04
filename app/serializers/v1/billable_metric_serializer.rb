@@ -11,6 +11,8 @@ module V1
         aggregation_type: model.aggregation_type,
         weighted_interval: model.weighted_interval,
         recurring: model.recurring,
+        rounding_function: model.rounding_function,
+        rounding_precision: model.rounding_precision,
         created_at: model.created_at.iso8601,
         field_name: model.field_name,
         expression: model.expression,

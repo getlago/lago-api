@@ -24,4 +24,6 @@ RSpec.describe Types::BillableMetrics::Object do
   it { is_expected.to have_field(:deleted_at).of_type('ISO8601DateTime') }
   it { is_expected.to have_field(:updated_at).of_type('ISO8601DateTime!') }
   it { is_expected.to have_field(:integration_mappings).of_type('[Mapping!]') }
+  it { is_expected.to have_field(:rounding_function).of_type('RoundingFunctionEnum') }
+  it { is_expected.to have_field(:rounding_precision).of_type('Int') }
 end
