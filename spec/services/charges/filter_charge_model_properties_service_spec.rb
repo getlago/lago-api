@@ -24,9 +24,11 @@ RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
       per_transaction_max_amount: 100,
       per_transaction_min_amount: 10,
       volume_ranges: [{from_value: 0, to_value: 100, per_unit_amount: '2', flat_amount: '1'}],
-      custom_properties: {rate: '20'}
+      custom_properties:
     }
   end
+
+  let(:custom_properties) { {rate: '20'} }
 
   describe '#call' do
     context 'without charge_model' do
@@ -90,6 +92,21 @@ RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
       let(:billable_metric) { build(:custom_billable_metric) }
 
       it { expect(filter_service.call.properties.keys).to include('custom_properties') }
+      it { expect(filter_service.call.properties[:custom_properties]).to be_a(Hash) }
+
+      context 'when custom_properties is a string' do
+        let(:custom_properties) { '{"rate": 20}' }
+
+        it { expect(filter_service.call.properties.keys).to include('custom_properties') }
+        it { expect(filter_service.call.properties[:custom_properties]).to eq('rate' => 20) }
+
+        context 'when properties failed to parse' do
+          let(:custom_properties) { 'rate: 20' }
+
+          it { expect(filter_service.call.properties.keys).to include('custom_properties') }
+          it { expect(filter_service.call.properties[:custom_properties]).to eq({}) }
+        end
+      end
     end
   end
 end

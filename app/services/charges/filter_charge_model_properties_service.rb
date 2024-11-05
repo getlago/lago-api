@@ -11,6 +11,15 @@ module Charges
 
     def call
       result.properties = slice_properties || {}
+
+      if result.properties[:custom_properties].present? && result.properties[:custom_properties].is_a?(String)
+        result.properties[:custom_properties] = begin
+          JSON.parse(result.properties[:custom_properties])
+        rescue JSON::ParserError
+          {}
+        end
+      end
+
       result
     end
 
