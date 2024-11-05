@@ -11,7 +11,7 @@ module DunningCampaigns
 
     def call
       return result.forbidden_failure! unless organization.auto_dunning_enabled?
-      # TODO: At least one threshold currency/amount pair is needed
+      return result.validation_failure!(errors: {thresholds: ["can't be blank"]}) if params[:thresholds].blank?
 
       ActiveRecord::Base.transaction do
         if params[:applied_to_organization]
