@@ -7,7 +7,7 @@ else
   bundle exec rake db:create
   bundle exec rails db:migrate
 
-  if [ "$LAGO_CREATE_ORG" == "true" ]
+  if [ -v LAGO_CREATE_ORG ] && [ "$LAGO_CREATE_ORG" == "true" ]
   then
     bundle exec rails signup:seed_organization
   fi
