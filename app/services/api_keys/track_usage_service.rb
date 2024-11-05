@@ -9,7 +9,7 @@ module ApiKeys
 
         next unless last_used_at
 
-        api_key.update_columns(last_used_at:)
+        api_key.update_columns(last_used_at:) # rubocop:disable Rails/SkipsModelValidations
         Rails.cache.delete(cache_key)
       end
     end
