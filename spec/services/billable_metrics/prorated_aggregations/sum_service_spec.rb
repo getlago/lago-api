@@ -199,6 +199,31 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       expect(result.aggregation).to eq(9.64517)
       expect(result.current_usage_units).to eq(29)
     end
+
+    context 'when rounding is configured' do
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          organization:,
+          aggregation_type: 'sum_agg',
+          field_name: 'total_count',
+          recurring: true,
+          rounding_function: 'ceil',
+          rounding_precision: 2
+        )
+      end
+
+      before do
+        latest_events.last.update!(properties: {total_count: 12.434})
+      end
+
+      it 'aggregates the events' do
+        result = sum_service.aggregate(options:)
+
+        expect(result.aggregation).to eq(9.73)
+        expect(result.current_usage_units).to eq(29.44)
+      end
+    end
   end
 
   context 'when current usage context and charge is pay in advance' do
