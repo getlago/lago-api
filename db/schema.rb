@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_11_01_151559) do
+ActiveRecord::Schema[7.1].define(version: 2024_10_31_123415) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -107,7 +107,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_01_151559) do
     t.string "value", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.datetime "last_used_at"
+    t.datetime "expires_at"
     t.index ["organization_id"], name: "index_api_keys_on_organization_id"
     t.index ["value"], name: "index_api_keys_on_value", unique: true
   end
@@ -965,7 +965,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_01_151559) do
     t.boolean "custom_aggregation", default: false
     t.boolean "finalize_zero_amount_invoice", default: true, null: false
     t.boolean "clickhouse_events_store", default: false, null: false
+    t.string "hmac_key", null: false
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
+    t.index ["hmac_key"], name: "index_organizations_on_hmac_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
