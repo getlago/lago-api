@@ -390,7 +390,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
     end
 
-    context "when neither organizaiton nor customer has an applied dunning campaign" do
+    context "when neither organization nor customer has an applied dunning campaign" do
       let(:dunning_campaign) { create :dunning_campaign, organization:, applied_to_organization: false }
 
       let(:dunning_campaign_threshold) do
@@ -403,7 +403,6 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
 
       before do
-        dunning_campaign
         dunning_campaign_threshold
         invoice_1
       end
