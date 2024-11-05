@@ -54,4 +54,21 @@ RSpec.describe ApiKey, type: :model do
       end
     end
   end
+
+  describe '.active' do
+    subject { described_class.active }
+
+    let(:scoped) do
+      [
+        create(:api_key),
+        create(:api_key, :expiring)
+      ]
+    end
+
+    before { create(:api_key, :expired) }
+
+    it 'returns API keys with either no expiration or future expiration dates' do
+      expect(subject).to match_array scoped
+    end
+  end
 end

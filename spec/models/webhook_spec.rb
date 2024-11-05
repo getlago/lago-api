@@ -55,8 +55,8 @@ RSpec.describe Webhook, type: :model do
 
   describe '#hmac_signature' do
     it 'generates a correct hmac signature' do
-      api_key_value = webhook.organization.api_keys.first.value
-      hmac = OpenSSL::HMAC.digest('sha-256', api_key_value, webhook.payload.to_json)
+      hmac_key = webhook.organization.hmac_key
+      hmac = OpenSSL::HMAC.digest('sha-256', hmac_key, webhook.payload.to_json)
       base64_hmac = Base64.strict_encode64(hmac)
 
       expect(base64_hmac).to eq(webhook.hmac_signature)

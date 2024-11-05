@@ -139,6 +139,28 @@ RSpec.describe Organization, type: :model do
 
       expect(organization).not_to be_valid
     end
+
+    describe 'of hmac key uniqueness' do
+      before { create(:organization) }
+
+      it { is_expected.to validate_uniqueness_of(:hmac_key) }
+    end
+
+    describe 'of hmac key presence' do
+      subject { organization }
+
+      context 'with a new record' do
+        let(:organization) { build(:organization) }
+
+        it { is_expected.not_to validate_presence_of(:hmac_key) }
+      end
+
+      context 'with a persisted record' do
+        let(:organization) { create(:organization) }
+
+        it { is_expected.to validate_presence_of(:hmac_key) }
+      end
+    end
   end
 
   describe '#save' do
@@ -146,12 +168,22 @@ RSpec.describe Organization, type: :model do
 
     context 'with a new record' do
       let(:organization) { build(:organization) }
+      let(:used_hmac_key) { create(:organization).hmac_key }
+      let(:unique_hmac_key) { SecureRandom.uuid }
+
+      before do
+        allow(SecureRandom).to receive(:uuid).and_return(used_hmac_key, unique_hmac_key)
+      end
 
       it 'sets document number prefix of organization' do
         subject
 
         expect(organization.document_number_prefix)
           .to eq "#{organization.name.first(3).upcase}-#{organization.id.last(4).upcase}"
+      end
+
+      it 'sets unique hmac key' do
+        expect { subject }.to change(organization, :hmac_key).to unique_hmac_key
       end
     end
 
@@ -160,6 +192,10 @@ RSpec.describe Organization, type: :model do
 
       it 'does not change document number prefix of organization' do
         expect { subject }.not_to change(organization, :document_number_prefix)
+      end
+
+      it 'does not change the hmac key' do
+        expect { subject }.not_to change(organization, :hmac_key)
       end
     end
   end
@@ -198,6 +234,22 @@ RSpec.describe Organization, type: :model do
 
         it { is_expected.to eq(true) }
       end
+    end
+  end
+
+  describe '#admins' do
+    subject { organization.admins }
+
+    let(:organization) { create(:organization) }
+    let(:scoped) { create(:membership, organization:).user }
+
+    before do
+      create(:membership)
+      create(:membership, organization:, role: [:manager, :finance].sample)
+    end
+
+    it 'returns admins of the organization' do
+      expect(subject).to contain_exactly scoped
     end
   end
 end

@@ -1,6 +1,13 @@
 ---
 en:
   email:
+    api_key:
+      rotated:
+        access_warning: If you did not authorize this request, please reset your password and roll your API key immediately to secure your account.
+        change_notice: If someone from your team initiated this change, no further action is required. To keep your billing running smoothly, update your app to reference the new token as soon as possible.
+        email_info: You’re receiving this email because an API key has been rotated in your Lago instance, and you have admin privileges.
+        greetings: Your %{organization_name}'s API key has been rotated!
+        subject: Your Lago API key has been rolled
     credit_note:
       created:
         credit_note_from: Credit Note from %{organization_name}

@@ -20,6 +20,8 @@ RSpec.configure do |config|
 
   config.shared_context_metadata_behavior = :apply_to_host_groups
 
+  config.example_status_persistence_file_path = 'tmp/rspec_examples.txt'
+
   # NOTE: Database cleaner config to turn off/on transactional mode
   config.before(:suite) do
     DatabaseCleaner.clean_with(:deletion)

@@ -187,7 +187,7 @@ module Api
       private
 
       def create_params
-        @create_params if defined? @create_params
+        return @create_params if defined? @create_params
 
         @create_params =
           params.require(:invoice)

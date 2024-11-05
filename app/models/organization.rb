@@ -78,13 +78,20 @@ class Organization < ApplicationRecord
   validates :timezone, timezone: true
   validates :webhook_url, url: true, allow_nil: true
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
+  validates :hmac_key, uniqueness: true
+  validates :hmac_key, presence: true, on: :update
 
   validate :validate_email_settings
 
+  before_create :set_hmac_key
   after_create :generate_document_number_prefix
 
   PREMIUM_INTEGRATIONS.each do |premium_integration|
     scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
+  end
+
+  def admins
+    users.joins(:memberships).merge!(memberships.admin)
   end
 
   def logo_url
@@ -138,6 +145,13 @@ class Organization < ApplicationRecord
 
     errors.add(:email_settings, :unsupported_value)
   end
+
+  def set_hmac_key
+    loop do
+      self.hmac_key = SecureRandom.uuid
+      break unless self.class.exists?(hmac_key:)
+    end
+  end
 end
 
 # == Schema Information
@@ -161,6 +175,7 @@ end
 #  email_settings               :string           default([]), not null, is an Array
 #  eu_tax_management            :boolean          default(FALSE)
 #  finalize_zero_amount_invoice :boolean          default(TRUE), not null
+#  hmac_key                     :string           not null
 #  invoice_footer               :text
 #  invoice_grace_period         :integer          default(0), not null
 #  legal_name                   :string
@@ -180,5 +195,6 @@ end
 #
 # Indexes
 #
-#  index_organizations_on_api_key  (api_key) UNIQUE
+#  index_organizations_on_api_key   (api_key) UNIQUE
+#  index_organizations_on_hmac_key  (hmac_key) UNIQUE
 #
