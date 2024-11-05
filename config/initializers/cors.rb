@@ -14,6 +14,8 @@ Rails.application.config.middleware.insert_before(0, Rack::Cors) do
       end
 
       origins frontend_origin
+    elsif ENV.key?('LAGO_DOMAIN')
+      origins ENV['LAGO_DOMAIN']
     elsif Rails.env.development?
       origins 'app.lago.dev', 'api', 'lago.ngrok.dev'
     end
