@@ -4,7 +4,7 @@ module DataExports
   class ExportResourcesService < BaseService
     EXPIRED_FAILURE_MESSAGE = 'Data Export already expired'
     PROCESSED_FAILURE_MESSAGE = 'Data Export already processed'
-    DEFAULT_BATCH_SIZE = 100
+    DEFAULT_BATCH_SIZE = 20
 
     ResourceTypeNotSupportedError = Class.new(StandardError)
 

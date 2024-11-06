@@ -10,6 +10,7 @@ module DataExports
 
     def call
       result.data_export_part = data_export_part
+      return result if data_export_part.completed
 
       # produce CSV lines into StringIO
       export_result = data_export.export_class.call(data_export_part:).raise_if_error!
