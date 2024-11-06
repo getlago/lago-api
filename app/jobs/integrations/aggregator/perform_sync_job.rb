@@ -8,16 +8,13 @@ module Integrations
       retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 3
       retry_on RequestLimitError, wait: :polynomially_longer, attempts: 10
 
-      def perform(integration:, sync_tax_items: false)
+      def perform(integration:, sync_items: true)
         sync_result = Integrations::Aggregator::SyncService.call(integration:)
         sync_result.raise_if_error!
 
-        items_result = Integrations::Aggregator::ItemsService.call(integration:)
-        items_result.raise_if_error!
-
-        if sync_tax_items
-          tax_items_result = Integrations::Aggregator::TaxItemsService.call(integration:)
-          tax_items_result.raise_if_error!
+        if sync_items
+          items_result = Integrations::Aggregator::ItemsService.call(integration:)
+          items_result.raise_if_error!
         end
       end
     end
