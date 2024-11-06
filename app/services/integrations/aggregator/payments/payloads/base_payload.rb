@@ -35,7 +35,7 @@ module Integrations
           end
 
           def integration_customer
-            @integration_customer ||= invoice.customer&.integration_customers&.first
+            @integration_customer ||= invoice.customer&.integration_customers&.accounting_kind&.first
           end
         end
       end
