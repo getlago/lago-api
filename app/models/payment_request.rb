@@ -44,7 +44,7 @@ end
 #  id                           :uuid             not null, primary key
 #  amount_cents                 :bigint           default(0), not null
 #  amount_currency              :string           not null
-#  email                        :string           not null
+#  email                        :string
 #  payment_attempts             :integer          default(0), not null
 #  payment_status               :integer          default("pending"), not null
 #  ready_for_payment_processing :boolean          default(TRUE), not null
