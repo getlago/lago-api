@@ -101,6 +101,7 @@ module Customers
       )
 
       track_customer_created(customer)
+      SendWebhookJob.perform_later('customer.created', customer)
       result
     rescue BaseService::ServiceFailure => e
       result.single_validation_failure!(error_code: e.code)
@@ -195,6 +196,7 @@ module Customers
       )
 
       track_customer_created(customer)
+      SendWebhookJob.perform_later('customer.created', customer)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
