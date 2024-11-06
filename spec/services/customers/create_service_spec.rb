@@ -35,6 +35,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(SendWebhookJob).to receive(:perform_later)
       allow(CurrentContext).to receive(:source).and_return('api')
     end
 
@@ -89,6 +90,15 @@ RSpec.describe Customers::CreateService, type: :service do
         document_locale: billing[:document_locale],
         invoice_grace_period: nil
       )
+    end
+
+    it 'calls SendWebhookJob with customer.created' do
+      customer = customers_service.create_from_api(
+        organization:,
+        params: create_args
+      ).customer
+
+      expect(SendWebhookJob).to have_received(:perform_later).with('customer.created', customer)
     end
 
     it 'calls SegmentTrackJob' do
@@ -994,6 +1004,7 @@ RSpec.describe Customers::CreateService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(SendWebhookJob).to receive(:perform_later)
       allow(CurrentContext).to receive(:source).and_return('graphql')
     end
 
@@ -1020,6 +1031,11 @@ RSpec.describe Customers::CreateService, type: :service do
         expect(customer.shipping_state).to eq(shipping_address[:state])
         expect(customer.shipping_country).to eq(shipping_address[:country])
       end
+    end
+
+    it 'calls SendWebhookJob with customer.created' do
+      customer = customers_service.create(**create_args).customer
+      expect(SendWebhookJob).to have_received(:perform_later).with('customer.created', customer)
     end
 
     it 'calls SegmentTrackJob' do

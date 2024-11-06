@@ -153,7 +153,7 @@ module Customers
         customer: result.customer,
         new_customer: false
       )
-
+      SendWebhookJob.perform_later('customer.updated', customer)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

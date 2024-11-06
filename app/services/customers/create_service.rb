@@ -333,6 +333,7 @@ module Customers
           organization_id: customer.organization_id
         }
       )
+      SendWebhookJob.perform_later('customer.created', customer)
     end
 
     def should_create_billing_configuration?(billing, customer)
