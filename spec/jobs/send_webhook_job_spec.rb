@@ -499,6 +499,44 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook type is customer.created' do
+    let(:webhook_service) { instance_double(Webhooks::Customers::CreatedService) }
+    let(:customer) { create(:customer) }
+
+    before do
+      allow(Webhooks::Customers::CreatedService).to receive(:new)
+        .with(object: customer, options: {})
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the created webhook service' do
+      send_webhook_job.perform_now('customer.created', customer)
+
+      expect(Webhooks::Customers::CreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
+  context 'when webhook type is customer.updated' do
+    let(:webhook_service) { instance_double(Webhooks::Customers::UpdatedService) }
+    let(:customer) { create(:customer) }
+
+    before do
+      allow(Webhooks::Customers::UpdatedService).to receive(:new)
+        .with(object: customer, options: {})
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the updated webhook service' do
+      send_webhook_job.perform_now('customer.updated', customer)
+
+      expect(Webhooks::Customers::UpdatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook_type is payment_request.created' do
     let(:webhook_service) { instance_double(Webhooks::PaymentRequests::CreatedService) }
     let(:payment_request) { create(:payment_request) }

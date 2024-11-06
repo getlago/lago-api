@@ -1220,7 +1220,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_10_31_123415) do
     t.integer "source", default: 0, null: false
     t.integer "transaction_status", default: 0, null: false
     t.boolean "invoice_requires_successful_payment", default: false, null: false
-    t.jsonb "metadata", default: []
+    t.jsonb "metadata", default: {}
     t.uuid "credit_note_id"
     t.index ["credit_note_id"], name: "index_wallet_transactions_on_credit_note_id"
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"

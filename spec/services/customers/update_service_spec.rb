@@ -29,9 +29,10 @@ RSpec.describe Customers::UpdateService, type: :service do
       }
     end
 
-    it 'updates a customer' do
-      result = customers_service.call
+    it 'updates a customer and calls SendWebhookJob' do
+      allow(SendWebhookJob).to receive(:perform_later)
 
+      result = customers_service.call
       updated_customer = result.customer
       aggregate_failures do
         expect(updated_customer.name).to eq(update_args[:name])
@@ -42,6 +43,7 @@ RSpec.describe Customers::UpdateService, type: :service do
 
         shipping_address = update_args[:shipping_address]
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
+        expect(SendWebhookJob).to have_received(:perform_later).with('customer.updated', updated_customer)
       end
     end
 
