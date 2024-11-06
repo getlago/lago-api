@@ -3,12 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Integrations::Netsuite::CreateService, type: :service do
-  let(:service) { described_class.new(membership.user) }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
   describe '#call' do
-    subject(:service_call) { service.call(**create_args) }
+    subject(:service_call) { described_class.call(params: create_args) }
 
     let(:name) { 'Netsuite 1' }
     let(:script_endpoint_url) { Faker::Internet.url }

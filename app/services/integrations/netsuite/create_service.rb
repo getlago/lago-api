@@ -3,8 +3,16 @@
 module Integrations
   module Netsuite
     class CreateService < BaseService
-      def call(**args)
-        organization = Organization.find_by(id: args[:organization_id])
+      attr_reader :params
+
+      def initialize(params:)
+        @params = params
+
+        super
+      end
+
+      def call
+        organization = Organization.find_by(id: params[:organization_id])
 
         unless organization.premium_integrations.include?('netsuite')
           return result.not_allowed_failure!(code: 'premium_integration_missing')
@@ -12,19 +20,19 @@ module Integrations
 
         integration = Integrations::NetsuiteIntegration.new(
           organization:,
-          name: args[:name],
-          code: args[:code],
-          client_id: args[:client_id],
-          client_secret: args[:client_secret],
-          account_id: args[:account_id],
-          token_id: args[:token_id],
-          token_secret: args[:token_secret],
-          connection_id: args[:connection_id],
-          script_endpoint_url: args[:script_endpoint_url],
-          sync_credit_notes: ActiveModel::Type::Boolean.new.cast(args[:sync_credit_notes]),
-          sync_invoices: ActiveModel::Type::Boolean.new.cast(args[:sync_invoices]),
-          sync_payments: ActiveModel::Type::Boolean.new.cast(args[:sync_payments]),
-          sync_sales_orders: ActiveModel::Type::Boolean.new.cast(args[:sync_sales_orders])
+          name: params[:name],
+          code: params[:code],
+          client_id: params[:client_id],
+          client_secret: params[:client_secret],
+          account_id: params[:account_id],
+          token_id: params[:token_id],
+          token_secret: params[:token_secret],
+          connection_id: params[:connection_id],
+          script_endpoint_url: params[:script_endpoint_url],
+          sync_credit_notes: ActiveModel::Type::Boolean.new.cast(params[:sync_credit_notes]),
+          sync_invoices: ActiveModel::Type::Boolean.new.cast(params[:sync_invoices]),
+          sync_payments: ActiveModel::Type::Boolean.new.cast(params[:sync_payments]),
+          sync_sales_orders: ActiveModel::Type::Boolean.new.cast(params[:sync_sales_orders])
         )
 
         integration.save!
