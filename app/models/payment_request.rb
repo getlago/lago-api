@@ -10,7 +10,6 @@ class PaymentRequest < ApplicationRecord
   belongs_to :organization
   belongs_to :customer, -> { with_discarded }
 
-  validates :email, presence: true
   validates :amount_cents, presence: true
   validates :amount_currency, presence: true
 
