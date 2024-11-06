@@ -6,6 +6,10 @@ class PaymentRequestMailer < ApplicationMailer
   def requested
     @payment_request = params[:payment_request]
     @organization = @payment_request.organization
+
+    return if @payment_request.email.blank?
+    return if @organization.email.blank?
+
     @customer = @payment_request.customer
     @invoices = @payment_request.invoices
     @payment_url = ::PaymentRequests::Payments::GeneratePaymentUrlService.call(payable: @payment_request).payment_url

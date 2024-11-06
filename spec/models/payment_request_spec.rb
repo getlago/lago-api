@@ -31,11 +31,6 @@ RSpec.describe PaymentRequest, type: :model do
       expect(payment_request).to be_valid
     end
 
-    it "is not valid without email" do
-      payment_request.email = nil
-      expect(payment_request).not_to be_valid
-    end
-
     it "is not valid without amount_cents" do
       payment_request.amount_cents = nil
       expect(payment_request).not_to be_valid

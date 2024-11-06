@@ -8,7 +8,7 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
   let(:organization) { create(:organization, document_number_prefix: 'ORG-123B') }
   let(:first_invoice) { create(:invoice, total_amount_cents: 1000, organization:) }
   let(:second_invoice) { create(:invoice, total_amount_cents: 2000, organization:) }
-  let(:payment_request) { create(:payment_request, invoices: [first_invoice, second_invoice]) }
+  let(:payment_request) { create(:payment_request, organization:, invoices: [first_invoice, second_invoice]) }
 
   before do
     first_invoice.file.attach(
@@ -55,6 +55,24 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
       expect(PaymentRequests::Payments::GeneratePaymentUrlService)
         .to have_received(:call)
         .with(payable: payment_request)
+    end
+
+    context "when payment request email is nil" do
+      before { payment_request.update(email: nil) }
+
+      it "returns a mailer with nil values" do
+        mailer = payment_request_mailer.with(payment_request:).requested
+        expect(mailer.to).to be_nil
+      end
+    end
+
+    context "when organization email is nil" do
+      before { organization.update(email: nil) }
+
+      it "returns a mailer with nil values" do
+        mailer = payment_request_mailer.with(payment_request:).requested
+        expect(mailer.to).to be_nil
+      end
     end
 
     context "when no payment url is available" do
