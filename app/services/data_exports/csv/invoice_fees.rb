@@ -21,7 +21,7 @@ module DataExports
       end
 
       def call
-        result.csv_lines = ::CSV.generate(headers: false) do |csv|
+        result.csv_file = with_csv do |csv|
           invoices.each do |invoice|
             serialized_invoice = serializer_klass.new(invoice).serialize
 

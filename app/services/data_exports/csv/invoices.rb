@@ -15,7 +15,7 @@ module DataExports
       end
 
       def call
-        result.csv_lines = ::CSV.generate(headers: false) do |csv|
+        result.csv_file = with_csv do |csv|
           invoices.each do |invoice|
             csv << serialized_invoice(invoice)
           end
@@ -52,6 +52,14 @@ module DataExports
       end
 
       private
+
+      def with_csv
+        tempfile = Tempfile.create([data_export_part.id, ".csv"])
+        yield CSV.new(tempfile, headers: false)
+
+        tempfile.rewind
+        tempfile
+      end
 
       attr_reader :data_export_part, :serializer_klass, :output, :batch_size
 

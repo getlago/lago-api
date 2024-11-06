@@ -90,8 +90,11 @@ RSpec.describe DataExports::Csv::Invoices do
       CSV
 
       expect(result).to be_success
-      generated_csv = result.csv_lines
+      file = result.csv_file
+      generated_csv = file.read
 
+      file.close
+      File.unlink(file.path)
       expect(generated_csv).to eq(expected_csv)
     end
   end
