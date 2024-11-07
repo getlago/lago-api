@@ -9,7 +9,7 @@ RSpec.describe DataExports::ExportResourcesJob, type: :job do
   before do
     allow(DataExports::ExportResourcesService)
       .to receive(:call)
-      .with(data_export:, batch_size: 100)
+      .with(data_export:, batch_size: 20)
       .and_return(result)
   end
 
@@ -18,6 +18,6 @@ RSpec.describe DataExports::ExportResourcesJob, type: :job do
 
     expect(DataExports::ExportResourcesService)
       .to have_received(:call)
-      .with(data_export:, batch_size: 100)
+      .with(data_export:, batch_size: 20)
   end
 end
