@@ -38,8 +38,10 @@ module Integrations
             result
           end
 
-          def call_async
+          def call_async(send_webhook: false)
             return result.not_found_failure!(resource: 'invoice') unless invoice
+
+            SendWebhookJob.perform_later('invoice.resynced', invoice) if send_webhook
 
             ::Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice:)
 

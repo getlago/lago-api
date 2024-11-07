@@ -18,7 +18,7 @@ module Mutations
       def resolve(**args)
         invoice = current_organization.invoices.find_by(id: args[:invoice_id])
 
-        result = ::Integrations::Aggregator::Invoices::Crm::CreateService.call_async(invoice:)
+        result = ::Integrations::Aggregator::Invoices::Crm::CreateService.call_async(invoice:, send_webhooks: true)
         result.success? ? result.invoice_id : result_error(result)
         result
       end
