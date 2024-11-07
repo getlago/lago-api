@@ -12,11 +12,12 @@ module Mutations
         graphql_name 'SyncSalesforceInvoice'
         description 'Sync Salesforce invoice'
 
-        input_object_class Types::Integrations::SyncInvoiceInput
+        input_object_class Types::Integrations::Salesforce::SyncInvoiceInput
 
         field :invoice_id, ID, null: true
 
         def resolve(**args)
+          invoice = current_organization.invoices.find_by(id: args[:invoice_id])
           SendWebhookJob.perform_later('invoice.resynced', invoice)
         end
       end
