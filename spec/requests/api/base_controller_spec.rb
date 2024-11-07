@@ -12,6 +12,10 @@ RSpec.describe Api::BaseController, type: :controller do
       params.require(:input).permit(:value)
       render nothing: true
     end
+
+    def track_api_key_usage?
+      action_name.to_sym != :create
+    end
   end
 
   let(:api_key) { create(:api_key) }
@@ -24,7 +28,7 @@ RSpec.describe Api::BaseController, type: :controller do
     expect(CurrentContext.source).to eq 'api'
   end
 
-  describe 'authenticate' do
+  describe '#authenticate' do
     before do
       request.headers['Authorization'] = "Bearer #{api_key.value}"
       get :index
@@ -43,6 +47,32 @@ RSpec.describe Api::BaseController, type: :controller do
 
       it 'returns an authentication error' do
         expect(response).to have_http_status(:unauthorized)
+      end
+    end
+  end
+
+  describe '#track_api_key_usage', cache: :memory do
+    let(:api_key) { create(:api_key) }
+    let(:cache_key) { "api_key_last_used_#{api_key.id}" }
+
+    before do
+      request.headers['Authorization'] = "Bearer #{api_key.value}"
+      freeze_time
+    end
+
+    context 'when accessed trackable endpoint' do
+      subject { get :index }
+
+      it 'caches when API key was last used' do
+        expect { subject }.to change { Rails.cache.read(cache_key) }.to Time.current.iso8601
+      end
+    end
+
+    context 'when accessed non-trackable endpoint' do
+      subject { get :create }
+
+      it 'does not cache when API key was last used' do
+        expect { subject }.not_to change { Rails.cache.read(cache_key) }.from nil
       end
     end
   end

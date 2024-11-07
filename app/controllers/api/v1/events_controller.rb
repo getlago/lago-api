@@ -149,6 +149,10 @@ module Api
           ip_address: request.remote_ip
         }
       end
+
+      def track_api_key_usage?
+        action_name&.to_sym != :create
+      end
     end
   end
 end

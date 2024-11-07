@@ -32,7 +32,7 @@ RSpec.describe ApiKeyMailer, type: :mailer do
       subject { mail.body.to_s }
 
       it "includes organization's name" do
-        expect(subject).to include organization.name
+        expect(subject).to include CGI.escapeHTML(organization.name)
       end
     end
   end
