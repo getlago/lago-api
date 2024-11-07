@@ -48,4 +48,17 @@ FactoryBot.define do
       }
     end
   end
+
+  factory :hubspot_customer, class: 'IntegrationCustomers::SalesforceCustomer' do
+    association :integration, factory: :salesforce_integration
+    customer
+    type { 'IntegrationCustomers::HubspotCustomer' }
+    external_customer_id { SecureRandom.uuid }
+
+    settings do
+      {
+        sync_with_provider: false,
+      }
+    end
+  end
 end

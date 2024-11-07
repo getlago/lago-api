@@ -34,6 +34,8 @@ module IntegrationCustomers
         'IntegrationCustomers::XeroCustomer'
       when 'hubspot'
         'IntegrationCustomers::HubspotCustomer'
+      when 'salesforce'
+        'IntegrationCustomers::SalesforceCustomer'
       else
         raise(NotImplementedError)
       end
