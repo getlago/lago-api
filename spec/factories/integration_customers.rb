@@ -57,7 +57,7 @@ FactoryBot.define do
 
     settings do
       {
-        sync_with_provider: false,
+        sync_with_provider: false
       }
     end
   end
