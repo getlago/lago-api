@@ -52,7 +52,7 @@ FactoryBot.define do
   factory :salesforce_customer, class: 'IntegrationCustomers::SalesforceCustomer' do
     association :integration, factory: :salesforce_integration
     customer
-    type { 'IntegrationCustomers::HubspotCustomer' }
+    type { 'IntegrationCustomers::SalesforceCustomer' }
     external_customer_id { SecureRandom.uuid }
 
     settings do
