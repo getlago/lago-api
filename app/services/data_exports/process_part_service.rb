@@ -10,10 +10,15 @@ module DataExports
 
     def call
       result.data_export_part = data_export_part
+      return result if data_export_part.completed
 
       # produce CSV lines into StringIO
       export_result = data_export.export_class.call(data_export_part:).raise_if_error!
-      data_export_part.update!(csv_lines: export_result.csv_lines, completed: true)
+      file = export_result.csv_file
+      data_export_part.update!(csv_lines: file.read, completed: true)
+      # Explicitely close and unlink the file
+      file.close
+      File.unlink(file.path)
 
       # check if we are the last one to finish
       if last_completed
