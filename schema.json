@@ -20790,6 +20790,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "salesforce",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -30643,6 +30649,12 @@
             },
             {
               "name": "revenue_analytics",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "salesforce",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
