@@ -20,7 +20,7 @@ module Api
     def authenticate
       return unauthorized_error unless auth_token
 
-      @current_api_key = ApiKey.active.find_by(value: auth_token)
+      @current_api_key = ApiKey.find_by(value: auth_token)
 
       return unauthorized_error unless current_api_key
 

@@ -15,7 +15,7 @@ module Mutations
       type Types::ApiKeys::Object
 
       def resolve(id:)
-        api_key = context[:current_organization].api_keys.active.find_by(id:)
+        api_key = context[:current_organization].api_keys.find_by(id:)
         result = ::ApiKeys::RotateService.call(api_key)
 
         result.success? ? result.api_key : result_error(result)

@@ -6,6 +6,7 @@ module Types
       graphql_name 'ApiKey'
 
       field :id, ID, null: false
+      field :name, String, null: true
       field :value, String, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

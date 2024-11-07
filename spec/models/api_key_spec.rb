@@ -55,8 +55,8 @@ RSpec.describe ApiKey, type: :model do
     end
   end
 
-  describe '.active' do
-    subject { described_class.active }
+  describe 'default_scope' do
+    subject { described_class.all }
 
     let(:scoped) do
       [

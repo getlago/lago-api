@@ -7,7 +7,7 @@ RSpec.describe ApiKeys::RotateService, type: :service do
     subject(:service_result) { described_class.call(api_key) }
 
     context 'when API key is provided' do
-      let!(:api_key) { create(:api_key) }
+      let(:api_key) { create(:api_key) }
       let(:organization) { api_key.organization }
 
       it 'expires the API key' do
