@@ -4,15 +4,15 @@ module Integrations
   module Aggregator
     module Invoices
       class BaseService < Integrations::Aggregator::BaseService
-        def initialize(invoice:)
+        def initialize(invoice:, send_webhook: false)
           @invoice = invoice
-
+          @send_webhook = send_webhook
           super(integration:)
         end
 
         private
 
-        attr_reader :invoice
+        attr_reader :invoice, :send_webhook
 
         delegate :customer, to: :invoice, allow_nil: true
 
