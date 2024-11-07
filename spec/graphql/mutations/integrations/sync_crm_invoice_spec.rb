@@ -52,7 +52,7 @@ RSpec.describe Mutations::Integrations::SyncCrmInvoice, type: :graphql do
 
   it 'syncs an invoice' do
     aggregate_failures do
-      expect(::Integrations::Aggregator::Invoices::Crm::CreateService).to have_received(:new).with(invoice:)
+      expect(::Integrations::Aggregator::Invoices::Crm::CreateService).to have_received(:new).with(invoice:, send_webhook: true)
       expect(service).to have_received(:call_async)
     end
   end
