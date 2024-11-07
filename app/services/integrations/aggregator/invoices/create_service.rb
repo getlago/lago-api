@@ -51,6 +51,7 @@ module Integrations
         def call_async
           return result.not_found_failure!(resource: 'invoice') unless invoice
 
+          SendWebhookJob.perform_later('invoice.resynced', invoice) if send_webhook
           ::Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:)
 
           result.invoice_id = invoice.id

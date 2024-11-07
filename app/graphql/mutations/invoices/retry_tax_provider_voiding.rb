@@ -16,7 +16,7 @@ module Mutations
 
       def resolve(**args)
         invoice = current_organization.invoices.visible.find_by(id: args[:id])
-        result = ::Invoices::ProviderTaxes::VoidService.call(invoice:, send_webhook: true)
+        result = ::Invoices::ProviderTaxes::VoidService.call(invoice:)
 
         result.success? ? result.invoice : result_error(result)
       end
