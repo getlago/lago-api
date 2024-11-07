@@ -28,18 +28,15 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       'type' => 'customerpayment',
       'isDynamic' => true,
       'columns' => {
-        'customer' => integration_customer.external_customer_id
+        'customer' => integration_customer.external_customer_id,
+        'payment' => payment.amount_cents.div(100).to_f,
+        'autoapply' => true
       },
-      'lines' => [
+      'applyTransactions' => [
         {
-          'sublistId' => 'apply',
-          'lineItems' => [
-            {
-              'doc' => integration_invoice.external_id,
-              'apply' => true,
-              'amount' => payment.amount_cents.div(100).to_f
-            }
-          ]
+          'internalId' => integration_invoice.external_id,
+          'apply' => true,
+          'amount' => payment.amount_cents.div(100).to_f
         }
       ],
       'options' => {
