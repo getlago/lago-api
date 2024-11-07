@@ -13,6 +13,7 @@ class ApiKey < ApplicationRecord
   default_scope { active }
 
   scope :active, -> { where('expires_at IS NULL OR expires_at > ?', Time.current) }
+  scope :non_expiring, -> { where(expires_at: nil) }
 
   private
 

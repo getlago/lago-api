@@ -58,7 +58,7 @@ RSpec.describe ApiKey, type: :model do
   describe 'default_scope' do
     subject { described_class.all }
 
-    let(:scoped) do
+    let!(:scoped) do
       [
         create(:api_key),
         create(:api_key, :expiring)
@@ -69,6 +69,18 @@ RSpec.describe ApiKey, type: :model do
 
     it 'returns API keys with either no expiration or future expiration dates' do
       expect(subject).to match_array scoped
+    end
+  end
+
+  describe '.non_expiring' do
+    subject { described_class.non_expiring }
+
+    let!(:scoped) { create(:api_key) }
+
+    before { create(:api_key, :expiring) }
+
+    it 'returns API keys with no expiration date' do
+      expect(subject).to contain_exactly scoped
     end
   end
 end
