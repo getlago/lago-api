@@ -10,19 +10,15 @@ module Integrations
               'type' => 'customerpayment',
               'isDynamic' => true,
               'columns' => {
-                'customer' => integration_customer.external_customer_id
+                'customer' => integration_customer.external_customer_id,
+                'payment' => amount(payment.amount_cents, resource: invoice),
+                'autoapply' => true
               },
-              'lines' => [
+              'applyTransactions' => [
                 {
-                  'sublistId' => 'apply',
-                  'lineItems' => [
-                    {
-                      # If the invoice is not synced yet, lets raise an error and retry. (doc: nil is an invalid request)
-                      'doc' => integration_invoice&.external_id,
-                      'apply' => true,
-                      'amount' => amount(payment.amount_cents, resource: invoice)
-                    }
-                  ]
+                  'internalId' => integration_invoice&.external_id,
+                  'apply' => true,
+                  'amount' => amount(payment.amount_cents, resource: invoice)
                 }
               ],
               'options' => {
