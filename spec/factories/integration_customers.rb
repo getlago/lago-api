@@ -49,7 +49,7 @@ FactoryBot.define do
     end
   end
 
-  factory :hubspot_customer, class: 'IntegrationCustomers::SalesforceCustomer' do
+  factory :salesforce_customer, class: 'IntegrationCustomers::SalesforceCustomer' do
     association :integration, factory: :salesforce_integration
     customer
     type { 'IntegrationCustomers::HubspotCustomer' }
