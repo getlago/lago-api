@@ -38,7 +38,7 @@ module Integrations
             result
           end
 
-          def call_async(send_webhook: false)
+          def call_async
             return result.not_found_failure!(resource: 'invoice') unless invoice
 
             SendWebhookJob.perform_later('invoice.resynced', invoice) if send_webhook
