@@ -51,10 +51,6 @@ RSpec.describe DataExports::Csv::InvoiceFees do
     instance_double('V1::FeeSerializer', serialize: serialized_fee)
   end
 
-  let(:subscription_serializer) do
-    instance_double('V1::SubscriptionSerializer', serialize: serialized_subscription)
-  end
-
   let(:invoice) { create :invoice }
   let(:fee) { create :fee, invoice: }
 
@@ -88,14 +84,6 @@ RSpec.describe DataExports::Csv::InvoiceFees do
     }
   end
 
-  let(:serialized_subscription) do
-    {
-      lago_id: "80ebcc26-3703-4577-b13e-765591255df4",
-      external_id: "ff6c279c-9f6c-4962-987e-270936d52310",
-      plan_code: "all_charges"
-    }
-  end
-
   before do
     invoice
     fee
@@ -107,10 +95,6 @@ RSpec.describe DataExports::Csv::InvoiceFees do
     allow(fee_serializer_klass)
       .to receive(:new)
       .and_return(fee_serializer)
-
-    allow(subscription_serializer_klass)
-      .to receive(:new)
-      .and_return(subscription_serializer)
   end
 
   describe '#call' do
@@ -118,14 +102,13 @@ RSpec.describe DataExports::Csv::InvoiceFees do
       described_class.new(
         data_export_part:,
         invoice_serializer_klass:,
-        fee_serializer_klass:,
-        subscription_serializer_klass:
+        fee_serializer_klass:
       ).call
     end
 
     it 'generates the correct CSV output' do
       expected_csv = <<~CSV
-        292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,cc16e6d5-b5e1-4e2c-9ad3-62b3ee4be302,charge,group,group,charge 1 description,group,Converted to EUR,"{:models=>""model_1""}",ff6c279c-9f6c-4962-987e-270936d52310,all_charges,2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,USD,100.0,10.0,50,10000
+        292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,cc16e6d5-b5e1-4e2c-9ad3-62b3ee4be302,charge,group,group,charge 1 description,group,Converted to EUR,"{:models=>""model_1""}",#{fee.subscription.external_id},#{fee.subscription.plan.code},2024-05-08T00:00:00+00:00,2024-06-06T12:48:59+00:00,USD,100.0,10.0,50,10000
       CSV
 
       expect(result).to be_success

@@ -11,13 +11,11 @@ module DataExports
       def initialize(
         data_export_part:,
         invoice_serializer_klass: V1::InvoiceSerializer,
-        fee_serializer_klass: V1::FeeSerializer,
-        subscription_serializer_klass: V1::SubscriptionSerializer
+        fee_serializer_klass: V1::FeeSerializer
       )
         super(data_export_part:, serializer_klass: invoice_serializer_klass)
 
         @fee_serializer_klass = fee_serializer_klass
-        @subscription_serializer_klass = subscription_serializer_klass
       end
 
       def call
@@ -41,7 +39,7 @@ module DataExports
               .each do |fee|
               serialized_fee = fee_serializer_klass.new(fee).serialize
 
-              serialized_subscription = fee.subscription ? subscription_serializer_klass.new(fee.subscription).serialize : {}
+              serialized_subscription = fee.subscription ? {external_id: fee.subscription.external_id, plan_code: fee.subscription.plan.code} : {}
 
               csv << [
                 serialized_invoice[:lago_id],
