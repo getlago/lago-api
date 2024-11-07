@@ -4254,6 +4254,7 @@ enum IntegrationTypeEnum {
   okta
   progressive_billing
   revenue_analytics
+  salesforce
   xero
 }
 
@@ -6060,6 +6061,7 @@ enum PremiumIntegrationTypeEnum {
   okta
   progressive_billing
   revenue_analytics
+  salesforce
   xero
 }
 

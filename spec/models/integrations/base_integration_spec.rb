@@ -95,6 +95,12 @@ RSpec.describe Integrations::BaseIntegration, type: :model do
       end
     end
 
+    context 'when type is salesforce' do
+      it 'returns the correct class name' do
+        expect(described_class.integration_type('salesforce')).to eq('Integrations::SalesforceIntegration')
+      end
+    end
+
     context 'when type is unknown' do
       it 'raises a NotImplementedError' do
         expect { described_class.integration_type('unknown') }.to raise_error(NotImplementedError)

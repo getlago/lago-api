@@ -77,4 +77,15 @@ FactoryBot.define do
       {connection_id: SecureRandom.uuid}.to_json
     end
   end
+
+  factory :salesforce_integration, class: 'Integrations::SalesforceIntegration' do
+    organization
+    type { 'Integrations::SalesforceIntegration' }
+    code { 'salesforce' }
+    name { 'Salesforce Integration' }
+
+    settings do
+      {instance_id: SecureRandom.uuid}
+    end
+  end
 end
