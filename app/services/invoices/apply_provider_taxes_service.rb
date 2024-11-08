@@ -59,10 +59,6 @@ module Invoices
 
       output = {}
       provider_taxes.each do |fee_taxes|
-        # fee_taxes.tax_breakdown would only include client-facing tax breakdowns,
-        # so if they should pay nothing, we don't need to create any client-facing taxes
-        next if fee_taxes.tax_breakdown.empty?
-
         fee_taxes.tax_breakdown.each do |tax|
           key = calculate_key(tax)
 

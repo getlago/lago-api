@@ -74,15 +74,22 @@ module Integrations
                 type: b['type']
               )
             elsif b['rate']
-              # If there are taxes, that client shouldn't pay, we don't need to show them
-              next if taxes_to_pay.zero?
-
-              OpenStruct.new(
-                name: b['name'],
-                rate: b['rate'],
-                tax_amount: b['tax_amount'],
-                type: b['type']
-              )
+              # If there are taxes, that client shouldn't pay, we nullify the taxes
+              if taxes_to_pay.zero?
+                OpenStruct.new(
+                  name: 'Tax',
+                  rate: '0.00',
+                  tax_amount: 0,
+                  type: 'tax'
+                )
+              else
+                OpenStruct.new(
+                  name: b['name'],
+                  rate: b['rate'],
+                  tax_amount: b['tax_amount'],
+                  type: b['type']
+                )
+              end
             else
               OpenStruct.new(
                 name: humanize_tax_name(b['reason'].presence || b['type'] || 'unknown_taxation'),
@@ -91,7 +98,7 @@ module Integrations
                 type: b['type'] || 'unknown_taxation'
               )
             end
-          end.compact
+          end
         end
 
         def retrieve_error_details(validation_error)

@@ -184,8 +184,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             result = service_call
             aggregate_failures do
               expect(result).to be_success
-              expect(result.fees.first['tax_breakdown']).to be_empty
-              expect(result.fees.first['tax_amount_cents']).to eq(0)
+              expect(result.fees.first['tax_breakdown'].last['name']).to eq('Tax')
+              expect(result.fees.first['tax_breakdown'].last['type']).to eq('tax')
+              expect(result.fees.first['tax_breakdown'].last['rate']).to eq('0.00')
+              expect(result.fees.first['tax_breakdown'].last['tax_amount']).to eq(0)
             end
           end
         end

@@ -12,9 +12,6 @@ module Fees
     def call
       result.applied_taxes = []
       return result if fee.applied_taxes.any?
-      # fee_taxes.tax_breakdown would only include client-facing tax breakdowns,
-      # so if they should pay nothing, we don't need to create any client-facing taxes
-      return result if fee_taxes.tax_breakdown.empty?
 
       applied_taxes_amount_cents = 0
       applied_precise_taxes_amount_cents = 0.to_d

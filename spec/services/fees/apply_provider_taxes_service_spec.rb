@@ -81,7 +81,7 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
         let(:fee_taxes) do
           OpenStruct.new(
             tax_amount_cents: 0,
-            tax_breakdown: []
+            tax_breakdown: [  OpenStruct.new(name: 'Tax', type: 'tax', rate: '0.00', tax_amount: 0) ]
           )
         end
 
@@ -92,12 +92,11 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
             expect(result).to be_success
 
             applied_taxes = result.applied_taxes
-            expect(applied_taxes.count).to eq(0)
+            expect(applied_taxes.count).to eq(1)
             expect(fee).to have_attributes(
               taxes_amount_cents: 0,
               taxes_precise_amount_cents: 0.0,
-              taxes_rate: 0,
-              taxes_base_rate: 0.0
+              taxes_rate: 0
             )
           end
         end
