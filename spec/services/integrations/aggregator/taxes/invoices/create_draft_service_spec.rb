@@ -172,7 +172,25 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             end
           end
         end
+
+        context 'when taxes are paid by seller' do
+          let(:body) do
+            path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_seller_pays_taxes.json')
+            File.read(path)
+          end
+
+          it 'returns fee object with empty tax breakdown' do
+            result = service_call
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.fees.first['tax_breakdown']).to be_empty
+              expect(result.fees.first['tax_amount_cents']).to eq(0)
+            end
+          end
+
+        end
       end
+
 
       context 'when taxes are not successfully fetched' do
         let(:body) do

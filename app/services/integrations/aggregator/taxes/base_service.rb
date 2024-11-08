@@ -52,7 +52,7 @@ module Integrations
                 item_code: fee['item_code'],
                 amount_cents: fee['amount_cents'],
                 tax_amount_cents: taxes_to_pay,
-                tax_breakdown: tax_breakdown(fee['tax_breakdown'],  taxes_to_pay)
+                tax_breakdown: tax_breakdown(fee['tax_breakdown'], taxes_to_pay)
               )
             end
             result.succeeded_id = body['succeededInvoices'].first['id']
@@ -64,10 +64,7 @@ module Integrations
           end
         end
 
-        def tax_breakdown(breakdown,  taxes_to_pay)
-          # If there are no taxes to pay, we don't need to create any client-facing taxes
-          return [] if taxes_to_pay.zero?
-
+        def tax_breakdown(breakdown, taxes_to_pay)
           breakdown.map do |b|
             if SPECIAL_TAXATION_TYPES.include?(b['type'])
               OpenStruct.new(
@@ -77,6 +74,9 @@ module Integrations
                 type: b['type']
               )
             elsif b['rate']
+            # If there are taxes, that client shouldn't pay, we don't need to show them
+              next if taxes_to_pay.zero?
+
               OpenStruct.new(
                 name: b['name'],
                 rate: b['rate'],
@@ -91,7 +91,7 @@ module Integrations
                 type: b['type'] || 'unknown_taxation'
               )
             end
-          end
+          end.compact
         end
 
         def retrieve_error_details(validation_error)
