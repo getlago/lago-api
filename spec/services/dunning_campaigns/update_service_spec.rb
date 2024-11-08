@@ -87,6 +87,13 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
                 .to(false)
             end
           end
+
+          it "stops and resets counters on customers" do
+            customer = create(:customer, organization:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at: Time.current)
+
+            expect { result }.to change { customer.reload.last_dunning_campaign_attempt }.from(1).to(0)
+              .and change { customer.last_dunning_campaign_attempt_at }.from(a_value).to(nil)
+          end
         end
 
         context "with no dunning campaign record" do
