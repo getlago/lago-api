@@ -188,10 +188,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
               expect(result.fees.first['tax_amount_cents']).to eq(0)
             end
           end
-
         end
       end
-
 
       context 'when taxes are not successfully fetched' do
         let(:body) do
