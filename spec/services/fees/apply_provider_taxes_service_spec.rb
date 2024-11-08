@@ -10,8 +10,10 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
 
   let(:invoice) { create(:invoice, organization:, customer:) }
 
-  let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, precise_coupons_amount_cents:,
-                     taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0, taxes_base_rate: 0.0) }
+  let(:fee) do
+    create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, precise_coupons_amount_cents:,
+      taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0, taxes_base_rate: 0.0)
+  end
   let(:precise_coupons_amount_cents) { 0 }
 
   let(:fee_taxes) do
@@ -78,8 +80,8 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
       context 'when taxes are paid by the seller' do
         let(:fee_taxes) do
           OpenStruct.new(
-          tax_amount_cents: 0,
-          tax_breakdown: []
+            tax_amount_cents: 0,
+            tax_breakdown: []
           )
         end
 
@@ -92,14 +94,13 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
             applied_taxes = result.applied_taxes
             expect(applied_taxes.count).to eq(0)
             expect(fee).to have_attributes(
-                             taxes_amount_cents: 0,
-                             taxes_precise_amount_cents: 0.0,
-                             taxes_rate: 0,
-                             taxes_base_rate: 0.0
-                           )
+              taxes_amount_cents: 0,
+              taxes_precise_amount_cents: 0.0,
+              taxes_rate: 0,
+              taxes_base_rate: 0.0
+            )
           end
         end
-
       end
     end
 

@@ -74,7 +74,7 @@ module Integrations
                 type: b['type']
               )
             elsif b['rate']
-            # If there are taxes, that client shouldn't pay, we don't need to show them
+              # If there are taxes, that client shouldn't pay, we don't need to show them
               next if taxes_to_pay.zero?
 
               OpenStruct.new(
