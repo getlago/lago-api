@@ -81,7 +81,7 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
         let(:fee_taxes) do
           OpenStruct.new(
             tax_amount_cents: 0,
-            tax_breakdown: [  OpenStruct.new(name: 'Tax', type: 'tax', rate: '0.00', tax_amount: 0) ]
+            tax_breakdown: [OpenStruct.new(name: 'Tax', type: 'tax', rate: '0.00', tax_amount: 0)]
           )
         end
 
