@@ -97,6 +97,15 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
       end
     end
 
+    context 'when type is salesforce' do
+      let(:type) { 'salesforce' }
+      let(:customer_type) { 'IntegrationCustomers::SalesforceCustomer' }
+
+      it 'returns customer type' do
+        expect(subject).to eq(customer_type)
+      end
+    end
+
     context 'when type is not supported' do
       let(:type) { 'n/a' }
 
