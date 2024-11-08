@@ -75,6 +75,7 @@ module Types
     field :sync_crm_integration_invoice, mutation: Mutations::Integrations::SyncCrmInvoice
     field :sync_integration_credit_note, mutation: Mutations::Integrations::SyncCreditNote
     field :sync_integration_invoice, mutation: Mutations::Integrations::SyncInvoice
+    field :sync_salesforce_invoice, mutation: Mutations::Integrations::Salesforce::SyncInvoice
 
     field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download

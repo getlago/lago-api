@@ -97,6 +97,24 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context 'when webhook_type is invoice.resynced' do
+    let(:webhook_service) { instance_double(Webhooks::Invoices::ResyncedService) }
+
+    before do
+      allow(Webhooks::Invoices::ResyncedService).to receive(:new)
+        .with(object: invoice, options: {})
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it 'calls the webhook invoice resynced service' do
+      send_webhook_job.perform_now('invoice.resynced', invoice)
+
+      expect(Webhooks::Invoices::ResyncedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context 'when webhook_type is event' do
     let(:webhook_service) { instance_double(Webhooks::Events::ErrorService) }
     let(:object) do
