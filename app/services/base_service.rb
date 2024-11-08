@@ -156,6 +156,10 @@ class BaseService
     end
   end
 
+  def self.call!(*, **, &)
+    call(*, **, &).raise_if_error!
+  end
+
   def initialize(args = nil)
     @result = Result.new
     @source = CurrentContext&.source

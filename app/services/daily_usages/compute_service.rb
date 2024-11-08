@@ -14,7 +14,7 @@ module DailyUsages
         return result
       end
 
-      daily_usage = DailyUsage.create!(
+      daily_usage = DailyUsage.new(
         organization: subscription.organization,
         customer: subscription.customer,
         subscription:,
@@ -24,6 +24,9 @@ module DailyUsages
         to_datetime: current_usage.to_datetime,
         refreshed_at: timestamp
       )
+
+      daily_usage.usage_diff = diff_usage(daily_usage)
+      daily_usage.save!
 
       result.daily_usage = daily_usage
       result
@@ -46,6 +49,10 @@ module DailyUsages
     def existing_daily_usage
       @existing_daily_usage ||= DailyUsage.refreshed_at_in_timezone(timestamp)
         .find_by(subscription_id: subscription.id)
+    end
+
+    def diff_usage(daily_usage)
+      DailyUsages::ComputeDiffService.call!(daily_usage:).usage_diff
     end
   end
 end

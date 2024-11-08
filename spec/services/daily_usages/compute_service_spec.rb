@@ -23,7 +23,8 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
           customer_id: customer.id,
           subscription_id: subscription.id,
           external_subscription_id: subscription.external_id,
-          usage: Hash
+          usage: Hash,
+          usage_diff: Hash
         )
         expect(daily_usage.refreshed_at).to match_datetime(timestamp)
         expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
