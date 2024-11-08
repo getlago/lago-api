@@ -10,6 +10,8 @@ class ApiKey < ApplicationRecord
   validates :value, uniqueness: true
   validates :value, presence: true, on: :update
 
+  default_scope { active }
+
   scope :active, -> { where('expires_at IS NULL OR expires_at > ?', Time.current) }
 
   private
@@ -29,6 +31,7 @@ end
 #  id              :uuid             not null, primary key
 #  expires_at      :datetime
 #  last_used_at    :datetime
+#  name            :string
 #  value           :string           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null

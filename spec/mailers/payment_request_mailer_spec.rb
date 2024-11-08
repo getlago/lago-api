@@ -42,8 +42,8 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
 
       expect(mailer.to).to eq([payment_request.email])
       expect(mailer.reply_to).to eq([payment_request.organization.email])
-      expect(mailer.body.encoded).to include(first_invoice.number)
-      expect(mailer.body.encoded).to include(second_invoice.number)
+      expect(mailer.body.encoded).to include(CGI.escapeHTML(first_invoice.number))
+      expect(mailer.body.encoded).to include(CGI.escapeHTML(second_invoice.number))
     end
 
     it "calls the generate payment url service" do

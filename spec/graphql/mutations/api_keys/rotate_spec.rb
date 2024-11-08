@@ -36,7 +36,7 @@ RSpec.describe Mutations::ApiKeys::Rotate, type: :graphql do
 
     it 'returns newly created api key' do
       api_key_response = result['data']['rotateApiKey']
-      new_api_key = membership.organization.api_keys.active.last
+      new_api_key = membership.organization.api_keys.last
 
       aggregate_failures do
         expect(api_key_response['id']).to eq(new_api_key.id)

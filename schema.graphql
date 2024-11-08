@@ -181,6 +181,7 @@ type ApiKey {
   expiresAt: ISO8601DateTime
   id: ID!
   lastUsedAt: ISO8601DateTime
+  name: String
   value: String!
 }
 
@@ -6819,6 +6820,7 @@ type SanitizedApiKey {
   expiresAt: ISO8601DateTime
   id: ID!
   lastUsedAt: ISO8601DateTime
+  name: String
   value: String!
 }
 
