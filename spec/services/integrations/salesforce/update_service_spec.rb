@@ -2,29 +2,20 @@
 
 require 'rails_helper'
 
-RSpec.describe Integrations::Salesforce::CreateService, type: :service do
-  let(:membership) { create(:membership) }
+RSpec.describe Integrations::Salesforce::UpdateService, type: :service do
+  let(:integration) { create(:salesforce_integration, organization:) }
   let(:organization) { membership.organization }
+  let(:membership) { create(:membership) }
 
   describe '#call' do
-    subject(:service_call) { described_class.call(params: create_args) }
+    subject(:service_call) { described_class.call(integration:, params: update_args) }
 
-    let(:name) { 'Salesforce 1' }
+    before { integration }
 
-    let(:create_args) do
-      {
-        name:,
-        code: 'salesforce',
-        organization_id: organization.id,
-        instance_id: 'Instance1'
-      }
-    end
+    let(:name) { 'Salesforce updated name' }
+    let(:update_args) { {name:} }
 
     context 'without premium license' do
-      it 'does not create an integration' do
-        expect { service_call }.not_to change(Integrations::SalesforceIntegration, :count)
-      end
-
       it 'returns an error' do
         result = service_call
 
@@ -36,6 +27,8 @@ RSpec.describe Integrations::Salesforce::CreateService, type: :service do
     end
 
     context 'with premium license' do
+      around { |test| lago_premium!(&test) }
+
       context 'with salesforce premium integration not present' do
         it 'returns an error' do
           result = service_call
@@ -48,14 +41,22 @@ RSpec.describe Integrations::Salesforce::CreateService, type: :service do
       end
 
       context 'with salesforce premium integration present' do
-        before { organization.update!(premium_integrations: ['salesforce']) }
+        before do
+          organization.update!(premium_integrations: ['salesforce'])
+        end
 
         context 'without validation errors' do
-          it 'creates an integration' do
-            expect { service_call }.to change(Integrations::SalesforceIntegration, :count).by(1)
+          it 'updates an integration' do
+            service_call
 
-            integration = Integrations::SalesforceIntegration.order(:created_at).last
-            expect(integration.instance_id).to eq('Instance1')
+            integration = Integrations::SalesforceIntegration.order(:updated_at).last
+            expect(integration.name).to eq(name)
+          end
+
+          it 'returns an integration in result object' do
+            result = service_call
+
+            expect(result.integration).to be_a(Integrations::SalesforceIntegration)
           end
         end
 
