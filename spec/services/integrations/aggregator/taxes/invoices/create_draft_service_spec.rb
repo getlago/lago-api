@@ -137,6 +137,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
         context 'when special rules applied' do
           before do
             parsed_body = JSON.parse(body)
+            parsed_body['succeededInvoices'].first['fees'].first['tax_amount_cents'] = 0
             parsed_body['succeededInvoices'].first['fees'].first['tax_breakdown'] = [
               {
                 reason: "",
@@ -169,6 +170,24 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
                   expect(result.fees.first['tax_breakdown'].last['tax_amount']).to eq(0)
                 end
               end
+            end
+          end
+        end
+
+        context 'when taxes are paid by seller' do
+          let(:body) do
+            path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_seller_pays_taxes.json')
+            File.read(path)
+          end
+
+          it 'returns fee object with empty tax breakdown' do
+            result = service_call
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.fees.first['tax_breakdown'].last['name']).to eq('Tax')
+              expect(result.fees.first['tax_breakdown'].last['type']).to eq('tax')
+              expect(result.fees.first['tax_breakdown'].last['rate']).to eq('0.00')
+              expect(result.fees.first['tax_breakdown'].last['tax_amount']).to eq(0)
             end
           end
         end

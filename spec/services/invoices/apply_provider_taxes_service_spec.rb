@@ -234,12 +234,14 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
               let(:fee_taxes) do
                 [
                   OpenStruct.new(
+                    tax_amount_cents: 0,
                     tax_breakdown: [
                       OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type],
                         rate: '0.00', tax_amount: 0)
                     ]
                   ),
                   OpenStruct.new(
+                    tax_amount_cents: 0,
                     tax_breakdown: [
                       OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type],
                         rate: '0.00', tax_amount: 0)
@@ -279,6 +281,55 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
                   end
                 end
               end
+            end
+          end
+        end
+
+        context 'with seller paying taxes' do
+          let(:fee_taxes) do
+            [
+              OpenStruct.new(
+                tax_amount_cents: 0,
+                tax_breakdown: [OpenStruct.new(name: 'Tax', type: 'tax', rate: '0.00', tax_amount: 0)]
+              ),
+              OpenStruct.new(
+                tax_amount_cents: 0,
+                tax_breakdown: [OpenStruct.new(name: 'Tax', type: 'tax', rate: '0.00', tax_amount: 0)]
+              )
+            ]
+          end
+          let(:fee1) { create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 0) }
+          let(:fee2) { create(:fee, invoice:, amount_cents: 2000, precise_coupons_amount_cents: 0) }
+          let(:fee1_applied_tax) do
+            create(:fee_applied_tax, fee: fee1, amount_cents: 0, tax_name: 'Tax', tax_code: 'tax', tax_rate: 0.0, tax_description: 'tax')
+          end
+          let(:fee2_applied_tax) do
+            create(:fee_applied_tax, fee: fee2, amount_cents: 0, tax_name: 'Tax', tax_code: 'tax', tax_rate: 0.0, tax_description: 'tax')
+          end
+
+          before do
+            fee1_applied_tax
+            fee2_applied_tax
+          end
+
+          it "does creates zero-tax" do
+            result = apply_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              applied_taxes = result.applied_taxes
+              expect(applied_taxes.count).to eq(1)
+              expect(applied_taxes.find { |item| item.tax_code == 'tax' }).to have_attributes(
+                invoice:,
+                tax_description: 'tax',
+                tax_code: 'tax',
+                tax_name: 'Tax',
+                tax_rate: 0,
+                amount_currency: invoice.currency,
+                amount_cents: 0,
+                fees_amount_cents: 3000
+              )
             end
           end
         end

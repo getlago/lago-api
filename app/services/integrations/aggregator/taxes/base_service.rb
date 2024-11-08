@@ -45,12 +45,14 @@ module Integrations
 
           if fees
             result.fees = fees.map do |fee|
+              taxes_to_pay = fee['tax_amount_cents']
+
               OpenStruct.new(
                 item_id: fee['item_id'],
                 item_code: fee['item_code'],
                 amount_cents: fee['amount_cents'],
-                tax_amount_cents: fee['tax_amount_cents'],
-                tax_breakdown: tax_breakdown(fee['tax_breakdown'])
+                tax_amount_cents: taxes_to_pay,
+                tax_breakdown: tax_breakdown(fee['tax_breakdown'], taxes_to_pay)
               )
             end
             result.succeeded_id = body['succeededInvoices'].first['id']
@@ -62,7 +64,7 @@ module Integrations
           end
         end
 
-        def tax_breakdown(breakdown)
+        def tax_breakdown(breakdown, taxes_to_pay)
           breakdown.map do |b|
             if SPECIAL_TAXATION_TYPES.include?(b['type'])
               OpenStruct.new(
@@ -72,12 +74,22 @@ module Integrations
                 type: b['type']
               )
             elsif b['rate']
-              OpenStruct.new(
-                name: b['name'],
-                rate: b['rate'],
-                tax_amount: b['tax_amount'],
-                type: b['type']
-              )
+              # If there are taxes, that client shouldn't pay, we nullify the taxes
+              if taxes_to_pay.zero?
+                OpenStruct.new(
+                  name: 'Tax',
+                  rate: '0.00',
+                  tax_amount: 0,
+                  type: 'tax'
+                )
+              else
+                OpenStruct.new(
+                  name: b['name'],
+                  rate: b['rate'],
+                  tax_amount: b['tax_amount'],
+                  type: b['type']
+                )
+              end
             else
               OpenStruct.new(
                 name: humanize_tax_name(b['reason'].presence || b['type'] || 'unknown_taxation'),

@@ -10,11 +10,15 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
 
   let(:invoice) { create(:invoice, organization:, customer:) }
 
-  let(:fee) { create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, precise_coupons_amount_cents:) }
+  let(:fee) do
+    create(:fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, precise_coupons_amount_cents:,
+      taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0, taxes_base_rate: 0.0)
+  end
   let(:precise_coupons_amount_cents) { 0 }
 
   let(:fee_taxes) do
     OpenStruct.new(
+      tax_amount_cents: 170,
       tax_breakdown: [
         OpenStruct.new(name: 'tax 2', type: 'type2', rate: '0.12', tax_amount: 120),
         OpenStruct.new(name: 'tax 3', type: 'type3', rate: '0.05', tax_amount: 50)
@@ -45,6 +49,7 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
       context 'when there is tax deduction' do
         let(:fee_taxes) do
           OpenStruct.new(
+            tax_amount_cents: 136,
             tax_breakdown: [
               OpenStruct.new(name: 'tax 2', type: 'type2', rate: '0.12', tax_amount: 96),
               OpenStruct.new(name: 'tax 3', type: 'type3', rate: '0.05', tax_amount: 40)
@@ -67,6 +72,31 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
               taxes_precise_amount_cents: 136.0,
               taxes_rate: 17,
               taxes_base_rate: 0.8
+            )
+          end
+        end
+      end
+
+      context 'when taxes are paid by the seller' do
+        let(:fee_taxes) do
+          OpenStruct.new(
+            tax_amount_cents: 0,
+            tax_breakdown: [OpenStruct.new(name: 'Tax', type: 'tax', rate: '0.00', tax_amount: 0)]
+          )
+        end
+
+        it 'does not create applied_taxes' do
+          result = apply_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+
+            applied_taxes = result.applied_taxes
+            expect(applied_taxes.count).to eq(1)
+            expect(fee).to have_attributes(
+              taxes_amount_cents: 0,
+              taxes_precise_amount_cents: 0.0,
+              taxes_rate: 0
             )
           end
         end
@@ -96,6 +126,7 @@ RSpec.describe Fees::ApplyProviderTaxesService, type: :service do
         context "when tax provider returned specific rule applied to fees - #{applied_rule[:expected_name]}" do
           let(:fee_taxes) do
             OpenStruct.new(
+              tax_amount_cents: 0,
               tax_breakdown: [
                 OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type], rate: '0.00', tax_amount: 0)
               ]
