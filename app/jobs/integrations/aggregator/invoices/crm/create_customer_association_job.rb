@@ -8,7 +8,7 @@ module Integrations
           queue_as 'integrations'
 
           retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 10
-          retry_on RequestLimitError, wait: :polynomially_longer, attempts: 10
+          retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100
 
           def perform(invoice:)
             result = Integrations::Aggregator::Invoices::Crm::CreateCustomerAssociationService.call(invoice:)
