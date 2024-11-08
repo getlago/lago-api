@@ -59,6 +59,10 @@ module Invoices
 
       output = {}
       provider_taxes.each do |fee_taxes|
+        # fee_taxes.tax_amount_cents represents how much the customer should pay,
+        # so if they should pay nothing, we don't need to create any client-facing taxes
+        next if fee_taxes.tax_amount_cents.zero?
+
         fee_taxes.tax_breakdown.each do |tax|
           key = calculate_key(tax)
 

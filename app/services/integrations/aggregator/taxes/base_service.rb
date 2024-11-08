@@ -45,12 +45,14 @@ module Integrations
 
           if fees
             result.fees = fees.map do |fee|
+              taxes_to_pay = fee['tax_amount_cents']
+
               OpenStruct.new(
                 item_id: fee['item_id'],
                 item_code: fee['item_code'],
                 amount_cents: fee['amount_cents'],
-                tax_amount_cents: fee['tax_amount_cents'],
-                tax_breakdown: tax_breakdown(fee['tax_breakdown'])
+                tax_amount_cents: taxes_to_pay,
+                tax_breakdown: tax_breakdown(fee['tax_breakdown'],  taxes_to_pay)
               )
             end
             result.succeeded_id = body['succeededInvoices'].first['id']
@@ -62,7 +64,10 @@ module Integrations
           end
         end
 
-        def tax_breakdown(breakdown)
+        def tax_breakdown(breakdown,  taxes_to_pay)
+          # If there are no taxes to pay, we don't need to create any client-facing taxes
+          return [] if taxes_to_pay.zero?
+
           breakdown.map do |b|
             if SPECIAL_TAXATION_TYPES.include?(b['type'])
               OpenStruct.new(
