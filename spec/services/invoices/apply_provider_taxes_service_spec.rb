@@ -234,12 +234,14 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
               let(:fee_taxes) do
                 [
                   OpenStruct.new(
+                    tax_amount_cents: 0,
                     tax_breakdown: [
                       OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type],
                         rate: '0.00', tax_amount: 0)
                     ]
                   ),
                   OpenStruct.new(
+                    tax_amount_cents: 0,
                     tax_breakdown: [
                       OpenStruct.new(name: applied_rule[:expected_name], type: applied_rule[:received_type],
                         rate: '0.00', tax_amount: 0)
@@ -279,6 +281,34 @@ RSpec.describe Invoices::ApplyProviderTaxesService, type: :service do
                   end
                 end
               end
+            end
+          end
+        end
+
+        context 'with seller paying taxes' do
+          let(:fee_taxes) do
+            [
+              OpenStruct.new(
+                tax_amount_cents: 0,
+                tax_breakdown: []
+              ),
+              OpenStruct.new(
+                tax_amount_cents: 0,
+                tax_breakdown: []
+              )
+            ]
+          end
+          let(:fee1) { create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 0) }
+          let(:fee2) { create(:fee, invoice:, amount_cents: 2000, precise_coupons_amount_cents: 0) }
+
+          it "does not create taxes" do
+            result = apply_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+
+              applied_taxes = result.applied_taxes
+              expect(applied_taxes.count).to eq(0)
             end
           end
         end

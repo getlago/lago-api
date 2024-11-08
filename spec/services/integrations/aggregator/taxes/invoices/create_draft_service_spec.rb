@@ -137,6 +137,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
         context 'when special rules applied' do
           before do
             parsed_body = JSON.parse(body)
+            parsed_body['succeededInvoices'].first['fees'].first['tax_amount_cents'] = 0
             parsed_body['succeededInvoices'].first['fees'].first['tax_breakdown'] = [
               {
                 reason: "",
