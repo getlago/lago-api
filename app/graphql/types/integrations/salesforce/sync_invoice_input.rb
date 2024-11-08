@@ -2,7 +2,7 @@
 
 module Types
   module Integrations
-    module Salesforce
+    class Salesforce
       class SyncInvoiceInput < Types::BaseInputObject
         graphql_name 'SyncSalesforceInvoiceInput'
 

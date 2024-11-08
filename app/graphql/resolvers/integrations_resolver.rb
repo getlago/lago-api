@@ -35,6 +35,8 @@ module Resolvers
         'Integrations::XeroIntegration'
       when 'hubspot'
         'Integrations::HubspotIntegration'
+      when 'salesforce'
+        'Integrations::SalesforceIntegration'
       else
         raise(NotImplementedError)
       end

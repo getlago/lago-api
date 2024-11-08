@@ -144,6 +144,9 @@ module Types
     field :create_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Create
     field :update_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Update
 
+    field :create_salesforce_integration, mutation: Mutations::Integrations::Salesforce::Create
+    field :update_salesforce_integration, mutation: Mutations::Integrations::Salesforce::Update
+
     field :okta_accept_invite, mutation: Mutations::Auth::Okta::AcceptInvite
     field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize
     field :okta_login, mutation: Mutations::Auth::Okta::Login

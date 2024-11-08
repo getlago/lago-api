@@ -21,6 +21,7 @@ guard :rspec, cmd: 'bundle exec rspec' do
   watch('app/jobs/application_job.rb') { 'spec/jobs/' }
   watch('app/models/application_record.rb') { 'spec/models/' }
   watch('app/serializers/model_serializer.rb') { 'spec/serializers/' }
+  watch('app/graphql/lago_api_schema.rb') { 'spec/graphql/' }
   watch(%r{^spec/.+_spec\.rb$})
   watch(%r{^app/(.+)\.rb$}) { |m| "spec/#{m[1]}_spec.rb" }
   watch(%r{^lib/(.+)\.rb$}) { |m| "spec/lib/#{m[1]}_spec.rb" }
