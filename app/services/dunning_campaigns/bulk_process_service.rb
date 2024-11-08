@@ -34,10 +34,7 @@ module DunningCampaigns
         return result if max_attempts_reached?
         return result unless days_between_attempts_satisfied?
 
-        DunningCampaigns::ProcessAttemptJob.perform_later(
-          customer: customer,
-          dunning_campaign_threshold: threshold
-        )
+        DunningCampaigns::ProcessAttemptJob.perform_later(customer:, dunning_campaign_threshold: threshold)
 
         result
       end
