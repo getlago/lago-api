@@ -19,7 +19,7 @@ module DailyUsages
         customer: subscription.customer,
         subscription:,
         external_subscription_id: subscription.external_id,
-        usage: ::V1::Customers::UsageSerializer.new(current_usage).serialize,
+        usage: ::V1::Customers::UsageSerializer.new(current_usage, includes: %i[charges_usage]).serialize,
         from_datetime: current_usage.from_datetime,
         to_datetime: current_usage.to_datetime,
         refreshed_at: timestamp
