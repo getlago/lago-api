@@ -26,23 +26,27 @@ RSpec.describe Integrations::Aggregator::Payments::Payloads::Netsuite do
 
   let(:body) do
     {
-      'type' => 'customerpayment',
       'isDynamic' => true,
       'columns' => {
         'customer' => integration_customer.external_customer_id,
-        'payment' => payment.amount_cents / 100.0,
-        'autoapply' => true
+        'payment' => payment.amount_cents.div(100).to_f
       },
-      'applyTransactions' => [
-        {
-          'internalId' => integration_invoice&.external_id,
-          'apply' => true,
-          'amount' => payment.amount_cents / 100.0
-        }
-      ],
       'options' => {
         'ignoreMandatoryFields' => false
-      }
+      },
+      'type' => 'customerpayment',
+      'lines' => [
+        {
+          'lineItems' => [
+            {
+              'amount' => payment.amount_cents.div(100).to_f,
+              'apply' => true,
+              'doc' => integration_invoice.external_id
+            }
+          ],
+          'sublistId' => 'apply'
+        }
+      ]
     }
   end
 
