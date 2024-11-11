@@ -22,7 +22,7 @@ module Integrations
                     {
                       'amount' => amount(payment.amount_cents, resource: invoice),
                       'apply' => true,
-                      'doc' => integration_invoice&.external_id
+                      'doc' => integration_invoice.external_id
                     }
                   ],
                   'sublistId' => 'apply'

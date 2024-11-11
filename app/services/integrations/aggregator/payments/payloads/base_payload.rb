@@ -14,7 +14,7 @@ module Integrations
           def body
             [
               {
-                'invoice_id' => integration_invoice&.external_id,
+                'invoice_id' => integration_invoice.external_id,
                 'account_code' => account_item&.external_account_code,
                 'date' => payment.created_at.utc.iso8601,
                 'amount_cents' => payment.amount_cents
@@ -31,7 +31,12 @@ module Integrations
           end
 
           def integration_invoice
-            invoice.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').first
+            integration_resource =
+              invoice.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').first
+
+            raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invoice_missing') unless integration_resource
+
+            integration_resource
           end
 
           def integration_customer
