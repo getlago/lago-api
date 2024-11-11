@@ -15,6 +15,7 @@ gem "puma", "~> 6.4"
 gem "rails", "~> 7.1.3.4"
 gem "redis"
 gem "sidekiq"
+gem "dry-validation"
 
 # Security
 gem "bcrypt"

@@ -2,6 +2,8 @@
 
 class BillableMetricsQuery < BaseQuery
   def call
+    return result unless validate_filters.success?
+
     metrics = base_scope.result
     metrics = paginate(metrics)
     metrics = metrics.order(created_at: :desc)
@@ -14,6 +16,10 @@ class BillableMetricsQuery < BaseQuery
   end
 
   private
+
+  def filters_contract
+    @filters_contract ||= Queries::BillableMetricsQueryFiltersContract.new
+  end
 
   def base_scope
     BillableMetric.where(organization:).ransack(search_params)
