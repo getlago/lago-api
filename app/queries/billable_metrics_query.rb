@@ -17,6 +17,10 @@ class BillableMetricsQuery < BaseQuery
 
   private
 
+  def filters_contract
+    @filters_contract ||= Queries::BillableMetricsQueryFiltersContract.new
+  end
+
   def base_scope
     BillableMetric.where(organization:).ransack(search_params)
   end
