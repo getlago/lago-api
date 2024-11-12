@@ -2,13 +2,16 @@
 
 module ChargeFilters
   class CreateOrUpdateBatchService < BaseService
-    def initialize(charge:, filters_params:, options: {})
+    def initialize(charge:, filters_params:, cascade_options: {})
       @charge = charge
       @filters_params = filters_params
-      @options = options
-      @cascade_updates = options[:cascade]
-      @parent_filters_attributes = options[:parent_filters] || []
-      @parent_filters = ChargeFilter.with_discarded.where(id: parent_filters_attributes.map { |f| f['id'] })
+      @cascade_updates = cascade_options[:cascade]
+      @parent_filters_attributes = cascade_options[:parent_filters] || []
+      @parent_filters = if parent_filters_attributes.blank?
+        ChargeFilter.none
+      else
+        ChargeFilter.with_discarded.where(id: parent_filters_attributes.map { |f| f['id'] })
+      end
 
       super
     end
@@ -87,7 +90,7 @@ module ChargeFilters
 
     private
 
-    attr_reader :charge, :filters_params, :cascade_updates, :options, :parent_filters, :parent_filters_attributes
+    attr_reader :charge, :filters_params, :cascade_updates, :parent_filters, :parent_filters_attributes
 
     def filters
       @filters ||= charge.filters.includes(values: :billable_metric_filter)

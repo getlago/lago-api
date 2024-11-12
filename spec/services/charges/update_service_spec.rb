@@ -3,12 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe Charges::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(charge:, params:, options:) }
+  subject(:update_service) { described_class.new(charge:, params:, cascade_options:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
-  let(:options) do
+  let(:cascade_options) do
     {
       cascade: false
     }
@@ -103,7 +103,7 @@ RSpec.describe Charges::UpdateService, type: :service do
     end
 
     context 'when cascade is true' do
-      let(:options) do
+      let(:cascade_options) do
         {
           cascade: true,
           parent_filters: [],
@@ -129,7 +129,7 @@ RSpec.describe Charges::UpdateService, type: :service do
       end
 
       context 'with charge properties already overridden' do
-        let(:options) do
+        let(:cascade_options) do
           {
             cascade: true,
             parent_filters: [],

@@ -130,7 +130,7 @@ module Plans
           Charges::UpdateJob.perform_later(
             charge: child_charge,
             params: payload_charge,
-            options: {
+            cascade_options: {
               cascade: true,
               parent_filters: charge.filters.map(&:attributes),
               equal_properties: charge.equal_properties?(child_charge)

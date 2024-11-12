@@ -3,11 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
-  subject(:service) { described_class.call(charge:, filters_params:, options:) }
+  subject(:service) { described_class.call(charge:, filters_params:, cascade_options:) }
 
   let(:charge) { create(:standard_charge) }
   let(:filters_params) { {} }
-  let(:options) { {} }
+  let(:cascade_options) { {} }
 
   let(:card_location_filter) do
     create(
@@ -80,7 +80,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
             values: [card_location_filter.values.first]
           )
         end
-        let(:options) do
+        let(:cascade_options) do
           {
             cascade: true,
             parent_filters: charge_parent.filters.map(&:attributes)
@@ -275,7 +275,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           )
         ]
       end
-      let(:options) do
+      let(:cascade_options) do
         {
           cascade: true,
           parent_filters: charge_parent.filters.map(&:attributes)

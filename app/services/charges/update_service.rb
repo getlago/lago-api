@@ -2,11 +2,11 @@
 
 module Charges
   class UpdateService < BaseService
-    def initialize(charge:, params:, options: {})
+    def initialize(charge:, params:, cascade_options: {})
       @charge = charge
       @params = params
-      @options = options
-      @cascade = options[:cascade]
+      @cascade_options = cascade_options
+      @cascade = cascade_options[:cascade]
 
       super
     end
@@ -19,7 +19,7 @@ module Charges
         charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
         charge.invoice_display_name = params[:invoice_display_name] unless cascade
 
-        if !cascade || options[:equal_properties]
+        if !cascade || cascade_options[:equal_properties]
           properties = params.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
             params[:charge_model]
           )
@@ -33,7 +33,7 @@ module Charges
           ChargeFilters::CreateOrUpdateBatchService.call(
             charge:,
             filters_params: filters.map(&:with_indifferent_access),
-            options:
+            cascade_options:
           ).raise_if_error!
         end
 
@@ -69,7 +69,7 @@ module Charges
 
     private
 
-    attr_reader :charge, :params, :options, :cascade
+    attr_reader :charge, :params, :cascade_options, :cascade
 
     delegate :plan, to: :charge
   end
