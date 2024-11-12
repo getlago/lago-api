@@ -299,7 +299,7 @@ module Events
                 )
                 /
                 -- NOTE: full duration of the period
-                #{charges_duration},
+                #{charges_duration || 1},
 
                 -- NOTE: operation was a remove, so the duration is 0
                 0
@@ -329,7 +329,7 @@ module Events
                 )
                 /
                 -- NOTE: full duration of the period
-                #{charges_duration},
+                #{charges_duration || 1},
 
                 -- NOTE: operation was a remove, so the duration is 0
                 0
