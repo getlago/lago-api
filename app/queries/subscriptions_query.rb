@@ -4,7 +4,7 @@ class SubscriptionsQuery < BaseQuery
   def call
     subscriptions = paginate(organization.subscriptions)
     subscriptions = subscriptions.where(status: filtered_statuses)
-    subscriptions = subscriptions.order(started_at: :asc)
+    subscriptions = subscriptions.order("subscriptions.started_at ASC NULLS LAST, subscriptions.created_at ASC")
 
     subscriptions = with_external_customer(subscriptions) if filters.external_customer_id
     subscriptions = with_plan_code(subscriptions) if filters.plan_code
