@@ -25,26 +25,27 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
 
   let(:params) do
     {
-      'type' => 'customerpayment',
       'isDynamic' => true,
       'columns' => {
-        'customer' => integration_customer.external_customer_id
+        'customer' => integration_customer.external_customer_id,
+        'payment' => payment.amount_cents.div(100).to_f
       },
-      'lines' => [
-        {
-          'sublistId' => 'apply',
-          'lineItems' => [
-            {
-              'doc' => integration_invoice.external_id,
-              'apply' => true,
-              'amount' => payment.amount_cents.div(100).to_f
-            }
-          ]
-        }
-      ],
       'options' => {
         'ignoreMandatoryFields' => false
-      }
+      },
+      'type' => 'customerpayment',
+      'lines' => [
+        {
+          'lineItems' => [
+            {
+              'amount' => payment.amount_cents.div(100).to_f,
+              'apply' => true,
+              'doc' => integration_invoice.external_id
+            }
+          ],
+          'sublistId' => 'apply'
+        }
+      ]
     }
   end
 

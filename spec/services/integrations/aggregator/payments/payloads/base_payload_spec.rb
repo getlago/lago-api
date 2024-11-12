@@ -36,11 +36,15 @@ RSpec.describe Integrations::Aggregator::Payments::Payloads::BasePayload, type: 
   end
 
   describe '#body' do
+    let(:integration_invoice) { create(:integration_resource, syncable: invoice, integration:) }
+
+    before { integration_invoice }
+
     it 'returns correct body' do
       expect(payload.body).to eq(
         [
           {
-            'invoice_id' => nil,
+            'invoice_id' => integration_invoice.external_id,
             'account_code' => nil,
             'date' => payment.created_at.utc.iso8601,
             'amount_cents' => payment.amount_cents
