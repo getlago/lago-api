@@ -25,6 +25,7 @@ RSpec.describe Mutations::ApiKeys::Rotate, type: :graphql do
   let!(:membership) { create(:membership) }
 
   it_behaves_like 'requires current user'
+  it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'developers:keys:manage'
 
   context 'when api key with such ID exists in the current organization' do

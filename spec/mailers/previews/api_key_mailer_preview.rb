@@ -5,4 +5,9 @@ class ApiKeyMailerPreview < BasePreviewMailer
     api_key = FactoryBot.create(:api_key)
     ApiKeyMailer.with(api_key:).rotated
   end
+
+  def created
+    api_key = FactoryBot.create(:api_key)
+    ApiKeyMailer.with(api_key:).created
+  end
 end
