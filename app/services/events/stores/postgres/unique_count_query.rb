@@ -293,7 +293,7 @@ module Events
               )
               /
               -- NOTE: full duration of the period
-              #{charges_duration}::numeric
+              #{charges_duration || 1}::numeric
             ELSE
               0 -- NOTE: duration was null so usage is null
             END
@@ -323,7 +323,7 @@ module Events
               )
               /
               -- NOTE: full duration of the period
-              #{charges_duration}::numeric
+              #{charges_duration || 1}::numeric
             ELSE
               0 -- NOTE: duration was null so usage is null
             END
