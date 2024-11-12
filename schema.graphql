@@ -2128,7 +2128,6 @@ input CreateNetsuiteIntegrationInput {
   syncCreditNotes: Boolean
   syncInvoices: Boolean
   syncPayments: Boolean
-  syncSalesOrders: Boolean
   tokenId: String!
   tokenSecret: String!
 }
@@ -5763,7 +5762,6 @@ type NetsuiteIntegration {
   syncCreditNotes: Boolean
   syncInvoices: Boolean
   syncPayments: Boolean
-  syncSalesOrders: Boolean
   tokenId: String
   tokenSecret: String
 }
@@ -8160,7 +8158,6 @@ input UpdateNetsuiteIntegrationInput {
   syncCreditNotes: Boolean
   syncInvoices: Boolean
   syncPayments: Boolean
-  syncSalesOrders: Boolean
   tokenId: String
   tokenSecret: String
 }

@@ -17,7 +17,6 @@ module Types
       field :sync_credit_notes, Boolean
       field :sync_invoices, Boolean
       field :sync_payments, Boolean
-      field :sync_sales_orders, Boolean
       field :token_id, String, null: true
       field :token_secret, String, null: true
 
