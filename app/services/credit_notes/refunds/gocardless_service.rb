@@ -38,6 +38,15 @@ module CreditNotes
 
         result.refund = refund
         result
+      rescue GoCardlessPro::Error, GoCardlessPro::ValidationError => e
+        deliver_error_webhook(message: e.message, code: e.code)
+        update_credit_note_status(:failed)
+
+        if e.is_a?(GoCardlessPro::ValidationError)
+          result
+        else
+          raise
+        end
       end
 
       def update_status(provider_refund_id:, status:, metadata: {})
@@ -108,11 +117,6 @@ module CreditNotes
             'Idempotency-Key' => credit_note.id
           }
         )
-      rescue GoCardlessPro::Error => e
-        deliver_error_webhook(message: e.message, code: e.code)
-        update_credit_note_status(:failed)
-
-        raise
       end
 
       def deliver_error_webhook(message:, code:)
