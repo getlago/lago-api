@@ -19,5 +19,4 @@ RSpec.describe Types::Integrations::Netsuite do
   it { is_expected.to have_field(:sync_credit_notes).of_type('Boolean') }
   it { is_expected.to have_field(:sync_invoices).of_type('Boolean') }
   it { is_expected.to have_field(:sync_payments).of_type('Boolean') }
-
 end
