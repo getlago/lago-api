@@ -89,8 +89,17 @@ RSpec.describe SubscriptionsQuery, type: :query do
     context 'with pending status filter' do
       let(:filters) { {status: [:pending]} }
 
+      let(:subscription_1) do
+        create(:subscription, :pending, customer:, plan:, created_at: Time.zone.parse('2024-10-12T00:01:01'))
+      end
+
+      let(:subscription_2) do
+        create(:subscription, :pending, customer:, plan:, created_at: Time.zone.parse('2024-10-10T00:01:01'))
+      end
+
       it 'returns only pending subscriptions' do
-        create(:subscription, :pending, customer:, plan:)
+        subscription_1
+        subscription_2
         create(:subscription, customer:, plan:, status: :canceled)
         create(:subscription, customer:, plan:, status: :terminated)
 
@@ -98,11 +107,12 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.subscriptions.count).to eq(1)
+          expect(result.subscriptions.count).to eq(2)
           expect(result.subscriptions.active.count).to eq(0)
-          expect(result.subscriptions.pending.count).to eq(1)
+          expect(result.subscriptions.pending.count).to eq(2)
           expect(result.subscriptions.canceled.count).to eq(0)
           expect(result.subscriptions.terminated.count).to eq(0)
+          expect(result.subscriptions.first).to eq(subscription_1)
         end
       end
     end
