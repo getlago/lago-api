@@ -8,10 +8,7 @@ module Integrations
           def self.new_instance(integration_customer:, invoice:)
             case integration_customer&.integration&.type&.to_s
             when 'Integrations::NetsuiteIntegration'
-              Integrations::Aggregator::Invoices::Payloads::Netsuite.new(
-                integration_customer:,
-                invoice:
-              )
+              Integrations::Aggregator::Invoices::Payloads::Netsuite.new(integration_customer:, invoice:)
             when 'Integrations::XeroIntegration'
               Integrations::Aggregator::Invoices::Payloads::Xero.new(integration_customer:, invoice:)
             when 'Integrations::AnrokIntegration'
