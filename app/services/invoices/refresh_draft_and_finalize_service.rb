@@ -29,20 +29,22 @@ module Invoices
       end
 
       result.invoice = invoice.reload
-      unless invoice.closed?
-        SendWebhookJob.perform_later('invoice.created', invoice)
-        GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
-        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
-        Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice:) if invoice.should_sync_crm_invoice?
-        Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
-        Invoices::Payments::CreateService.new(invoice).call
-        Utils::SegmentTrack.invoice_created(invoice)
-      end
+      after_commit do
+        unless invoice.closed?
+          SendWebhookJob.perform_later('invoice.created', invoice)
+          GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
+          Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
+          Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice:) if invoice.should_sync_crm_invoice?
+          Integrations::Aggregator::SalesOrders::CreateJob.perform_later(invoice:) if invoice.should_sync_sales_order?
+          Invoices::Payments::CreateService.new(invoice).call
+          Utils::SegmentTrack.invoice_created(invoice)
+        end
 
-      invoice.credit_notes.each do |credit_note|
-        track_credit_note_created(credit_note)
-        SendWebhookJob.perform_later('credit_note.created', credit_note)
-        CreditNotes::GeneratePdfJob.perform_later(credit_note)
+        invoice.credit_notes.each do |credit_note|
+          track_credit_note_created(credit_note)
+          SendWebhookJob.perform_later('credit_note.created', credit_note)
+          CreditNotes::GeneratePdfJob.perform_later(credit_note)
+        end
       end
 
       result
