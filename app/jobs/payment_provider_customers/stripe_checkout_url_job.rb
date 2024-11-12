@@ -4,9 +4,9 @@ module PaymentProviderCustomers
   class StripeCheckoutUrlJob < ApplicationJob
     queue_as :providers
 
-    retry_on Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
-    retry_on Stripe::APIError, wait: :polynomially_longer, attempts: 6
-    retry_on Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6
+    retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
+    retry_on ::Stripe::APIError, wait: :polynomially_longer, attempts: 6
+    retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6
     retry_on ActiveJob::DeserializationError
 
     def perform(stripe_customer)

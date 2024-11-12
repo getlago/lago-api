@@ -93,35 +93,15 @@ module PaymentProviders
 
       case event.type
       when 'setup_intent.succeeded'
-        service = PaymentProviderCustomers::StripeService.new
-
-        service
-          .update_provider_default_payment_method(
-            organization_id: organization.id,
-            stripe_customer_id: event.data.object.customer,
-            payment_method_id: event.data.object.payment_method,
-            metadata: event.data.object.metadata.to_h.symbolize_keys
-          ).raise_if_error!
-
-        service
-          .update_payment_method(
-            organization_id: organization.id,
-            stripe_customer_id: event.data.object.customer,
-            payment_method_id: event.data.object.payment_method,
-            metadata: event.data.object.metadata.to_h.symbolize_keys
-          ).raise_if_error!
+        PaymentProviders::Webhooks::Stripe::SetupIntentSucceededService.call(
+          organization_id: organization.id,
+          event_json:
+        ).raise_if_error!
       when 'customer.updated'
-        payment_method_id = event.data.object.invoice_settings.default_payment_method ||
-          event.data.object.default_source
-
-        PaymentProviderCustomers::StripeService
-          .new
-          .update_payment_method(
-            organization_id: organization.id,
-            stripe_customer_id: event.data.object.id,
-            payment_method_id:,
-            metadata: event.data.object.metadata.to_h.symbolize_keys
-          ).raise_if_error!
+        PaymentProviders::Webhooks::Stripe::CustomerUpdatedService.call(
+          organization_id: organization.id,
+          event_json:
+        ).raise_if_error!
       when 'charge.succeeded'
         payment_service_klass(event)
           .new.update_payment_status(

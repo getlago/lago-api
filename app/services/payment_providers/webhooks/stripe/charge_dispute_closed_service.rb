@@ -21,10 +21,6 @@ module PaymentProviders
 
         private
 
-        def event
-          @event ||= ::Stripe::Event.construct_from(JSON.parse(event_json))
-        end
-
         def payment_dispute_lost_at
           Time.zone.at(event.created)
         end

@@ -21,7 +21,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService, type: :serv
         payment_provider: stripe_provider
       )
 
-      allow(Stripe::Checkout::Session).to receive(:create)
+      allow(::Stripe::Checkout::Session).to receive(:create)
         .and_return({"url" => "https://example55.com"})
     end
 

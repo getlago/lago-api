@@ -397,11 +397,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
 
       before do
-        allow(PaymentProviderCustomers::StripeService).to receive(:new)
-          .and_return(provider_customer_service)
-        allow(provider_customer_service).to receive(:update_payment_method)
-          .and_return(service_result)
-        allow(provider_customer_service).to receive(:update_provider_default_payment_method)
+        allow(PaymentProviders::Webhooks::Stripe::SetupIntentSucceededService).to receive(:call)
           .and_return(service_result)
       end
 
@@ -413,9 +409,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(result).to be_success
 
-        expect(PaymentProviderCustomers::StripeService).to have_received(:new)
-        expect(provider_customer_service).to have_received(:update_payment_method)
-        expect(provider_customer_service).to have_received(:update_provider_default_payment_method)
+        expect(PaymentProviders::Webhooks::Stripe::SetupIntentSucceededService).to have_received(:call)
       end
     end
 
@@ -426,9 +420,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
 
       before do
-        allow(PaymentProviderCustomers::StripeService).to receive(:new)
-          .and_return(provider_customer_service)
-        allow(provider_customer_service).to receive(:update_payment_method)
+        allow(PaymentProviders::Webhooks::Stripe::CustomerUpdatedService).to receive(:call)
           .and_return(service_result)
       end
 
@@ -440,17 +432,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(result).to be_success
 
-        expect(PaymentProviderCustomers::StripeService).to have_received(:new)
-        expect(provider_customer_service).to have_received(:update_payment_method)
-          .with(
-            metadata: {
-              customer_id: 'test_5',
-              lago_customer_id: '123456-1234-1234-1234-1234567890'
-            },
-            organization_id: organization.id,
-            stripe_customer_id: 'cus_123456789',
-            payment_method_id: 'card_123456789'
-          )
+        expect(PaymentProviders::Webhooks::Stripe::CustomerUpdatedService).to have_received(:call)
       end
     end
 

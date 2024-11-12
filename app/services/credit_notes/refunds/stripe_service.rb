@@ -86,7 +86,7 @@ module CreditNotes
             idempotency_key: credit_note.id
           }
         )
-      rescue Stripe::InvalidRequestError => e
+      rescue ::Stripe::InvalidRequestError => e
         deliver_error_webhook(message: e.message, code: e.code)
         update_credit_note_status(:failed)
 

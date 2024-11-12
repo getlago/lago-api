@@ -55,7 +55,7 @@ module PaymentRequests
 
         result.payment = payment
         result
-      rescue Stripe::AuthenticationError, Stripe::CardError, Stripe::InvalidRequestError, Stripe::PermissionError => e
+      rescue ::Stripe::AuthenticationError, ::Stripe::CardError, ::Stripe::InvalidRequestError, Stripe::PermissionError => e
         # NOTE: Do not mark the payable as failed if the amount is too small for Stripe
         #       For now we keep it as pending.
         return result if e.code == "amount_too_small"
@@ -63,9 +63,9 @@ module PaymentRequests
         deliver_error_webhook(e)
         update_payable_payment_status(payment_status: :failed, deliver_webhook: false)
         result
-      rescue Stripe::RateLimitError, Stripe::APIConnectionError
+      rescue ::Stripe::RateLimitError, ::Stripe::APIConnectionError
         raise # Let the auto-retry process do its own job
-      rescue Stripe::StripeError => e
+      rescue ::Stripe::StripeError => e
         deliver_error_webhook(e)
         raise
       end
@@ -73,7 +73,7 @@ module PaymentRequests
       def generate_payment_url
         return result unless should_process_payment?
 
-        result_url = Stripe::Checkout::Session.create(
+        result_url = ::Stripe::Checkout::Session.create(
           payment_url_payload,
           {
             api_key: stripe_api_key
@@ -83,7 +83,7 @@ module PaymentRequests
         result.payment_url = result_url["url"]
 
         result
-      rescue Stripe::CardError, Stripe::InvalidRequestError, Stripe::AuthenticationError, Stripe::PermissionError => e
+      rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
         deliver_error_webhook(e)
 
         result.single_validation_failure!(error_code: "payment_provider_error")

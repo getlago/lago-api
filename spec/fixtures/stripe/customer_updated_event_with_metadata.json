@@ -25,10 +25,15 @@
         "rendering_options": null
       },
       "livemode": false,
-      "metadata": {},
+      "metadata": {
+        "lago_customer_id": "123456-1234-1234-1234-1234567890",
+        "customer_id": "test_5"
+      },
       "name": "Test 5",
       "phone": null,
-      "preferred_locales": [],
+      "preferred_locales": [
+
+      ],
       "shipping": null,
       "tax_exempt": "none",
       "test_clock": null

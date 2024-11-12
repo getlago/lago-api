@@ -96,7 +96,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         stub_request(:post, 'https://api.stripe.com/v1/checkout/sessions')
           .to_return(status: 200, body: body.to_json, headers: {})
 
-        allow(Stripe::Checkout::Session).to receive(:create)
+        allow(::Stripe::Checkout::Session).to receive(:create)
           .and_return({'url' => 'https://example.com'})
 
         post_with_token(organization, '/api/v1/customers', {customer: create_params})
@@ -360,7 +360,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
       customer.update(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)
 
-      allow(Stripe::Checkout::Session).to receive(:create)
+      allow(::Stripe::Checkout::Session).to receive(:create)
         .and_return({'url' => 'https://example.com'})
     end
 

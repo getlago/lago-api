@@ -88,12 +88,12 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
     context 'with an error on stripe' do
       before do
         allow(Stripe::Refund).to receive(:create)
-          .and_raise(Stripe::InvalidRequestError.new('error', {}))
+          .and_raise(::Stripe::InvalidRequestError.new('error', {}))
       end
 
       it 'delivers an error webhook' do
         expect { stripe_service.create }
-          .to raise_error(Stripe::InvalidRequestError)
+          .to raise_error(::Stripe::InvalidRequestError)
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
