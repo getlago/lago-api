@@ -111,6 +111,28 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       end
     end
 
+    context 'with a validation error on gocardless' do
+      before do
+        allow(gocardless_refunds_service).to receive(:create)
+          .and_raise(GoCardlessPro::ValidationError.new('code' => 'code', 'message' => 'error'))
+      end
+
+      it 'delivers an error webhook and returns an empty result' do
+        expect(gocardless_service.create).to be_success
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            'credit_note.provider_refund_failure',
+            credit_note,
+            provider_customer_id: gocardless_customer.provider_customer_id,
+            provider_error: {
+              message: 'error',
+              error_code: 'code'
+            }
+          )
+      end
+    end
+
     context 'when credit note does not have a refund amount' do
       let(:credit_note) do
         create(
