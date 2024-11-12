@@ -15,11 +15,13 @@ module Wallets
         update_params = compute_update_params
         wallet.update!(update_params)
 
-        if update_params[:depleted_ongoing_balance] == true
-          SendWebhookJob.perform_later('wallet.depleted_ongoing_balance', wallet)
-        end
+        after_commit do
+          if update_params[:depleted_ongoing_balance] == true
+            SendWebhookJob.perform_later('wallet.depleted_ongoing_balance', wallet)
+          end
 
-        ::Wallets::ThresholdTopUpService.call(wallet:)
+          ::Wallets::ThresholdTopUpService.call(wallet:)
+        end
 
         result.wallet = wallet
         result
