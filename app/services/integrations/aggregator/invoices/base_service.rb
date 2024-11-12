@@ -37,8 +37,7 @@ module Integrations
         def payload(type)
           Integrations::Aggregator::Invoices::Payloads::Factory.new_instance(
             integration_customer:,
-            invoice:,
-            type:
+            invoice:
           ).body
         end
       end

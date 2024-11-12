@@ -4,9 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Integrations::Aggregator::Invoices::Payloads::Factory do
   describe '.new_instance' do
-    subject(:new_instance_call) { described_class.new_instance(integration_customer:, invoice:, type:) }
+    subject(:new_instance_call) { described_class.new_instance(integration_customer:, invoice:) }
 
-    let(:type) { 'invoice' }
     let(:invoice) { FactoryBot.create(:invoice) }
 
     context 'when customer is a netsuite customer' do

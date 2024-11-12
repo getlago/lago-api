@@ -289,10 +289,6 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         let(:service_call) { invoice_service.call }
       end
 
-      it_behaves_like 'syncs sales order' do
-        let(:service_call) { invoice_service.call }
-      end
-
       it 'does not re-create an invoice' do
         result = invoice_service.call
 

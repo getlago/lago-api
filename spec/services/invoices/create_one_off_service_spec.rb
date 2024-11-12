@@ -67,10 +67,6 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       let(:service_call) { create_service.call }
     end
 
-    it_behaves_like 'syncs sales order' do
-      let(:service_call) { create_service.call }
-    end
-
     it 'calls SegmentTrackJob' do
       invoice = create_service.call.invoice
 

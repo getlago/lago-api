@@ -25,7 +25,6 @@ module Integrations
         integration.sync_credit_notes = params[:sync_credit_notes] if params.key?(:sync_credit_notes)
         integration.sync_invoices = params[:sync_invoices] if params.key?(:sync_invoices)
         integration.sync_payments = params[:sync_payments] if params.key?(:sync_payments)
-        integration.sync_sales_orders = params[:sync_sales_orders] if params.key?(:sync_sales_orders)
 
         integration.save!
 
