@@ -29,7 +29,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService, type: :service do
         zipcode: "Updated customer shipping zipcode",
         city: "Updated customer shipping city",
         state: "Updated customer shipping state",
-        country: "Updated customer shipping country"
+        country: "PT"
       }
     }
   end

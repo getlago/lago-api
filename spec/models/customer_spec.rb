@@ -31,19 +31,6 @@ RSpec.describe Customer, type: :model do
 
     let(:external_id) { SecureRandom.uuid }
 
-    it 'validates the country' do
-      expect(customer).to be_valid
-
-      customer.country = 'fr'
-      expect(customer).to be_valid
-
-      customer.country = 'foo'
-      expect(customer).not_to be_valid
-
-      customer.country = ''
-      expect(customer).not_to be_valid
-    end
-
     it 'validates the language code' do
       customer.document_locale = nil
       expect(customer).to be_valid
@@ -69,6 +56,72 @@ RSpec.describe Customer, type: :model do
 
       customer.timezone = 'America/Guadeloupe'
       expect(customer).not_to be_valid
+    end
+
+    describe 'of country' do
+      let(:customer) { build_stubbed(:customer, country:) }
+      let(:error) { customer.errors.where(:country, :country_code_invalid) }
+
+      before { customer.valid? }
+
+      context 'with non-null country value' do
+        context 'when value is a valid country code' do
+          let(:country) { TZInfo::Country.all_codes.sample }
+
+          it 'does not add an error' do
+            expect(error).not_to be_present
+          end
+        end
+
+        context 'when value is an invalid country code' do
+          let(:country) { 'USA' }
+
+          it 'adds an error' do
+            expect(error).to be_present
+          end
+        end
+      end
+
+      context 'with null country value' do
+        let(:country) { nil }
+
+        it 'does not add an error' do
+          expect(error).not_to be_present
+        end
+      end
+    end
+
+    describe 'of shipping country' do
+      let(:customer) { build_stubbed(:customer, shipping_country:) }
+      let(:error) { customer.errors.where(:shipping_country, :country_code_invalid) }
+
+      before { customer.valid? }
+
+      context 'with non-null shipping country value' do
+        context 'when value is a valid country code' do
+          let(:shipping_country) { TZInfo::Country.all_codes.sample }
+
+          it 'does not add an error' do
+            expect(error).not_to be_present
+          end
+        end
+
+        context 'when value is an invalid country code' do
+          let(:shipping_country) { 'USA' }
+
+          it 'adds an error' do
+            expect(error).to be_present
+          end
+        end
+      end
+
+      context 'with null shipping country value' do
+        let(:shipping_country) { nil }
+
+        it 'does not add an error' do
+          expect(error).not_to be_present
+        end
+      end
     end
   end
 

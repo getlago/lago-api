@@ -68,7 +68,7 @@ class Customer < ApplicationRecord
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
     lock_key: ->(customer) { customer.organization_id }
 
-  validates :country, country_code: true, unless: -> { country.nil? }
+  validates :country, :shipping_country, country_code: true, allow_nil: true
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
   validates :currency, inclusion: {in: currency_list}, allow_nil: true
   validates :external_id,
