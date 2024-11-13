@@ -95,7 +95,7 @@ module Plans
       return if plan.children.empty?
 
       plan.children.where(amount_cents: old_amount_cents).find_each do |p|
-        Plans::UpdateAmountJob.perform_later(plan: p, amount_cents: plan.amount_cents)
+        Plans::UpdateAmountJob.perform_later(plan: p, amount_cents: plan.amount_cents, expected_amount_cents: old_amount_cents)
       end
     end
 
