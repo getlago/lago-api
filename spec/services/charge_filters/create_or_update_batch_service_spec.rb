@@ -3,10 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
-  subject(:service) { described_class.call(charge:, filters_params:) }
+  subject(:service) { described_class.call(charge:, filters_params:, cascade_options:) }
 
   let(:charge) { create(:standard_charge) }
   let(:filters_params) { {} }
+  let(:cascade_options) { {} }
 
   let(:card_location_filter) do
     create(
@@ -57,6 +58,51 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       it 'discards all filters and the related values' do
         expect { service }.to change { filter.reload.discarded? }.to(true)
           .and change { filter_value.reload.discarded? }.to(true)
+      end
+
+      context 'with cascade_updates set to true and existing filters' do
+        let(:charge_parent) { create(:standard_charge) }
+        let(:filter_extra) { create(:charge_filter, charge:) }
+        let(:filter_parent) { create(:charge_filter, charge: charge_parent) }
+        let(:filter_value_extra) do
+          create(
+            :charge_filter_value,
+            charge_filter: filter_extra,
+            billable_metric_filter: card_location_filter,
+            values: [card_location_filter.values.second]
+          )
+        end
+        let(:filter_value_parent) do
+          create(
+            :charge_filter_value,
+            charge_filter: filter_parent,
+            billable_metric_filter: card_location_filter,
+            values: [card_location_filter.values.first]
+          )
+        end
+        let(:cascade_options) do
+          {
+            cascade: true,
+            parent_filters: charge_parent.filters.map(&:attributes)
+          }
+        end
+
+        before do
+          filter_value_extra
+          filter_value_parent
+        end
+
+        it 'discards all filters and the related values that are inherited from parent' do
+          expect { service }.to change { filter.reload.discarded? }.to(true)
+            .and change { filter_value.reload.discarded? }.to(true)
+        end
+
+        it 'does not discard filters and the related values that are defined on child' do
+          service
+
+          expect(filter_extra.reload.discarded?).to eq(false)
+          expect(filter_value_extra.reload.discarded?).to eq(false)
+        end
       end
     end
   end
@@ -198,6 +244,128 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
         new_filter = result.filters.first
         expect(new_filter.values.count).to eq(2)
         expect(new_filter.values.pluck(:values).flatten).to match_array(%w[domestic visa mastercard])
+      end
+    end
+
+    context 'with cascading option' do
+      let(:charge_parent) { create(:standard_charge) }
+      let(:filter_extra) { create(:charge_filter, charge:) }
+      let(:filter_parent) { create(:charge_filter, properties: filter.properties, charge: charge_parent) }
+      let(:filter_value_extra) do
+        create(
+          :charge_filter_value,
+          charge_filter: filter_extra,
+          billable_metric_filter: card_location_filter,
+          values: [card_location_filter.values.second]
+        )
+      end
+      let(:filter_values_parent) do
+        [
+          create(
+            :charge_filter_value,
+            charge_filter: filter_parent,
+            billable_metric_filter: card_location_filter,
+            values: ['domestic']
+          ),
+          create(
+            :charge_filter_value,
+            charge_filter: filter_parent,
+            billable_metric_filter: scheme_filter,
+            values: ['visa']
+          )
+        ]
+      end
+      let(:cascade_options) do
+        {
+          cascade: true,
+          parent_filters: charge_parent.filters.map(&:attributes)
+        }
+      end
+
+      before do
+        filter_values_parent
+        filter_value_extra
+      end
+
+      it 'updates the filter if child and parent properties are the same' do
+        expect { service }.not_to change(ChargeFilter, :count)
+
+        expect(filter.reload).to have_attributes(
+          invoice_display_name: 'New display name',
+          properties: {'amount' => '20'}
+        )
+        expect(filter.values.count).to eq(2)
+        expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
+      end
+
+      context 'when properties are already overridden' do
+        let(:properties) { {amount: '755'} }
+        let(:filter_parent) { create(:charge_filter, properties:, charge: charge_parent) }
+
+        it 'does not update the filter' do
+          expect { service }.not_to change(ChargeFilter, :count)
+
+          expect(filter.reload).to have_attributes(
+            invoice_display_name: nil,
+            properties: charge.properties
+          )
+          expect(filter.values.count).to eq(2)
+          expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
+        end
+      end
+
+      context 'when changing filter values' do
+        let(:filters_params) do
+          [
+            {
+              values: {
+                card_location_filter.key => ['international'],
+                scheme_filter.key => ['mastercard']
+              },
+              invoice_display_name: 'New display name',
+              properties: {amount: '20'}
+            }
+          ]
+        end
+
+        it 'creates a new filter and removes only the one that matches with parent' do
+          result = service
+
+          expect(result.filters.count).to eq(1)
+          expect(filter.reload).to be_discarded
+          expect(filter_value_extra.reload).not_to be_discarded
+
+          new_filter = result.filters.first
+          expect(new_filter.values.count).to eq(2)
+          expect(new_filter.values.pluck(:values).flatten).to match_array(%w[international mastercard])
+        end
+      end
+
+      context 'when adding a value into filter values' do
+        let(:filters_params) do
+          [
+            {
+              values: {
+                card_location_filter.key => ['domestic'],
+                scheme_filter.key => %w[visa mastercard]
+              },
+              invoice_display_name: 'New display name',
+              properties: {amount: '20'}
+            }
+          ]
+        end
+
+        it 'creates a new filter and removes only the one that matches with parent' do
+          result = service
+
+          expect(result.filters.count).to eq(1)
+          expect(filter.reload).to be_discarded
+          expect(filter_value_extra.reload).not_to be_discarded
+
+          new_filter = result.filters.first
+          expect(new_filter.values.count).to eq(2)
+          expect(new_filter.values.pluck(:values).flatten).to match_array(%w[domestic visa mastercard])
+        end
       end
     end
   end
