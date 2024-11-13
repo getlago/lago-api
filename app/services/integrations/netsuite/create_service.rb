@@ -31,8 +31,7 @@ module Integrations
           script_endpoint_url: params[:script_endpoint_url],
           sync_credit_notes: ActiveModel::Type::Boolean.new.cast(params[:sync_credit_notes]),
           sync_invoices: ActiveModel::Type::Boolean.new.cast(params[:sync_invoices]),
-          sync_payments: ActiveModel::Type::Boolean.new.cast(params[:sync_payments]),
-          sync_sales_orders: ActiveModel::Type::Boolean.new.cast(params[:sync_sales_orders])
+          sync_payments: ActiveModel::Type::Boolean.new.cast(params[:sync_payments])
         )
 
         integration.save!

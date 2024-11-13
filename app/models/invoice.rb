@@ -342,13 +342,6 @@ class Invoice < ApplicationRecord
     customer.integration_customers.crm_kind.any? { |c| c.integration.sync_invoices }
   end
 
-  def should_sync_sales_order?
-    finalized? &&
-      customer.integration_customers.accounting_kind.any? do |c|
-        c.integration.respond_to?(:sync_sales_orders) && c.integration.sync_sales_orders
-      end
-  end
-
   def document_invoice_name
     return I18n.t('invoice.prepaid_credit_invoice') if credit?
 

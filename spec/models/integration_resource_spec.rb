@@ -6,7 +6,7 @@ RSpec.describe IntegrationResource, type: :model do
   subject(:integration_resource) { create(:integration_resource) }
 
   let(:resource_types) do
-    %i[invoice sales_order payment credit_note subscription]
+    %i[invoice sales_order_deprecated payment credit_note subscription]
   end
 
   it { is_expected.to belong_to(:syncable) }

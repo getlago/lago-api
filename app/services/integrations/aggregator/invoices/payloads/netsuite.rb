@@ -9,7 +9,7 @@ module Integrations
 
           def body
             result = {
-              'type' => type,
+              'type' => 'invoice',
               'isDynamic' => true,
               'columns' => columns,
               'lines' => [

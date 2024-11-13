@@ -20,7 +20,6 @@ module Types
         argument :sync_credit_notes, Boolean, required: false
         argument :sync_invoices, Boolean, required: false
         argument :sync_payments, Boolean, required: false
-        argument :sync_sales_orders, Boolean, required: false
       end
     end
   end

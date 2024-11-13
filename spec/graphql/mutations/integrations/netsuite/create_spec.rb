@@ -18,7 +18,6 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
           name,
           clientId,
           clientSecret,
-          syncSalesOrders,
           syncInvoices,
           syncCreditNotes,
           syncPayments,

@@ -8928,18 +8928,6 @@
               "deprecationReason": null
             },
             {
-              "name": "syncSalesOrders",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "clientMutationId",
               "description": "A unique identifier for the client performing the mutation.",
               "type": {
@@ -27630,20 +27618,6 @@
               ]
             },
             {
-              "name": "syncSalesOrders",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-
-              ]
-            },
-            {
               "name": "tokenId",
               "description": null,
               "type": {
@@ -40699,18 +40673,6 @@
             },
             {
               "name": "syncPayments",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "syncSalesOrders",
               "description": null,
               "type": {
                 "kind": "SCALAR",

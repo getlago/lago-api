@@ -177,10 +177,6 @@ RSpec.describe Invoices::RetryService, type: :service do
         let(:service_call) { retry_service.call }
       end
 
-      it_behaves_like 'syncs sales order' do
-        let(:service_call) { retry_service.call }
-      end
-
       it 'enqueues a SendWebhookJob' do
         expect do
           retry_service.call

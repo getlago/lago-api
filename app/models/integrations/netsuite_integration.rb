@@ -9,7 +9,6 @@ module Integrations
       :sync_credit_notes,
       :sync_invoices,
       :sync_payments,
-      :sync_sales_orders,
       :script_endpoint_url,
       :token_id
     secrets_accessors :connection_id, :client_secret, :token_secret

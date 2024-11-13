@@ -118,14 +118,12 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         create(:charge_fee, :succeeded, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
 
         allow_any_instance_of(Invoice).to receive(:should_sync_invoice?).and_return(true) # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(Invoice).to receive(:should_sync_sales_order?).and_return(true) # rubocop:disable RSpec/AnyInstance
       end
 
       it 'creates invoices' do
         result = invoice_service.call
 
         expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
-        expect(Integrations::Aggregator::SalesOrders::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
       end
     end
   end

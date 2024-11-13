@@ -11,7 +11,6 @@ RSpec.describe Invoices::FinalizeOpenCreditService, type: :service do
   before do
     if invoice
       allow(invoice).to receive(:should_sync_invoice?).and_return(true)
-      allow(invoice).to receive(:should_sync_sales_order?).and_return(true)
     end
   end
 
@@ -26,7 +25,6 @@ RSpec.describe Invoices::FinalizeOpenCreditService, type: :service do
       expect(SendWebhookJob).to have_been_enqueued.with('invoice.paid_credit_added', result.invoice)
       expect(Invoices::GeneratePdfAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
       expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
-      expect(Integrations::Aggregator::SalesOrders::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
       expect(SegmentTrackJob).to have_been_enqueued.with(membership_id: anything, event: 'invoice_created', properties: {
         organization_id: result.invoice.organization.id,
         invoice_id: result.invoice.id,
@@ -45,7 +43,6 @@ RSpec.describe Invoices::FinalizeOpenCreditService, type: :service do
         expect(SendWebhookJob).not_to have_been_enqueued
         expect(Invoices::GeneratePdfAndNotifyJob).not_to have_been_enqueued
         expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
-        expect(Integrations::Aggregator::SalesOrders::CreateJob).not_to have_been_enqueued
         expect(SegmentTrackJob).not_to have_been_enqueued
       end
     end

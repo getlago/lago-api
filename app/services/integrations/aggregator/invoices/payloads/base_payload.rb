@@ -5,12 +5,11 @@ module Integrations
     module Invoices
       module Payloads
         class BasePayload < Integrations::Aggregator::BasePayload
-          def initialize(integration_customer:, invoice:, type: 'invoice')
+          def initialize(integration_customer:, invoice:)
             super(integration: integration_customer.integration)
 
             @invoice = invoice
             @integration_customer = integration_customer
-            @type = type
           end
 
           def body
@@ -35,7 +34,7 @@ module Integrations
 
           private
 
-          attr_reader :integration_customer, :invoice, :type
+          attr_reader :integration_customer, :invoice
           attr_accessor :remaining_taxes_amount_cents
 
           def fees

@@ -34,12 +34,11 @@ module Integrations
           @integration_customer ||= customer&.integration_customers&.accounting_kind&.first
         end
 
-        def payload(type)
+        def payload
           Integrations::Aggregator::Invoices::Payloads::Factory.new_instance(
             integration_customer:,
-            invoice:,
-            type:
-          ).body
+            invoice:
+          )
         end
       end
     end

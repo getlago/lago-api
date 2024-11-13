@@ -111,10 +111,6 @@ RSpec.describe Invoices::AddOnService, type: :service do
       let(:service_call) { invoice_service.create }
     end
 
-    it_behaves_like 'syncs sales order' do
-      let(:service_call) { invoice_service.create }
-    end
-
     context 'with customer timezone' do
       before { applied_add_on.customer.update!(timezone: 'America/Los_Angeles') }
 

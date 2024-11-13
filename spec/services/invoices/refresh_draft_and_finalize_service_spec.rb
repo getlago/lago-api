@@ -77,10 +77,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       let(:service_call) { finalize_service.call }
     end
 
-    it_behaves_like 'syncs sales order' do
-      let(:service_call) { finalize_service.call }
-    end
-
     it 'enqueues a SendWebhookJob' do
       expect do
         finalize_service.call
@@ -232,7 +228,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         allow(SendWebhookJob).to receive(:perform_later).and_call_original
         allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later).and_call_original
         allow(Integrations::Aggregator::Invoices::CreateJob).to receive(:perform_later).and_call_original
-        allow(Integrations::Aggregator::SalesOrders::CreateJob).to receive(:perform_later).and_call_original
         allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
         allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
       end
@@ -305,7 +300,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
             expect(SendWebhookJob).not_to have_received(:perform_later).with('invoice.created', invoice)
             expect(Invoices::GeneratePdfAndNotifyJob).not_to have_received(:perform_later)
             expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_received(:perform_later)
-            expect(Integrations::Aggregator::SalesOrders::CreateJob).not_to have_received(:perform_later)
             expect(Invoices::Payments::CreateService).not_to have_received(:new)
             expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
           end
