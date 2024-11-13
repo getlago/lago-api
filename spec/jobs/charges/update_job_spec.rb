@@ -14,11 +14,11 @@ RSpec.describe Charges::UpdateJob, type: :job do
   end
 
   before do
-    allow(Charges::UpdateService).to receive(:call).with(charge:, params:, options:).and_return(BaseService::Result.new)
+    allow(Charges::UpdateService).to receive(:call).with(charge:, params:, cascade_options:).and_return(BaseService::Result.new)
   end
 
   it 'calls the service' do
-    described_class.perform_now(charge:, params:, options:)
+    described_class.perform_now(charge:, params:, cascade_options:)
 
     expect(Charges::UpdateService).to have_received(:call)
   end
