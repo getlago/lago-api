@@ -2,22 +2,21 @@
 
 module Mutations
   module ApiKeys
-    class Rotate < BaseMutation
+    class Create < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
 
       REQUIRED_PERMISSION = 'developers:keys:manage'
 
-      graphql_name 'RotateApiKey'
-      description 'Create new ApiKey while expiring provided'
+      graphql_name 'CreateApiKey'
+      description 'Creates a new API key'
 
-      argument :id, ID, required: true
+      argument :name, String, required: false
 
       type Types::ApiKeys::Object
 
-      def resolve(id:)
-        api_key = context[:current_organization].api_keys.find_by(id:)
-        result = ::ApiKeys::RotateService.call(api_key)
+      def resolve(**args)
+        result = ::ApiKeys::CreateService.call(args.merge(organization_id: current_organization.id))
 
         result.success? ? result.api_key : result_error(result)
       end

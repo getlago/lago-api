@@ -2,11 +2,19 @@
 en:
   email:
     api_key:
+      created:
+        access_warning: However, if you did not authorize this change, please reset your password and delete the API key immediately to protect your account.
+        change_notice: If someone from your team initiated this, you can start using this API key to automate your billing process.
+        email_info: You're receiving this email because a new API key has been created in your Lago instance, and you have admin privileges.
+        greetings: Hello,
+        key_has_been_created: A new API key has been successfully created for your organization, %{organization_name}.
+        subject: A new Lago API key has been created
       rotated:
         access_warning: If you did not authorize this request, please reset your password and roll your API key immediately to secure your account.
         change_notice: If someone from your team initiated this change, no further action is required. To keep your billing running smoothly, update your app to reference the new token as soon as possible.
         email_info: You’re receiving this email because an API key has been rotated in your Lago instance, and you have admin privileges.
-        greetings: Your %{organization_name}'s API key has been rotated!
+        greetings: Hello,
+        key_has_been_rotated: Your %{organization_name}'s API key has been rotated!
         subject: Your Lago API key has been rolled
     credit_note:
       created:
