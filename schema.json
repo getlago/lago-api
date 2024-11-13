@@ -12260,6 +12260,20 @@
               ]
             },
             {
+              "name": "hmacKey",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -35546,11 +35560,11 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
+              "name": "expiresAt",
+              "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "defaultValue": null,
@@ -35568,6 +35582,30 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

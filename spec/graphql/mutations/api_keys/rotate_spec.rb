@@ -9,20 +9,22 @@ RSpec.describe Mutations::ApiKeys::Rotate, type: :graphql do
       current_organization: membership.organization,
       permissions: required_permission,
       query:,
-      variables: {input: {id: api_key.id}}
+      variables: {input: {id: api_key.id, expiresAt: expires_at, name:}}
     )
   end
 
   let(:query) do
     <<-GQL
       mutation($input: RotateApiKeyInput!) {
-        rotateApiKey(input: $input) { id value createdAt }
+        rotateApiKey(input: $input) { id value name createdAt expiresAt }
       }
     GQL
   end
 
   let(:required_permission) { 'developers:keys:manage' }
   let!(:membership) { create(:membership) }
+  let(:expires_at) { generate(:future_date).iso8601 }
+  let(:name) { Faker::Lorem.words.join(' ') }
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
@@ -31,17 +33,22 @@ RSpec.describe Mutations::ApiKeys::Rotate, type: :graphql do
   context 'when api key with such ID exists in the current organization' do
     let(:api_key) { membership.organization.api_keys.first }
 
+    around { |test| lago_premium!(&test) }
+
     it 'expires the api key' do
-      expect { result }.to change { api_key.reload.expires_at }.from(nil).to(Time)
+      expect { result }
+        .to change { api_key.reload.expires_at&.iso8601 }
+        .to(expires_at)
     end
 
     it 'returns newly created api key' do
       api_key_response = result['data']['rotateApiKey']
-      new_api_key = membership.organization.api_keys.last
+      new_api_key = membership.organization.api_keys.order(:created_at).last
 
       aggregate_failures do
         expect(api_key_response['id']).to eq(new_api_key.id)
         expect(api_key_response['value']).to eq(new_api_key.value)
+        expect(api_key_response['name']).to eq(name)
         expect(api_key_response['createdAt']).to eq(new_api_key.created_at.iso8601)
         expect(api_key_response['expiresAt']).to be_nil
       end

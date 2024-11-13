@@ -2,19 +2,25 @@
 
 module ApiKeys
   class RotateService < BaseService
-    def initialize(api_key)
+    def initialize(api_key:, params:)
       @api_key = api_key
+      @params = params
       super
     end
 
     def call
       return result.not_found_failure!(resource: 'api_key') unless api_key
 
-      new_api_key = api_key.organization.api_keys.new
+      if params[:expires_at].present? && !License.premium?
+        return result.forbidden_failure!(code: "cannot_rotate_with_provided_date")
+      end
+
+      expires_at = params[:expires_at] || Time.current
+      new_api_key = api_key.organization.api_keys.new(name: params[:name])
 
       ActiveRecord::Base.transaction do
         new_api_key.save!
-        api_key.update!(expires_at: Time.current)
+        api_key.update!(expires_at:)
       end
 
       ApiKeyMailer.with(api_key:).rotated.deliver_later
@@ -27,6 +33,6 @@ module ApiKeys
 
     private
 
-    attr_reader :api_key
+    attr_reader :api_key, :params
   end
 end
