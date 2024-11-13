@@ -6,7 +6,7 @@ RSpec.describe Charges::UpdateJob, type: :job do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:charge) { create(:standard_charge, plan:) }
-  let(:options) { {} }
+  let(:cascade_options) { {} }
   let(:params) do
     {
       properties: {}
