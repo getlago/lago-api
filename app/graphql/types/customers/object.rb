@@ -50,6 +50,7 @@ module Types
       field :anrok_customer, Types::IntegrationCustomers::Anrok, null: true
       field :hubspot_customer, Types::IntegrationCustomers::Hubspot, null: true
       field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true
+      field :salesforce_customer, Types::IntegrationCustomers::Salesforce, null: true
       field :xero_customer, Types::IntegrationCustomers::Xero, null: true
 
       field :invoices, [Types::Invoices::Object]
