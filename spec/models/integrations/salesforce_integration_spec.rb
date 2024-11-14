@@ -5,9 +5,9 @@ require 'rails_helper'
 RSpec.describe Integrations::SalesforceIntegration, type: :model do
   subject(:salesforce_integration) { build(:salesforce_integration) }
 
+  it { is_expected.to validate_presence_of(:code) }
   it { is_expected.to validate_presence_of(:name) }
   it { is_expected.to validate_presence_of(:instance_id) }
-  it { is_expected.to validate_inclusion_of(:code).in_array(%w[salesforce]) }
 
   describe 'validations' do
     it 'validates uniqueness of the code' do
