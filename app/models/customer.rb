@@ -57,12 +57,13 @@ class Customer < ApplicationRecord
   has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
   has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'
   has_one :adyen_customer, class_name: 'PaymentProviderCustomers::AdyenCustomer'
+  has_one :moneyhash_customer, class_name: 'PaymentProviderCustomers::MoneyhashCustomer'
   has_one :netsuite_customer, class_name: 'IntegrationCustomers::NetsuiteCustomer'
   has_one :anrok_customer, class_name: 'IntegrationCustomers::AnrokCustomer'
   has_one :xero_customer, class_name: 'IntegrationCustomers::XeroCustomer'
   has_one :hubspot_customer, class_name: 'IntegrationCustomers::HubspotCustomer'
 
-  PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
+  PAYMENT_PROVIDERS = %w[stripe gocardless adyen moneyhash].freeze
 
   default_scope -> { kept }
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
@@ -144,6 +145,8 @@ class Customer < ApplicationRecord
       gocardless_customer
     when :adyen
       adyen_customer
+    when :moneyhash
+      moneyhash_customer
     end
   end
 

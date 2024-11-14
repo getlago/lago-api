@@ -280,7 +280,7 @@ module Customers
 
       if billing.key?(:payment_provider)
         customer.payment_provider = nil
-        if %w[stripe gocardless adyen].include?(billing[:payment_provider])
+        if %w[stripe gocardless adyen moneyhash].include?(billing[:payment_provider])
           customer.payment_provider = billing[:payment_provider]
           customer.payment_provider_code = billing[:payment_provider_code] if billing.key?(:payment_provider_code)
         end
@@ -310,6 +310,8 @@ module Customers
         PaymentProviderCustomers::GocardlessCustomer
       when 'adyen'
         PaymentProviderCustomers::AdyenCustomer
+      when 'moneyhash'
+        PaymentProviderCustomers::MoneyhashCustomer
       end
 
       create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(

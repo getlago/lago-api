@@ -14,6 +14,8 @@ module PaymentProviderCustomers
         PaymentProviderCustomers::GocardlessService
       when 'PaymentProviderCustomers::AdyenCustomer'
         PaymentProviderCustomers::AdyenService
+      when 'PaymentProviderCustomers::MoneyhashCustomer'
+        PaymentProviderCustomers::MoneyhashService
       else
         raise(NotImplementedError)
       end

@@ -74,6 +74,9 @@ module V1
       when :adyen
         configuration[:provider_customer_id] = model.adyen_customer&.provider_customer_id
         configuration.merge!(model.adyen_customer&.settings || {})
+      when :moneyhash
+        configuration[:provider_customer_id] = model.moneyhash_customer&.provider_customer_id
+        configuration.merge!(model.moneyhash_customer&.settings || {})
       end
 
       configuration

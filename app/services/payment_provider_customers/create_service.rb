@@ -65,6 +65,10 @@ module PaymentProviderCustomers
         return PaymentProviderCustomers::AdyenCreateJob.perform_later(result.provider_customer) if async
 
         PaymentProviderCustomers::AdyenCreateJob.perform_now(result.provider_customer)
+      elsif result.provider_customer.type == 'PaymentProviderCustomers::MoneyhashCustomer'
+        return PaymentProviderCustomers::MoneyhashCreateJob.perform_later(result.provider_customer) if async
+
+        PaymentProviderCustomers::MoneyhashCreateJob.perform_now(result.provider_customer)
       else
         return PaymentProviderCustomers::GocardlessCreateJob.perform_later(result.provider_customer) if async
 
