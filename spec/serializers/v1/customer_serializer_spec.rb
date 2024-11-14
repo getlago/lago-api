@@ -12,7 +12,6 @@ RSpec.describe ::V1::CustomerSerializer do
   let(:tax) { create(:tax, organization: customer.organization) }
   let(:customer_applied_tax) { create(:customer_applied_tax, customer:, tax:) }
 
-
   before do
     metadata
     customer_applied_tax
