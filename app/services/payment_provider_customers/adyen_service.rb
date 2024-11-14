@@ -20,6 +20,11 @@ module PaymentProviderCustomers
 
       result.checkout_url = checkout_url_result.checkout_url
       result
+    rescue Adyen::AuthenticationError
+      # NOTE: Authentication errors will be sent to the account owner with a webhook.
+      #       Since nothing can be done on Lago's side, we should not raise the error.
+      # TODO: Flag the error on the PaymentProvider instance.
+      result
     end
 
     def update
