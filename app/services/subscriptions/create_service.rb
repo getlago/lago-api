@@ -136,7 +136,9 @@ module Subscriptions
     end
 
     def upgrade_subscription
-      PlanUpgradeService.call(current_subscription:, plan:, params:).subscription
+      PlanUpgradeService.call(current_subscription:, plan:, params:).tap do |result|
+        result.raise_if_error!
+      end.subscription
     end
 
     def downgrade_subscription

@@ -494,6 +494,28 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             end
           end
 
+          context "when subscription upgrade fails" do
+            let(:result_failure) do
+              BaseService::Result.new.validation_failure!(
+                errors: {billing_time: ['value_is_invalid']}
+              )
+            end
+
+            before do
+              allow(Subscriptions::PlanUpgradeService)
+                .to receive(:call)
+                .and_return(result_failure)
+            end
+
+            it "returns an error", :aggregate_failures do
+              result = create_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages).to eq({ billing_time: ["value_is_invalid"] })
+            end
+          end
+
           context 'when current subscription is pending' do
             before { subscription.pending! }
 
