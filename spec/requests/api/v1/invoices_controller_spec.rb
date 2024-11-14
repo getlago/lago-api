@@ -725,7 +725,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
       customer.update(payment_provider: 'stripe')
 
-      allow(Stripe::Checkout::Session).to receive(:create)
+      allow(::Stripe::Checkout::Session).to receive(:create)
         .and_return({'url' => 'https://example.com'})
     end
 

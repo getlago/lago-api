@@ -277,7 +277,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
 
       before do
         allow(Stripe::PaymentIntent).to receive(:create)
-          .and_raise(Stripe::CardError.new("error", {}))
+          .and_raise(::Stripe::CardError.new("error", {}))
         allow(PaymentRequests::Payments::DeliverErrorWebhookService)
           .to receive(:call_async)
           .and_call_original
@@ -324,7 +324,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
 
       before do
         allow(Stripe::PaymentIntent).to receive(:create)
-          .and_raise(Stripe::InvalidRequestError.new("amount_too_small", {}, code: "amount_too_small"))
+          .and_raise(::Stripe::InvalidRequestError.new("amount_too_small", {}, code: "amount_too_small"))
       end
 
       it "does not mark the payment request as failed" do
@@ -401,14 +401,14 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       stripe_payment_provider
       stripe_customer
 
-      allow(Stripe::Checkout::Session).to receive(:create)
+      allow(::Stripe::Checkout::Session).to receive(:create)
         .and_return({"url" => "https://example.com"})
     end
 
     it "generates payment url" do
       stripe_service.generate_payment_url
 
-      expect(Stripe::Checkout::Session)
+      expect(::Stripe::Checkout::Session)
         .to have_received(:create)
         .with(
           {
@@ -448,7 +448,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       it "does not generate payment url" do
         stripe_service.generate_payment_url
 
-        expect(Stripe::Checkout::Session).not_to have_received(:create)
+        expect(::Stripe::Checkout::Session).not_to have_received(:create)
       end
     end
   end

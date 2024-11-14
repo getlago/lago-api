@@ -20,6 +20,12 @@ module PaymentProviderCustomers
 
     settings_accessors :provider_mandate_id, :sync_with_provider
 
+    scope :by_provider_id_from_organization, ->(organization_id, provider_id) do
+      joins(:customer)
+        .where(customers: {organization_id: organization_id})
+        .where(provider_customer_id: provider_id)
+    end
+
     def provider_payment_methods
       nil
     end

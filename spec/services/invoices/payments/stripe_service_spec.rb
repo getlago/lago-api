@@ -210,7 +210,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         subscription
 
         allow(Stripe::PaymentIntent).to receive(:create)
-          .and_raise(Stripe::CardError.new('error', {}))
+          .and_raise(::Stripe::CardError.new('error', {}))
       end
 
       it 'delivers an error webhook' do
@@ -279,7 +279,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         subscription
 
         allow(Stripe::PaymentIntent).to receive(:create)
-          .and_raise(Stripe::InvalidRequestError.new('amount_too_small', {}, code: 'amount_too_small'))
+          .and_raise(::Stripe::InvalidRequestError.new('amount_too_small', {}, code: 'amount_too_small'))
       end
 
       it 'does not send mark the invoice as failed' do
@@ -413,14 +413,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       stripe_payment_provider
       stripe_customer
 
-      allow(Stripe::Checkout::Session).to receive(:create)
+      allow(::Stripe::Checkout::Session).to receive(:create)
         .and_return({'url' => 'https://example.com'})
     end
 
     it 'generates payment url' do
       stripe_service.generate_payment_url
 
-      expect(Stripe::Checkout::Session).to have_received(:create)
+      expect(::Stripe::Checkout::Session).to have_received(:create)
     end
 
     context 'when invoice is payment_succeeded' do
@@ -429,7 +429,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       it 'does not generate payment url' do
         stripe_service.generate_payment_url
 
-        expect(Stripe::Checkout::Session).not_to have_received(:create)
+        expect(::Stripe::Checkout::Session).not_to have_received(:create)
       end
     end
 
@@ -439,7 +439,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       it 'does not generate payment url' do
         stripe_service.generate_payment_url
 
-        expect(Stripe::Checkout::Session).not_to have_received(:create)
+        expect(::Stripe::Checkout::Session).not_to have_received(:create)
       end
     end
 
