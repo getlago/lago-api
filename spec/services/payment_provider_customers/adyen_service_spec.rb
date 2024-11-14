@@ -98,6 +98,27 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
           )
       end
     end
+
+    context 'with authentication error' do
+      before do
+        allow(payment_links_api)
+          .to receive(:payment_links).and_raise(Adyen::AuthenticationError.new('error', nil))
+      end
+
+      it 'delivers an error webhook' do
+        expect(adyen_service.create).to be_success
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            'customer.payment_provider_error',
+            customer,
+            provider_error: {
+              message: 'error',
+              error_code: 401
+            }
+          )
+      end
+    end
   end
 
   describe '#update' do
