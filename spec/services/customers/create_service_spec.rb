@@ -980,6 +980,46 @@ RSpec.describe Customers::CreateService, type: :service do
         end
       end
     end
+
+    context 'with tax_codes' do
+      let(:create_args) do
+        {
+          external_id: SecureRandom.uuid,
+          name: 'Foo Bar',
+          organization_id: organization.id
+        }
+      end
+
+      it 'creates customer with tax_codes' do
+        create_args[:tax_codes] = ['123456789']
+        create(:tax, organization:, code: '123456789')
+        result = customers_service.create_from_api(organization:, params: create_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.taxes.count).to eq(1)
+          expect(customer.taxes.first.code).to eq('123456789')
+        end
+      end
+
+      it 'updates customer with tax_codes' do
+        create_args[:tax_codes] = []
+        tax = create(:tax, organization:, code: '987654321')
+        customer = create(:customer, organization:, external_id: create_args[:external_id])
+        create(:customer_applied_tax, customer:, tax:)
+
+        result = customers_service.create_from_api(organization:, params: create_args)
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.taxes.count).to eq(0)
+        end
+      end
+    end
   end
 
   describe 'create' do
