@@ -23,10 +23,12 @@ module PaymentRequests
         )
       end
 
-      SendWebhookJob.perform_later("payment_request.created", payment_request)
+      after_commit do
+        SendWebhookJob.perform_later("payment_request.created", payment_request)
 
-      payment_result = Payments::CreateService.call(payment_request)
-      PaymentRequestMailer.with(payment_request:).requested.deliver_later unless payment_result.success?
+        payment_result = Payments::CreateService.call(payment_request)
+        PaymentRequestMailer.with(payment_request:).requested.deliver_later unless payment_result.success?
+      end
 
       result.payment_request = payment_request
 
