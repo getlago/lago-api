@@ -136,48 +136,7 @@ module Subscriptions
     end
 
     def upgrade_subscription
-      if current_subscription.starting_in_the_future?
-        update_pending_subscription
-
-        return current_subscription
-      end
-
-      new_subscription = Subscription.new(
-        customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
-        name:,
-        external_id: current_subscription.external_id,
-        previous_subscription_id: current_subscription.id,
-        subscription_at: current_subscription.subscription_at,
-        billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
-      )
-
-      cancel_pending_subscription if pending_subscription?
-
-      # Collection that groups all billable subscriptions for an invoice
-      billable_subscriptions = billable_subscriptions(new_subscription)
-
-      # NOTE: When upgrading, the new subscription becomes active immediately
-      #       The previous one must be terminated
-      Subscriptions::TerminateService.call(subscription: current_subscription, upgrade: true)
-
-      new_subscription.mark_as_active!
-      after_commit { SendWebhookJob.perform_later('subscription.started', new_subscription) }
-
-      # NOTE: If plan is in advance we should create only one invoice for termination fees and for new plan fees
-      if billable_subscriptions.any?
-        # NOTE: Since job is launched from inside a db transaction
-        #       we must wait for it to be committed before processing the job
-        #       We do not set offset anymore but instead retry jobs
-        after_commit do
-          billing_at = Time.current + 1.second
-          BillSubscriptionJob.perform_later(billable_subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
-          BillNonInvoiceableFeesJob.perform_later(billable_subscriptions, billing_at)
-        end
-      end
-
-      new_subscription
+      PlanUpgradeService.call(current_subscription:, plan:, params:).subscription
     end
 
     def downgrade_subscription
@@ -265,20 +224,6 @@ module Subscriptions
 
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
-    end
-
-    def billable_subscriptions(new_subscription)
-      billable_subscriptions = if current_subscription.starting_in_the_future?
-        []
-      elsif current_subscription.pending?
-        []
-      elsif !current_subscription.terminated?
-        [current_subscription]
-      end.to_a
-
-      billable_subscriptions << new_subscription if plan.pay_in_advance? && !new_subscription.in_trial_period?
-
-      billable_subscriptions
     end
   end
 end
