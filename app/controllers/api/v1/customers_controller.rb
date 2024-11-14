@@ -42,11 +42,11 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            customers.includes(:taxes),
+            customers.includes(:taxes, :integration_customers),
             ::V1::CustomerSerializer,
             collection_name: 'customers',
             meta: pagination_metadata(customers),
-            includes: %i[taxes]
+            includes: %i[taxes integration_customers]
           )
         )
       end

@@ -25,6 +25,8 @@ module V1
         'xero'
       when 'IntegrationCustomers::HubspotCustomer'
         'hubspot'
+      when 'IntegrationCustomers::SalesforceCustomer'
+        'salesforce'
       end
     end
   end
