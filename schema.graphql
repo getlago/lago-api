@@ -3223,6 +3223,7 @@ type Customer {
   paymentProviderCode: String
   phone: String
   providerCustomer: ProviderCustomer
+  salesforceCustomer: SalesforceCustomer
   sequentialId: String!
   shippingAddress: CustomerAddress
   slug: String!
@@ -6935,6 +6936,15 @@ enum RoundingFunctionEnum {
   ceil
   floor
   round
+}
+
+type SalesforceCustomer {
+  externalCustomerId: String
+  id: ID!
+  integrationCode: String
+  integrationId: ID
+  integrationType: IntegrationTypeEnum
+  syncWithProvider: Boolean
 }
 
 type SalesforceIntegration {
