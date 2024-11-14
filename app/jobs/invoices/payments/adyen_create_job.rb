@@ -10,7 +10,7 @@ module Invoices
       retry_on Faraday::ConnectionFailed, wait: :polynomially_longer, attempts: 6
 
       def perform(invoice)
-        result = Invoices::Payments::AdyenService.new(invoice).create
+        result = Invoices::Payments::AdyenService.call(invoice)
         result.raise_if_error!
       end
     end

@@ -29,7 +29,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     )
   end
 
-  describe '#create' do
+  describe '#call' do
     before do
       adyen_payment_provider
       adyen_customer
@@ -48,7 +48,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     end
 
     it 'creates an adyen payment' do
-      result = adyen_service.create
+      result = adyen_service.call
 
       expect(result).to be_success
 
@@ -73,14 +73,14 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     end
 
     it_behaves_like 'syncs payment' do
-      let(:service_call) { adyen_service.create }
+      let(:service_call) { adyen_service.call }
     end
 
     context 'with no payment provider' do
       let(:adyen_payment_provider) { nil }
 
       it 'does not creates a adyen payment' do
-        result = adyen_service.create
+        result = adyen_service.call
 
         expect(result).to be_success
 
@@ -105,7 +105,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
 
       it 'does not creates a adyen payment' do
-        result = adyen_service.create
+        result = adyen_service.call
 
         expect(result).to be_success
 
@@ -124,7 +124,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       before { adyen_customer.update!(provider_customer_id: nil) }
 
       it 'does not creates a adyen payment' do
-        result = adyen_service.create
+        result = adyen_service.call
 
         expect(result).to be_success
 
@@ -145,7 +145,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
 
       it 'delivers an error webhook' do
-        expect { adyen_service.create }.to enqueue_job(SendWebhookJob)
+        expect { adyen_service.call }.to enqueue_job(SendWebhookJob)
           .with(
             'invoice.payment_failure',
             invoice,
@@ -182,7 +182,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         it 'delivers an error webhook' do
           allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
 
-          adyen_service.create
+          adyen_service.call
 
           expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
           expect(SendWebhookJob).to have_been_enqueued
@@ -204,7 +204,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
             invoice.update! status: :open, invoice_type: :credit
             allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
 
-            adyen_service.create
+            adyen_service.call
 
             expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
             expect(SendWebhookJob).to have_been_enqueued
@@ -228,7 +228,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         end
 
         it 'delivers an error webhook' do
-          expect { adyen_service.create }.to enqueue_job(SendWebhookJob)
+          expect { adyen_service.call }.to enqueue_job(SendWebhookJob)
             .with(
               'invoice.payment_failure',
               invoice,

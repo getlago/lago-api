@@ -8,7 +8,7 @@ module Invoices
       unique :until_executed
 
       def perform(invoice)
-        result = Invoices::Payments::GocardlessService.new(invoice).create
+        result = Invoices::Payments::GocardlessService.call(invoice)
         result.raise_if_error!
       end
     end

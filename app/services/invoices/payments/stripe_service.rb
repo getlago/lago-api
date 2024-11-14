@@ -13,10 +13,10 @@ module Invoices
       def initialize(invoice = nil)
         @invoice = invoice
 
-        super(nil)
+        super
       end
 
-      def create
+      def call
         result.invoice = invoice
         return result unless should_process_payment?
 

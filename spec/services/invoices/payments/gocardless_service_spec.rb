@@ -27,7 +27,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     )
   end
 
-  describe '.create' do
+  describe '.call' do
     before do
       gocardless_payment_provider
       gocardless_customer
@@ -53,7 +53,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     end
 
     it 'creates a gocardless payment' do
-      result = gocardless_service.create
+      result = gocardless_service.call
 
       expect(result).to be_success
 
@@ -76,14 +76,14 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     end
 
     it_behaves_like 'syncs payment' do
-      let(:service_call) { gocardless_service.create }
+      let(:service_call) { gocardless_service.call }
     end
 
     context 'with no payment provider' do
       let(:gocardless_payment_provider) { nil }
 
       it 'does not creates a gocardless payment' do
-        result = gocardless_service.create
+        result = gocardless_service.call
 
         expect(result).to be_success
 
@@ -108,7 +108,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       end
 
       it 'does not creates a gocardless payment' do
-        result = gocardless_service.create
+        result = gocardless_service.call
 
         expect(result).to be_success
 
@@ -127,7 +127,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       before { gocardless_customer.update!(provider_customer_id: nil) }
 
       it 'does not creates a gocardless payment' do
-        result = gocardless_service.create
+        result = gocardless_service.call
 
         expect(result).to be_success
 
@@ -161,7 +161,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       it 'delivers an error webhook' do
         allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
 
-        expect { gocardless_service.create }.to raise_error(GoCardlessPro::Error)
+        expect { gocardless_service.call }.to raise_error(GoCardlessPro::Error)
 
         expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
         expect(SendWebhookJob).to have_been_enqueued
@@ -183,7 +183,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
           invoice.update! status: :open, invoice_type: :credit
           allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
 
-          expect { gocardless_service.create }.to raise_error(GoCardlessPro::Error)
+          expect { gocardless_service.call }.to raise_error(GoCardlessPro::Error)
 
           expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
           expect(SendWebhookJob).to have_been_enqueued
@@ -213,7 +213,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
       end
 
       it "delivers an error webhook" do
-        result = gocardless_service.create
+        result = gocardless_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
