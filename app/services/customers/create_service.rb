@@ -77,7 +77,7 @@ module Customers
           params[:tax_codes] = (params[:tax_codes] + [eu_tax_code]).uniq
         end
 
-        if params[:tax_codes].present?
+        if params.key?(:tax_codes)
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: params[:tax_codes])
           taxes_result.raise_if_error!
         end
