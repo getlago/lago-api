@@ -28,7 +28,7 @@ module DataExports
         data_export.file.attach(
           io: tempfile,
           filename: data_export.filename,
-          key: "data_exports/#{data_export.id}.#{data_export.format}",
+          key: "data_exports/#{data_export.id}-#{SecureRandom.hex(5)}.#{data_export.format}",
           content_type: "text/csv"
         )
       end
