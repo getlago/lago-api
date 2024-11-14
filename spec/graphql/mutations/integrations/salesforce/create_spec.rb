@@ -6,6 +6,7 @@ RSpec.describe Mutations::Integrations::Salesforce::Create, type: :graphql do
   let(:required_permission) { 'organization:integrations:create' }
   let(:membership) { create(:membership) }
   let(:name) { 'Salesforce 1' }
+  let(:code) { 'salesforce_test' }
   let(:script_endpoint_url) { Faker::Internet.url }
 
   let(:mutation) do
@@ -38,16 +39,18 @@ RSpec.describe Mutations::Integrations::Salesforce::Create, type: :graphql do
       variables: {
         input: {
           name:,
+          code:,
           instanceId: 'this-is-random-uuid'
         }
       }
     )
 
+    pp result
     result_data = result['data']['createSalesforceIntegration']
 
     aggregate_failures do
       expect(result_data['id']).to be_present
-      expect(result_data['code']).to eq('salesforce')
+      expect(result_data['code']).to eq(code)
       expect(result_data['name']).to eq(name)
     end
   end

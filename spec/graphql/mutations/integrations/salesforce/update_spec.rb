@@ -8,6 +8,7 @@ RSpec.describe Mutations::Integrations::Salesforce::Update, type: :graphql do
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
   let(:name) { 'Salesforce 1' }
+  let(:code) { 'salesforce_work' }
 
   let(:mutation) do
     <<-GQL
@@ -42,16 +43,18 @@ RSpec.describe Mutations::Integrations::Salesforce::Update, type: :graphql do
       variables: {
         input: {
           id: integration.id,
-          name:
+          name:,
+          code: code
         }
       }
     )
 
+    pp result
     result_data = result['data']['updateSalesforceIntegration']
 
     aggregate_failures do
       expect(result_data['name']).to eq(name)
-      expect(result_data['code']).to eq('salesforce')
+      expect(result_data['code']).to eq(code)
     end
   end
 end

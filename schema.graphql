@@ -2220,6 +2220,7 @@ input CreateSalesforceIntegrationInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String!
   instanceId: String!
   name: String!
 }
@@ -4249,7 +4250,7 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime @specifiedBy(url: "https://tools.ietf.org/html/rfc3339")
 
-union Integration = AnrokIntegration | HubspotIntegration | NetsuiteIntegration | OktaIntegration | XeroIntegration
+union Integration = AnrokIntegration | HubspotIntegration | NetsuiteIntegration | OktaIntegration | SalesforceIntegration | XeroIntegration
 
 """
 IntegrationCollection type
@@ -8394,6 +8395,7 @@ input UpdateSalesforceIntegrationInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   id: ID
   instanceId: String
   name: String

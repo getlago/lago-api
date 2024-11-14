@@ -9,7 +9,8 @@ module Types
         Types::Integrations::Okta,
         Types::Integrations::Anrok,
         Types::Integrations::Xero,
-        Types::Integrations::Hubspot
+        Types::Integrations::Hubspot,
+        Types::Integrations::Salesforce
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -23,6 +24,8 @@ module Types
           Types::Integrations::Xero
         when 'Integrations::HubspotIntegration'
           Types::Integrations::Hubspot
+        when 'Integrations::SalesforceIntegration'
+          Types::Integrations::Salesforce
         else
           raise "Unexpected integration type: #{object.inspect}"
         end

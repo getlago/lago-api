@@ -6,6 +6,7 @@ module Types
       class CreateInput < Types::BaseInputObject
         graphql_name 'CreateSalesforceIntegrationInput'
 
+        argument :code, String, required: true
         argument :instance_id, String, required: true
         argument :name, String, required: true
       end

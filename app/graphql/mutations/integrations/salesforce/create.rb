@@ -18,7 +18,7 @@ module Mutations
 
         def resolve(**args)
           result = ::Integrations::Salesforce::CreateService
-            .call(params: args.merge(organization_id: current_organization.id, code: 'salesforce'))
+            .call(params: args.merge(organization_id: current_organization.id))
 
           result.success? ? result.integration : result_error(result)
         end
