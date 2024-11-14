@@ -268,12 +268,21 @@ module Plans
       end
     end
 
-    # NOTE: We should remove pending subscriptions
-    #       if plan has been downgraded but amount cents of pending plan became higher than original plan.
-    #       This pending subscription is not relevant in this case and downgrade should be ignored
+    # NOTE: If new plan yearly amount is higher than its value before the update
+    #       and there are pending subscriptions for the plan,
+    #       this is a plan upgrade, old subscription must be terminated and billed
+    #       new subscription with updated plan must be activated inmediately.
     def process_pending_subscriptions
-      Subscription.where(plan:, status: :pending).find_each do |sub|
-        sub.mark_as_canceled! if plan.amount_cents > sub.previous_subscription.plan.amount_cents
+      Subscription.where(plan:, status: :pending).find_each do |subscription|
+        next unless subscription.previous_subscription
+
+        if plan.yearly_amount_cents >= subscription.previous_subscription.plan.yearly_amount_cents
+          Subscriptions::PlanUpgradeService.call(
+            current_subscription: subscription.previous_subscription,
+            plan: plan,
+            params: {name: subscription.name}
+          ).raise_if_error!
+        end
       end
     end
   end

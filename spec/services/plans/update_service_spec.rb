@@ -402,17 +402,54 @@ RSpec.describe Plans::UpdateService, type: :service do
             amount_currency: 'EUR'
           }
         end
+        let(:plan_upgrade_result) { BaseService::Result.new }
 
-        before { pending_subscription }
+        before do
+          allow(Subscriptions::PlanUpgradeService)
+            .to receive(:call)
+            .and_return(plan_upgrade_result)
 
-        it 'correctly cancels pending subscriptions' do
+          pending_subscription
+        end
+
+        it "upgrades subscription plan" do
+          plans_service.call
+
+          expect(Subscriptions::PlanUpgradeService).to have_received(:call)
+        end
+
+        it 'updates the plan', :aggregate_failures do
           result = plans_service.call
 
-          updated_plan = result.plan
-          aggregate_failures do
-            expect(updated_plan.name).to eq('Updated plan name')
-            expect(updated_plan.amount_cents).to eq(200)
-            expect(Subscription.find_by(id: pending_subscription.id).status).to eq('canceled')
+          expect(result.plan.name).to eq('Updated plan name')
+          expect(result.plan.amount_cents).to eq(200)
+        end
+
+        context "when pending subscription does not have a previous one" do
+          let(:pending_subscription) do
+            create(:subscription, plan:, status: :pending, previous_subscription_id: nil)
+          end
+
+          it "does not upgrade it" do
+            plans_service.call
+
+            expect(Subscriptions::PlanUpgradeService).not_to have_received(:call)
+          end
+        end
+
+        context "when subscription upgrade fails" do
+          let(:plan_upgrade_result) do
+            BaseService::Result.new.validation_failure!(
+              errors: {billing_time: ['value_is_invalid']}
+            )
+          end
+
+          it "returns an error", :aggregate_failures do
+            result = plans_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq({ billing_time: ["value_is_invalid"] })
           end
         end
       end
