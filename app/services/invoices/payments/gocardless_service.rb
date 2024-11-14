@@ -26,10 +26,10 @@ module Invoices
       def initialize(invoice = nil)
         @invoice = invoice
 
-        super(nil)
+        super
       end
 
-      def create
+      def call
         result.invoice = invoice
         return result unless should_process_payment?
 
@@ -66,6 +66,15 @@ module Invoices
 
         result.service_failure!(code: e.code, message: e.message)
         result
+      rescue GoCardlessPro::Error, GoCardlessPro::ValidationError => e
+        deliver_error_webhook(e)
+        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
+
+        if e.is_a?(GoCardlessPro::ValidationError)
+          result
+        else
+          raise
+        end
       end
 
       def update_payment_status(provider_payment_id:, status:)
@@ -147,11 +156,6 @@ module Invoices
             'Idempotency-Key' => "#{invoice.id}/#{invoice.payment_attempts}"
           }
         )
-      rescue GoCardlessPro::Error => e
-        deliver_error_webhook(e)
-        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
-
-        raise
       end
 
       def invoice_payment_status(payment_status)

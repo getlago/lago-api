@@ -22,7 +22,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     )
   end
 
-  describe '.create' do
+  describe '.call' do
     let(:provider_customer_service) { instance_double(PaymentProviderCustomers::StripeService) }
 
     let(:provider_customer_service_result) do
@@ -65,7 +65,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     it 'creates a stripe payment and a payment' do
-      result = stripe_service.create
+      result = stripe_service.call
 
       expect(result).to be_success
 
@@ -87,14 +87,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     it_behaves_like 'syncs payment' do
-      let(:service_call) { stripe_service.create }
+      let(:service_call) { stripe_service.call }
     end
 
     context 'with no payment provider' do
       let(:stripe_payment_provider) { nil }
 
       it 'does not creates a stripe payment' do
-        result = stripe_service.create
+        result = stripe_service.call
 
         expect(result).to be_success
 
@@ -119,7 +119,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it 'does not creates a stripe payment' do
-        result = stripe_service.create
+        result = stripe_service.call
 
         expect(result).to be_success
 
@@ -138,7 +138,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       before { stripe_customer.update!(provider_customer_id: nil) }
 
       it 'does not creates a stripe payment' do
-        result = stripe_service.create
+        result = stripe_service.call
 
         expect(result).to be_success
 
@@ -183,7 +183,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it 'retrieves the payment method' do
-        result = stripe_service.create
+        result = stripe_service.call
 
         expect(result).to be_success
         expect(customer.stripe_customer.reload).to be_present
@@ -216,7 +216,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       it 'delivers an error webhook' do
         allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
 
-        stripe_service.create
+        stripe_service.call
 
         expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
         expect(SendWebhookJob).to have_been_enqueued
@@ -242,7 +242,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         it 'delivers an error webhook' do
           allow(Invoices::Payments::DeliverErrorWebhookService).to receive(:call_async).and_call_original
 
-          stripe_service.create
+          stripe_service.call
 
           expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
           expect(SendWebhookJob).to have_been_enqueued
@@ -283,7 +283,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it 'does not send mark the invoice as failed' do
-        stripe_service.create
+        stripe_service.call
         invoice.reload
 
         expect(invoice).to be_payment_pending
@@ -294,7 +294,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       let(:payment_status) { 'processing' }
 
       it 'creates a stripe payment and a payment' do
-        result = stripe_service.create
+        result = stripe_service.call
 
         expect(result).to be_success
 
@@ -336,7 +336,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it 'creates a stripe payment and payment with requires_action status' do
-        result = stripe_service.create
+        result = stripe_service.call
 
         expect(result).to be_success
 
@@ -347,7 +347,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it 'has enqueued a SendWebhookJob' do
-        result = stripe_service.create
+        result = stripe_service.call
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
