@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Subscriptions
   class PlanUpgradeService < BaseService
     def initialize(current_subscription:, plan:, params:)

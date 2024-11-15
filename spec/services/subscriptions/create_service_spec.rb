@@ -512,7 +512,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
               expect(result).not_to be_success
               expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages).to eq({ billing_time: ["value_is_invalid"] })
+              expect(result.error.messages).to eq({billing_time: ["value_is_invalid"]})
             end
           end
 

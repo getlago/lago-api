@@ -15,7 +15,7 @@ RSpec.describe Subscriptions::PlanUpgradeService, type: :service do
       status: :active,
       subscription_at: Time.current,
       started_at: Time.current,
-      external_id: SecureRandom.uuid,
+      external_id: SecureRandom.uuid
     )
   end
 
