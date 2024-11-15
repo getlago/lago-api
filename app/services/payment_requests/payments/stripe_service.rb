@@ -89,15 +89,20 @@ module PaymentRequests
         result.single_validation_failure!(error_code: "payment_provider_error")
       end
 
-      def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
+      def update_payment_status(organization_id:, status:, stripe_payment:)
         # TODO: do we have one-time payments for payment requests?
-        payment = if metadata[:payment_type] == "one-time"
-          create_payment(provider_payment_id:, metadata:)
+        payment = if stripe_payment.metadata[:payment_type] == "one-time"
+          create_payment(stripe_payment)
         else
-          Payment.find_by(provider_payment_id:)
+          Payment.find_by(provider_payment_id: stripe_payment.id)
         end
 
-        return handle_missing_payment(organization_id, metadata) unless payment
+        unless payment
+          handle_missing_payment(organization_id, stripe_payment)
+          return result unless result.payment
+
+          payment = result.payment
+        end
 
         result.payment = payment
         result.payable = payment.payable
@@ -278,38 +283,41 @@ module PaymentRequests
         }
       end
 
-      def handle_missing_payment(organization_id, metadata)
+      def handle_missing_payment(organization_id, stripe_payment)
         # NOTE: Payment was not initiated by lago
-        return result unless metadata&.key?(:lago_payable_id)
+        return result unless stripe_payment.metadata&.key?(:lago_payable_id)
 
         # NOTE: Payment Request does not belong to this lago organization
         #       It means the same Stripe secret key is used for multiple organizations
-        payment_request = PaymentRequest.find_by(id: metadata[:lago_payable_id], organization_id:)
+        payment_request = PaymentRequest.find_by(id: stripe_payment.metadata[:lago_payable_id], organization_id:)
         return result unless payment_request
 
         # NOTE: Payment Request exists but payment status is failed
         return result if payment_request.payment_failed?
 
-        result.not_found_failure!(resource: "stripe_payment")
+        # NOTE: For some reason payment is missing in the database... (killed sidekiq job, etc.)
+        #       We have to recreate it from the received data
+        result.payment = create_payment(stripe_payment, payable: payment_request)
+        result
       end
 
-      def create_payment(provider_payment_id:, metadata:)
-        @payable = PaymentRequest.find_by(id: metadata[:lago_payable_id])
+      def create_payment(stripe_payment, payable: nil)
+        @payable = payable || PaymentRequest.find_by(id: stripe_payment.metadata[:lago_payable_id])
 
-        unless payable
+        unless @payable
           result.not_found_failure!(resource: "payment_request")
           return
         end
 
-        payable.increment_payment_attempts!
+        @payable.increment_payment_attempts!
 
         Payment.new(
-          payable:,
+          payable: @payable,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
-          amount_cents: payable.total_amount_cents,
-          amount_currency: payable.currency&.upcase,
-          provider_payment_id:
+          amount_cents: @payable.total_amount_cents,
+          amount_currency: @payable.currency,
+          provider_payment_id: stripe_payment.id
         )
       end
 

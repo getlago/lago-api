@@ -457,7 +457,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
     subject(:result) do
       stripe_service.update_payment_status(
         organization_id: organization.id,
-        provider_payment_id:,
+        stripe_payment:,
         status:
       )
     end
@@ -468,11 +468,17 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       create(
         :payment,
         payable: payment_request,
-        provider_payment_id:
+        provider_payment_id: stripe_payment.id
       )
     end
 
-    let(:provider_payment_id) { "ch_123456" }
+    let(:stripe_payment) do
+      PaymentProviders::StripeProvider::StripePayment.new(
+        id: "ch_123456",
+        status: "succeeded",
+        metadata: {}
+      )
+    end
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
@@ -569,23 +575,24 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       let(:payment) { nil }
       let(:status) { "succeeded" }
 
-      before do
-        stripe_payment_provider
-        stripe_customer
-      end
-
-      it "creates a payment and updates payment request and invoice payment status", :aggregate_failures do
-        result = stripe_service.update_payment_status(
-          organization_id: organization.id,
-          provider_payment_id:,
-          status:,
+      let(:stripe_payment) do
+        PaymentProviders::StripeProvider::StripePayment.new(
+          id: "ch_123456",
+          status: "succeeded",
           metadata: {
             lago_payable_id: payment_request.id,
             lago_payable_type: "PaymentRequest",
             payment_type: "one-time"
           }
         )
+      end
 
+      before do
+        stripe_payment_provider
+        stripe_customer
+      end
+
+      it "creates a payment and updates payment request and invoice payment status", :aggregate_failures do
         expect(result).to be_success
         expect(result.payment.status).to eq(status)
 
@@ -599,18 +606,19 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       end
 
       context "when payment request is not found" do
-        it "raises a not found failure", :aggregate_failures do
-          result = stripe_service.update_payment_status(
-            organization_id: organization.id,
-            provider_payment_id:,
-            status:,
+        let(:stripe_payment) do
+          PaymentProviders::StripeProvider::StripePayment.new(
+            id: "ch_123456",
+            status: "succeeded",
             metadata: {
               lago_payable_id: "invalid",
               lago_payable_type: "PaymentRequest",
               payment_type: "one-time"
             }
           )
+        end
 
+        it "raises a not found failure", :aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq("payment_request_not_found")
@@ -628,30 +636,62 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       end
 
       context "with payment request id in metadata" do
-        it "returns an empty result", :aggregate_failures do
-          result = stripe_service.update_payment_status(
-            organization_id: organization.id,
-            provider_payment_id:,
-            status:,
-            metadata: {lago_payable_id: SecureRandom.uuid, lago_payable_type: "PaymentRequest"}
+        let(:stripe_payment) do
+          PaymentProviders::StripeProvider::StripePayment.new(
+            id: "ch_123456",
+            status: "succeeded",
+            metadata: {
+              lago_payable_id: SecureRandom.uuid,
+              lago_payable_type: "PaymentRequest"
+            }
           )
+        end
 
+        it "returns an empty result", :aggregate_failures do
           expect(result).to be_success
           expect(result.payment).to be_nil
         end
 
         context "when the payment request is found for organization" do
-          it "returns a not found failure", :aggregate_failures do
-            result = stripe_service.update_payment_status(
-              organization_id: organization.id,
-              provider_payment_id:,
-              status:,
-              metadata: {lago_payable_id: payment_request.id, lago_payable_type: "PaymentRequest"}
+          let(:stripe_payment) do
+            PaymentProviders::StripeProvider::StripePayment.new(
+              id: "ch_123456",
+              status: "succeeded",
+              metadata: {
+                lago_payable_id: payment_request.id,
+                lago_payable_type: "PaymentRequest"
+              }
             )
+          end
 
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("stripe_payment_not_found")
+          before do
+            stripe_customer
+            stripe_payment_provider
+          end
+
+          it "creates the missing payment and updates payment_request status", :aggregate_failures do
+            expect(result).to be_success
+            expect(result.payment.status).to eq(status)
+
+            expect(result.payable.reload).to be_payment_succeeded
+            expect(result.payable.ready_for_payment_processing).to eq(false)
+
+            expect(invoice_1.reload).to be_payment_succeeded
+            expect(invoice_1.ready_for_payment_processing).to eq(false)
+            expect(invoice_2.reload).to be_payment_succeeded
+            expect(invoice_2.ready_for_payment_processing).to eq(false)
+
+            expect(payment_request.payments.count).to eq(1)
+            payment = payment_request.payments.first
+            expect(payment).to have_attributes(
+              payable: payment_request,
+              payment_provider_id: stripe_payment_provider.id,
+              payment_provider_customer_id: stripe_customer.id,
+              amount_cents: payment_request.total_amount_cents,
+              amount_currency: payment_request.currency,
+              provider_payment_id: 'ch_123456',
+              status: 'succeeded'
+            )
           end
         end
       end

@@ -33,11 +33,14 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
       expect(payment_service).to have_received(:update_payment_status)
         .with(
           organization_id: organization.id,
-          provider_payment_id: 'pi_1JKS2Y2VYugoKSBzNHPFBNj9',
           status: 'succeeded',
-          metadata: {
-            lago_invoice_id: 'a587e552-36bc-4334-81f2-abcbf034ad3f'
-          }
+          stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+            id: 'pi_1JKS2Y2VYugoKSBzNHPFBNj9',
+            status: 'success',
+            metadata: {
+              lago_invoice_id: 'a587e552-36bc-4334-81f2-abcbf034ad3f'
+            }
+          )
         )
     end
   end
@@ -66,12 +69,15 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
       expect(payment_service).to have_received(:update_payment_status)
         .with(
           organization_id: organization.id,
-          provider_payment_id: "pi_1JKS2Y2VYugoKSBzNHPFBNj9",
           status: "succeeded",
-          metadata: {
-            lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
-            lago_payable_type: "PaymentRequest"
-          }
+          stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+            id: 'pi_1JKS2Y2VYugoKSBzNHPFBNj9',
+            status: 'success',
+            metadata: {
+              lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
+              lago_payable_type: "PaymentRequest"
+            }
+          )
         )
     end
   end
@@ -102,9 +108,12 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
       expect(payment_service).to have_received(:update_payment_status)
         .with(
           organization_id: organization.id,
-          provider_payment_id: 'pi_123456',
           status: 'succeeded',
-          metadata: {}
+          stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+            id: 'pi_123456',
+            status: 'succeeded',
+            metadata: {}
+          )
         )
     end
   end
@@ -133,12 +142,15 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
       expect(payment_service).to have_received(:update_payment_status)
         .with(
           organization_id: organization.id,
-          provider_payment_id: 'pi_123456',
           status: "succeeded",
-          metadata: {
-            lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
-            lago_payable_type: "PaymentRequest"
-          }
+          stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+            id: 'pi_123456',
+            status: 'succeeded',
+            metadata: {
+              lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
+              lago_payable_type: "PaymentRequest"
+            }
+          )
         )
     end
   end

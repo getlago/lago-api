@@ -491,6 +491,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       )
     end
 
+    let(:stripe_payment) do
+      PaymentProviders::StripeProvider::StripePayment.new(
+        id: 'ch_123456',
+        status: 'succeeded',
+        metadata: {}
+      )
+    end
+
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(SendWebhookJob).to receive(:perform_later)
@@ -500,8 +508,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     it 'updates the payment and invoice status' do
       result = stripe_service.update_payment_status(
         organization_id: organization.id,
-        provider_payment_id: 'ch_123456',
-        status: 'succeeded'
+        status: 'succeeded',
+        stripe_payment:
       )
 
       expect(result).to be_success
@@ -513,11 +521,19 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     context 'when status is failed' do
+      let(:stripe_payment) do
+        PaymentProviders::StripeProvider::StripePayment.new(
+          id: 'ch_123456',
+          status: 'canceled',
+          metadata: {}
+        )
+      end
+
       it 'updates the payment and invoice status' do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
-          provider_payment_id: 'ch_123456',
-          status: 'failed'
+          status: 'failed',
+          stripe_payment:
         )
 
         expect(result).to be_success
@@ -535,8 +551,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       it 'does not update the status of invoice and payment' do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
-          provider_payment_id: 'ch_123456',
-          status: 'succeeded'
+          status: 'succeeded',
+          stripe_payment:
         )
 
         expect(result).to be_success
@@ -548,8 +564,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       it 'does not update the status of invoice and payment' do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
-          provider_payment_id: 'ch_123456',
-          status: 'foo-bar'
+          status: 'foo-bar',
+          stripe_payment:
         )
 
         aggregate_failures do
@@ -564,6 +580,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     context 'when payment is not found and it is one time payment' do
       let(:payment) { nil }
 
+      let(:stripe_payment) do
+        PaymentProviders::StripeProvider::StripePayment.new(
+          id: 'ch_123456',
+          status: 'succeeded',
+          metadata: {lago_invoice_id: invoice.id, payment_type: 'one-time'}
+        )
+      end
+
       before do
         stripe_payment_provider
         stripe_customer
@@ -572,9 +596,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       it 'creates a payment and updates invoice payment status' do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
-          provider_payment_id: 'ch_123456',
           status: 'succeeded',
-          metadata: {lago_invoice_id: invoice.id, payment_type: 'one-time'}
+          stripe_payment:
         )
 
         aggregate_failures do
@@ -588,12 +611,19 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       context 'when invoice is not found' do
+        let(:stripe_payment) do
+          PaymentProviders::StripeProvider::StripePayment.new(
+            id: 'ch_123456',
+            status: 'succeeded',
+            metadata: {lago_invoice_id: 'invalid', payment_type: 'one-time'}
+          )
+        end
+
         it 'raises a not found failure' do
           result = stripe_service.update_payment_status(
             organization_id: organization.id,
-            provider_payment_id: 'ch_123456',
             status: 'succeeded',
-            metadata: {lago_invoice_id: 'invalid', payment_type: 'one-time'}
+            stripe_payment:
           )
 
           aggregate_failures do
@@ -611,8 +641,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       it 'returns an empty result' do
         result = stripe_service.update_payment_status(
           organization_id: organization.id,
-          provider_payment_id: 'ch_123456',
-          status: 'succeeded'
+          status: 'succeeded',
+          stripe_payment:
         )
 
         aggregate_failures do
@@ -622,12 +652,19 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       context 'with invoice id in metadata' do
+        let(:stripe_payment) do
+          PaymentProviders::StripeProvider::StripePayment.new(
+            id: 'ch_123456',
+            status: 'succeeded',
+            metadata: {lago_invoice_id: SecureRandom.uuid}
+          )
+        end
+
         it 'returns an empty result' do
           result = stripe_service.update_payment_status(
             organization_id: organization.id,
-            provider_payment_id: 'ch_123456',
             status: 'succeeded',
-            metadata: {lago_invoice_id: SecureRandom.uuid}
+            stripe_payment:
           )
 
           aggregate_failures do
@@ -637,19 +674,44 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         end
 
         context 'when the invoice is found for organization' do
-          it 'returns a not found failure' do
-            result = stripe_service.update_payment_status(
-              organization_id: organization.id,
-              provider_payment_id: 'ch_123456',
+          let(:stripe_payment) do
+            PaymentProviders::StripeProvider::StripePayment.new(
+              id: 'ch_123456',
               status: 'succeeded',
               metadata: {lago_invoice_id: invoice.id}
             )
+          end
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::NotFoundFailure)
-              expect(result.error.message).to eq('stripe_payment_not_found')
-            end
+          before do
+            stripe_customer
+            stripe_payment_provider
+          end
+
+          it 'creates the missing payment and updates invoice status' do
+            result = stripe_service.update_payment_status(
+              organization_id: organization.id,
+              status: 'succeeded',
+              stripe_payment:
+            )
+
+            expect(result).to be_success
+            expect(result.payment.status).to eq('succeeded')
+            expect(result.invoice.reload).to have_attributes(
+              payment_status: 'succeeded',
+              ready_for_payment_processing: false
+            )
+
+            expect(invoice.payments.count).to eq(1)
+            payment = invoice.payments.first
+            expect(payment).to have_attributes(
+              payable: invoice,
+              payment_provider_id: stripe_payment_provider.id,
+              payment_provider_customer_id: stripe_customer.id,
+              amount_cents: invoice.total_amount_cents,
+              amount_currency: invoice.currency,
+              provider_payment_id: 'ch_123456',
+              status: 'succeeded'
+            )
           end
         end
       end

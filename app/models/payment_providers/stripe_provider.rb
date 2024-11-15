@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class StripeProvider < BaseProvider
+    StripePayment = Data.define(:id, :status, :metadata)
+
     SUCCESS_REDIRECT_URL = 'https://stripe.com/'
 
     # NOTE: find the complete list of event types at https://stripe.com/docs/api/events/types
