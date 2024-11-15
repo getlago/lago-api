@@ -26,7 +26,7 @@ module Types
       field :zipcode, String
 
       field :api_key, String, permission: 'developers:keys:manage'
-      field :hmac_key, String, permission: 'developers:keys:manage'
+      field :hmac_key, String, null: false, permission: 'developers:keys:manage'
       field :webhook_url, String, permission: 'developers:manage'
 
       field :document_number_prefix, String, null: false
