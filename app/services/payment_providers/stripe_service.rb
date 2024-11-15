@@ -93,12 +93,12 @@ module PaymentProviders
 
       case event.type
       when 'setup_intent.succeeded'
-        PaymentProviders::Webhooks::Stripe::SetupIntentSucceededService.call(
+        PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService.call(
           organization_id: organization.id,
           event_json:
         ).raise_if_error!
       when 'customer.updated'
-        PaymentProviders::Webhooks::Stripe::CustomerUpdatedService.call(
+        PaymentProviders::Stripe::Webhooks::CustomerUpdatedService.call(
           organization_id: organization.id,
           event_json:
         ).raise_if_error!
@@ -111,7 +111,7 @@ module PaymentProviders
             metadata: event.data.object.metadata.to_h.symbolize_keys
           ).raise_if_error!
       when 'charge.dispute.closed'
-        PaymentProviders::Webhooks::Stripe::ChargeDisputeClosedService.call(
+        PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService.call(
           organization_id: organization.id,
           event_json:
         ).raise_if_error!

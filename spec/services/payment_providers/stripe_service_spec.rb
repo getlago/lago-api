@@ -397,7 +397,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
 
       before do
-        allow(PaymentProviders::Webhooks::Stripe::SetupIntentSucceededService).to receive(:call)
+        allow(PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService).to receive(:call)
           .and_return(service_result)
       end
 
@@ -409,7 +409,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(result).to be_success
 
-        expect(PaymentProviders::Webhooks::Stripe::SetupIntentSucceededService).to have_received(:call)
+        expect(PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService).to have_received(:call)
       end
     end
 
@@ -420,7 +420,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
       end
 
       before do
-        allow(PaymentProviders::Webhooks::Stripe::CustomerUpdatedService).to receive(:call)
+        allow(PaymentProviders::Stripe::Webhooks::CustomerUpdatedService).to receive(:call)
           .and_return(service_result)
       end
 
@@ -432,7 +432,7 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         expect(result).to be_success
 
-        expect(PaymentProviders::Webhooks::Stripe::CustomerUpdatedService).to have_received(:call)
+        expect(PaymentProviders::Stripe::Webhooks::CustomerUpdatedService).to have_received(:call)
       end
     end
 

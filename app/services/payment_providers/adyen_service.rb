@@ -82,7 +82,7 @@ module PaymentProviders
         result = service.update_status(provider_refund_id:, status:)
         result.raise_if_error!
       when 'CHARGEBACK'
-        PaymentProviders::Webhooks::Adyen::ChargebackService.call(
+        PaymentProviders::Adyen::Webhooks::ChargebackService.call(
           organization_id: organization.id,
           event_json:
         )

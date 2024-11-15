@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe PaymentProviders::Webhooks::Stripe::CustomerUpdatedService, type: :service do
+RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerUpdatedService, type: :service do
   subject(:webhook_service) { described_class.new(organization_id: organization.id, event_json:) }
 
   let(:organization) { create(:organization) }

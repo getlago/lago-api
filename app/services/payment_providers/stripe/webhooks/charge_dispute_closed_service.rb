@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module PaymentProviders
-  module Webhooks
-    module Stripe
+  module Stripe
+    module Webhooks
       class ChargeDisputeClosedService < BaseService
         def call
           status = event.data.object.status
