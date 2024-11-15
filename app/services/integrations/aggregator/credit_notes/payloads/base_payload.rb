@@ -26,6 +26,11 @@ module Integrations
             ]
           end
 
+          def integration_credit_note
+            @integration_credit_note ||=
+              IntegrationResource.find_by(integration:, syncable: credit_note, resource_type: 'credit_note')
+          end
+
           private
 
           attr_reader :integration_customer, :credit_note

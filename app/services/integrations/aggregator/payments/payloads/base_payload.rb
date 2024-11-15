@@ -22,6 +22,11 @@ module Integrations
             ]
           end
 
+          def integration_payment
+            @integration_payment ||=
+              IntegrationResource.find_by(integration:, syncable: payment, resource_type: 'payment')
+          end
+
           private
 
           attr_reader :payment

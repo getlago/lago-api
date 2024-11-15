@@ -12,6 +12,7 @@ module Integrations
           return result unless integration
           return result unless integration.sync_invoices
           return result unless invoice.finalized?
+          return result if payload.integration_invoice
 
           response = http_client.post_with_response(payload.body, headers)
           body = JSON.parse(response.body)
