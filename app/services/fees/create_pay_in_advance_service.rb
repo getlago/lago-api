@@ -18,7 +18,7 @@ module Fees
         fees << if charge.filters.any?
           create_charge_filter_fee
         else
-          create_fee(properties: charge.properties)
+          create_fee(properties:)
         end
 
         result.fees = fees.compact
@@ -97,10 +97,7 @@ module Fees
     end
 
     def create_charge_filter_fee
-      properties = charge.properties
-
       filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
-      properties = filter.properties if filter
 
       create_fee(properties:, charge_filter: filter || ChargeFilter.new(charge:))
     end
@@ -111,6 +108,13 @@ module Fees
         billing_at,
         current_usage: true
       )
+    end
+
+    def properties
+      @properties ||= begin
+        filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
+        filter&.properties || charge.properties
+      end
     end
 
     def boundaries
@@ -168,9 +172,9 @@ module Fees
     end
 
     def format_grouped_by
-      return {} if charge.properties['grouped_by'].blank?
+      return {} if properties['grouped_by'].blank?
 
-      charge.properties['grouped_by'].index_with { event.properties[_1] }
+      properties['grouped_by'].index_with { event.properties[_1] }
     end
 
     def customer_provider_taxation?
