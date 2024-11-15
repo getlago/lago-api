@@ -24,23 +24,24 @@ end
 #
 # Table name: adjusted_fees
 #
-#  id                   :uuid             not null, primary key
-#  adjusted_amount      :boolean          default(FALSE), not null
-#  adjusted_units       :boolean          default(FALSE), not null
-#  fee_type             :integer
-#  grouped_by           :jsonb            not null
-#  invoice_display_name :string
-#  properties           :jsonb            not null
-#  unit_amount_cents    :bigint           default(0), not null
-#  units                :decimal(, )      default(0.0), not null
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  charge_filter_id     :uuid
-#  charge_id            :uuid
-#  fee_id               :uuid
-#  group_id             :uuid
-#  invoice_id           :uuid             not null
-#  subscription_id      :uuid
+#  id                        :uuid             not null, primary key
+#  adjusted_amount           :boolean          default(FALSE), not null
+#  adjusted_units            :boolean          default(FALSE), not null
+#  fee_type                  :integer
+#  grouped_by                :jsonb            not null
+#  invoice_display_name      :string
+#  properties                :jsonb            not null
+#  unit_amount_cents         :bigint           default(0), not null
+#  unit_precise_amount_cents :decimal(40, 15)  default(0.0), not null
+#  units                     :decimal(, )      default(0.0), not null
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  charge_filter_id          :uuid
+#  charge_id                 :uuid
+#  fee_id                    :uuid
+#  group_id                  :uuid
+#  invoice_id                :uuid             not null
+#  subscription_id           :uuid
 #
 # Indexes
 #

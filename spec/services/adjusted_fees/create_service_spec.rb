@@ -13,7 +13,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
   let(:params) do
     {
       units: 5,
-      unit_amount_cents: 1200,
+      unit_precise_amount_cents: 1200.2,
       invoice_display_name: 'new-dis-name'
     }
   end
@@ -47,6 +47,34 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
 
         expect(Invoices::RefreshDraftService).to have_received(:new)
         expect(refresh_service).to have_received(:call)
+      end
+
+      it 'populates precise and not precise values for the created adjusted fee' do
+        result = create_service.call
+        expect(result.adjusted_fee).to have_attributes(
+          units: 5,
+          unit_amount_cents: 1200,
+          unit_precise_amount_cents: 1200.2
+        )
+      end
+
+      context 'when unit_amount_cents is sent instead of unit_precise_amount_cents' do
+        let(:params) do
+          {
+            units: 5,
+            unit_precise_amount_cents: 1200,
+            invoice_display_name: 'new-dis-name'
+          }
+        end
+
+        it 'populates precise and not precise values for the created adjusted fee' do
+          result = create_service.call
+          expect(result.adjusted_fee).to have_attributes(
+            units: 5,
+            unit_amount_cents: 1200,
+            unit_precise_amount_cents: 1200.0
+          )
+        end
       end
 
       context 'when invoice is NOT in draft status' do
