@@ -18,8 +18,8 @@ module Plans
       plan.description = params[:description] if params.key?(:description)
       plan.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
 
-      # NOTE: Only name and description are editable if plan
-      #       is attached to subscriptions
+      # NOTE: If plan is attached to subscriptions the editable attributes are:
+      #       name, invoice_display_name, description, amount_cents
       unless plan.attached_to_subscriptions?
         plan.code = params[:code] if params.key?(:code)
         plan.interval = params[:interval].to_sym if params.key?(:interval)
@@ -276,12 +276,21 @@ module Plans
       end
     end
 
-    # NOTE: We should remove pending subscriptions
-    #       if plan has been downgraded but amount cents of pending plan became higher than original plan.
-    #       This pending subscription is not relevant in this case and downgrade should be ignored
+    # NOTE: If new plan yearly amount is higher than its value before the update
+    #       and there are pending subscriptions for the plan,
+    #       this is a plan upgrade, old subscription must be terminated and billed
+    #       new subscription with updated plan must be activated inmediately.
     def process_pending_subscriptions
-      Subscription.where(plan:, status: :pending).find_each do |sub|
-        sub.mark_as_canceled! if plan.amount_cents > sub.previous_subscription.plan.amount_cents
+      Subscription.where(plan:, status: :pending).find_each do |subscription|
+        next unless subscription.previous_subscription
+
+        if plan.yearly_amount_cents >= subscription.previous_subscription.plan.yearly_amount_cents
+          Subscriptions::PlanUpgradeService.call(
+            current_subscription: subscription.previous_subscription,
+            plan: plan,
+            params: {name: subscription.name}
+          ).raise_if_error!
+        end
       end
     end
   end
