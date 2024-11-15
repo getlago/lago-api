@@ -19,6 +19,7 @@ RSpec.describe Customer, type: :model do
   it { is_expected.to have_one(:anrok_customer) }
   it { is_expected.to have_one(:xero_customer) }
   it { is_expected.to have_one(:hubspot_customer) }
+  it { is_expected.to have_one(:salesforce_customer) }
 
   it 'sets the default value to inherit' do
     expect(customer.finalize_zero_amount_invoice).to eq "inherit"
