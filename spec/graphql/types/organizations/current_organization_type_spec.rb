@@ -25,6 +25,7 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
   it { is_expected.to have_field(:zipcode).of_type('String') }
 
   it { is_expected.to have_field(:api_key).of_type('String').with_permission('developers:keys:manage') }
+  it { is_expected.to have_field(:hmac_key).of_type('String').with_permission('developers:keys:manage') }
   it { is_expected.to have_field(:webhook_url).of_type('String').with_permission('developers:manage') }
 
   it { is_expected.to have_field(:timezone).of_type('TimezoneEnum') }

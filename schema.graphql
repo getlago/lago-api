@@ -3109,6 +3109,7 @@ type CurrentOrganization {
   euTaxManagement: Boolean!
   finalizeZeroAmountInvoice: Boolean!
   gocardlessPaymentProviders: [GocardlessProvider!]
+  hmacKey: String
   id: ID!
   legalName: String
   legalNumber: String
@@ -6846,7 +6847,9 @@ input RotateApiKeyInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  expiresAt: ISO8601DateTime
   id: ID!
+  name: String
 }
 
 enum RoundingFunctionEnum {
