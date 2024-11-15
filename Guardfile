@@ -30,4 +30,7 @@ guard :rspec, cmd: 'bundle exec rspec' do
       "spec/requests/#{m[1]}_controller_spec.rb"
     ]
   end
+
+  # Run schema check for any change in Graphql folder
+  watch(%r{^app/graphql/(.+)\.rb$}) { |m| "spec/graphql/lago_api_schema_spec.rb" }
 end
