@@ -306,6 +306,51 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         expect(result.fees.first.applied_taxes.count).to eq(1)
       end
 
+      context 'when chargefilter has a grouped_by defined' do
+        let(:charge_filter) { create(:charge_filter, charge:, properties: {:amount => '1', 'grouped_by' => ['group_key']}) }
+        let(:event_properties) do
+          {
+            payment_method: 'card',
+            card_location: 'international',
+            scheme: 'visa',
+            card_type: 'credit',
+            group_key: 'group_value'
+          }
+        end
+
+        it 'creates a fee' do
+          result = fee_service.call
+
+          expect(result).to be_success
+
+          expect(result.fees.count).to eq(1)
+          expect(result.fees.first).to have_attributes(
+            subscription:,
+            charge:,
+            amount_cents: 10,
+            precise_amount_cents: 10.0,
+            amount_currency: 'EUR',
+            fee_type: 'charge',
+            pay_in_advance: true,
+            invoiceable: charge,
+            units: 9,
+            properties: Hash,
+            events_count: 1,
+            charge_filter:,
+            pay_in_advance_event_id: event.id,
+            pay_in_advance_event_transaction_id: event.transaction_id,
+            unit_amount_cents: 1,
+            precise_unit_amount: 0.01111111111,
+            grouped_by: {"group_key" => "group_value"},
+
+            taxes_rate: 20.0,
+            taxes_amount_cents: 2,
+            taxes_precise_amount_cents: 2.0
+          )
+          expect(result.fees.first.applied_taxes.count).to eq(1)
+        end
+      end
+
       context 'when event does not match the charge filter' do
         let(:charge_filter) { ChargeFilter }
 
