@@ -9,6 +9,13 @@ en:
         greetings: Hello,
         key_has_been_created: A new API key has been successfully created for your organization, %{organization_name}.
         subject: A new Lago API key has been created
+      destroyed:
+        access_warning: If you did not authorize this request, please reset your password immediately to secure your account.
+        change_notice: If someone from your team initiated this change, no further action is required.
+        email_info: You’re receiving this email because an API key has been deleted in your Lago instance, and you have admin privileges.
+        greetings: Hello,
+        key_has_been_destroyed: An API key has been deleted for your organization, %{organization_name}.
+        subject: A Lago API key has been deleted
       rotated:
         access_warning: If you did not authorize this request, please reset your password and roll your API key immediately to secure your account.
         change_notice: If someone from your team initiated this change, no further action is required. To keep your billing running smoothly, update your app to reference the new token as soon as possible.

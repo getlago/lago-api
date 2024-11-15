@@ -2,14 +2,14 @@
 
 module Mutations
   module ApiKeys
-    class Rotate < BaseMutation
+    class Destroy < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
 
       REQUIRED_PERMISSION = 'developers:keys:manage'
 
-      graphql_name 'RotateApiKey'
-      description 'Create new ApiKey while expiring provided'
+      graphql_name 'DestroyApiKey'
+      description 'Deletes an API key'
 
       argument :id, ID, required: true
 
@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(id:)
         api_key = current_organization.api_keys.find_by(id:)
-        result = ::ApiKeys::RotateService.call(api_key)
+        result = ::ApiKeys::DestroyService.call(api_key)
 
         result.success? ? result.api_key : result_error(result)
       end

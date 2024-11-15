@@ -152,6 +152,7 @@ module Types
     field :update_dunning_campaign, mutation: Mutations::DunningCampaigns::Update
 
     field :create_api_key, mutation: Mutations::ApiKeys::Create
+    field :destroy_api_key, mutation: Mutations::ApiKeys::Destroy
     field :rotate_api_key, mutation: Mutations::ApiKeys::Rotate
   end
 end
