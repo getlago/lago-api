@@ -41,18 +41,24 @@ module PaymentProviders
           payment_service_klass(event)
             .new.update_payment_status(
               organization_id: organization.id,
-              provider_payment_id: event.data.object.payment_intent,
               status: 'succeeded',
-              metadata: event.data.object.metadata.to_h.symbolize_keys
+              stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+                id: event.data.object.payment_intent,
+                status: event.data.object.status,
+                metadata: event.data.object.metadata.to_h.symbolize_keys
+              )
             ).raise_if_error!
         when 'payment_intent.payment_failed', 'payment_intent.succeeded'
           status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
           payment_service_klass(event)
             .new.update_payment_status(
               organization_id: organization.id,
-              provider_payment_id: event.data.object.id,
               status:,
-              metadata: event.data.object.metadata.to_h.symbolize_keys
+              stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+                id: event.data.object.id,
+                status: event.data.object.status,
+                metadata: event.data.object.metadata.to_h.symbolize_keys
+              )
             ).raise_if_error!
         when 'payment_method.detached'
           PaymentProviderCustomers::StripeService

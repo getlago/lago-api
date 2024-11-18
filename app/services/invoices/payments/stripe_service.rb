@@ -71,13 +71,19 @@ module Invoices
         raise
       end
 
-      def update_payment_status(organization_id:, provider_payment_id:, status:, metadata: {})
-        payment = if metadata[:payment_type] == 'one-time'
-          create_payment(provider_payment_id:, metadata:)
+      def update_payment_status(organization_id:, status:, stripe_payment:)
+        payment = if stripe_payment.metadata[:payment_type] == 'one-time'
+          create_payment(stripe_payment)
         else
-          Payment.find_by(provider_payment_id:)
+          Payment.find_by(provider_payment_id: stripe_payment.id)
         end
-        return handle_missing_payment(organization_id, metadata) unless payment
+
+        unless payment
+          handle_missing_payment(organization_id, stripe_payment)
+          return result unless result.payment
+
+          payment = result.payment
+        end
 
         result.payment = payment
         result.invoice = payment.payable
@@ -120,8 +126,8 @@ module Invoices
 
       delegate :organization, :customer, to: :invoice
 
-      def create_payment(provider_payment_id:, metadata:)
-        @invoice = Invoice.find_by(id: metadata[:lago_invoice_id])
+      def create_payment(stripe_payment, invoice: nil)
+        @invoice = invoice || Invoice.find_by(id: stripe_payment.metadata[:lago_invoice_id])
         unless @invoice
           result.not_found_failure!(resource: 'invoice')
           return
@@ -130,12 +136,12 @@ module Invoices
         increment_payment_attempts
 
         Payment.new(
-          payable: invoice,
+          payable: @invoice,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
-          amount_cents: invoice.total_amount_cents,
-          amount_currency: invoice.currency&.upcase,
-          provider_payment_id:
+          amount_cents: @invoice.total_amount_cents,
+          amount_currency: @invoice.currency,
+          provider_payment_id: stripe_payment.id
         )
       end
 
@@ -298,19 +304,22 @@ module Invoices
         })
       end
 
-      def handle_missing_payment(organization_id, metadata)
+      def handle_missing_payment(organization_id, stripe_payment)
         # NOTE: Payment was not initiated by lago
-        return result unless metadata&.key?(:lago_invoice_id)
+        return result unless stripe_payment.metadata&.key?(:lago_invoice_id)
 
         # NOTE: Invoice does not belong to this lago organization
         #       It means the same Stripe secret key is used for multiple organizations
-        invoice = Invoice.find_by(id: metadata[:lago_invoice_id], organization_id:)
+        invoice = Invoice.find_by(id: stripe_payment.metadata[:lago_invoice_id], organization_id:)
         return result if invoice.nil?
 
         # NOTE: Invoice exists but payment status is failed
         return result if invoice.payment_failed?
 
-        result.not_found_failure!(resource: 'stripe_payment')
+        # NOTE: For some reason payment is missing in the database... (killed sidekiq job, etc.)
+        #       We have to recreate it from the received data
+        result.payment = create_payment(stripe_payment, invoice:)
+        result
       end
 
       # NOTE: Due to RBI limitation, all indians payment should be off_session
