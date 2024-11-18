@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module PaymentProviders
-  module Webhooks
-    module Adyen
+  module Adyen
+    module Webhooks
       class ChargebackService < BaseService
         def call
           status = event['additionalData']['disputeStatus']
@@ -20,10 +20,6 @@ module PaymentProviders
         end
 
         private
-
-        def event
-          @event ||= JSON.parse(event_json)['notificationItems'].first&.dig('NotificationRequestItem')
-        end
 
         def payment_dispute_lost_at
           Time.zone.parse(event['eventDate'])
