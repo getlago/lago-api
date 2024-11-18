@@ -18,23 +18,19 @@ module AdjustedFees
       return result.validation_failure!(errors: {charge: ['invalid_charge_model']}) if disabled_charge_model?(charge)
 
       unit_precise_amount_cents = params[:unit_precise_amount_cents]
-      unit_amount_cents = params[:unit_amount_cents]
       adjusted_fee = AdjustedFee.new(
         fee:,
         invoice: fee.invoice,
         subscription: fee.subscription,
         charge:,
-        # these indicate if the user is adjusting the units or the amount
-        adjusted_units: params[:units].present? && params[:unit_precise_amount_cents].blank? && params[:unit_amount_cents].blank?,
-        adjusted_amount: params[:units].present? && (params[:unit_precise_amount_cents].present? || params[:unit_amount_cents].present?),
+        adjusted_units: params[:units].present? && params[:unit_precise_amount_cents].blank?,
+        adjusted_amount: params[:units].present? && params[:unit_precise_amount_cents].present?,
         invoice_display_name: params[:invoice_display_name],
         fee_type: fee.fee_type,
         properties: fee.properties,
-        # these are the values that the user is adjusting
         units: params[:units].presence || 0,
-        # TODO: Keeping both of them before changes on the FE, after - use only unit_precise_amount_cents
-        unit_amount_cents: (unit_precise_amount_cents.presence || unit_amount_cents.presence).to_i.round,
-        unit_precise_amount_cents: (unit_precise_amount_cents.presence || unit_amount_cents.presence).to_f,
+        unit_amount_cents: (unit_precise_amount_cents.presence || 0).to_i.round,
+        unit_precise_amount_cents: (unit_precise_amount_cents.presence || 0).to_f,
         grouped_by: fee.grouped_by,
         charge_filter: fee.charge_filter
       )
@@ -55,7 +51,7 @@ module AdjustedFees
     attr_reader :organization, :fee, :params
 
     def disabled_charge_model?(charge)
-      unit_adjustment = params[:units].present? && params[:unit_precise_amount_cents].blank? && params[:unit_amount_cents].blank?
+      unit_adjustment = params[:units].present? && params[:unit_precise_amount_cents].blank?
 
       charge && unit_adjustment && (charge.percentage? || (charge.prorated? && charge.graduated?))
     end
