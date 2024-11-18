@@ -374,7 +374,6 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_20_090305) do
     t.decimal "precise_coupons_adjustment_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "precise_taxes_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
     t.float "taxes_rate", default: 0.0, null: false
-    t.string "tax_provider_id"
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
   end
