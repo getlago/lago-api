@@ -7,7 +7,7 @@ module Types
 
       argument :fee_id, ID, required: true
       argument :invoice_display_name, String, required: false
-      argument :unit_precise_amount_cents, String, required: false
+      argument :unit_precise_amount, String, required: false
       argument :units, GraphQL::Types::Float, required: false
     end
   end

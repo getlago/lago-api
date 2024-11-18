@@ -13,7 +13,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
   let(:params) do
     {
       units: 5,
-      unit_precise_amount_cents: 1200.2,
+      unit_precise_amount: 12.002,
       invoice_display_name: 'new-dis-name'
     }
   end

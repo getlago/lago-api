@@ -1084,7 +1084,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     end
     let(:adjusted_fee_params) do
       {
-        unit_precise_amount_cents: 500,
+        unit_precise_amount: '5.00',
         units: 3
       }
     end
@@ -1181,7 +1181,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     context 'with updated fee with attached credit note' do
       let(:adjusted_fee_params) do
         {
-          unit_precise_amount_cents: 50,
+          unit_precise_amount: '0.50',
           units: 18 # 50 x 18 = 900
         }
       end
@@ -1262,7 +1262,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
     context 'with updated fee equal to zero' do
       let(:adjusted_fee_params) do
         {
-          unit_precise_amount_cents: 0,
+          unit_precise_amount: 0,
           units: 1
         }
       end

@@ -6507,7 +6507,7 @@
               "deprecationReason": null
             },
             {
-              "name": "unitPreciseAmountCents",
+              "name": "unitPreciseAmount",
               "description": null,
               "type": {
                 "kind": "SCALAR",

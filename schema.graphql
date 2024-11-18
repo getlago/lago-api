@@ -1810,7 +1810,7 @@ input CreateAdjustedFeeInput {
   clientMutationId: String
   feeId: ID!
   invoiceDisplayName: String
-  unitPreciseAmountCents: String
+  unitPreciseAmount: String
   units: Float
 }
 
