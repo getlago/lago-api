@@ -17,8 +17,8 @@ module AdjustedFees
       charge = fee.charge
       return result.validation_failure!(errors: {charge: ['invalid_charge_model']}) if disabled_charge_model?(charge)
 
-      unit_precise_amount_cents = params[:unit_precise_amount_cents].presence.to_f
-      unit_amount_cents = params[:unit_amount_cents].presence.to_i
+      unit_precise_amount_cents = params[:unit_precise_amount_cents]
+      unit_amount_cents = params[:unit_amount_cents]
       adjusted_fee = AdjustedFee.new(
         fee:,
         invoice: fee.invoice,
@@ -33,8 +33,8 @@ module AdjustedFees
         # these are the values that the user is adjusting
         units: params[:units].presence || 0,
         # TODO: Keeping both of them before changes on the FE, after - use only unit_precise_amount_cents
-        unit_amount_cents: unit_precise_amount_cents.round || unit_amount_cents.round,
-        unit_precise_amount_cents:unit_precise_amount_cents || unit_amount_cents,
+        unit_amount_cents: (unit_precise_amount_cents.presence || unit_amount_cents.presence).to_i.round,
+        unit_precise_amount_cents: (unit_precise_amount_cents.presence || unit_amount_cents.presence).to_f,
         grouped_by: fee.grouped_by,
         charge_filter: fee.charge_filter
       )
