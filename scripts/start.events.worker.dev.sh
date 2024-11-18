@@ -1,4 +1,4 @@
 #!/bin/bash
 
 bundle install
-bundle exec sidekiq -C config/sidekiq_events.yml
+bin/jobs -c config/queue_events.yml
