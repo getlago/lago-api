@@ -159,7 +159,7 @@ RSpec.describe Fees::SubscriptionService do
             adjusted_amount: true,
             units: 3,
             unit_amount_cents: 200,
-            unit_precise_amount: 2.0
+            unit_precise_amount_cents: 200.0
           )
         end
 

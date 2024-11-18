@@ -52,6 +52,7 @@ module Fees
         unit_amount_cents: new_amount_cents,
         amount_details: {plan_amount_cents: plan.amount_cents}
       )
+      base_fee.precise_unit_amount = base_fee.unit_amount.to_f
 
       return base_fee if !invoice.draft? || !adjusted_fee
 

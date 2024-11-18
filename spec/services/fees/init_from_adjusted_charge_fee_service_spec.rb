@@ -91,7 +91,8 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
         adjusted_units: false,
         adjusted_amount: true,
         units: 4,
-        unit_amount_cents: 200
+        unit_amount_cents: 200,
+        unit_precise_amount_cents: 200.0
       )
     end
 
