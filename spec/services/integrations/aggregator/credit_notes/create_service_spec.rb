@@ -219,6 +219,29 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
   end
 
   describe '#call' do
+    context 'when integration_credit_note exists' do
+      let(:integration_credit_note) do
+        create(:integration_resource, integration:, syncable: credit_note, resource_type: 'credit_note')
+      end
+
+      let(:response) { instance_double(Net::HTTPOK) }
+
+      before do
+        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        integration_credit_note
+      end
+
+      it 'returns result without making an API call' do
+        expect(lago_client).not_to have_received(:post_with_response)
+        result = service_call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.external_id).to be_nil
+        end
+      end
+    end
+
     context 'when service call is successful' do
       let(:response) { instance_double(Net::HTTPOK) }
 

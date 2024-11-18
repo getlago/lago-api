@@ -18,8 +18,9 @@ module Integrations
           return result unless integration
           return result unless integration.sync_payments
           return result unless invoice.finalized?
+          return result if payload.integration_payment
 
-          response = http_client.post_with_response(payload, headers)
+          response = http_client.post_with_response(payload.body, headers)
           body = JSON.parse(response.body)
 
           if body.is_a?(Hash)
@@ -72,7 +73,7 @@ module Integrations
         end
 
         def payload
-          Integrations::Aggregator::Payments::Payloads::Factory.new_instance(integration:, payment:).body
+          Integrations::Aggregator::Payments::Payloads::Factory.new_instance(integration:, payment:)
         end
 
         def process_hash_result(body)

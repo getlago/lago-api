@@ -18,8 +18,9 @@ module Integrations
           return result unless integration
           return result unless integration.sync_credit_notes
           return result unless credit_note.finalized?
+          return result if payload.integration_credit_note
 
-          response = http_client.post_with_response(payload, headers)
+          response = http_client.post_with_response(payload.body, headers)
           body = JSON.parse(response.body)
 
           if body.is_a?(Hash)
@@ -73,7 +74,7 @@ module Integrations
           Integrations::Aggregator::CreditNotes::Payloads::Factory.new_instance(
             integration_customer:,
             credit_note:
-          ).body
+          )
         end
 
         def process_hash_result(body)
