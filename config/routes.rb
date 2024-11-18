@@ -5,8 +5,6 @@ Rails.application.routes.draw do
   mount Karafka::Web::App, at: '/karafka' if ENV['KARAFKA_WEB']
   mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql' if Rails.env.development?
 
-  mount MissionControl::Jobs::Engine, at: "/jobs"
-
   post '/graphql', to: 'graphql#execute'
 
   # Health Check status

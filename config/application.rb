@@ -23,7 +23,8 @@ module LagoApi
     ]
 
     config.api_only = true
-    config.active_job.queue_adapter = :solid_queue # :sidekiq
+    config.active_job.queue_adapter = :solid_queue
+    config.solid_queue.connects_to = { database: { writing: :queue } }
 
     # Configuration for active record encryption
     config.active_record.encryption.hash_digest_class = OpenSSL::Digest::SHA1

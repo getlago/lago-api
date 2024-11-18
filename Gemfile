@@ -16,7 +16,7 @@ gem "rails", "~> 7.1.3.4"
 gem "redis"
 gem "sidekiq"
 gem "dry-validation"
-gem 'solid_queue'
+gem 'solid_queue', "~> 1.0.2"
 
 # Security
 gem "bcrypt"
@@ -105,8 +105,6 @@ group :development, :test do
   gem "debug", platforms: %i[mri mingw x64_mingw], require: false
   gem "dotenv"
   gem "i18n-tasks", git: "https://github.com/glebm/i18n-tasks.git"
-  gem "mission_control-jobs"
-  gem "propshaft"
   gem "rspec-rails"
   gem "simplecov", require: false
   gem "webmock"
