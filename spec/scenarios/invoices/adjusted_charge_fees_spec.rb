@@ -8,12 +8,12 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
   let(:customer) { create(:customer, organization:, invoice_grace_period: 5) }
   let(:subscription_at) { DateTime.new(2023, 7, 19, 12, 12) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'custom') }
-  let(:unit_amount_cents) { nil }
+  let(:unit_precise_amount_cents) { nil }
 
   let(:adjusted_fee_params) do
     {
       invoice_display_name: 'test-name-25',
-      unit_amount_cents:,
+      unit_precise_amount_cents:,
       units: 3
     }
   end
@@ -90,7 +90,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
   end
 
   context 'with adjusted amount' do
-    let(:unit_amount_cents) { 15_000 }
+    let(:unit_precise_amount_cents) { 15_000 }
 
     it 'creates invoices correctly' do
       # NOTE: Jul 19th: create the subscription
