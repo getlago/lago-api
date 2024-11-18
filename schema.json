@@ -6519,6 +6519,18 @@
               "deprecationReason": null
             },
             {
+              "name": "unitPreciseAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "units",
               "description": null,
               "type": {
