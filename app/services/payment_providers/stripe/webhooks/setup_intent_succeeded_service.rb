@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module PaymentProviders
-    module Stripe
-      module Webhooks
+  module Stripe
+    module Webhooks
       class SetupIntentSucceededService < BaseService
         include Customers::PaymentProviderFinder
 

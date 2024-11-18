@@ -4,20 +4,16 @@ module PaymentProviders
   module Stripe
     module Webhooks
       class BaseService < BaseService
-        def initialize(organization_id:, event_json:)
+        def initialize(organization_id:, event:)
           @organization = Organization.find(organization_id)
-          @event_json = event_json
+          @event = event
 
           super
         end
 
         private
 
-        attr_reader :organization, :event_json
-
-        def event
-          @event ||= ::Stripe::Event.construct_from(JSON.parse(event_json))
-        end
+        attr_reader :organization, :event
 
         def metadata
           @metadata ||= event.data.object.metadata.to_h.symbolize_keys

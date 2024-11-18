@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, type: :service do
-  subject(:service) { described_class.new(organization_id:, event_json:) }
+  subject(:service) { described_class.new(organization_id:, event:) }
 
   let(:organization_id) { organization.id }
   let(:organization) { create(:organization) }
@@ -12,6 +12,8 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, t
   let(:payment) { create(:payment, payable: invoice, provider_payment_id: 'pi_3OzgpDH4tiDZlIUa0Ezzggtg') }
   let(:lose_dispute_service) { Invoices::LoseDisputeService.new(invoice:) }
   let(:invoice) { create(:invoice, customer:, organization:, status:, payment_status: 'succeeded') }
+
+  let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
 
   describe '#call' do
     before { payment }
