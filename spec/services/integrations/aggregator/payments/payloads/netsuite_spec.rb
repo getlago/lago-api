@@ -9,7 +9,7 @@ RSpec.describe Integrations::Aggregator::Payments::Payloads::Netsuite do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:payment) { create(:payment, payable: invoice, amount_cents: 100) }
-  let(:integration_invoice) { create(:integration_resource, syncable: invoice) }
+  let(:integration_invoice) { create(:integration_resource, integration:, syncable: invoice) }
 
   let(:invoice) do
     create(
