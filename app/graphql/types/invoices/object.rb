@@ -73,7 +73,7 @@ module Types
         object.should_sync_invoice? &&
           object.integration_resources
             .joins(:integration)
-            .where(integration: {type: Integration::BaseIntegration::INTEGRATION_ACCOUNTING_TYPES})
+            .where(integration: {type: ::Integrations::BaseIntegration::INTEGRATION_ACCOUNTING_TYPES})
             .where(resource_type: 'invoice', syncable_type: 'Invoice').none?
       end
 
@@ -81,7 +81,7 @@ module Types
         object.should_sync_crm_invoice? &&
           object.integration_resources
             .joins(:integration)
-            .where(integration: {type: Integration::BaseIntegration::INTEGRATION_CRM_TYPES})
+            .where(integration: {type: ::Integrations::BaseIntegration::INTEGRATION_CRM_TYPES})
             .where(resource_type: 'invoice', syncable_type: 'Invoice').none?
       end
 
@@ -89,7 +89,7 @@ module Types
         object.should_sync_salesforce_invoice? &&
           object.integration_resources
             .joins(:integration)
-            .where(integration: {type: Integration::BaseIntegration::INTEGRATION_SALESFORCE_TYPES})
+            .where(integration: {type: ::Integrations::BaseIntegration::INTEGRATION_SALESFORCE_TYPES})
             .where(resource_type: 'invoice', syncable_type: 'Invoice').none?
       end
 
