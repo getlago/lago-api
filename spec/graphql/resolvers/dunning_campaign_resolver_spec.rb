@@ -9,6 +9,7 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
       query($dunningCampaignId: ID!) {
         dunningCampaign(id: $dunningCampaignId) {
           id
+          customersCount
           appliedToOrganization
           code
           daysBetweenAttempts
@@ -52,6 +53,7 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
     expect(dunning_campaign_response).to include(
       {
         "id" => dunning_campaign.id,
+        "customersCount" => dunning_campaign.customers_count,
         "appliedToOrganization" => dunning_campaign.applied_to_organization,
         "code" => dunning_campaign.code,
         "daysBetweenAttempts" => dunning_campaign.days_between_attempts,

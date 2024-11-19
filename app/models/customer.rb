@@ -28,7 +28,7 @@ class Customer < ApplicationRecord
   before_save :ensure_slug
 
   belongs_to :organization
-  belongs_to :applied_dunning_campaign, optional: true, class_name: 'DunningCampaign'
+  belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign", counter_cache: true
 
   has_many :subscriptions
   has_many :events

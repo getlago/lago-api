@@ -9,6 +9,7 @@ module Types
 
       field :applied_to_organization, Boolean, null: false
       field :code, String, null: false
+      field :customers_count, Integer, null: false
       field :days_between_attempts, Integer, null: false
       field :max_attempts, Integer, null: false
       field :name, String, null: false

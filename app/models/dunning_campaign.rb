@@ -10,7 +10,7 @@ class DunningCampaign < ApplicationRecord
   belongs_to :organization
 
   has_many :thresholds, class_name: "DunningCampaignThreshold", dependent: :destroy
-  has_many :customers, foreign_key: :applied_dunning_campaign_id, dependent: :nullify
+  has_many :customers, foreign_key: :applied_dunning_campaign_id, dependent: :nullify, counter_cache: :customers_count
 
   accepts_nested_attributes_for :thresholds
 
@@ -39,6 +39,7 @@ end
 #  id                      :uuid             not null, primary key
 #  applied_to_organization :boolean          default(FALSE), not null
 #  code                    :string           not null
+#  customers_count         :integer          default(0), not null
 #  days_between_attempts   :integer          default(1), not null
 #  deleted_at              :datetime
 #  description             :text
