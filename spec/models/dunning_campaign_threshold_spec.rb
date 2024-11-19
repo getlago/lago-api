@@ -39,7 +39,7 @@ RSpec.describe DunningCampaignThreshold, type: :model do
 
     it "only returns non-deleted dunning_campaign_threshold objects" do
       expect(described_class.all).to eq([])
-      expect(described_class.unscoped.discarded).to eq([deleted_dunning_campaign_threshold])
+      expect(described_class.with_discarded).to eq([deleted_dunning_campaign_threshold])
     end
   end
 end
