@@ -37,9 +37,12 @@ module Integrations
 
           def integration_invoice
             integration_resource =
-              invoice.integration_resources.where(resource_type: 'invoice', syncable_type: 'Invoice').first
+              invoice.integration_resources
+                .where(integration:, resource_type: 'invoice', syncable_type: 'Invoice').first
 
-            raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invoice_missing') unless integration_resource
+            unless integration_resource
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invoice_missing')
+            end
 
             integration_resource
           end
