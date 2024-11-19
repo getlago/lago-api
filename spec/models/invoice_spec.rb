@@ -313,60 +313,6 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#should_sync_salesforce_invoice?' do
-    subject(:method_call) { invoice.should_sync_salesforce_invoice? }
-
-    let(:invoice) { create(:invoice, customer:, organization:, status:) }
-
-    context 'when invoice is not finalized' do
-      let(:status) { %i[draft generating voided].sample }
-
-      context 'without integration customer' do
-        let(:customer) { create(:customer, organization:) }
-
-        it 'returns false' do
-          expect(method_call).to eq(false)
-        end
-      end
-
-      context 'with integration salesforce customer' do
-        let(:integration_customer) { create(:salesforce_customer, integration:, customer:) }
-        let(:integration) { create(:salesforce_integration, organization:) }
-        let(:customer) { create(:customer, organization:) }
-
-        before { integration_customer }
-
-        it 'returns false' do
-          expect(method_call).to eq(false)
-        end
-      end
-    end
-
-    context 'when invoice is finalized' do
-      let(:status) { :finalized }
-
-      context 'without integration customer' do
-        let(:customer) { create(:customer, organization:) }
-
-        it 'returns false' do
-          expect(method_call).to eq(false)
-        end
-      end
-
-      context 'with integration crm customer' do
-        let(:integration_customer) { create(:salesforce_customer, integration:, customer:) }
-        let(:integration) { create(:salesforce_integration, organization:) }
-        let(:customer) { create(:customer, organization:) }
-
-        before { integration_customer }
-
-        it 'returns true' do
-          expect(method_call).to eq(true)
-        end
-      end
-    end
-  end
-
   describe '#should_update_crm_invoice?' do
     subject(:method_call) { invoice.should_update_crm_invoice? }
 

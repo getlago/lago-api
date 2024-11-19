@@ -24,7 +24,7 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice, type: :graphql 
   let(:mutation) do
     <<-GQL
       mutation($input: SyncSalesforceInvoiceInput!) {
-        syncSalesforceInvoice(input: $input) { invoiceId }
+        syncSalesforceInvoice(input: $input) { id }
       }
     GQL
   end

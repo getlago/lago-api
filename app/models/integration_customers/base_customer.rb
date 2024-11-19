@@ -17,11 +17,7 @@ module IntegrationCustomers
     end
 
     scope :crm_kind, -> do
-      where(type: %w[IntegrationCustomers::HubspotCustomer])
-    end
-
-    scope :salesforce_kind, -> do
-      where(type: %w[IntegrationCustomers::SalesforceCustomer])
+      where(type: %w[IntegrationCustomers::HubspotCustomer IntegrationCustomers::SalesforceCustomer])
     end
 
     settings_accessors :sync_with_provider

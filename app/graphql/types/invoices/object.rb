@@ -59,9 +59,7 @@ module Types
 
       field :external_crm_integration_id, String, null: true
       field :external_integration_id, String, null: true
-      field :external_salesforce_integration_id, String, null: true
       field :integration_crm_syncable, GraphQL::Types::Boolean, null: false
-      field :integration_salesforce_syncable, GraphQL::Types::Boolean, null: false
       field :integration_syncable, GraphQL::Types::Boolean, null: false
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
 
@@ -82,14 +80,6 @@ module Types
           object.integration_resources
             .joins(:integration)
             .where(integration: {type: ::Integrations::BaseIntegration::INTEGRATION_CRM_TYPES})
-            .where(resource_type: 'invoice', syncable_type: 'Invoice').none?
-      end
-
-      def integration_salesforce_syncable
-        object.should_sync_salesforce_invoice? &&
-          object.integration_resources
-            .joins(:integration)
-            .where(integration: {type: ::Integrations::BaseIntegration::INTEGRATION_SALESFORCE_TYPES})
             .where(resource_type: 'invoice', syncable_type: 'Invoice').none?
       end
 
@@ -114,19 +104,6 @@ module Types
 
       def external_integration_id
         integration_customer = object.customer&.integration_customers&.accounting_kind&.first
-
-        return nil unless integration_customer
-
-        IntegrationResource.find_by(
-          integration: integration_customer.integration,
-          syncable_id: object.id,
-          syncable_type: 'Invoice',
-          resource_type: :invoice
-        )&.external_id
-      end
-
-      def external_salesforce_integration_id
-        integration_customer = object.customer&.integration_customers&.salesforce_kind&.first
 
         return nil unless integration_customer
 
