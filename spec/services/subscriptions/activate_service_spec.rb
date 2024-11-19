@@ -33,10 +33,10 @@ RSpec.describe Subscriptions::ActivateService, type: :service do
         )
       end
 
-      it 'enqueues Integrations::Aggregator::Subscriptions::Crm::UpdateJob' do
-        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+      it 'enqueues Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob' do
+        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
         activate_service.activate_all_pending
-        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
           .to have_received(:perform_later).with(subscription: pending_subscription)
       end
 

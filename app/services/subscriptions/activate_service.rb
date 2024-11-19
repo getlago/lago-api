@@ -22,7 +22,7 @@ module Subscriptions
           subscription.mark_as_active!(Time.zone.at(timestamp))
 
           if subscription.should_sync_crm_subscription?
-            Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+            Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
           end
 
           SendWebhookJob.perform_later('subscription.started', subscription)

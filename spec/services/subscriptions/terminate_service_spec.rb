@@ -21,12 +21,12 @@ RSpec.describe Subscriptions::TerminateService do
     context 'when the subscription should sync with CRM' do
       before do
         allow(subscription).to receive(:should_sync_crm_subscription?).and_return(true)
-        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
       end
 
       it 'calls the CRM update job' do
         terminate_service.call
-        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
           .to have_received(:perform_later).with(subscription:)
       end
     end

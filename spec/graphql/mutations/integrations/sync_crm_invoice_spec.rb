@@ -31,7 +31,7 @@ RSpec.describe Mutations::Integrations::SyncCrmInvoice, type: :graphql do
     GQL
   end
 
-  let(:service) { instance_double(Integrations::Aggregator::Invoices::Crm::CreateService) }
+  let(:service) { instance_double(Integrations::Aggregator::Invoices::Hubspot::CreateService) }
 
   let(:result) do
     r = BaseService::Result.new
@@ -41,7 +41,7 @@ RSpec.describe Mutations::Integrations::SyncCrmInvoice, type: :graphql do
 
   before do
     integration_customer
-    allow(Integrations::Aggregator::Invoices::Crm::CreateService).to receive(:new).and_return(service)
+    allow(Integrations::Aggregator::Invoices::Hubspot::CreateService).to receive(:new).and_return(service)
     allow(service).to receive(:call_async).and_return(result)
     execute_graphql_call
   end
@@ -52,7 +52,7 @@ RSpec.describe Mutations::Integrations::SyncCrmInvoice, type: :graphql do
 
   it 'syncs an invoice' do
     aggregate_failures do
-      expect(::Integrations::Aggregator::Invoices::Crm::CreateService).to have_received(:new).with(invoice:)
+      expect(::Integrations::Aggregator::Invoices::Hubspot::CreateService).to have_received(:new).with(invoice:)
       expect(service).to have_received(:call_async)
     end
   end

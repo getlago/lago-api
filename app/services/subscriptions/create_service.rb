@@ -129,7 +129,7 @@ module Subscriptions
       end
 
       if new_subscription.should_sync_crm_subscription?
-        after_commit { Integrations::Aggregator::Subscriptions::Crm::CreateJob.perform_later(subscription: new_subscription) }
+        after_commit { Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription: new_subscription) }
       end
 
       new_subscription
@@ -212,7 +212,7 @@ module Subscriptions
       current_subscription.save!
 
       if current_subscription.should_sync_crm_subscription?
-        Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription: current_subscription)
+        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
       end
     end
 

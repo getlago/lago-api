@@ -18,7 +18,7 @@ module Subscriptions
             Subscriptions::TerminateJob.perform_later(subscription, today.to_i)
 
             if subscription.should_sync_crm_subscription?
-              Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+              Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
             end
           else
             billing_subscriptions << subscription
