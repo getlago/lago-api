@@ -21644,6 +21644,20 @@
               ]
             },
             {
+              "name": "externalSalesforceIntegrationId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
               "name": "fees",
               "description": null,
               "type": {
@@ -21717,6 +21731,24 @@
             },
             {
               "name": "integrationCrmSyncable",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "integrationSalesforceSyncable",
               "description": null,
               "type": {
                 "kind": "NON_NULL",

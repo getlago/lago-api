@@ -4372,11 +4372,13 @@ type Invoice {
   errorDetails: [ErrorDetail!]
   externalCrmIntegrationId: String
   externalIntegrationId: String
+  externalSalesforceIntegrationId: String
   fees: [Fee!]
   feesAmountCents: BigInt!
   fileUrl: String
   id: ID!
   integrationCrmSyncable: Boolean!
+  integrationSalesforceSyncable: Boolean!
   integrationSyncable: Boolean!
   invoiceSubscriptions: [InvoiceSubscription!]
   invoiceType: InvoiceTypeEnum!

@@ -20,6 +20,10 @@ module IntegrationCustomers
       where(type: %w[IntegrationCustomers::HubspotCustomer])
     end
 
+    scope :salesforce_kind, -> do
+      where(type: %w[IntegrationCustomers::SalesforceCustomer])
+    end
+
     settings_accessors :sync_with_provider
 
     def self.customer_type(type)
