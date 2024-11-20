@@ -3764,6 +3764,7 @@ type DunningCampaign {
   appliedToOrganization: Boolean!
   code: String!
   createdAt: ISO8601DateTime!
+  customersCount: Int!
   daysBetweenAttempts: Int!
   description: String
   id: ID!
@@ -6344,6 +6345,16 @@ type Query {
   Query customers of an organization
   """
   customers(limit: Int, page: Int, searchTerm: String): CustomerCollection!
+
+  """
+  Query a single dunning campaign of an organization
+  """
+  dunningCampaign(
+    """
+    Unique ID of the integration collection mappings
+    """
+    id: ID!
+  ): DunningCampaign!
 
   """
   Query dunning campaigns of an organization
