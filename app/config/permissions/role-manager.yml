@@ -30,6 +30,7 @@ dunning_campaigns:
   view: true
   create: false
   update: false
+  delete: false
 subscriptions:
   create: true
   update: true
