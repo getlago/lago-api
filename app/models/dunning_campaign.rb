@@ -15,7 +15,7 @@ class DunningCampaign < ApplicationRecord
   validates :name, presence: true
   validates :days_between_attempts, numericality: {greater_than: 0}
   validates :max_attempts, numericality: {greater_than: 0}
-  validates :code, uniqueness: {scope: :organization_id}
+  validates :code, uniqueness: {scope: :organization_id}, unless: :deleted_at
 
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
   scope :with_currency_threshold, ->(currencies) {
@@ -37,6 +37,7 @@ end
 #  applied_to_organization :boolean          default(FALSE), not null
 #  code                    :string           not null
 #  days_between_attempts   :integer          default(1), not null
+#  deleted_at              :datetime
 #  description             :text
 #  max_attempts            :integer          default(1), not null
 #  name                    :string           not null
@@ -46,8 +47,9 @@ end
 #
 # Indexes
 #
+#  index_dunning_campaigns_on_deleted_at                  (deleted_at)
 #  index_dunning_campaigns_on_organization_id             (organization_id)
-#  index_dunning_campaigns_on_organization_id_and_code    (organization_id,code) UNIQUE
+#  index_dunning_campaigns_on_organization_id_and_code    (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #  index_unique_applied_to_organization_per_organization  (organization_id) UNIQUE WHERE (applied_to_organization = true)
 #
 # Foreign Keys
