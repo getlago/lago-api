@@ -37461,7 +37461,7 @@
               ]
             },
             {
-              "name": "invoiceId",
+              "name": "id",
               "description": null,
               "type": {
                 "kind": "SCALAR",
