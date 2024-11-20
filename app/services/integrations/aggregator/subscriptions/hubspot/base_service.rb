@@ -12,7 +12,7 @@ module Integrations
           private
 
           def integration_customer
-            @integration_customer ||= customer&.integration_customers&.crm_kind&.first
+            @integration_customer ||= customer&.integration_customers&.hubspot_kind&.first
           end
 
           def payload
