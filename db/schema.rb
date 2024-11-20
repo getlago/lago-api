@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_11_19_110219) do
+ActiveRecord::Schema[7.1].define(version: 2024_11_20_090305) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -551,7 +551,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_19_110219) do
     t.integer "max_attempts", default: 1, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["organization_id", "code"], name: "index_dunning_campaigns_on_organization_id_and_code", unique: true
+    t.datetime "deleted_at", precision: nil
+    t.index ["deleted_at"], name: "index_dunning_campaigns_on_deleted_at"
+    t.index ["organization_id", "code"], name: "index_dunning_campaigns_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_dunning_campaigns_on_organization_id"
     t.index ["organization_id"], name: "index_unique_applied_to_organization_per_organization", unique: true, where: "(applied_to_organization = true)"
   end
