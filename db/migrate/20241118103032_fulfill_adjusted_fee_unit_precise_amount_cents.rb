@@ -9,9 +9,12 @@ class FulfillAdjustedFeeUnitPreciseAmountCents < ActiveRecord::Migration[7.1]
     enum status: {draft: 0}
   end
 
-  def change
+  def up
     AdjustedFee.joins(:invoice).where(invoice: {status: 'draft'}).where(unit_precise_amount_cents: 0).find_each do |af|
       af.update_attribute(:unit_precise_amount_cents, af.unit_amount_cents.to_f) # rubocop:disable Rails/SkipsModelValidations
     end
+  end
+
+  def down
   end
 end
