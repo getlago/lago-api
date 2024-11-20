@@ -15,6 +15,12 @@ module DunningCampaigns
       return result.not_found_failure!(resource: "dunning_campaign") unless dunning_campaign
 
       ActiveRecord::Base.transaction do
+        dunning_campaign.name = params[:name] if params.key?(:name)
+        dunning_campaign.code = params[:code] if params.key?(:code)
+        dunning_campaign.description = params[:description] if params.key?(:description)
+        dunning_campaign.days_between_attempts = params[:days_between_attempts] if params.key?(:days_between_attempts)
+        dunning_campaign.max_attempts = params[:max_attempts] if params.key?(:max_attempts)
+
         unless params[:applied_to_organization].nil?
           organization
             .dunning_campaigns

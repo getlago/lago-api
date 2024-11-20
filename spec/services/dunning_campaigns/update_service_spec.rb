@@ -13,7 +13,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
   let(:params) { {applied_to_organization: false} }
 
-  describe "#call" do
+  describe "#call", :aggregate_failures do
     subject(:result) { update_service.call }
 
     before do
@@ -21,7 +21,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
     end
 
     context "when lago freemium" do
-      it 'returns an error', :aggregate_failures do
+      it 'returns an error' do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
@@ -35,7 +35,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
       around { |test| lago_premium!(&test) }
 
       context "when no auto_dunning premium integration" do
-        it 'returns an error', :aggregate_failures do
+        it 'returns an error' do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ForbiddenFailure)
         end
@@ -48,6 +48,25 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
       context "when auto_dunning premium integration" do
         let(:organization) do
           create(:organization, premium_integrations: ["auto_dunning"])
+        end
+
+        let(:params) do
+          {
+            name: "Updated Dunning Campaign",
+            code: "updated-dunning-campaign",
+            days_between_attempts: Faker::Number.number(digits: 2),
+            max_attempts: Faker::Number.number(digits: 2),
+            description: "Updated Dunning Campaign Description"
+          }
+        end
+
+        it "updates the dunning campaign" do
+          expect(result).to be_success
+          expect(result.dunning_campaign.name).to eq(params[:name])
+          expect(result.dunning_campaign.code).to eq(params[:code])
+          expect(result.dunning_campaign.days_between_attempts).to eq(params[:days_between_attempts])
+          expect(result.dunning_campaign.max_attempts).to eq(params[:max_attempts])
+          expect(result.dunning_campaign.description).to eq(params[:description])
         end
 
         context "with applied_to_organization false" do
@@ -99,7 +118,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
         context "with no dunning campaign record" do
           let(:dunning_campaign) { nil }
 
-          it "returns a failure", :aggregate_failures do
+          it "returns a failure" do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::NotFoundFailure)
             expect(result.error.message).to eq("dunning_campaign_not_found")
