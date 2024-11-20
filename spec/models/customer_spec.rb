@@ -593,4 +593,24 @@ RSpec.describe Customer, type: :model do
       end
     end
   end
+
+  describe "counter cache updates on discard/undiscard (soft deletion)" do
+    let(:customer) { create(:customer, applied_dunning_campaign: dunning_campaign) }
+    let(:dunning_campaign) { create(:dunning_campaign) }
+
+    before { customer }
+
+    it "decrements customers_count when discarded" do
+      expect {
+        customer.discard
+      }.to change { dunning_campaign.reload.customers_count }.by(-1)
+    end
+
+    it "increments customers_count when undiscarded" do
+      customer.discard
+      expect {
+        customer.undiscard
+      }.to change { dunning_campaign.reload.customers_count }.by(1)
+    end
+  end
 end

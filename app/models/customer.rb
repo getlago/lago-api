@@ -27,6 +27,9 @@ class Customer < ApplicationRecord
 
   before_save :ensure_slug
 
+  after_discard :decrement_customers_count
+  after_undiscard :increment_customers_count
+
   belongs_to :organization
   belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign", counter_cache: true
 
@@ -191,6 +194,14 @@ class Customer < ApplicationRecord
     formatted_sequential_id = format('%03d', sequential_id)
 
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
+  end
+
+  def decrement_customers_count
+    applied_dunning_campaign.increment!(:customers_count, -1) if applied_dunning_campaign
+  end
+
+  def increment_customers_count
+    applied_dunning_campaign.increment!(:customers_count, 1) if applied_dunning_campaign
   end
 end
 
