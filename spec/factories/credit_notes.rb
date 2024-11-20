@@ -11,6 +11,7 @@ FactoryBot.define do
     total_amount_cents { 120 }
     total_amount_currency { 'EUR' }
     taxes_amount_cents { 20 }
+    precise_taxes_amount_cents { 20 }
 
     credit_status { 'available' }
     credit_amount_cents { 120 }

@@ -37,7 +37,6 @@ module CreditNotes
           credit_status: 'available',
           status: invoice.status
         )
-
         create_items
         result.raise_if_error!
 
