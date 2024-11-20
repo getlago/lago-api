@@ -17,7 +17,7 @@ module AdjustedFees
       charge = fee.charge
       return result.validation_failure!(errors: {charge: ['invalid_charge_model']}) if disabled_charge_model?(charge)
 
-      unit_precise_amount_cents = (params[:unit_precise_amount].presence || 0).to_f * fee.amount.currency.subunit_to_unit
+      unit_precise_amount_cents = params[:unit_precise_amount].to_f * fee.amount.currency.subunit_to_unit
       adjusted_fee = AdjustedFee.new(
         fee:,
         invoice: fee.invoice,
