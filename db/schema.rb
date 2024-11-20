@@ -467,6 +467,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_20_090305) do
     t.boolean "exclude_from_dunning_campaign", default: false, null: false
     t.integer "last_dunning_campaign_attempt", default: 0, null: false
     t.datetime "last_dunning_campaign_attempt_at", precision: nil
+    t.boolean "dunning_campaign_completed", default: false
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
