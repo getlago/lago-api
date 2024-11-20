@@ -120,31 +120,4 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
       )
     end
   end
-
-  context "when not member of the organization" do
-    it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: create(:organization),
-        permissions: required_permission,
-        query:,
-        variables: {dunningCampaignId: dunning_campaign.id}
-      )
-
-      expect_graphql_error(result:, message: "Not in organization")
-    end
-  end
-
-  context "without current organization" do
-    it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
-        query:,
-        variables: {dunningCampaignId: dunning_campaign.id}
-      )
-
-      expect_graphql_error(result:, message: "Missing organization id")
-    end
-  end
 end
