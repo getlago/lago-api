@@ -338,10 +338,14 @@ class Invoice < ApplicationRecord
     finalized? && should_update_crm_invoice?
   end
 
-  def should_update_crm_invoice?
-    customer.integration_customers.crm_kind.any? do |c|
-      c.integration.type == 'Integrations::SalesforceIntegration' || c.integration.sync_invoices
+  def should_sync_salesforce_invoice?
+    finalized? && customer.integration_customers.crm_kind.any? do |c|
+      c.integration.type == 'Integrations::SalesforceIntegration'
     end
+  end
+
+  def should_update_crm_invoice?
+    customer.integration_customers.crm_kind.any? { |c| c.integration.sync_invoices }
   end
 
   def document_invoice_name
