@@ -6507,11 +6507,11 @@
               "deprecationReason": null
             },
             {
-              "name": "unitAmountCents",
+              "name": "unitPreciseAmount",
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "BigInt",
+                "name": "String",
                 "ofType": null
               },
               "defaultValue": null,

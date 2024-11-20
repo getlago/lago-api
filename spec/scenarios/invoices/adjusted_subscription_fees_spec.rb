@@ -7,12 +7,12 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
 
   let(:customer) { create(:customer, organization:, invoice_grace_period: 5) }
   let(:subscription_at) { DateTime.new(2023, 7, 19, 12, 12) }
-  let(:unit_amount_cents) { nil }
+  let(:unit_precise_amount) { nil }
 
   let(:adjusted_fee_params) do
     {
       invoice_display_name: 'test-name-25',
-      unit_amount_cents:,
+      unit_precise_amount:,
       units: 3
     }
   end
@@ -82,7 +82,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
   end
 
   context 'with adjusted amount' do
-    let(:unit_amount_cents) { 15_000 }
+    let(:unit_precise_amount) { '150.00' }
 
     it 'creates invoices correctly' do
       # NOTE: Jul 19th: create the subscription

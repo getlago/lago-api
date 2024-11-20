@@ -17,22 +17,23 @@ module AdjustedFees
       charge = fee.charge
       return result.validation_failure!(errors: {charge: ['invalid_charge_model']}) if disabled_charge_model?(charge)
 
+      unit_precise_amount_cents = params[:unit_precise_amount].to_f * fee.amount.currency.subunit_to_unit
       adjusted_fee = AdjustedFee.new(
         fee:,
         invoice: fee.invoice,
         subscription: fee.subscription,
         charge:,
-        adjusted_units: params[:units].present? && params[:unit_amount_cents].blank?,
-        adjusted_amount: params[:units].present? && params[:unit_amount_cents].present?,
+        adjusted_units: params[:units].present? && params[:unit_precise_amount].blank?,
+        adjusted_amount: params[:units].present? && params[:unit_precise_amount].present?,
         invoice_display_name: params[:invoice_display_name],
         fee_type: fee.fee_type,
         properties: fee.properties,
         units: params[:units].presence || 0,
-        unit_amount_cents: params[:unit_amount_cents].presence || 0,
+        unit_amount_cents: unit_precise_amount_cents.round,
+        unit_precise_amount_cents: unit_precise_amount_cents,
         grouped_by: fee.grouped_by,
         charge_filter: fee.charge_filter
       )
-
       adjusted_fee.save!
 
       refresh_result = Invoices::RefreshDraftService.call(invoice: fee.invoice)
@@ -50,7 +51,7 @@ module AdjustedFees
     attr_reader :organization, :fee, :params
 
     def disabled_charge_model?(charge)
-      unit_adjustment = params[:units].present? && params[:unit_amount_cents].blank?
+      unit_adjustment = params[:units].present? && params[:unit_precise_amount].blank?
 
       charge && unit_adjustment && (charge.percentage? || (charge.prorated? && charge.graduated?))
     end

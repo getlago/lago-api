@@ -94,6 +94,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_20_090305) do
     t.uuid "group_id"
     t.jsonb "grouped_by", default: {}, null: false
     t.uuid "charge_filter_id"
+    t.decimal "unit_precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
     t.index ["charge_filter_id"], name: "index_adjusted_fees_on_charge_filter_id"
     t.index ["charge_id"], name: "index_adjusted_fees_on_charge_id"
     t.index ["fee_id"], name: "index_adjusted_fees_on_fee_id"

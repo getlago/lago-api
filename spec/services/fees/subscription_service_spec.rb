@@ -158,7 +158,8 @@ RSpec.describe Fees::SubscriptionService do
             adjusted_units: false,
             adjusted_amount: true,
             units: 3,
-            unit_amount_cents: 200
+            unit_amount_cents: 200,
+            unit_precise_amount_cents: 200.0
           )
         end
 
@@ -177,6 +178,39 @@ RSpec.describe Fees::SubscriptionService do
             unit_amount_cents: 200,
             precise_unit_amount: 2
           )
+        end
+
+        context 'when precise unit amounts are used' do
+          let(:adjusted_fee) do
+            create(
+              :adjusted_fee,
+              invoice:,
+              subscription:,
+              properties:,
+              adjusted_units: false,
+              adjusted_amount: true,
+              units: 1000,
+              unit_amount_cents: 0,
+              unit_precise_amount_cents: 0.1
+            )
+          end
+
+          it 'creates a fee' do
+            result = fees_subscription_service.create
+
+            expect(result.fee).to have_attributes(
+              id: String,
+              invoice_id: invoice.id,
+              amount_cents: 100,
+              precise_amount_cents: 100.0,
+              amount_currency: 'EUR',
+              units: 1000,
+              events_count: nil,
+              payment_status: 'pending',
+              unit_amount_cents: 0,
+              precise_unit_amount: 0.001
+            )
+          end
         end
       end
 

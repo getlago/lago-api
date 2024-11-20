@@ -52,10 +52,11 @@ module Fees
         precise_unit_amount = amount_result.unit_amount
         amount_details = amount_result.amount_details
       else
-        unit_amount_cents = adjusted_fee.unit_amount_cents.round
-        amount_cents = (units * unit_amount_cents).round
-        precise_unit_amount = amount_cents / (currency.subunit_to_unit * units)
-        precise_amount_cents = units * adjusted_fee.unit_amount_cents.to_d
+        unit_precise_amount_cents = adjusted_fee.unit_precise_amount_cents
+        unit_amount_cents = unit_precise_amount_cents.round
+        precise_amount_cents = units * unit_precise_amount_cents
+        amount_cents = precise_amount_cents.round
+        precise_unit_amount = precise_amount_cents / (currency.subunit_to_unit * units)
         amount_details = {}
       end
 

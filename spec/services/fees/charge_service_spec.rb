@@ -640,8 +640,9 @@ RSpec.describe Fees::ChargeService do
               fee_type: :charge,
               adjusted_units: false,
               adjusted_amount: true,
-              units: 4,
-              unit_amount_cents: 200
+              units: 1000,
+              unit_amount_cents: 0,
+              unit_precise_amount_cents: 0.1
             )
           end
 
@@ -653,13 +654,13 @@ RSpec.describe Fees::ChargeService do
               id: String,
               invoice_id: invoice.id,
               charge_id: charge.id,
-              amount_cents: 800,
-              precise_amount_cents: 800.0,
+              amount_cents: 100,
+              precise_amount_cents: 100.0,
               taxes_precise_amount_cents: 0.0,
               amount_currency: 'EUR',
-              units: 4,
-              unit_amount_cents: 200,
-              precise_unit_amount: 2,
+              units: 1000,
+              unit_amount_cents: 0,
+              precise_unit_amount: 0.001,
               events_count: 0,
               payment_status: 'pending'
             )

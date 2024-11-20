@@ -10,7 +10,7 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
     {
       feeId: fee.id,
       units: 4,
-      unitAmountCents: 1000,
+      unitPreciseAmount: '10.00001',
       invoiceDisplayName: 'Hello'
     }
   end
