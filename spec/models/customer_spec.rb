@@ -9,7 +9,7 @@ RSpec.describe Customer, type: :model do
 
   it_behaves_like 'paper_trail traceable'
 
-  it { is_expected.to belong_to(:applied_dunning_campaign).optional.counter_cache }
+  it { is_expected.to belong_to(:applied_dunning_campaign).optional }
   it { is_expected.to have_many(:daily_usages) }
 
   it { is_expected.to have_many(:integration_customers).dependent(:destroy) }
