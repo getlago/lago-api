@@ -5,7 +5,7 @@ class ResetCustomersCountCounterCacheForDunningCampaigns < ActiveRecord::Migrati
 
   def up
     DunningCampaign.find_each(batch_size: 1000) do |campaign|
-      campaign.update_column(:customers_count, campaign.customers.kept.count)
+      campaign.update_column(:customers_count, campaign.customers.kept.count) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 

@@ -197,11 +197,11 @@ class Customer < ApplicationRecord
   end
 
   def decrement_customers_count
-    applied_dunning_campaign.increment!(:customers_count, -1) if applied_dunning_campaign
+    applied_dunning_campaign&.increment!(:customers_count, -1) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def increment_customers_count
-    applied_dunning_campaign.increment!(:customers_count, 1) if applied_dunning_campaign
+    applied_dunning_campaign&.increment!(:customers_count, 1) # rubocop:disable Rails/SkipsModelValidations
   end
 end
 
