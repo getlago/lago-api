@@ -30,10 +30,6 @@ class DunningCampaign < ApplicationRecord
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
-
-  def customers_count
-    0
-  end
 end
 
 # == Schema Information
