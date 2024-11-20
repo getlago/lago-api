@@ -20,6 +20,7 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      # rubocop:disable GraphQL/ResolverMethodLength
       def customers_count
         Customer.where(
           <<~SQL.squish,
@@ -42,6 +43,7 @@ module Types
           organization_id: object.organization_id
         ).count
       end
+      # rubocop:enable GraphQL/ResolverMethodLength
     end
   end
 end
