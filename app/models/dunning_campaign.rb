@@ -2,6 +2,8 @@
 
 class DunningCampaign < ApplicationRecord
   include PaperTrailTraceable
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   ORDERS = %w[name code].freeze
 
@@ -17,6 +19,7 @@ class DunningCampaign < ApplicationRecord
   validates :max_attempts, numericality: {greater_than: 0}
   validates :code, uniqueness: {scope: :organization_id}, unless: :deleted_at
 
+  default_scope -> { kept }
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
   scope :with_currency_threshold, ->(currencies) {
     joins(:thresholds)
