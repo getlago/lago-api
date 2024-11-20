@@ -17,7 +17,7 @@ module Credits
       # We're not locking individual coupons as that might lead to deadlocks.
       # This will also keep the lock for the shortest time possible, otherwise
       # we'd have to wait for the transaction to either rollback / commit.
-      customer.with_advisory_lock("COUPONS-#{customer.id}", timeout_seconds: 5) do
+      AppliedCoupons::LockService.new(customer:).call do
         # reload coupons now that we've acquired the lock
         applied_coupons.reload
 
