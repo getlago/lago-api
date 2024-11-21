@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'timecop'
-
 namespace :daily_usages do
   desc "Fill past daily usage"
   task :fill_history, [:organization_id, :days_ago] => :environment do |_task, args|
@@ -15,7 +13,7 @@ namespace :daily_usages do
     subscriptions = organization.subscriptions
       .where(status: [:active, :terminated])
       .where.not(started_at: nil)
-      .where('terminated_at IS NULL OR terminated_at >= ?', days_ago)
+      .where("terminated_at IS NULL OR terminated_at >= ?", days_ago)
       .includes(customer: :organization)
 
     subscriptions.find_each do |subscription|
