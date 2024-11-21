@@ -14,6 +14,8 @@ module Integrations
         def call
           Integrations::Hubspot::Companies::DeployPropertiesService.call(integration:)
 
+          throttle!(:hubspot)
+
           response = http_client.post_with_response(params, headers)
           body = JSON.parse(response.body)
 

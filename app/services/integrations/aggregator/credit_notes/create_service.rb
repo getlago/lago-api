@@ -20,6 +20,8 @@ module Integrations
           return result unless credit_note.finalized?
           return result if payload.integration_credit_note
 
+          throttle!(:anrok, :netsuite, :xero)
+
           response = http_client.post_with_response(payload.body, headers)
           body = JSON.parse(response.body)
 

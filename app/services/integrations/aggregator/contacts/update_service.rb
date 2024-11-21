@@ -13,6 +13,8 @@ module Integrations
         def call
           Integrations::Hubspot::Contacts::DeployPropertiesService.call(integration:)
 
+          throttle!(:anrok, :hubspot, :netsuite, :xero)
+
           response = http_client.put_with_response(params, headers)
           body = JSON.parse(response.body)
 

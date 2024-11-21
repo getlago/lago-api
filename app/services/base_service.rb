@@ -13,6 +13,8 @@ class BaseService
     end
   end
 
+  class ThrottlingError < StandardError; end
+
   class NotFoundFailure < FailedResult
     attr_reader :resource
 

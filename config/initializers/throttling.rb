@@ -6,7 +6,7 @@ require 'sidekiq/throttled/web'
 ##
 # Configuration of 'sidekiq-throttled' gem
 #
-# This is the limit of concurrent API calls for Xero and Anrok
+# This is the limit of concurrent API calls for Xero and Netsuite
 Sidekiq::Throttled::Registry.add(:concurrency_limit, concurrency: {limit: 5})
 
 ##
@@ -17,23 +17,29 @@ Throttling.logger = Rails.logger
 
 # Limits per integration and per API key
 Throttling.limits = {
-  hubspot_requests: { # Rate limit: 110 requests per connected account 'hubspot'
+  hubspot: { # Rate limit: 110 requests per 10 seconds
     tensecondly: {
       limit: 110,
       period: 10
     }
   },
-  xero_requests: {
-    minutely: {
+  xero: {
+    minutely: { # Rate limit: 60 requests per minute
       limit: 60,
       period: 60
     },
     daily: {
-      limit: 5000,
+      limit: 5000, # Rate limit: 5000 requests per day
       period: 86400
     }
   },
-  netsuite_requests: { # Rate limit: 10 requests per second per API key. 'integration.client_id' is used
+  netsuite: { # Rate limit: 10 requests per second
+    secondly: {
+      limit: 10,
+      period: 1
+    }
+  },
+  anrok: { # Rate limit: 10 requests per second
     secondly: {
       limit: 10,
       period: 1
@@ -42,6 +48,7 @@ Throttling.limits = {
 }
 
 # Examples of how to use the throttling gem
-# Throttling.for(:hubspot_requests).check(:api_key, 'hubspot')
-# Throttling.for(:xero_requests).check(:api_key, integration.client_id)
-# Throttling.for(:netsuite_requests).check(:api_key, integration.client_id)
+# Throttling.for(:hubspot).check(:client, 'hubspot')
+# Throttling.for(:xero).check(:client, 'xero')
+# Throttling.for(:netsuite).check(:client, integration.token_id)
+# Throttling.for(:anrok).check(:client, integration.api_key)
