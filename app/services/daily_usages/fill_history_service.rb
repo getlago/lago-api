@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "timecop"
+
 module DailyUsages
   class FillHistoryService < BaseService
     def initialize(subscription:, from_datetime:)
