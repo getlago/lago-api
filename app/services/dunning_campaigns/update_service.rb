@@ -21,6 +21,8 @@ module DunningCampaigns
         dunning_campaign.days_between_attempts = params[:days_between_attempts] if params.key?(:days_between_attempts)
         dunning_campaign.max_attempts = params[:max_attempts] if params.key?(:max_attempts)
 
+        handle_thresholds if params.key?(:thresholds)
+
         unless params[:applied_to_organization].nil?
           organization
             .dunning_campaigns
@@ -51,5 +53,22 @@ module DunningCampaigns
     private
 
     attr_reader :dunning_campaign, :organization, :params
+
+    def handle_thresholds
+      input_threshold_ids = params[:thresholds].map { |t| t[:id] }.compact
+
+      # Delete thresholds not included in the payload
+      dunning_campaign.thresholds.where.not(id: input_threshold_ids).discard_all
+
+      # Update or create new thresholds from the input
+      params[:thresholds].each do |threshold_input|
+        dunning_campaign.thresholds.find_or_initialize_by(
+          id: threshold_input[:id]
+        ).update!(
+          amount_cents: threshold_input[:amount_cents],
+          currency: threshold_input[:currency]
+        )
+      end
+    end
   end
 end

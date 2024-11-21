@@ -50,14 +50,33 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           create(:organization, premium_integrations: ["auto_dunning"])
         end
 
+        let(:dunning_campaign_threshold) do
+          create(:dunning_campaign_threshold, dunning_campaign:)
+        end
+
         let(:params) do
           {
             name: "Updated Dunning Campaign",
             code: "updated-dunning-campaign",
             days_between_attempts: Faker::Number.number(digits: 2),
             max_attempts: Faker::Number.number(digits: 2),
-            description: "Updated Dunning Campaign Description"
+            description: "Updated Dunning Campaign Description",
+            thresholds: thresholds_input
           }
+        end
+
+        let(:thresholds_input) do
+          [
+            {
+              id: dunning_campaign_threshold.id,
+              amount_cents: 999_99,
+              currency: "GBP"
+            },
+            {
+              amount_cents: 5_55,
+              currency: "CHF"
+            }
+          ]
         end
 
         it "updates the dunning campaign" do
@@ -67,6 +86,27 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           expect(result.dunning_campaign.days_between_attempts).to eq(params[:days_between_attempts])
           expect(result.dunning_campaign.max_attempts).to eq(params[:max_attempts])
           expect(result.dunning_campaign.description).to eq(params[:description])
+
+          expect(result.dunning_campaign.thresholds.count).to eq(2)
+          expect(result.dunning_campaign.thresholds.find(dunning_campaign_threshold.id))
+            .to have_attributes({amount_cents: 999_99, currency: "GBP"})
+          expect(result.dunning_campaign.thresholds.where.not(id: dunning_campaign_threshold.id).first)
+            .to have_attributes({amount_cents: 5_55, currency: "CHF"})
+        end
+
+        context "when the input does not include a thresholds" do
+          let(:dunning_campaign_threshold_to_be_deleted) do
+            create(:dunning_campaign_threshold, dunning_campaign:, currency: "EUR")
+          end
+
+          before { dunning_campaign_threshold_to_be_deleted }
+
+          it "deletes the thresholds not in the input" do
+            expect(result).to be_success
+            expect(result.dunning_campaign.thresholds.count).to eq(2)
+            expect(result.dunning_campaign.thresholds.find_by(id: dunning_campaign_threshold_to_be_deleted.id)).to be_nil
+            expect(dunning_campaign_threshold_to_be_deleted.reload).to be_discarded
+          end
         end
 
         context "with applied_to_organization false" do
@@ -117,6 +157,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
         context "with no dunning campaign record" do
           let(:dunning_campaign) { nil }
+          let(:thresholds_input) { nil }
 
           it "returns a failure" do
             expect(result).not_to be_success
