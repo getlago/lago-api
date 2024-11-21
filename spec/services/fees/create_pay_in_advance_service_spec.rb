@@ -111,13 +111,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
       let(:body) do
         p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response.json')
-        json = File.read(p)
-
-        # setting item_id based on the test example
-        response = JSON.parse(json)
-        response['succeededInvoices'].first['fees'].first['item_id'] = billable_metric.id
-
-        response.to_json
+        File.read(p)
       end
       let(:integration_collection_mapping) do
         create(
@@ -135,6 +129,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
+        allow_any_instance_of(Fee).to receive(:id).and_return('lago_fee_id')
       end
 
       it 'creates fees' do

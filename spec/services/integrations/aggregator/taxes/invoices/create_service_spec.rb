@@ -83,12 +83,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         },
         'fees' => [
           {
-            'item_id' => fee_add_on.item_id,
+            'item_id' => fee_add_on.id,
             'item_code' => 'm1',
             'amount_cents' => 200
           },
           {
-            'item_id' => fee_add_on_two.item_id,
+            'item_id' => fee_add_on_two.id,
             'item_code' => '1',
             'amount_cents' => 200
           }
