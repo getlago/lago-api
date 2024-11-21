@@ -35,9 +35,10 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
     let(:fee) { create(:fee, invoice:, subscription:) }
     let(:plan) { create(:plan, organization:, interval: 'monthly') }
     let(:credit_note) { create(:credit_note, :draft, invoice:) }
+    let(:standard_charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
 
     before do
-      create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+      standard_charge
 
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
@@ -230,18 +231,22 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         allow(Integrations::Aggregator::Invoices::CreateJob).to receive(:perform_later).and_call_original
         allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
         allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
+        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args|
+          fee = m.receiver
+          if fee.charge_id == standard_charge.id
+            'charge_fee_id-12345'
+          elsif fee.subscription_id == subscription.id
+            'sub_fee_id-12345'
+          else
+            m.call(*args)
+          end
+        end
       end
 
       context 'when taxes fetched correctly' do
         let(:body) do
           p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
-          json = File.read(p)
-
-          response = JSON.parse(json)
-          response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
-          response['succeededInvoices'].first['fees'].last['item_id'] = plan.billable_metrics.first.id
-
-          response.to_json
+          File.read(p)
         end
         let(:invoice_issuing_date) { Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date }
 

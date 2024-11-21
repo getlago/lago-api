@@ -166,14 +166,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
         let(:body) do
           p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
-          json = File.read(p)
-
-          # setting item_id based on the test example
-          response = JSON.parse(json)
-          response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
-          response['succeededInvoices'].first['fees'].last['item_id'] = charge.billable_metric.id
-
-          response.to_json
+          File.read(p)
         end
         let(:integration_collection_mapping) do
           create(
@@ -193,6 +186,16 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           allow(response).to receive(:body).and_return(body)
           allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
           allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
+          allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args|
+            fee = m.receiver
+            if fee.charge_id == charge.id
+              'charge_fee_id-12345'
+            elsif fee.subscription_id == subscription.id
+              'sub_fee_id-12345'
+            else
+              m.call(*args)
+            end
+          end
         end
 
         it 'creates fees' do
