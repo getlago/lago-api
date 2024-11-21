@@ -9,6 +9,9 @@ RSpec.describe Mutations::DunningCampaigns::Update, type: :graphql do
   let(:dunning_campaign) do
     create(:dunning_campaign, organization:, applied_to_organization: true)
   end
+  let(:dunning_campaign_threshold) do
+    create(:dunning_campaign_threshold, dunning_campaign:)
+  end
 
   let(:mutation) do
     <<-GQL
@@ -21,6 +24,25 @@ RSpec.describe Mutations::DunningCampaigns::Update, type: :graphql do
         }
       }
     GQL
+  end
+
+  let(:input) do
+    {
+      id: dunning_campaign.id,
+      name: "Updated Dunning campaign name",
+      code: "updated-dunning-campaign-code",
+      description: "Updated Dunning campaign description",
+      maxAttempts: 99,
+      daysBetweenAttempts: 7,
+      appliedToOrganization: false,
+      thresholds: [
+        {
+          id: dunning_campaign_threshold.id,
+          amountCents: 999_00,
+          currency: "USD"
+        }
+      ]
+    }
   end
 
   around { |test| lago_premium!(&test) }
@@ -39,19 +61,15 @@ RSpec.describe Mutations::DunningCampaigns::Update, type: :graphql do
       current_organization: organization,
       permissions: required_permission,
       query: mutation,
-      variables: {
-        input: {
-          id: dunning_campaign.id,
-          appliedToOrganization: false
-        }
-      }
+      variables: {input:}
     )
 
+    # TODO: update expectation with dunning campaign changes after update service implementation.
     expect(result["data"]["updateDunningCampaign"]).to include(
       "id" => String,
       "name" => dunning_campaign.name,
       "code" => dunning_campaign.code,
-      "appliedToOrganization" => false
+      "appliedToOrganization" => input[:appliedToOrganization]
     )
   end
 end
