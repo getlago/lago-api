@@ -2,12 +2,10 @@
 
 module Types
   module DunningCampaigns
-    class UpdateInput < Types::BaseInputObject
+    class UpdateInput < Types::DunningCampaigns::CreateInput
       graphql_name "UpdateDunningCampaignInput"
 
       argument :id, ID, required: true
-
-      argument :applied_to_organization, Boolean, required: true
     end
   end
 end
