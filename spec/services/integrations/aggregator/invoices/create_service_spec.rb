@@ -141,6 +141,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       'isDynamic' => true,
       'columns' => {
         'tranid' => invoice.number,
+        'otherrefnum' => invoice.number,
         'taxregoverride' => true,
         'taxdetailsoverride' => true,
         'entity' => integration_customer.external_customer_id,

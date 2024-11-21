@@ -40,6 +40,7 @@ module Integrations
           def columns
             result = {
               'tranid' => invoice.number,
+              'otherrefnum' => invoice.number,
               'entity' => integration_customer.external_customer_id,
               'taxregoverride' => true,
               'taxdetailsoverride' => true,
