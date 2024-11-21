@@ -78,7 +78,7 @@ module Types
       end
 
       def integration_hubspot_syncable
-        object.should_sync_crm_invoice? &&
+        object.should_sync_hubspot_invoice? &&
           object.integration_resources
             .joins(:integration)
             .where(integration: {type: "Integrations::HubspotIntegration"})

@@ -40,8 +40,8 @@ module Invoices
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: result.invoice)
       end
 
-      if result.invoice.should_sync_crm_invoice?
-        Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice: result.invoice)
+      if result.invoice.should_sync_hubspot_invoice?
+        Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice: result.invoice)
       end
 
       create_payment(result.invoice)

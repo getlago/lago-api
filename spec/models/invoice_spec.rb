@@ -235,8 +235,8 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#should_sync_crm_invoice?' do
-    subject(:method_call) { invoice.should_sync_crm_invoice? }
+  describe '#should_sync_hubspot_invoice?' do
+    subject(:method_call) { invoice.should_sync_hubspot_invoice? }
 
     let(:invoice) { create(:invoice, customer:, organization:, status:) }
 
@@ -313,8 +313,8 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe '#should_update_crm_invoice?' do
-    subject(:method_call) { invoice.should_update_crm_invoice? }
+  describe '#should_update_hubspot_invoice?' do
+    subject(:method_call) { invoice.should_update_hubspot_invoice? }
 
     let(:invoice) { create(:invoice, customer:, organization:, status:) }
 

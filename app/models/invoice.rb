@@ -334,8 +334,8 @@ class Invoice < ApplicationRecord
     finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
   end
 
-  def should_sync_crm_invoice?
-    finalized? && should_update_crm_invoice?
+  def should_sync_hubspot_invoice?
+    finalized? && should_update_hubspot_invoice?
   end
 
   def should_sync_salesforce_invoice?
@@ -344,8 +344,8 @@ class Invoice < ApplicationRecord
     end
   end
 
-  def should_update_crm_invoice?
-    customer.integration_customers.crm_kind.any? { |c| c.integration.sync_invoices }
+  def should_update_hubspot_invoice?
+    customer.integration_customers.hubspot_kind.any? { |c| c.integration.sync_invoices }
   end
 
   def document_invoice_name
