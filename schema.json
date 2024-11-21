@@ -32666,7 +32666,7 @@
               "args": [
                 {
                   "name": "id",
-                  "description": "Unique ID of the integration collection mappings",
+                  "description": "Unique ID of the dunning campaign",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
