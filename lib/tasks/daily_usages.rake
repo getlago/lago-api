@@ -26,6 +26,8 @@ namespace :daily_usages do
 
       to = (subscription.terminated_at || Time.current).to_date
 
+      previous_daily_usage = nil
+
       (from..to).each do |date|
         datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
 
@@ -41,7 +43,12 @@ namespace :daily_usages do
             max_to_datetime: datetime
           ).raise_if_error!.usage
 
-          DailyUsage.create!(
+          if previous_daily_usage.present? && previous_daily_usage.from_datetime != usage.from_datetime
+            # NOTE: A new billing period was started, the diff should contains the complete current usage
+            previous_daily_usage = nil
+          end
+
+          daily_usage = DailyUsage.new(
             organization:,
             customer: subscription.customer,
             subscription:,
@@ -51,6 +58,15 @@ namespace :daily_usages do
             to_datetime: usage.to_datetime,
             refreshed_at: datetime
           )
+
+          daily_usage.usage_diff = DailyUsages::ComputeDiffService
+            .call(daily_usage:, previous_daily_usage:)
+            .raise_if_error!
+            .usage_diff
+
+          daily_usage.save!
+
+          previous_daily_usage = daily_usage
         end
       end
     end

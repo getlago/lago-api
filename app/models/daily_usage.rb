@@ -23,6 +23,7 @@ end
 #  refreshed_at             :datetime         not null
 #  to_datetime              :datetime         not null
 #  usage                    :jsonb            not null
+#  usage_diff               :jsonb            not null
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #  customer_id              :uuid             not null

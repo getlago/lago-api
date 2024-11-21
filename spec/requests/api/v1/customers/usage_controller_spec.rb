@@ -85,7 +85,6 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         expect(charge_usage[:units]).to eq('4.0')
         expect(charge_usage[:amount_cents]).to eq(5)
         expect(charge_usage[:amount_currency]).to eq('EUR')
-        expect(charge_usage[:groups]).to eq([])
       end
     end
 
@@ -140,31 +139,36 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         )
       end
 
-      it 'returns the group usage for the customer' do
+      it 'returns the filters usage for the customer' do
         get_with_token(organization, path)
 
         charge_usage = json[:customer_usage][:charges_usage].first
-        groups_usage = charge_usage[:groups]
+        filters_usage = charge_usage[:filters]
 
         aggregate_failures do
           expect(charge_usage[:units]).to eq('8.0')
           expect(charge_usage[:amount_cents]).to eq(5000)
-          expect(groups_usage).to contain_exactly(
+          expect(filters_usage).to contain_exactly(
             {
-              lago_id: "charge-filter-#{charge_filter_aws.id}",
-              key: 'cloud',
-              value: 'aws',
-              units: '3.0',
-              amount_cents: 3000,
-              events_count: 3
+              amount_cents: 0,
+              events_count: 4,
+              invoice_display_name: nil,
+              units: "4.0",
+              values: nil
             },
             {
-              lago_id: "charge-filter-#{charge_filter_gcp.id}",
-              key: 'cloud',
-              value: 'google',
+              units: '3.0',
+              amount_cents: 3000,
+              events_count: 3,
+              invoice_display_name: nil,
+              values: {cloud: ['aws']}
+            },
+            {
               units: '1.0',
               amount_cents: 2000,
-              events_count: 1
+              events_count: 1,
+              invoice_display_name: nil,
+              values: {cloud: ['google']}
             }
           )
         end
@@ -283,39 +287,43 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         )
       end
 
-      it 'returns the group usage for the customer' do
+      it 'returns the filters usage for the customer' do
         get_with_token(organization, path)
 
         charge_usage = json[:customer_usage][:charges_usage].first
-        groups_usage = charge_usage[:groups]
+        filters_usage = charge_usage[:filters]
 
         aggregate_failures do
           expect(charge_usage[:units]).to eq('8.0')
           expect(charge_usage[:amount_cents]).to eq(7000)
-          expect(groups_usage).to contain_exactly(
+          expect(filters_usage).to contain_exactly(
             {
-              lago_id: "charge-filter-#{charge_filter_aws_usa.id}",
-              key: 'cloud, region',
-              value: 'aws, usa',
+              units: '4.0',
+              amount_cents: 0,
+              events_count: 4,
+              invoice_display_name: nil,
+              values: nil
+            },
+            {
               units: '2.0',
               amount_cents: 2000,
-              events_count: 2
+              events_count: 2,
+              invoice_display_name: nil,
+              values: {cloud: ['aws'], region: ['usa']}
             },
             {
-              lago_id: "charge-filter-#{charge_filter_aws_france.id}",
-              key: 'cloud, region',
-              value: 'aws, france',
               units: '1.0',
               amount_cents: 2000,
-              events_count: 1
+              events_count: 1,
+              invoice_display_name: nil,
+              values: {cloud: ['aws'], region: ['france']}
             },
             {
-              lago_id: "charge-filter-#{charge_filter_google_usa.id}",
-              key: 'cloud, region',
-              value: 'google, usa',
               units: '1.0',
               amount_cents: 3000,
-              events_count: 1
+              events_count: 1,
+              invoice_display_name: nil,
+              values: {cloud: ['google'], region: ['usa']}
             }
           )
         end
@@ -394,7 +402,6 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         expect(charge_usage[:units]).to eq(fee1.units.to_s)
         expect(charge_usage[:amount_cents]).to eq(fee1.amount_cents)
         expect(charge_usage[:amount_currency]).to eq(fee1.currency)
-        expect(charge_usage[:groups]).to eq([])
       end
     end
 

@@ -28,8 +28,7 @@ RSpec.describe ::V1::Customers::UsageSerializer do
           ),
           units: '4.0',
           amount_cents: 5,
-          amount_currency: 'EUR',
-          groups: []
+          amount_currency: 'EUR'
         )
       ]
     )
@@ -55,7 +54,6 @@ RSpec.describe ::V1::Customers::UsageSerializer do
       expect(charge_usage['units']).to eq('4.0')
       expect(charge_usage['amount_cents']).to eq(5)
       expect(charge_usage['amount_currency']).to eq('EUR')
-      expect(charge_usage['groups']).to eq([])
     end
   end
 end
