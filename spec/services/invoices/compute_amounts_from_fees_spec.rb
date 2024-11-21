@@ -70,7 +70,7 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
 
     let(:fee_taxes) do
       OpenStruct.new(
-        item_id: fee1.subscription.id,
+        item_id: fee1.id,
         item_code: "lago_default_b2b",
         tax_breakdown: [
           OpenStruct.new(name: 'tax 1', type: 'type1', rate: '0.50', tax_amount: 75.5),
