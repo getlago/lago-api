@@ -30,6 +30,25 @@ class DunningCampaign < ApplicationRecord
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
+
+  def reset_customers_last_attempt
+    # NOTE: Reset last attempt on customers with the campaign applied explicitly
+    customers.update_all( # rubocop:disable Rails/SkipsModelValidations
+      last_dunning_campaign_attempt: 0,
+      last_dunning_campaign_attempt_at: nil
+    )
+
+    # NOTE: Reset last attempt on customers falling back to the organization campaign
+    if applied_to_organization?
+      organization.customers.where(
+        applied_dunning_campaign_id: nil,
+        exclude_from_dunning_campaign: false
+      ).update_all( # rubocop:disable Rails/SkipsModelValidations
+        last_dunning_campaign_attempt: 0,
+        last_dunning_campaign_attempt_at: nil
+      )
+    end
+  end
 end
 
 # == Schema Information
