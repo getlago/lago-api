@@ -7,6 +7,7 @@ RSpec.describe Types::ApiKeys::SanitizedObject do
 
   it { is_expected.to have_field(:id).of_type('ID!') }
   it { is_expected.to have_field(:name).of_type('String') }
+  it { is_expected.to have_field(:permissions).of_type('JSON!') }
   it { is_expected.to have_field(:value).of_type('String!') }
   it { is_expected.to have_field(:created_at).of_type('ISO8601DateTime!') }
   it { is_expected.to have_field(:expires_at).of_type('ISO8601DateTime') }
