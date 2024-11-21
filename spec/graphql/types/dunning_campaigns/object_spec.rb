@@ -7,6 +7,7 @@ RSpec.describe Types::DunningCampaigns::Object do
 
   it { is_expected.to have_field(:id).of_type("ID!") }
 
+  it { is_expected.to have_field(:customers_count).of_type("Int!") }
   it { is_expected.to have_field(:applied_to_organization).of_type("Boolean!") }
   it { is_expected.to have_field(:code).of_type("String!") }
   it { is_expected.to have_field(:days_between_attempts).of_type("Int!") }
