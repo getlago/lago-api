@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Mutations::Integrations::SyncCrmInvoice, type: :graphql do
+RSpec.describe Mutations::Integrations::Hubspot::SyncInvoice, type: :graphql do
   subject(:execute_graphql_call) do
     execute_graphql(
       current_user: membership.user,
@@ -25,8 +25,8 @@ RSpec.describe Mutations::Integrations::SyncCrmInvoice, type: :graphql do
 
   let(:mutation) do
     <<-GQL
-      mutation($input: SyncCrmIntegrationInvoiceInput!) {
-        syncCrmIntegrationInvoice(input: $input) { invoiceId }
+      mutation($input: SyncHubspotIntegrationInvoiceInput!) {
+        syncHubspotIntegrationInvoice(input: $input) { invoiceId }
       }
     GQL
   end
