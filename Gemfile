@@ -16,6 +16,7 @@ gem "rails", "~> 7.1.3.4"
 gem "redis"
 gem "sidekiq"
 gem "sidekiq-throttled", '1.4.0' # '1.5.0' was losing some jobs
+gem "throttling"
 gem "dry-validation"
 
 # Security
