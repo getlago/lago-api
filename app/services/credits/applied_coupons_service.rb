@@ -13,13 +13,22 @@ module Credits
 
       result.credits = []
 
-      applied_coupons.each do |applied_coupon|
-        break unless invoice.sub_total_excluding_taxes_amount_cents&.positive?
+      ## take an advisory lock on coupons for this customer
+      # We're not locking individual coupons as that might lead to deadlocks.
+      # This will also keep the lock for the shortest time possible, otherwise
+      # we'd have to wait for the transaction to either rollback / commit.
+      AppliedCoupons::LockService.new(customer:).call do
+        # reload coupons now that we've acquired the lock
+        applied_coupons.reload
 
-        credit_result = Credits::AppliedCouponService.call(invoice:, applied_coupon:)
-        credit_result.raise_if_error!
+        applied_coupons.each do |applied_coupon|
+          break unless invoice.sub_total_excluding_taxes_amount_cents&.positive?
 
-        result.credits << credit_result.credit
+          credit_result = Credits::AppliedCouponService.call(invoice:, applied_coupon:)
+          credit_result.raise_if_error!
+
+          result.credits << credit_result.credit
+        end
       end
 
       result.invoice = invoice

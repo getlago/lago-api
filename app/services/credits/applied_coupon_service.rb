@@ -10,6 +10,10 @@ module Credits
     end
 
     def call
+      if !AppliedCoupons::LockService.new(customer:).locked?
+        return result.service_failure!(code: 'no_lock_acquired', message: "Calling this service without acquiring a lock is not allowed")
+      end
+
       return result unless matches_currency?
       return result if already_applied?
       return result unless fees.any?
@@ -56,6 +60,7 @@ module Credits
     attr_accessor :invoice, :applied_coupon
 
     delegate :coupon, to: :applied_coupon
+    delegate :customer, to: :invoice
 
     def matches_currency?
       return true unless applied_coupon.coupon.fixed_amount?
