@@ -10,7 +10,7 @@ module Mutations
         REQUIRED_PERMISSION = 'organization:integrations:update'
 
         graphql_name 'SyncSalesforceInvoice'
-        description 'Sync Salesforce invoice'
+        description 'Sync Salesforce integration invoice'
 
         input_object_class Types::Integrations::Salesforce::SyncInvoiceInput
 

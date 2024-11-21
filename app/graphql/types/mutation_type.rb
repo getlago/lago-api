@@ -72,7 +72,7 @@ module Types
     field :fetch_integration_accounts, mutation: Mutations::IntegrationItems::FetchAccounts
     field :fetch_integration_items, mutation: Mutations::IntegrationItems::FetchItems
 
-    field :sync_crm_integration_invoice, mutation: Mutations::Integrations::SyncCrmInvoice
+    field :sync_hubspot_integration_invoice, mutation: Mutations::Integrations::Hubspot::SyncInvoice
     field :sync_integration_credit_note, mutation: Mutations::Integrations::SyncCreditNote
     field :sync_integration_invoice, mutation: Mutations::Integrations::SyncInvoice
     field :sync_salesforce_invoice, mutation: Mutations::Integrations::Salesforce::SyncInvoice

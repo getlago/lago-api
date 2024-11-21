@@ -2,8 +2,8 @@
 
 module Types
   module Integrations
-    class SyncCrmInvoiceInput < Types::BaseInputObject
-      graphql_name 'SyncCrmIntegrationInvoiceInput'
+    class SyncHubspotInvoiceInput < Types::BaseInputObject
+      graphql_name 'SyncHubspotIntegrationInvoiceInput'
 
       argument :invoice_id, ID, required: true
     end
