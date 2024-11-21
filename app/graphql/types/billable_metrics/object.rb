@@ -43,7 +43,7 @@ module Types
       end
 
       def active_subscriptions_count
-        object.plans.joins(:subscriptions).merge(Subscription.active).count
+        Subscription.active.where(plan_id: object.charges.select(:plan_id).distinct).count
       end
 
       def draft_invoices_count

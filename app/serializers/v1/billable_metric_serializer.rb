@@ -29,7 +29,7 @@ module V1
     private
 
     def active_subscriptions_count
-      model.plans.joins(:subscriptions).merge(Subscription.active).count
+      Subscription.active.where(plan_id: model.charges.select(:plan_id).distinct).count
     end
 
     def draft_invoices_count
