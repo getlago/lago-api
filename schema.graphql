@@ -4311,6 +4311,7 @@ enum IntegrationItemTypeEnum {
 
 enum IntegrationTypeEnum {
   anrok
+  api_permissions
   auto_dunning
   hubspot
   netsuite
@@ -6180,6 +6181,7 @@ input PlanOverridesInput {
 }
 
 enum PremiumIntegrationTypeEnum {
+  api_permissions
   auto_dunning
   hubspot
   netsuite

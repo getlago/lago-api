@@ -41,6 +41,12 @@ en:
         unsupported_value: unsupported_value
         url_invalid: url_is_invalid
         value_already_exist: value_already_exist
+        models:
+          api_key:
+            attributes:
+              permissions:
+                missing_key: "missing required keys: %{keys}"
+                forbidden_key: "contains forbidden keys: %{keys}"
   date:
     formats:
       default: "%b %d, %Y"

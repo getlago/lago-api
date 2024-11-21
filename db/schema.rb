@@ -111,6 +111,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_25_194753) do
     t.datetime "expires_at"
     t.datetime "last_used_at"
     t.string "name"
+    t.jsonb "permissions", null: false
     t.index ["organization_id"], name: "index_api_keys_on_organization_id"
     t.index ["value"], name: "index_api_keys_on_value", unique: true
   end
