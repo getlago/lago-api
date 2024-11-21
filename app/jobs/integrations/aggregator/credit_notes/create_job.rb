@@ -4,6 +4,8 @@ module Integrations
   module Aggregator
     module CreditNotes
       class CreateJob < ApplicationJob
+        include ConcurrencyThrottlable
+
         queue_as 'integrations'
 
         unique :until_executed, on_conflict: :log
