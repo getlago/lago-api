@@ -69,8 +69,8 @@ RSpec.describe Invoices::RetryService, type: :service do
 
       # setting item_id based on the test example
       response = JSON.parse(json)
-      response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
-      response['succeededInvoices'].first['fees'].last['item_id'] = billable_metric.id
+      response['succeededInvoices'].first['fees'].first['item_id'] = fee_subscription.id
+      response['succeededInvoices'].first['fees'].last['item_id'] = fee_charge.id
 
       response.to_json
     end
