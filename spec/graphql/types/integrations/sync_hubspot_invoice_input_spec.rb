@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Types::Integrations::SyncCrmInvoiceInput do
+RSpec.describe Types::Integrations::SyncHubspotInvoiceInput do
   subject { described_class }
 
   it { is_expected.to accept_argument(:invoice_id).of_type('ID!') }
