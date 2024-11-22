@@ -71,7 +71,7 @@ module Subscriptions
       current_subscription.name = name if name.present?
       current_subscription.save!
 
-      if current_subscription.should_sync_crm_subscription?
+      if current_subscription.should_sync_hubspot_subscription?
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
       end
     end

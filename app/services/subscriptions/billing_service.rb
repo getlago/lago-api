@@ -17,7 +17,7 @@ module Subscriptions
             #       a next subscription is pending, the current one must be terminated
             Subscriptions::TerminateJob.perform_later(subscription, today.to_i)
 
-            if subscription.should_sync_crm_subscription?
+            if subscription.should_sync_hubspot_subscription?
               Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
             end
           else

@@ -38,7 +38,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       let(:params) { {name: 'new name'} }
 
       before do
-        allow(subscription).to receive(:should_sync_crm_subscription?).and_return(true)
+        allow(subscription).to receive(:should_sync_hubspot_subscription?).and_return(true)
         allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
       end
 

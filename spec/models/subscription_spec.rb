@@ -421,8 +421,8 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
-  describe '#should_sync_crm_subscription?' do
-    subject(:method_call) { subscription.should_sync_crm_subscription? }
+  describe '#should_sync_hubspot_subscription??' do
+    subject(:method_call) { subscription.should_sync_hubspot_subscription? }
 
     let(:subscription) { create(:subscription, customer:) }
     let(:organization) { create(:organization) }
@@ -434,7 +434,7 @@ RSpec.describe Subscription, type: :model do
       end
     end
 
-    context 'with integration crm customer' do
+    context 'with integration hubspot customer' do
       let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
       let(:integration) { create(:hubspot_integration, organization:, sync_subscriptions:) }
 

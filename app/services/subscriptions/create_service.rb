@@ -128,7 +128,7 @@ module Subscriptions
         after_commit { SendWebhookJob.perform_later('subscription.started', new_subscription) }
       end
 
-      if new_subscription.should_sync_crm_subscription?
+      if new_subscription.should_sync_hubspot_subscription?
         after_commit { Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription: new_subscription) }
       end
 
@@ -211,7 +211,7 @@ module Subscriptions
       current_subscription.name = name if name.present?
       current_subscription.save!
 
-      if current_subscription.should_sync_crm_subscription?
+      if current_subscription.should_sync_hubspot_subscription?
         Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: current_subscription)
       end
     end

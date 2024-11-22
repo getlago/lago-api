@@ -339,9 +339,7 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_salesforce_invoice?
-    finalized? && customer.integration_customers.crm_kind.any? do |c|
-      c.integration.type == 'Integrations::SalesforceIntegration'
-    end
+    finalized? && customer.integration_customers.salesforce_kind.any?
   end
 
   def should_update_hubspot_invoice?
