@@ -26,7 +26,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateJob, type: :jo
   end
 
   context 'when the service call is successful' do
-    it 'calls the aggregator create invoice crm service' do
+    it 'calls the aggregator create invoice hubspot service' do
       described_class.perform_now(invoice:)
 
       aggregate_failures do
