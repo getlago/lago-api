@@ -45,4 +45,65 @@ RSpec.describe DunningCampaign, type: :model do
       expect(described_class.with_discarded).to eq([deleted_dunning_campaign])
     end
   end
+
+  describe "#reset_customers_last_attempt" do
+    let(:last_dunning_campaign_attempt_at) { Time.current }
+    let(:organization) { dunning_campaign.organization }
+
+    it "resets last attempt on customers with the campaign applied explicitly" do
+      customer = create(
+        :customer,
+        organization:,
+        applied_dunning_campaign: dunning_campaign,
+        last_dunning_campaign_attempt: 1,
+        last_dunning_campaign_attempt_at:
+      )
+
+      expect { dunning_campaign.reset_customers_last_attempt }
+        .to change { customer.reload.last_dunning_campaign_attempt }.from(1).to(0)
+        .and change { customer.last_dunning_campaign_attempt_at }.from(last_dunning_campaign_attempt_at).to(nil)
+    end
+
+    it "does not reset last attempt on customers with dunning campaign already completed" do
+      customer = create(
+        :customer,
+        organization:,
+        applied_dunning_campaign: dunning_campaign,
+        last_dunning_campaign_attempt: 1,
+        dunning_campaign_completed: true
+      )
+
+      expect { dunning_campaign.reset_customers_last_attempt }
+        .not_to change { customer.reload.last_dunning_campaign_attempt }.from(1)
+    end
+
+    context "when applied to organization" do
+      subject(:dunning_campaign) { create(:dunning_campaign, applied_to_organization: true) }
+
+      it "resets last attempt on customers falling back to the organization campaign" do
+        customer = create(
+          :customer,
+          organization:,
+          last_dunning_campaign_attempt: 2,
+          last_dunning_campaign_attempt_at:
+        )
+
+        expect { dunning_campaign.reset_customers_last_attempt }
+          .to change { customer.reload.last_dunning_campaign_attempt }.from(2).to(0)
+          .and change { customer.last_dunning_campaign_attempt_at }.from(last_dunning_campaign_attempt_at).to(nil)
+      end
+
+      it "does not reset last attempt on customers with dunning campaign already completed" do
+        customer = create(
+          :customer,
+          organization:,
+          last_dunning_campaign_attempt: 2,
+          dunning_campaign_completed: true
+        )
+
+        expect { dunning_campaign.reset_customers_last_attempt }
+          .not_to change { customer.reload.last_dunning_campaign_attempt }.from(2)
+      end
+    end
+  end
 end

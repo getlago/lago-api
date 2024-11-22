@@ -135,6 +135,16 @@ class Organization < ApplicationRecord
     License.premium? && premium_integrations.include?("auto_dunning")
   end
 
+  def reset_customers_last_dunning_campaign_attempt
+    customers
+      .falling_back_to_default_dunning_campaign
+      .with_dunning_campaign_not_completed
+      .update_all( # rubocop:disable Rails/SkipsModelValidations
+        last_dunning_campaign_attempt: 0,
+        last_dunning_campaign_attempt_at: nil
+      )
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.

@@ -58,6 +58,12 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
           create(:organization, premium_integrations: ["auto_dunning"])
         end
 
+        it "resets last attempt on customers" do
+          customer = create(:customer, organization:, applied_dunning_campaign: dunning_campaign, last_dunning_campaign_attempt: 1)
+
+          expect { destroy_service.call }.to change { customer.reload.last_dunning_campaign_attempt }.from(1).to(0)
+        end
+
         it "soft deletes the dunning campaign" do
           freeze_time do
             expect { destroy_service.call }.to change(DunningCampaign, :count).by(-1)

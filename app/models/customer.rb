@@ -68,6 +68,11 @@ class Customer < ApplicationRecord
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
     lock_key: ->(customer) { customer.organization_id }
 
+  scope :falling_back_to_default_dunning_campaign, -> {
+    where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
+  }
+  scope :with_dunning_campaign_not_completed, -> { where(dunning_campaign_completed: false) }
+
   validates :country, :shipping_country, country_code: true, allow_nil: true
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
   validates :currency, inclusion: {in: currency_list}, allow_nil: true
