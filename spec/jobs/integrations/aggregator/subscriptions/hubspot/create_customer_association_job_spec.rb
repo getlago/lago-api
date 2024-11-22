@@ -15,7 +15,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateCustomerA
     allow(service).to receive(:call).and_return(result)
   end
 
-  it 'calls the aggregator create subscription crm service' do
+  it 'calls the aggregator create subscription hubspot service' do
     described_class.perform_now(subscription:)
 
     aggregate_failures do
