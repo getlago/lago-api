@@ -53,5 +53,13 @@ RSpec.describe ::V1::IntegrationCustomerSerializer do
         expect(subject).to eq('hubspot')
       end
     end
+
+    context 'when customer is a salesforce customer' do
+      let(:integration_customer) { create(:salesforce_customer) }
+
+      it 'returns salesforce' do
+        expect(subject).to eq('salesforce')
+      end
+    end
   end
 end
