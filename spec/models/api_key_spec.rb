@@ -107,7 +107,7 @@ RSpec.describe ApiKey, type: :model do
       before { subject }
 
       context 'when permission contains forbidden values' do
-        let(:permissions) { {'add_on': ['forbidden', 'read']} }
+        let(:permissions) { {add_on: ['forbidden', 'read']} }
 
         it 'adds an error' do
           expect(error).to be_present
@@ -115,7 +115,7 @@ RSpec.describe ApiKey, type: :model do
       end
 
       context 'when permission contains only allowed values' do
-        let(:permissions) { {'add_on': ['read', 'write']} }
+        let(:permissions) { {add_on: ['read', 'write']} }
 
         it 'does not add an error' do
           expect(error).not_to be_present
@@ -186,7 +186,7 @@ RSpec.describe ApiKey, type: :model do
     let(:resource) { described_class::RESOURCES.sample }
     let(:mode) { described_class::MODES.sample }
 
-    before { api_key.organization.update!(premium_integrations: ) }
+    before { api_key.organization.update!(premium_integrations:) }
 
     context "when organization has 'api_permissions' add-on enabled" do
       let(:premium_integrations) { ["api_permissions"] }
