@@ -82,7 +82,7 @@ class Customer < ApplicationRecord
   validates :email, email: true, if: :email?
 
   def self.ransackable_attributes(_auth_object = nil)
-    %w[id name firstname lastname external_id email]
+    %w[id name firstname lastname legal_name external_id email]
   end
 
   def display_name(prefer_legal_name: true)
