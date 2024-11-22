@@ -64,4 +64,8 @@ RSpec.configure do |config|
     DatabaseCleaner.strategy = :deletion
     WebMock.disable_net_connect!(allow: ENV.fetch('LAGO_CLICKHOUSE_HOST', 'clickhouse'))
   end
+
+  config.define_derived_metadata do |meta|
+    meta[:aggregate_failures] = true
+  end
 end
