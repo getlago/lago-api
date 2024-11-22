@@ -251,7 +251,7 @@ RSpec.describe Invoice, type: :model do
         end
       end
 
-      context 'with integration crm customer' do
+      context 'with integration hubspot customer' do
         let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
         let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
         let(:customer) { create(:customer, organization:) }
@@ -287,7 +287,7 @@ RSpec.describe Invoice, type: :model do
         end
       end
 
-      context 'with integration crm customer' do
+      context 'with integration hubspot customer' do
         let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
         let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
         let(:customer) { create(:customer, organization:) }
@@ -329,7 +329,7 @@ RSpec.describe Invoice, type: :model do
         end
       end
 
-      context 'with integration crm customer' do
+      context 'with integration hubpot customer' do
         let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
         let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
         let(:customer) { create(:customer, organization:) }
@@ -365,7 +365,7 @@ RSpec.describe Invoice, type: :model do
         end
       end
 
-      context 'with integration crm customer' do
+      context 'with integration hubspot customer' do
         let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
         let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
         let(:customer) { create(:customer, organization:) }
