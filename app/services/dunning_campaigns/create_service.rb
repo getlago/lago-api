@@ -15,16 +15,10 @@ module DunningCampaigns
 
       ActiveRecord::Base.transaction do
         if params[:applied_to_organization]
-          organization
-            .dunning_campaigns
-            .applied_to_organization
+          organization.dunning_campaigns.applied_to_organization
             .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
 
-          # NOTE: Stop and reset existing campaigns.
-          organization.customers.falling_back_to_default_dunning_campaign.update_all( # rubocop:disable Rails/SkipsModelValidations
-            last_dunning_campaign_attempt: 0,
-            last_dunning_campaign_attempt_at: nil
-          )
+          organization.reset_customers_last_dunning_campaign_attempt
         end
 
         dunning_campaign = organization.dunning_campaigns.create!(
