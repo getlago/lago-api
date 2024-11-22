@@ -24,7 +24,7 @@ module SentryCronConcern
     end
 
     def deserialize(job_data)
-      super(job_data)
+      super
       self.class.sentry = job_data['sentry']
     end
   end
@@ -35,7 +35,7 @@ module SentryCronConcern
         self.sentry = options[:sentry]
       end
 
-      super(options)
+      super
     end
   end
 end

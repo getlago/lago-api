@@ -4,7 +4,7 @@ module BillableMetrics
   module Aggregations
     class UniqueCountService < BillableMetrics::Aggregations::BaseService
       def initialize(...)
-        super(...)
+        super
 
         event_store.aggregation_property = billable_metric.field_name
         event_store.use_from_boundary = !billable_metric.recurring

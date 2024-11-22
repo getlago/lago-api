@@ -22,22 +22,22 @@ end
 
 def find_or_create_metrics(organization)
   metrics_params = [
-    { name: 'metered_count', agg_type: :count_agg, recurring: false},
-    { name: 'metered_count_uniq', agg_type: :unique_count_agg, recurring: false },
-    { name: 'metered_latest', agg_type: :latest_agg, recurring: false },
-    { name: 'metered_max', agg_type: :max_agg, recurring: false },
-    { name: 'metered_sum', agg_type: :sum_agg, recurring: false },
-    { name: 'metered_weighted_sum', agg_type: :weighted_sum_agg, recurring: false },
-    {name: 'recurring_sum', agg_type: :sum_agg, recurring: true },
-    {name: 'recurring_weighted_sum', agg_type: :weighted_sum_agg, recurring: true }
+    {name: 'metered_count', agg_type: :count_agg, recurring: false},
+    {name: 'metered_count_uniq', agg_type: :unique_count_agg, recurring: false},
+    {name: 'metered_latest', agg_type: :latest_agg, recurring: false},
+    {name: 'metered_max', agg_type: :max_agg, recurring: false},
+    {name: 'metered_sum', agg_type: :sum_agg, recurring: false},
+    {name: 'metered_weighted_sum', agg_type: :weighted_sum_agg, recurring: false},
+    {name: 'recurring_sum', agg_type: :sum_agg, recurring: true},
+    {name: 'recurring_weighted_sum', agg_type: :weighted_sum_agg, recurring: true}
   ]
-  metered_metrics = metrics_params.map do |params|
+  metrics_params.map do |params|
     organization.billable_metrics.find_or_create_by!(name: params[:name],
-                                                     code: params[:name],
-                                                     recurring: params[:recurring],
-                                                     aggregation_type: params[:agg_type],
-                                                     field_name: 'test',
-                                                     weighted_interval: "seconds")
+      code: params[:name],
+      recurring: params[:recurring],
+      aggregation_type: params[:agg_type],
+      field_name: 'test',
+      weighted_interval: "seconds")
   end
 end
 
@@ -65,10 +65,10 @@ def build_plan_args(organization, all_metrics, i)
     charges_params << charge_params
   end
 
-  args = {
+  {
     organization_id: organization.id,
-    name: "Plan parent #{i+1}",
-    code: "plan_parent_#{i+1}-#{SecureRandom.hex(5)}",
+    name: "Plan parent #{i + 1}",
+    code: "plan_parent_#{i + 1}-#{SecureRandom.hex(5)}",
     pay_in_advance: [true, false].sample,
     amount_cents: Faker::Number.number(digits: 4),
     amount_currency: 'USD',
