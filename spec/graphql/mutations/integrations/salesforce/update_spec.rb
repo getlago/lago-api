@@ -46,7 +46,7 @@ RSpec.describe Mutations::Integrations::Salesforce::Update, type: :graphql do
           id: integration.id,
           name:,
           code: code,
-          instance_id: instance_id
+          instanceId: instance_id
         }
       }
     )
@@ -57,7 +57,7 @@ RSpec.describe Mutations::Integrations::Salesforce::Update, type: :graphql do
     aggregate_failures do
       expect(result_data['name']).to eq(name)
       expect(result_data['code']).to eq(code)
-      expect(result_data['instance_id']).to eq(instance_id)
+      expect(result_data['instanceId']).to eq(instance_id)
     end
   end
 end
