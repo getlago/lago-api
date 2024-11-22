@@ -47,12 +47,9 @@ module Types
       end
 
       def draft_invoices_count
-        object.charges
-          .joins(fees: [:invoice])
-          .merge(Invoice.draft)
-          .select(:invoice_id)
-          .distinct
-          .count
+        Invoice.draft.where(id: object.charges
+          .joins(:fees)
+          .select(:invoice_id)).count
       end
 
       def plans_count

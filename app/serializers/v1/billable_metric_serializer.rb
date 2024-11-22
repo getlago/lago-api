@@ -33,12 +33,9 @@ module V1
     end
 
     def draft_invoices_count
-      model.charges
-        .joins(fees: [:invoice])
-        .merge(Invoice.draft)
-        .select(:invoice_id)
-        .distinct
-        .count
+      Invoice.draft.where(id: model.charges
+        .joins(:fees)
+        .select(:invoice_id)).count
     end
 
     def plans_count
