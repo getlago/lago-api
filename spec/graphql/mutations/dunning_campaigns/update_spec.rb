@@ -64,8 +64,6 @@ RSpec.describe Mutations::DunningCampaigns::Update, type: :graphql do
       variables: {input:}
     )
 
-    # TODO: update expectation with dunning campaign changes after update service implementation.
-    pp result
     expect(result["data"]["updateDunningCampaign"]).to include(
       "id" => dunning_campaign.id,
       "name" => "Updated Dunning campaign name",
