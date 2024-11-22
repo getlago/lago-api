@@ -40,10 +40,7 @@ class DunningCampaign < ApplicationRecord
 
     # NOTE: Reset last attempt on customers falling back to the organization campaign
     if applied_to_organization?
-      organization.customers.where(
-        applied_dunning_campaign_id: nil,
-        exclude_from_dunning_campaign: false
-      ).update_all( # rubocop:disable Rails/SkipsModelValidations
+      organization.customers.falling_back_to_default_dunning_campaign.update_all( # rubocop:disable Rails/SkipsModelValidations
         last_dunning_campaign_attempt: 0,
         last_dunning_campaign_attempt_at: nil
       )
