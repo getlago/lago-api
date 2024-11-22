@@ -142,7 +142,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
 
           context 'when invoice is succesfully created' do
             let(:body) do
-              path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/crm/success_hash_response.json')
+              path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/hubspot/success_hash_response.json')
               File.read(path)
             end
 
@@ -168,7 +168,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
 
           context 'when invoice is not created' do
             let(:body) do
-              path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/crm/failure_hash_response.json')
+              path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/hubspot/failure_hash_response.json')
               File.read(path)
             end
 
