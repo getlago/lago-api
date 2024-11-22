@@ -118,9 +118,9 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
 
         # setting item_id based on the test example
         response = JSON.parse(json)
-        response['succeededInvoices'].first['fees'].first['item_id'] = add_on_first.id
+        response['succeededInvoices'].first['fees'].first['item_id'] = 'fee_id_1'
         response['succeededInvoices'].first['fees'].first['tax_breakdown'].first['tax_amount'] = 240
-        response['succeededInvoices'].first['fees'].last['item_id'] = add_on_second.id
+        response['succeededInvoices'].first['fees'].last['item_id'] = 'fee_id_2'
         response['succeededInvoices'].first['fees'].last['tax_breakdown'].first['tax_amount'] = 60
 
         response.to_json
@@ -141,6 +141,16 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
+        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
+          fee = m.receiver
+          if fee.add_on_id == add_on_first.id
+            'fee_id_1'
+          elsif fee.add_on_id == add_on_second.id
+            'fee_id_2'
+          else
+            m.call(*args)
+          end
+        end
       end
 
       it 'creates an invoice' do

@@ -56,7 +56,7 @@ module Invoices
     end
 
     def fee_taxes(fee)
-      provider_taxes.find { |item| item.item_id == fee.item_id }
+      provider_taxes.find { |item| item.item_id == fee.id }
     end
 
     def should_apply_fee_taxes?

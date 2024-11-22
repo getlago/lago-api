@@ -53,7 +53,7 @@ RSpec.describe Mutations::Invoices::Retry, type: :graphql do
 
     # setting item_id based on the test example
     response = JSON.parse(json)
-    response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
+    response['succeededInvoices'].first['fees'].first['item_id'] = fee_subscription.id
 
     response.to_json
   end

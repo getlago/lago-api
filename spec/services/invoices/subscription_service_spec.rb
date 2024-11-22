@@ -140,14 +140,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
       let(:body) do
         p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
-        json = File.read(p)
-
-        # setting item_id based on the test example
-        response = JSON.parse(json)
-        response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
-        response['succeededInvoices'].first['fees'].last['item_id'] = plan.charges.first.billable_metric.id
-
-        response.to_json
+        File.read(p)
       end
       let(:integration_collection_mapping) do
         create(
@@ -165,6 +158,17 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
+
+        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
+          fee = m.receiver
+          if fee.charge_id == plan.charges.first.id
+            'charge_fee_id-12345'
+          elsif fee.subscription_id == subscription.id
+            'sub_fee_id-12345'
+          else
+            m.call(*args)
+          end
+        end
       end
 
       it 'creates an invoice' do

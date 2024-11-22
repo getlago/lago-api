@@ -75,7 +75,7 @@ module Integrations
               )
             elsif b['rate']
               # If there are taxes, that client shouldn't pay, we nullify the taxes
-              if taxes_to_pay.zero?
+              if taxes_to_pay.zero? && b['tax_amount'].positive?
                 OpenStruct.new(
                   name: 'Tax',
                   rate: '0.00',
