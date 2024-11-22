@@ -26,7 +26,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateJob, type
   end
 
   context 'when the service call is successful' do
-    it 'calls the aggregator create subscription crm service' do
+    it 'calls the aggregator create subscription hubspot service' do
       described_class.perform_now(subscription:)
 
       aggregate_failures do
