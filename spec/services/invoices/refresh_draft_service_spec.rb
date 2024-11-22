@@ -189,17 +189,22 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
+        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args|
+          fee = m.receiver
+          if fee.charge_id == charge.id
+            'charge_fee_id-12345'
+          elsif fee.subscription_id == subscription.id
+            'sub_fee_id-12345'
+          else
+            m.call(*args)
+          end
+        end
       end
 
       context 'when successfully fetching taxes' do
         let(:body) do
           p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
-          json = File.read(p)
-          response = JSON.parse(json)
-
-          response['succeededInvoices'].first['fees'].first['item_id'] = subscription.id
-          response['succeededInvoices'].first['fees'].second['item_id'] = charge.billable_metric.id
-          response.to_json
+          File.read(p)
         end
 
         it 'successfully applies taxes and regenerates fees' do
