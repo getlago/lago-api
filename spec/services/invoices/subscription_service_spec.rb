@@ -159,7 +159,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
 
-        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args|
+        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
           fee = m.receiver
           if fee.charge_id == plan.charges.first.id
             'charge_fee_id-12345'

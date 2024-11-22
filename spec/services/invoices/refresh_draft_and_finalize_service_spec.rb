@@ -231,7 +231,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         allow(Integrations::Aggregator::Invoices::CreateJob).to receive(:perform_later).and_call_original
         allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
         allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
-        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args|
+        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
           fee = m.receiver
           if fee.charge_id == standard_charge.id
             'charge_fee_id-12345'

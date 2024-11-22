@@ -129,7 +129,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
-        allow_any_instance_of(Fee).to receive(:id).and_return('lago_fee_id')
+        allow_any_instance_of(Fee).to receive(:id).and_return('lago_fee_id') # rubocop:disable RSpec/AnyInstance
       end
 
       it 'creates fees' do

@@ -95,7 +95,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
         allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
-        allow_any_instance_of(Fee).to receive(:id).and_return('lago_fee_id')
+        allow_any_instance_of(Fee).to receive(:id).and_return('lago_fee_id') # rubocop:disable RSpec/AnyInstance
       end
 
       it 'creates a progressive billing invoice', aggregate_failures: true do

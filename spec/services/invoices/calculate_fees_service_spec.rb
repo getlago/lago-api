@@ -186,7 +186,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           allow(response).to receive(:body).and_return(body)
           allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
           allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
-          allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args|
+          allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
             fee = m.receiver
             if fee.charge_id == charge.id
               'charge_fee_id-12345'
