@@ -22,7 +22,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::BaseService, type: :
       create(:netsuite_customer, customer:)
     end
 
-    it 'returns the first CRM kind integration customer' do
+    it 'returns the first Hubspot kind integration customer' do
       expect(service.send(:integration_customer)).to eq(integration_customer)
     end
 
