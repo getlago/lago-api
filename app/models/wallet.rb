@@ -10,8 +10,9 @@ class Wallet < ApplicationRecord
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
 
-  monetize :balance_cents, :ongoing_balance_cents, :ongoing_usage_balance_cents
+  monetize :balance_cents
   monetize :consumed_amount_cents
+  monetize :ongoing_balance_cents, :ongoing_usage_balance_cents, with_model_currency: :balance_currency
 
   validates :rate_amount, numericality: {greater_than: 0}
 
