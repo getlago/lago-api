@@ -235,6 +235,32 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe '#should_sync_salesforce_invoice?' do
+    subject(:method_call) { invoice.should_sync_salesforce_invoice? }
+
+    let(:invoice) { create(:invoice, customer:, organization:, status: :finalized) }
+
+    context 'with integration salesforce customer' do
+      let(:integration_customer) { create(:salesforce_customer, integration:, customer:) }
+      let(:integration) { create(:salesforce_integration, organization:) }
+      let(:customer) { create(:customer, organization:) }
+
+      before { integration_customer }
+
+      it 'returns true' do
+        expect(method_call).to eq(true)
+      end
+    end
+
+    context 'without integration salesforce customer' do
+      let(:customer) { create(:customer, organization:) }
+
+      it 'returns true' do
+        expect(method_call).to eq(false)
+      end
+    end
+  end
+
   describe '#should_sync_hubspot_invoice?' do
     subject(:method_call) { invoice.should_sync_hubspot_invoice? }
 
