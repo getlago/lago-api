@@ -6,7 +6,7 @@ module Types
 
     attr_reader :permissions
 
-    def initialize(*args, permission: nil, permissions: nil, **kwargs, &block)
+    def initialize(*, permission: nil, permissions: nil, **kwargs, &)
       if permission
         @permissions = [permission.to_s]
       elsif permissions
@@ -15,7 +15,7 @@ module Types
 
       kwargs[:null] = true if @permissions
 
-      super(*args, **kwargs, &block)
+      super(*, **kwargs, &)
 
       extension(Extensions::FieldAuthorizationExtension) if @permissions
     end

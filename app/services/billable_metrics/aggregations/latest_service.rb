@@ -4,7 +4,7 @@ module BillableMetrics
   module Aggregations
     class LatestService < BillableMetrics::Aggregations::BaseService
       def initialize(...)
-        super(...)
+        super
 
         event_store.numeric_property = true
         event_store.aggregation_property = billable_metric.field_name
