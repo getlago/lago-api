@@ -258,14 +258,8 @@ RSpec.describe Fees::OneOffService do
 
         it 'creates fees' do
           result = one_off_service.create
-
-          # This is very bad. I'm sorry. I'm just trying to get the test to pass.
-          # first_fee = result.fees[0].reload
-          first_fee_id = result.fees[0].attributes['id']
-          first_fee = Fee.find_by(id: first_fee_id)
-          # second_fee = result.fees[1].reload
-          second_fee_id = result.fees[1].attributes['id']
-          second_fee = Fee.find_by(id: second_fee_id)
+          first_fee = result.fees[0]
+          second_fee = result.fees[1]
 
           aggregate_failures do
             expect(result).to be_success
