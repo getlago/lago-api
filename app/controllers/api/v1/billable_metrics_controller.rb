@@ -12,7 +12,8 @@ module Api
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: "billable_metric"
+              root_name: "billable_metric",
+              includes: %i[counters]
             )
           )
         else
@@ -35,7 +36,8 @@ module Api
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: "billable_metric"
+              root_name: "billable_metric",
+              includes: %i[counters]
             )
           )
         else
@@ -52,7 +54,8 @@ module Api
           render(
             json: ::V1::BillableMetricSerializer.new(
               result.billable_metric,
-              root_name: "billable_metric"
+              root_name: "billable_metric",
+              includes: %i[counters]
             )
           )
         else
@@ -87,7 +90,8 @@ module Api
             metrics,
             ::V1::BillableMetricSerializer,
             collection_name: "billable_metrics",
-            meta: pagination_metadata(metrics)
+            meta: pagination_metadata(metrics),
+            includes: %i[counters] # DEPRECATED since 2024-11-22
           )
         )
       end
