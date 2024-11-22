@@ -15,18 +15,24 @@ module V1
         rounding_precision: model.rounding_precision,
         created_at: model.created_at.iso8601,
         field_name: model.field_name,
-        expression: model.expression,
-        active_subscriptions_count:,
-        draft_invoices_count:,
-        plans_count:
+        expression: model.expression
       }
 
+      payload.merge!(counters) if include?(:counters)
       payload.merge!(filters)
 
       payload
     end
 
     private
+
+    def counters
+      {
+        active_subscriptions_count:,
+        draft_invoices_count:,
+        plans_count:
+      }
+    end
 
     def active_subscriptions_count
       Subscription.active.where(plan_id: model.charges.select(:plan_id).distinct).count
@@ -49,7 +55,7 @@ module V1
       ::CollectionSerializer.new(
         model.filters,
         ::V1::BillableMetricFilterSerializer,
-        collection_name: 'filters'
+        collection_name: "filters"
       ).serialize
     end
   end
