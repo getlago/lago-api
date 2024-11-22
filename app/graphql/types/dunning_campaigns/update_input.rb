@@ -7,7 +7,13 @@ module Types
 
       argument :id, ID, required: true
 
-      argument :applied_to_organization, Boolean, required: true
+      argument :applied_to_organization, Boolean, required: false
+      argument :code, String, required: false
+      argument :days_between_attempts, Integer, required: false
+      argument :description, String, required: false
+      argument :max_attempts, Integer, required: false
+      argument :name, String, required: false
+      argument :thresholds, [Types::DunningCampaignThresholds::Input], required: false
     end
   end
 end

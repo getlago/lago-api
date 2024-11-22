@@ -9,7 +9,7 @@ module Mutations
       REQUIRED_PERMISSION = "dunning_campaigns:update"
 
       graphql_name "UpdateDunningCampaign"
-      description "Updates a dunning campaign"
+      description "Updates a dunning campaign and its thresholds"
 
       input_object_class Types::DunningCampaigns::UpdateInput
       type Types::DunningCampaigns::Object
