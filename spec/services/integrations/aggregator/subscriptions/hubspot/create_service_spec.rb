@@ -41,11 +41,11 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
   describe '#call_async' do
     subject(:service_call_async) { described_class.new(subscription:).call_async }
 
-    # context 'when subscription exists' do
-    #   it 'enqueues subscription create job' do
-    #     expect { service_call_async }.to enqueue_job(Integrations::Aggregator::Subscriptions::Crm::CreateJob)
-    #   end
-    # end
+    context 'when subscription exists' do
+      it 'enqueues subscription create job' do
+        expect { service_call_async }.to enqueue_job(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob)
+      end
+    end
 
     context 'when subscription does not exist' do
       let(:subscription) { nil }
@@ -91,7 +91,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
 
         context 'when subscription is succesfully created' do
           let(:body) do
-            path = Rails.root.join('spec/fixtures/integration_aggregator/subscriptions/crm/success_hash_response.json')
+            path = Rails.root.join('spec/fixtures/integration_aggregator/subscriptions/hubspot/success_hash_response.json')
             File.read(path)
           end
 
@@ -117,7 +117,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
 
         context 'when subscription is not created' do
           let(:body) do
-            path = Rails.root.join('spec/fixtures/integration_aggregator/subscriptions/crm/failure_hash_response.json')
+            path = Rails.root.join('spec/fixtures/integration_aggregator/subscriptions/hubspot/failure_hash_response.json')
             File.read(path)
           end
 
