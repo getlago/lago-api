@@ -45,5 +45,56 @@ RSpec.describe Plans::UpdateAmountService, type: :service do
         end
       end
     end
+
+    context "when there are pending subscriptions which are not relevant after the amount cents increase", :aggregate_failures do
+      let(:original_plan) { create(:plan, organization:, amount_cents: expected_amount_cents) }
+      let(:subscription) { create(:subscription, plan: original_plan) }
+      let(:pending_subscription) do
+        create(:subscription, plan:, status: :pending, previous_subscription_id: subscription.id)
+      end
+      let(:plan_upgrade_result) { BaseService::Result.new }
+
+      before do
+        allow(Subscriptions::PlanUpgradeService)
+          .to receive(:call)
+          .and_return(plan_upgrade_result)
+
+        pending_subscription
+      end
+
+      it "upgrades subscription plan" do
+        update_service.call
+
+        expect(Subscriptions::PlanUpgradeService).to have_received(:call)
+      end
+
+      context "when pending subscription does not have a previous one" do
+        let(:pending_subscription) do
+          create(:subscription, plan:, status: :pending, previous_subscription_id: nil)
+        end
+
+        it "does not upgrade it" do
+          update_service.call
+
+          expect(Subscriptions::PlanUpgradeService).not_to have_received(:call)
+        end
+      end
+
+      context "when subscription upgrade fails" do
+        let(:plan_upgrade_result) do
+          BaseService::Result.new.validation_failure!(
+            errors: {billing_time: ["value_is_invalid"]}
+          )
+        end
+
+        it "returns an error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({billing_time: ["value_is_invalid"]})
+        end
+      end
+    end
   end
 end
