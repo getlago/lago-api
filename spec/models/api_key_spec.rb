@@ -114,10 +114,10 @@ RSpec.describe ApiKey, type: :model do
         end
       end
 
-      context 'when permission contains forbidden values' do
+      context 'when permission contains only allowed values' do
         let(:permissions) { {'add_on': ['read', 'write']} }
 
-        it 'does not adds an error' do
+        it 'does not add an error' do
           expect(error).not_to be_present
         end
       end
