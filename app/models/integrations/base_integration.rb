@@ -9,7 +9,6 @@ module Integrations
     self.table_name = 'integrations'
 
     INTEGRATION_ACCOUNTING_TYPES = %w[Integrations::NetsuiteIntegration Integrations::XeroIntegration].freeze
-    INTEGRATION_CRM_TYPES = %w[Integrations::HubspotIntegration Integrations::SalesforceIntegration].freeze
 
     belongs_to :organization
 
