@@ -428,7 +428,7 @@ RSpec.describe Subscription, type: :model do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
 
-    context 'without integration crm customer' do
+    context 'without integration hubspot customer' do
       it 'returns false' do
         expect(method_call).to eq(false)
       end
