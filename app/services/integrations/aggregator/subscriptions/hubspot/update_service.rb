@@ -31,7 +31,7 @@ module Integrations
           def call_async
             return result.not_found_failure!(resource: 'subscription') unless subscription
 
-            ::Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+            ::Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
 
             result.subscription_id = subscription.id
             result

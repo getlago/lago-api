@@ -450,7 +450,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
         end
       end
 
-      it 'enqueues Integrations::Aggregator::Subscriptions::Crm::UpdateJob' do
+      it 'enqueues Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob' do
         current_date = DateTime.parse('20 Feb 2022')
         allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
 
