@@ -255,7 +255,7 @@ RSpec.describe Invoice, type: :model do
     context 'without integration salesforce customer' do
       let(:customer) { create(:customer, organization:) }
 
-      it 'returns true' do
+      it 'returns false' do
         expect(method_call).to eq(false)
       end
     end
