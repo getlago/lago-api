@@ -797,6 +797,21 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
     t.index ["token"], name: "index_invites_on_token", unique: true
   end
 
+  create_table "invoice_custom_sections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "description"
+    t.string "display_name"
+    t.string "details"
+    t.uuid "organization_id", null: false
+    t.datetime "deleted_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "code"], name: "index_invoice_custom_sections_on_organization_id_and_code", unique: true
+    t.index ["organization_id", "deleted_at"], name: "idx_on_organization_id_deleted_at_225e3f789d"
+    t.index ["organization_id"], name: "index_invoice_custom_sections_on_organization_id"
+  end
+
   create_table "invoice_errors", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.text "backtrace"
     t.json "invoice"
@@ -1375,6 +1390,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
   add_foreign_key "integrations", "organizations"
   add_foreign_key "invites", "memberships"
   add_foreign_key "invites", "organizations"
+  add_foreign_key "invoice_custom_sections", "organizations"
   add_foreign_key "invoice_metadata", "invoices"
   add_foreign_key "invoice_subscriptions", "invoices"
   add_foreign_key "invoice_subscriptions", "subscriptions"
