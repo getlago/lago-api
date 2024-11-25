@@ -15,7 +15,7 @@ module DunningCampaigns
       return result.not_found_failure!(resource: "dunning_campaign") unless dunning_campaign
 
       ActiveRecord::Base.transaction do
-        update_dunning_campaign_attributes
+        dunning_campaign.assign_attributes(permitted_attributes)
         handle_thresholds if params.key?(:thresholds)
         handle_applied_to_organization_update if params.key?(:applied_to_organization)
 
@@ -31,10 +31,6 @@ module DunningCampaigns
     private
 
     attr_reader :dunning_campaign, :organization, :params
-
-    def update_dunning_campaign_attributes
-      dunning_campaign.assign_attributes(permitted_attributes)
-    end
 
     def permitted_attributes
       params.slice(:name, :code, :description, :days_between_attempts, :max_attempts)
@@ -78,7 +74,6 @@ module DunningCampaigns
         .customers
         .falling_back_to_default_dunning_campaign
         .with_dunning_campaign_not_completed
-        .where(dunning_campaign.applied_to_organization ? nil : "1 = 0")
 
       customers_to_reset = customers_applied_campaign.or(customers_fallback_campaign)
 
