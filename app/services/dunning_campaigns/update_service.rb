@@ -41,10 +41,17 @@ module DunningCampaigns
     end
 
     def handle_thresholds
+      thresholds_updated = false
+
       input_threshold_ids = params[:thresholds].map { |t| t[:id] }.compact
 
       # Delete thresholds not included in the payload
-      dunning_campaign.thresholds.where.not(id: input_threshold_ids).discard_all
+      discarded_thresholds = dunning_campaign
+        .thresholds
+        .where.not(id: input_threshold_ids)
+        .discard_all
+
+      thresholds_updated = discarded_thresholds.present?
 
       # Update or create new thresholds from the input
       params[:thresholds].each do |threshold_input|
@@ -54,15 +61,14 @@ module DunningCampaigns
 
         threshold.assign_attributes(threshold_input.slice(:amount_cents, :currency))
 
-        if threshold.changed? && threshold.persisted?
-          reset_customers_for_threshold(threshold)
-        end
-
+        thresholds_updated ||= threshold.changed? && threshold.persisted?
         threshold.save!
       end
+
+      reset_customers_for_threshold if thresholds_updated
     end
 
-    def reset_customers_for_threshold(threshold)
+    def reset_customers_for_threshold
       customers_applied_campaign = organization
         .customers
         .with_dunning_campaign_not_completed
@@ -77,20 +83,21 @@ module DunningCampaigns
       customers_to_reset = customers_applied_campaign.or(customers_fallback_campaign)
 
       customers_to_reset
-        .joins(:invoices)
-        .where(invoices: {payment_overdue: true})
-        .group("customers.id")
-        .having(
-          "customers.currency != :currency OR SUM(invoices.total_amount_cents) < :amount_cents",
-          amount_cents: threshold.amount_cents,
-          currency: threshold.currency
-        )
-        .update_all( # rubocop:disable Rails/SkipsModelValidations
-          last_dunning_campaign_attempt: 0,
-          last_dunning_campaign_attempt_at: nil
-        )
-    end
+        .includes(:invoices)
+        .where(invoices: {payment_overdue: true}).each do |customer|
+          threshold_matches = dunning_campaign.thresholds.any? do |threshold|
+            threshold.currency == customer.currency &&
+              customer.overdue_balance_cents >= threshold.amount_cents
+          end
 
+          unless threshold_matches
+            customer.update!(
+              last_dunning_campaign_attempt: 0,
+              last_dunning_campaign_attempt_at: nil
+            )
+          end
+        end
+    end
 
     def handle_applied_to_organization_update
       dunning_campaign.applied_to_organization = params[:applied_to_organization]

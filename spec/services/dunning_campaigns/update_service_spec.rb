@@ -226,9 +226,28 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        xcontext "when threshold amount_cents changes but it still applies to the customer" do
+        context "when threshold amount_cents changes but it still applies to the customer" do
           let(:thresholds_input) do
-            [{ id: dunning_campaign_threshold.id, amount_cents: 50_00, currency: "USD" }]
+            [
+              {
+                id: dunning_campaign_threshold.id,
+                amount_cents: threshold_amount_cents,
+                currency: dunning_campaign_threshold.currency
+              }
+            ]
+          end
+
+          let(:threshold_amount_cents) { 50_00 }
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: (threshold_amount_cents + 1),
+              currency: dunning_campaign_threshold.currency
+            )
           end
 
           context "when the campaign is assigned to the customer" do
@@ -258,8 +277,19 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        xcontext "when a threshold is discarded and the campaign does not apply anymore to the customer" do
+        context "when a threshold is discarded and the campaign does not apply anymore to the customer" do
           let(:thresholds_input) { [] } # No thresholds remain.
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: (dunning_campaign_threshold.amount_cents + 1),
+              currency: dunning_campaign_threshold.currency
+            )
+          end
 
           context "when the campaign is assigned to the customer" do
             include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
