@@ -17,7 +17,9 @@ class DunningCampaign < ApplicationRecord
   validates :name, presence: true
   validates :days_between_attempts, numericality: {greater_than: 0}
   validates :max_attempts, numericality: {greater_than: 0}
-  validates :code, uniqueness: {scope: :organization_id}, unless: :deleted_at
+  validates :code,
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},
+    unless: :deleted_at
 
   default_scope -> { kept }
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
