@@ -26,6 +26,9 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:data_exports) }
   it { is_expected.to have_many(:dunning_campaigns) }
   it { is_expected.to have_many(:daily_usages) }
+  it { is_expected.to have_many(:invoice_custom_sections) }
+  it { is_expected.to have_many(:invoice_custom_sections_selections) }
+  it { is_expected.to have_many(:selected_custom_sections_selections) }
 
   it { is_expected.to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true) }
 

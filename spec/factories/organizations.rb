@@ -19,5 +19,15 @@ FactoryBot.define do
         organization.webhook_endpoints.create!(webhook_url: evaluator.webhook_url)
       end
     end
+
+    trait :with_invoice_custom_sections do
+      after :create do |org|
+        sections = []
+        3.times do
+          sections << create(:invoice_custom_section, organization: org)
+        end
+        org.invoice_custom_section_selections = sections
+      end
+    end
   end
 end
