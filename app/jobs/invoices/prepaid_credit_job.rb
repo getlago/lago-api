@@ -5,7 +5,7 @@ module Invoices
     queue_as 'wallets'
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
-    unique :until_executed_patch, on_conflict: :log
+    unique :until_executed, on_conflict: :log
 
     def perform(invoice)
       wallet_transaction = invoice.fees.find_by(fee_type: 'credit')&.invoiceable

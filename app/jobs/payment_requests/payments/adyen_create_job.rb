@@ -5,7 +5,7 @@ module PaymentRequests
     class AdyenCreateJob < ApplicationJob
       queue_as 'providers'
 
-      unique :until_executed_patch
+      unique :until_executed
 
       retry_on Faraday::ConnectionFailed, wait: :polynomially_longer, attempts: 6
 
