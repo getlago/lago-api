@@ -72,8 +72,8 @@ module Invoices
         # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
 
-        if invoice.should_update_crm_invoice?
-          Integrations::Aggregator::Invoices::Crm::UpdateJob.perform_later(invoice: invoice.reload)
+        if invoice.should_update_hubspot_invoice?
+          Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice: invoice.reload)
         end
       end
 

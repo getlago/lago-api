@@ -34,18 +34,18 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
-    context 'when subscription should sync CRM subscription' do
+    context 'when subscription should sync Hubspot subscription' do
       let(:params) { {name: 'new name'} }
 
       before do
-        allow(subscription).to receive(:should_sync_crm_subscription?).and_return(true)
-        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+        allow(subscription).to receive(:should_sync_hubspot_subscription?).and_return(true)
+        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
       end
 
-      it 'enqueues a job to update CRM subscription' do
+      it 'enqueues a job to update Hubspot subscription' do
         update_service.call
 
-        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
           .to have_received(:perform_later).with(subscription: subscription)
       end
     end

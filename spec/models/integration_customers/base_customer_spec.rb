@@ -31,21 +31,27 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
     end
   end
 
-  describe '.crm_kind' do
+  describe '.hubspot_kind and .salesforce_kind' do
     let(:netsuite_customer) { create(:netsuite_customer) }
     let(:xero_customer) { create(:xero_customer) }
     let(:anrok_customer) { create(:anrok_customer) }
     let(:hubspot_customer) { create(:hubspot_customer) }
+    let(:salesforce_customer) { create(:salesforce_customer) }
 
     before do
       netsuite_customer
       xero_customer
       anrok_customer
       hubspot_customer
+      salesforce_customer
     end
 
-    it 'returns only crm kind customers' do
-      expect(described_class.crm_kind).to contain_exactly(hubspot_customer)
+    it 'returns only hubspot kind customers' do
+      expect(described_class.hubspot_kind).to contain_exactly(hubspot_customer)
+    end
+
+    it 'returns only salesforce kind customers' do
+      expect(described_class.salesforce_kind).to contain_exactly(salesforce_customer)
     end
   end
 

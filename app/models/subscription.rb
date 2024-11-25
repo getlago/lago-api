@@ -167,8 +167,8 @@ class Subscription < ApplicationRecord
     number_od_days.negative? ? 0 : number_od_days
   end
 
-  def should_sync_crm_subscription?
-    customer.integration_customers.crm_kind.any? { |c| c.integration.sync_subscriptions }
+  def should_sync_hubspot_subscription?
+    customer.integration_customers.hubspot_kind.any? { |c| c.integration.sync_subscriptions }
   end
 
   def terminated_at?(timestamp)

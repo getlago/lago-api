@@ -54,11 +54,6 @@ FactoryBot.define do
     customer
     type { 'IntegrationCustomers::SalesforceCustomer' }
     external_customer_id { SecureRandom.uuid }
-
-    settings do
-      {
-        sync_with_provider: false
-      }
-    end
+    settings { {} }
   end
 end

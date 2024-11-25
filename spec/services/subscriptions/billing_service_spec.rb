@@ -450,13 +450,13 @@ RSpec.describe Subscriptions::BillingService, type: :service do
         end
       end
 
-      it 'enqueues Integrations::Aggregator::Subscriptions::Crm::UpdateJob' do
+      it 'enqueues Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob' do
         current_date = DateTime.parse('20 Feb 2022')
-        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
 
         travel_to(current_date) do
           billing_service.call
-          expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+          expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
             .to have_received(:perform_later).with(subscription: previous_subscription)
         end
       end

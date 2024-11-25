@@ -3,7 +3,7 @@
 module Integrations
   class SalesforceIntegration < BaseIntegration
     validates :instance_id, presence: true
-    validates :code, inclusion: {in: %w[salesforce]}
+    validates :code, presence: true
 
     settings_accessors :instance_id
   end

@@ -61,6 +61,7 @@ class Customer < ApplicationRecord
   has_one :anrok_customer, class_name: 'IntegrationCustomers::AnrokCustomer'
   has_one :xero_customer, class_name: 'IntegrationCustomers::XeroCustomer'
   has_one :hubspot_customer, class_name: 'IntegrationCustomers::HubspotCustomer'
+  has_one :salesforce_customer, class_name: 'IntegrationCustomers::SalesforceCustomer'
 
   PAYMENT_PROVIDERS = %w[stripe gocardless adyen].freeze
 

@@ -4,10 +4,10 @@ require 'rails_helper'
 
 RSpec.describe ::V1::CustomerSerializer do
   subject(:serializer) do
-    described_class.new(customer, root_name: 'customer', includes: %i[taxes])
+    described_class.new(customer, root_name: 'customer', includes: %i[taxes integration_customers])
   end
 
-  let(:customer) { create(:customer) }
+  let(:customer) { create(:customer, :with_salesforce_integration) }
   let(:metadata) { create(:customer_metadata, customer:) }
   let(:tax) { create(:tax, organization: customer.organization) }
   let(:customer_applied_tax) { create(:customer_applied_tax, customer:, tax:) }
@@ -62,6 +62,7 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['metadata'].first['display_in_invoice']).to eq(metadata.display_in_invoice)
       expect(result['customer']['tax_identification_number']).to eq(customer.tax_identification_number)
       expect(result['customer']['taxes'].count).to eq(1)
+      expect(result['customer']['integration_customers'].count).to eq(1)
     end
   end
 end

@@ -16,8 +16,12 @@ module IntegrationCustomers
       where(type: %w[IntegrationCustomers::NetsuiteCustomer IntegrationCustomers::XeroCustomer])
     end
 
-    scope :crm_kind, -> do
+    scope :hubspot_kind, -> do
       where(type: %w[IntegrationCustomers::HubspotCustomer])
+    end
+
+    scope :salesforce_kind, -> do
+      where(type: %w[IntegrationCustomers::SalesforceCustomer])
     end
 
     settings_accessors :sync_with_provider

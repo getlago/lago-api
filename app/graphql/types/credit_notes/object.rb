@@ -57,7 +57,10 @@ module Types
 
       def integration_syncable
         object.should_sync_credit_note? &&
-          object.integration_resources.where(resource_type: 'credit_note', syncable_type: 'CreditNote').none?
+          object.integration_resources
+            .joins(:integration)
+            .where(integration: {type: Integration::BaseIntegration::INTEGRATION_ACCOUNTING_TYPES})
+            .where(resource_type: 'credit_note', syncable_type: 'CreditNote').none?
       end
 
       def tax_provider_syncable

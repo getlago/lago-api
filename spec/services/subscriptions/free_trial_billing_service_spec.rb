@@ -62,14 +62,14 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
       end
     end
 
-    context 'when the subscription should sync with CRM' do
-      it 'calls the CRM update job' do
+    context 'when the subscription should sync with Hubspot' do
+      it 'calls the Hubspot update job' do
         customer = create(:customer, :with_hubspot_integration)
         plan = create(:plan, trial_period: 10, pay_in_advance: true)
         subscription = create(:subscription, customer:, plan:, started_at: 15.days.ago)
-        allow(Integrations::Aggregator::Subscriptions::Crm::UpdateJob).to receive(:perform_later)
+        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
         service.call
-        expect(Integrations::Aggregator::Subscriptions::Crm::UpdateJob)
+        expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
           .to have_received(:perform_later).with(subscription: subscription)
       end
     end

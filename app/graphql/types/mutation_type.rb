@@ -72,7 +72,7 @@ module Types
     field :fetch_integration_accounts, mutation: Mutations::IntegrationItems::FetchAccounts
     field :fetch_integration_items, mutation: Mutations::IntegrationItems::FetchItems
 
-    field :sync_crm_integration_invoice, mutation: Mutations::Integrations::SyncCrmInvoice
+    field :sync_hubspot_integration_invoice, mutation: Mutations::Integrations::Hubspot::SyncInvoice
     field :sync_integration_credit_note, mutation: Mutations::Integrations::SyncCreditNote
     field :sync_integration_invoice, mutation: Mutations::Integrations::SyncInvoice
     field :sync_salesforce_invoice, mutation: Mutations::Integrations::Salesforce::SyncInvoice
@@ -143,6 +143,9 @@ module Types
 
     field :create_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Create
     field :update_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Update
+
+    field :create_salesforce_integration, mutation: Mutations::Integrations::Salesforce::Create
+    field :update_salesforce_integration, mutation: Mutations::Integrations::Salesforce::Update
 
     field :okta_accept_invite, mutation: Mutations::Auth::Okta::AcceptInvite
     field :okta_authorize, mutation: Mutations::Auth::Okta::Authorize

@@ -51,5 +51,11 @@ FactoryBot.define do
         create(:hubspot_customer, customer:)
       end
     end
+
+    trait :with_salesforce_integration do
+      after :create do |customer|
+        create(:salesforce_customer, customer:)
+      end
+    end
   end
 end

@@ -18,8 +18,8 @@ module Subscriptions
       elsif !subscription.terminated?
         subscription.mark_as_terminated!
 
-        if subscription.should_sync_crm_subscription?
-          Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+        if subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
         end
 
         if subscription.plan.pay_in_advance? && pay_in_advance_invoice_issued?
@@ -43,8 +43,8 @@ module Subscriptions
       next_subscription = subscription.next_subscription
       next_subscription&.mark_as_canceled!
 
-      if next_subscription&.should_sync_crm_subscription?
-        Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription: next_subscription)
+      if next_subscription&.should_sync_hubspot_subscription?
+        Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription: next_subscription)
       end
 
       # NOTE: Wait to ensure job is performed at the end of the database transaction.
@@ -66,13 +66,13 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         subscription.mark_as_terminated!(rotation_date)
 
-        if subscription.should_sync_crm_subscription?
-          Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(subscription:)
+        if subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
         end
 
         next_subscription.mark_as_active!(rotation_date)
-        if next_subscription.should_sync_crm_subscription?
-          Integrations::Aggregator::Subscriptions::Crm::UpdateJob.perform_later(next_subscription)
+        if next_subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(next_subscription)
         end
       end
 

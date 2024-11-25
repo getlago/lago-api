@@ -10,7 +10,7 @@ module Mutations
         REQUIRED_PERMISSION = 'organization:integrations:update'
 
         graphql_name 'SyncSalesforceInvoice'
-        description 'Sync Salesforce invoice'
+        description 'Sync Salesforce integration invoice'
 
         input_object_class Types::Integrations::Salesforce::SyncInvoiceInput
 
@@ -18,7 +18,10 @@ module Mutations
 
         def resolve(**args)
           invoice = current_organization.invoices.find_by(id: args[:invoice_id])
-          SendWebhookJob.perform_later('invoice.resynced', invoice)
+
+          result = ::Integrations::Salesforce::Invoices::SyncService.call(invoice)
+          result.success? ? result.invoice_id : result_error(result)
+          result
         end
       end
     end
