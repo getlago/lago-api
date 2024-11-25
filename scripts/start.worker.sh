@@ -1,3 +1,3 @@
 #!/bin/bash
 
-bundle exec sidekiq -C config/sidekiq.yml
+bin/jobs -c config/queue.yml
