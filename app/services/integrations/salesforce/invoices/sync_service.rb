@@ -4,7 +4,6 @@ module Integrations
   module Salesforce
     module Invoices
       class SyncService < BaseService
-
         def initialize(invoice)
           @invoice = invoice
 
