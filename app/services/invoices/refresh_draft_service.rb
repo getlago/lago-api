@@ -31,7 +31,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice.update!(ready_to_be_refreshed: false) if invoice.ready_to_be_refreshed?
-        invoice.customer.flag_wallets_for_refresh
+        old_total_amount_cents = invoice.total_amount_cents
 
         old_fee_values = invoice_credit_note_items.map do |item|
           {credit_note_item_id: item.id, fee_amount_cents: item.fee&.amount_cents}
@@ -68,7 +68,10 @@ module Invoices
         end
         calculate_result.raise_if_error!
 
-        flag_lifetime_usage_for_refresh
+        if old_total_amount_cents != invoice.total_amount_cents
+          flag_lifetime_usage_for_refresh
+          invoice.customer.flag_wallets_for_refresh
+        end
 
         # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
