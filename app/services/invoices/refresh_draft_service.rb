@@ -31,6 +31,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice.update!(ready_to_be_refreshed: false) if invoice.ready_to_be_refreshed?
+        invoice.customer.flag_wallets_for_refresh
 
         old_fee_values = invoice_credit_note_items.map do |item|
           {credit_note_item_id: item.id, fee_amount_cents: item.fee&.amount_cents}
