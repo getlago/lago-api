@@ -15,6 +15,7 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
+        organization:,
         applied_add_on:,
         amount_cents:,
         precise_amount_cents: amount_cents.to_d,
@@ -44,7 +45,7 @@ module Fees
 
     attr_reader :invoice, :applied_add_on
 
-    delegate :customer, to: :invoice
+    delegate :customer, :organization, to: :invoice
 
     def already_billed?
       existing_fee = invoice.fees.find_by(applied_add_on_id: applied_add_on.id)

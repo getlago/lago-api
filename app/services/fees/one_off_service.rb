@@ -24,6 +24,7 @@ module Fees
 
           fee = Fee.new(
             invoice:,
+            organization:,
             add_on:,
             invoice_display_name: fee[:invoice_display_name].presence,
             description: fee[:description] || add_on.description,
@@ -77,7 +78,7 @@ module Fees
 
     attr_reader :invoice, :fees
 
-    delegate :customer, to: :invoice
+    delegate :customer, :organization, to: :invoice
 
     def add_on(identifier:)
       finder = api_context? ? :code : :id

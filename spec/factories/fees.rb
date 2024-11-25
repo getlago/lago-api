@@ -8,6 +8,8 @@ FactoryBot.define do
     fee_type { 'subscription' }
     subscription
 
+    organization { invoice&.organization || build(:organization) }
+
     amount_cents { 200 }
     precise_amount_cents { 200.0000000001 }
     amount_currency { 'EUR' }
