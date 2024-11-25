@@ -17,7 +17,7 @@ RUN bundle config build.nokogiri --use-system-libraries &&\
 
 # Temporary fix for mission_control-jobs
 # See https://github.com/rails/mission_control-jobs/issues/60#issuecomment-2486452545
-RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+RUN SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile
 
 FROM ruby:3.3.4-slim
 
