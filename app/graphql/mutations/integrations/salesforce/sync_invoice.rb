@@ -14,13 +14,14 @@ module Mutations
 
         input_object_class Types::Integrations::Salesforce::SyncInvoiceInput
 
-        field :id, ID, null: true
+        field :invoice_id, ID, null: true
 
         def resolve(**args)
           invoice = current_organization.invoices.find_by(id: args[:invoice_id])
-          return not_found_error(resource: invoice) unless invoice
-          SendWebhookJob.perform_later('invoice.resynced', invoice)
-          invoice
+
+          result = ::Integrations::Aggregator::Invoices::Salesforce::SyncInvoiceService.call(invoice)
+          result.success? ? result.invoice_id : result_error(result)
+          result
         end
       end
     end
