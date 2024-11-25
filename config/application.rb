@@ -42,3 +42,5 @@ module LagoApi
     config.active_support.cache_format_version = 7.1
   end
 end
+
+require_relative "../lib/active_job/uniqueness/strategies/until_executed_patch"

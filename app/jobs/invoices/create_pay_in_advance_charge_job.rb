@@ -6,7 +6,7 @@ module Invoices
 
     retry_on Sequenced::SequenceError
 
-    unique :until_executed, on_conflict: :log
+    unique :until_executed_patch, on_conflict: :log
 
     def perform(charge:, event:, timestamp:, invoice: nil)
       result = Invoices::CreatePayInAdvanceChargeService.call(charge:, event:, timestamp:, invoice:)
