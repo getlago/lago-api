@@ -81,8 +81,9 @@ module DunningCampaigns
         .where(invoices: {payment_overdue: true})
         .group("customers.id")
         .having(
-          "customers.currency != ? OR SUM(invoices.total_amount_cents) < ?",
-          threshold.currency, threshold.amount_cents
+          "customers.currency != :currency OR SUM(invoices.total_amount_cents) < :amount_cents",
+          amount_cents: threshold.amount_cents,
+          currency: threshold.currency
         )
         .update_all( # rubocop:disable Rails/SkipsModelValidations
           last_dunning_campaign_attempt: 0,

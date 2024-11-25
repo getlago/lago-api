@@ -100,8 +100,8 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           before { customer }
 
           it "resets the customer's dunning campaign fields" do
-            expect { result }
-              .to change { customer.reload.last_dunning_campaign_attempt }.to(0)
+            expect { result && customer.reload }
+              .to change { customer.last_dunning_campaign_attempt }.to(0)
               .and change { customer.last_dunning_campaign_attempt_at }.to(nil)
           end
         end
@@ -112,8 +112,8 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           before { customer }
 
           it "does not reset the customer's dunning campaign fields" do
-            expect { result }
-              .to not_change { customer.reload.last_dunning_campaign_attempt }
+            expect { result && customer.reload }
+              .to not_change { customer.last_dunning_campaign_attempt }
               .and not_change { customer.last_dunning_campaign_attempt_at&.to_i }
           end
         end
@@ -168,7 +168,14 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           let(:threshold_amount_cents) { 999_99 }
 
           before do
-            create :invoice, organization:, customer:, payment_overdue: true, total_amount_cents: (threshold_amount_cents - 1)
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: (threshold_amount_cents - 1),
+              currency: dunning_campaign_threshold.currency
+            )
           end
 
           context "when the campaign is assigned to the customer" do
@@ -184,7 +191,28 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        xcontext "when threshold currency changes and does not apply anymore to the customer" do
+        context "when threshold currency changes and does not apply anymore to the customer" do
+          let(:thresholds_input) do
+            [
+              {
+                id: dunning_campaign_threshold.id,
+                amount_cents: dunning_campaign_threshold.amount_cents,
+                currency: "GBP"
+              }
+            ]
+          end
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: dunning_campaign_threshold.amount_cents + 1,
+              currency: dunning_campaign_threshold.currency
+            )
+          end
+
           context "when the campaign is assigned to the customer" do
             include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
           end
