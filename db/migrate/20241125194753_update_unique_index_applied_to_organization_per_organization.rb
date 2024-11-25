@@ -4,7 +4,12 @@ class UpdateUniqueIndexAppliedToOrganizationPerOrganization < ActiveRecord::Migr
   disable_ddl_transaction!
 
   def change
-    remove_index :dunning_campaigns, name: "index_unique_applied_to_organization_per_organization", algorithm: :concurrently
+    remove_index :dunning_campaigns,
+      %i[organization_id],
+      unique: true,
+      algorithm: :concurrently,
+      where: "applied_to_organization = true",
+      name: "index_unique_applied_to_organization_per_organization"
 
     add_index :dunning_campaigns,
       %i[organization_id],
