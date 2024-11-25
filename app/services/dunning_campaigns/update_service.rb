@@ -55,7 +55,7 @@ module DunningCampaigns
           id: threshold_input[:id]
         )
 
-        threshold.assign_attributes(threshold_input.slice(:amount_cents, :currency))
+        threshold.assign_attributes(threshold_input.to_h.slice(:amount_cents, :currency))
 
         thresholds_updated ||= threshold.changed? && threshold.persisted?
         threshold.save!
