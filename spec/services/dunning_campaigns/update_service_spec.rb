@@ -103,6 +103,8 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             expect { result && customer.reload }
               .to change { customer.last_dunning_campaign_attempt }.to(0)
               .and change { customer.last_dunning_campaign_attempt_at }.to(nil)
+
+            expect(result).to be_success
           end
         end
 
@@ -115,6 +117,8 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             expect { result && customer.reload }
               .to not_change { customer.last_dunning_campaign_attempt }
               .and not_change { customer.last_dunning_campaign_attempt_at&.to_i }
+
+            expect(result).to be_success
           end
         end
 
@@ -304,17 +308,35 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        xcontext "when a threshold is discarded and replaced with one that still applies to the customer" do
+        context "when a threshold is discarded and replaced with one that still applies to the customer" do
           let(:thresholds_input) do
-            [{ amount_cents: 50_00, currency: "USD" }] # New threshold matches the customer
+            [
+              {
+                amount_cents: threshold_amount_cents,
+                currency: dunning_campaign_threshold.currency 
+              }
+            ]
+          end
+
+          let(:threshold_amount_cents) { 1_00 }
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: (threshold_amount_cents + 1),
+              currency: dunning_campaign_threshold.currency
+            )
           end
 
           context "when the campaign is assigned to the customer" do
-            include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_assigned
           end
 
           context "when the customer defaults to the campaign applied to organization" do
-            include_examples "resets customer last dunning campaign attempt fields", :customer_defaulting
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_defaulting
           end
 
           context "when the customer already completed the campaign" do

@@ -65,10 +65,10 @@ module DunningCampaigns
         threshold.save!
       end
 
-      reset_customers_for_threshold if thresholds_updated
+      reset_customers_if_no_threshold_match if thresholds_updated
     end
 
-    def reset_customers_for_threshold
+    def reset_customers_if_no_threshold_match
       customers_applied_campaign = organization
         .customers
         .with_dunning_campaign_not_completed
