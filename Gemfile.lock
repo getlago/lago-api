@@ -325,6 +325,10 @@ GEM
     httpclient (2.8.3)
     i18n (1.14.6)
       concurrent-ruby (~> 1.0)
+    importmap-rails (2.0.3)
+      actionpack (>= 6.0.0)
+      activesupport (>= 6.0.0)
+      railties (>= 6.0.0)
     io-console (0.7.2)
     irb (1.14.0)
       rdoc (>= 4.0.0)
@@ -381,6 +385,16 @@ GEM
     mini_mime (1.1.5)
     mini_portile2 (2.8.7)
     minitest (5.25.1)
+    mission_control-jobs (0.6.0)
+      actioncable (>= 7.1)
+      actionpack (>= 7.1)
+      activejob (>= 7.1)
+      activerecord (>= 7.1)
+      importmap-rails (>= 1.2.1)
+      irb (~> 1.13)
+      railties (>= 7.1)
+      stimulus-rails
+      turbo-rails
     monetize (1.13.0)
       money (~> 6.12)
     money (6.19.0)
@@ -636,6 +650,11 @@ GEM
       racc
     pg (1.5.7)
     prism (1.2.0)
+    propshaft (1.1.0)
+      actionpack (>= 7.0.0)
+      activesupport (>= 7.0.0)
+      rack
+      railties (>= 7.0.0)
     pry (0.14.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
@@ -870,6 +889,8 @@ GEM
     standard-performance (1.4.0)
       lint_roller (~> 1.1)
       rubocop-performance (~> 1.21.0)
+    stimulus-rails (1.3.4)
+      railties (>= 6.0.0)
     stringio (3.1.1)
     stripe (6.5.0)
     strong_migrations (2.0.0)
@@ -882,6 +903,9 @@ GEM
     timecop (0.9.10)
     timeout (0.4.2)
     trailblazer-option (0.1.2)
+    turbo-rails (2.0.11)
+      actionpack (>= 6.0.0)
+      railties (>= 6.0.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     uber (0.1.0)
@@ -963,6 +987,7 @@ DEPENDENCIES
   lago-expression!
   lograge
   logstash-event
+  mission_control-jobs (~> 0.6.0)
   money-rails
   multipart-post
   mutex_m
@@ -974,6 +999,7 @@ DEPENDENCIES
   paper_trail (~> 15.1)
   parallel
   pg
+  propshaft
   puma (~> 6.4)
   rack-cors
   rails (~> 7.1.3.4)

@@ -13,6 +13,8 @@ Rails.application.configure do
   config.middleware.use(ActionDispatch::Session::CookieStore, key: '_lago_dev')
   config.middleware.use(Rack::MethodOverride)
 
+  config.debug_exception_response_format = :api
+
   config.eager_load_paths += %W[
     #{config.root}/dev
   ]

@@ -15,8 +15,8 @@ gem "puma", "~> 6.4"
 gem "rails", "~> 7.1.3.4"
 gem "redis"
 gem "sidekiq"
-gem "dry-validation"
 gem 'solid_queue', "~> 1.0.2"
+gem "dry-validation"
 
 # Security
 gem "bcrypt"
@@ -36,6 +36,10 @@ gem "ransack", "~> 4.1.0"
 gem "scenic"
 gem "with_advisory_lock"
 gem "strong_migrations"
+
+# Job monitoring
+gem "mission_control-jobs", '~> 0.6.0'
+gem "propshaft"
 
 # Currencies, Countries, Timezones...
 gem "bigdecimal"
