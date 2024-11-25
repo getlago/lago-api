@@ -21,13 +21,13 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::CreateJob, type: :job do
     end
 
     it 'raises an error' do
-      expect { create_job.perform_now(invoice:) }.to raise_error(StandardError)
+      expect { create_job.perform_now(invoice) }.to raise_error(StandardError)
     end
   end
 
   context 'when the service call is successful' do
     it 'calls the aggregator create invoice crm service' do
-      described_class.perform_now(invoice:)
+      described_class.perform_now(invoice)
 
       aggregate_failures do
         expect(Integrations::Aggregator::Invoices::Crm::CreateService).to have_received(:new)
@@ -37,8 +37,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Crm::CreateJob, type: :job do
 
     it 'enqueues the aggregator create customer association invoice job' do
       expect do
-        described_class.perform_now(invoice:)
-      end.to have_enqueued_job(Integrations::Aggregator::Invoices::Crm::CreateCustomerAssociationJob).with(invoice:)
+        described_class.perform_now(invoice)
+      end.to have_enqueued_job(Integrations::Aggregator::Invoices::Crm::CreateCustomerAssociationJob).with(invoice)
     end
   end
 end

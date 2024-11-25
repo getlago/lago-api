@@ -37,11 +37,11 @@ module Invoices
       GeneratePdfAndNotifyJob.perform_later(invoice: result.invoice, email: should_deliver_email?)
 
       if result.invoice.should_sync_invoice?
-        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: result.invoice)
+        Integrations::Aggregator::Invoices::CreateJob.perform_later(result.invoice)
       end
 
       if result.invoice.should_sync_crm_invoice?
-        Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice: result.invoice)
+        Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(result.invoice)
       end
 
       create_payment(result.invoice)

@@ -15,7 +15,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateJob, type: :job do
   end
 
   it 'calls the aggregator create invoice service' do
-    described_class.perform_now(invoice:)
+    described_class.perform_now(invoice)
 
     aggregate_failures do
       expect(Integrations::Aggregator::Invoices::CreateService).to have_received(:new)

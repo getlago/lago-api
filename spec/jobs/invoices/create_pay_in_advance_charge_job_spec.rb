@@ -20,7 +20,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
   end
 
   it 'calls the create pay in advance charge service' do
-    described_class.perform_now(charge:, event:, timestamp:)
+    described_class.perform_now(charge, event, timestamp)
 
     expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:new)
     expect(invoice_service).to have_received(:call)
@@ -33,7 +33,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
 
     it 'raises an error' do
       expect do
-        described_class.perform_now(charge:, event:, timestamp:)
+        described_class.perform_now(charge, event, timestamp)
       end.to raise_error(BaseService::FailedResult)
 
       expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:new)
@@ -45,7 +45,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
 
       it 'raises an error' do
         expect do
-          described_class.perform_now(charge:, event:, timestamp:, invoice:)
+          described_class.perform_now(charge, event, timestamp, invoice)
         end.to raise_error(BaseService::FailedResult)
 
         expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:new)
@@ -59,13 +59,13 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
       before { result.invoice = result_invoice }
 
       it 'retries the job with the invoice' do
-        described_class.perform_now(charge:, event:, timestamp:)
+        described_class.perform_now(charge, event, timestamp)
 
         expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:new)
         expect(invoice_service).to have_received(:call)
 
         expect(described_class).to have_been_enqueued
-          .with(charge:, event:, timestamp:, invoice: result_invoice)
+          .with(charge, event, timestamp, result_invoice)
       end
     end
 
@@ -76,7 +76,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
 
       it 'raises an error' do
         expect do
-          described_class.perform_now(charge:, event:, timestamp:)
+          described_class.perform_now(charge, event, timestamp)
         end.to raise_error(BaseService::FailedResult)
 
         expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:new)

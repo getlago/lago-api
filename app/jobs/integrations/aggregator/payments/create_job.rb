@@ -6,11 +6,15 @@ module Integrations
       class CreateJob < ApplicationJob
         queue_as 'integrations'
 
+        # https://github.com/veeqo/activejob-uniqueness/issues/75
+        # retry_on does not work with until_executed strategy
+        unique :until_executed_patch, on_conflict: :log
+
         retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 5
         retry_on Integrations::Aggregator::BasePayload::Failure, wait: :polynomially_longer, attempts: 10
         retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100
 
-        def perform(payment:)
+        def perform(payment)
           result = Integrations::Aggregator::Payments::CreateService.call(payment:)
           result.raise_if_error!
         end

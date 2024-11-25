@@ -21,13 +21,13 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Crm::CreateJob, type: :j
     end
 
     it 'raises an error' do
-      expect { create_job.perform_now(subscription:) }.to raise_error(StandardError)
+      expect { create_job.perform_now(subscription) }.to raise_error(StandardError)
     end
   end
 
   context 'when the service call is successful' do
     it 'calls the aggregator create subscription crm service' do
-      described_class.perform_now(subscription:)
+      described_class.perform_now(subscription)
 
       aggregate_failures do
         expect(Integrations::Aggregator::Subscriptions::Crm::CreateService).to have_received(:new)
@@ -37,8 +37,9 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Crm::CreateJob, type: :j
 
     it 'enqueues the aggregator create customer association subscription job' do
       expect do
-        described_class.perform_now(subscription:)
-      end.to have_enqueued_job(Integrations::Aggregator::Subscriptions::Crm::CreateCustomerAssociationJob).with(subscription:)
+        described_class.perform_now(subscription)
+      end.to have_enqueued_job(Integrations::Aggregator::Subscriptions::Crm::CreateCustomerAssociationJob)
+        .with(subscription)
     end
   end
 end

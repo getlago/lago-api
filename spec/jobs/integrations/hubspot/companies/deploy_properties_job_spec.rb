@@ -16,7 +16,7 @@ RSpec.describe Integrations::Hubspot::Companies::DeployPropertiesJob, type: :job
     end
 
     it 'calls the DeployPropertiesService to sync companies custom properties' do
-      deploy_properties_job.perform_now(integration:)
+      deploy_properties_job.perform_now(integration)
       expect(Integrations::Hubspot::Companies::DeployPropertiesService).to have_received(:new)
       expect(deploy_company_service).to have_received(:call)
     end

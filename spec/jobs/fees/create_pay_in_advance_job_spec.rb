@@ -13,7 +13,7 @@ RSpec.describe Fees::CreatePayInAdvanceJob, type: :job do
       .with(charge:, event:, billing_at: nil)
       .and_return(result)
 
-    described_class.perform_now(charge:, event:)
+    described_class.perform_now(charge, event)
 
     expect(Fees::CreatePayInAdvanceService).to have_received(:call)
   end

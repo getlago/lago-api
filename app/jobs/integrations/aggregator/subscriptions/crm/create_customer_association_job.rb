@@ -10,7 +10,7 @@ module Integrations
           retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 10
           retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100
 
-          def perform(subscription:)
+          def perform(subscription)
             result = Integrations::Aggregator::Subscriptions::Crm::CreateCustomerAssociationService.call(subscription:)
             result.raise_if_error!
           end

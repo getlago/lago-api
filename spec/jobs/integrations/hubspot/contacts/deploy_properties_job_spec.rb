@@ -16,7 +16,7 @@ RSpec.describe Integrations::Hubspot::Contacts::DeployPropertiesJob, type: :job 
     end
 
     it 'calls the DeployPropertiesService to sync contacts custom properties' do
-      deploy_properties_job.perform_now(integration:)
+      deploy_properties_job.perform_now(integration)
 
       expect(Integrations::Hubspot::Contacts::DeployPropertiesService).to have_received(:new)
       expect(deploy_contact_service).to have_received(:call)

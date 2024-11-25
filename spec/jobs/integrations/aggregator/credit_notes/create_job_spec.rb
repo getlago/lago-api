@@ -15,7 +15,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateJob, type: :job do
   end
 
   it 'calls the aggregator create credit_note service' do
-    described_class.perform_now(credit_note:)
+    described_class.perform_now(credit_note)
 
     aggregate_failures do
       expect(Integrations::Aggregator::CreditNotes::CreateService).to have_received(:new)

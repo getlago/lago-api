@@ -4,9 +4,11 @@ module Invoices
   class CreatePayInAdvanceChargeJob < ApplicationJob
     queue_as 'billing'
 
+    unique :until_executed, on_conflict: :log
+
     retry_on Sequenced::SequenceError
 
-    def perform(charge:, event:, timestamp:, invoice: nil)
+    def perform(charge, event, timestamp, invoice = nil)
       result = Invoices::CreatePayInAdvanceChargeService.call(charge:, event:, timestamp:, invoice:)
       return if result.success?
       # NOTE: We don't want a dead job for failed invoice due to the tax reason.
@@ -17,17 +19,19 @@ module Invoices
 
       # NOTE: retry the job with the already created invoice in a previous failed attempt
       self.class.set(wait: 3.seconds).perform_later(
-        charge:,
-        event:,
-        timestamp:,
-        invoice: result.invoice
+        charge,
+        event,
+        timestamp,
+        result.invoice
       )
     end
 
     def lock_key_arguments
-      args = arguments.first
-      event = Events::CommonFactory.new_instance(source: args[:event])
-      [args[:charge], event.organization_id, event.external_subscription_id, event.transaction_id]
+      charge = arguments.first
+      arg_event = arguments.second
+
+      event = Events::CommonFactory.new_instance(source: arg_event)
+      [charge, event.organization_id, event.external_subscription_id, event.transaction_id]
     end
 
     private

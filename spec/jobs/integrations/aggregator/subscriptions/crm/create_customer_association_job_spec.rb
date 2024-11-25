@@ -16,7 +16,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Crm::CreateCustomerAssoc
   end
 
   it 'calls the aggregator create subscription crm service' do
-    described_class.perform_now(subscription:)
+    described_class.perform_now(subscription)
 
     aggregate_failures do
       expect(Integrations::Aggregator::Subscriptions::Crm::CreateCustomerAssociationService).to have_received(:new)

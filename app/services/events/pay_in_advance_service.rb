@@ -22,11 +22,11 @@ module Events
       end
 
       charges.where(invoiceable: false).find_each do |charge|
-        Fees::CreatePayInAdvanceJob.perform_later(charge:, event: event.as_json)
+        Fees::CreatePayInAdvanceJob.perform_later(charge, event.as_json)
       end
 
       charges.where(invoiceable: true).find_each do |charge|
-        Invoices::CreatePayInAdvanceChargeJob.perform_later(charge:, event: event.as_json, timestamp: event.timestamp)
+        Invoices::CreatePayInAdvanceChargeJob.perform_later(charge, event.as_json, event.timestamp)
       end
 
       result.event = event

@@ -4,7 +4,9 @@ module Fees
   class CreatePayInAdvanceJob < ApplicationJob
     queue_as :default
 
-    def perform(charge:, event:, billing_at: nil)
+    unique :until_executed, on_conflict: :log
+
+    def perform(charge, event, billing_at = nil)
       result = Fees::CreatePayInAdvanceService.call(charge:, event:, billing_at:)
 
       return if !result.success? && tax_error?(result)
@@ -13,9 +15,11 @@ module Fees
     end
 
     def lock_key_arguments
-      args = arguments.first
-      event = Events::CommonFactory.new_instance(source: args[:event])
-      [args[:charge], event.organization_id, event.external_subscription_id, event.transaction_id]
+      charge = arguments.first
+      arg_event = arguments.second
+
+      event = Events::CommonFactory.new_instance(source: arg_event)
+      [charge, event.organization_id, event.external_subscription_id, event.transaction_id]
     end
 
     private

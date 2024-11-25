@@ -51,8 +51,8 @@ module Invoices
         Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
         GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
-        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
-        Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice:) if invoice.should_sync_crm_invoice?
+        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice) if invoice.should_sync_invoice?
+        Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice) if invoice.should_sync_crm_invoice?
         Invoices::Payments::CreateService.new(invoice).call
       end
 

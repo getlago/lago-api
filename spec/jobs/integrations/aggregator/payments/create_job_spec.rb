@@ -15,7 +15,7 @@ RSpec.describe Integrations::Aggregator::Payments::CreateJob, type: :job do
   end
 
   it 'calls the aggregator create payment service' do
-    described_class.perform_now(payment:)
+    described_class.perform_now(payment)
 
     aggregate_failures do
       expect(Integrations::Aggregator::Payments::CreateService).to have_received(:new)

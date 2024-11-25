@@ -16,7 +16,7 @@ RSpec.describe Integrations::Hubspot::SavePortalIdJob, type: :job do
     end
 
     it 'saves portal id to the integration' do
-      described_class.perform_now(integration:)
+      described_class.perform_now(integration)
 
       expect(Integrations::Hubspot::SavePortalIdService).to have_received(:new)
       expect(service).to have_received(:call)

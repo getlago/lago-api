@@ -11,7 +11,7 @@ module Integrations
           retry_on Integrations::Aggregator::BasePayload::Failure, wait: :polynomially_longer, attempts: 10
           retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100
 
-          def perform(subscription:)
+          def perform(subscription)
             result = Integrations::Aggregator::Subscriptions::Crm::UpdateService.call(subscription:)
             result.raise_if_error!
           end

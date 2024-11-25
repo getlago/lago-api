@@ -67,8 +67,8 @@ module Invoices
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_later('invoice.created', invoice)
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_finalized_email?)
-          Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
-          Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice:) if invoice.should_sync_crm_invoice?
+          Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice) if invoice.should_sync_invoice?
+          Integrations::Aggregator::Invoices::Crm::CreateJob.perform_later(invoice) if invoice.should_sync_crm_invoice?
           Invoices::Payments::CreateService.new(invoice).call
           Utils::SegmentTrack.invoice_created(invoice)
         end

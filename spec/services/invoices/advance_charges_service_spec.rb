@@ -123,7 +123,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
       it 'creates invoices' do
         result = invoice_service.call
 
-        expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
+        expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(result.invoice)
       end
     end
   end
