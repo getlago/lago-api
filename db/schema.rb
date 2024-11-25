@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_11_20_090305) do
+ActiveRecord::Schema[7.1].define(version: 2024_11_25_194753) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -558,7 +558,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_20_090305) do
     t.index ["deleted_at"], name: "index_dunning_campaigns_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_dunning_campaigns_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_dunning_campaigns_on_organization_id"
-    t.index ["organization_id"], name: "index_unique_applied_to_organization_per_organization", unique: true, where: "(applied_to_organization = true)"
+    t.index ["organization_id"], name: "index_unique_applied_to_organization_per_organization", unique: true, where: "((applied_to_organization = true) AND (deleted_at IS NULL))"
   end
 
   create_table "error_details", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
