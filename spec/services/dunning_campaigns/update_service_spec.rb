@@ -79,6 +79,40 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           ]
         end
 
+        let(:customer_completed) do
+          create(
+            :customer,
+            currency: dunning_campaign_threshold.currency,
+            applied_dunning_campaign: dunning_campaign,
+            last_dunning_campaign_attempt: 4,
+            last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_campaign_completed: true,
+            organization: organization
+          )
+        end
+        let(:customer_defaulting) do
+          create(
+            :customer,
+            currency: dunning_campaign_threshold.currency,
+            applied_dunning_campaign: nil,
+            last_dunning_campaign_attempt: 4,
+            last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_campaign_completed: false,
+            organization: organization
+          )
+        end
+        let(:customer_assigned) do
+          create(
+            :customer,
+            currency: dunning_campaign_threshold.currency,
+            applied_dunning_campaign: dunning_campaign,
+            last_dunning_campaign_attempt: 4,
+            last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_campaign_completed: false,
+            organization: organization
+          )
+        end
+
         it "updates the dunning campaign" do
           expect(result).to be_success
           expect(result.dunning_campaign.name).to eq(params[:name])
@@ -101,8 +135,8 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           it "resets the customer's dunning campaign fields" do
             expect { result && customer.reload }
-              .to change { customer.last_dunning_campaign_attempt }.to(0)
-              .and change { customer.last_dunning_campaign_attempt_at }.to(nil)
+              .to change(customer, :last_dunning_campaign_attempt).to(0)
+              .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
             expect(result).to be_success
           end
@@ -120,42 +154,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
             expect(result).to be_success
           end
-        end
-
-        let(:customer_assigned) do
-          create(
-            :customer,
-            currency: dunning_campaign_threshold.currency,
-            applied_dunning_campaign: dunning_campaign,
-            last_dunning_campaign_attempt: 4,
-            last_dunning_campaign_attempt_at: 1.day.ago,
-            dunning_campaign_completed: false,
-            organization: organization
-          )
-        end
-
-        let(:customer_defaulting) do
-          create(
-            :customer,
-            currency: dunning_campaign_threshold.currency,
-            applied_dunning_campaign: nil,
-            last_dunning_campaign_attempt: 4,
-            last_dunning_campaign_attempt_at: 1.day.ago,
-            dunning_campaign_completed: false,
-            organization: organization
-          )
-        end
-
-        let(:customer_completed) do
-          create(
-            :customer,
-            currency: dunning_campaign_threshold.currency,
-            applied_dunning_campaign: dunning_campaign,
-            last_dunning_campaign_attempt: 4,
-            last_dunning_campaign_attempt_at: 1.day.ago,
-            dunning_campaign_completed: true,
-            organization: organization
-          )
         end
 
         context "when threshold amount_cents changes and does not apply anymore to the customer" do
@@ -343,7 +341,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             [
               {
                 amount_cents: threshold_amount_cents,
-                currency: dunning_campaign_threshold.currency 
+                currency: dunning_campaign_threshold.currency
               }
             ]
           end
