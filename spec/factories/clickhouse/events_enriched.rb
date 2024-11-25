@@ -6,6 +6,7 @@ FactoryBot.define do
       subscription { create(:subscription, customer:) }
       customer { create(:customer) }
       organization { customer.organization }
+      billable_metric { create(:billable_metric, organization: organization) }
     end
 
     organization_id { organization.id }
