@@ -15,22 +15,9 @@ module DunningCampaigns
       return result.not_found_failure!(resource: "dunning_campaign") unless dunning_campaign
 
       ActiveRecord::Base.transaction do
-        dunning_campaign.name = params[:name] if params.key?(:name)
-        dunning_campaign.code = params[:code] if params.key?(:code)
-        dunning_campaign.description = params[:description] if params.key?(:description)
-        dunning_campaign.days_between_attempts = params[:days_between_attempts] if params.key?(:days_between_attempts)
-        dunning_campaign.max_attempts = params[:max_attempts] if params.key?(:max_attempts)
-
+        update_dunning_campaign_attributes
         handle_thresholds if params.key?(:thresholds)
-
-        unless params[:applied_to_organization].nil?
-          organization.dunning_campaigns.applied_to_organization
-            .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
-
-          organization.reset_customers_last_dunning_campaign_attempt
-
-          dunning_campaign.applied_to_organization = params[:applied_to_organization]
-        end
+        handle_applied_to_organization_update if params.key?(:applied_to_organization)
 
         dunning_campaign.save!
       end
@@ -44,6 +31,14 @@ module DunningCampaigns
     private
 
     attr_reader :dunning_campaign, :organization, :params
+
+    def update_dunning_campaign_attributes
+      dunning_campaign.assign_attributes(permitted_attributes)
+    end
+
+    def permitted_attributes
+      params.slice(:name, :code, :description, :days_between_attempts, :max_attempts)
+    end
 
     def handle_thresholds
       input_threshold_ids = params[:thresholds].map { |t| t[:id] }.compact
@@ -60,6 +55,20 @@ module DunningCampaigns
           currency: threshold_input[:currency]
         )
       end
+    end
+
+
+    def handle_applied_to_organization_update
+      dunning_campaign.applied_to_organization = params[:applied_to_organization]
+
+      return unless dunning_campaign.applied_to_organization_changed?
+
+      organization
+        .dunning_campaigns
+        .applied_to_organization
+        .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
+
+      organization.reset_customers_last_dunning_campaign_attempt
     end
   end
 end
