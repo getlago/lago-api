@@ -92,13 +92,12 @@ module Customers
       # NOTE: handle configuration for configured payment providers
       handle_api_billing_configuration(customer, params, new_customer)
 
-      result.customer = customer.reload
-
       IntegrationCustomers::CreateOrUpdateService.call(
         integration_customers: params[:integration_customers],
         customer: result.customer,
         new_customer:
       )
+      result.customer = customer.reload
 
       track_customer_created(customer)
       result
