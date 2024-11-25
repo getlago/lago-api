@@ -5,8 +5,7 @@ module Clock
     include SentryCronConcern
 
     queue_as 'clock'
-
-    unique :until_executed, on_conflict: :log
+    limits_concurrency to: 1, key: 'refresh_draft_invoices', duration: 5.minutes
 
     def perform
       Invoice.ready_to_be_refreshed.with_active_subscriptions.find_each do |invoice|

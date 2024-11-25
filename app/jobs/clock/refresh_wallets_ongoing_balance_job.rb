@@ -5,8 +5,7 @@ module Clock
     include SentryCronConcern
 
     queue_as 'clock'
-
-    unique :until_executed, on_conflict: :log
+    limits_concurrency to: 1, key: 'refresh_wallets_ongoing_balance', duration: 5.minutes
 
     def perform
       return unless License.premium?

@@ -5,8 +5,7 @@ module Clock
     include SentryCronConcern
 
     queue_as 'clock'
-
-    unique :until_executed, on_conflict: :log
+    limits_concurrency to: 1, key: 'process_dunning_campaign', duration: 1.hour
 
     def perform
       return unless License.premium?
