@@ -23,15 +23,15 @@ RSpec.describe DunningCampaign, type: :model do
     let(:organization) { create(:organization) }
 
     it "validates uniqueness of code scoped to organization_id excluding deleted records" do
-      create(:dunning_campaign, code:, organization:)
-      new_record = build(:dunning_campaign, code:, organization:)
-
-      expect(new_record).not_to be_valid
-      expect(new_record.errors[:code]).to include("value_already_exist")
-
-      # Records with deleted_at set should not conflict
       deleted_record = create(:dunning_campaign, :deleted, code:, organization:)
       expect(deleted_record).to be_valid
+
+      record1 = create(:dunning_campaign, code:, organization:)
+      expect(record1).to be_valid
+
+      record2 = build(:dunning_campaign, code:, organization:)
+      expect(record2).not_to be_valid
+      expect(record2.errors[:code]).to include("value_already_exist")
     end
   end
 
