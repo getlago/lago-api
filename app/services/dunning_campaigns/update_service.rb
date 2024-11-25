@@ -48,13 +48,46 @@ module DunningCampaigns
 
       # Update or create new thresholds from the input
       params[:thresholds].each do |threshold_input|
-        dunning_campaign.thresholds.find_or_initialize_by(
+        threshold = dunning_campaign.thresholds.find_or_initialize_by(
           id: threshold_input[:id]
-        ).update!(
-          amount_cents: threshold_input[:amount_cents],
-          currency: threshold_input[:currency]
         )
+
+        threshold.assign_attributes(threshold_input.slice(:amount_cents, :currency))
+
+        if threshold.changed? && threshold.persisted?
+          reset_customers_for_threshold(threshold)
+        end
+
+        threshold.save!
       end
+    end
+
+    def reset_customers_for_threshold(threshold)
+      customers_applied_campaign = organization
+        .customers
+        .with_dunning_campaign_not_completed
+        .where(applied_dunning_campaign: dunning_campaign)
+
+      customers_fallback_campaign = organization
+        .customers
+        .falling_back_to_default_dunning_campaign
+        .with_dunning_campaign_not_completed
+        .where(dunning_campaign.applied_to_organization ? nil : "1 = 0")
+
+      customers_to_reset = customers_applied_campaign.or(customers_fallback_campaign)
+
+      customers_to_reset
+        .joins(:invoices)
+        .where(invoices: {payment_overdue: true})
+        .group("customers.id")
+        .having(
+          "customers.currency != ? OR SUM(invoices.total_amount_cents) < ?",
+          threshold.currency, threshold.amount_cents
+        )
+        .update_all( # rubocop:disable Rails/SkipsModelValidations
+          last_dunning_campaign_attempt: 0,
+          last_dunning_campaign_attempt_at: nil
+        )
     end
 
 
