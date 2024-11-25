@@ -267,7 +267,37 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        xcontext "when threshold currency changes but it still applies to the customer" do
+        context "when threshold currency changes but it still applies to the customer" do
+          let(:thresholds_input) do
+            [
+              {
+                id: not_matching_threshold.id,
+                amount_cents: 999_99,
+                currency: "GBP"
+              },
+              {
+                id: dunning_campaign_threshold.id,
+                amount_cents: dunning_campaign_threshold.amount_cents,
+                currency: dunning_campaign_threshold.currency
+              }
+            ]
+          end
+
+          let(:not_matching_threshold) do
+            create(:dunning_campaign_threshold, dunning_campaign:, currency: "CHF")
+          end
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: dunning_campaign_threshold.amount_cents + 1,
+              currency: dunning_campaign_threshold.currency
+            )
+          end
+
           context "when the campaign is assigned to the customer" do
             include_examples "does not reset customer last dunning campaign attempt fields", :customer_assigned
           end
