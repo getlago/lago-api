@@ -613,4 +613,30 @@ RSpec.describe Customer, type: :model do
         .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
     end
   end
+
+  describe "#flag_wallets_for_refresh" do
+    context "without any wallets" do
+      it "returns nil" do
+        expect(customer.flag_wallets_for_refresh).to be_nil
+      end
+    end
+
+    context "without active wallets" do
+      it "does not flag wallets for refresh" do
+        wallet = create(:wallet, :terminated, customer:)
+
+        expect { customer.flag_wallets_for_refresh }.not_to change {
+          wallet.reload.ready_to_be_refreshed
+        }.from(false)
+      end
+    end
+
+    it "flags all active wallets for refresh" do
+      wallet = create(:wallet, customer:)
+
+      expect { customer.flag_wallets_for_refresh }.to change {
+        wallet.reload.ready_to_be_refreshed
+      }.from(false).to(true)
+    end
+  end
 end
