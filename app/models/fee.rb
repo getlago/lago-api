@@ -7,6 +7,7 @@ class Fee < ApplicationRecord
   default_scope -> { kept }
 
   belongs_to :invoice, optional: true
+  belongs_to :organization, optional: true, autosave: false
   belongs_to :charge, -> { with_discarded }, optional: true
   belongs_to :add_on, -> { with_discarded }, optional: true
   belongs_to :applied_add_on, optional: true

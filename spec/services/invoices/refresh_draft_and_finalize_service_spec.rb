@@ -32,7 +32,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
 
     let(:timestamp) { Time.zone.now - 1.year }
     let(:started_at) { Time.zone.now - 2.years }
-    let(:fee) { create(:fee, invoice:, subscription:) }
+    let(:fee) { create(:fee, invoice:, subscription:, organization:) }
     let(:plan) { create(:plan, organization:, interval: 'monthly') }
     let(:credit_note) { create(:credit_note, :draft, invoice:) }
     let(:standard_charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
