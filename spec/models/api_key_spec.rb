@@ -34,66 +34,24 @@ RSpec.describe ApiKey, type: :model do
       subject { api_key.valid? }
 
       let(:api_key) { build_stubbed(:api_key) }
-      let(:missing_error) { api_key.errors.where(:permissions, :missing_keys) }
-      let(:forbidden_error) { api_key.errors.where(:permissions, :forbidden_keys) }
+      let(:error) { api_key.errors.where(:permissions, :forbidden_keys) }
 
       context 'when permissions has forbidden keys' do
-        before { api_key.permissions = api_key.permissions.merge(forbidden: []) }
-
-        context 'when permissions has required keys missing' do
-          before do
-            api_key.permissions.delete('add_on')
-            subject
-          end
-
-          it 'adds forbidden keys error' do
-            expect(forbidden_error).to be_present
-          end
-
-          it 'adds missing keys error' do
-            expect(missing_error).to be_present
-          end
+        before do
+          api_key.permissions = api_key.permissions.merge(forbidden: [])
+          subject
         end
 
-        context 'when permissions all required keys present' do
-          before { subject }
-
-          it 'adds forbidden keys error' do
-            expect(forbidden_error).to be_present
-          end
-
-          it 'does not add missing keys error' do
-            expect(missing_error).not_to be_present
-          end
+        it 'adds forbidden keys error' do
+          expect(error).to be_present
         end
       end
 
       context 'when permissions has no forbidden keys' do
-        context 'when permissions has required keys missing' do
-          before do
-            api_key.permissions.delete('add_on')
-            subject
-          end
+        before { subject }
 
-          it 'does not add forbidden keys error' do
-            expect(forbidden_error).not_to be_present
-          end
-
-          it 'adds missing keys error' do
-            expect(missing_error).to be_present
-          end
-        end
-
-        context 'when permissions all required keys present' do
-          before { subject }
-
-          it 'does not add forbidden keys error' do
-            expect(forbidden_error).not_to be_present
-          end
-
-          it 'does not add missing keys error' do
-            expect(missing_error).not_to be_present
-          end
+        it 'does not add forbidden keys error' do
+          expect(error).not_to be_present
         end
       end
     end
@@ -182,7 +140,7 @@ RSpec.describe ApiKey, type: :model do
   describe "#permit?" do
     subject { api_key.permit?(resource, mode) }
 
-    let(:api_key) { create(:api_key) }
+    let(:api_key) { create(:api_key, permissions:) }
     let(:resource) { described_class::RESOURCES.sample }
     let(:mode) { described_class::MODES.sample }
 
@@ -191,16 +149,28 @@ RSpec.describe ApiKey, type: :model do
     context "when organization has 'api_permissions' add-on enabled" do
       let(:premium_integrations) { ["api_permissions"] }
 
-      context "when corresponding resource allows provided mode" do
-        it "returns true" do
-          expect(subject).to be true
+      context "when corresponding resource is specified in permissions" do
+        let(:permissions) { {resource => allowed_modes} }
+
+        context "when corresponding resource allows provided mode" do
+          let(:allowed_modes) { [mode] }
+
+          it "returns true" do
+            expect(subject).to be true
+          end
+        end
+
+        context "when corresponding resource does not allow provided mode" do
+          let(:allowed_modes) { described_class::MODES.excluding(mode) }
+
+          it "returns false" do
+            expect(subject).to be false
+          end
         end
       end
 
-      context "when corresponding resource does not allow provided mode" do
-        before do
-          api_key.permissions = api_key.permissions.merge(resource => described_class::MODES.excluding(mode))
-        end
+      context "when corresponding resource does not specified in permissions" do
+        let(:permissions) { described_class.default_permissions.without(resource) }
 
         it "returns false" do
           expect(subject).to be false
@@ -211,16 +181,28 @@ RSpec.describe ApiKey, type: :model do
     context "when organization has 'api_permissions' add-on disabled" do
       let(:premium_integrations) { [] }
 
-      context "when corresponding resource allows provided mode" do
-        it "returns true" do
-          expect(subject).to be true
+      context "when corresponding resource is specified in permissions" do
+        let(:permissions) { {resource => allowed_modes} }
+
+        context "when corresponding resource allows provided mode" do
+          let(:allowed_modes) { [mode] }
+
+          it "returns true" do
+            expect(subject).to be true
+          end
+        end
+
+        context "when corresponding resource does not allow provided mode" do
+          let(:allowed_modes) { described_class::MODES.excluding(mode) }
+
+          it "returns true" do
+            expect(subject).to be true
+          end
         end
       end
 
-      context "when corresponding resource does not allow provided mode" do
-        before do
-          api_key.permissions = api_key.permissions.merge(resource => described_class::MODES.excluding(mode))
-        end
+      context "when corresponding resource does not specified in permissions" do
+        let(:permissions) { described_class.default_permissions.without(resource) }
 
         it "returns true" do
           expect(subject).to be true

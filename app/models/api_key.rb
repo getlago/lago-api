@@ -31,7 +31,7 @@ class ApiKey < ApplicationRecord
   def permit?(resource, mode)
     return true unless organization.premium_integrations.include?('api_permissions')
 
-    permissions[resource].include?(mode)
+    Array(permissions[resource]).include?(mode)
   end
 
   def self.default_permissions
@@ -43,12 +43,7 @@ class ApiKey < ApplicationRecord
   def permissions_keys_compliance
     return unless permissions
 
-    missing_permissions = RESOURCES - permissions.keys
     forbidden_permissions = permissions.keys - RESOURCES
-
-    if missing_permissions.any?
-      errors.add(:permissions, :missing_keys, keys: missing_permissions)
-    end
 
     if forbidden_permissions.any?
       errors.add(:permissions, :forbidden_keys, keys: forbidden_permissions)
