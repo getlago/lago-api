@@ -7,6 +7,7 @@ class Fee < ApplicationRecord
   default_scope -> { kept }
 
   belongs_to :invoice, optional: true
+  belongs_to :organization, optional: true, autosave: false
   belongs_to :charge, -> { with_discarded }, optional: true
   belongs_to :add_on, -> { with_discarded }, optional: true
   belongs_to :applied_add_on, optional: true
@@ -235,6 +236,7 @@ end
 #  group_id                            :uuid
 #  invoice_id                          :uuid
 #  invoiceable_id                      :uuid
+#  organization_id                     :uuid
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
 #  subscription_id                     :uuid
@@ -251,6 +253,7 @@ end
 #  index_fees_on_group_id                             (group_id)
 #  index_fees_on_invoice_id                           (invoice_id)
 #  index_fees_on_invoiceable                          (invoiceable_type,invoiceable_id)
+#  index_fees_on_organization_id                      (organization_id)
 #  index_fees_on_pay_in_advance_event_transaction_id  (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
 #  index_fees_on_subscription_id                      (subscription_id)
 #  index_fees_on_true_up_parent_fee_id                (true_up_parent_fee_id)
@@ -262,6 +265,7 @@ end
 #  fk_rails_...  (charge_id => charges.id)
 #  fk_rails_...  (group_id => groups.id)
 #  fk_rails_...  (invoice_id => invoices.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
 #  fk_rails_...  (true_up_parent_fee_id => fees.id)
 #

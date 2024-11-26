@@ -50,6 +50,7 @@ module Fees
 
     delegate :billable_metric, to: :charge
     delegate :subscription, to: :event
+    delegate :organization, to: :customer
 
     def create_fee(properties:, charge_filter: nil)
       ActiveRecord::Base.transaction do
@@ -63,6 +64,7 @@ module Fees
         fee = Fee.new(
           subscription:,
           charge:,
+          organization:,
           amount_cents: result.amount,
           precise_amount_cents: result.precise_amount,
           amount_currency: subscription.plan.amount_currency,

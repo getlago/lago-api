@@ -20,6 +20,7 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
+        organization:,
         fee_type: :credit,
         invoiceable_type: 'WalletTransaction',
         invoiceable: wallet_transaction,
@@ -47,6 +48,7 @@ module Fees
     private
 
     attr_reader :invoice, :wallet_transaction, :customer
+    delegate :organization, to: :customer
 
     def already_billed?
       existing_fee = invoice.fees.find_by(invoiceable_id: wallet_transaction.id, invoiceable_type: 'WalletTransaction')

@@ -22,6 +22,7 @@ module Fees
 
           new_fee = Fee.new(
             invoice:,
+            organization:,
             subscription:,
             fee_type: :commitment,
             invoiceable_type: 'Commitment',
@@ -49,6 +50,7 @@ module Fees
         attr_reader :minimum_commitment, :invoice_subscription
 
         delegate :invoice, :subscription, to: :invoice_subscription
+        delegate :organization, to: :invoice
 
         def invoice_has_minimum_commitment_fee?
           invoice.fees.commitment_kind.where(subscription:).any? { |fee| fee.invoiceable.minimum_commitment? }

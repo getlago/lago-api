@@ -55,6 +55,7 @@ module Fees
     attr_accessor :invoice, :charge, :subscription, :boundaries, :current_usage, :currency, :cache_middleware
 
     delegate :billable_metric, to: :charge
+    delegate :organization, to: :subscription
     delegate :plan, to: :subscription
 
     def init_fees
@@ -123,6 +124,7 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
+        organization:,
         subscription:,
         charge:,
         amount_cents:,
