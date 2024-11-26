@@ -4,14 +4,17 @@ default: &default
       batch_size: 500
   workers:
     - queues: "pdfs"
-      threads: 3
-      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      threads: <%= ENV.fetch("JOB_CONCURRENCY", 10) %>
+      processes: 1
       polling_interval: 3
 
 development:
   <<: *default
 
 test:
+  <<: *default
+
+staging:
   <<: *default
 
 production:

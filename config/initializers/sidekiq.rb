@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# TODO(solid_queue): Remove
+
 require 'socket'
 
 LIVENESS_PORT = 8080

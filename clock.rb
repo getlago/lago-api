@@ -4,6 +4,7 @@ require 'clockwork'
 require './config/boot'
 require './config/environment'
 
+# TODO(solid_queue): Remove file
 module Clockwork
   handler do |job, time|
     puts "Running #{job} at #{time}"

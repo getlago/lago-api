@@ -2,6 +2,7 @@
 
 require 'rails_helper'
 
+# TODO(solid_queue): Remove
 describe Clockwork do
   after { Clockwork::Test.clear! }
 
