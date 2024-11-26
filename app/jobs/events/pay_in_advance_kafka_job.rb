@@ -3,7 +3,7 @@
 module Events
   class PayInAdvanceKafkaJob < ApplicationJob
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_EVENTS'])
+      if ActiveModel::Type::Boolean.new.cast(ENV['LAGO_WORKER_EVENTS'])
         :events
       else
         :default
