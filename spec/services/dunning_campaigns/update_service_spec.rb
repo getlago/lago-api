@@ -163,7 +163,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
             it "sets dunning_campaign_completed to true for customers whose last_dunning_campaign_attempt exceeds max_attempts" do
               expect { result && customer.reload }
-                .to change { customer.dunning_campaign_completed }.to true
+                .to change(customer, :dunning_campaign_completed).to true
             end
 
             it "does not update customers whose last_dunning_campaign_attempt is within the new max_attempts" do
@@ -205,7 +205,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
             it "sets dunning_campaign_completed to true for customers whose last_dunning_campaign_attempt exceeds max_attempts" do
               expect { result && customer.reload }
-                .to change { customer.dunning_campaign_completed }.to true
+                .to change(customer, :dunning_campaign_completed).to true
             end
 
             it "does not update customers whose last_dunning_campaign_attempt is within the new max_attempts" do
