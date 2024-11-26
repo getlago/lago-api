@@ -84,21 +84,17 @@ module DunningCampaigns
     end
 
     def customers_to_reset
-      @customers_to_reset ||= customers_applied_campaign.or(customers_fallback_campaign)
+      @customers_to_reset ||= customers_applied_campaign
+        .or(customers_fallback_campaign)
+        .with_dunning_campaign_not_completed
     end
 
     def customers_applied_campaign
-      organization
-        .customers
-        .with_dunning_campaign_not_completed
-        .where(applied_dunning_campaign: dunning_campaign)
+      organization.customers.where(applied_dunning_campaign: dunning_campaign)
     end
 
     def customers_fallback_campaign
-      organization
-        .customers
-        .falling_back_to_default_dunning_campaign
-        .with_dunning_campaign_not_completed
+      organization.customers.falling_back_to_default_dunning_campaign
     end
 
     def handle_applied_to_organization_update
@@ -112,6 +108,12 @@ module DunningCampaigns
         .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
 
       organization.reset_customers_last_dunning_campaign_attempt
+
+      customers_fallback_campaign.update_all( # rubocop:disable Rails/SkipsModelValidations
+        dunning_campaign_completed: false,
+        last_dunning_campaign_attempt_at: nil,
+        last_dunning_campaign_attempt: 0
+      )
     end
 
     def handle_max_attempts_change
