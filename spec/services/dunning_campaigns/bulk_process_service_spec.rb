@@ -65,6 +65,17 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
             .with(customer:, dunning_campaign_threshold:)
         end
 
+        context "when the customer has completed the dunning campaign" do
+          let(:customer) do
+            create :customer, organization:, currency:, dunning_campaign_completed: true
+          end
+
+          it "does not queue a job for the customer" do
+            result
+            expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+          end
+        end
+
         context "when organization does not have auto_dunning feature enabled" do
           let(:organization) { create(:organization, premium_integrations: []) }
 
