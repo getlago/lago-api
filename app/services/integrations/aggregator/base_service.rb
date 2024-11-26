@@ -62,9 +62,9 @@ module Integrations
         # Hubspot and Xero calls are throttled globally, others are throttled per api key or token
         case provider
         when 'netsuite'
-          integration.token_id
+          Digest::SHA2.hexdigest(integration.token_id)
         when 'anrok'
-          integration.api_key
+          Digest::SHA2.hexdigest(integration.api_key)
         else
           provider.to_s
         end
