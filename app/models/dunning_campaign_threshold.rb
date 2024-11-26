@@ -10,7 +10,7 @@ class DunningCampaignThreshold < ApplicationRecord
 
   validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :currency, inclusion: {in: currency_list}
-  validates :currency, uniqueness: {scope: :dunning_campaign_id}, unless: :deleted_at
+  validates :currency, uniqueness: {scope: :dunning_campaign_id, conditions: -> { where(deleted_at: nil) }}
 
   default_scope -> { kept }
 end

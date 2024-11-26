@@ -79,6 +79,40 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           ]
         end
 
+        let(:customer_completed) do
+          create(
+            :customer,
+            currency: dunning_campaign_threshold.currency,
+            applied_dunning_campaign: dunning_campaign,
+            last_dunning_campaign_attempt: 4,
+            last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_campaign_completed: true,
+            organization: organization
+          )
+        end
+        let(:customer_defaulting) do
+          create(
+            :customer,
+            currency: dunning_campaign_threshold.currency,
+            applied_dunning_campaign: nil,
+            last_dunning_campaign_attempt: 4,
+            last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_campaign_completed: false,
+            organization: organization
+          )
+        end
+        let(:customer_assigned) do
+          create(
+            :customer,
+            currency: dunning_campaign_threshold.currency,
+            applied_dunning_campaign: dunning_campaign,
+            last_dunning_campaign_attempt: 4,
+            last_dunning_campaign_attempt_at: 1.day.ago,
+            dunning_campaign_completed: false,
+            organization: organization
+          )
+        end
+
         it "updates the dunning campaign" do
           expect(result).to be_success
           expect(result.dunning_campaign.name).to eq(params[:name])
@@ -92,6 +126,250 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             .to have_attributes({amount_cents: 999_99, currency: "GBP"})
           expect(result.dunning_campaign.thresholds.where.not(id: dunning_campaign_threshold.id).first)
             .to have_attributes({amount_cents: 5_55, currency: "CHF"})
+        end
+
+        shared_examples "resets customer last dunning campaign attempt fields" do |customer_name|
+          let(:customer) { send(customer_name) }
+
+          before { customer }
+
+          it "resets the customer's dunning campaign fields" do
+            expect { result && customer.reload }
+              .to change(customer, :last_dunning_campaign_attempt).to(0)
+              .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+
+            expect(result).to be_success
+          end
+        end
+
+        shared_examples "does not reset customer last dunning campaign attempt fields" do |customer_name|
+          let(:customer) { send(customer_name) }
+
+          before { customer }
+
+          it "does not reset the customer's dunning campaign fields" do
+            expect { result && customer.reload }
+              .to not_change { customer.last_dunning_campaign_attempt }
+              .and not_change { customer.last_dunning_campaign_attempt_at&.to_i }
+
+            expect(result).to be_success
+          end
+        end
+
+        context "when threshold amount_cents changes and does not apply anymore to the customer" do
+          let(:thresholds_input) do
+            [
+              {
+                id: dunning_campaign_threshold.id,
+                amount_cents: threshold_amount_cents,
+                currency: dunning_campaign_threshold.currency
+              }
+            ]
+          end
+
+          let(:threshold_amount_cents) { 999_99 }
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: (threshold_amount_cents - 1),
+              currency: dunning_campaign_threshold.currency
+            )
+          end
+
+          context "when the campaign is assigned to the customer" do
+            include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
+          end
+
+          context "when the customer defaults to the campaign applied to organization" do
+            include_examples "resets customer last dunning campaign attempt fields", :customer_defaulting
+          end
+
+          context "when the customer already completed the campaign" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
+          end
+        end
+
+        context "when threshold currency changes and does not apply anymore to the customer" do
+          let(:thresholds_input) do
+            [
+              {
+                id: dunning_campaign_threshold.id,
+                amount_cents: dunning_campaign_threshold.amount_cents,
+                currency: "GBP"
+              }
+            ]
+          end
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: dunning_campaign_threshold.amount_cents + 1,
+              currency: dunning_campaign_threshold.currency
+            )
+          end
+
+          context "when the campaign is assigned to the customer" do
+            include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
+          end
+
+          context "when the customer defaults to the campaign applied to organization" do
+            include_examples "resets customer last dunning campaign attempt fields", :customer_defaulting
+          end
+
+          context "when the customer already completed the campaign" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
+          end
+        end
+
+        context "when threshold amount_cents changes but it still applies to the customer" do
+          let(:thresholds_input) do
+            [
+              {
+                id: dunning_campaign_threshold.id,
+                amount_cents: threshold_amount_cents,
+                currency: dunning_campaign_threshold.currency
+              }
+            ]
+          end
+
+          let(:threshold_amount_cents) { 50_00 }
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: (threshold_amount_cents + 1),
+              currency: dunning_campaign_threshold.currency
+            )
+          end
+
+          context "when the campaign is assigned to the customer" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_assigned
+          end
+
+          context "when the customer defaults to the campaign applied to organization" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_defaulting
+          end
+
+          context "when the customer already completed the campaign" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
+          end
+        end
+
+        context "when threshold currency changes but it still applies to the customer" do
+          let(:thresholds_input) do
+            [
+              {
+                id: not_matching_threshold.id,
+                amount_cents: 999_99,
+                currency: "GBP"
+              },
+              {
+                id: dunning_campaign_threshold.id,
+                amount_cents: dunning_campaign_threshold.amount_cents,
+                currency: dunning_campaign_threshold.currency
+              }
+            ]
+          end
+
+          let(:not_matching_threshold) do
+            create(:dunning_campaign_threshold, dunning_campaign:, currency: "CHF")
+          end
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: dunning_campaign_threshold.amount_cents + 1,
+              currency: dunning_campaign_threshold.currency
+            )
+          end
+
+          context "when the campaign is assigned to the customer" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_assigned
+          end
+
+          context "when the customer defaults to the campaign applied to organization" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_defaulting
+          end
+
+          context "when the customer already completed the campaign" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
+          end
+        end
+
+        context "when a threshold is discarded and the campaign does not apply anymore to the customer" do
+          let(:thresholds_input) { [] } # No thresholds remain.
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: (dunning_campaign_threshold.amount_cents + 1),
+              currency: dunning_campaign_threshold.currency
+            )
+          end
+
+          context "when the campaign is assigned to the customer" do
+            include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
+          end
+
+          context "when the customer defaults to the campaign applied to organization" do
+            include_examples "resets customer last dunning campaign attempt fields", :customer_defaulting
+          end
+
+          context "when the customer already completed the campaign" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
+          end
+        end
+
+        context "when a threshold is discarded and replaced with one that still applies to the customer" do
+          let(:thresholds_input) do
+            [
+              {
+                amount_cents: threshold_amount_cents,
+                currency: dunning_campaign_threshold.currency
+              }
+            ]
+          end
+
+          let(:threshold_amount_cents) { 1_00 }
+
+          before do
+            create(
+              :invoice,
+              organization:,
+              customer:,
+              payment_overdue: true,
+              total_amount_cents: (threshold_amount_cents + 1),
+              currency: dunning_campaign_threshold.currency
+            )
+          end
+
+          context "when the campaign is assigned to the customer" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_assigned
+          end
+
+          context "when the customer defaults to the campaign applied to organization" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_defaulting
+          end
+
+          context "when the customer already completed the campaign" do
+            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
+          end
         end
 
         context "when the input does not include a thresholds" do
