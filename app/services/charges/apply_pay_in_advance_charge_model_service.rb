@@ -30,7 +30,7 @@ module Charges
       result.amount = amount_cents
       result.precise_amount = amount * currency.subunit_to_unit.to_d
       result.unit_amount = rounded_amount.zero? ? BigDecimal("0") : rounded_amount / compute_units
-      result.amount_details = calculated_amount_details
+      result.amount_details = calculated_single_event_amount_details
       result
     end
 
@@ -116,13 +116,21 @@ module Charges
         aggregation_result.current_aggregation <= aggregation_result.max_aggregation
     end
 
-    def calculated_amount_details
-      return {} unless charge.percentage?
+    def calculated_single_event_amount_details
+      return {} unless charge.percentage? || charge.graduated_percentage?
 
       all_charges_details = applied_charge_model.amount_details
       charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
       return {} if all_charges_details.blank? || charges_details_without_last_event.blank?
 
+      if charge.percentage?
+        calculate_percentage_charge_details(all_charges_details, charges_details_without_last_event)
+      elsif charge.graduated_percentage?
+        calculate_graduated_percentage_charge_details(all_charges_details, charges_details_without_last_event)
+      end
+    end
+
+    def calculate_percentage_charge_details(all_charges_details, charges_details_without_last_event)
       fixed_values = {rate: all_charges_details[:rate], fixed_fee_unit_amount: all_charges_details[:fixed_fee_unit_amount]}
       details = CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
         result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).to_s
@@ -130,6 +138,24 @@ module Charges
       # TODO: remove this when Charges::ChargeModels::PercentageService#free_units_value respects :exclude_event flag
       details[:free_units] = (details[:units].to_f - details[:paid_units].to_f).to_s
       details
+    end
+
+    def calculate_graduated_percentage_charge_details(all_charges_details, charges_details_without_last_event)
+      calculated_ranges = all_charges_details[:graduated_percentage_ranges].map do |range_with_last_event|
+        corresponding_range_without_last_event = charges_details_without_last_event[:graduated_percentage_ranges].find do |range|
+          range[:from_value] == range_with_last_event[:from_value] && range[:to_value] == range_with_last_event[:to_value]
+        end || Hash.new(0)
+
+        total_with_flat_amount = range_with_last_event[:total_with_flat_amount] - corresponding_range_without_last_event[:total_with_flat_amount]
+        units = range_with_last_event[:units].to_f - corresponding_range_without_last_event[:units].to_f
+        {
+          from_value: range_with_last_event[:from_value], to_value: range_with_last_event[:to_value],
+          flat_unit_amount: range_with_last_event[:flat_unit_amount] - corresponding_range_without_last_event[:flat_unit_amount],
+          rate: range_with_last_event[:rate], units: units.to_s,
+          per_unit_total_amount: units > 0 ? (total_with_flat_amount / units).round(2).to_s : '0', total_with_flat_amount: total_with_flat_amount
+        }
+      end
+      { graduated_percentage_ranges: calculated_ranges }
     end
   end
 end
