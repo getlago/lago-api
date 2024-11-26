@@ -316,6 +316,52 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
       expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
     end
 
+    context "when the payment request belongs to a dunning campaign" do
+      let(:customer) do
+        create(
+          :customer,
+          payment_provider_code: code,
+          dunning_campaign_completed: true,
+          last_dunning_campaign_attempt: 3,
+          last_dunning_campaign_attempt_at: Time.zone.now
+        )
+      end
+
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          amount_cents: 799,
+          amount_currency: "USD",
+          invoices: [invoice_1, invoice_2],
+          dunning_campaign: create(:dunning_campaign)
+        )
+      end
+
+      it "resets the customer dunning campaign counters" do
+        expect { result && customer.reload }
+          .to change(customer, :dunning_campaign_completed).to(false)
+          .and change(customer, :last_dunning_campaign_attempt).to(0)
+          .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+
+        expect(result).to be_success
+      end
+
+      context "when status is failed" do
+        let(:status) { "failed" }
+
+        it "doest not reset the customer dunning campaign counters" do
+          expect { result && customer.reload }
+            .to not_change(customer, :dunning_campaign_completed)
+            .and not_change(customer, :last_dunning_campaign_attempt)
+            .and not_change { customer.last_dunning_campaign_attempt_at&.to_i }
+
+          expect(result).to be_success
+        end
+      end
+    end
+
     context "when status is failed" do
       let(:status) { "failed" }
 
