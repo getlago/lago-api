@@ -18,11 +18,11 @@ module Clockwork
 
   # NOTE: All clocks run every hour to take customer timezones into account
 
-  every(5.minutes, 'schedule:activate_subscriptions') do
-    Clock::ActivateSubscriptionsJob
-      .set(sentry: {"slug" => 'lago_activate_subscriptions', "cron" => '*/5 * * * *'})
-      .perform_later
-  end
+  # every(5.minutes, 'schedule:activate_subscriptions') do
+  #   Clock::ActivateSubscriptionsJob
+  #     .set(sentry: {"slug" => 'lago_activate_subscriptions', "cron" => '*/5 * * * *'})
+  #     .perform_later
+  # end
 
   every(5.minutes, 'schedule:refresh_draft_invoices') do
     Clock::RefreshDraftInvoicesJob
