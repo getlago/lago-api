@@ -41,7 +41,9 @@ Throttling.limits = {
   },
   anrok: { # Rate limit: 10 requests per second
     secondly: {
-      limit: 10,
+      # this mutation can bypass the limit of 10, so lets set it to 9
+      # app/graphql/mutations/integrations/anrok/fetch_draft_invoice_taxes.rb
+      limit: 9,
       period: 1
     }
   }
@@ -50,5 +52,5 @@ Throttling.limits = {
 # Examples of how to use the throttling gem
 # Throttling.for(:hubspot).check(:client, 'hubspot')
 # Throttling.for(:xero).check(:client, 'xero')
-# Throttling.for(:netsuite).check(:client, integration.token_id)
+# Throttling.for(:netsuite).check(:client, integration.client_id)
 # Throttling.for(:anrok).check(:client, integration.api_key)

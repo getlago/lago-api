@@ -8,6 +8,8 @@ module Integrations
       end
 
       def call
+        throttle!(:hubspot)
+
         response = http_client.get(headers:)
 
         result.account_information = OpenStruct.new(response)

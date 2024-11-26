@@ -116,6 +116,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
               expect(result.external_id).to eq('123456789')
             end
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
 
         context 'when invoice is not updated' do
@@ -132,6 +134,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
               expect(result.external_id).to be(nil)
             end
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
       end
 
@@ -157,6 +161,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
           it 'enqueues a SendWebhookJob' do
             expect { service_call }.to have_enqueued_job(SendWebhookJob)
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
 
         context 'when it is a client error' do
@@ -173,6 +179,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
           it 'enqueues a SendWebhookJob' do
             expect { service_call }.to have_enqueued_job(SendWebhookJob)
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
       end
     end

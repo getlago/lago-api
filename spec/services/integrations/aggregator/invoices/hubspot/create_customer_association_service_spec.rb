@@ -76,6 +76,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
         it 'returns result' do
           expect(service_call).to be_a(BaseService::Result)
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
     end
   end

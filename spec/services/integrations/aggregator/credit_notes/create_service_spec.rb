@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
   subject(:service_call) { described_class.call(credit_note: credit_note.reload) }
 
+  let(:service) { described_class.new(credit_note: credit_note.reload) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
   let(:customer) { create(:customer, organization:) }
@@ -276,6 +277,8 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
             expect(integration_resource.syncable_type).to eq('CreditNote')
             expect(integration_resource.resource_type).to eq('credit_note')
           end
+
+          it_behaves_like 'throttles!', :anrok, :netsuite, :xero
         end
 
         context 'when credit note is not created' do
@@ -296,6 +299,8 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
           it 'does not create integration resource object' do
             expect { service_call }.not_to change(IntegrationResource, :count)
           end
+
+          it_behaves_like 'throttles!', :anrok, :netsuite, :xero
         end
       end
 
@@ -324,6 +329,8 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
           expect(integration_resource.syncable_type).to eq('CreditNote')
           expect(integration_resource.resource_type).to eq('credit_note')
         end
+
+        it_behaves_like 'throttles!', :anrok, :netsuite, :xero
       end
     end
 
@@ -363,6 +370,8 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
         it 'enqueues a SendWebhookJob' do
           expect { service_call }.to have_enqueued_job(SendWebhookJob)
         end
+
+        it_behaves_like 'throttles!', :anrok, :netsuite, :xero
       end
     end
 
@@ -400,6 +409,8 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       it 'sends error webhook' do
         expect { service_call }.to have_enqueued_job(SendWebhookJob)
       end
+
+      it_behaves_like 'throttles!', :anrok, :netsuite, :xero
     end
   end
 end

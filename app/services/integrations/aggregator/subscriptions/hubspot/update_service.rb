@@ -10,6 +10,8 @@ module Integrations
             return result unless integration.sync_subscriptions
             return result unless payload.integration_subscription
 
+            throttle!(:hubspot)
+
             Integrations::Hubspot::Subscriptions::DeployPropertiesService.call(integration:)
 
             response = http_client.put_with_response(payload.update_body, headers)

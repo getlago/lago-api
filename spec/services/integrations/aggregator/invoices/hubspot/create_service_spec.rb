@@ -164,6 +164,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
               expect(integration_resource.syncable_type).to eq('Invoice')
               expect(integration_resource.resource_type).to eq('invoice')
             end
+
+            it_behaves_like 'throttles!', :hubspot
           end
 
           context 'when invoice is not created' do
@@ -184,6 +186,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
             it 'does not create integration resource object' do
               expect { service_call }.not_to change(IntegrationResource, :count)
             end
+
+            it_behaves_like 'throttles!', :hubspot
           end
         end
 
@@ -209,6 +213,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
             it 'enqueues a SendWebhookJob' do
               expect { service_call }.to have_enqueued_job(SendWebhookJob)
             end
+
+            it_behaves_like 'throttles!', :hubspot
           end
 
           context 'when it is a client error' do
@@ -225,6 +231,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
             it 'enqueues a SendWebhookJob' do
               expect { service_call }.to have_enqueued_job(SendWebhookJob)
             end
+
+            it_behaves_like 'throttles!', :hubspot
           end
         end
       end

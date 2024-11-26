@@ -50,3 +50,12 @@ RSpec.shared_examples 'syncs payment' do
     end
   end
 end
+
+RSpec.shared_examples 'throttles!' do |*providers|
+  before { allow(service).to receive(:throttle!) }
+
+  it 'calls throttle!' do
+    service.call
+    expect(service).to have_received(:throttle!).with(*providers)
+  end
+end

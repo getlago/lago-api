@@ -22,6 +22,8 @@ module Integrations
             return result
           end
 
+          throttle!(:hubspot)
+
           response = http_client.post_with_response(payload, headers)
           ActiveRecord::Base.transaction do
             save_object_type_id(response['objectTypeId'])

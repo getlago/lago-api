@@ -14,6 +14,8 @@ module Integrations
 
             Integrations::Hubspot::Subscriptions::DeployObjectService.call(integration:)
 
+            throttle!(:hubspot)
+
             http_client.put_with_response(payload.customer_association_body, headers)
 
             result
