@@ -13,7 +13,7 @@ module Integrations
         retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 5
         retry_on Integrations::Aggregator::BasePayload::Failure, wait: :polynomially_longer, attempts: 10
         retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100
-        retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 100
+        retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
 
         def perform(payment:)
           result = Integrations::Aggregator::Payments::CreateService.call(payment:)
