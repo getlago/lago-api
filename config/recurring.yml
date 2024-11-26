@@ -3,6 +3,78 @@ default: &default
     class: Clock::ActivateSubscriptionsJob
     queue: clock
     schedule: every 5 minutes
+  refresh_draft_invoices:
+    class: Clock::RefreshDraftInvoicesJob
+    queue: clock
+    schedule: every 5 minutes
+  terminate_ended_subscriptions:
+    class: Clock::TerminateEndedSubscriptionsJob
+    queue: clock
+    schedule: "5 */1 * * *"
+  bill_customers:
+    class: Clock::SubscriptionsBillerJob
+    queue: clock
+    schedule: "10 */1 * * *"
+  api_keys_track_usage:
+    class: Clock::ApiKeys::TrackUsageJob
+    queue: clock
+    schedule: "15 */1 * * *"
+  retry_generating_subscription_invoices:
+    class: Clock::RetryGeneratingSubscriptionInvoicesJob
+    queue: clock
+    schedule: "30 */1 * * *"
+  finalize_invoices:
+    class: Clock::FinalizeInvoicesJob
+    queue: clock
+    schedule: "20 */1 * * *"
+  mark_invoices_as_payment_overdue:
+    class: Clock::MarkInvoicesAsPaymentOverdueJob
+    queue: clock
+    schedule: "25 */1 * * *"
+  terminate_coupons:
+    class: Clock::TerminateCouponsJob
+    queue: clock
+    schedule: "30 */1 * * *"
+  bill_ended_trial_subscriptions:
+    class: Clock::FreeTrialSubscriptionsBillerJob
+    queue: clock
+    schedule: "35 */1 * * *"
+  terminate_wallets:
+    class: Clock::TerminateWalletsJob
+    queue: clock
+    schedule: "45 */1 * * *"
+  termination_alert:
+    class: Clock::SubscriptionsToBeTerminatedJob
+    queue: clock
+    schedule: "50 */1 * * *"
+  top_up_wallet_interval_credits:
+    class: Clock::CreateIntervalWalletTransactionsJob
+    queue: clock
+    schedule: "55 */1 * * *"
+  clean_webhooks:
+    class: Clock::WebhooksCleanupJob
+    queue: clock
+    schedule: every 1 day at 01:00
+  compute_daily_usage:
+    class: Clock::ComputeAllDailyUsagesJob
+    queue: clock
+    schedule: "15 */1 * * *"
+  process_dunning_campaigns:
+    class: Clock::ProcessDunningCampaignsJob
+    queue: clock
+    schedule: "45 */1 * * *"
+  refresh_lifetime_usages:
+    class: Clock::RefreshLifetimeUsagesJob
+    queue: clock
+    schedule: <%= "every " + (ENV.fetch('LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS', 5.minutes).to_i / 60).to_s + " minutes" %>
+  post_validate_events:
+    class: Clock::EventsValidationJob
+    queue: clock
+    schedule: "5 */1 * * *"
+  refresh_wallets_ongoing_balance:
+    class: Clock::RefreshWalletsOngoingBalanceJob
+    queue: clock
+    schedule: every 5 minutes
 
 development:
   <<: *default

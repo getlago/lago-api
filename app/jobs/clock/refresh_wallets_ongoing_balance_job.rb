@@ -9,6 +9,8 @@ module Clock
 
     def perform
       return unless License.premium?
+      return if ActiveModel::Type::Boolean.new.cast(ENV['LAGO_DISABLE_WALLET_REFRESH'])
+      return unless ENV['LAGO_MEMCACHE_SERVERS'].present? || ENV['LAGO_REDIS_CACHE_URL'].present?
 
       Wallet.active.ready_to_be_refreshed.find_each do |wallet|
         Wallets::RefreshOngoingBalanceJob.perform_later(wallet)

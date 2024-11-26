@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # NOTE: Turn off the private key while building assets for mission_control
-unless ENV['SECRET_KEY_BASE_DUMMY'] != 1
+if ENV['SECRET_KEY_BASE_DUMMY'] != 1
   private_key_string = if Rails.env.development? || Rails.env.test?
     File.read(Rails.root.join('.rsa_private.pem'))
   else
