@@ -22,7 +22,6 @@ module ApiResponses
 
   def set_json_format
     return if request.path.start_with?('/jobs')
-    return if request.path.start_with?('/assets')
 
     request.format = :json
   end
