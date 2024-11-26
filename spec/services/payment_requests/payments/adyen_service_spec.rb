@@ -488,6 +488,19 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
 
         expect(result).to be_success
       end
+
+      context "when status is failed" do
+        let(:status) { "failed" }
+
+        it "doest not reset the customer dunning campaign counters" do
+          expect { result && customer.reload }
+            .to not_change(customer, :dunning_campaign_completed)
+            .and not_change(customer, :last_dunning_campaign_attempt)
+            .and not_change { customer.last_dunning_campaign_attempt_at&.to_i }
+
+          expect(result).to be_success
+        end
+      end
     end
 
     context "when status is failed" do
