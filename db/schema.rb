@@ -1033,7 +1033,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_26_141853) do
     t.integer "payment_status", default: 0, null: false
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
+    t.uuid "dunning_campaign_id"
     t.index ["customer_id"], name: "index_payment_requests_on_customer_id"
+    t.index ["dunning_campaign_id"], name: "index_payment_requests_on_dunning_campaign_id"
     t.index ["organization_id"], name: "index_payment_requests_on_organization_id"
   end
 
@@ -1392,6 +1394,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_26_141853) do
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
   add_foreign_key "payment_requests", "customers"
+  add_foreign_key "payment_requests", "dunning_campaigns"
   add_foreign_key "payment_requests", "organizations"
   add_foreign_key "payments", "invoices"
   add_foreign_key "payments", "payment_providers"

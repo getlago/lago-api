@@ -50,15 +50,18 @@ end
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  customer_id                  :uuid             not null
+#  dunning_campaign_id          :uuid
 #  organization_id              :uuid             not null
 #
 # Indexes
 #
-#  index_payment_requests_on_customer_id      (customer_id)
-#  index_payment_requests_on_organization_id  (organization_id)
+#  index_payment_requests_on_customer_id          (customer_id)
+#  index_payment_requests_on_dunning_campaign_id  (dunning_campaign_id)
+#  index_payment_requests_on_organization_id      (organization_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (customer_id => customers.id)
+#  fk_rails_...  (dunning_campaign_id => dunning_campaigns.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #
