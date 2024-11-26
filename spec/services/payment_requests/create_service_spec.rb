@@ -27,7 +27,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
         allow(License).to receive(:premium?).and_return(false)
       end
 
-      it "returns forbidden failure", :aggregate_failures do
+      it "returns forbidden failure" do
         result = create_service.call
 
         expect(result).not_to be_success
@@ -38,7 +38,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     context "when customer does not exist" do
       before { params[:external_customer_id] = "non-existing-id" }
 
-      it "returns not found failure", :aggregate_failures do
+      it "returns not found failure" do
         result = create_service.call
 
         expect(result).not_to be_success
@@ -50,7 +50,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     context "when invoices are not found" do
       before { params[:lago_invoice_ids] = [] }
 
-      it "returns not found failure", :aggregate_failures do
+      it "returns not found failure" do
         result = create_service.call
 
         expect(result).not_to be_success
@@ -62,7 +62,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     context "when invoices are not overdue" do
       before { first_invoice.update!(payment_overdue: false) }
 
-      it "returns not allowed failure", :aggregate_failures do
+      it "returns not allowed failure" do
         result = create_service.call
 
         expect(result).not_to be_success
@@ -74,7 +74,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     context "when invoices have different currencies" do
       before { second_invoice.update!(currency: "USD") }
 
-      it "returns not allowed failure", :aggregate_failures do
+      it "returns not allowed failure" do
         result = create_service.call
 
         expect(result).not_to be_success
@@ -86,7 +86,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     context "when invoices are not ready for payment processing" do
       before { first_invoice.update!(ready_for_payment_processing: false) }
 
-      it "returns not allowed failure", :aggregate_failures do
+      it "returns not allowed failure" do
         result = create_service.call
 
         expect(result).not_to be_success
@@ -128,13 +128,15 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
-    it "returns the payment request", :aggregate_failures do
-      result = create_service.call
+    it "returns the payment request" do
+      dunning_campaign = create(:dunning_campaign, organization:)
+      result = described_class.call(organization:, params:, dunning_campaign:)
 
       expect(result.payment_request).to be_a(PaymentRequest)
       expect(result.payment_request).to have_attributes(
         organization:,
         customer:,
+        dunning_campaign:,
         amount_cents: first_invoice.total_amount_cents + second_invoice.total_amount_cents,
         amount_currency: "EUR",
         email: "john.doe@example.com"

@@ -2,9 +2,10 @@
 
 module PaymentRequests
   class CreateService < BaseService
-    def initialize(organization:, params:)
+    def initialize(organization:, params:, dunning_campaign: nil)
       @organization = organization
       @params = params
+      @dunning_campaign = dunning_campaign
 
       super
     end
@@ -16,6 +17,7 @@ module PaymentRequests
       payment_request = ActiveRecord::Base.transaction do
         customer.payment_requests.create!(
           organization:,
+          dunning_campaign:,
           amount_cents: invoices.sum(:total_amount_cents),
           amount_currency: currency,
           email:,
@@ -37,7 +39,7 @@ module PaymentRequests
 
     private
 
-    attr_reader :organization, :params
+    attr_reader :organization, :params, :dunning_campaign
 
     def check_preconditions
       # NOTE: Prevent creation of payment request if:

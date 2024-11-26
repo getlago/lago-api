@@ -24,7 +24,8 @@ module DunningCampaigns
           params: {
             external_customer_id: customer.external_id,
             lago_invoice_ids: overdue_invoices.pluck(:id)
-          }
+          },
+          dunning_campaign:
         ).raise_if_error!
 
         customer.increment(:last_dunning_campaign_attempt)
