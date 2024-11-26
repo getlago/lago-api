@@ -61,7 +61,8 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
           params: {
             external_customer_id: customer.external_id,
             lago_invoice_ids: [invoice_2.id]
-          }
+          },
+          dunning_campaign:
         )
     end
 

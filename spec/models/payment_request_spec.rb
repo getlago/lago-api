@@ -25,6 +25,7 @@ RSpec.describe PaymentRequest, type: :model do
 
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:customer) }
+  it { is_expected.to belong_to(:dunning_campaign).optional }
 
   describe "Validations" do
     it "is valid with valid attributes" do
