@@ -233,7 +233,7 @@ module PaymentRequests
           params: {
             payment_status:,
             # NOTE: A proper `processing` payment status should be introduced for payment_requests
-            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+            ready_for_payment_processing: !processing && !payment_status_succeeded?(payment_status)
           },
           webhook_notification: deliver_webhook
         ).raise_if_error!
@@ -246,7 +246,7 @@ module PaymentRequests
             params: {
               payment_status:,
               # NOTE: A proper `processing` payment status should be introduced for invoices
-              ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+              ready_for_payment_processing: !processing && !payment_status_succeeded?(payment_status)
             },
             webhook_notification: deliver_webhook
           ).raise_if_error!
@@ -333,6 +333,10 @@ module PaymentRequests
 
       def stripe_payment_provider
         @stripe_payment_provider ||= payment_provider(customer)
+      end
+
+      def payment_status_succeeded?(payment_status)
+        payment_status.to_sym == :succeeded
       end
     end
   end
