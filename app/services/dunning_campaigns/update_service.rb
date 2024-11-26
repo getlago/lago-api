@@ -119,7 +119,7 @@ module DunningCampaigns
       # we assume there is matching threshold at this point or it was reseted
       customers_to_reset
         .where("last_dunning_campaign_attempt >= ?", dunning_campaign.max_attempts)
-        .update_all(dunning_campaign_completed: true)
+        .update_all(dunning_campaign_completed: true) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end
