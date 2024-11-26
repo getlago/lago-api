@@ -352,10 +352,11 @@ RSpec.describe Customers::UpdateService, type: :service do
         }
       end
 
-      it "does not update auto dunning config", :aggregate_failures do
+      it "does not update auto dunning config" do
         expect { customers_service.call }
           .to not_change(customer, :applied_dunning_campaign_id)
           .and not_change(customer, :exclude_from_dunning_campaign)
+          .and not_change(customer, :dunning_campaign_completed)
           .and not_change(customer, :last_dunning_campaign_attempt)
           .and not_change { customer.last_dunning_campaign_attempt_at.iso8601 }
 
@@ -369,7 +370,8 @@ RSpec.describe Customers::UpdateService, type: :service do
             organization:,
             exclude_from_dunning_campaign: true,
             last_dunning_campaign_attempt: 3,
-            last_dunning_campaign_attempt_at: 2.days.ago
+            last_dunning_campaign_attempt_at: 2.days.ago,
+            dunning_campaign_completed: true
           )
         end
 
@@ -385,10 +387,11 @@ RSpec.describe Customers::UpdateService, type: :service do
 
         around { |test| lago_premium!(&test) }
 
-        it "updates auto dunning config", :aggregate_failures do
+        it "updates auto dunning config" do
           expect { customers_service.call }
             .to change(customer, :applied_dunning_campaign_id).to(dunning_campaign.id)
             .and change(customer, :exclude_from_dunning_campaign).to(false)
+            .and change(customer, :dunning_campaign_completed).to(false)
             .and change(customer, :last_dunning_campaign_attempt).to(0)
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
@@ -402,7 +405,8 @@ RSpec.describe Customers::UpdateService, type: :service do
               organization:,
               applied_dunning_campaign: dunning_campaign,
               last_dunning_campaign_attempt: 3,
-              last_dunning_campaign_attempt_at: 2.days.ago
+              last_dunning_campaign_attempt_at: 2.days.ago,
+              dunning_campaign_completed: true
             )
           end
 
@@ -410,10 +414,11 @@ RSpec.describe Customers::UpdateService, type: :service do
             {exclude_from_dunning_campaign: true}
           end
 
-          it "updates auto dunning config", :aggregate_failures do
+          it "updates auto dunning config" do
             expect { customers_service.call }
               .to change(customer, :applied_dunning_campaign_id).to(nil)
               .and change(customer, :exclude_from_dunning_campaign).to(true)
+              .and change(customer, :dunning_campaign_completed).to(false)
               .and change(customer, :last_dunning_campaign_attempt).to(0)
               .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
@@ -429,16 +434,18 @@ RSpec.describe Customers::UpdateService, type: :service do
               applied_dunning_campaign: dunning_campaign,
               exclude_from_dunning_campaign: false,
               last_dunning_campaign_attempt: 3,
-              last_dunning_campaign_attempt_at: 2.days.ago
+              last_dunning_campaign_attempt_at: 2.days.ago,
+              dunning_campaign_completed: true
             )
           end
 
           let(:update_args) { {applied_dunning_campaign_id: nil} }
 
-          it "updates auto dunning config", :aggregate_failures do
+          it "updates auto dunning config" do
             expect { customers_service.call }
               .to change(customer, :applied_dunning_campaign_id).to(nil)
               .and not_change(customer, :exclude_from_dunning_campaign)
+              .and change(customer, :dunning_campaign_completed).to(false)
               .and change(customer, :last_dunning_campaign_attempt).to(0)
               .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
@@ -454,16 +461,18 @@ RSpec.describe Customers::UpdateService, type: :service do
               applied_dunning_campaign: dunning_campaign,
               exclude_from_dunning_campaign: false,
               last_dunning_campaign_attempt: 3,
-              last_dunning_campaign_attempt_at: 2.days.ago
+              last_dunning_campaign_attempt_at: 2.days.ago,
+              dunning_campaign_completed: true
             )
           end
 
           let(:update_args) { {applied_dunning_campaign_id: "not_found_id"} }
 
-          it "does not update auto dunning config", :aggregate_failures do
+          it "does not update auto dunning config" do
             expect { customers_service.call }
               .to not_change(customer, :applied_dunning_campaign_id)
               .and not_change(customer, :exclude_from_dunning_campaign)
+              .and not_change(customer, :dunning_campaign_completed)
               .and not_change(customer, :last_dunning_campaign_attempt)
               .and not_change(customer, :last_dunning_campaign_attempt_at)
 

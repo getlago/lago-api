@@ -109,6 +109,7 @@ module Customers
         if customer.applied_dunning_campaign_id_changed? || customer.exclude_from_dunning_campaign_changed?
           customer.last_dunning_campaign_attempt = 0
           customer.last_dunning_campaign_attempt_at = nil
+          customer.dunning_campaign_completed = false
         end
       end
 
