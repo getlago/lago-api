@@ -554,6 +554,21 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             expect { result }.to change { customer.reload.last_dunning_campaign_attempt }.from(1).to(0)
               .and change { customer.last_dunning_campaign_attempt_at }.from(a_value).to(nil)
           end
+
+          it "flags customers as not dunning campaign completed" do
+            customer = create(
+              :customer,
+              organization:,
+              dunning_campaign_completed: true,
+              last_dunning_campaign_attempt: 3,
+              last_dunning_campaign_attempt_at: Time.zone.now
+            )
+
+            expect { result && customer.reload }
+              .to change(customer, :dunning_campaign_completed).to(false)
+              .and change(customer, :last_dunning_campaign_attempt).to(0)
+              .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+          end
         end
 
         context "with no dunning campaign record" do
