@@ -99,7 +99,6 @@ module DunningCampaigns
         .customers
         .falling_back_to_default_dunning_campaign
         .with_dunning_campaign_not_completed
-        .where(dunning_campaign.applied_to_organization ? nil : "1 = 0")
     end
 
     def handle_applied_to_organization_update
