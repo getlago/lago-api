@@ -219,7 +219,7 @@ module PaymentRequests
           payable: result.payable,
           params: {
             payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded
+            ready_for_payment_processing: !payment_status_succeeded?(payment_status)
           },
           webhook_notification: deliver_webhook
         ).raise_if_error!
@@ -231,11 +231,15 @@ module PaymentRequests
             invoice:,
             params: {
               payment_status:,
-              ready_for_payment_processing: payment_status.to_sym != :succeeded
+              ready_for_payment_processing: !payment_status_succeeded?(payment_status)
             },
             webhook_notification: deliver_webhook
           ).raise_if_error!
         end
+      end
+
+      def payment_status_succeeded?(payment_status)
+        payment_status.to_sym == :succeeded
       end
 
       def create_payment(provider_payment_id:, metadata:)
