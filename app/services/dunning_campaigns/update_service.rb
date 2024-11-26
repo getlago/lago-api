@@ -18,6 +18,7 @@ module DunningCampaigns
         dunning_campaign.assign_attributes(permitted_attributes)
         handle_thresholds if params.key?(:thresholds)
         handle_applied_to_organization_update if params.key?(:applied_to_organization)
+        handle_max_attempts_change if dunning_campaign.max_attempts_changed?
 
         dunning_campaign.save!
       end
@@ -65,18 +66,6 @@ module DunningCampaigns
     end
 
     def reset_customers_if_no_threshold_match
-      customers_applied_campaign = organization
-        .customers
-        .with_dunning_campaign_not_completed
-        .where(applied_dunning_campaign: dunning_campaign)
-
-      customers_fallback_campaign = organization
-        .customers
-        .falling_back_to_default_dunning_campaign
-        .with_dunning_campaign_not_completed
-
-      customers_to_reset = customers_applied_campaign.or(customers_fallback_campaign)
-
       customers_to_reset
         .includes(:invoices)
         .where(invoices: {payment_overdue: true}).find_each do |customer|
@@ -94,6 +83,25 @@ module DunningCampaigns
         end
     end
 
+    def customers_to_reset
+      @customers_to_reset ||= customers_applied_campaign.or(customers_fallback_campaign)
+    end
+
+    def customers_applied_campaign
+      organization
+        .customers
+        .with_dunning_campaign_not_completed
+        .where(applied_dunning_campaign: dunning_campaign)
+    end
+
+    def customers_fallback_campaign
+      organization
+        .customers
+        .falling_back_to_default_dunning_campaign
+        .with_dunning_campaign_not_completed
+        .where(dunning_campaign.applied_to_organization ? nil : "1 = 0")
+    end
+
     def handle_applied_to_organization_update
       dunning_campaign.applied_to_organization = params[:applied_to_organization]
 
@@ -105,6 +113,13 @@ module DunningCampaigns
         .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
 
       organization.reset_customers_last_dunning_campaign_attempt
+    end
+
+    def handle_max_attempts_change
+      # we assume there is matching threshold at this point or it was reseted
+      customers_to_reset
+        .where("last_dunning_campaign_attempt >= ?", dunning_campaign.max_attempts)
+        .update_all(dunning_campaign_completed: true)
     end
   end
 end
