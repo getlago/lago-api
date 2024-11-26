@@ -21118,6 +21118,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "api_permissions",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -31187,6 +31193,12 @@
             },
             {
               "name": "salesforce",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "api_permissions",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

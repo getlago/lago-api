@@ -32,6 +32,12 @@ en:
         less_than_or_equal_to: value_is_out_of_range
         missing_graduated_ranges: missing_graduated_ranges
         missing_volume_ranges: missing_volume_ranges
+        models:
+          api_key:
+            attributes:
+              permissions:
+                forbidden_key: 'contains forbidden keys: %{keys}'
+                missing_key: 'missing required keys: %{keys}'
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
         only_compatible_with_pay_in_advance_and_non_invoiceable: only_compatible_with_pay_in_advance_and_non_invoiceable
