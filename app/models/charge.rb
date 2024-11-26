@@ -181,7 +181,7 @@ end
 #
 # Indexes
 #
-#  index_charges_on_billable_metric_id  (billable_metric_id)
+#  index_charges_on_billable_metric_id  (billable_metric_id) WHERE (deleted_at IS NULL)
 #  index_charges_on_deleted_at          (deleted_at)
 #  index_charges_on_parent_id           (parent_id)
 #  index_charges_on_plan_id             (plan_id)
