@@ -22,9 +22,9 @@ module IntegrationCustomers
         next if skip_creating_integration_customer?
 
         if create_integration_customer?
-          IntegrationCustomers::CreateJob.perform_now(integration_customer_params:, integration:, customer:)
+          handle_creation
         elsif update_integration_customer?
-          IntegrationCustomers::UpdateJob.perform_now(
+          IntegrationCustomers::UpdateJob.perform_later(
             integration_customer_params:,
             integration:,
             integration_customer:
@@ -46,6 +46,39 @@ module IntegrationCustomers
 
     def update_integration_customer?
       !new_customer && integration_customer
+    end
+
+    def handle_creation
+      # salesforce don't need to reach a provider so it can be done sync
+      if integration&.type == 'Integrations::SalesforceIntegration'
+        IntegrationCustomers::CreateJob.perform_now(
+          integration_customer_params: integration_customer_params,
+          integration:,
+          customer:
+        )
+      else
+        IntegrationCustomers::CreateJob.perform_later(
+          integration_customer_params: integration_customer_params,
+          integration:,
+          customer:
+        )
+      end
+    end
+
+    def handle_update
+      if integration&.type == 'Integrations::SalesforceIntegration'
+        IntegrationCustomers::UpdateJob.perform_now(
+          integration_customer_params: integration_customer_params,
+          integration:,
+          integration_customer:
+        )
+      else
+        IntegrationCustomers::UpdateJob.perform_later(
+          integration_customer_params: integration_customer_params,
+          integration:,
+          integration_customer:
+        )
+      end
     end
 
     def sanitize_integration_customers
