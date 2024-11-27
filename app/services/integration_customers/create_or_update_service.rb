@@ -2,6 +2,7 @@
 
 module IntegrationCustomers
   class CreateOrUpdateService < ::BaseService
+    INTEGRATIONS_REQUIRING_RESPONSE = ['Integrations::SalesforceIntegration'].freeze
     def initialize(integration_customers:, customer:, new_customer:)
       @integration_customers = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }
       @customer = customer
@@ -46,7 +47,7 @@ module IntegrationCustomers
 
     def handle_creation
       # salesforce don't need to reach a provider so it can be done sync
-      if integration&.type == 'Integrations::SalesforceIntegration'
+      if INTEGRATIONS_REQUIRING_RESPONSE.include? integration&.type
         IntegrationCustomers::CreateJob.perform_now(
           integration_customer_params: integration_customer_params,
           integration:,
@@ -62,7 +63,7 @@ module IntegrationCustomers
     end
 
     def handle_update
-      if integration&.type == 'Integrations::SalesforceIntegration'
+      if INTEGRATIONS_REQUIRING_RESPONSE.include? integration&.type
         IntegrationCustomers::UpdateJob.perform_now(
           integration_customer_params: integration_customer_params,
           integration:,
