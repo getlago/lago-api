@@ -48,7 +48,7 @@ module Charges
             from_value: range_with_last_event[:from_value], to_value: range_with_last_event[:to_value],
             flat_unit_amount: range_with_last_event[:flat_unit_amount] - corresponding_range_without_last_event[:flat_unit_amount],
             rate: range_with_last_event[:rate], units: units.to_s,
-            per_unit_total_amount: units > 0 ? (total_with_flat_amount / units).round(2).to_s : '0', total_with_flat_amount: total_with_flat_amount
+            per_unit_total_amount: units > 0 ? (total_with_flat_amount / units).round(2).to_s : '0.0', total_with_flat_amount: total_with_flat_amount
           }
         end
         { graduated_percentage_ranges: calculated_ranges }
