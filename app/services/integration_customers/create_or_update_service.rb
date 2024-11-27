@@ -24,11 +24,7 @@ module IntegrationCustomers
         if create_integration_customer?
           handle_creation
         elsif update_integration_customer?
-          IntegrationCustomers::UpdateJob.perform_later(
-            integration_customer_params:,
-            integration:,
-            integration_customer:
-          )
+          handle_update
         end
       end
     end
