@@ -13,7 +13,8 @@ module V1
         add_ons_count: model.add_ons.count,
         customers_count: model.customers_count,
         plans_count: model.plans.count,
-        charges_count: model.charges.count,
+        # DEPRECATED: this is creating a major performance issue
+        # charges_count: model.charges.count,
         commitments_count: model.commitments.count,
         created_at: model.created_at.iso8601
       }
