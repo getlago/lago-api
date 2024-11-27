@@ -241,7 +241,7 @@ end
 #  shipping_country                 :string
 #  shipping_state                   :string
 #  shipping_zipcode                 :string
-#  skip_invoice_custom_sections     :boolean          default(FALSE)
+#  skip_invoice_custom_sections     :boolean          default(FALSE), not null
 #  slug                             :string
 #  state                            :string
 #  tax_identification_number        :string
