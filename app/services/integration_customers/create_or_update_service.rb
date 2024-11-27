@@ -22,9 +22,9 @@ module IntegrationCustomers
         next if skip_creating_integration_customer?
 
         if create_integration_customer?
-          IntegrationCustomers::CreateJob.perform_later(integration_customer_params:, integration:, customer:)
+          IntegrationCustomers::CreateJob.perform_now(integration_customer_params:, integration:, customer:)
         elsif update_integration_customer?
-          IntegrationCustomers::UpdateJob.perform_later(
+          IntegrationCustomers::UpdateJob.perform_now(
             integration_customer_params:,
             integration:,
             integration_customer:
