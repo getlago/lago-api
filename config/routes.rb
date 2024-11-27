@@ -63,6 +63,7 @@ Rails.application.routes.draw do
         post :payment_url, on: :member
         put :refresh, on: :member
         put :finalize, on: :member
+        put :sync_salesforce_id, on: :member
       end
       resources :payment_requests, only: %i[create index]
       resources :plans, param: :code, code: /.*/

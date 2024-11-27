@@ -184,6 +184,19 @@ module Api
         end
       end
 
+      def sync_salesforce_id
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
+        return not_found_error(resource: 'invoice') unless invoice
+
+        result = Invoices::SyncSalesforceIdService.new(invoice:, params: sync_salesforce_id_params).call
+
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params
@@ -213,6 +226,13 @@ module Api
             :key,
             :value
           ]
+        )
+      end
+
+      def sync_salesforce_id_params
+        params.permit(
+          :external_id,
+          :integration_code
         )
       end
 
