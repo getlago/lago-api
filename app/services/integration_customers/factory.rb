@@ -16,6 +16,8 @@ module IntegrationCustomers
         IntegrationCustomers::XeroService
       when 'Integrations::HubspotIntegration'
         IntegrationCustomers::HubspotService
+      when 'Integrations::SalesforceIntegration'
+        IntegrationCustomers::SalesforceService
       else
         raise(NotImplementedError)
       end
