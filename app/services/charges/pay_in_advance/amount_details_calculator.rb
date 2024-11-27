@@ -3,8 +3,10 @@
 module Charges
   module PayInAdvance
     class AmountDetailsCalculator < BaseService
-      CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_units paid_units free_events paid_events fixed_fee_total_amount
+      AMOUNT_DETAILS_FOR_SINGLE_EVENT_ENABLED = %w[percentage graduated_percentage].freeze
+      PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_units paid_units free_events paid_events fixed_fee_total_amount
       min_max_adjustment_total_amount per_unit_total_amount].freeze
+
       def initialize(charge:, applied_charge_model:, applied_charge_model_excluding_event:)
         @charge = charge
         @all_charges_details = applied_charge_model.amount_details
@@ -12,7 +14,7 @@ module Charges
       end
 
       def call
-        return {} unless charge.percentage? || charge.graduated_percentage?
+        return {} unless AMOUNT_DETAILS_FOR_SINGLE_EVENT_ENABLED.include? charge.charge_model
         return {} if all_charges_details.blank? || charges_details_without_last_event.blank?
 
         if charge.percentage?
@@ -28,7 +30,7 @@ module Charges
 
       def calculate_percentage_charge_details
         fixed_values = {rate: all_charges_details[:rate], fixed_fee_unit_amount: all_charges_details[:fixed_fee_unit_amount]}
-        details = CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
+        details = PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
           result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).to_s
         end
         # TODO: remove this when Charges::ChargeModels::PercentageService#free_units_value respects :exclude_event flag
