@@ -94,11 +94,10 @@ module Customers
 
       IntegrationCustomers::CreateOrUpdateService.call(
         integration_customers: params[:integration_customers],
-        customer: result.customer,
+        customer: customer,
         new_customer:
       )
       result.customer = customer.reload
-
       track_customer_created(customer)
       result
     rescue BaseService::ServiceFailure => e

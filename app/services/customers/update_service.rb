@@ -152,7 +152,7 @@ module Customers
         new_customer: false
       )
 
-      result.customer = customer
+      result.customer = customer.reload
       SendWebhookJob.perform_later('customer.updated', customer)
       result
     rescue ActiveRecord::RecordInvalid => e
