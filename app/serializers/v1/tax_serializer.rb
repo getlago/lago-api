@@ -22,7 +22,7 @@ module V1
     private
 
     def charges_count
-      Charges::AppliedTax.where(tax_id: model.id).count('charge_id')
+      Charge::AppliedTax.where(tax_id: model.id).count('charge_id')
     end
   end
 end
