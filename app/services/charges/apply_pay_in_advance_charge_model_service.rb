@@ -2,7 +2,6 @@
 
 module Charges
   class ApplyPayInAdvanceChargeModelService < BaseService
-
     def initialize(charge:, aggregation_result:, properties:)
       @charge = charge
       @aggregation_result = aggregation_result

@@ -1358,9 +1358,9 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         billable_metric:,
         properties: {
           graduated_percentage_ranges:
-           [{"rate"=>"20", "to_value"=>100, "from_value"=>0, "flat_amount"=>"10"},
-            {"rate"=>"30", "to_value"=>200, "from_value"=>101, "flat_amount"=>"7"},
-            {"rate"=>"40", "to_value"=>nil, "from_value"=>201, "flat_amount"=>"5"}]
+           [{"rate" => "20", "to_value" => 100, "from_value" => 0, "flat_amount" => "10"},
+             {"rate" => "30", "to_value" => 200, "from_value" => 101, "flat_amount" => "7"},
+             {"rate" => "40", "to_value" => nil, "from_value" => 201, "flat_amount" => "5"}]
         }
       )
 
@@ -1390,10 +1390,11 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(50 * 20 + 1000) # flat fee = 10, which is 1000 cents
         expect(fee.amount_details).to eq(
-          { "graduated_percentage_ranges" => [
-            { "rate" => "20.0", "units" => "50.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "10.0",
-              "per_unit_total_amount" => "0.4", "total_with_flat_amount" => "20.0"}
-          ]})
+          {"graduated_percentage_ranges" => [
+            {"rate" => "20.0", "units" => "50.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "10.0",
+             "per_unit_total_amount" => "0.4", "total_with_flat_amount" => "20.0"}
+          ]}
+        )
       end
 
       travel_to(DateTime.new(2023, 2, 17)) do
@@ -1413,12 +1414,13 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(50 * 20 + 50 * 30 + 700) # this transactions goes into two tiers and we are including flat fee for the second tier
         expect(fee.amount_details).to eq(
-        { "graduated_percentage_ranges" => [
-          { "rate" => "20.0", "units" => "50.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "0.0",
-            "per_unit_total_amount" => "0.2", "total_with_flat_amount" => "10.0"},
-          { "rate" => "30.0", "units" => "50.0", "to_value" => 200, "from_value" => 101, "flat_unit_amount" => "7.0",
-            "per_unit_total_amount" => "0.44", "total_with_flat_amount" => "22.0"},
-        ]})
+          {"graduated_percentage_ranges" => [
+            {"rate" => "20.0", "units" => "50.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "0.0",
+             "per_unit_total_amount" => "0.2", "total_with_flat_amount" => "10.0"},
+            {"rate" => "30.0", "units" => "50.0", "to_value" => 200, "from_value" => 101, "flat_unit_amount" => "7.0",
+             "per_unit_total_amount" => "0.44", "total_with_flat_amount" => "22.0"}
+          ]}
+        )
       end
 
       travel_to(DateTime.new(2023, 2, 19)) do
@@ -1438,14 +1440,15 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
         expect(fee.events_count).to eq(1)
         expect(fee.amount_cents).to eq(50 * 30 + 250 * 40 + 500) # this transactions goes into two tiers and we are including flat fee for the second tier
         expect(fee.amount_details).to eq(
-          { "graduated_percentage_ranges" => [
-            { "rate" => "20.0", "units" => "0.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "0.0",
-              "per_unit_total_amount" => "0.0", "total_with_flat_amount" => "0.0"},
-            { "rate" => "30.0", "units" => "50.0", "to_value" => 200, "from_value" => 101, "flat_unit_amount" => "0.0",
-              "per_unit_total_amount" => "0.3", "total_with_flat_amount" => "15.0"},
-            { "rate" => "40.0", "units" => "250.0", "to_value" => nil, "from_value" => 201, "flat_unit_amount" => "5.0",
-              "per_unit_total_amount" => "0.42", "total_with_flat_amount" => "105.0"}
-          ]})
+          {"graduated_percentage_ranges" => [
+            {"rate" => "20.0", "units" => "0.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "0.0",
+             "per_unit_total_amount" => "0.0", "total_with_flat_amount" => "0.0"},
+            {"rate" => "30.0", "units" => "50.0", "to_value" => 200, "from_value" => 101, "flat_unit_amount" => "0.0",
+             "per_unit_total_amount" => "0.3", "total_with_flat_amount" => "15.0"},
+            {"rate" => "40.0", "units" => "250.0", "to_value" => nil, "from_value" => 201, "flat_unit_amount" => "5.0",
+             "per_unit_total_amount" => "0.42", "total_with_flat_amount" => "105.0"}
+          ]}
+        )
       end
     end
   end

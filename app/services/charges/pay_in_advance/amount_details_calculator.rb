@@ -5,7 +5,7 @@ module Charges
     class AmountDetailsCalculator < BaseService
       AMOUNT_DETAILS_FOR_SINGLE_EVENT_ENABLED = %w[percentage graduated_percentage].freeze
       PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_units paid_units free_events paid_events fixed_fee_total_amount
-      min_max_adjustment_total_amount per_unit_total_amount].freeze
+        min_max_adjustment_total_amount per_unit_total_amount].freeze
 
       def initialize(charge:, applied_charge_model:, applied_charge_model_excluding_event:)
         @charge = charge
@@ -50,10 +50,10 @@ module Charges
             from_value: range_with_last_event[:from_value], to_value: range_with_last_event[:to_value],
             flat_unit_amount: range_with_last_event[:flat_unit_amount] - corresponding_range_without_last_event[:flat_unit_amount],
             rate: range_with_last_event[:rate], units: units.to_s,
-            per_unit_total_amount: units > 0 ? (total_with_flat_amount / units).round(2).to_s : '0.0', total_with_flat_amount: total_with_flat_amount
+            per_unit_total_amount: (units > 0) ? (total_with_flat_amount / units).round(2).to_s : '0.0', total_with_flat_amount: total_with_flat_amount
           }
         end
-        { graduated_percentage_ranges: calculated_ranges }
+        {graduated_percentage_ranges: calculated_ranges}
       end
     end
   end

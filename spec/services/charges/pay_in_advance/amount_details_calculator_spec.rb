@@ -6,8 +6,8 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
   let(:amount_details_calculator) { described_class.new(charge:, applied_charge_model:, applied_charge_model_excluding_event:) }
 
   let(:charge) { create(:standard_charge, :pay_in_advance) }
-  let(:applied_charge_model) { double(amount_details: all_charges_details) }
-  let(:applied_charge_model_excluding_event) { double(amount_details: charges_details_without_last_event) }
+  let(:applied_charge_model) { instance_double('AppliedChargeModel', amount_details: all_charges_details) }
+  let(:applied_charge_model_excluding_event) { instance_double('AppliedChargeModel', amount_details: charges_details_without_last_event) }
 
   context 'when charge model does not support pay in advance amount details' do
     let(:all_charges_details) { nil }
@@ -72,16 +72,16 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
     let(:all_charges_details) do
       {
         graduated_percentage_ranges: [
-          { from_value: 0, to_value: 100, flat_unit_amount: 5, rate: 0.1, units: 10, total_with_flat_amount: 100 },
-          { from_value: 100, to_value: 200, flat_unit_amount: 20, rate: 0.2, units: 20, total_with_flat_amount: 400 }
+          {from_value: 0, to_value: 100, flat_unit_amount: 5, rate: 0.1, units: 10, total_with_flat_amount: 100},
+          {from_value: 100, to_value: 200, flat_unit_amount: 20, rate: 0.2, units: 20, total_with_flat_amount: 400}
         ]
       }
     end
     let(:charges_details_without_last_event) do
       {
         graduated_percentage_ranges: [
-          { from_value: 0, to_value: 100, flat_unit_amount: 5, rate: 0.1, units: 5, total_with_flat_amount: 50 },
-          { from_value: 100, to_value: 200, flat_unit_amount: 10, rate: 0.2, units: 10, total_with_flat_amount: 200 }
+          {from_value: 0, to_value: 100, flat_unit_amount: 5, rate: 0.1, units: 5, total_with_flat_amount: 50},
+          {from_value: 100, to_value: 200, flat_unit_amount: 10, rate: 0.2, units: 10, total_with_flat_amount: 200}
         ]
       }
     end
@@ -89,8 +89,8 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
     it 'calculates graduated percentage charge details' do
       expected_details = {
         graduated_percentage_ranges: [
-          { from_value: 0, to_value: 100, flat_unit_amount: 0, rate: 0.1, units: '5.0', per_unit_total_amount: '10.0', total_with_flat_amount: 50 },
-          { from_value: 100, to_value: 200, flat_unit_amount: 10, rate: 0.2, units: '10.0', per_unit_total_amount: '20.0', total_with_flat_amount: 200 }
+          {from_value: 0, to_value: 100, flat_unit_amount: 0, rate: 0.1, units: '5.0', per_unit_total_amount: '10.0', total_with_flat_amount: 50},
+          {from_value: 100, to_value: 200, flat_unit_amount: 10, rate: 0.2, units: '10.0', per_unit_total_amount: '20.0', total_with_flat_amount: 200}
         ]
       }
       expect(amount_details_calculator.call).to eq(expected_details)
@@ -100,15 +100,15 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
       let(:all_charges_details) do
         {
           graduated_percentage_ranges: [
-            { from_value: 0, to_value: 100, flat_unit_amount: 10, rate: 0.1, units: 10, total_with_flat_amount: 100 },
-            { from_value: 100, to_value: 200, flat_unit_amount: 20, rate: 0.2, units: 20, total_with_flat_amount: 400 }
+            {from_value: 0, to_value: 100, flat_unit_amount: 10, rate: 0.1, units: 10, total_with_flat_amount: 100},
+            {from_value: 100, to_value: 200, flat_unit_amount: 20, rate: 0.2, units: 20, total_with_flat_amount: 400}
           ]
         }
       end
       let(:charges_details_without_last_event) do
         {
           graduated_percentage_ranges: [
-            { from_value: 0, to_value: 100, flat_unit_amount: 0, rate: 0.1, units: 0, total_with_flat_amount: 0 }
+            {from_value: 0, to_value: 100, flat_unit_amount: 0, rate: 0.1, units: 0, total_with_flat_amount: 0}
           ]
         }
       end
@@ -116,8 +116,8 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
       it 'calculates graduated percentage charge details' do
         expected_details = {
           graduated_percentage_ranges: [
-            { from_value: 0, to_value: 100, flat_unit_amount: 10, rate: 0.1, units: '10.0', per_unit_total_amount: '10.0', total_with_flat_amount: 100 },
-            { from_value: 100, to_value: 200, flat_unit_amount: 20, rate: 0.2, units: '20.0', per_unit_total_amount: '20.0', total_with_flat_amount: 400 }
+            {from_value: 0, to_value: 100, flat_unit_amount: 10, rate: 0.1, units: '10.0', per_unit_total_amount: '10.0', total_with_flat_amount: 100},
+            {from_value: 100, to_value: 200, flat_unit_amount: 20, rate: 0.2, units: '20.0', per_unit_total_amount: '20.0', total_with_flat_amount: 400}
           ]
         }
         expect(amount_details_calculator.call).to eq(expected_details)
