@@ -267,9 +267,10 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
         end
 
         it 'processes the job immediately' do
-          expect do
-            service_call
-          end.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
+          aggregate_failures 'job processing and enqueuing' do
+            expect { service_call }.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
+            expect { service_call }.not_to have_enqueued_job(IntegrationCustomers::CreateJob)
+          end
         end
       end
     end
