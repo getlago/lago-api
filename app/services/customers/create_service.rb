@@ -186,7 +186,7 @@ module Customers
       )
       create_billing_configuration(customer, billing_configuration)
 
-      result.customer = customer.reload
+      result.customer = customer
 
       IntegrationCustomers::CreateOrUpdateService.call(
         integration_customers: args[:integration_customers],

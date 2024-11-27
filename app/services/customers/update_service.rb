@@ -146,13 +146,12 @@ module Customers
         update_result.raise_if_error!
       end
 
-      result.customer = customer.reload
+      result.customer = customer
       IntegrationCustomers::CreateOrUpdateService.call(
         integration_customers: args[:integration_customers],
         customer: result.customer,
         new_customer: false
       )
-
       SendWebhookJob.perform_later('customer.updated', customer)
       result
     rescue ActiveRecord::RecordInvalid => e
