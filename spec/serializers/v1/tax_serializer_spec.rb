@@ -19,6 +19,7 @@ RSpec.describe ::V1::TaxSerializer do
       'add_ons_count' => 0,
       'customers_count' => 0,
       'plans_count' => 0,
+      'charges_count' => 0,
       'created_at' => tax.created_at.iso8601
     )
   end
