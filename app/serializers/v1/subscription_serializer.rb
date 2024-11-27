@@ -42,7 +42,8 @@ module V1
     def plan
       ::V1::PlanSerializer.new(
         model.plan,
-        includes: %i[charges usage_thresholds taxes minimum_commitment]
+        # don't include taxes by default. The count queries on tax serializer have pretty poor performance.
+        includes: %i[charges usage_thresholds minimum_commitment]
       ).serialize
     end
 
