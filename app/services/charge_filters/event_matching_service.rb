@@ -11,7 +11,7 @@ module ChargeFilters
 
     def call
       # NOTE: Find all filters matching event properties
-      matching_filters = filters.all.select do |filter|
+      matching_filters = filters.select do |filter|
         filter.to_h.all? do |key, values|
           applicable_event_properties.key?(key) && applicable_event_properties[key].in?(values)
         end
