@@ -308,6 +308,37 @@ RSpec.describe Invoices::RetryService, type: :service do
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
         end
       end
+
+      context 'with api limit error' do
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/api_limit_response.json')
+          File.read(p)
+        end
+
+        it 'keeps invoice in failed status' do
+          result = retry_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(invoice.reload.status).to eq('failed')
+        end
+
+        it 'resolves old tax error and creates new one' do
+          old_error_id = invoice.reload.error_details.last.id
+
+          retry_service.call
+
+          aggregate_failures do
+            expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
+            expect(invoice.error_details.tax_error.count).to be(1)
+            expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
+            expect(invoice.error_details.tax_error.order(created_at: :asc).last.details['tax_error'])
+              .to eq('validationError')
+            expect(invoice.error_details.tax_error.order(created_at: :asc).last.details['tax_error_message'])
+              .to eq("You've exceeded your API limit of 10 per second")
+          end
+        end
+      end
     end
   end
 end

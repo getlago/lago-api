@@ -147,6 +147,30 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
           expect(invoice.error_details.count).to eq(1)
           expect(invoice.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
         end
+
+        context 'with api limit error' do
+          let(:body) do
+            p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/api_limit_response.json')
+            File.read(p)
+          end
+
+          it 'returns and store proper error details' do
+            result = create_service.call
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error.code).to eq('tax_error')
+              expect(result.error.error_message).to eq('validationError')
+
+              invoice = customer.invoices.order(created_at: :desc).first
+
+              expect(invoice.reload.error_details.count).to eq(1)
+              expect(invoice.reload.error_details.first.details['tax_error']).to eq('validationError')
+              expect(invoice.reload.error_details.first.details['tax_error_message'])
+                .to eq("You've exceeded your API limit of 10 per second")
+            end
+          end
+        end
       end
     end
 
