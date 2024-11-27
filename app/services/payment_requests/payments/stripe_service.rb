@@ -114,6 +114,7 @@ module PaymentRequests
         payment_status = payable_payment_status(status)
         update_payable_payment_status(payment_status:, processing:)
         update_invoices_payment_status(payment_status:, processing:)
+        reset_customer_dunning_campaign_status(payment_status)
 
         PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
 
@@ -233,7 +234,7 @@ module PaymentRequests
           params: {
             payment_status:,
             # NOTE: A proper `processing` payment status should be introduced for payment_requests
-            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+            ready_for_payment_processing: !processing && !payment_status_succeeded?(payment_status)
           },
           webhook_notification: deliver_webhook
         ).raise_if_error!
@@ -246,7 +247,7 @@ module PaymentRequests
             params: {
               payment_status:,
               # NOTE: A proper `processing` payment status should be introduced for invoices
-              ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+              ready_for_payment_processing: !processing && !payment_status_succeeded?(payment_status)
             },
             webhook_notification: deliver_webhook
           ).raise_if_error!
@@ -333,6 +334,21 @@ module PaymentRequests
 
       def stripe_payment_provider
         @stripe_payment_provider ||= payment_provider(customer)
+      end
+
+      def payment_status_succeeded?(payment_status)
+        payment_status.to_sym == :succeeded
+      end
+
+      def reset_customer_dunning_campaign_status(payment_status)
+        return unless payment_status_succeeded?(payment_status)
+        return unless payable.try(:dunning_campaign)
+
+        customer.update!(
+          dunning_campaign_completed: false,
+          last_dunning_campaign_attempt: 0,
+          last_dunning_campaign_attempt_at: nil
+        )
       end
     end
   end

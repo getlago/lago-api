@@ -84,6 +84,7 @@ module PaymentRequests
         payable_payment_status = payable_payment_status(status)
         update_payable_payment_status(payment_status: payable_payment_status)
         update_invoices_payment_status(payment_status: payable_payment_status)
+        reset_customer_dunning_campaign_status(payable_payment_status)
 
         PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
 
@@ -174,7 +175,7 @@ module PaymentRequests
           payable: result.payable,
           params: {
             payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded
+            ready_for_payment_processing: !payment_status_succeeded?(payment_status)
           },
           webhook_notification: deliver_webhook
         ).raise_if_error!
@@ -186,7 +187,7 @@ module PaymentRequests
             invoice:,
             params: {
               payment_status:,
-              ready_for_payment_processing: payment_status.to_sym != :succeeded
+              ready_for_payment_processing: !payment_status_succeeded?(payment_status)
             },
             webhook_notification: deliver_webhook
           ).raise_if_error!
@@ -201,6 +202,21 @@ module PaymentRequests
             error_code: gocardless_error.code
           }
         })
+      end
+
+      def payment_status_succeeded?(payment_status)
+        payment_status.to_sym == :succeeded
+      end
+
+      def reset_customer_dunning_campaign_status(payment_status)
+        return unless payment_status_succeeded?(payment_status)
+        return unless payable.try(:dunning_campaign)
+
+        customer.update!(
+          dunning_campaign_completed: false,
+          last_dunning_campaign_attempt: 0,
+          last_dunning_campaign_attempt_at: nil
+        )
       end
     end
   end
