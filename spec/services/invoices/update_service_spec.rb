@@ -36,6 +36,48 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
+    context "when invoices is included in a payment request" do
+      let(:customer) do
+        create(
+          :customer,
+          dunning_campaign_completed: true,
+          last_dunning_campaign_attempt: 3,
+          last_dunning_campaign_attempt_at: 1.day.ago
+        )
+      end
+
+      let(:invoice) { create(:invoice, payment_overdue: true, customer:) }
+
+      let(:payment_request) do
+        create(:payment_request, customer:, invoices: [invoice])
+      end
+
+      before do
+        payment_request
+      end
+
+      it "does not reset customer dunning campaign status counters" do
+        expect { result && customer.reload }
+          .to not_change(customer, :dunning_campaign_completed)
+          .and not_change(customer, :last_dunning_campaign_attempt)
+          .and not_change { customer.last_dunning_campaign_attempt_at.to_i }
+      end
+
+      context "when payment request belongs to a dunning campaign" do
+        let(:dunning_campaign) { create(:dunning_campaign) }
+        let(:payment_request) do
+          create(:payment_request, customer:, invoices: [invoice], dunning_campaign:)
+        end
+
+        it "resets customer dunning campaign status counters" do
+          expect { result && customer.reload }
+            .to change(customer, :dunning_campaign_completed).to(false)
+            .and change(customer, :last_dunning_campaign_attempt).to(0)
+            .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+        end
+      end
+    end
+
     it 'calls SegmentTrackJob' do
       result
 

@@ -40,7 +40,18 @@ module Invoices
       end
 
       ActiveRecord::Base.transaction do
-        invoice.payment_overdue = false if invoice.payment_overdue? && invoice.payment_succeeded?
+        if invoice.payment_overdue? && invoice.payment_succeeded?
+          invoice.payment_overdue = false
+
+          if invoice.payment_requests.where.not(dunning_campaign_id: nil).exists?
+            invoice.customer.update!(
+              dunning_campaign_completed: false,
+              last_dunning_campaign_attempt: 0,
+              last_dunning_campaign_attempt_at: nil
+            )
+          end
+        end
+
         invoice.save!
 
         Invoices::Metadata::UpdateService.call(invoice:, params: params[:metadata]) if params[:metadata]
