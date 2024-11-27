@@ -98,7 +98,7 @@ module Fees
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: fees_result)
 
       unless taxes_result.success?
-        create_error_detail(taxes_result.error.code)
+        create_error_detail(taxes_result.error)
 
         return taxes_result
       end
@@ -116,15 +116,17 @@ module Fees
       taxes_result
     end
 
-    def create_error_detail(code)
+    def create_error_detail(error)
       error_result = ErrorDetails::CreateService.call(
         owner: invoice,
         organization: invoice.organization,
         params: {
           error_code: :tax_error,
           details: {
-            tax_error: code
-          }
+            tax_error: error.code
+          }.tap do |details|
+            details[:tax_error_message] = error.error_message if error.code == 'validationError'
+          end
         }
       )
       error_result.raise_if_error!

@@ -26,7 +26,7 @@ module Invoices
           taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
 
           unless taxes_result.success?
-            create_error_detail(taxes_result.error.code)
+            create_error_detail(taxes_result.error)
             invoice.failed!
 
             return result.service_failure!(code: 'tax_error', message: taxes_result.error.code)
@@ -154,15 +154,17 @@ module Invoices
       @customer_provider_taxation ||= invoice.customer.anrok_customer
     end
 
-    def create_error_detail(code)
+    def create_error_detail(error)
       error_result = ErrorDetails::CreateService.call(
         owner: invoice,
         organization: invoice.organization,
         params: {
           error_code: :tax_error,
           details: {
-            tax_error: code
-          }
+            tax_error: error.code
+          }.tap do |details|
+            details[:tax_error_message] = error.error_message if error.code == 'validationError'
+          end
         }
       )
       error_result.raise_if_error!
