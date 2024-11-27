@@ -248,6 +248,30 @@ RSpec.describe IntegrationCustomers::CreateOrUpdateService, type: :service do
           expect { service_call }.to have_enqueued_job(IntegrationCustomers::CreateJob).exactly(:once)
         end
       end
+
+      context 'when adding a sync integration customer' do
+        let(:integration_salesforce) { create(:salesforce_integration, organization:) }
+        let(:integration_customers) do
+          [
+            {
+              integration_type: 'salesforce',
+              integration_code: integration_salesforce.code,
+              sync_with_provider: true,
+              external_customer_id: "12345"
+            }
+          ]
+        end
+
+        before do
+          IntegrationCustomers::BaseCustomer.destroy_all
+        end
+
+        it 'processes the job immediately' do
+          expect do
+            service_call
+          end.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
+        end
+      end
     end
   end
 end
