@@ -19,7 +19,7 @@ module Charges
         charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
         charge.invoice_display_name = params[:invoice_display_name] unless cascade
 
-        if cascade || !cascade_options[:equal_properties]
+        if !cascade || cascade_options[:equal_properties]
           properties = params.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
             params[:charge_model]
           )
