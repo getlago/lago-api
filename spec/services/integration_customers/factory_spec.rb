@@ -11,7 +11,7 @@ RSpec.describe IntegrationCustomers::Factory do
     let(:membership) { create(:membership) }
     let(:customer) { create(:customer, organization:) }
     let(:subsidiary_id) {}
-    let(:params) {{}}
+    let(:params) { {} }
 
     context 'when the integration is NetsuiteIntegration' do
       let(:integration) { create(:netsuite_integration, organization:) }
