@@ -683,7 +683,7 @@ GEM
     rake (13.2.1)
     rake-compiler (1.2.8)
       rake
-    ransack (4.1.1)
+    ransack (4.2.1)
       activerecord (>= 6.1.5)
       activesupport (>= 6.1.5)
       i18n
@@ -962,7 +962,7 @@ DEPENDENCIES
   puma (~> 6.4)
   rack-cors
   rails (~> 7.2)
-  ransack (~> 4.1.0)
+  ransack (~> 4.2.0)
   redis
   rspec-graphql_matchers
   rspec-rails
