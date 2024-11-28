@@ -620,7 +620,7 @@ GEM
     opentelemetry-semantic_conventions (1.10.1)
       opentelemetry-api (~> 1.0)
     os (1.1.4)
-    paper_trail (15.1.0)
+    paper_trail (16.0.0)
       activerecord (>= 6.1)
       request_store (~> 1.4)
     parallel (1.26.3)
@@ -956,7 +956,7 @@ DEPENDENCIES
   opentelemetry-exporter-otlp
   opentelemetry-instrumentation-all
   opentelemetry-sdk
-  paper_trail (~> 15.1)
+  paper_trail (~> 16.0)
   parallel
   pg
   puma (~> 6.4)
