@@ -61,6 +61,10 @@ module Api
             external_customer_id: params[:customer_external_id]
           )
         end
+
+        def resource_name
+          'customer_usage'
+        end
       end
     end
   end

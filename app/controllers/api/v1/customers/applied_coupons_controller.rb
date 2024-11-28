@@ -18,6 +18,12 @@ module Api
             render_error_response(result)
           end
         end
+
+        private
+
+        def resource_name
+          'applied_coupon'
+        end
       end
     end
   end

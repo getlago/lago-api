@@ -189,6 +189,10 @@ module Api
           )
         )
       end
+
+      def resource_name
+        'subscription'
+      end
     end
   end
 end

@@ -67,6 +67,10 @@ module Api
       def render_tax(tax)
         render(json: ::V1::TaxSerializer.new(tax, root_name: 'tax'))
       end
+
+      def resource_name
+        'tax'
+      end
     end
   end
 end

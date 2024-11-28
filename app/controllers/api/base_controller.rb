@@ -9,6 +9,7 @@ module Api
     before_action :authenticate
     before_action :set_context_source
     before_action :track_api_key_usage
+    before_action :authorize
     include Trackable
 
     rescue_from ActionController::ParameterMissing, with: :bad_request_error
@@ -47,6 +48,20 @@ module Api
 
     def track_api_key_usage?
       true
+    end
+
+    def authorize
+      return if current_api_key.permit?(resource_name, mode)
+
+      forbidden_error(code: "#{mode}_action_not_allowed_for_#{resource_name}")
+    end
+
+    def resource_name
+      nil
+    end
+
+    def mode
+      (request.method == 'GET') ? 'read' : 'write'
     end
   end
 end

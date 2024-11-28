@@ -161,6 +161,10 @@ module Api
           )
         )
       end
+
+      def resource_name
+        'customer'
+      end
     end
   end
 end

@@ -60,6 +60,10 @@ module Api
       def index_filters
         params.permit(:external_customer_id)
       end
+
+      def resource_name
+        'payment_request'
+      end
     end
   end
 end

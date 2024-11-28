@@ -127,6 +127,10 @@ module Api
           )
         )
       end
+
+      def resource_name
+        'plan'
+      end
     end
   end
 end

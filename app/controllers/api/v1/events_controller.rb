@@ -153,6 +153,10 @@ module Api
       def track_api_key_usage?
         action_name&.to_sym != :create
       end
+
+      def resource_name
+        'event'
+      end
     end
   end
 end

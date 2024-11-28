@@ -90,6 +90,10 @@ module Api
           )
         )
       end
+
+      def resource_name
+        'add_on'
+      end
     end
   end
 end

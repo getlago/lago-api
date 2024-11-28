@@ -18,6 +18,12 @@ module Api
           status: :ok
         )
       end
+
+      private
+
+      def resource_name
+        'webhook_jwt_public_key'
+      end
     end
   end
 end

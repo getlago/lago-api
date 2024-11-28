@@ -260,6 +260,10 @@ module Api
           organization_id: current_organization.id
         )
       end
+
+      def resource_name
+        'invoice'
+      end
     end
   end
 end

@@ -74,6 +74,10 @@ module Api
           ]
         )
       end
+
+      def resource_name
+        'organization'
+      end
     end
   end
 end

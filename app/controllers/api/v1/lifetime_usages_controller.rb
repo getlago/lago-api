@@ -43,6 +43,10 @@ module Api
           )
         )
       end
+
+      def resource_name
+        'lifetime_usage'
+      end
     end
   end
 end
