@@ -710,6 +710,33 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
   end
 
+  describe 'PUT /invoices/:id/sync_salesforce_id' do
+    let(:sync_salesforce_service) { instance_double(Invoices::SyncSalesforceIdService) }
+    let(:result) { BaseService::Result.new }
+
+    before do
+      result.invoice = invoice
+      allow(Invoices::SyncSalesforceIdService).to receive(:new).and_return(sync_salesforce_service)
+      allow(sync_salesforce_service).to receive(:call).and_return(result)
+    end
+
+    it 'calls sync salesforce id service' do
+      put_with_token(organization, "/api/v1/invoices/#{invoice.id}/sync_salesforce_id")
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+        expect(sync_salesforce_service).to have_received(:call)
+      end
+    end
+
+    context 'when invoice does not exist' do
+      it 'returns not found' do
+        post_with_token(organization, '/api/v1/invoices/555/sync_salesforce_id')
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe 'POST /invoices/:id/payment_url' do
     let(:organization) { create(:organization) }
     let(:stripe_provider) { create(:stripe_provider, organization:, code:) }
