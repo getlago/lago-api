@@ -73,7 +73,8 @@ module Events
           # NOTE: Default value to 0.0 is required for clickhouse parsing
           precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
           properties: event.properties,
-          ingested_at: Time.zone.now.iso8601[...-1]
+          ingested_at: Time.zone.now.iso8601[...-1],
+          source: 'http_ruby'
         }.to_json
       )
     end
