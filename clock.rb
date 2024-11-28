@@ -140,4 +140,10 @@ module Clockwork
       .set(sentry: {"slug" => "lago_process_dunning_campaigns", "cron" => "45 */1 * * *"})
       .perform_later
   end
+
+  every(15.minutes, "schedule:retry_failed_invoices") do
+    Clock::RetryFailedInvoicesJob
+      .set(sentry: {"slug" => "lago_retry_failed_invoices", "cron" => '*/15 * * * *'})
+      .perform_later
+  end
 end
