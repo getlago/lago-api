@@ -698,7 +698,7 @@ GEM
     rake (13.2.1)
     rake-compiler (1.2.9)
       rake
-    ransack (4.1.1)
+    ransack (4.2.1)
       activerecord (>= 6.1.5)
       activesupport (>= 6.1.5)
       i18n
