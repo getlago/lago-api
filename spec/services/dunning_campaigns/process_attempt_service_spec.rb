@@ -74,6 +74,23 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
+    context "when dunning campaign max attempt is reached" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          currency:,
+          last_dunning_campaign_attempt: dunning_campaign.max_attempts,
+          last_dunning_campaign_attempt_at: dunning_campaign.days_between_attempts.days.ago
+        )
+      end
+
+      it "does nothing" do
+        result
+        expect(PaymentRequests::CreateService).not_to have_received(:call)
+      end
+    end
+
     context "when the campaign threshold is not reached" do
       let(:dunning_campaign_threshold) do
         create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 99_01
