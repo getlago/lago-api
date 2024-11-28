@@ -18,7 +18,6 @@ module DunningCampaigns
         dunning_campaign.assign_attributes(permitted_attributes)
         handle_thresholds if params.key?(:thresholds)
         handle_applied_to_organization_update if params.key?(:applied_to_organization)
-        handle_max_attempts_change if dunning_campaign.max_attempts_changed?
 
         dunning_campaign.save!
       end
@@ -84,9 +83,7 @@ module DunningCampaigns
     end
 
     def customers_to_reset
-      @customers_to_reset ||= customers_applied_campaign
-        .or(customers_fallback_campaign)
-        .with_dunning_campaign_not_completed
+      @customers_to_reset ||= customers_applied_campaign.or(customers_fallback_campaign)
     end
 
     def customers_applied_campaign
@@ -110,17 +107,9 @@ module DunningCampaigns
       organization.reset_customers_last_dunning_campaign_attempt
 
       customers_fallback_campaign.update_all( # rubocop:disable Rails/SkipsModelValidations
-        dunning_campaign_completed: false,
         last_dunning_campaign_attempt_at: nil,
         last_dunning_campaign_attempt: 0
       )
-    end
-
-    def handle_max_attempts_change
-      # we assume there is matching threshold at this point or it was reseted
-      customers_to_reset
-        .where("last_dunning_campaign_attempt >= ?", dunning_campaign.max_attempts)
-        .update_all(dunning_campaign_completed: true) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

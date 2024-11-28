@@ -16,7 +16,6 @@ module DunningCampaigns
       return result unless applicable_dunning_campaign?
       return result unless dunning_campaign_threshold_reached?
       return result unless days_between_attempts_passed?
-      return result if customer.dunning_campaign_completed?
 
       ActiveRecord::Base.transaction do
         payment_request_result = PaymentRequests::CreateService.call(
@@ -30,7 +29,6 @@ module DunningCampaigns
 
         customer.increment(:last_dunning_campaign_attempt)
         customer.last_dunning_campaign_attempt_at = Time.zone.now
-        customer.dunning_campaign_completed = last_dunning_campaign_attempt?
         customer.save!
 
         result.customer = customer
@@ -63,10 +61,6 @@ module DunningCampaigns
       return true unless customer.last_dunning_campaign_attempt_at
 
       (customer.last_dunning_campaign_attempt_at + dunning_campaign.days_between_attempts.days).past?
-    end
-
-    def last_dunning_campaign_attempt?
-      customer.last_dunning_campaign_attempt >= dunning_campaign.max_attempts
     end
 
     def overdue_invoices

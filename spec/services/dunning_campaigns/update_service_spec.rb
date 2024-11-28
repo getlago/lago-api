@@ -79,17 +79,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           ]
         end
 
-        let(:customer_completed) do
-          create(
-            :customer,
-            currency: dunning_campaign_threshold.currency,
-            applied_dunning_campaign: dunning_campaign,
-            last_dunning_campaign_attempt: 4,
-            last_dunning_campaign_attempt_at: 1.day.ago,
-            dunning_campaign_completed: true,
-            organization: organization
-          )
-        end
         let(:customer_defaulting) do
           create(
             :customer,
@@ -97,7 +86,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             applied_dunning_campaign: nil,
             last_dunning_campaign_attempt: 4,
             last_dunning_campaign_attempt_at: 1.day.ago,
-            dunning_campaign_completed: false,
             organization: organization
           )
         end
@@ -108,7 +96,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             applied_dunning_campaign: dunning_campaign,
             last_dunning_campaign_attempt: 4,
             last_dunning_campaign_attempt_at: 1.day.ago,
-            dunning_campaign_completed: false,
             organization: organization
           )
         end
@@ -126,105 +113,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             .to have_attributes({amount_cents: 999_99, currency: "GBP"})
           expect(result.dunning_campaign.thresholds.where.not(id: dunning_campaign_threshold.id).first)
             .to have_attributes({amount_cents: 5_55, currency: "CHF"})
-        end
-
-        context "when max_attempts is changed and some customers exceed it" do
-          let(:params) { {max_attempts: 3} }
-
-          before do
-            create(
-              :invoice,
-              organization:,
-              customer:,
-              payment_overdue: true,
-              total_amount_cents: dunning_campaign_threshold.amount_cents,
-              currency: dunning_campaign_threshold.currency
-            )
-          end
-
-          context "when the campaign is applied to the customer" do
-            let(:dunning_campaign) do
-              create(:dunning_campaign, organization:, applied_to_organization: false)
-            end
-
-            let(:customer) do
-              create(
-                :customer,
-                currency: dunning_campaign_threshold.currency,
-                applied_dunning_campaign: dunning_campaign,
-                last_dunning_campaign_attempt: 3,
-                last_dunning_campaign_attempt_at: 1.day.ago,
-                dunning_campaign_completed: false,
-                organization: organization
-              )
-            end
-
-            before { customer }
-
-            it "sets dunning_campaign_completed to true for customers whose last_dunning_campaign_attempt exceeds max_attempts" do
-              expect { result && customer.reload }
-                .to change(customer, :dunning_campaign_completed).to true
-            end
-
-            it "does not update customers whose last_dunning_campaign_attempt is within the new max_attempts" do
-              another_customer = create(
-                :customer,
-                currency: dunning_campaign_threshold.currency,
-                applied_dunning_campaign: dunning_campaign,
-                last_dunning_campaign_attempt: 2,
-                last_dunning_campaign_attempt_at: 1.day.ago,
-                dunning_campaign_completed: false,
-                organization: organization
-              )
-
-              expect { result && another_customer.reload }
-                .not_to change { another_customer.dunning_campaign_completed }
-
-              expect(result).to be_success
-            end
-          end
-
-          context "when the customer falls back to the campaign through the organization" do
-            let(:customer) do
-              create(
-                :customer,
-                currency: dunning_campaign_threshold.currency,
-                applied_dunning_campaign: nil,
-                last_dunning_campaign_attempt: 4,
-                last_dunning_campaign_attempt_at: 1.day.ago,
-                dunning_campaign_completed: false,
-                organization: organization
-              )
-            end
-
-            let(:dunning_campaign) do
-              create(:dunning_campaign, organization:, applied_to_organization: true)
-            end
-
-            before { customer }
-
-            it "sets dunning_campaign_completed to true for customers whose last_dunning_campaign_attempt exceeds max_attempts" do
-              expect { result && customer.reload }
-                .to change(customer, :dunning_campaign_completed).to true
-            end
-
-            it "does not update customers whose last_dunning_campaign_attempt is within the new max_attempts" do
-              another_customer = create(
-                :customer,
-                currency: dunning_campaign_threshold.currency,
-                applied_dunning_campaign: dunning_campaign,
-                last_dunning_campaign_attempt: 2,
-                last_dunning_campaign_attempt_at: 1.day.ago,
-                dunning_campaign_completed: false,
-                organization: organization
-              )
-
-              expect { result && another_customer.reload }
-                .not_to change { another_customer.dunning_campaign_completed }
-
-              expect(result).to be_success
-            end
-          end
         end
 
         shared_examples "resets customer last dunning campaign attempt fields" do |customer_name|
@@ -290,10 +178,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           context "when the customer defaults to the campaign applied to organization" do
             include_examples "resets customer last dunning campaign attempt fields", :customer_defaulting
           end
-
-          context "when the customer already completed the campaign" do
-            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
-          end
         end
 
         context "when threshold currency changes and does not apply anymore to the customer" do
@@ -328,10 +212,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the customer defaults to the campaign applied to organization" do
             include_examples "resets customer last dunning campaign attempt fields", :customer_defaulting
-          end
-
-          context "when the customer already completed the campaign" do
-            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
           end
         end
 
@@ -369,10 +249,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the customer defaults to the campaign applied to organization" do
             include_examples "does not reset customer last dunning campaign attempt fields", :customer_defaulting
-          end
-
-          context "when the customer already completed the campaign" do
-            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
           end
         end
 
@@ -418,10 +294,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           context "when the customer defaults to the campaign applied to organization" do
             include_examples "does not reset customer last dunning campaign attempt fields", :customer_defaulting
           end
-
-          context "when the customer already completed the campaign" do
-            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
-          end
         end
 
         context "when a threshold is discarded and the campaign does not apply anymore to the customer" do
@@ -448,10 +320,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the customer defaults to the campaign applied to organization" do
             include_examples "resets customer last dunning campaign attempt fields", :customer_defaulting
-          end
-
-          context "when the customer already completed the campaign" do
-            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
           end
         end
 
@@ -488,10 +356,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the customer defaults to the campaign applied to organization" do
             include_examples "does not reset customer last dunning campaign attempt fields", :customer_defaulting
-          end
-
-          context "when the customer already completed the campaign" do
-            include_examples "does not reset customer last dunning campaign attempt fields", :customer_completed
           end
         end
 
@@ -555,18 +419,16 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
               .and change { customer.last_dunning_campaign_attempt_at }.from(a_value).to(nil)
           end
 
-          it "flags customers as not dunning campaign completed" do
+          it "resets last attempt" do
             customer = create(
               :customer,
               organization:,
-              dunning_campaign_completed: true,
               last_dunning_campaign_attempt: 3,
               last_dunning_campaign_attempt_at: Time.zone.now
             )
 
             expect { result && customer.reload }
-              .to change(customer, :dunning_campaign_completed).to(false)
-              .and change(customer, :last_dunning_campaign_attempt).to(0)
+              .to change(customer, :last_dunning_campaign_attempt).to(0)
               .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
           end
         end

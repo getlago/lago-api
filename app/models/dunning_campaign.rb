@@ -36,7 +36,7 @@ class DunningCampaign < ApplicationRecord
 
   def reset_customers_last_attempt
     # NOTE: Reset last attempt on customers with the campaign applied explicitly
-    customers.with_dunning_campaign_not_completed.update_all( # rubocop:disable Rails/SkipsModelValidations
+    customers.update_all( # rubocop:disable Rails/SkipsModelValidations
       last_dunning_campaign_attempt: 0,
       last_dunning_campaign_attempt_at: nil
     )
