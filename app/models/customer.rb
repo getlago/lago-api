@@ -190,6 +190,14 @@ class Customer < ApplicationRecord
     invoices.payment_overdue.where(currency:).sum(:total_amount_cents)
   end
 
+  def reset_dunning_campaign!
+    update!(
+      dunning_campaign_completed: false,
+      last_dunning_campaign_attempt: 0,
+      last_dunning_campaign_attempt_at: nil
+    )
+  end
+
   private
 
   def ensure_slug
