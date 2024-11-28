@@ -12,7 +12,7 @@ gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
 gem "puma", "~> 6.4"
-gem "rails", "~> 7.1.3.4"
+gem "rails", "~> 7.2"
 gem "redis"
 gem "sidekiq"
 gem "dry-validation"
