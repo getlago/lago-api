@@ -71,25 +71,6 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
         expect { result && customer.reload }
           .to change(customer, :last_dunning_campaign_attempt).by(1)
           .and change(customer, :last_dunning_campaign_attempt_at).to(Time.zone.now)
-          .and not_change(customer, :dunning_campaign_completed).from(false)
-      end
-    end
-
-    context "when dunning campaign max attemp is reached" do
-      let(:customer) do
-        create(
-          :customer,
-          organization:,
-          currency:,
-          last_dunning_campaign_attempt: dunning_campaign.max_attempts - 1,
-          last_dunning_campaign_attempt_at: dunning_campaign.days_between_attempts.days.ago,
-          dunning_campaign_completed: false
-        )
-      end
-
-      it "updates customer's dunning campaign completed flag" do
-        expect { result && customer.reload }
-          .to change(customer, :dunning_campaign_completed).to(true)
       end
     end
 
@@ -128,22 +109,6 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
     context "when the customer is excluded from auto dunning" do
       let(:customer) do
         create :customer, organization:, currency:, exclude_from_dunning_campaign: true
-      end
-
-      it "does nothing" do
-        result
-        expect(PaymentRequests::CreateService).not_to have_received(:call)
-      end
-    end
-
-    context "when the customer has completed the dunning campaign" do
-      let(:customer) do
-        create(
-          :customer,
-          organization:,
-          currency:,
-          dunning_campaign_completed: true
-        )
       end
 
       it "does nothing" do

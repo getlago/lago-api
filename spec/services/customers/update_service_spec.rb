@@ -356,7 +356,6 @@ RSpec.describe Customers::UpdateService, type: :service do
         expect { customers_service.call }
           .to not_change(customer, :applied_dunning_campaign_id)
           .and not_change(customer, :exclude_from_dunning_campaign)
-          .and not_change(customer, :dunning_campaign_completed)
           .and not_change(customer, :last_dunning_campaign_attempt)
           .and not_change { customer.last_dunning_campaign_attempt_at.iso8601 }
 
@@ -370,8 +369,7 @@ RSpec.describe Customers::UpdateService, type: :service do
             organization:,
             exclude_from_dunning_campaign: true,
             last_dunning_campaign_attempt: 3,
-            last_dunning_campaign_attempt_at: 2.days.ago,
-            dunning_campaign_completed: true
+            last_dunning_campaign_attempt_at: 2.days.ago
           )
         end
 
@@ -391,7 +389,6 @@ RSpec.describe Customers::UpdateService, type: :service do
           expect { customers_service.call }
             .to change(customer, :applied_dunning_campaign_id).to(dunning_campaign.id)
             .and change(customer, :exclude_from_dunning_campaign).to(false)
-            .and change(customer, :dunning_campaign_completed).to(false)
             .and change(customer, :last_dunning_campaign_attempt).to(0)
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
@@ -405,8 +402,7 @@ RSpec.describe Customers::UpdateService, type: :service do
               organization:,
               applied_dunning_campaign: dunning_campaign,
               last_dunning_campaign_attempt: 3,
-              last_dunning_campaign_attempt_at: 2.days.ago,
-              dunning_campaign_completed: true
+              last_dunning_campaign_attempt_at: 2.days.ago
             )
           end
 
@@ -418,7 +414,6 @@ RSpec.describe Customers::UpdateService, type: :service do
             expect { customers_service.call }
               .to change(customer, :applied_dunning_campaign_id).to(nil)
               .and change(customer, :exclude_from_dunning_campaign).to(true)
-              .and change(customer, :dunning_campaign_completed).to(false)
               .and change(customer, :last_dunning_campaign_attempt).to(0)
               .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
@@ -434,8 +429,7 @@ RSpec.describe Customers::UpdateService, type: :service do
               applied_dunning_campaign: dunning_campaign,
               exclude_from_dunning_campaign: false,
               last_dunning_campaign_attempt: 3,
-              last_dunning_campaign_attempt_at: 2.days.ago,
-              dunning_campaign_completed: true
+              last_dunning_campaign_attempt_at: 2.days.ago
             )
           end
 
@@ -445,7 +439,6 @@ RSpec.describe Customers::UpdateService, type: :service do
             expect { customers_service.call }
               .to change(customer, :applied_dunning_campaign_id).to(nil)
               .and not_change(customer, :exclude_from_dunning_campaign)
-              .and change(customer, :dunning_campaign_completed).to(false)
               .and change(customer, :last_dunning_campaign_attempt).to(0)
               .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
@@ -461,8 +454,7 @@ RSpec.describe Customers::UpdateService, type: :service do
               applied_dunning_campaign: dunning_campaign,
               exclude_from_dunning_campaign: false,
               last_dunning_campaign_attempt: 3,
-              last_dunning_campaign_attempt_at: 2.days.ago,
-              dunning_campaign_completed: true
+              last_dunning_campaign_attempt_at: 2.days.ago
             )
           end
 
@@ -472,7 +464,6 @@ RSpec.describe Customers::UpdateService, type: :service do
             expect { customers_service.call }
               .to not_change(customer, :applied_dunning_campaign_id)
               .and not_change(customer, :exclude_from_dunning_campaign)
-              .and not_change(customer, :dunning_campaign_completed)
               .and not_change(customer, :last_dunning_campaign_attempt)
               .and not_change(customer, :last_dunning_campaign_attempt_at)
 

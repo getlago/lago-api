@@ -40,7 +40,6 @@ RSpec.describe Invoices::UpdateService do
       let(:customer) do
         create(
           :customer,
-          dunning_campaign_completed: true,
           last_dunning_campaign_attempt: 3,
           last_dunning_campaign_attempt_at: 1.day.ago
         )
@@ -58,8 +57,7 @@ RSpec.describe Invoices::UpdateService do
 
       it "does not reset customer dunning campaign status counters" do
         expect { result && customer.reload }
-          .to not_change(customer, :dunning_campaign_completed)
-          .and not_change(customer, :last_dunning_campaign_attempt)
+          .to not_change(customer, :last_dunning_campaign_attempt)
           .and not_change { customer.last_dunning_campaign_attempt_at.to_i }
       end
 
@@ -71,8 +69,7 @@ RSpec.describe Invoices::UpdateService do
 
         it "resets customer dunning campaign status counters" do
           expect { result && customer.reload }
-            .to change(customer, :dunning_campaign_completed).to(false)
-            .and change(customer, :last_dunning_campaign_attempt).to(0)
+            .to change(customer, :last_dunning_campaign_attempt).to(0)
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
         end
       end

@@ -72,8 +72,6 @@ class Customer < ApplicationRecord
   scope :falling_back_to_default_dunning_campaign, -> {
     where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
   }
-  scope :with_dunning_campaign_completed, -> { where(dunning_campaign_completed: true) }
-  scope :with_dunning_campaign_not_completed, -> { where(dunning_campaign_completed: false) }
 
   validates :country, :shipping_country, country_code: true, allow_nil: true
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
@@ -192,7 +190,6 @@ class Customer < ApplicationRecord
 
   def reset_dunning_campaign!
     update!(
-      dunning_campaign_completed: false,
       last_dunning_campaign_attempt: 0,
       last_dunning_campaign_attempt_at: nil
     )
@@ -222,7 +219,6 @@ end
 #  customer_type                    :enum
 #  deleted_at                       :datetime
 #  document_locale                  :string
-#  dunning_campaign_completed       :boolean          default(FALSE)
 #  email                            :string
 #  exclude_from_dunning_campaign    :boolean          default(FALSE), not null
 #  finalize_zero_amount_invoice     :integer          default("inherit"), not null

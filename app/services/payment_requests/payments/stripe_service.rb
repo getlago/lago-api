@@ -344,11 +344,7 @@ module PaymentRequests
         return unless payment_status_succeeded?(payment_status)
         return unless payable.try(:dunning_campaign)
 
-        customer.update!(
-          dunning_campaign_completed: false,
-          last_dunning_campaign_attempt: 0,
-          last_dunning_campaign_attempt_at: nil
-        )
+        customer.reset_dunning_campaign!
       end
     end
   end

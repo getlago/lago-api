@@ -16,7 +16,6 @@ module DunningCampaigns
 
     def eligible_customers
       Customer
-        .with_dunning_campaign_not_completed
         .joins(:organization)
         .where(exclude_from_dunning_campaign: false)
         .where("organizations.premium_integrations @> ARRAY[?]::varchar[]", ['auto_dunning'])
@@ -31,7 +30,6 @@ module DunningCampaigns
       end
 
       def call
-        return result if customer.dunning_campaign_completed?
         return result unless threshold
         return result if max_attempts_reached?
         return result unless days_between_attempts_satisfied?
