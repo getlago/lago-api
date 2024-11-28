@@ -1331,4 +1331,125 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
       end
     end
   end
+
+  describe "with sum_agg / graduated_percentage" do
+    let(:aggregation_type) { "sum_agg" }
+    let(:field_name) { "amount" }
+
+    it "creates an pay_in_advance fee" do
+      ### 24 january: Create subscription.
+      jan24 = DateTime.new(2023, 1, 24)
+
+      travel_to(jan24) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+      end
+
+      charge = create(
+        :graduated_percentage_charge,
+        :pay_in_advance,
+        invoiceable: false,
+        plan:,
+        billable_metric:,
+        properties: {
+          graduated_percentage_ranges:
+           [{"rate" => "20", "to_value" => 100, "from_value" => 0, "flat_amount" => "10"},
+             {"rate" => "30", "to_value" => 200, "from_value" => 101, "flat_amount" => "7"},
+             {"rate" => "40", "to_value" => nil, "from_value" => 201, "flat_amount" => "5"}]
+        }
+      )
+
+      subscription = customer.subscriptions.first
+
+      ### 15 february: Send an event.
+      feb15 = DateTime.new(2023, 2, 15)
+
+      travel_to(feb15) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: subscription.external_id,
+              properties: {amount: "50"}
+            }
+          )
+        end.to change { subscription.reload.fees.count }.from(0).to(1)
+
+        fee = subscription.fees.first
+
+        expect(fee.invoice_id).to be_nil
+        expect(fee.charge_id).to eq(charge.id)
+        expect(fee.pay_in_advance).to eq(true)
+        expect(fee.units).to eq(50)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(50 * 20 + 1000) # flat fee = 10, which is 1000 cents
+        expect(fee.amount_details).to eq(
+          {"graduated_percentage_ranges" => [
+            {"rate" => "20.0", "units" => "50.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "10.0",
+             "per_unit_total_amount" => "0.4", "total_with_flat_amount" => "20.0"}
+          ]}
+        )
+      end
+
+      travel_to(DateTime.new(2023, 2, 17)) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: subscription.external_id,
+              properties: {amount: "100"}
+            }
+          )
+        end.to change { subscription.reload.fees.count }.from(1).to(2)
+
+        fee = subscription.fees.order(created_at: :desc).first
+        expect(fee.units).to eq(100)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(50 * 20 + 50 * 30 + 700) # this transactions goes into two tiers and we are including flat fee for the second tier
+        expect(fee.amount_details).to eq(
+          {"graduated_percentage_ranges" => [
+            {"rate" => "20.0", "units" => "50.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "0.0",
+             "per_unit_total_amount" => "0.2", "total_with_flat_amount" => "10.0"},
+            {"rate" => "30.0", "units" => "50.0", "to_value" => 200, "from_value" => 101, "flat_unit_amount" => "7.0",
+             "per_unit_total_amount" => "0.44", "total_with_flat_amount" => "22.0"}
+          ]}
+        )
+      end
+
+      travel_to(DateTime.new(2023, 2, 19)) do
+        expect do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: subscription.external_id,
+              properties: {amount: "300"}
+            }
+          )
+        end.to change { subscription.reload.fees.count }.from(2).to(3)
+
+        fee = subscription.fees.order(created_at: :desc).first
+        expect(fee.units).to eq(300)
+        expect(fee.events_count).to eq(1)
+        expect(fee.amount_cents).to eq(50 * 30 + 250 * 40 + 500) # this transactions goes into two tiers and we are including flat fee for the second tier
+        expect(fee.amount_details).to eq(
+          {"graduated_percentage_ranges" => [
+            {"rate" => "20.0", "units" => "0.0", "to_value" => 100, "from_value" => 0, "flat_unit_amount" => "0.0",
+             "per_unit_total_amount" => "0.0", "total_with_flat_amount" => "0.0"},
+            {"rate" => "30.0", "units" => "50.0", "to_value" => 200, "from_value" => 101, "flat_unit_amount" => "0.0",
+             "per_unit_total_amount" => "0.3", "total_with_flat_amount" => "15.0"},
+            {"rate" => "40.0", "units" => "250.0", "to_value" => nil, "from_value" => 201, "flat_unit_amount" => "5.0",
+             "per_unit_total_amount" => "0.42", "total_with_flat_amount" => "105.0"}
+          ]}
+        )
+      end
+    end
+  end
 end

@@ -2,9 +2,6 @@
 
 module Charges
   class ApplyPayInAdvanceChargeModelService < BaseService
-    CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_units paid_units free_events paid_events fixed_fee_total_amount
-      min_max_adjustment_total_amount per_unit_total_amount]
-
     def initialize(charge:, aggregation_result:, properties:)
       @charge = charge
       @aggregation_result = aggregation_result
@@ -30,7 +27,7 @@ module Charges
       result.amount = amount_cents
       result.precise_amount = amount * currency.subunit_to_unit.to_d
       result.unit_amount = rounded_amount.zero? ? BigDecimal("0") : rounded_amount / compute_units
-      result.amount_details = calculated_amount_details
+      result.amount_details = calculated_single_event_amount_details
       result
     end
 
@@ -116,20 +113,8 @@ module Charges
         aggregation_result.current_aggregation <= aggregation_result.max_aggregation
     end
 
-    def calculated_amount_details
-      return {} unless charge.percentage?
-
-      all_charges_details = applied_charge_model.amount_details
-      charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
-      return {} if all_charges_details.blank? || charges_details_without_last_event.blank?
-
-      fixed_values = {rate: all_charges_details[:rate], fixed_fee_unit_amount: all_charges_details[:fixed_fee_unit_amount]}
-      details = CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
-        result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).to_s
-      end
-      # TODO: remove this when Charges::ChargeModels::PercentageService#free_units_value respects :exclude_event flag
-      details[:free_units] = (details[:units].to_f - details[:paid_units].to_f).to_s
-      details
+    def calculated_single_event_amount_details
+      PayInAdvance::AmountDetailsCalculator.call(charge:, applied_charge_model:, applied_charge_model_excluding_event:)
     end
   end
 end
