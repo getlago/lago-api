@@ -1839,6 +1839,7 @@ input CreateApiKeyInput {
   """
   clientMutationId: String
   name: String
+  permissions: JSON
 }
 
 """
