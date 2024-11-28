@@ -12,6 +12,8 @@ module Integrations
 
             Integrations::Hubspot::Invoices::DeployPropertiesService.call(integration:)
 
+            throttle!(:hubspot)
+
             response = http_client.put_with_response(payload.update_body, headers)
             body = JSON.parse(response.body)
 

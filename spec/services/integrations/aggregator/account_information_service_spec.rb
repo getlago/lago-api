@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Integrations::Aggregator::AccountInformationService do
-  subject(:account_information_service) { described_class.new(integration:) }
+  subject(:service) { described_class.new(integration:) }
 
   let(:integration) { create(:hubspot_integration) }
 
@@ -30,7 +30,7 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
     end
 
     it 'successfully fetches account information' do
-      result = account_information_service.call
+      result = service.call
       account_information = result.account_information
 
       aggregate_failures do
@@ -39,5 +39,7 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
         expect(account_information.id).to eq('1234567890')
       end
     end
+
+    it_behaves_like 'throttles!', :hubspot
   end
 end

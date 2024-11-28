@@ -13,6 +13,9 @@ module Integrations
         def call
           return unless integration.type == 'Integrations::HubspotIntegration'
           return result if integration.subscriptions_properties_version == VERSION
+
+          throttle!(:hubspot)
+
           response = http_client.post_with_response(payload, headers)
           ActiveRecord::Base.transaction do
             integration.settings = integration.reload.settings

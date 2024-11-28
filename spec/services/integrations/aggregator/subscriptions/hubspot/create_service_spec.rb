@@ -113,6 +113,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
             expect(integration_resource.syncable_type).to eq('Subscription')
             expect(integration_resource.resource_type).to eq('subscription')
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
 
         context 'when subscription is not created' do
@@ -133,6 +135,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
           it 'does not create integration resource object' do
             expect { service_call }.not_to change(IntegrationResource, :count)
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
       end
 
@@ -159,6 +163,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
           it 'enqueues a SendWebhookJob' do
             expect { service_call }.to have_enqueued_job(SendWebhookJob)
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
 
         context 'when it is a client error' do
@@ -175,6 +181,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
           it 'enqueues a SendWebhookJob' do
             expect { service_call }.to have_enqueued_job(SendWebhookJob)
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
       end
     end

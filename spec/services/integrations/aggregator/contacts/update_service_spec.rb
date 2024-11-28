@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
   subject(:service_call) { described_class.call(integration:, integration_customer:) }
 
+  let(:service) { described_class.new(integration:, integration_customer:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
@@ -76,6 +77,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
             expect(result.contact_id).to eq('1')
           end
         end
+
+        it_behaves_like 'throttles!', :anrok, :hubspot, :netsuite, :xero
       end
 
       context 'when response is a hash' do
@@ -119,6 +122,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
             expect(result.contact_id).to eq('2e50c200-9a54-4a66-b241-1e75fb87373f')
           end
         end
+
+        it_behaves_like 'throttles!', :anrok, :hubspot, :netsuite, :xero
       end
     end
 
@@ -192,6 +197,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :anrok, :hubspot, :netsuite, :xero
       end
 
       context 'when it is a server payload error' do
@@ -227,6 +234,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :anrok, :hubspot, :netsuite, :xero
       end
 
       context 'when it is a client error' do
@@ -262,6 +271,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :anrok, :hubspot, :netsuite, :xero
       end
     end
   end

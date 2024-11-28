@@ -96,6 +96,8 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
               customer
             ).on_queue(:webhook)
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
 
       context 'when response is a hash' do
@@ -139,6 +141,8 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
                 customer
               ).on_queue(:webhook)
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
 
         context 'when contact is not created' do
@@ -159,6 +163,8 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
           it 'does not create integration resource object' do
             expect { service_call }.not_to change(IntegrationResource, :count)
           end
+
+          it_behaves_like 'throttles!', :hubspot
         end
       end
     end
@@ -221,6 +227,8 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
 
       context 'when it is a server payload error' do
@@ -256,6 +264,8 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
 
       context 'when it is a client error' do
@@ -291,6 +301,8 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
     end
   end

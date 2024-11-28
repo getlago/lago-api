@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Integrations::Aggregator::Payments::CreateService do
   subject(:service_call) { described_class.call(payment:) }
 
+  let(:service) { described_class.new(payment:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
   let(:customer) { create(:customer, organization:) }
@@ -138,6 +139,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
           expect(integration_resource.syncable_type).to eq('Payment')
           expect(integration_resource.resource_type).to eq('payment')
         end
+
+        it_behaves_like 'throttles!', :netsuite, :xero
       end
 
       context 'when response is a hash' do
@@ -165,6 +168,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
             expect(integration_resource.syncable_type).to eq('Payment')
             expect(integration_resource.resource_type).to eq('payment')
           end
+
+          it_behaves_like 'throttles!', :netsuite, :xero
         end
 
         context 'when payment is not created' do
@@ -185,6 +190,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
           it 'does not create integration resource object' do
             expect { service_call }.not_to change(IntegrationResource, :count)
           end
+
+          it_behaves_like 'throttles!', :netsuite, :xero
         end
       end
     end
@@ -229,6 +236,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
         it 'enqueues a SendWebhookJob' do
           expect { service_call }.to have_enqueued_job(SendWebhookJob)
         end
+
+        it_behaves_like 'throttles!', :netsuite, :xero
       end
     end
   end

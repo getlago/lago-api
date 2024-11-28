@@ -20,6 +20,8 @@ module Integrations
           return result unless invoice.finalized?
           return result if payload.integration_payment
 
+          throttle!(:netsuite, :xero)
+
           response = http_client.post_with_response(payload.body, headers)
           body = JSON.parse(response.body)
 

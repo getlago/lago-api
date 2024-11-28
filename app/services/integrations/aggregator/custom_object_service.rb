@@ -13,6 +13,8 @@ module Integrations
       end
 
       def call
+        throttle!(:hubspot)
+
         response = http_client.get(headers:, body:)
 
         result.custom_object = OpenStruct.new(response)

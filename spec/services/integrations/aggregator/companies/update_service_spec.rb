@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Integrations::Aggregator::Companies::UpdateService do
   subject(:service_call) { described_class.call(integration:, integration_customer:) }
 
+  let(:service) { described_class.new(integration:, integration_customer:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
@@ -26,6 +27,7 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
 
   before do
     allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(service).to receive(:throttle!)
   end
 
   describe '#initialize' do
@@ -98,6 +100,8 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
             expect(result.contact_id).to eq('1')
           end
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
 
       context 'when response is a hash' do
@@ -141,6 +145,8 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
             expect(result.contact_id).to eq('2e50c200-9a54-4a66-b241-1e75fb87373f')
           end
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
     end
 
@@ -212,6 +218,8 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
 
       context 'when it is a server payload error' do
@@ -247,6 +255,8 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
 
       context 'when it is a client error' do
@@ -282,6 +292,8 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
               }
             )
         end
+
+        it_behaves_like 'throttles!', :hubspot
       end
     end
   end
