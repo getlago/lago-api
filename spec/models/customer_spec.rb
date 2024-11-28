@@ -594,4 +594,22 @@ RSpec.describe Customer, type: :model do
       end
     end
   end
+
+  describe "#reset_dunning_campaign!" do
+    let(:customer) do
+      create(
+        :customer,
+        dunning_campaign_completed: true,
+        last_dunning_campaign_attempt: 5,
+        last_dunning_campaign_attempt_at: 1.day.ago
+      )
+    end
+
+    it "changes dunning campaign status counters" do
+      expect { customer.reset_dunning_campaign! && customer.reload }
+        .to change(customer, :dunning_campaign_completed).to(false)
+        .and change(customer, :last_dunning_campaign_attempt).to(0)
+        .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+    end
+  end
 end
