@@ -159,6 +159,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               'account' => '33',
               'quantity' => 0.0,
               'rate' => 0.0,
+              'amount' => 2.0,
               'taxdetailsreference' => anything
             },
             {
@@ -166,6 +167,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               'account' => '44',
               'quantity' => 0.0,
               'rate' => 0.0,
+              'amount' => 2.0,
               'taxdetailsreference' => anything
             },
             {
@@ -173,6 +175,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               'account' => 'm22',
               'quantity' => 2,
               'rate' => 4.1212121212334,
+              'amount' => 2.0,
               'taxdetailsreference' => anything
             },
             {
