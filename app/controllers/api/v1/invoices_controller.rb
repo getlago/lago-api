@@ -188,7 +188,7 @@ module Api
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: 'invoice') unless invoice
 
-        result = Invoices::SyncSalesforceIdService.new(invoice:, params: sync_salesforce_id_params).call
+        result = Invoices::SyncSalesforceIdService.call(invoice:, params: sync_salesforce_id_params)
 
         if result.success?
           render_invoice(result.invoice)
