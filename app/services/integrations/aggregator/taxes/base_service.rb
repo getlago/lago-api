@@ -58,7 +58,10 @@ module Integrations
             result.succeeded_id = body['succeededInvoices'].first['id']
           else
             code, message = retrieve_error_details(body['failedInvoices'].first['validation_errors'])
-            deliver_tax_error_webhook(customer:, code:, message:)
+
+            unless message.include?('API limit')
+              deliver_tax_error_webhook(customer:, code:, message:)
+            end
 
             result.service_failure!(code:, message:)
           end
