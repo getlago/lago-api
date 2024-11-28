@@ -10,19 +10,13 @@ module V1
         rate: model.rate,
         description: model.description,
         applied_to_organization: model.applied_to_organization,
-        add_ons_count: model.add_ons.count,
-        customers_count: model.customers_count,
-        plans_count: model.plans.count,
-        charges_count:,
-        commitments_count: model.commitments.count,
+        add_ons_count: 0,
+        customers_count: 0,
+        plans_count: 0,
+        charges_count: 0,
+        commitments_count: 0,
         created_at: model.created_at.iso8601
       }
-    end
-
-    private
-
-    def charges_count
-      Charge::AppliedTax.where(tax_id: model.id).count('charge_id')
     end
   end
 end
