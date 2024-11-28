@@ -35,10 +35,10 @@ class Coupon < ApplicationRecord
     :forever
   ].freeze
 
-  enum status: STATUSES
-  enum expiration: EXPIRATION_TYPES
-  enum coupon_type: COUPON_TYPES
-  enum frequency: FREQUENCIES
+  enum :status, STATUSES
+  enum :expiration, EXPIRATION_TYPES
+  enum :coupon_type, COUPON_TYPES
+  enum :frequency, FREQUENCIES
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 

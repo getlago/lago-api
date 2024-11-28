@@ -19,8 +19,8 @@ class Membership < ApplicationRecord
     finance: 2
   }.freeze
 
-  enum status: STATUSES
-  enum role: ROLES
+  enum :status, STATUSES
+  enum :role, ROLES
 
   validates :user_id, uniqueness: {conditions: -> { where(revoked_at: nil) }, scope: :organization_id}
 

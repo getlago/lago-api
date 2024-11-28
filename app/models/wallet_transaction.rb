@@ -32,10 +32,10 @@ class WalletTransaction < ApplicationRecord
     :threshold
   ].freeze
 
-  enum status: STATUSES
-  enum transaction_status: TRANSACTION_STATUSES
-  enum transaction_type: TRANSACTION_TYPES
-  enum source: SOURCES
+  enum :status, STATUSES
+  enum :transaction_status, TRANSACTION_STATUSES
+  enum :transaction_type, TRANSACTION_TYPES
+  enum :source, SOURCES
 
   scope :pending, -> { where(status: :pending) }
 end

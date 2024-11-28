@@ -13,7 +13,7 @@ module IntegrationCollectionMappings
       fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account
     ].freeze
 
-    enum mapping_type: MAPPING_TYPES
+    enum :mapping_type, MAPPING_TYPES
 
     validates :mapping_type, uniqueness: {scope: :integration_id}
 

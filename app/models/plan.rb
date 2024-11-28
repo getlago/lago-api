@@ -32,7 +32,7 @@ class Plan < ApplicationRecord
     quarterly
   ].freeze
 
-  enum interval: INTERVALS
+  enum :interval, INTERVALS
 
   monetize :amount_cents
 

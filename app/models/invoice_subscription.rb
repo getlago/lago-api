@@ -22,7 +22,7 @@ class InvoiceSubscription < ApplicationRecord
     progressive_billing: 'progressive_billing'
   }.freeze
 
-  enum invoicing_reason: INVOICING_REASONS
+  enum :invoicing_reason, INVOICING_REASONS
 
   scope :order_by_charges_to_datetime,
     lambda {

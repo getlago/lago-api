@@ -13,7 +13,7 @@ class AdjustedFee < ApplicationRecord
     :adjusted_amount
   ].freeze
 
-  enum fee_type: Fee::FEE_TYPES
+  enum :fee_type, Fee::FEE_TYPES
 
   def adjusted_display_name?
     adjusted_units.blank? && adjusted_amount.blank?

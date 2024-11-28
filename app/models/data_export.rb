@@ -16,8 +16,8 @@ class DataExport < ApplicationRecord
   validates :format, presence: true, inclusion: {in: EXPORT_FORMATS}
   validates :status, presence: true, inclusion: {in: STATUSES}
 
-  enum format: EXPORT_FORMATS
-  enum status: STATUSES
+  enum :format, EXPORT_FORMATS
+  enum :status, STATUSES
 
   delegate :user, to: :membership
 

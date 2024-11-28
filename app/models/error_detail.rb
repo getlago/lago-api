@@ -9,7 +9,7 @@ class ErrorDetail < ApplicationRecord
   belongs_to :organization
 
   ERROR_CODES = %w[not_provided tax_error tax_voiding_error]
-  enum error_code: ERROR_CODES
+  enum :error_code, ERROR_CODES
 end
 
 # == Schema Information

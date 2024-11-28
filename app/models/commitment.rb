@@ -9,7 +9,7 @@ class Commitment < ApplicationRecord
     minimum_commitment: 0
   }.freeze
 
-  enum commitment_type: COMMITMENT_TYPES
+  enum :commitment_type, COMMITMENT_TYPES
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 

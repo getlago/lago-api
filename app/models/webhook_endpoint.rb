@@ -15,7 +15,7 @@ class WebhookEndpoint < ApplicationRecord
   validates :webhook_url, uniqueness: {scope: :organization_id}
   validate :max_webhook_endpoints, on: :create
 
-  enum signature_algo: SIGNATURE_ALGOS
+  enum :signature_algo, SIGNATURE_ALGOS
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[webhook_url]
