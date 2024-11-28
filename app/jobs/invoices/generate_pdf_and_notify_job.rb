@@ -3,7 +3,7 @@
 module Invoices
   class GeneratePdfAndNotifyJob < ApplicationJob
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_PDFS'])
+      if ActiveModel::Type::Boolean.new.cast(ENV['LAGO_WORKER_PDFS'])
         :pdfs
       else
         :invoices

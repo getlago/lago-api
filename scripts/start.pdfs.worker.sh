@@ -1,3 +1,3 @@
 #!/bin/bash
 
-bundle exec sidekiq -C config/sidekiq_pdfs.yml
+bin/jobs -c config/queue_pdfs.yml

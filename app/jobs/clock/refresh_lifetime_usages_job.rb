@@ -6,6 +6,8 @@ module Clock
 
     queue_as 'clock'
     unique :until_executed, on_conflict: :log
+    limits_concurrency to: 1, key: 'refresh_lifetime_usage',
+      duration: (ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes).to_i.seconds
 
     def perform
       return unless License.premium?

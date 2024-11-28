@@ -1,4 +1,4 @@
 #!/bin/bash
 
 bundle install
-bundle exec sidekiq -C config/sidekiq.yml
+bin/jobs -c config/queue.yml --recurring-schedule-file=config/recurring.yml

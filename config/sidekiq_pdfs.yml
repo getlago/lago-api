@@ -1,3 +1,4 @@
+# TODO(solid_queue): Remove
 concurrency: 10
 timeout: 25
 retry: 1

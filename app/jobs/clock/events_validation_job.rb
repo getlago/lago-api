@@ -5,10 +5,11 @@ module Clock
     include SentryCronConcern
 
     queue_as 'clock'
-
-    unique :until_executed
+    limits_concurrency to: 1, key: 'post_validate_events', duration: 1.hour
 
     def perform
+      return if ActiveModel::Type::Boolean.new.cast(ENV['LAGO_DISABLE_EVENTS_VALIDATION'])
+
       # NOTE: refresh the last hour events materialized view
       Scenic.database.refresh_materialized_view(
         Events::LastHourMv.table_name,

@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  if ENV['LAGO_JOB_DASHBOARD'] == 'true'
+    mount MissionControl::Jobs::Engine, at: "/jobs"
+  end
+  # TODO(solid_queue): Remove
   mount Sidekiq::Web, at: '/sidekiq' if defined? Sidekiq::Web
+
   mount Karafka::Web::App, at: '/karafka' if ENV['KARAFKA_WEB']
   mount GraphiQL::Rails::Engine, at: '/graphiql', graphql_path: '/graphql' if Rails.env.development?
 
