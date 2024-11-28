@@ -105,18 +105,16 @@ module Customers
           customer.exclude_from_dunning_campaign = args[:exclude_from_dunning_campaign]
           customer.applied_dunning_campaign = nil if args[:exclude_from_dunning_campaign]
         end
-
-        if customer.applied_dunning_campaign_id_changed? || customer.exclude_from_dunning_campaign_changed?
-          customer.last_dunning_campaign_attempt = 0
-          customer.last_dunning_campaign_attempt_at = nil
-          customer.dunning_campaign_completed = false
-        end
       end
 
       ActiveRecord::Base.transaction do
         if old_provider_customer && args[:payment_provider].nil? && args[:payment_provider_code].present?
           old_provider_customer.discard!
           customer.payment_provider_code = nil
+        end
+
+        if customer.applied_dunning_campaign_id_changed? || customer.exclude_from_dunning_campaign_changed?
+          customer.reset_dunning_campaign!
         end
 
         customer.save!

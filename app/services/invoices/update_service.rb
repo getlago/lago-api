@@ -44,11 +44,7 @@ module Invoices
           invoice.payment_overdue = false
 
           if invoice.payment_requests.where.not(dunning_campaign_id: nil).exists?
-            invoice.customer.update!(
-              dunning_campaign_completed: false,
-              last_dunning_campaign_attempt: 0,
-              last_dunning_campaign_attempt_at: nil
-            )
+            invoice.customer.reset_dunning_campaign!
           end
         end
 
