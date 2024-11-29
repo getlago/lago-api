@@ -58,15 +58,11 @@ module Wallets
       end
 
       def ongoing_balance_cents
-        wallet.balance_cents - total_usage_amount_cents - draft_invoices_total_amount_cents + pay_in_advance_usage_amount_cents
+        wallet.balance_cents - total_usage_amount_cents - wallet.ongoing_draft_invoices_balance_cents + pay_in_advance_usage_amount_cents
       end
 
       def credits_ongoing_balance
         ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
-      end
-
-      def draft_invoices_total_amount_cents
-        wallet.customer.invoices.draft.sum(:total_amount_cents)
       end
     end
   end

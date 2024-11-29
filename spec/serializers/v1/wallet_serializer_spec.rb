@@ -28,8 +28,10 @@ RSpec.describe ::V1::WalletSerializer do
         'balance_cents' => wallet.balance_cents,
         'credits_ongoing_balance' => wallet.credits_ongoing_balance.to_s,
         'credits_ongoing_usage_balance' => wallet.credits_ongoing_usage_balance.to_s,
+        'credits_ongoing_draft_invoices_balance' => '0.0',
         'ongoing_balance_cents' => wallet.ongoing_balance_cents,
         'ongoing_usage_balance_cents' => wallet.ongoing_usage_balance_cents,
+        'ongoing_draft_invoices_balance_cents' => 0,
         'consumed_credits' => wallet.consumed_credits.to_s,
         'invoice_requires_successful_payment' => wallet.invoice_requires_successful_payment
       )
