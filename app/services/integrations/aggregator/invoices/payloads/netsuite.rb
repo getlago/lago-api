@@ -101,7 +101,7 @@ module Integrations
             {
               'item' => mapped_item.external_id,
               'account' => mapped_item.external_account_code,
-              'quantity' => fee.units,
+              'quantity' => limited_rate(fee.units),
               'rate' => limited_rate(fee.precise_unit_amount),
               'amount' => limited_rate(amount(fee.amount_cents, resource: invoice)),
               'taxdetailsreference' => fee.id
