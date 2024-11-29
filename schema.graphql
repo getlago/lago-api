@@ -3353,12 +3353,14 @@ type CustomerPortalWallet {
   consumedCredits: Float!
   creditsBalance: Float!
   creditsOngoingBalance: Float!
+  creditsOngoingDraftInvoicesBalance: Float!
   currency: CurrencyEnum!
   expirationAt: ISO8601DateTime
   id: ID!
   lastBalanceSyncAt: ISO8601DateTime
   name: String
   ongoingBalanceCents: BigInt!
+  ongoingDraftInvoicesBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
   rateAmount: Float!
   status: WalletStatusEnum!
@@ -8562,6 +8564,7 @@ type Wallet {
   createdAt: ISO8601DateTime!
   creditsBalance: Float!
   creditsOngoingBalance: Float!
+  creditsOngoingDraftInvoicesBalance: Float!
   creditsOngoingUsageBalance: Float!
   currency: CurrencyEnum!
   customer: Customer
@@ -8572,6 +8575,7 @@ type Wallet {
   lastConsumedCreditAt: ISO8601DateTime
   name: String
   ongoingBalanceCents: BigInt!
+  ongoingDraftInvoicesBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]

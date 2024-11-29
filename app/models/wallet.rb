@@ -39,6 +39,14 @@ class Wallet < ApplicationRecord
   def currency
     balance_currency
   end
+
+  def credits_ongoing_draft_invoices_balance
+    ongoing_draft_invoices_balance_cents.to_f.fdiv(ongoing_balance.currency.subunit_to_unit).fdiv(rate_amount)
+  end
+
+  def ongoing_draft_invoices_balance_cents
+    customer.invoices.draft.sum(:total_amount_cents)
+  end
 end
 
 # == Schema Information
