@@ -5,8 +5,8 @@ class ApiKey < ApplicationRecord
 
   RESOURCES = %w[
     add_on analytic billable_metric coupon applied_coupon credit_note customer_usage
-    customer fee invoice organization payment_request plan subscription lifetime_usage
-    tax wallet wallet_transaction webhook_endpoint
+    customer event fee invoice organization payment_request plan subscription lifetime_usage
+    tax wallet wallet_transaction webhook_endpoint webhook_jwt_public_key
   ].freeze
 
   MODES = %w[read write].freeze

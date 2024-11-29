@@ -12,11 +12,12 @@ module Mutations
       description 'Creates a new API key'
 
       argument :name, String, required: false
+      argument :permissions, GraphQL::Types::JSON, required: false
 
       type Types::ApiKeys::Object
 
       def resolve(**args)
-        result = ::ApiKeys::CreateService.call(args.merge(organization_id: current_organization.id))
+        result = ::ApiKeys::CreateService.call(args.merge(organization: current_organization))
 
         result.success? ? result.api_key : result_error(result)
       end

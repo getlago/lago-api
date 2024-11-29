@@ -10,8 +10,12 @@ module ApiKeys
     def call
       return result.forbidden_failure! unless License.premium?
 
+      if params[:permissions].present? && !params[:organization].premium_integrations.include?('api_permissions')
+        return result.forbidden_failure!(code: 'premium_integration_missing')
+      end
+
       api_key = ApiKey.create!(
-        params.slice(:organization_id, :name)
+        params.slice(:organization, :name, :permissions)
       )
 
       ApiKeyMailer.with(api_key:).created.deliver_later
