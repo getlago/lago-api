@@ -205,7 +205,7 @@ module PaymentRequests
 
       def deliver_error_webhook(cashfree_error)
         DeliverErrorWebhookService.call_async(payable, {
-          provider_customer_id: customer.cashfree_customer.provider_customer_id,
+          provider_customer_id: customer.cashfree_customer.id,
           provider_error: {
             message: cashfree_error.error_body,
             error_code: cashfree_error.error_code
