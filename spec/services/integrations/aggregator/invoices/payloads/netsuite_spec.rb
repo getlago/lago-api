@@ -152,6 +152,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     end
 
     let(:due_date) { invoice.payment_due_date.strftime("%-m/%-d/%Y") }
+    let(:issuing_date) { invoice.issuing_date.strftime("%-m/%-d/%Y") }
 
     let(:body) do
       {
@@ -258,7 +259,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
             'custbody_lago_id' => invoice.id,
             'custbody_ava_disable_tax_calculation' => true,
             'custbody_lago_invoice_link' => invoice_link,
-            'duedate' => due_date
+            'duedate' => due_date,
+            'trandate' => issuing_date
           }
         end
 
@@ -346,6 +348,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_link,
               'duedate' => due_date,
+              'trandate' => issuing_date,
               'nexus' => 'some_nexus'
             }
           end
@@ -368,6 +371,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_link,
               'duedate' => due_date,
+              'trandate' => issuing_date,
               'nexus' => 'some_nexus'
             }
           end
@@ -389,7 +393,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           'custbody_lago_id' => invoice.id,
           'custbody_ava_disable_tax_calculation' => true,
           'custbody_lago_invoice_link' => invoice_link,
-          'duedate' => due_date
+          'duedate' => due_date,
+          'trandate' => issuing_date
         }
       end
 
