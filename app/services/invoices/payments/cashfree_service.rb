@@ -75,6 +75,10 @@ module Invoices
         !!customer&.cashfree_customer&.id
       end
 
+      def increment_payment_attempts
+        invoice.update!(payment_attempts: invoice.payment_attempts + 1)
+      end
+
       def client
         @client ||= LagoHttpClient::Client.new(::PaymentProviders::CashfreeProvider::BASE_URL)
       end
@@ -150,7 +154,7 @@ module Invoices
 
       def deliver_error_webhook(cashfree_error)
         DeliverErrorWebhookService.call_async(invoice, {
-          provider_customer_id: customer.cashfree_customer.provider_customer_id,
+          provider_customer_id: customer.cashfree_customer.id,
           provider_error: {
             message: cashfree_error.error_body,
             error_code: cashfree_error.error_code
