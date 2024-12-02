@@ -4,7 +4,7 @@ module PaymentProviders
   module Cashfree
     module Payments
       class CreateService < BaseService
-        include Customers::PaymentProviderFinder
+        include ::Customers::PaymentProviderFinder
 
         PENDING_STATUSES = %w[PARTIALLY_PAID].freeze
         SUCCESS_STATUSES = %w[PAID].freeze
@@ -20,6 +20,10 @@ module PaymentProviders
 
         def call
           result.payment = payment
+
+          # NOTE: No need to register the payment with Cashfree Payments for the Payment Link feature.
+          # Simply create a single `Payment` record and update it upon receiving the webhook, which works perfectly fine.
+
           result
         end
 
