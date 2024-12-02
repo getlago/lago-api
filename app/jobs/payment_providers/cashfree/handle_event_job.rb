@@ -3,11 +3,13 @@
 module PaymentProviders
   module Cashfree
     class HandleEventJob < ApplicationJob
-      queue_as 'providers'
+      queue_as "providers"
 
-      def perform(event_json:)
-        result = PaymentProviders::CashfreeService.new.handle_event(event_json:)
-        result.raise_if_error!
+      def perform(organization:, event:)
+        PaymentProviders::Cashfree::HandleEventService.call!(
+          organization:,
+          event_json: event
+        )
       end
     end
   end

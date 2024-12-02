@@ -43,6 +43,8 @@ module PaymentProviders
     end
 
     def handle_incoming_webhook(organization_id:, body:, timestamp:, signature:, code: nil)
+      organization = Organization.find_by(id: organization_id)
+
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id:,
         code:,
@@ -59,33 +61,10 @@ module PaymentProviders
         return result.service_failure!(code: "webhook_error", message: "Invalid signature")
       end
 
-      PaymentProviders::Cashfree::HandleEventJob.perform_later(event_json: body)
+      PaymentProviders::Cashfree::HandleEventJob.perform_later(organization:, event: body)
 
       result.event = body
       result
-    end
-
-    def handle_event(event_json:)
-      event = JSON.parse(event_json)
-      event_type = event["type"]
-
-      case event_type
-      when "PAYMENT_LINK_EVENT"
-        link_status = event.dig("data", "link_status")
-        provider_payment_id = event.dig("data", "link_notes", "lago_invoice_id")
-
-        if LINK_STATUS_ACTIONS.include?(link_status) && !provider_payment_id.nil?
-          update_payment_status_result = Invoices::Payments::CashfreeService
-            .new.update_payment_status(
-              provider_payment_id: provider_payment_id,
-              status: link_status
-            )
-
-          return update_payment_status_result unless update_payment_status_result.success?
-        end
-      end
-
-      result.raise_if_error!
     end
   end
 end
