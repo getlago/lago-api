@@ -9,6 +9,8 @@ RSpec.describe Api::V1::Analytics::OverdueBalancesController, type: :request do
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization, created_at: DateTime.new(2023, 11, 1)) }
 
+    include_examples "requires API permission", "analytic", "read"
+
     it "returns the overdue balance" do
       travel_to(DateTime.new(2024, 1, 15)) do
         create(:invoice, customer:, organization:)

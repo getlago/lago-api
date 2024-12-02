@@ -45,6 +45,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     let(:override_amount_cents) { 777 }
     let(:override_display_name) { 'Overriden Threshold 12' }
 
+    include_examples 'requires API permission', 'subscription', 'write'
+
     it 'returns a success', :aggregate_failures do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: 'foo')
 
@@ -197,6 +199,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:external_id) { subscription.external_id }
 
+    include_examples 'requires API permission', 'subscription', 'write'
+
     it 'terminates a subscription' do
       subject
 
@@ -256,6 +260,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       subscription
       usage_threshold
     end
+
+    include_examples 'requires API permission', 'subscription', 'write'
 
     it 'updates a subscription', :aggregate_failures do
       subject
@@ -351,6 +357,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:external_id) { subscription.external_id }
 
+    include_examples 'requires API permission', 'subscription', 'read'
+
     it 'returns a subscription' do
       subject
 
@@ -395,6 +403,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     let!(:subscription) { create(:subscription, customer:, plan:) }
     let(:params) { {external_customer_id: external_customer_id} }
     let(:external_customer_id) { customer.external_id }
+
+    include_examples 'requires API permission', 'subscription', 'read'
 
     it 'returns subscriptions' do
       subject

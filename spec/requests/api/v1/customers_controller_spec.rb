@@ -21,6 +21,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'customer', 'write'
+
     it 'returns a success' do
       subject
 
@@ -243,6 +245,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:organization) { create(:organization) }
     let(:external_id) { customer.external_id }
 
+    include_examples 'requires API permission', 'customer', 'read'
+
     it 'returns the portal url' do
       subject
 
@@ -269,6 +273,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
     before { create_pair(:customer, organization:) }
 
+    include_examples 'requires API permission', 'customer', 'read'
+
     it 'returns all customers from organization' do
       subject
 
@@ -288,6 +294,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:external_id) { customer.external_id }
 
     context 'when customer exists' do
+      include_examples 'requires API permission', 'customer', 'read'
+
       it 'returns the customer' do
         subject
 
@@ -315,6 +323,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:organization) { create(:organization) }
     let!(:customer) { create(:customer, organization:) }
     let(:external_id) { customer.external_id }
+
+    include_examples 'requires API permission', 'customer', 'write'
 
     it 'deletes a customer' do
       expect { subject }.to change(Customer, :count).by(-1)
@@ -362,6 +372,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       allow(::Stripe::Checkout::Session).to receive(:create)
         .and_return({'url' => 'https://example.com'})
     end
+
+    include_examples 'requires API permission', 'customer', 'write'
 
     it 'returns the new generated checkout url' do
       subject

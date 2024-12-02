@@ -12,6 +12,8 @@ RSpec.describe Api::V1::Analytics::MrrsController, type: :request do # rubocop:d
     context 'when license is premium' do
       around { |test| lago_premium!(&test) }
 
+      include_examples 'requires API permission', 'analytic', 'read'
+
       it 'returns the mrr' do
         subject
 

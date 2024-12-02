@@ -20,6 +20,8 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'webhook_endpoint', 'write'
+
     it 'returns a success' do
       subject
 
@@ -39,6 +41,8 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
 
     before { create_pair(:webhook_endpoint, organization:) }
 
+    include_examples 'requires API permission', 'webhook_endpoint', 'read'
+
     it 'returns all webhook endpoints from organization' do
       subject
 
@@ -57,6 +61,8 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
 
     context 'with existing id' do
       let(:id) { webhook_endpoint.id }
+
+      include_examples 'requires API permission', 'webhook_endpoint', 'read'
 
       it 'returns the customer' do
         subject
@@ -86,6 +92,8 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
 
     context 'when webhook endpoint exists' do
       let(:id) { webhook_endpoint.id }
+
+      include_examples 'requires API permission', 'webhook_endpoint', 'write'
 
       it 'deletes a webhook endpoint' do
         expect { subject }.to change(WebhookEndpoint, :count).by(-1)
@@ -135,6 +143,8 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
 
     context 'when webhook endpoint exists' do
       let(:id) { webhook_endpoint.id }
+
+      include_examples 'requires API permission', 'webhook_endpoint', 'write'
 
       it 'updates a webhook endpoint' do
         subject

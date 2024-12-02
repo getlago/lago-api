@@ -13,6 +13,8 @@ RSpec.describe Api::V1::FeesController, type: :request do
     let(:fee) { create(:fee, subscription:, invoice: nil) }
     let(:fee_id) { fee.id }
 
+    include_examples 'requires API permission', 'fee', 'read'
+
     it 'returns a fee' do
       subject
 
@@ -97,6 +99,8 @@ RSpec.describe Api::V1::FeesController, type: :request do
 
     before { fee.charge.update!(invoiceable: false) }
 
+    include_examples 'requires API permission', 'fee', 'write'
+
     it 'updates the fee' do
       subject
 
@@ -148,10 +152,11 @@ RSpec.describe Api::V1::FeesController, type: :request do
       let(:fee) do
         create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice:)
       end
+      let(:invoice) { nil }
+
+      include_examples 'requires API permission', 'fee', 'write'
 
       context 'when fee does not attached to an invoice' do
-        let(:invoice) { nil }
-
         it 'deletes the fee' do
           subject
           expect(response).to have_http_status(:ok)
@@ -187,6 +192,8 @@ RSpec.describe Api::V1::FeesController, type: :request do
 
     context 'without params' do
       let(:params) { {} }
+
+      include_examples 'requires API permission', 'fee', 'read'
 
       it 'returns a list of fees' do
         subject

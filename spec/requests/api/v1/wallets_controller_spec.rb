@@ -28,6 +28,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'wallet', 'write'
+
     it 'creates a wallet' do
       subject
 
@@ -241,6 +243,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
     before { wallet }
 
+    include_examples 'requires API permission', 'wallet', 'write'
+
     it 'updates a wallet' do
       subject
 
@@ -443,6 +447,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     let(:wallet) { create(:wallet, customer:) }
     let(:id) { wallet.id }
 
+    include_examples 'requires API permission', 'wallet', 'read'
+
     it 'returns a wallet' do
       subject
 
@@ -466,6 +472,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
     let(:wallet) { create(:wallet, customer:) }
     let(:id) { wallet.id }
+
+    include_examples 'requires API permission', 'wallet', 'write'
 
     it 'terminates a wallet' do
       subject
@@ -507,6 +515,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
     let!(:wallet) { create(:wallet, customer:) }
     let(:external_id) { customer.external_id }
+
+    include_examples 'requires API permission', 'wallet', 'read'
 
     it 'returns wallets' do
       subject

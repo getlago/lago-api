@@ -24,12 +24,17 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
       }
     end
 
-    it "delegates to PaymentRequests::CreateService", :aggregate_failures do
-      payment_request = create(:payment_request, invoices: [invoice], customer:)
+    let(:payment_request) { create(:payment_request, invoices: [invoice], customer:) }
+
+    before do
       allow(PaymentRequests::CreateService).to receive(:call).and_return(
         BaseService::Result.new.tap { |r| r.payment_request = payment_request }
       )
+    end
 
+    include_examples 'requires API permission', 'payment_request', 'write'
+
+    it "delegates to PaymentRequests::CreateService", :aggregate_failures do
       subject
 
       expect(PaymentRequests::CreateService).to have_received(:call).with(
@@ -52,6 +57,8 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
     subject { get_with_token(organization, "/api/v1/payment_requests", params) }
 
     let(:params) { {} }
+
+    include_examples 'requires API permission', 'payment_request', 'read'
 
     it "returns organization's payment requests", :aggregate_failures do
       first_customer = create(:customer, organization:)

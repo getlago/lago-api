@@ -17,6 +17,8 @@ RSpec.describe Api::V1::LifetimeUsagesController, type: :request do
 
     let(:external_id) { subscription.external_id }
 
+    include_examples 'requires API permission', 'lifetime_usage', 'read'
+
     it 'returns the lifetime_usage' do
       subject
 
@@ -57,6 +59,8 @@ RSpec.describe Api::V1::LifetimeUsagesController, type: :request do
     let(:update_params) { {external_historical_usage_amount_cents: 20} }
 
     context 'when subscription exists' do
+      include_examples 'requires API permission', 'lifetime_usage', 'write'
+
       it 'updates the lifetime_usage' do
         subject
 

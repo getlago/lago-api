@@ -21,6 +21,8 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'add_on', 'write'
+
     it 'creates a add-on' do
       subject
 
@@ -45,6 +47,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     let(:add_on_applied_tax) { create(:add_on_applied_tax, add_on:, tax:) }
     let(:code) { 'add_on_code' }
     let(:tax2) { create(:tax, organization:) }
+
     let(:update_params) do
       {
         name: 'add_on1',
@@ -58,6 +61,8 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     before { add_on_applied_tax }
+
+    include_examples 'requires API permission', 'add_on', 'write'
 
     it 'updates an add-on' do
       subject
@@ -84,7 +89,6 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
 
       it 'returns unprocessable_entity error' do
         subject
-
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
@@ -95,6 +99,8 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
 
     let(:add_on) { create(:add_on, organization:) }
     let(:add_on_code) { add_on.code }
+
+    include_examples 'requires API permission', 'add_on', 'read'
 
     it 'returns a add-on' do
       subject
@@ -120,6 +126,8 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
 
     let!(:add_on) { create(:add_on, organization:) }
     let(:add_on_code) { add_on.code }
+
+    include_examples 'requires API permission', 'add_on', 'write'
 
     it 'deletes a add-on' do
       expect { subject }.to change(AddOn, :count).by(-1)
@@ -150,6 +158,8 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     let(:params) { {} }
 
     before { create(:add_on_applied_tax, add_on:, tax:) }
+
+    include_examples 'requires API permission', 'add_on', 'read'
 
     it 'returns add-ons' do
       subject

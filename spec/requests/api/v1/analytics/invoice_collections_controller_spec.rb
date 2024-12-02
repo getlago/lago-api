@@ -12,6 +12,8 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController, type: :request 
     context 'when licence is premium' do
       around { |test| lago_premium!(&test) }
 
+      include_examples 'requires API permission', 'analytic', 'read'
+
       it 'returns the gross revenue' do
         subject
 

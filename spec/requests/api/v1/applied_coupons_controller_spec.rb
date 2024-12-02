@@ -21,6 +21,8 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
 
     before { create(:subscription, customer:) }
 
+    include_examples 'requires API permission', 'applied_coupon', 'write'
+
     it 'returns a success' do
       subject
 
@@ -69,6 +71,8 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
     before do
       create(:credit, applied_coupon:, amount_cents: 2, amount_currency: customer.currency)
     end
+
+    include_examples 'requires API permission', 'applied_coupon', 'read'
 
     it 'returns applied coupons' do
       subject

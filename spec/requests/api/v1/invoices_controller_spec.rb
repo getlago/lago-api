@@ -36,6 +36,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'invoice', 'write'
+
     it 'creates an invoice' do
       subject
 
@@ -103,6 +105,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       {payment_status: 'succeeded'}
     end
 
+    include_examples 'requires API permission', 'invoice', 'write'
+
     it 'updates an invoice' do
       subject
 
@@ -155,6 +159,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
+
+    include_examples 'requires API permission', 'invoice', 'read'
 
     it 'returns an invoice' do
       charge_filter = create(:charge_filter)
@@ -257,6 +263,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     context 'without params' do
       let(:params) { {} }
       let!(:invoice) { create(:invoice, :draft, customer:, organization:) }
+
+      include_examples 'requires API permission', 'invoice', 'read'
 
       it 'returns invoices' do
         subject
@@ -492,6 +500,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     context 'when invoice is draft' do
       let(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
+      include_examples 'requires API permission', 'invoice', 'write'
+
       it 'updates the invoice' do
         expect { subject }.to change { invoice.reload.updated_at }
       end
@@ -545,6 +555,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice is draft' do
+      include_examples 'requires API permission', 'invoice', 'write'
+
       it 'finalizes the invoice' do
         expect { subject }.to change { invoice.reload.status }.from('draft').to('finalized')
       end
@@ -608,6 +620,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       context 'when the payment status is not succeeded' do
         let(:payment_status) { [:pending, :failed].sample }
 
+        include_examples 'requires API permission', 'invoice', 'write'
+
         it 'voids the invoice' do
           expect { subject }.to change { invoice.reload.status }.from('finalized').to('voided')
         end
@@ -643,6 +657,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
       context 'when invoice is finalized' do
         let(:status) { :finalized }
+
+        include_examples 'requires API permission', 'invoice', 'write'
 
         it 'marks the dispute as lost' do
           expect { subject }.to change { invoice.reload.payment_dispute_lost_at }.from(nil)
@@ -691,6 +707,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     let(:invoice) { create(:invoice, :draft, customer:, organization:) }
     let(:invoice_id) { invoice.id }
 
+    include_examples 'requires API permission', 'invoice', 'write'
+
     context 'when invoice is draft' do
       it 'returns not found' do
         subject
@@ -710,6 +728,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       allow(Invoices::Payments::RetryService).to receive(:new).and_return(retry_service)
       allow(retry_service).to receive(:call).and_return(BaseService::Result.new)
     end
+
+    include_examples 'requires API permission', 'invoice', 'write'
 
     it 'calls retry service' do
       subject
@@ -755,6 +775,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       allow(retry_service).to receive(:call).and_return(result)
     end
 
+    include_examples 'requires API permission', 'invoice', 'write'
+
     it 'calls retry service' do
       subject
 
@@ -799,6 +821,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice exists' do
+      include_examples 'requires API permission', 'invoice', 'write'
+
       it 'calls sync salesforce id service' do
         subject
 
@@ -843,6 +867,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context 'when invoice exists' do
+      include_examples 'requires API permission', 'invoice', 'write'
+
       it 'returns the generated payment url' do
         subject
 

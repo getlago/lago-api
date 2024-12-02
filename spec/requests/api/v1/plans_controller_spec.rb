@@ -63,6 +63,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
     context 'when interval is present' do
       let(:interval) { 'weekly' }
 
+      include_examples 'requires API permission', 'plan', 'write'
+
       it 'creates a plan' do
         subject
 
@@ -314,6 +316,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'plan', 'write'
+
     it 'updates a plan' do
       subject
 
@@ -537,6 +541,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
     let(:plan) { create(:plan, organization:) }
     let(:plan_code) { plan.code }
 
+    include_examples 'requires API permission', 'plan', 'read'
+
     it 'returns a plan' do
       subject
 
@@ -590,6 +596,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
     let(:plan) { create(:plan, organization:) }
     let(:plan_code) { plan.code }
 
+    include_examples 'requires API permission', 'plan', 'write'
+
     context 'when plan exists' do
       it 'marks plan as pending_deletion' do
         expect { subject }.to change { plan.reload.pending_deletion }.from(false).to(true)
@@ -627,6 +635,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
     let(:plan) { create(:plan, organization:) }
 
     before { create(:usage_threshold, plan:) }
+
+    include_examples 'requires API permission', 'plan', 'read'
 
     it 'returns plans' do
       subject

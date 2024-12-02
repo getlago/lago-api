@@ -31,6 +31,8 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'wallet_transaction', 'write'
+
     it 'creates a wallet transactions' do
       subject
 
@@ -117,6 +119,8 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       wallet_transaction_second
       wallet_transaction_third
     end
+
+    include_examples 'requires API permission', 'wallet_transaction', 'read'
 
     it 'returns wallet transactions' do
       subject
