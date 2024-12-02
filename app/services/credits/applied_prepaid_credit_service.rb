@@ -10,7 +10,9 @@ module Credits
     end
 
     def call
-      return result if already_applied?
+      if already_applied?
+        return result.service_failure!(code: 'already_applied', message: 'Prepaid credits already applied')
+      end
 
       amount_cents = compute_amount
       amount = compute_amount_from_cents(amount_cents)
