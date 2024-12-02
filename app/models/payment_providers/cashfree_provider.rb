@@ -2,9 +2,11 @@
 
 module PaymentProviders
   class CashfreeProvider < BaseProvider
-    SUCCESS_REDIRECT_URL = 'https://cashfree.com/'
+    CashfreePayment = Data.define(:id, :status, :metadata)
+
+    SUCCESS_REDIRECT_URL = "https://cashfree.com/"
     API_VERSION = "2023-08-01"
-    BASE_URL = (Rails.env.production? ? 'https://api.cashfree.com/pg/links' : 'https://sandbox.cashfree.com/pg/links')
+    BASE_URL = (Rails.env.production? ? "https://api.cashfree.com/pg/links" : "https://sandbox.cashfree.com/pg/links")
 
     validates :client_id, presence: true
     validates :client_secret, presence: true

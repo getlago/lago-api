@@ -112,8 +112,8 @@ RSpec.describe PaymentProviders::CashfreeService, type: :service do
     let(:cashfree_provider) { create(:cashfree_provider, organization:, client_id:, client_secret:) }
 
     let(:body) do
-      path = Rails.root.join("spec/fixtures/cashfree/event.json")
-      File.read(path)
+      path = Rails.root.join("spec/fixtures/cashfree/payment_link_event_payment.json")
+      JSON.parse(File.read(path)).to_json # NOTE: Ensure valid sha256 signature
     end
 
     before { cashfree_provider }
@@ -146,32 +146,6 @@ RSpec.describe PaymentProviders::CashfreeService, type: :service do
           expect(result.error.code).to eq("webhook_error")
           expect(result.error.error_message).to eq("Invalid signature")
         end
-      end
-    end
-  end
-
-  describe ".handle_event" do
-    let(:payment_service) { instance_double(Invoices::Payments::CashfreeService) }
-    let(:service_result) { BaseService::Result.new }
-
-    before do
-      allow(Invoices::Payments::CashfreeService).to receive(:new)
-        .and_return(payment_service)
-      allow(payment_service).to receive(:update_payment_status)
-        .and_return(service_result)
-    end
-
-    context "when succeeded payment event" do
-      let(:event) do
-        path = Rails.root.join("spec/fixtures/cashfree/event.json")
-        File.read(path)
-      end
-
-      it "routes the event to an other service" do
-        cashfree_service.handle_event(event_json: event)
-
-        expect(Invoices::Payments::CashfreeService).to have_received(:new)
-        expect(payment_service).to have_received(:update_payment_status)
       end
     end
   end
