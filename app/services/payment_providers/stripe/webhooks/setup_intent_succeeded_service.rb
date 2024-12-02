@@ -4,7 +4,7 @@ module PaymentProviders
   module Stripe
     module Webhooks
       class SetupIntentSucceededService < BaseService
-        include Customers::PaymentProviderFinder
+        include ::Customers::PaymentProviderFinder
 
         def call
           return result if stripe_customer_id.nil?
@@ -21,7 +21,7 @@ module PaymentProviders
           result.stripe_customer = stripe_customer
           result
         rescue ::Stripe::PermissionError => e
-          result.service_failure!(code: 'stripe_error', message: e.message)
+          result.service_failure!(code: "stripe_error", message: e.message)
         end
 
         private

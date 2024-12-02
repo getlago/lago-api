@@ -289,7 +289,7 @@ module Customers
 
       if billing.key?(:payment_provider)
         customer.payment_provider = nil
-        if %w[stripe gocardless adyen].include?(billing[:payment_provider])
+        if Customer::PAYMENT_PROVIDERS.include?(billing[:payment_provider])
           customer.payment_provider = billing[:payment_provider]
           customer.payment_provider_code = billing[:payment_provider_code] if billing.key?(:payment_provider_code)
         end
@@ -312,23 +312,13 @@ module Customers
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
-      provider_class = case billing_configuration[:payment_provider] || customer.payment_provider
-      when "stripe"
-        PaymentProviderCustomers::StripeCustomer
-      when "gocardless"
-        PaymentProviderCustomers::GocardlessCustomer
-      when "adyen"
-        PaymentProviderCustomers::AdyenCustomer
-      end
-
-      create_result = PaymentProviderCustomers::CreateService.new(customer).create_or_update(
-        customer_class: provider_class,
+      PaymentProviders::CreateCustomerFactory.new_instance(
+        provider: billing_configuration[:payment_provider] || customer.payment_provider,
+        customer:,
         payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration,
         async: !(billing_configuration || {})[:sync]
-      )
-
-      create_result.raise_if_error!
+      ).call.raise_if_error!
     end
 
     def track_customer_created(customer)
