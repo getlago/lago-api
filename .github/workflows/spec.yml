@@ -48,6 +48,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: install psql
+        run: sudo apt install postgresql-client
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:

@@ -23,6 +23,8 @@ module LagoApi
     ]
 
     config.api_only = true
+
+    config.active_record.schema_format = :sql
     config.active_job.queue_adapter = :sidekiq
 
     # Configuration for active record encryption
