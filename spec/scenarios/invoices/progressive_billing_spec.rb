@@ -22,11 +22,11 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
 
   def ingest_event(subscription, amount)
     create_event({
-                   transaction_id: SecureRandom.uuid,
-                   code: billable_metric.code,
-                   external_subscription_id: subscription.external_id,
-                   properties: { 'total' => amount }
-                 })
+      transaction_id: SecureRandom.uuid,
+      code: billable_metric.code,
+      external_subscription_id: subscription.external_id,
+      properties: {'total' => amount}
+    })
     perform_usage_update
   end
 
@@ -161,7 +161,7 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
       expect(progressive_invoice.total_amount_cents).to eq(60000)
     end
 
-    travel_to time_0 + 2.month do
+    travel_to time_0 + 2.months do
       perform_finalize_refresh
       perform_billing
       expect(Invoice.count).to eq(3)

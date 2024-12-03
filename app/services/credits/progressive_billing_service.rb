@@ -16,7 +16,7 @@ module Credits
         # We can use invoice_subscription.charges_from_datetime as we're looking for the progressive billing invoices
         # that are associated to a subscription with boundaries charges_from_datetime <= timestamp; charges_to_datetime > timestamp
         progressive_billed_result = Subscriptions::ProgressiveBilledAmount.call(subscription:,
-                                                                                timestamp: invoice_subscription.charges_from_datetime).raise_if_error!
+          timestamp: invoice_subscription.charges_from_datetime).raise_if_error!
         progressive_billing_invoice = progressive_billed_result.progressive_billing_invoice
 
         next unless progressive_billing_invoice
