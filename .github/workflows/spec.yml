@@ -48,8 +48,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: install psql
-        run: sudo apt install postgresql-client
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
@@ -62,10 +60,6 @@ jobs:
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
       - name: Set up Postgres database schema
-        run: bin/rails db:schema:load:primary
-      - name: Set up Clickhouse database schema
-        run: bin/rails db:migrate:clickhouse
-      - name: Dump Clickhouse database schema
-        run: bin/rails db:schema:dump:clickhouse
+        run: bin/rails db:schema:load
       - name: Run tests
         run: bundle exec rspec
