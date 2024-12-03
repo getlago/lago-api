@@ -10,7 +10,11 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
   before { subscription }
 
-  describe 'create' do
+  describe 'POST /api/v1/wallets' do
+    subject do
+      post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+    end
+
     let(:create_params) do
       {
         external_customer_id: customer.external_id,
@@ -25,7 +29,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     it 'creates a wallet' do
-      post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -55,7 +59,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
       before do
         allow(WalletTransactions::CreateJob).to receive(:perform_later).and_call_original
-        post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+        subject
       end
 
       it 'schedules a WalletTransactions::CreateJob with correct parameters' do
@@ -94,7 +98,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+        subject
 
         recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -130,7 +134,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
 
         it 'follows the wallet configuration to create the rule' do
-          post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+          subject
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -164,7 +168,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
 
         it 'follows the wallet configuration to create the rule' do
-          post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+          subject
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -201,7 +205,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         let(:transaction_metadata) { [{key: 'valid_value', value: 'also_valid'}] }
 
         it 'create the rule with correct metadata' do
-          post_with_token(organization, '/api/v1/wallets', {wallet: create_params})
+          subject
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -215,8 +219,17 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
   end
 
-  describe 'update' do
+  describe 'PUT /api/v1/wallets/:id' do
+    subject do
+      put_with_token(
+        organization,
+        "/api/v1/wallets/#{id}",
+        {wallet: update_params}
+      )
+    end
+
     let(:wallet) { create(:wallet, customer:) }
+    let(:id) { wallet.id }
     let(:expiration_at) { (Time.current + 1.year).iso8601 }
     let(:update_params) do
       {
@@ -229,11 +242,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     before { wallet }
 
     it 'updates a wallet' do
-      put_with_token(
-        organization,
-        "/api/v1/wallets/#{wallet.id}",
-        {wallet: update_params}
-      )
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -246,9 +255,10 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     context 'when wallet does not exist' do
-      it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/wallets/invalid', {wallet: update_params})
+      let(:id) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
@@ -278,11 +288,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       before { recurring_transaction_rule }
 
       it 'returns a success' do
-        put_with_token(
-          organization,
-          "/api/v1/wallets/#{wallet.id}",
-          {wallet: update_params}
-        )
+        subject
 
         recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -323,11 +329,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         let(:update_transaction_metadata) { [{key: 'update_key', value: 'update_value'}] }
 
         it 'updates the rule' do
-          put_with_token(
-            organization,
-            "/api/v1/wallets/#{wallet.id}",
-            {wallet: update_params}
-          )
+          subject
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
           aggregate_failures do
@@ -361,11 +363,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           let(:rule_id) { recurring_transaction_rule.id }
 
           it 'updates the wallet and the rule' do
-            put_with_token(
-              organization,
-              "/api/v1/wallets/#{wallet.id}",
-              {wallet: update_params}
-            )
+            subject
 
             recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -384,11 +382,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           let(:rule_id) { 'does not exists in the db' }
 
           it 'create a new rule and follow the new wallet configuration' do
-            put_with_token(
-              organization,
-              "/api/v1/wallets/#{wallet.id}",
-              {wallet: update_params}
-            )
+            subject
 
             recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -425,11 +419,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
           it 'create a new rule and ignores wallet configuration' do
             expect(wallet.invoice_requires_successful_payment).to eq(true)
-            put_with_token(
-              organization,
-              "/api/v1/wallets/#{wallet.id}",
-              {wallet: update_params}
-            )
+
+            subject
 
             recurring_rules = json[:wallet][:recurring_transaction_rules]
 
@@ -446,16 +437,14 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
   end
 
-  describe 'show' do
-    let(:wallet) { create(:wallet, customer:) }
+  describe 'GET /api/v1/wallets/:id' do
+    subject { get_with_token(organization, "/api/v1/wallets/#{id}") }
 
-    before { wallet }
+    let(:wallet) { create(:wallet, customer:) }
+    let(:id) { wallet.id }
 
     it 'returns a wallet' do
-      get_with_token(
-        organization,
-        "/api/v1/wallets/#{wallet.id}"
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:wallet][:lago_id]).to eq(wallet.id)
@@ -463,27 +452,28 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     context 'when wallet does not exist' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/wallets/555')
+      let(:id) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'terminate' do
-    let(:wallet) { create(:wallet, customer:) }
+  describe 'DELETE /api/v1/wallets/:id' do
+    subject { delete_with_token(organization, "/api/v1/wallets/#{id}") }
 
-    before { wallet }
+    let(:wallet) { create(:wallet, customer:) }
+    let(:id) { wallet.id }
 
     it 'terminates a wallet' do
-      delete_with_token(organization, "/api/v1/wallets/#{wallet.id}")
-
+      subject
       expect(wallet.reload.status).to eq('terminated')
     end
 
     it 'returns terminated wallet' do
-      delete_with_token(organization, "/api/v1/wallets/#{wallet.id}")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:wallet][:lago_id]).to eq(wallet.id)
@@ -491,30 +481,35 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     context 'when wallet does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, '/api/v1/wallets/invalid')
+      let(:id) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when wallet id does not belong to the current organization' do
-      it 'returns a not found error' do
-        other_wallet = create(:wallet)
-        delete_with_token(organization, "/api/v1/wallets/#{other_wallet.id}")
+      let(:other_org_wallet) { create(:wallet) }
+      let(:id) { other_org_wallet.id }
 
+      it 'returns a not found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'index' do
-    let(:wallet) { create(:wallet, customer:) }
+  describe 'GET /api/v1/wallets' do
+    subject do
+      get_with_token(organization, "/api/v1/wallets?external_customer_id=#{external_id}&page=1&per_page=1")
+    end
 
-    before { wallet }
+    let!(:wallet) { create(:wallet, customer:) }
+    let(:external_id) { customer.external_id }
 
     it 'returns wallets' do
-      get_with_token(organization, "/api/v1/wallets?external_customer_id=#{customer.external_id}")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:wallets].count).to eq(1)
@@ -524,12 +519,10 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     context 'with pagination' do
-      let(:wallet2) { create(:wallet, customer:) }
-
-      before { wallet2 }
+      before { create(:wallet, customer:) }
 
       it 'returns wallets with correct meta data' do
-        get_with_token(organization, "/api/v1/wallets?external_customer_id=#{customer.external_id}&page=1&per_page=1")
+        subject
 
         expect(response).to have_http_status(:success)
 
@@ -543,10 +536,11 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     context 'when external_customer_id does not belong to the current organization' do
-      it 'returns a not found error' do
-        other_customer = create(:customer)
-        get_with_token(organization, "/api/v1/wallets?external_customer_id=#{other_customer.external_id}")
+      let(:other_org_customer) { create(:customer) }
+      let(:external_id) { other_org_customer.external_id }
 
+      it 'returns a not found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end

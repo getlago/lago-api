@@ -3,7 +3,9 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::CustomersController, type: :request do
-  describe 'create' do
+  describe 'POST /api/v1/customers' do
+    subject { post_with_token(organization, '/api/v1/customers', {customer: create_params}) }
+
     let(:organization) { stripe_provider.organization }
     let(:stripe_provider) { create(:stripe_provider) }
     let(:create_params) do
@@ -20,7 +22,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
 
     it 'returns a success' do
-      post_with_token(organization, '/api/v1/customers', {customer: create_params})
+      subject
 
       expect(response).to have_http_status(:success)
 
@@ -49,13 +51,10 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/customers', {customer: create_params})
+        subject
 
         expect(response).to have_http_status(:success)
-
-        aggregate_failures do
-          expect(json[:customer][:timezone]).to eq(create_params[:timezone])
-        end
+        expect(json[:customer][:timezone]).to eq(create_params[:timezone])
       end
     end
 
@@ -68,7 +67,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/customers', {customer: create_params})
+        subject
+
         expect(response).to have_http_status(:success)
         expect(json[:customer][:finalize_zero_amount_invoice]).to eq("skip")
       end
@@ -99,7 +99,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         allow(::Stripe::Checkout::Session).to receive(:create)
           .and_return({'url' => 'https://example.com'})
 
-        post_with_token(organization, '/api/v1/customers', {customer: create_params})
+        subject
       end
 
       context 'when provider payment methods are not present' do
@@ -207,7 +207,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
 
       it 'returns a success' do
-        post_with_token(organization, '/api/v1/customers', {customer: create_params})
+        subject
 
         expect(response).to have_http_status(:success)
 
@@ -230,22 +230,21 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
 
       it 'returns an unprocessable_entity' do
-        post_with_token(organization, '/api/v1/customers', {customer: create_params})
-
+        subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'GET /customers/:customer_external_id/portal_url' do
+  describe 'GET /api/v1/customers/:customer_external_id/portal_url' do
+    subject { get_with_token(organization, "/api/v1/customers/#{external_id}/portal_url") }
+
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
+    let(:external_id) { customer.external_id }
 
     it 'returns the portal url' do
-      get_with_token(
-        organization,
-        "/api/v1/customers/#{customer.external_id}/portal_url"
-      )
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -257,25 +256,21 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       let(:customer) { create(:customer) }
 
       it 'returns not found error' do
-        get_with_token(
-          organization,
-          "/api/v1/customers/#{customer.external_id}/portal_url"
-        )
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /customers' do
+  describe 'GET /api/v1/customers' do
+    subject { get_with_token(organization, '/api/v1/customers') }
+
     let(:organization) { create(:organization) }
 
-    before do
-      create_list(:customer, 2, organization:)
-    end
+    before { create_pair(:customer, organization:) }
 
     it 'returns all customers from organization' do
-      get_with_token(organization, '/api/v1/customers')
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:ok)
@@ -285,49 +280,48 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
   end
 
-  describe 'GET /customers/:customer_id' do
+  describe 'GET /api/v1/customers/:customer_id' do
+    subject { get_with_token(organization, "/api/v1/customers/#{external_id}") }
+
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
+    let(:external_id) { customer.external_id }
 
-    before do
-      customer
-    end
+    context 'when customer exists' do
+      it 'returns the customer' do
+        subject
 
-    it 'returns the customer' do
-      get_with_token(
-        organization,
-        "/api/v1/customers/#{customer.external_id}"
-      )
-
-      aggregate_failures do
-        expect(response).to have_http_status(:ok)
-        expect(json[:customer][:lago_id]).to eq(customer.id)
-        expect(json[:customer][:taxes]).not_to be_nil
+        aggregate_failures do
+          expect(response).to have_http_status(:ok)
+          expect(json[:customer][:lago_id]).to eq(customer.id)
+          expect(json[:customer][:taxes]).not_to be_nil
+        end
       end
     end
 
-    context 'with not existing external_id' do
-      it 'returns a not found error' do
-        get_with_token(organization, '/api/v1/customers/foobar')
+    context 'when customer does not exist' do
+      let(:external_id) { SecureRandom.uuid }
 
+      it 'returns a not found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'DELETE /customers/:customer_id' do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+  describe 'DELETE /api/v1/customers/:customer_id' do
+    subject { delete_with_token(organization, "/api/v1/customers/#{external_id}") }
 
-    before { customer }
+    let(:organization) { create(:organization) }
+    let!(:customer) { create(:customer, organization:) }
+    let(:external_id) { customer.external_id }
 
     it 'deletes a customer' do
-      expect { delete_with_token(organization, "/api/v1/customers/#{customer.external_id}") }
-        .to change(Customer, :count).by(-1)
+      expect { subject }.to change(Customer, :count).by(-1)
     end
 
     it 'returns deleted customer' do
-      delete_with_token(organization, "/api/v1/customers/#{customer.external_id}")
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -338,15 +332,20 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
 
     context 'when customer does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, '/api/v1/customers/invalid')
+      let(:external_id) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'POST /customers/:external_customer_id/checkout_url' do
+  describe 'POST /api/v1/customers/:external_customer_id/checkout_url' do
+    subject do
+      post_with_token(organization, "/api/v1/customers/#{customer.external_id}/checkout_url")
+    end
+
     let(:organization) { create(:organization) }
     let(:stripe_provider) { create(:stripe_provider, organization:) }
     let(:customer) { create(:customer, organization:) }
@@ -358,14 +357,14 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         payment_provider: stripe_provider
       )
 
-      customer.update(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)
+      customer.update!(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)
 
       allow(::Stripe::Checkout::Session).to receive(:create)
         .and_return({'url' => 'https://example.com'})
     end
 
     it 'returns the new generated checkout url' do
-      post_with_token(organization, "/api/v1/customers/#{customer.external_id}/checkout_url")
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)

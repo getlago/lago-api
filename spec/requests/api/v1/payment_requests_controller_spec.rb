@@ -5,7 +5,15 @@ require "rails_helper"
 RSpec.describe Api::V1::PaymentRequestsController, type: :request do
   let(:organization) { create(:organization) }
 
-  describe "create" do
+  describe "POST /api/v1/payment_requests" do
+    subject do
+      post_with_token(
+        organization,
+        "/api/v1/payment_requests",
+        {payment_request: params}
+      )
+    end
+
     let(:customer) { create(:customer, organization:) }
     let(:invoice) { create(:invoice, organization:, customer:) }
     let(:params) do
@@ -22,7 +30,7 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
         BaseService::Result.new.tap { |r| r.payment_request = payment_request }
       )
 
-      post_with_token(organization, "/api/v1/payment_requests", {payment_request: params})
+      subject
 
       expect(PaymentRequests::CreateService).to have_received(:call).with(
         organization:,
@@ -40,14 +48,18 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
     end
   end
 
-  describe "index" do
+  describe "GET /api/v1/payment_requests" do
+    subject { get_with_token(organization, "/api/v1/payment_requests", params) }
+
+    let(:params) { {} }
+
     it "returns organization's payment requests", :aggregate_failures do
       first_customer = create(:customer, organization:)
       second_customer = create(:customer, organization:)
       first_payment_request = create(:payment_request, customer: first_customer)
       second_payment_request = create(:payment_request, customer: second_customer)
 
-      get_with_token(organization, "/api/v1/payment_requests")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:payment_requests].count).to eq(2)
@@ -58,11 +70,15 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
     end
 
     context "with a not found customer", :aggregate_failures do
+      let(:params) { {external_customer_id: SecureRandom.uuid} }
+
+      before do
+        customer = create(:customer, organization:)
+        create(:payment_request, customer:)
+      end
+
       it "returns an empty result" do
-        get_with_token(
-          organization,
-          "/api/v1/payment_requests?external_customer_id=unknown"
-        )
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:payment_requests]).to be_empty
@@ -70,6 +86,7 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
     end
 
     context "with customer" do
+      let(:params) { {external_customer_id: customer.external_id} }
       let(:customer) { create(:customer, organization:) }
 
       it "returns customer's payment requests", :aggregate_failures do
@@ -78,10 +95,7 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
         create(:payment_request_applied_invoice, invoice:, payment_request: first_payment_request)
         create(:payment_request)
 
-        get_with_token(
-          organization,
-          "/api/v1/payment_requests?external_customer_id=#{customer.external_id}"
-        )
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:payment_requests].map { |r| r[:lago_id] }).to contain_exactly(

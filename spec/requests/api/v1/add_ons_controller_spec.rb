@@ -6,7 +6,9 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
   let(:organization) { create(:organization) }
   let(:tax) { create(:tax, organization:) }
 
-  describe 'create' do
+  describe 'POST /api/v1/add_ons' do
+    subject { post_with_token(organization, '/api/v1/add_ons', {add_on: create_params}) }
+
     let(:create_params) do
       {
         name: 'add_on1',
@@ -20,7 +22,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     it 'creates a add-on' do
-      post_with_token(organization, '/api/v1/add_ons', {add_on: create_params})
+      subject
 
       expect(response).to have_http_status(:success)
 
@@ -33,8 +35,13 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
   end
 
-  describe 'update' do
+  describe 'PUT /api/v1/add_ons/:code' do
+    subject do
+      put_with_token(organization, "/api/v1/add_ons/#{add_on_code}", {add_on: update_params})
+    end
+
     let(:add_on) { create(:add_on, organization:) }
+    let(:add_on_code) { add_on.code }
     let(:add_on_applied_tax) { create(:add_on_applied_tax, add_on:, tax:) }
     let(:code) { 'add_on_code' }
     let(:tax2) { create(:tax, organization:) }
@@ -53,11 +60,7 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     before { add_on_applied_tax }
 
     it 'updates an add-on' do
-      put_with_token(
-        organization,
-        "/api/v1/add_ons/#{add_on.code}",
-        {add_on: update_params}
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:add_on][:lago_id]).to eq(add_on.id)
@@ -67,39 +70,34 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     context 'when add-on does not exist' do
-      it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/add_ons/invalid', {add_on: update_params})
+      let(:add_on_code) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when add-on code already exists in organization scope (validation error)' do
-      let(:add_on2) { create(:add_on, organization:) }
+      let!(:add_on2) { create(:add_on, organization:) }
       let(:code) { add_on2.code }
 
-      before { add_on2 }
-
       it 'returns unprocessable_entity error' do
-        put_with_token(
-          organization,
-          "/api/v1/add_ons/#{add_on.code}",
-          {add_on: update_params}
-        )
+        subject
 
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'show' do
+  describe 'GET /api/v1/add_ons/:code' do
+    subject { get_with_token(organization, "/api/v1/add_ons/#{add_on_code}") }
+
     let(:add_on) { create(:add_on, organization:) }
+    let(:add_on_code) { add_on.code }
 
     it 'returns a add-on' do
-      get_with_token(
-        organization,
-        "/api/v1/add_ons/#{add_on.code}"
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:add_on][:lago_id]).to eq(add_on.id)
@@ -108,26 +106,27 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     context 'when add-on does not exist' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/add_ons/555')
+      let(:add_on_code) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'destroy' do
-    let(:add_on) { create(:add_on, organization:) }
+  describe 'DELETE /api/v1/add_ons/:code' do
+    subject { delete_with_token(organization, "/api/v1/add_ons/#{add_on_code}") }
 
-    before { add_on }
+    let!(:add_on) { create(:add_on, organization:) }
+    let(:add_on_code) { add_on.code }
 
     it 'deletes a add-on' do
-      expect { delete_with_token(organization, "/api/v1/add_ons/#{add_on.code}") }
-        .to change(AddOn, :count).by(-1)
+      expect { subject }.to change(AddOn, :count).by(-1)
     end
 
     it 'returns deleted add-on' do
-      delete_with_token(organization, "/api/v1/add_ons/#{add_on.code}")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:add_on][:lago_id]).to eq(add_on.id)
@@ -135,22 +134,25 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     context 'when add-on does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, '/api/v1/add_ons/invalid')
+      let(:add_on_code) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'index' do
-    let(:add_on) { create(:add_on, organization:) }
-    let(:add_on_applied_tax) { create(:add_on_applied_tax, add_on:, tax:) }
+  describe 'GET /api/v1/add_ons' do
+    subject { get_with_token(organization, '/api/v1/add_ons', params) }
 
-    before { add_on_applied_tax }
+    let(:add_on) { create(:add_on, organization:) }
+    let(:params) { {} }
+
+    before { create(:add_on_applied_tax, add_on:, tax:) }
 
     it 'returns add-ons' do
-      get_with_token(organization, '/api/v1/add_ons')
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:add_ons].count).to eq(1)
@@ -161,12 +163,12 @@ RSpec.describe Api::V1::AddOnsController, type: :request do
     end
 
     context 'with pagination' do
-      let(:add_on2) { create(:add_on, organization:) }
+      let(:params) { {page: 1, per_page: 1} }
 
-      before { add_on2 }
+      before { create(:add_on, organization:) }
 
       it 'returns add-ons with correct meta data' do
-        get_with_token(organization, '/api/v1/add_ons?page=1&per_page=1')
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:add_ons].count).to eq(1)

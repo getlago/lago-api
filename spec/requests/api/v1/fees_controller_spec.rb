@@ -5,13 +5,16 @@ require 'rails_helper'
 RSpec.describe Api::V1::FeesController, type: :request do
   let(:organization) { create(:organization) }
 
-  describe 'GET /fees/:id' do
+  describe 'GET /api/v1/fees/:id' do
+    subject { get_with_token(organization, "/api/v1/fees/#{fee_id}") }
+
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
     let(:fee) { create(:fee, subscription:, invoice: nil) }
+    let(:fee_id) { fee.id }
 
     it 'returns a fee' do
-      get_with_token(organization, "/api/v1/fees/#{fee.id}")
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -38,7 +41,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
       let(:fee) { create(:add_on_fee, invoice:) }
 
       it 'returns a fee' do
-        get_with_token(organization, "/api/v1/fees/#{fee.id}")
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -61,10 +64,11 @@ RSpec.describe Api::V1::FeesController, type: :request do
       end
     end
 
-    context 'when fee does not exsits' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/fees/foo')
+    context 'when fee does not exist' do
+      let(:fee_id) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
@@ -73,17 +77,20 @@ RSpec.describe Api::V1::FeesController, type: :request do
       let(:fee) { create(:fee) }
 
       it 'returns not found' do
-        get_with_token(organization, "/api/v1/fee/#{fee.id}")
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'PUT /fees/:id' do
+  describe 'PUT /api/v1/fees/:id' do
+    subject { put_with_token(organization, "/api/v1/fees/#{fee_id}", fee: update_params) }
+
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
     let(:update_params) { {payment_status: 'succeeded'} }
+    let(:fee_id) { fee.id }
+
     let(:fee) do
       create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice: nil)
     end
@@ -91,7 +98,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
     before { fee.charge.update!(invoiceable: false) }
 
     it 'updates the fee' do
-      put_with_token(organization, "/api/v1/fees/#{fee.id}", fee: update_params)
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -120,62 +127,84 @@ RSpec.describe Api::V1::FeesController, type: :request do
     end
 
     context 'when fee does not exist' do
-      it 'returns not found' do
-        put_with_token(organization, '/api/v1/fees/foo', fee: update_params)
+      let(:fee_id) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'DELETE /fees/:id' do
+  describe 'DELETE /api/v1/fees/:id' do
+    subject { delete_with_token(organization, "/api/v1/fees/#{fee_id}") }
+
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
     let(:update_params) { {payment_status: 'succeeded'} }
-    let(:fee) do
-      create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice: nil)
-    end
+    let(:fee_id) { fee.id }
 
-    context 'when fee exist' do
-      it 'deletes the fee' do
-        delete_with_token(organization, "/api/v1/fees/#{fee.id}")
-        expect(response).to have_http_status(:ok)
-      end
-    end
-
-    context 'when fee exist but is attached to an invoice' do
-      let(:invoice) { create(:invoice, organization:, customer:) }
+    context 'when fee exists' do
       let(:fee) do
         create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice:)
       end
 
-      it 'dont delete the fee' do
-        delete_with_token(organization, "/api/v1/fees/#{fee.id}")
-        expect(response).to have_http_status(:method_not_allowed)
+      context 'when fee does not attached to an invoice' do
+        let(:invoice) { nil }
+
+        it 'deletes the fee' do
+          subject
+          expect(response).to have_http_status(:ok)
+        end
+      end
+
+      context 'when fee is attached to an invoice' do
+        let(:invoice) { create(:invoice, organization:, customer:) }
+
+        it 'dont delete the fee' do
+          subject
+          expect(response).to have_http_status(:method_not_allowed)
+        end
+      end
+    end
+
+    context 'when fee does not exist' do
+      let(:fee_id) { SecureRandom.uuid }
+
+      it 'returns not found' do
+        subject
+        expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /fees' do
+  describe 'GET /api/v1/fees' do
+    subject { get_with_token(organization, '/api/v1/fees', params) }
+
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
-    let(:fee) { create(:fee, subscription:, invoice: nil) }
+    let!(:fee) { create(:fee, subscription:, invoice: nil) }
 
-    before { fee }
+    context 'without params' do
+      let(:params) { {} }
 
-    it 'returns a list of fees' do
-      get_with_token(organization, '/api/v1/fees')
+      it 'returns a list of fees' do
+        subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
 
-        expect(json[:fees].count).to eq(1)
+          expect(json[:fees].count).to eq(1)
+          expect(json[:fees].first[:lago_id]).to eq(fee.id)
+        end
       end
     end
 
     context 'with an invalid filter' do
+      let(:params) { {fee_type: 'invalid_filter'} }
+
       it 'returns an error response' do
-        get_with_token(organization, '/api/v1/fees', fee_type: 'foo_bar')
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:unprocessable_entity)

@@ -7,9 +7,9 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, organization:) }
 
-  describe 'apply' do
-    before do
-      create(:subscription, customer:)
+  describe 'POST /api/v1/applied_coupons' do
+    subject do
+      post_with_token(organization, '/api/v1/applied_coupons', {applied_coupon: params})
     end
 
     let(:params) do
@@ -19,12 +19,10 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       }
     end
 
+    before { create(:subscription, customer:) }
+
     it 'returns a success' do
-      post_with_token(
-        organization,
-        '/api/v1/applied_coupons',
-        {applied_coupon: params}
-      )
+      subject
 
       expect(response).to have_http_status(:success)
 
@@ -47,19 +45,17 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       end
 
       it 'returns an unprocessable_entity' do
-        post_with_token(organization, '/api/v1/applied_coupons', {applied_coupon: params})
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'index' do
-    let(:customer) { create(:customer, organization:) }
+  describe 'GET /api/v1/applied_coupons' do
+    subject { get_with_token(organization, '/api/v1/applied_coupons') }
+
     let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', organization:) }
-    let(:credit) do
-      create(:credit, applied_coupon:, amount_cents: 2, amount_currency: customer.currency)
-    end
+
     let(:applied_coupon) do
       create(
         :applied_coupon,
@@ -71,12 +67,11 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
     end
 
     before do
-      applied_coupon
-      credit
+      create(:credit, applied_coupon:, amount_cents: 2, amount_currency: customer.currency)
     end
 
     it 'returns applied coupons' do
-      get_with_token(organization, '/api/v1/applied_coupons')
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
