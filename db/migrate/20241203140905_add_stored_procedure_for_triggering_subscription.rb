@@ -21,8 +21,7 @@ class AddStoredProcedureForTriggeringSubscription < ActiveRecord::Migration[7.1]
           p_external_subscription_id,
           NOW()
       )
-      ON CONFLICT (organization_id, external_subscription_id, start_processing_at)
-      DO NOTHING;
+      ON CONFLICT DO NOTHING;
   END;
   $$;"
     end
