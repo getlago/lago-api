@@ -17,8 +17,6 @@ AllCops:
   DisplayStyleGuide: true
   Exclude:
     - 'bin/**/*'
-    - 'db/schema.rb'
-    - 'db/*_schema.rb'
 
 # TODO: Enable when we have time to fix all the offenses
 Style/StringLiterals:
