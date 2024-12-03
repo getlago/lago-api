@@ -37,6 +37,8 @@ module Subscriptions
         #       For upgrade we will create only one invoice for termination charges and for in advance charges
         #       It is handled in subscriptions/create_service.rb
         bill_subscription unless upgrade
+
+        compute_final_daily_usage
       end
 
       # NOTE: Pending next subscription should be canceled as well
@@ -90,6 +92,8 @@ module Subscriptions
 
       SendWebhookJob.perform_later('subscription.terminated', subscription)
       SendWebhookJob.perform_later('subscription.started', next_subscription)
+
+      compute_final_daily_usage
 
       result.subscription = next_subscription
 
@@ -159,6 +163,12 @@ module Subscriptions
       )
 
       dates_service.previous_beginning_of_period(current_period: true).to_datetime
+    end
+
+    def compute_final_daily_usage
+      return unless subscription.organization.premium_integrations.include?("revenue_analytics")
+
+      DailyUsages::ComputeJob.perform_later(subscription, timestamp: subscription.terminated_at)
     end
   end
 end

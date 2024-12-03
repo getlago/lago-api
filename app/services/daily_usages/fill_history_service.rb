@@ -42,18 +42,25 @@ module DailyUsages
             usage: ::V1::Customers::UsageSerializer.new(usage, includes: %i[charges_usage]).serialize,
             from_datetime: usage.from_datetime,
             to_datetime: usage.to_datetime,
-            refreshed_at: datetime
+            refreshed_at: datetime,
+            usage_diff: {}
           )
 
-          daily_usage.usage_diff = DailyUsages::ComputeDiffService
-            .call(daily_usage:, previous_daily_usage:)
-            .raise_if_error!
-            .usage_diff
+          if date != from
+            daily_usage.usage_diff = DailyUsages::ComputeDiffService
+              .call(daily_usage:, previous_daily_usage:)
+              .raise_if_error!
+              .usage_diff
+          end
 
           daily_usage.save!
 
           previous_daily_usage = daily_usage
         end
+      end
+
+      if subscription.terminated?
+        DailyUsages::ComputeJob.perform_later(subscription, timestamp: subscription.terminated_at)
       end
 
       result

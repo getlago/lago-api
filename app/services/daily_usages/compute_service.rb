@@ -47,6 +47,8 @@ module DailyUsages
     end
 
     def existing_daily_usage
+      return nil if subscription.terminated_at?(timestamp)
+
       @existing_daily_usage ||= DailyUsage.refreshed_at_in_timezone(timestamp)
         .find_by(subscription_id: subscription.id)
     end
