@@ -23,6 +23,9 @@ module LagoApi
     ]
 
     config.api_only = true
+
+    config.active_record.schema_format = :sql
+    ActiveRecord::Tasks::DatabaseTasks.structure_dump_flags = ['--clean', '--if-exists']
     config.active_job.queue_adapter = :sidekiq
 
     # Configuration for active record encryption
