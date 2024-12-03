@@ -144,8 +144,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           progressive_invoice
           progressive_fee
           progressive_invoice.invoice_subscriptions.first.update!(
-            charges_from_datetime: progressive_invoice.issuing_date - 2.weeks,
-            charges_to_datetime: progressive_invoice.issuing_date + 2.weeks,
+            charges_from_datetime: progressive_invoice.issuing_date - 1.month,
+            charges_to_datetime: progressive_invoice.issuing_date,
             timestamp: progressive_invoice.issuing_date
           )
         end

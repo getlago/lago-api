@@ -60,8 +60,8 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
       progressive_billing_invoice
       progressive_billing_fee
       progressive_billing_invoice.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice.issuing_date,
         timestamp: progressive_billing_invoice.issuing_date
       )
     end
@@ -116,13 +116,13 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
       progressive_billing_fee
       progressive_billing_fee2
       progressive_billing_invoice.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice.issuing_date,
         timestamp: progressive_billing_invoice.issuing_date
       )
       progressive_billing_invoice2.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice2.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice2.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice2.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice2.issuing_date,
         timestamp: progressive_billing_invoice2.issuing_date
       )
     end
@@ -175,13 +175,13 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
       progressive_billing_fee
       progressive_billing_fee2
       progressive_billing_invoice.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice.issuing_date,
         timestamp: progressive_billing_invoice.issuing_date
       )
       progressive_billing_invoice2.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice2.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice2.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice2.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice2.issuing_date,
         timestamp: progressive_billing_invoice2.issuing_date
       )
     end
@@ -251,18 +251,18 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
       progressive_billing_fee3
 
       progressive_billing_invoice.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice.issuing_date,
         timestamp: progressive_billing_invoice.issuing_date
       )
       progressive_billing_invoice2.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice2.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice2.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice2.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice2.issuing_date,
         timestamp: progressive_billing_invoice2.issuing_date
       )
       progressive_billing_invoice3.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice3.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice3.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice3.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice3.issuing_date,
         timestamp: progressive_billing_invoice3.issuing_date
       )
     end
@@ -319,8 +319,8 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
       progressive_billing_fee
       progressive_billing_invoice.invoice_subscriptions.each do |is|
         is.update!(
-          charges_from_datetime: progressive_billing_invoice.issuing_date - 2.weeks,
-          charges_to_datetime: progressive_billing_invoice.issuing_date + 2.weeks,
+          charges_from_datetime: progressive_billing_invoice.issuing_date - 1.month,
+          charges_to_datetime: progressive_billing_invoice.issuing_date,
           timestamp: progressive_billing_invoice.issuing_date
         )
       end
@@ -358,8 +358,8 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
       progressive_billing_invoice
       progressive_billing_fee
       progressive_billing_invoice.invoice_subscriptions.first.update!(
-        charges_from_datetime: progressive_billing_invoice.issuing_date - 2.weeks,
-        charges_to_datetime: progressive_billing_invoice.issuing_date + 2.weeks,
+        charges_from_datetime: progressive_billing_invoice.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice.issuing_date,
         timestamp: progressive_billing_invoice.issuing_date
       )
     end

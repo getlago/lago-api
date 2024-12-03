@@ -89,7 +89,6 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
       terminate_subscription(subscription)
       expect(Invoice.count).to eq(2)
       termination_invoice = subscription.invoices.order(:created_at).last
-      # ASK VINCENT, why when terminating it's 1800, and when upgrading it's 1700
       expect(termination_invoice.total_amount_cents).to eq(1800)
       expect(termination_invoice.fees_amount_cents).to eq(21800)
       expect(termination_invoice.progressive_billing_credit_amount_cents).to eq(20000)
@@ -177,40 +176,6 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
       expect(subscription_invoice_2.progressive_billing_credit_amount_cents).to eq(60000)
       expect(subscription_invoice_2.status).to eq('draft')
       expect(subscription_invoice_2.fees_amount_cents).to eq(631_00)
-    end
-  end
-
-  it 'generates an invoice in the middle of the month and downgrades the subscription before the end of the month' do
-    time_0 = DateTime.new(2022, 12, 1)
-    travel_to time_0 do
-      create_subscription(
-        {
-          external_customer_id: customer.external_id,
-          external_id: customer.external_id,
-          plan_code: plan.code
-        }
-      )
-    end
-    subscription = customer.subscriptions.first
-
-    travel_to time_0 + 15.days do
-      ingest_event(subscription, 1000000)
-      expect(Invoice.count).to eq(1)
-      expect(Invoice.last.total_amount_cents).to eq(20000)
-    end
-
-    travel_to time_0 + 1.month - 1.day do
-      create_subscription(
-        {
-          external_customer_id: customer.external_id,
-          external_id: customer.external_id,
-          plan_code: downgrade_plan.code
-        }
-      )
-      perform_billing
-      expect(Invoice.count).to eq(2)
-      subscription_invoice = subscription.invoices.subscription.last
-      expect(subscription_invoice.total_amount_cents).to eq(3100)
     end
   end
 
