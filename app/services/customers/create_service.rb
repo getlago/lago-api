@@ -100,6 +100,12 @@ module Customers
         new_customer:
       )
 
+      if new_customer
+        SendWebhookJob.perform_later('customer.created', customer)
+      else
+        SendWebhookJob.perform_later('customer.updated', customer)
+      end
+
       track_customer_created(customer)
       result
     rescue BaseService::ServiceFailure => e
@@ -196,6 +202,7 @@ module Customers
         new_customer: true
       )
 
+      SendWebhookJob.perform_later('customer.created', customer)
       track_customer_created(customer)
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -335,7 +342,6 @@ module Customers
           organization_id: customer.organization_id
         }
       )
-      SendWebhookJob.perform_later("customer.created", customer)
     end
 
     def should_create_billing_configuration?(billing, customer)

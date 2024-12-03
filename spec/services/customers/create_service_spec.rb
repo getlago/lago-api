@@ -374,6 +374,14 @@ RSpec.describe Customers::CreateService, type: :service do
         end
       end
 
+      it 'calls SendWebhookJob with customer.updated' do
+        customers_service.create_from_api(
+          organization:,
+          params: create_args
+        )
+        expect(SendWebhookJob).to have_received(:perform_later).with('customer.updated', customer)
+      end
+
       context 'with provider customer' do
         let(:payment_provider) { create(:stripe_provider, organization:) }
         let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider:) }
