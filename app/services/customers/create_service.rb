@@ -12,21 +12,21 @@ module Customers
       unless valid_metadata_count?(metadata: params[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
-          error_code: 'invalid_count'
+          error_code: "invalid_count"
         )
       end
 
       unless valid_finalize_zero_amount_invoice?(params[:finalize_zero_amount_invoice])
         return result.single_validation_failure!(
           field: :finalize_zero_amount_invoice,
-          error_code: 'invalid_value'
+          error_code: "invalid_value"
         )
       end
 
       unless valid_integration_customers_count?(integration_customers: params[:integration_customers])
         return result.single_validation_failure!(
           field: :integration_customers,
-          error_code: 'invalid_count_per_integration_type'
+          error_code: "invalid_count_per_integration_type"
         )
       end
 
@@ -52,7 +52,7 @@ module Customers
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
         customer.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
         customer.external_salesforce_id = params[:external_salesforce_id] if params.key?(:external_salesforce_id)
-        customer.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] || 'inherit' if params.key?(:finalize_zero_amount_invoice)
+        customer.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] || "inherit" if params.key?(:finalize_zero_amount_invoice)
         customer.firstname = params[:firstname] if params.key?(:firstname)
         customer.lastname = params[:lastname] if params.key?(:lastname)
         customer.customer_type = params[:customer_type] if params.key?(:customer_type)
@@ -108,6 +108,8 @@ module Customers
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
+    rescue ActiveRecord::RecordNotUnique
+      result.single_validation_failure!(field: :external_id, error_code: "value_already_exist")
     end
 
     def create(**args)
@@ -117,7 +119,7 @@ module Customers
       unless valid_metadata_count?(metadata: args[:metadata])
         return result.single_validation_failure!(
           field: :metadata,
-          error_code: 'invalid_count'
+          error_code: "invalid_count"
         )
       end
 
@@ -304,11 +306,11 @@ module Customers
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
       provider_class = case billing_configuration[:payment_provider] || customer.payment_provider
-      when 'stripe'
+      when "stripe"
         PaymentProviderCustomers::StripeCustomer
-      when 'gocardless'
+      when "gocardless"
         PaymentProviderCustomers::GocardlessCustomer
-      when 'adyen'
+      when "adyen"
         PaymentProviderCustomers::AdyenCustomer
       end
 
@@ -325,7 +327,7 @@ module Customers
     def track_customer_created(customer)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'customer_created',
+        event: "customer_created",
         properties: {
           customer_id: customer.id,
           created_at: customer.created_at,
@@ -333,7 +335,7 @@ module Customers
           organization_id: customer.organization_id
         }
       )
-      SendWebhookJob.perform_later('customer.created', customer)
+      SendWebhookJob.perform_later("customer.created", customer)
     end
 
     def should_create_billing_configuration?(billing, customer)

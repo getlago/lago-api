@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Salesforce::Create, type: :graphql do
-  let(:required_permission) { 'organization:integrations:create' }
+  let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
-  let(:name) { 'Salesforce 1' }
-  let(:code) { 'salesforce_test' }
+  let(:name) { "Salesforce 1" }
+  let(:code) { "salesforce_test" }
   let(:script_endpoint_url) { Faker::Internet.url }
 
   let(:mutation) do
@@ -24,13 +24,13 @@ RSpec.describe Mutations::Integrations::Salesforce::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
-  before { membership.organization.update!(premium_integrations: ['salesforce']) }
+  before { membership.organization.update!(premium_integrations: ["salesforce"]) }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:create'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:create"
 
-  it 'creates a salesforce integration' do
+  it "creates a salesforce integration" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -40,18 +40,17 @@ RSpec.describe Mutations::Integrations::Salesforce::Create, type: :graphql do
         input: {
           name:,
           code:,
-          instanceId: 'this-is-random-uuid'
+          instanceId: "this-is-random-uuid"
         }
       }
     )
 
-    pp result
-    result_data = result['data']['createSalesforceIntegration']
+    result_data = result["data"]["createSalesforceIntegration"]
 
     aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['code']).to eq(code)
-      expect(result_data['name']).to eq(name)
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq(code)
+      expect(result_data["name"]).to eq(name)
     end
   end
 end

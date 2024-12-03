@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Salesforce::Update, type: :graphql do
-  let(:required_permission) { 'organization:integrations:update' }
+  let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:salesforce_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
-  let(:name) { 'Salesforce 1' }
-  let(:code) { 'salesforce_work' }
-  let(:instance_id) { 'salesforce_link' }
+  let(:name) { "Salesforce 1" }
+  let(:code) { "salesforce_work" }
+  let(:instance_id) { "salesforce_link" }
 
   let(:mutation) do
     <<-GQL
@@ -28,14 +28,14 @@ RSpec.describe Mutations::Integrations::Salesforce::Update, type: :graphql do
 
   before do
     integration
-    membership.organization.update!(premium_integrations: ['salesforce'])
+    membership.organization.update!(premium_integrations: ["salesforce"])
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:update"
 
-  it 'updates a salesforce integration' do
+  it "updates a salesforce integration" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -51,13 +51,12 @@ RSpec.describe Mutations::Integrations::Salesforce::Update, type: :graphql do
       }
     )
 
-    pp result
-    result_data = result['data']['updateSalesforceIntegration']
+    result_data = result["data"]["updateSalesforceIntegration"]
 
     aggregate_failures do
-      expect(result_data['name']).to eq(name)
-      expect(result_data['code']).to eq(code)
-      expect(result_data['instanceId']).to eq(instance_id)
+      expect(result_data["name"]).to eq(name)
+      expect(result_data["code"]).to eq(code)
+      expect(result_data["instanceId"]).to eq(instance_id)
     end
   end
 end
