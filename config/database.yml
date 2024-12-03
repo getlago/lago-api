@@ -9,7 +9,6 @@ development:
     password: changeme
     database: lago
     port: 5432
-    schema_search_path: 'public'
   events:
     <<: *default
     host: db
