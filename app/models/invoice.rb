@@ -38,6 +38,7 @@ class Invoice < ApplicationRecord
 
   has_many :applied_usage_thresholds
   has_many :usage_thresholds, through: :applied_usage_thresholds
+  has_many :applied_invoice_custom_sections
 
   has_one_attached :file
 
