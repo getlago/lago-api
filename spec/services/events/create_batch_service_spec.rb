@@ -196,6 +196,21 @@ RSpec.describe Events::CreateBatchService, type: :service do
       end
     end
 
+    context "with an expression configured on the billable metric" do
+      let(:billable_metric) { create(:billable_metric, code:, organization:, field_name: "result", expression: "concat(event.properties.foo, '-bar')") }
+
+      before do
+        billable_metric
+      end
+
+      it "creates an event and updates the field name with the result of the expression" do
+        result = create_batch_service.call
+
+        expect(result).to be_success
+        result.events.each { |event| expect(event.properties["result"]).to eq('bar-bar') }
+      end
+    end
+
     context 'when timestamp is sent with decimal precision' do
       let(:timestamp) { DateTime.parse('2023-09-04T15:45:12.344Z').to_f }
 

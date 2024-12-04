@@ -50,6 +50,8 @@ module Events
         event.timestamp = Time.zone.at(event_params[:timestamp] ? event_params[:timestamp].to_f : timestamp)
         event.precise_total_amount_cents = event_params[:precise_total_amount_cents]
 
+        CalculateExpressionService.call(organization:, event:).raise_if_error!
+
         result.events.push(event)
         result.errors = result.errors.merge({index => event.errors.messages}) unless event.valid?
       end
