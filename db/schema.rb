@@ -145,6 +145,17 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
     t.index ["customer_id"], name: "index_applied_coupons_on_customer_id"
   end
 
+  create_table "applied_invoice_custom_sections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "display_name"
+    t.string "details"
+    t.uuid "invoice_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invoice_id"], name: "index_applied_invoice_custom_sections_on_invoice_id"
+  end
+
   create_table "applied_usage_thresholds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "usage_threshold_id", null: false
     t.uuid "invoice_id", null: false
@@ -469,6 +480,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
     t.boolean "exclude_from_dunning_campaign", default: false, null: false
     t.integer "last_dunning_campaign_attempt", default: 0, null: false
     t.datetime "last_dunning_campaign_attempt_at", precision: nil
+    t.boolean "skip_invoice_custom_sections", default: false, null: false
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
@@ -795,6 +807,32 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
     t.index ["membership_id"], name: "index_invites_on_membership_id"
     t.index ["organization_id"], name: "index_invites_on_organization_id"
     t.index ["token"], name: "index_invites_on_token", unique: true
+  end
+
+  create_table "invoice_custom_section_selections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "invoice_custom_section_id", null: false
+    t.uuid "organization_id"
+    t.uuid "customer_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_invoice_custom_section_selections_on_customer_id"
+    t.index ["invoice_custom_section_id"], name: "idx_on_invoice_custom_section_id_7edbcef7b5"
+    t.index ["organization_id"], name: "index_invoice_custom_section_selections_on_organization_id"
+  end
+
+  create_table "invoice_custom_sections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "description"
+    t.string "display_name"
+    t.string "details"
+    t.uuid "organization_id", null: false
+    t.datetime "deleted_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id", "code"], name: "index_invoice_custom_sections_on_organization_id_and_code", unique: true
+    t.index ["organization_id", "deleted_at"], name: "idx_on_organization_id_deleted_at_225e3f789d"
+    t.index ["organization_id"], name: "index_invoice_custom_sections_on_organization_id"
   end
 
   create_table "invoice_errors", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1309,6 +1347,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
   add_foreign_key "api_keys", "organizations"
   add_foreign_key "applied_add_ons", "add_ons"
   add_foreign_key "applied_add_ons", "customers"
+  add_foreign_key "applied_invoice_custom_sections", "invoices"
   add_foreign_key "applied_usage_thresholds", "invoices"
   add_foreign_key "applied_usage_thresholds", "usage_thresholds"
   add_foreign_key "billable_metric_filters", "billable_metrics"
@@ -1375,6 +1414,10 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
   add_foreign_key "integrations", "organizations"
   add_foreign_key "invites", "memberships"
   add_foreign_key "invites", "organizations"
+  add_foreign_key "invoice_custom_section_selections", "customers"
+  add_foreign_key "invoice_custom_section_selections", "invoice_custom_sections"
+  add_foreign_key "invoice_custom_section_selections", "organizations"
+  add_foreign_key "invoice_custom_sections", "organizations"
   add_foreign_key "invoice_metadata", "invoices"
   add_foreign_key "invoice_subscriptions", "invoices"
   add_foreign_key "invoice_subscriptions", "subscriptions"
