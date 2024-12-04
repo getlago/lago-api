@@ -29,17 +29,17 @@ RSpec.describe ::V1::BillableMetricSerializer do
   context "with counters inclusion" do
     let(:includes) { %i[counters] }
 
-    it "returns the count number of active subscriptions" do
+    it "returns a zero count for number of active subscriptions" do
       terminated_subscription = create(:subscription, :terminated)
       create(:standard_charge, plan: terminated_subscription.plan, billable_metric:)
 
       subscription = create(:subscription)
       create(:standard_charge, plan: subscription.plan, billable_metric:)
 
-      expect(result["billable_metric"]["active_subscriptions_count"]).to eq(1)
+      expect(result["billable_metric"]["active_subscriptions_count"]).to eq(0)
     end
 
-    it "returns the count number of draft invoices" do
+    it "returns a zero count for number of draft invoices" do
       customer = create(:customer, organization: billable_metric.organization)
       subscription = create(:subscription)
       subscription2 = create(:subscription)
@@ -53,14 +53,14 @@ RSpec.describe ::V1::BillableMetricSerializer do
       create(:fee, invoice: draft_invoice, charge: charge2)
       create(:fee, invoice: draft_invoice, charge: charge2)
 
-      expect(result["billable_metric"]["draft_invoices_count"]).to eq(1)
+      expect(result["billable_metric"]["draft_invoices_count"]).to eq(0)
     end
 
-    it "returns the number of plans" do
+    it "returns a zero number of plans" do
       plan = create(:plan, organization: billable_metric.organization)
       create(:standard_charge, billable_metric:, plan:)
 
-      expect(result["billable_metric"]["plans_count"]).to eq(1)
+      expect(result["billable_metric"]["plans_count"]).to eq(0)
     end
   end
 end

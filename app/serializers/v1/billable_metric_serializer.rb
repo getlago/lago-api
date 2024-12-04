@@ -28,24 +28,10 @@ module V1
 
     def counters
       {
-        active_subscriptions_count:,
-        draft_invoices_count:,
-        plans_count:
+        active_subscriptions_count: 0,
+        draft_invoices_count: 0,
+        plans_count: 0
       }
-    end
-
-    def active_subscriptions_count
-      Subscription.active.where(plan_id: model.charges.select(:plan_id).distinct).count
-    end
-
-    def draft_invoices_count
-      Invoice.draft.where(id: model.charges
-        .joins(:fees)
-        .select(:invoice_id)).count
-    end
-
-    def plans_count
-      model.plans.distinct.count
     end
 
     def filters

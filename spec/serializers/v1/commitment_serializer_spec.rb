@@ -32,7 +32,7 @@ RSpec.describe ::V1::CommitmentSerializer do
       'rate' => tax.rate,
       'description' => tax.description,
       'applied_to_organization' => tax.applied_to_organization,
-      'commitments_count' => 1
+      'commitments_count' => 0
     }
   end
 

@@ -44,8 +44,8 @@ RSpec.describe ::V1::PlanSerializer do
         'trial_period' => plan.trial_period,
         'pay_in_advance' => plan.pay_in_advance,
         'bill_charges_monthly' => plan.bill_charges_monthly,
-        'customers_count' => 2,
-        'active_subscriptions_count' => 2,
+        'customers_count' => 0,
+        'active_subscriptions_count' => 0,
         'draft_invoices_count' => 0,
         'parent_id' => nil,
         'taxes' => []
@@ -101,8 +101,8 @@ RSpec.describe ::V1::PlanSerializer do
         'trial_period' => plan.trial_period,
         'pay_in_advance' => plan.pay_in_advance,
         'bill_charges_monthly' => plan.bill_charges_monthly,
-        'customers_count' => 2,
-        'active_subscriptions_count' => 2,
+        'customers_count' => 0,
+        'active_subscriptions_count' => 0,
         'draft_invoices_count' => 0,
         'parent_id' => nil,
         'taxes' => []
