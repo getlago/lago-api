@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Mutations::InvoiceCustomSections::Create, type: :graphql do
-  let(:required_permission) { 'invoices:update' }
+  let(:required_permission) { 'invoice_custom_sections:create' }
   let(:membership) { create(:membership) }
 
   let(:mutation) do
@@ -24,7 +24,7 @@ RSpec.describe Mutations::InvoiceCustomSections::Create, type: :graphql do
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:update'
+  it_behaves_like 'requires permission', 'invoice_custom_sections:create'
 
   it 'creates a invoice_custom_section' do
     result = execute_graphql(
