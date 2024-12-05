@@ -29,6 +29,11 @@ Sidekiq.configure_server do |config|
   config.logger.formatter = Sidekiq::Logger::Formatters::JSON.new
   config[:max_retries] = 0
   config[:dead_max_jobs] = ENV.fetch("LAGO_SIDEKIQ_MAX_DEAD_JOBS", 100_000).to_i
+
+  if ENV.fetch("LAGO_ENABLE_SIDEKIQ_PRO", false).to_s == "true"
+    config.super_fetch!
+  end
+
   config.on(:startup) do
     Sidekiq.logger.info "Starting liveness server on #{LIVENESS_PORT}"
     Thread.start do

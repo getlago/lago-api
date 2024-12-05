@@ -16,6 +16,13 @@ gem "rails", "~> 7.1.3.4"
 gem "redis"
 gem "sidekiq"
 gem "sidekiq-throttled", '1.4.0' # '1.5.0' was losing some jobs
+
+if ENV.fetch("LAGO_ENABLE_SIDEKIQ_PRO", false).to_s == "true"
+  source "https://gems.contribsys.com" do
+    gem "sidekiq-pro"
+  end
+end
+
 gem "throttling"
 gem "dry-validation"
 
