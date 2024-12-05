@@ -365,10 +365,62 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     end
 
     describe "#call" do
-      it "applies one credit to the invoice" do
+      it "applies no credit to the invoice" do
         result = credit_service.call
         expect(result.credits).to be_empty
         expect(invoice.progressive_billing_credit_amount_cents).to eq(0)
+      end
+    end
+  end
+
+  context "with a spy on Subscriptions::ProgressiveBilledAmount" do
+    let(:progressive_billing_invoice) do
+      create(
+        :invoice,
+        organization:,
+        customer:,
+        status: 'finalized',
+        invoice_type: :progressive_billing,
+        subscriptions: [subscription],
+        issuing_date: invoice.issuing_date - 1.day,
+        created_at: invoice.issuing_date - 1.day,
+        fees_amount_cents: 20
+      )
+    end
+
+    let(:progressive_billing_fee) { create(:charge_fee, amount_cents: 20, invoice: progressive_billing_invoice) }
+    let(:dummy_result) do
+      BaseService::Result.new.tap do |r|
+        r.to_
+      end
+    end
+
+    before do
+      progressive_billing_invoice
+      progressive_billing_fee
+      progressive_billing_invoice.invoice_subscriptions.first.update!(
+        charges_from_datetime: progressive_billing_invoice.issuing_date - 1.month,
+        charges_to_datetime: progressive_billing_invoice.issuing_date,
+        timestamp: progressive_billing_invoice.issuing_date
+      )
+
+      allow(Subscriptions::ProgressiveBilledAmount).to receive(:call).and_wrap_original do |original_method, *args, **kwargs, &block|
+        result = original_method.call(*args, **kwargs, &block)
+        expect(result).to receive(:to_credit_amount).and_call_original # rubocop:disable RSpec/ExpectInHook,RSpec/MessageSpies
+        result
+      end
+    end
+
+    describe "#call" do
+      it "applies one credit to the invoice" do
+        result = credit_service.call
+        expect(result.credits.size).to eq(1)
+        credit = result.credits.sole
+        expect(credit.amount_cents).to eq(20)
+        expect(invoice.progressive_billing_credit_amount_cents).to eq(20)
+
+        expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(10)
+        expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(10)
       end
     end
   end
