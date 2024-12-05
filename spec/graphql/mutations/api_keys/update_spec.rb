@@ -9,7 +9,7 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
       current_organization: membership.organization,
       permissions: required_permission,
       query:,
-      variables: {input: {id: api_key.id, permissions:, name:}}
+      variables: {input: input_params}
     )
   end
 
@@ -23,6 +23,7 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
 
   let(:required_permission) { 'developers:keys:manage' }
   let!(:membership) { create(:membership) }
+  let(:input_params) { {id: api_key.id, permissions:, name:} }
   let(:permissions) { api_key.permissions.merge("add_on" => ['read']) }
   let(:name) { Faker::Lorem.words.join(' ') }
 
@@ -35,13 +36,29 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
 
     before { membership.organization.update!(premium_integrations: ['api_permissions']) }
 
-    it 'returns updated api key' do
-      api_key_response = result['data']['updateApiKey']
+    context 'when permissions are present' do
+      it 'returns updated api key' do
+        api_key_response = result['data']['updateApiKey']
 
-      aggregate_failures do
-        expect(api_key_response['id']).to eq(api_key.id)
-        expect(api_key_response['name']).to eq(name)
-        expect(api_key_response['permissions']).to eq(permissions)
+        aggregate_failures do
+          expect(api_key_response['id']).to eq(api_key.id)
+          expect(api_key_response['name']).to eq(name)
+          expect(api_key_response['permissions']).to eq(permissions)
+        end
+      end
+    end
+
+    context 'when permissions are missing' do
+      let(:input_params) { {id: api_key.id, name:} }
+
+      it 'returns updated api key' do
+        api_key_response = result['data']['updateApiKey']
+
+        aggregate_failures do
+          expect(api_key_response['id']).to eq(api_key.id)
+          expect(api_key_response['name']).to eq(name)
+          expect(api_key_response['permissions']).to eq(api_key.permissions)
+        end
       end
     end
   end
