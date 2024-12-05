@@ -195,7 +195,7 @@ RSpec.describe ::V1::FeeSerializer do
           'external_subscription_id' => subscription.external_id,
           'lago_customer_id' => customer.id,
           'external_customer_id' => customer.external_id,
-          'event_transaction_id' => event.transaction_id,
+          'event_transaction_id' => fee.pay_in_advance_event_transaction_id,
           'pay_in_advance' => true,
           'invoiceable' => true
         )
