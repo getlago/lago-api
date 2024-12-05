@@ -102,12 +102,7 @@ module V1
     def pay_in_advance_charge_attributes
       return {} unless model.pay_in_advance?
 
-      event = Event.find_by(
-        organization_id: model.subscription.organization,
-        id: model.pay_in_advance_event_id
-      )
-
-      {event_transaction_id: event&.transaction_id}
+      {event_transaction_id: model.pay_in_advance_event_transaction_id}
     end
 
     def applied_taxes
