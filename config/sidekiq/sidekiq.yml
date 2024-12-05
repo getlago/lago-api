@@ -6,7 +6,6 @@ queues:
   - mailers
   - clock
   - providers
-  - billing
   - webhook
   - invoices
   - wallets

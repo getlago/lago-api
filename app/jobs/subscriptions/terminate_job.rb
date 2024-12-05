@@ -2,7 +2,13 @@
 
 module Subscriptions
   class TerminateJob < ApplicationJob
-    queue_as 'billing'
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_BILLING'])
+        :billing
+      else
+        :default
+      end
+    end
 
     def perform(subscription, timestamp)
       result = Subscriptions::TerminateService.new(subscription:)

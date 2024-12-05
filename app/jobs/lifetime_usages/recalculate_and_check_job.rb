@@ -2,7 +2,14 @@
 
 module LifetimeUsages
   class RecalculateAndCheckJob < ApplicationJob
-    queue_as 'billing'
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_BILLING'])
+        :billing
+      else
+        :default
+      end
+    end
+
     unique :until_executed, on_conflict: :log
 
     def perform(lifetime_usage)
