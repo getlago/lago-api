@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe InvoiceCustomSections::CreateService, type: :service do
   describe '#call' do
     subject(:service_result) { described_class.call(organization:, create_params:, selected:) }
+
     let(:organization) { create(:organization) }
     let(:create_params) { nil }
     let(:selected) { nil }
@@ -45,8 +46,6 @@ RSpec.describe InvoiceCustomSections::CreateService, type: :service do
             .with(section: service_result.invoice_custom_section, organization: organization)
         end
       end
-
-
     end
 
     context 'with invalid params' do

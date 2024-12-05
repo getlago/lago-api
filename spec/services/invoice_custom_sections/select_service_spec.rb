@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe InvoiceCustomSections::SelectService, type: :service do
   describe '#call' do
     subject(:service_result) { described_class.call(organization:, section:) }
+
     let(:organization) { create(:organization) }
     let(:section) { create(:invoice_custom_section) }
 
