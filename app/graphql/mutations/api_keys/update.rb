@@ -14,17 +14,9 @@ module Mutations
 
       type Types::ApiKeys::Object
 
-      def resolve(id:, name: nil, permissions: nil)
+      def resolve(id:, **params)
         api_key = current_organization.api_keys.find_by(id:)
-
-        result = ::ApiKeys::UpdateService.call(
-          api_key:,
-          params: {
-            name:,
-            permissions:
-          }
-        )
-
+        result = ::ApiKeys::UpdateService.call(api_key:, params:)
         result.success? ? result.api_key : result_error(result)
       end
     end
