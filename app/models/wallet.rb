@@ -10,8 +10,9 @@ class Wallet < ApplicationRecord
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
 
-  monetize :balance_cents, :ongoing_balance_cents, :ongoing_usage_balance_cents
+  monetize :balance_cents
   monetize :consumed_amount_cents
+  monetize :ongoing_balance_cents, :ongoing_usage_balance_cents, with_model_currency: :balance_currency
 
   validates :rate_amount, numericality: {greater_than: 0}
 
@@ -37,6 +38,14 @@ class Wallet < ApplicationRecord
 
   def currency
     balance_currency
+  end
+
+  def credits_ongoing_draft_invoices_balance
+    ongoing_draft_invoices_balance_cents.to_f.fdiv(ongoing_balance.currency.subunit_to_unit).fdiv(rate_amount)
+  end
+
+  def ongoing_draft_invoices_balance_cents
+    customer.invoices.draft.sum(:total_amount_cents)
   end
 end
 
