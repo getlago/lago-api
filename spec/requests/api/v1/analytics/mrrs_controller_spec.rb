@@ -4,6 +4,8 @@ require 'rails_helper'
 
 RSpec.describe Api::V1::Analytics::MrrsController, type: :request do # rubocop:disable RSpec/FilePath
   describe 'GET /analytics/mrr' do
+    subject { get_with_token(organization, '/api/v1/analytics/mrr') }
+
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
 
@@ -11,7 +13,7 @@ RSpec.describe Api::V1::Analytics::MrrsController, type: :request do # rubocop:d
       around { |test| lago_premium!(&test) }
 
       it 'returns the mrr' do
-        get_with_token(organization, '/api/v1/analytics/mrr')
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -27,8 +29,7 @@ RSpec.describe Api::V1::Analytics::MrrsController, type: :request do # rubocop:d
 
     context 'when license is not premium' do
       it 'returns forbidden status' do
-        get_with_token(organization, '/api/v1/analytics/mrr')
-
+        subject
         expect(response).to have_http_status(:forbidden)
       end
     end

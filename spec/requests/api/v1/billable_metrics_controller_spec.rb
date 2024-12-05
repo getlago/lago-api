@@ -5,7 +5,15 @@ require 'rails_helper'
 RSpec.describe Api::V1::BillableMetricsController, type: :request do
   let(:organization) { create(:organization) }
 
-  describe 'create' do
+  describe 'POST /api/v1/billable_metrics' do
+    subject do
+      post_with_token(
+        organization,
+        '/api/v1/billable_metrics',
+        {billable_metric: create_params}
+      )
+    end
+
     let(:create_params) do
       {
         name: 'BM1',
@@ -21,7 +29,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     it 'creates a billable_metric' do
-      post_with_token(organization, '/api/v1/billable_metrics', {billable_metric: create_params})
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to be_present
@@ -49,7 +57,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       end
 
       it 'creates a billable_metric' do
-        post_with_token(organization, '/api/v1/billable_metrics', {billable_metric: create_params})
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metric][:lago_id]).to be_present
@@ -60,8 +68,17 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
   end
 
-  describe 'update' do
+  describe 'PUT /api/v1/billable_metrics/:code' do
+    subject do
+      put_with_token(
+        organization,
+        "/api/v1/billable_metrics/#{billable_metric_code}",
+        {billable_metric: update_params}
+      )
+    end
+
     let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:billable_metric_code) { billable_metric.code }
     let(:code) { 'BM1_code' }
     let(:update_params) do
       {
@@ -74,11 +91,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     it 'updates a billable_metric' do
-      put_with_token(
-        organization,
-        "/api/v1/billable_metrics/#{billable_metric.code}",
-        {billable_metric: update_params}
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
@@ -87,26 +100,20 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     context 'when billable metric does not exist' do
-      it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/billable_metrics/invalid', {billable_metric: update_params})
+      let(:billable_metric_code) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when billable metric code already exists in organization scope (validation error)' do
-      let(:billable_metric2) { create(:billable_metric, organization:) }
-      let(:code) { billable_metric2.code }
-
-      before { billable_metric2 }
+      let!(:another_metric) { create(:billable_metric, organization:) }
+      let(:code) { another_metric.code }
 
       it 'returns unprocessable_entity error' do
-        put_with_token(
-          organization,
-          "/api/v1/billable_metrics/#{billable_metric.code}",
-          {billable_metric: update_params}
-        )
-
+        subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
@@ -125,11 +132,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       end
 
       it 'updates a billable_metric' do
-        put_with_token(
-          organization,
-          "/api/v1/billable_metrics/#{billable_metric.code}",
-          {billable_metric: update_params}
-        )
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metric][:lago_id]).to be_present
@@ -140,11 +143,16 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
   end
 
-  describe 'show' do
+  describe 'GET /api/v1/billable_metrics/:code' do
+    subject do
+      get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric_code}")
+    end
+
     let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:billable_metric_code) { billable_metric.code }
 
     it 'returns a billable metric' do
-      get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
@@ -152,35 +160,38 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     context 'when billable metric does not exist' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/billable_metrics/555')
+      let(:billable_metric_code) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when billable metric is deleted' do
-      it 'returns not found' do
-        billable_metric.discard
-        get_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
+      before { billable_metric.discard! }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'destroy' do
-    let(:billable_metric) { create(:billable_metric, organization:) }
+  describe 'DELETE /api/v1/billable_metrics/:code' do
+    subject do
+      delete_with_token(organization, "/api/v1/billable_metrics/#{billable_metric_code}")
+    end
 
-    before { billable_metric }
+    let!(:billable_metric) { create(:billable_metric, organization:) }
+    let(:billable_metric_code) { billable_metric.code }
 
     it 'deletes a billable_metric' do
-      expect { delete_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}") }
-        .to change(BillableMetric, :count).by(-1)
+      expect { subject }.to change(BillableMetric, :count).by(-1)
     end
 
     it 'returns deleted billable_metric' do
-      delete_with_token(organization, "/api/v1/billable_metrics/#{billable_metric.code}")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metric][:lago_id]).to eq(billable_metric.id)
@@ -188,21 +199,23 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     context 'when billable metric does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, '/api/v1/billable_metrics/invalid')
+      let(:billable_metric_code) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'index' do
-    let(:billable_metric) { create(:billable_metric, organization:) }
+  describe 'GET /api/v1/billable_metrics' do
+    subject { get_with_token(organization, '/api/v1/billable_metrics', params) }
 
-    before { billable_metric }
+    let!(:billable_metric) { create(:billable_metric, organization:) }
+    let(:params) { {} }
 
     it 'returns billable metrics' do
-      get_with_token(organization, '/api/v1/billable_metrics')
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:billable_metrics].count).to eq(1)
@@ -211,12 +224,12 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
 
     context 'with pagination' do
-      let(:billable_metric2) { create(:billable_metric, organization:) }
+      let(:params) { {page: 1, per_page: 1} }
 
-      before { billable_metric2 }
+      before { create(:billable_metric, organization:) }
 
       it 'returns billable metrics with correct meta data' do
-        get_with_token(organization, '/api/v1/billable_metrics?page=1&per_page=1')
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:billable_metrics].count).to eq(1)
@@ -229,20 +242,33 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     end
   end
 
-  describe 'evaluate_expression' do
+  describe 'POST /api/v1/billable_metrics/evaluate_expression' do
+    subject do
+      post_with_token(
+        organization,
+        '/api/v1/billable_metrics/evaluate_expression',
+        {expression:, event:}
+      )
+    end
+
     let(:expression) { 'round(event.properties.value)' }
     let(:event) { {code: 'bm_code', timestamp: Time.current.to_i, properties: {value: '2.4'}} }
 
-    it 'evaluates the expression', aggregate_failures: true do
-      post_with_token(organization, '/api/v1/billable_metrics/evaluate_expression', {expression:, event:})
+    context 'with valid inputs' do
+      it 'evaluates the expression', :aggregate_failures do
+        subject
 
-      expect(response).to have_http_status(:success)
-      expect(json[:expression_result][:value]).to eq("2.0")
+        expect(response).to have_http_status(:success)
+        expect(json[:expression_result][:value]).to eq("2.0")
+      end
     end
 
     context 'with invalid inputs' do
-      it 'returns unprocessable_entity error' do
-        post_with_token(organization, '/api/v1/billable_metrics/evaluate_expression', {expression: '', event: {}})
+      let(:event) { {} }
+      let(:expression) { '' }
+
+      it 'returns unprocessable_entity error', :aggregate_failures do
+        subject
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:error_details][:expression]).to eq(["value_is_mandatory"])

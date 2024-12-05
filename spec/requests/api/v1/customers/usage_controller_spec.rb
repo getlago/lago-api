@@ -18,9 +18,18 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
   end
 
   describe 'GET /customers/:customer_id/current_usage' do
-    let(:tax) { create(:tax, organization:, rate: 20) }
+    subject do
+      get_with_token(
+        organization,
+        "/api/v1/customers/#{customer.external_id}/current_usage",
+        params
+      )
+    end
 
+    let(:params) { {external_subscription_id: subscription.external_id} }
+    let(:tax) { create(:tax, organization:, rate: 20) }
     let(:metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+
     let(:charge) do
       create(
         :graduated_charge,
@@ -40,14 +49,6 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       )
     end
 
-    let(:path) do
-      [
-        '/api/v1/customers',
-        customer.external_id,
-        "current_usage?external_subscription_id=#{subscription.external_id}"
-      ].join('/')
-    end
-
     before do
       subscription
       charge
@@ -65,7 +66,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
     end
 
     it 'returns the usage for the customer' do
-      get_with_token(organization, path)
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -140,7 +141,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       end
 
       it 'returns the filters usage for the customer' do
-        get_with_token(organization, path)
+        subject
 
         charge_usage = json[:customer_usage][:charges_usage].first
         filters_usage = charge_usage[:filters]
@@ -288,7 +289,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       end
 
       it 'returns the filters usage for the customer' do
-        get_with_token(organization, path)
+        subject
 
         charge_usage = json[:customer_usage][:charges_usage].first
         filters_usage = charge_usage[:filters]
@@ -334,14 +335,23 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       let(:customer) { create(:customer) }
 
       it 'returns not found' do
-        get_with_token(organization, path)
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
   describe 'GET /customers/:customer_id/past_usage' do
+    subject do
+      get_with_token(
+        organization,
+        "/api/v1/customers/#{customer.external_id}/past_usage",
+        params
+      )
+    end
+
+    let(:params) { {external_subscription_id: subscription.external_id, periods_count: 2} }
+
     let(:invoice_subscription) do
       create(
         :invoice_subscription,
@@ -362,21 +372,13 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
     let(:fee1) { create(:charge_fee, charge: charge1, subscription:, invoice:) }
     let(:fee2) { create(:charge_fee, charge: charge2, subscription:, invoice:) }
 
-    let(:path) do
-      [
-        '/api/v1/customers',
-        customer.external_id,
-        "past_usage?external_subscription_id=#{subscription.external_id}&periods_count=2"
-      ].join('/')
-    end
-
     before do
       fee1
       fee2
     end
 
     it 'returns the past usage' do
-      get_with_token(organization, path)
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -406,33 +408,24 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
     end
 
     context 'when missing external_subscription_id' do
-      let(:path) do
-        [
-          '/api/v1/customers',
-          customer.external_id,
-          'past_usage'
-        ].join('/')
-      end
+      let(:params) { {} }
 
       it 'returns an unprocessable entity' do
-        get_with_token(organization, path)
-
+        subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
 
     context 'with invalid billable metric code' do
-      let(:path) do
-        [
-          '/api/v1/customers',
-          customer.external_id,
-          "past_usage?billable_metric_code=foo&external_subscription_id=#{subscription.external_id}"
-        ].join('/')
+      let(:params) do
+        {
+          billable_metric_code: 'invalid_code',
+          external_subscription_id: subscription.external_id
+        }
       end
 
       it 'returns a not found error' do
-        get_with_token(organization, path)
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end

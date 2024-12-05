@@ -6,39 +6,44 @@ RSpec.describe Api::V1::Customers::AppliedCouponsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
 
-  describe 'destroy' do
-    let(:applied_coupon) { create(:applied_coupon, customer:) }
+  describe 'DELETE /api/v1/customers/:customer_external_id/applied_coupons/:id' do
+    subject do
+      delete_with_token(
+        organization,
+        "/api/v1/customers/#{external_id}/applied_coupons/#{identifier}"
+      )
+    end
+
+    let!(:applied_coupon) { create(:applied_coupon, customer:) }
+    let(:external_id) { customer.external_id }
     let(:identifier) { applied_coupon.id }
 
-    before { applied_coupon }
-
     it 'terminates the applied coupon' do
-      expect do
-        delete_with_token(organization, "/api/v1/customers/#{customer.external_id}/applied_coupons/#{identifier}")
-      end.to change { applied_coupon.reload.status }.from('active').to('terminated')
+      expect { subject }
+        .to change { applied_coupon.reload.status }.from('active').to('terminated')
     end
 
     it 'returns the applied_coupon' do
-      delete_with_token(organization, "/api/v1/customers/#{customer.external_id}/applied_coupons/#{identifier}")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_coupon][:lago_id]).to eq(applied_coupon.id)
     end
 
     context 'when customer does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, "/api/v1/customers/unknown/applied_coupons/#{identifier}")
+      let(:external_id) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when applied coupon does not exist' do
-      let(:identifier) { 'unknown' }
+      let(:identifier) { SecureRandom.uuid }
 
       it 'returns not_found error' do
-        delete_with_token(organization, "/api/v1/customers/#{customer.external_id}/applied_coupons/#{identifier}")
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
@@ -48,8 +53,7 @@ RSpec.describe Api::V1::Customers::AppliedCouponsController, type: :request do
       let(:identifier) { other_applied_coupon.id }
 
       it 'returns not_found error' do
-        delete_with_token(organization, "/api/v1/customers/#{customer.external_id}/applied_coupons/#{identifier}")
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end

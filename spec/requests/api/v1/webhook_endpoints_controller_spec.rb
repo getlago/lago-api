@@ -3,7 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
-  describe 'create' do
+  describe 'POST /api/v1/webhook_endpoints' do
+    subject do
+      post_with_token(
+        organization,
+        '/api/v1/webhook_endpoints',
+        {webhook_endpoint: create_params}
+      )
+    end
+
     let(:organization) { create(:organization) }
     let(:create_params) do
       {
@@ -13,7 +21,7 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     end
 
     it 'returns a success' do
-      post_with_token(organization, '/api/v1/webhook_endpoints', {webhook_endpoint: create_params})
+      subject
 
       expect(response).to have_http_status(:success)
 
@@ -24,15 +32,15 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     end
   end
 
-  describe 'GET /webhook_endpoints' do
+  describe 'GET /api/v1/webhook_endpoints' do
+    subject { get_with_token(organization, '/api/v1/webhook_endpoints') }
+
     let(:organization) { create(:organization) }
 
-    before do
-      create_list(:webhook_endpoint, 2, organization:)
-    end
+    before { create_pair(:webhook_endpoint, organization:) }
 
     it 'returns all webhook endpoints from organization' do
-      get_with_token(organization, '/api/v1/webhook_endpoints')
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:ok)
@@ -41,20 +49,17 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     end
   end
 
-  describe 'GET /webhook_endpoints/:id' do
+  describe 'GET /api/v1/webhook_endpoints/:id' do
+    subject { get_with_token(organization, "/api/v1/webhook_endpoints/#{id}") }
+
     let(:webhook_endpoint) { create(:webhook_endpoint) }
     let(:organization) { webhook_endpoint.organization.reload }
 
-    before do
-      webhook_endpoint
-    end
-
     context 'with existing id' do
+      let(:id) { webhook_endpoint.id }
+
       it 'returns the customer' do
-        get_with_token(
-          organization,
-          "/api/v1/webhook_endpoints/#{webhook_endpoint.id}"
-        )
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:ok)
@@ -64,28 +69,30 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     end
 
     context 'with not existing id' do
-      it 'returns a not found error' do
-        get_with_token(organization, '/api/v1/webhook_endpoints/foobar')
+      let(:id) { SecureRandom.uuid }
 
+      it 'returns a not found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'DELETE /webhook_endpoints/:id' do
-    let(:webhook_endpoint) { create(:webhook_endpoint) }
+  describe 'DELETE /api/v1webhook_endpoints/:id' do
+    subject { delete_with_token(organization, "/api/v1/webhook_endpoints/#{id}") }
+
+    let!(:webhook_endpoint) { create(:webhook_endpoint) }
     let(:organization) { webhook_endpoint.organization.reload }
 
-    before { webhook_endpoint }
-
     context 'when webhook endpoint exists' do
+      let(:id) { webhook_endpoint.id }
+
       it 'deletes a webhook endpoint' do
-        expect { delete_with_token(organization, "/api/v1/webhook_endpoints/#{webhook_endpoint.id}") }
-          .to change(WebhookEndpoint, :count).by(-1)
+        expect { subject }.to change(WebhookEndpoint, :count).by(-1)
       end
 
       it 'returns deleted webhook_endpoint' do
-        delete_with_token(organization, "/api/v1/webhook_endpoints/#{webhook_endpoint.id}")
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -97,15 +104,24 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     end
 
     context 'when webhook endpoint does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, '/api/v1/webhook_endpoints/invalid')
+      let(:id) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'PUT /webhook_endpoints/:id' do
+  describe 'PUT /api/v1/webhook_endpoints/:id' do
+    subject do
+      put_with_token(
+        organization,
+        "/api/v1/webhook_endpoints/#{id}",
+        {webhook_endpoint: update_params}
+      )
+    end
+
     let(:webhook_endpoint) { create(:webhook_endpoint) }
     let(:organization) { webhook_endpoint.organization.reload }
     let(:update_params) do
@@ -118,12 +134,10 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     before { webhook_endpoint }
 
     context 'when webhook endpoint exists' do
+      let(:id) { webhook_endpoint.id }
+
       it 'updates a webhook endpoint' do
-        put_with_token(
-          organization,
-          "/api/v1/webhook_endpoints/#{webhook_endpoint.id}",
-          {webhook_endpoint: update_params}
-        )
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -135,13 +149,10 @@ RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
     end
 
     context 'when webhook endpoint does not exist' do
-      it 'returns not_found error' do
-        put_with_token(
-          organization,
-          '/api/v1/webhook_endpoints/12345',
-          {webhook_endpoint: update_params}
-        )
+      let(:id) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end

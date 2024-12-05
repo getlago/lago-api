@@ -6,7 +6,6 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:credit_note) { create(:credit_note, invoice:, customer:) }
-  let(:credit_note_items) { create_list(:credit_note_item, 2, credit_note:) }
 
   let(:invoice) do
     create(
@@ -21,11 +20,14 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     )
   end
 
-  describe 'GET /credit_notes/:id' do
-    before { credit_note_items }
+  describe 'GET /api/v1/credit_notes/:id' do
+    subject { get_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}") }
+
+    let(:credit_note_id) { credit_note.id }
+    let!(:credit_note_items) { create_list(:credit_note_item, 2, credit_note:) }
 
     it 'returns a credit note' do
-      get_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}")
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -65,9 +67,10 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     context 'when credit note does not exists' do
-      it 'returns not found' do
-        get_with_token(organization, '/api/v1/credit_notes/foo')
+      let(:credit_note_id) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
@@ -76,59 +79,75 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:credit_note) { create(:credit_note, :draft) }
 
       it 'returns not found' do
-        get_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}")
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when credit note belongs to another organization' do
       let(:wrong_credit_note) { create(:credit_note) }
+      let(:credit_note_id) { wrong_credit_note.id }
 
       it 'returns not found' do
-        get_with_token(organization, "/api/v1/credit_notes/#{wrong_credit_note.id}")
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'PUT /credit_notes/:id' do
+  describe 'PUT /api/v1/credit_notes/:id' do
+    subject do
+      put_with_token(
+        organization,
+        "/api/v1/credit_notes/#{credit_note_id}",
+        credit_note: update_params
+      )
+    end
+
+    let(:credit_note_id) { credit_note.id }
     let(:update_params) { {refund_status: 'succeeded'} }
 
-    it 'updates the credit note' do
-      put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}", credit_note: update_params)
+    context 'when credit not exists' do
+      it 'updates the credit note' do
+        subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
 
-        expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
-        expect(json[:credit_note][:refund_status]).to eq('succeeded')
+          expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
+          expect(json[:credit_note][:refund_status]).to eq('succeeded')
+        end
       end
     end
 
     context 'when credit note does not exist' do
-      it 'returns a not found error' do
-        put_with_token(organization, '/api/v1/credit_notes/555', credit_note: update_params)
+      let(:credit_note_id) { SecureRandom.uuid }
 
+      it 'returns a not found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when provided refund status is invalid' do
-      let(:update_params) { {refund_status: 'foo_bar'} }
+      let(:update_params) { {refund_status: 'invalid_status'} }
 
       it 'returns an unprocessable entity error' do
-        put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}", credit_note: update_params)
-
+        subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'GET /credit_notes/:id/download' do
+  describe 'GET /api/v1/credit_notes/:id/download' do
+    subject do
+      post_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/download")
+    end
+
+    let(:credit_note_id) { credit_note.id }
+
     it 'enqueues a job to generate the PDF' do
-      post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -140,7 +159,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
 
       it 'returns the credit note object' do
-        post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -150,9 +169,10 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     context 'when credit note does not exist' do
-      it 'returns not found' do
-        post_with_token(organization, '/api/v1/credit_notes/foo/download')
+      let(:credit_note_id) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
@@ -161,50 +181,59 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:credit_note) { create(:credit_note, :draft) }
 
       it 'returns not found' do
-        post_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/download")
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when credit note belongs to another organization' do
       let(:wrong_credit_note) { create(:credit_note) }
+      let(:credit_note_id) { wrong_credit_note.id }
 
       it 'returns not found' do
-        post_with_token(organization, "/api/v1/credit_notes/#{wrong_credit_note.id}/download")
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /credit_notes' do
+  describe 'GET /api/v1/credit_notes' do
+    subject { get_with_token(organization, '/api/v1/credit_notes', params) }
+
     let(:second_customer) { create(:customer, organization:) }
     let(:second_invoice) { create(:invoice, customer: second_customer, organization:) }
-    let(:second_credit_note) { create(:credit_note, invoice: second_invoice, customer: second_invoice.customer) }
-    let(:draft_credit_note) { create(:credit_note, :draft, customer: second_customer) }
 
-    before do
-      credit_note
-      second_credit_note
-      draft_credit_note
+    let(:another_customer_credit_note) do
+      create(:credit_note, invoice: second_invoice, customer: second_invoice.customer)
     end
 
-    it 'returns a list of credit_notes' do
-      get_with_token(organization, '/api/v1/credit_notes')
+    let!(:credit_note_ids) do
+      [
+        credit_note,
+        another_customer_credit_note
+      ].pluck(:id)
+    end
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:credit_notes].count).to eq(2)
-        expect(json[:credit_notes].first[:lago_id]).to eq(second_credit_note.id)
-        expect(json[:credit_notes].first[:items]).to be_empty
-        expect(json[:credit_notes].last[:lago_id]).to eq(credit_note.id)
+    context 'without params' do
+      let(:params) { {} }
+
+      it 'returns a list of credit_notes' do
+        subject
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_notes].count).to eq(2)
+          expect(json[:credit_notes].first[:items]).to be_empty
+          expect(json[:credit_notes].map { |i| i[:lago_id] }).to match_array credit_note_ids
+        end
       end
     end
 
     context 'with pagination' do
+      let(:params) { {page: 1, per_page: 1} }
+
       it 'returns the metadata' do
-        get_with_token(organization, '/api/v1/credit_notes?page=1&per_page=1')
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -222,8 +251,10 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     context 'with external_customer_id filter' do
+      let(:params) { {external_customer_id: customer.external_id} }
+
       it 'returns credit notes of the customer' do
-        get_with_token(organization, "/api/v1/credit_notes?external_customer_id=#{customer.external_id}")
+        subject
 
         aggregate_failures do
           expect(response).to have_http_status(:success)
@@ -235,10 +266,13 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'POST /credit_notes' do
+  describe 'POST /api/v1/credit_notes' do
+    subject do
+      post_with_token(organization, '/api/v1/credit_notes', {credit_note: create_params})
+    end
+
     let(:fee1) { create(:fee, invoice:) }
     let(:fee2) { create(:charge_fee, invoice:) }
-
     let(:invoice_id) { invoice.id }
 
     let(:create_params) do
@@ -264,7 +298,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     around { |test| lago_premium!(&test) }
 
     it 'creates a credit note' do
-      post_with_token(organization, '/api/v1/credit_notes', {credit_note: create_params})
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -295,19 +329,22 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     context 'when invoice is not found' do
-      let(:invoice_id) { 'foo_id' }
+      let(:invoice_id) { SecureRandom.uuid }
 
       it 'returns not found' do
-        post_with_token(organization, '/api/v1/credit_notes', {credit_note: create_params})
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'PUT /credit_notes/:id/void' do
+  describe 'PUT /api/v1/credit_notes/:id/void' do
+    subject { put_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/void") }
+
+    let(:credit_note_id) { credit_note.id }
+
     it 'voids the credit note' do
-      put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/void")
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -319,9 +356,10 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     context 'when credit note does not exist' do
-      it 'returns a not found error' do
-        put_with_token(organization, '/api/v1/credit_notes/555/void')
+      let(:credit_note_id) { SecureRandom.uuid }
 
+      it 'returns a not found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
@@ -330,16 +368,22 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       before { credit_note.update!(credit_amount_cents: 0, credit_status: :voided) }
 
       it 'returns an unprocessable entity error' do
-        put_with_token(organization, "/api/v1/credit_notes/#{credit_note.id}/void")
-
+        subject
         expect(response).to have_http_status(:method_not_allowed)
       end
     end
   end
 
-  describe 'GET /credit_notes/estimate' do
-    let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100) }
+  describe 'POST /api/v1/credit_notes/estimate' do
+    subject do
+      post_with_token(
+        organization,
+        '/api/v1/credit_notes/estimate',
+        {credit_note: estimate_params}
+      )
+    end
 
+    let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100) }
     let(:invoice_id) { invoice.id }
 
     let(:estimate_params) do
@@ -352,7 +396,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     around { |test| lago_premium!(&test) }
 
     it 'returns the computed amounts for credit note creation' do
-      post_with_token(organization, '/api/v1/credit_notes/estimate', {credit_note: estimate_params})
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -375,8 +419,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:invoice) { create(:invoice) }
 
       it 'returns not found' do
-        post_with_token(organization, '/api/v1/credit_notes/estimate', {credit_note: estimate_params})
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end

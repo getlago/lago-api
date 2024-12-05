@@ -6,7 +6,15 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
   let(:organization) { create(:organization) }
   let(:webhook_url) { Faker::Internet.url }
 
-  describe 'update' do
+  describe 'PUT /api/v1/organizations' do
+    subject do
+      put_with_token(
+        organization,
+        '/api/v1/organizations',
+        {organization: update_params}
+      )
+    end
+
     let(:update_params) do
       {
         country: 'pl',
@@ -64,11 +72,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
       around { |test| lago_premium!(&test) }
 
       it 'updates an organization' do
-        put_with_token(
-          organization,
-          '/api/v1/organizations',
-          {organization: update_params}
-        )
+        subject
 
         expect(response).to have_http_status(:success)
 
@@ -83,24 +87,22 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
     end
   end
 
-  describe 'GET /grpc_token' do
+  describe 'GET /api/v1/organizations/grpc_token' do
+    subject { get_with_token(organization, '/api/v1/organizations/grpc_token') }
+
     it 'returns the grpc_token' do
-      get_with_token(
-        organization,
-        '/api/v1/organizations/grpc_token'
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:organization][:grpc_token]).not_to be_nil
     end
   end
 
-  describe 'GET' do
+  describe 'GET /api/v1/organizations' do
+    subject { get_with_token(organization, '/api/v1/organizations') }
+
     it 'returns the organization' do
-      get_with_token(
-        organization,
-        '/api/v1/organizations'
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:organization][:name]).to eq(organization.name)

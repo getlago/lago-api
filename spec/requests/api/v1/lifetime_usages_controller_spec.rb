@@ -3,36 +3,29 @@
 require 'rails_helper'
 
 RSpec.describe Api::V1::LifetimeUsagesController, type: :request do
-  let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:) }
+  let!(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:) }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, organization:, subscription_at:, customer:) }
   let(:subscription_at) { Date.new(2022, 8, 22) }
-
   let(:plan) { create(:plan) }
-  let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 100) }
 
-  before do
-    lifetime_usage
-    usage_threshold
-  end
+  before { create(:usage_threshold, plan:, amount_cents: 100) }
 
-  describe 'show' do
+  describe 'GET /api/v1/subscriptions/:subscription_external_id/lifetime_usage' do
+    subject { get_with_token(organization, "/api/v1/subscriptions/#{external_id}/lifetime_usage") }
+
+    let(:external_id) { subscription.external_id }
+
     it 'returns the lifetime_usage' do
-      get_with_token(
-        organization,
-        "/api/v1/subscriptions/#{subscription.external_id}/lifetime_usage"
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:lifetime_usage][:lago_id]).to eq(lifetime_usage.id)
     end
 
     it 'includes the usage_thresholds' do
-      get_with_token(
-        organization,
-        "/api/v1/subscriptions/#{subscription.external_id}/lifetime_usage"
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:lifetime_usage][:lago_id]).to eq(lifetime_usage.id)
@@ -42,31 +35,42 @@ RSpec.describe Api::V1::LifetimeUsagesController, type: :request do
     end
 
     context 'when subscription cannot be found' do
+      let(:external_id) { SecureRandom.uuid }
+
       it 'returns not found' do
-        get_with_token(organization, '/api/v1/subscriptions/123/lifetime_usage')
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'update' do
-    let(:update_params) { {external_historical_usage_amount_cents: 20} }
-
-    it 'updates the lifetime_usage' do
+  describe 'PUT /api/v1/subscriptions/:subscription_external_id/lifetime_usage' do
+    subject do
       put_with_token(
         organization,
-        "/api/v1/subscriptions/#{subscription.external_id}/lifetime_usage",
+        "/api/v1/subscriptions/#{external_id}/lifetime_usage",
         {lifetime_usage: update_params}
       )
-
-      expect(response).to have_http_status(:success)
-      expect(json[:lifetime_usage][:lago_id]).to eq(lifetime_usage.id)
-      expect(json[:lifetime_usage][:external_historical_usage_amount_cents]).to eq(20)
     end
 
-    context 'when subscription cannot be found' do
+    let(:external_id) { subscription.external_id }
+    let(:update_params) { {external_historical_usage_amount_cents: 20} }
+
+    context 'when subscription exists' do
+      it 'updates the lifetime_usage' do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:lifetime_usage][:lago_id]).to eq(lifetime_usage.id)
+        expect(json[:lifetime_usage][:external_historical_usage_amount_cents]).to eq(20)
+      end
+    end
+
+    context 'when subscription does not exist' do
+      let(:external_id) { SecureRandom.uuid }
+
       it 'returns not found' do
-        put_with_token(organization, '/api/v1/subscriptions/123/lifetime_usage', {lifetime_usage: update_params})
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end

@@ -5,7 +5,9 @@ require 'rails_helper'
 RSpec.describe Api::V1::CouponsController, type: :request do
   let(:organization) { create(:organization) }
 
-  describe 'create' do
+  describe 'POST /api/v1/coupons' do
+    subject { post_with_token(organization, '/api/v1/coupons', {coupon: create_params}) }
+
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:expiration_at) { Time.current + 15.days }
 
@@ -27,7 +29,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     end
 
     it 'creates a coupon' do
-      post_with_token(organization, '/api/v1/coupons', {coupon: create_params})
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:coupon][:lago_id]).to be_present
@@ -41,9 +43,14 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     end
   end
 
-  describe 'update' do
+  describe 'PUT /api/v1/coupons/:code' do
+    subject do
+      put_with_token(organization, "/api/v1/coupons/#{coupon_code}", {coupon: update_params})
+    end
+
     let(:coupon) { create(:coupon, organization:) }
     let(:code) { 'coupon_code' }
+    let(:coupon_code) { coupon.code }
     let(:expiration_at) { Time.current + 15.days }
     let(:update_params) do
       {
@@ -59,11 +66,7 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     end
 
     it 'updates a coupon' do
-      put_with_token(
-        organization,
-        "/api/v1/coupons/#{coupon.code}",
-        {coupon: update_params}
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:coupon][:lago_id]).to eq(coupon.id)
@@ -72,39 +75,33 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     end
 
     context 'when coupon does not exist' do
-      it 'returns not_found error' do
-        put_with_token(organization, '/api/v1/coupons/invalid', {coupon: update_params})
+      let(:coupon_code) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when coupon code already exists in organization scope (validation error)' do
-      let(:coupon2) { create(:coupon, organization:) }
-      let(:code) { coupon2.code }
-
-      before { coupon2 }
+      let!(:another_coupon) { create(:coupon, organization:) }
+      let(:code) { another_coupon.code }
 
       it 'returns unprocessable_entity error' do
-        put_with_token(
-          organization,
-          "/api/v1/coupons/#{coupon.code}",
-          {coupon: update_params}
-        )
-
+        subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'show' do
+  describe 'GET /api/v1/coupons/:code' do
+    subject { get_with_token(organization, "/api/v1/coupons/#{coupon_code}") }
+
     let(:coupon) { create(:coupon, organization:) }
+    let(:coupon_code) { coupon.code }
 
     it 'returns a coupon' do
-      get_with_token(
-        organization,
-        "/api/v1/coupons/#{coupon.code}"
-      )
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:coupon][:lago_id]).to eq(coupon.id)
@@ -112,29 +109,27 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     end
 
     context 'when coupon does not exist' do
-      it 'returns not found' do
-        get_with_token(
-          organization,
-          '/api/v1/coupons/555'
-        )
+      let(:coupon_code) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'destroy' do
-    let(:coupon) { create(:coupon, organization:) }
+  describe 'DELETE /api/v1/coupons/:code' do
+    subject { delete_with_token(organization, "/api/v1/coupons/#{coupon_code}") }
 
-    before { coupon }
+    let!(:coupon) { create(:coupon, organization:) }
+    let(:coupon_code) { coupon.code }
 
     it 'deletes a coupon' do
-      expect { delete_with_token(organization, "/api/v1/coupons/#{coupon.code}") }
-        .to change(Coupon, :count).by(-1)
+      expect { subject }.to change(Coupon, :count).by(-1)
     end
 
     it 'returns deleted coupon' do
-      delete_with_token(organization, "/api/v1/coupons/#{coupon.code}")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:coupon][:lago_id]).to eq(coupon.id)
@@ -142,21 +137,23 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     end
 
     context 'when coupon does not exist' do
-      it 'returns not_found error' do
-        delete_with_token(organization, '/api/v1/coupons/invalid')
+      let(:coupon_code) { SecureRandom.uuid }
 
+      it 'returns not_found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'index' do
-    let(:coupon) { create(:coupon, organization:) }
+  describe 'GET /api/v1/coupons' do
+    subject { get_with_token(organization, '/api/v1/coupons', params) }
 
-    before { coupon }
+    let!(:coupon) { create(:coupon, organization:) }
+    let(:params) { {} }
 
     it 'returns coupons' do
-      get_with_token(organization, '/api/v1/coupons')
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:coupons].count).to eq(1)
@@ -165,12 +162,12 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     end
 
     context 'with pagination' do
-      let(:coupon2) { create(:coupon, organization:) }
+      let(:params) { {page: 1, per_page: 1} }
 
-      before { coupon2 }
+      before { create(:coupon, organization:) }
 
       it 'returns coupons with correct meta data' do
-        get_with_token(organization, '/api/v1/coupons?page=1&per_page=1')
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:coupons].count).to eq(1)

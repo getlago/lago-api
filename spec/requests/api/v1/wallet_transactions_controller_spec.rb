@@ -14,7 +14,15 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     wallet
   end
 
-  describe 'create' do
+  describe 'POST /api/v1/wallet_transactions' do
+    subject do
+      post_with_token(
+        organization,
+        '/api/v1/wallet_transactions',
+        {wallet_transaction: params}
+      )
+    end
+
     let(:params) do
       {
         wallet_id:,
@@ -24,7 +32,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     it 'creates a wallet transactions' do
-      post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
+      subject
 
       expect(response).to have_http_status(:success)
 
@@ -47,7 +55,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
 
       it 'creates a wallet transactions' do
-        post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
+        subject
 
         expect(response).to have_http_status(:success)
 
@@ -73,7 +81,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
 
       it 'creates the wallet transactions with correct data' do
-        post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:wallet_transactions].count).to eq(2)
@@ -88,14 +96,18 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       let(:wallet_id) { "#{wallet.id}123" }
 
       it 'returns unprocessable_entity error' do
-        post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
-
+        subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'index' do
+  describe 'GET /api/v1/wallet_transactions' do
+    subject do
+      get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions", params)
+    end
+
+    let(:params) { {} }
     let(:wallet_transaction_first) { create(:wallet_transaction, wallet:) }
     let(:wallet_transaction_second) { create(:wallet_transaction, wallet:) }
     let(:wallet_transaction_third) { create(:wallet_transaction) }
@@ -107,7 +119,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     it 'returns wallet transactions' do
-      get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions")
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:wallet_transactions].count).to eq(2)
@@ -116,8 +128,10 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     context 'with pagination' do
+      let(:params) { {page: 1, per_page: 1} }
+
       it 'returns wallet transactions with correct meta data' do
-        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions?page=1&per_page=1")
+        subject
 
         expect(response).to have_http_status(:success)
 
@@ -131,10 +145,11 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     context 'with status param' do
+      let(:params) { {status: 'pending'} }
       let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, status: 'pending') }
 
       it 'returns wallet transactions with correct status' do
-        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions?status=pending")
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:wallet_transactions].count).to eq(1)
@@ -143,10 +158,11 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     context 'with transaction type param' do
+      let(:params) { {transaction_type: 'outbound'} }
       let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, transaction_type: 'outbound') }
 
       it 'returns wallet transactions with correct transaction type' do
-        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions?transaction_type=outbound")
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:wallet_transactions].count).to eq(1)
@@ -155,11 +171,10 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     end
 
     context 'when wallet does not exist' do
-      let(:wallet_id) { "#{wallet.id}abc" }
+      let(:wallet_id) { SecureRandom.uuid }
 
       it 'returns not_found error' do
-        get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions")
-
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end

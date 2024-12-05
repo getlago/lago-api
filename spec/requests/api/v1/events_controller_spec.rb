@@ -7,107 +7,109 @@ RSpec.describe Api::V1::EventsController, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:metric) { create(:billable_metric, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, customer:, organization:, plan:, started_at: 1.month.ago) }
+  let!(:subscription) { create(:subscription, customer:, organization:, plan:, started_at: 1.month.ago) }
 
-  before { subscription }
+  describe 'POST /api/v1/events' do
+    subject do
+      post_with_token(organization, '/api/v1/events', event: create_params)
+    end
 
-  describe 'POST /events' do
+    let(:create_params) do
+      {
+        code: metric.code,
+        transaction_id: SecureRandom.uuid,
+        external_subscription_id: subscription.external_id,
+        timestamp: Time.current.to_i,
+        precise_total_amount_cents: '123.45',
+        properties: {
+          foo: 'bar'
+        }
+      }
+    end
+
     it 'returns a success' do
-      expect do
-        post_with_token(
-          organization,
-          '/api/v1/events',
-          event: {
-            code: metric.code,
-            transaction_id: SecureRandom.uuid,
-            external_subscription_id: subscription.external_id,
-            timestamp: Time.current.to_i,
-            precise_total_amount_cents: '123.45',
-            properties: {
-              foo: 'bar'
-            }
-          }
-        )
-      end.to change(Event, :count).by(1)
+      expect { subject }.to change(Event, :count).by(1)
 
       expect(response).to have_http_status(:success)
       expect(json[:event][:external_subscription_id]).to eq(subscription.external_id)
     end
 
     context 'with duplicated transaction_id' do
-      let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
+      let!(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
 
-      before { event }
+      let(:create_params) do
+        {
+          code: metric.code,
+          transaction_id: event.transaction_id,
+          external_subscription_id: subscription.external_id,
+          timestamp: Time.current.to_i,
+          precise_total_amount_cents: '123.45',
+          properties: {
+            foo: 'bar'
+          }
+        }
+      end
 
       it 'returns a not found response' do
-        expect do
-          post_with_token(
-            organization,
-            '/api/v1/events',
-            event: {
-              code: metric.code,
-              transaction_id: event.transaction_id,
-              external_subscription_id: subscription.external_id,
-              timestamp: Time.current.to_i,
-              precise_total_amount_cents: '123.45',
-              properties: {
-                foo: 'bar'
-              }
-            }
-          )
-        end.not_to change(Event, :count)
+        expect { subject }.not_to change(Event, :count)
 
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'POST /events/batch' do
+  describe 'POST /api/v1/events/batch' do
+    subject do
+      post_with_token(organization, '/api/v1/events/batch', events: batch_params)
+    end
+
+    let(:batch_params) do
+      [
+        {
+          code: metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          timestamp: Time.current.to_i,
+          precise_total_amount_cents: '123.45',
+          properties: {
+            foo: 'bar'
+          }
+        }
+      ]
+    end
+
     it 'returns a success' do
-      expect do
-        post_with_token(
-          organization,
-          '/api/v1/events/batch',
-          events: [
-            {
-              code: metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: subscription.external_id,
-              timestamp: Time.current.to_i,
-              precise_total_amount_cents: '123.45',
-              properties: {
-                foo: 'bar'
-              }
-            }
-          ]
-        )
-      end.to change(Event, :count).by(1)
+      expect { subject }.to change(Event, :count).by(1)
 
       expect(response).to have_http_status(:ok)
       expect(json[:events].first[:external_subscription_id]).to eq(subscription.external_id)
     end
   end
 
-  describe 'GET /events' do
-    let(:event1) { create(:event, timestamp: 5.days.ago.to_date, organization:) }
+  describe 'GET /api/v1/events' do
+    subject { get_with_token(organization, '/api/v1/events', params) }
 
-    before { event1 }
+    let!(:event) { create(:event, timestamp: 5.days.ago.to_date, organization:) }
 
-    it 'returns events' do
-      get_with_token(organization, '/api/v1/events')
+    context 'without params' do
+      let(:params) { {} }
 
-      expect(response).to have_http_status(:ok)
-      expect(json[:events].count).to eq(1)
-      expect(json[:events].first[:lago_id]).to eq(event1.id)
+      it 'returns events' do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events].count).to eq(1)
+        expect(json[:events].first[:lago_id]).to eq(event.id)
+      end
     end
 
     context 'with pagination' do
-      let(:event2) { create(:event, organization:) }
+      let(:params) { {page: 1, per_page: 1} }
 
-      before { event2 }
+      before { create(:event, organization:) }
 
       it 'returns events with correct meta data' do
-        get_with_token(organization, '/api/v1/events?page=1&per_page=1')
+        subject
 
         expect(response).to have_http_status(:ok)
 
@@ -121,60 +123,60 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
 
     context 'with code' do
-      let(:event2) { create(:event, organization:) }
+      let(:params) { {code: event.code} }
 
-      before { event2 }
+      before { create(:event, organization:) }
 
       it 'returns events' do
-        get_with_token(organization, "/api/v1/events?code=#{event1.code}")
+        subject
 
         expect(response).to have_http_status(:ok)
         expect(json[:events].count).to eq(1)
-        expect(json[:events].first[:lago_id]).to eq(event1.id)
+        expect(json[:events].first[:lago_id]).to eq(event.id)
       end
     end
 
     context 'with external subscription id' do
-      let(:event2) { create(:event, organization:) }
+      let(:params) { {external_subscription_id: event.external_subscription_id} }
 
-      before { event2 }
+      before { create(:event, organization:) }
 
       it 'returns events' do
-        get_with_token(organization, "/api/v1/events?external_subscription_id=#{event1.external_subscription_id}")
+        subject
 
         expect(response).to have_http_status(:ok)
         expect(json[:events].count).to eq(1)
-        expect(json[:events].first[:lago_id]).to eq(event1.id)
+        expect(json[:events].first[:lago_id]).to eq(event.id)
       end
     end
 
     context 'with timestamp' do
-      let(:event2) { create(:event, timestamp: 3.days.ago.to_date, organization:) }
-      let(:event3) { create(:event, timestamp: 1.day.ago.to_date, organization:) }
-
-      before do
-        event2
-        event3
+      let(:params) do
+        {timestamp_from: 2.days.ago.to_date, timestamp_to: Date.tomorrow.to_date}
       end
 
+      let!(:matching_event) { create(:event, timestamp: 1.day.ago.to_date, organization:) }
+
+      before { create(:event, timestamp: 3.days.ago.to_date, organization:) }
+
       it 'returns events with correct timestamp' do
-        get_with_token(
-          organization,
-          "/api/v1/events?timestamp_from=#{2.days.ago.to_date}&timestamp_to=#{Date.tomorrow.to_date}"
-        )
+        subject
 
         expect(response).to have_http_status(:ok)
         expect(json[:events].count).to eq(1)
-        expect(json[:events].first[:lago_id]).to eq(event3.id)
+        expect(json[:events].first[:lago_id]).to eq(matching_event.id)
       end
     end
   end
 
-  describe 'GET /events/:id' do
+  describe 'GET /api/v1/events/:id' do
+    subject { get_with_token(event.organization, "/api/v1/events/#{transaction_id}") }
+
     let(:event) { create(:event) }
+    let(:transaction_id) { event.transaction_id }
 
     it 'returns an event' do
-      get_with_token(event.organization, "/api/v1/events/#{event.transaction_id}")
+      subject
 
       expect(response).to have_http_status(:ok)
 
@@ -187,26 +189,43 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
 
     context 'with a non-existing transaction_id' do
-      it 'returns not found' do
-        get_with_token(organization, "/api/v1/events/#{SecureRandom.uuid}")
+      let(:transaction_id) { SecureRandom.uuid }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
     context 'when event is deleted' do
-      it 'returns not found' do
-        event.discard
-        get_with_token(event.organization, "/api/v1/events/#{event.transaction_id}")
+      before { event.discard! }
 
+      it 'returns not found' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'POST /events/estimate_fees' do
+  describe 'POST /api/v1/events/estimate_fees' do
+    subject do
+      post_with_token(organization, '/api/v1/events/estimate_fees', event: event_params)
+    end
+
     let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric: metric) }
     let(:tax) { create(:tax, organization:) }
+
+    let(:event_params) do
+      {
+        code: metric.code,
+        external_subscription_id: subscription.external_id,
+        transaction_id: SecureRandom.uuid,
+        precise_total_amount_cents: '123.45',
+        properties: {
+          foo: 'bar'
+        }
+      }
+    end
 
     before do
       charge
@@ -214,19 +233,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
 
     it 'returns a success' do
-      post_with_token(
-        organization,
-        '/api/v1/events/estimate_fees',
-        event: {
-          code: metric.code,
-          external_subscription_id: subscription.external_id,
-          transaction_id: SecureRandom.uuid,
-          precise_total_amount_cents: '123.45',
-          properties: {
-            foo: 'bar'
-          }
-        }
-      )
+      subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
@@ -248,19 +255,18 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
 
     context 'with missing customer id' do
-      it 'returns a not found error' do
-        post_with_token(
-          organization,
-          '/api/v1/events/estimate_fees',
-          event: {
-            code: metric.code,
-            external_subscription_id: nil,
-            properties: {
-              foo: 'bar'
-            }
+      let(:event_params) do
+        {
+          code: metric.code,
+          external_subscription_id: nil,
+          properties: {
+            foo: 'bar'
           }
-        )
+        }
+      end
 
+      it 'returns a not found error' do
+        subject
         expect(response).to have_http_status(:not_found)
       end
     end
@@ -268,19 +274,18 @@ RSpec.describe Api::V1::EventsController, type: :request do
     context 'when metric code does not match an pay_in_advance charge' do
       let(:charge) { create(:standard_charge, plan:, billable_metric: metric) }
 
-      it 'returns a validation error' do
-        post_with_token(
-          organization,
-          '/api/v1/events/estimate_fees',
-          event: {
-            code: metric.code,
-            external_subscription_id: subscription.external_id,
-            properties: {
-              foo: 'bar'
-            }
+      let(:event_params) do
+        {
+          code: metric.code,
+          external_subscription_id: subscription.external_id,
+          properties: {
+            foo: 'bar'
           }
-        )
+        }
+      end
 
+      it 'returns a validation error' do
+        subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end

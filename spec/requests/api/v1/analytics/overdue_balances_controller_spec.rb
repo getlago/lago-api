@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Analytics::OverdueBalancesController, type: :request do
-  describe "GET /analytics/overdue_balances" do
+  describe "GET /analytics/overdue_balance" do
+    subject { get_with_token(organization, "/api/v1/analytics/overdue_balance") }
+
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization, created_at: DateTime.new(2023, 11, 1)) }
 
@@ -14,7 +16,7 @@ RSpec.describe Api::V1::Analytics::OverdueBalancesController, type: :request do
         i2 = create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 5.days.ago, total_amount_cents: 2000)
         i3 = create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.day.ago, total_amount_cents: 3000)
 
-        get_with_token(organization, "/api/v1/analytics/overdue_balance")
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:overdue_balances]).to match_array(
