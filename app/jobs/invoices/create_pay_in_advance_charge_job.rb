@@ -2,7 +2,13 @@
 
 module Invoices
   class CreatePayInAdvanceChargeJob < ApplicationJob
-    queue_as 'billing'
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_BILLING'])
+        :billing
+      else
+        :default
+      end
+    end
 
     retry_on Sequenced::SequenceError
 
