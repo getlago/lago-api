@@ -6,10 +6,10 @@ module Types
       graphql_name 'CreateInvoiceCustomSectionInput'
 
       argument :code, String, required: true
-      argument :name, String, required: true
       argument :description, String, required: false
       argument :details, String, required: true
       argument :display_name, String, required: false
+      argument :name, String, required: true
 
       argument :selected, Boolean, required: false
     end

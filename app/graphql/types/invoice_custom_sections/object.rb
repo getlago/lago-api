@@ -10,9 +10,9 @@ module Types
 
       field :code, String, null: true
       field :description, String, null: true
-      field :name, String, null: false
       field :details, String, null: true
       field :display_name, String, null: false
+      field :name, String, null: false
 
       field :selected, Boolean, null: true
 
