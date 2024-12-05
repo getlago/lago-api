@@ -2,7 +2,13 @@
 
 module Invoices
   class FinalizeJob < ApplicationJob
-    queue_as 'invoices'
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_BILLING'])
+        :billing
+      else
+        :invoices
+      end
+    end
 
     unique :until_executed, on_conflict: :log
 

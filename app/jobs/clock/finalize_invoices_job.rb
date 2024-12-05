@@ -9,7 +9,7 @@ module Clock
     unique :until_executed, on_conflict: :log
 
     def perform
-      Invoice.ready_to_be_finalized.each do |invoice|
+      Invoice.ready_to_be_finalized.find_each do |invoice|
         Invoices::FinalizeJob.perform_later(invoice)
       end
     end
