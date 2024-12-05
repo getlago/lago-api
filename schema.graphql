@@ -6117,6 +6117,10 @@ type Permissions {
   dunningCampaignsDelete: Boolean!
   dunningCampaignsUpdate: Boolean!
   dunningCampaignsView: Boolean!
+  invoiceCustomSectionsCreate: Boolean!
+  invoiceCustomSectionsDelete: Boolean!
+  invoiceCustomSectionsUpdate: Boolean!
+  invoiceCustomSectionsView: Boolean!
   invoicesCreate: Boolean!
   invoicesExport: Boolean!
   invoicesSend: Boolean!
