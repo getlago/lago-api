@@ -37,29 +37,33 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       expect(validator).to be_valid
     end
 
-    context 'when amount is negative' do
+    context 'when fee is missing' do
       let(:fee) { nil }
 
       it 'fails the validation' do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq('fee')
-        end
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq('fee')
       end
     end
 
-    context 'when fee is missing' do
+    context 'when amount is negative' do
       let(:amount_cents) { -3 }
 
       it 'fails the validation' do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:amount_cents]).to eq(['invalid_value'])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:amount_cents]).to eq(['invalid_value'])
+      end
+    end
+
+    context 'when amount is zero' do
+      let(:amount_cents) { 0 }
+
+      it 'passes the validation' do
+        expect(validator).to be_valid
       end
     end
 
@@ -71,12 +75,10 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       end
 
       it 'fails the validation' do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:amount_cents]).to eq(['higher_than_remaining_fee_amount'])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:amount_cents]).to eq(['higher_than_remaining_fee_amount'])
       end
     end
 
@@ -87,12 +89,10 @@ RSpec.describe CreditNotes::ValidateItemService, type: :service do
       end
 
       it 'fails the validation' do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:amount_cents]).to eq(['higher_than_remaining_fee_amount'])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:amount_cents]).to eq(['higher_than_remaining_fee_amount'])
       end
     end
   end

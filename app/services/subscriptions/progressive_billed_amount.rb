@@ -12,6 +12,7 @@ module Subscriptions
     def call
       result.progressive_billed_amount = 0
       result.progressive_billing_invoice = nil
+      result.to_credit_amount = 0
 
       invoice_subscription = InvoiceSubscription
         .where("charges_to_datetime > ?", timestamp)
@@ -33,7 +34,7 @@ module Subscriptions
         result.to_credit_amount -= invoice.credit_notes.available.sum(:credit_amount_cents)
 
         # if for some reason this goes below zero, it should be zero.
-        result.to_credit_amount = 0 if result.credit_amount.negative?
+        result.to_credit_amount = 0 if result.to_credit_amount.negative?
       end
 
       result

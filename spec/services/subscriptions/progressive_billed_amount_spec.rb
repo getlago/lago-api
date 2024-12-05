@@ -19,6 +19,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
+      expect(result.to_credit_amount).to be_zero
     end
   end
 
@@ -35,6 +36,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
+      expect(result.to_credit_amount).to be_zero
     end
   end
 
@@ -50,6 +52,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
       result = service.call
       expect(result.progressive_billed_amount).to eq(20)
       expect(result.progressive_billing_invoice).to eq(invoice)
+      expect(result.to_credit_amount).to eq(20)
     end
   end
 
@@ -67,6 +70,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
+      expect(result.to_credit_amount).to be_zero
     end
   end
 
@@ -85,6 +89,82 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
       result = service.call
       expect(result.progressive_billed_amount).to eq(40)
       expect(result.progressive_billing_invoice).to eq(invoice2)
+      expect(result.to_credit_amount).to eq(40)
+    end
+  end
+
+  context "with progressive billing invoice for this subscription, but it has a credit note" do
+    let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:credit_note) { create(:credit_note, invoice:, credit_amount_cents:) }
+
+    before do
+      invoice.update!(invoice_type:, fees_amount_cents: 20)
+      credit_note
+    end
+
+    context "when fully credited" do
+      let(:credit_amount_cents) { 20 }
+
+      it "returns the fees_amount_cents from that invoice" do
+        result = service.call
+        expect(result.progressive_billed_amount).to eq(20)
+        expect(result.progressive_billing_invoice).to eq(invoice)
+        expect(result.to_credit_amount).to eq(0)
+      end
+    end
+
+    context "when partially credited" do
+      let(:credit_amount_cents) { 10 }
+
+      it "returns the fees_amount_cents from that invoice" do
+        result = service.call
+        expect(result.progressive_billed_amount).to eq(20)
+        expect(result.progressive_billing_invoice).to eq(invoice)
+        expect(result.to_credit_amount).to eq(10)
+      end
+    end
+  end
+
+  context "with progressive billing invoice for this subscription, but it has already been applied to an invoice" do
+    let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+    let(:progressive_billing_invoice) { invoice_subscription.invoice }
+    let(:other_invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+    let(:invoice) { other_invoice_subscription.invoice }
+    let(:progressive_billing_credit) do
+      create(:credit,
+        invoice:,
+        progressive_billing_invoice:,
+        amount_cents: amount_to_credit,
+        amount_currency: invoice.currency,
+        before_taxes: true)
+    end
+
+    before do
+      progressive_billing_credit
+      progressive_billing_invoice.update!(invoice_type:, fees_amount_cents: 20)
+    end
+
+    context "when fully credited" do
+      let(:amount_to_credit) { 20 }
+
+      it "returns the fees_amount_cents from that invoice" do
+        result = service.call
+        expect(result.progressive_billed_amount).to eq(20)
+        expect(result.progressive_billing_invoice).to eq(progressive_billing_invoice)
+        expect(result.to_credit_amount).to eq(0)
+      end
+    end
+
+    context "when partially credited" do
+      let(:amount_to_credit) { 10 }
+
+      it "returns the fees_amount_cents from that invoice" do
+        result = service.call
+        expect(result.progressive_billed_amount).to eq(20)
+        expect(result.progressive_billing_invoice).to eq(progressive_billing_invoice)
+        expect(result.to_credit_amount).to eq(10)
+      end
     end
   end
 end
