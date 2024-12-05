@@ -7,7 +7,7 @@ module PaymentProviders
         def initialize(customer:, payment_provider_id:, params:, async: true)
           @customer = customer
           @payment_provider_id = payment_provider_id
-          @params = params
+          @params = params || {}
           @async = async
 
           super
@@ -17,11 +17,11 @@ module PaymentProviders
           provider_customer = PaymentProviderCustomers::StripeCustomer.find_by(customer_id: customer.id)
           provider_customer ||= PaymentProviderCustomers::StripeCustomer.new(customer_id: customer.id, payment_provider_id:)
 
-          if (params || {}).key?(:provider_customer_id)
+          if params.key?(:provider_customer_id)
             provider_customer.provider_customer_id = params[:provider_customer_id].presence
           end
 
-          if (params || {}).key?(:sync_with_provider)
+          if params.key?(:sync_with_provider)
             provider_customer.sync_with_provider = params[:sync_with_provider].presence
           end
 

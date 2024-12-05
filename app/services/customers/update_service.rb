@@ -192,7 +192,7 @@ module Customers
         params: billing_configuration
       ).call.raise_if_error!
 
-      # NOTE: Create service is modifying an other instance of the provider custome
+      # NOTE: Create service is modifying an other instance of the provider customer
       customer.reload
     end
 
