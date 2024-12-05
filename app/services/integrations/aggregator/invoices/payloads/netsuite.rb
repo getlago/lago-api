@@ -46,7 +46,8 @@ module Integrations
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_url,
               'custbody_lago_id' => invoice.id,
-              'duedate' => due_date
+              'duedate' => due_date,
+              'trandate' => issuing_date
             }
 
             if tax_item&.tax_nexus.present?
@@ -79,6 +80,10 @@ module Integrations
 
           def due_date
             invoice.payment_due_date&.strftime("%-m/%-d/%Y")
+          end
+
+          def issuing_date
+            invoice.issuing_date&.strftime("%-m/%-d/%Y")
           end
 
           def item(fee)
