@@ -9,7 +9,7 @@ module LifetimeUsages
         :default
       end
     end
-  
+
     unique :until_executed, on_conflict: :log
 
     def perform(lifetime_usage)
