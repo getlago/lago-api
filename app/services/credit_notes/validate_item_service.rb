@@ -53,9 +53,9 @@ module CreditNotes
       false
     end
 
-    # NOTE: Check if item amount is positive
+    # NOTE: Check if item amount is not negative
     def valid_item_amount?
-      return true if item.amount_cents.positive?
+      return true unless item.amount_cents.negative?
 
       add_error(field: :amount_cents, error_code: 'invalid_value')
     end

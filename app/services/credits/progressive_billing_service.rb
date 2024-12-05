@@ -23,7 +23,7 @@ module Credits
 
         total_charges_amount = invoice.fees.charge.where(subscription: subscription).sum(:amount_cents)
 
-        amount_to_credit = progressive_billing_invoice.fees_amount_cents
+        amount_to_credit = progressive_billed_result.to_credit_amount
 
         if amount_to_credit > total_charges_amount
           CreditNotes::CreateFromProgressiveBillingInvoice.call(
