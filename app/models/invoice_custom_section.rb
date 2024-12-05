@@ -5,6 +5,9 @@ class InvoiceCustomSection < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :organization
+
+  validates :name, presence: true
+  validates :code, presence: true, uniqueness: {scope: :organization_id}
 end
 
 # == Schema Information
