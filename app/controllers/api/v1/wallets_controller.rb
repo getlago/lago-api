@@ -144,6 +144,10 @@ module Api
           )
         )
       end
+
+      def resource_name
+        'wallet'
+      end
     end
   end
 end

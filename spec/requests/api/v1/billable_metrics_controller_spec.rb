@@ -28,6 +28,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'billable_metric', 'write'
+
     it 'creates a billable_metric' do
       subject
 
@@ -90,6 +92,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'billable_metric', 'write'
+
     it 'updates a billable_metric' do
       subject
 
@@ -151,6 +155,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:billable_metric_code) { billable_metric.code }
 
+    include_examples 'requires API permission', 'billable_metric', 'read'
+
     it 'returns a billable metric' do
       subject
 
@@ -186,6 +192,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
     let!(:billable_metric) { create(:billable_metric, organization:) }
     let(:billable_metric_code) { billable_metric.code }
 
+    include_examples 'requires API permission', 'billable_metric', 'write'
+
     it 'deletes a billable_metric' do
       expect { subject }.to change(BillableMetric, :count).by(-1)
     end
@@ -213,6 +221,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
     let!(:billable_metric) { create(:billable_metric, organization:) }
     let(:params) { {} }
+
+    include_examples 'requires API permission', 'billable_metric', 'read'
 
     it 'returns billable metrics' do
       subject
@@ -253,6 +263,8 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
     let(:expression) { 'round(event.properties.value)' }
     let(:event) { {code: 'bm_code', timestamp: Time.current.to_i, properties: {value: '2.4'}} }
+
+    include_examples 'requires API permission', 'billable_metric', 'write'
 
     context 'with valid inputs' do
       it 'evaluates the expression', :aggregate_failures do

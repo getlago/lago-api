@@ -70,6 +70,10 @@ module Api
       def index_filters
         params.permit(:external_customer_id, :status)
       end
+
+      def resource_name
+        'applied_coupon'
+      end
     end
   end
 end

@@ -98,6 +98,10 @@ module Api
           )
         )
       end
+
+      def resource_name
+        'coupon'
+      end
     end
   end
 end

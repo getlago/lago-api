@@ -23,6 +23,10 @@ module Api
             )
           )
         end
+
+        def resource_name
+          'analytic'
+        end
       end
     end
   end

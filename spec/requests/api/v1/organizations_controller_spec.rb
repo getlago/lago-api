@@ -40,6 +40,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'organization', 'write'
+
     it 'updates an organization' do
       put_with_token(
         organization,
@@ -90,6 +92,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
   describe 'GET /api/v1/organizations/grpc_token' do
     subject { get_with_token(organization, '/api/v1/organizations/grpc_token') }
 
+    include_examples 'requires API permission', 'organization', 'read'
+
     it 'returns the grpc_token' do
       subject
 
@@ -100,6 +104,8 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
 
   describe 'GET /api/v1/organizations' do
     subject { get_with_token(organization, '/api/v1/organizations') }
+
+    include_examples 'requires API permission', 'organization', 'read'
 
     it 'returns the organization' do
       subject

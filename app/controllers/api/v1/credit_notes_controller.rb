@@ -163,6 +163,10 @@ module Api
             ]
           )
       end
+
+      def resource_name
+        'credit_note'
+      end
     end
   end
 end

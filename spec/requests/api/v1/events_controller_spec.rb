@@ -27,6 +27,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'event', 'write'
+
     it 'returns a success' do
       expect { subject }.to change(Event, :count).by(1)
 
@@ -78,6 +80,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
       ]
     end
 
+    include_examples 'requires API permission', 'event', 'write'
+
     it 'returns a success' do
       expect { subject }.to change(Event, :count).by(1)
 
@@ -93,6 +97,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
     context 'without params' do
       let(:params) { {} }
+
+      include_examples 'requires API permission', 'event', 'read'
 
       it 'returns events' do
         subject
@@ -170,10 +176,13 @@ RSpec.describe Api::V1::EventsController, type: :request do
   end
 
   describe 'GET /api/v1/events/:id' do
-    subject { get_with_token(event.organization, "/api/v1/events/#{transaction_id}") }
+    subject { get_with_token(organization, "/api/v1/events/#{transaction_id}") }
 
     let(:event) { create(:event) }
+    let(:organization) { event.organization }
     let(:transaction_id) { event.transaction_id }
+
+    include_examples 'requires API permission', 'event', 'read'
 
     it 'returns an event' do
       subject
@@ -231,6 +240,8 @@ RSpec.describe Api::V1::EventsController, type: :request do
       charge
       tax
     end
+
+    include_examples 'requires API permission', 'event', 'write'
 
     it 'returns a success' do
       subject

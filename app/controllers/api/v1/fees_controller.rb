@@ -94,6 +94,10 @@ module Api
           :refunded_at_to
         )
       end
+
+      def resource_name
+        'fee'
+      end
     end
   end
 end

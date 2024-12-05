@@ -139,6 +139,10 @@ module Api
           properties: {}
         ])
       end
+
+      def resource_name
+        'billable_metric'
+      end
     end
   end
 end

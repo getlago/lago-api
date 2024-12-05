@@ -26,6 +26,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     let(:credit_note_id) { credit_note.id }
     let!(:credit_note_items) { create_list(:credit_note_item, 2, credit_note:) }
 
+    include_examples 'requires API permission', 'credit_note', 'read'
+
     it 'returns a credit note' do
       subject
 
@@ -107,6 +109,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     let(:credit_note_id) { credit_note.id }
     let(:update_params) { {refund_status: 'succeeded'} }
 
+    include_examples 'requires API permission', 'credit_note', 'write'
+
     context 'when credit not exists' do
       it 'updates the credit note' do
         subject
@@ -139,12 +143,14 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'GET /api/v1/credit_notes/:id/download' do
+  describe 'POST /api/v1/credit_notes/:id/download' do
     subject do
       post_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/download")
     end
 
     let(:credit_note_id) { credit_note.id }
+
+    include_examples 'requires API permission', 'credit_note', 'write'
 
     it 'enqueues a job to generate the PDF' do
       subject
@@ -202,6 +208,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
     let(:second_customer) { create(:customer, organization:) }
     let(:second_invoice) { create(:invoice, customer: second_customer, organization:) }
+    let(:params) { {} }
 
     let(:another_customer_credit_note) do
       create(:credit_note, invoice: second_invoice, customer: second_invoice.customer)
@@ -214,18 +221,16 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       ].pluck(:id)
     end
 
-    context 'without params' do
-      let(:params) { {} }
+    include_examples 'requires API permission', 'credit_note', 'read'
 
-      it 'returns a list of credit_notes' do
-        subject
+    it 'returns a list of credit_notes' do
+      subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:credit_notes].count).to eq(2)
-          expect(json[:credit_notes].first[:items]).to be_empty
-          expect(json[:credit_notes].map { |i| i[:lago_id] }).to match_array credit_note_ids
-        end
+      aggregate_failures do
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].count).to eq(2)
+        expect(json[:credit_notes].first[:items]).to be_empty
+        expect(json[:credit_notes].map { |i| i[:lago_id] }).to match_array credit_note_ids
       end
     end
 
@@ -297,6 +302,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
     around { |test| lago_premium!(&test) }
 
+    include_examples 'requires API permission', 'credit_note', 'write'
+
     it 'creates a credit note' do
       subject
 
@@ -342,6 +349,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     subject { put_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/void") }
 
     let(:credit_note_id) { credit_note.id }
+
+    include_examples 'requires API permission', 'credit_note', 'write'
 
     it 'voids the credit note' do
       subject
@@ -394,6 +403,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     around { |test| lago_premium!(&test) }
+
+    include_examples 'requires API permission', 'credit_note', 'write'
 
     it 'returns the computed amounts for credit note creation' do
       subject

@@ -63,6 +63,10 @@ module Api
           ]
         )
       end
+
+      def resource_name
+        'wallet_transaction'
+      end
     end
   end
 end

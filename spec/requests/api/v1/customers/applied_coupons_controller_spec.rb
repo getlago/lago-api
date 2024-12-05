@@ -18,6 +18,8 @@ RSpec.describe Api::V1::Customers::AppliedCouponsController, type: :request do
     let(:external_id) { customer.external_id }
     let(:identifier) { applied_coupon.id }
 
+    include_examples 'requires API permission', 'applied_coupon', 'write'
+
     it 'terminates the applied coupon' do
       expect { subject }
         .to change { applied_coupon.reload.status }.from('active').to('terminated')

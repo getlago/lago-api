@@ -89,6 +89,10 @@ module Api
           )
         )
       end
+
+      def resource_name
+        'webhook_endpoint'
+      end
     end
   end
 end

@@ -18,6 +18,8 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'tax', 'write'
+
     it 'creates a tax' do
       expect { subject }.to change(Tax, :count).by(1)
 
@@ -53,6 +55,8 @@ RSpec.describe Api::V1::TaxesController, type: :request do
     let(:update_params) do
       {code:, name:, rate:, applied_to_organization:}
     end
+
+    include_examples 'requires API permission', 'tax', 'write'
 
     it 'updates a tax' do
       subject
@@ -93,6 +97,8 @@ RSpec.describe Api::V1::TaxesController, type: :request do
     let(:tax) { create(:tax, organization:) }
     let(:tax_code) { tax.code }
 
+    include_examples 'requires API permission', 'tax', 'read'
+
     it 'returns a tax' do
       subject
 
@@ -118,6 +124,8 @@ RSpec.describe Api::V1::TaxesController, type: :request do
 
     let!(:tax) { create(:tax, organization:) }
     let(:tax_code) { tax.code }
+
+    include_examples 'requires API permission', 'tax', 'write'
 
     it 'deletes a tax' do
       expect { subject }.to change(Tax, :count).by(-1)
@@ -147,6 +155,8 @@ RSpec.describe Api::V1::TaxesController, type: :request do
     subject { get_with_token(organization, '/api/v1/taxes?page=1&per_page=1') }
 
     let!(:tax) { create(:tax, organization:) }
+
+    include_examples 'requires API permission', 'tax', 'read'
 
     it 'returns taxes' do
       subject

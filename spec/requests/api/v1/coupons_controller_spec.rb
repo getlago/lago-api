@@ -28,6 +28,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'coupon', 'write'
+
     it 'creates a coupon' do
       subject
 
@@ -65,6 +67,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
       }
     end
 
+    include_examples 'requires API permission', 'coupon', 'write'
+
     it 'updates a coupon' do
       subject
 
@@ -100,6 +104,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
     let(:coupon) { create(:coupon, organization:) }
     let(:coupon_code) { coupon.code }
 
+    include_examples 'requires API permission', 'coupon', 'read'
+
     it 'returns a coupon' do
       subject
 
@@ -123,6 +129,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
 
     let!(:coupon) { create(:coupon, organization:) }
     let(:coupon_code) { coupon.code }
+
+    include_examples 'requires API permission', 'coupon', 'write'
 
     it 'deletes a coupon' do
       expect { subject }.to change(Coupon, :count).by(-1)
@@ -151,6 +159,8 @@ RSpec.describe Api::V1::CouponsController, type: :request do
 
     let!(:coupon) { create(:coupon, organization:) }
     let(:params) { {} }
+
+    include_examples 'requires API permission', 'coupon', 'read'
 
     it 'returns coupons' do
       subject

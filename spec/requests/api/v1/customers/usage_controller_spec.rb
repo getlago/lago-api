@@ -65,6 +65,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       )
     end
 
+    include_examples 'requires API permission', 'customer_usage', 'read'
+
     it 'returns the usage for the customer' do
       subject
 
@@ -376,6 +378,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       fee1
       fee2
     end
+
+    include_examples 'requires API permission', 'customer_usage', 'read'
 
     it 'returns the past usage' do
       subject
