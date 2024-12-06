@@ -42,14 +42,14 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:,
+      query:
     )
 
     invoice_custom_sections_response = result['data']['invoiceCustomSections']
 
     aggregate_failures do
       expect(invoice_custom_sections_response['collection'].count).to eq(5)
-      expect(invoice_custom_sections_response['collection'].map{ |ics| ics['name'] }.join('')).to eq('acznr')
+      expect(invoice_custom_sections_response['collection'].map { |ics| ics['name'] }.join('')).to eq('acznr')
 
       expect(invoice_custom_sections_response['metadata']['currentPage']).to eq(1)
       expect(invoice_custom_sections_response['metadata']['totalCount']).to eq(6)
