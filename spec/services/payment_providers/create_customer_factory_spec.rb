@@ -26,6 +26,15 @@ RSpec.describe PaymentProviders::CreateCustomerFactory, type: :service do
       end
     end
 
+    context "when provider is cashfree" do
+      let(:provider) { "cashfree" }
+      let(:payment_provider_id) { create(:cashfree_provider, organization: customer.organization).id }
+
+      it "creates an instance of the cashfree service" do
+        expect(new_instance).to be_instance_of(PaymentProviders::Cashfree::Customers::CreateService)
+      end
+    end
+
     context "when provider is gocardless" do
       let(:provider) { "gocardless" }
       let(:payment_provider_id) { create(:gocardless_provider, organization: customer.organization).id }
