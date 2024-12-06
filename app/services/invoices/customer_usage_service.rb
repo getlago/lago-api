@@ -2,12 +2,13 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(customer:, subscription:, apply_taxes: true, with_cache: true, max_to_datetime: nil)
+    def initialize(customer:, subscription:, timestamp: Time.current, apply_taxes: true, with_cache: true, max_to_datetime: nil)
       super
 
       @apply_taxes = apply_taxes
       @customer = customer
       @subscription = subscription
+      @timestamp = timestamp # To not set this value if without disabling the cache
       @with_cache = with_cache
 
       # NOTE: used to force charges_to_datetime boundary
@@ -41,7 +42,7 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :subscription, :apply_taxes, :with_cache, :max_to_datetime
+    attr_reader :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
 
@@ -111,7 +112,7 @@ module Invoices
 
       date_service = Subscriptions::DatesService.new_instance(
         subscription,
-        Time.current,
+        timestamp,
         current_usage: true
       )
 

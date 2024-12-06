@@ -186,18 +186,6 @@ RSpec.describe Subscriptions::TerminateService do
         end
       end
     end
-
-    context 'when organization has the revenue_analytics premium integration' do
-      before do
-        subscription.organization.update!(premium_integrations: ['revenue_analytics'])
-      end
-
-      it 'enqueues a DailyUsages::ComputeJob' do
-        expect do
-          terminate_service.call
-        end.to have_enqueued_job(BillSubscriptionJob).and have_enqueued_job(DailyUsages::ComputeJob)
-      end
-    end
   end
 
   describe '.terminate_and_start_next' do
@@ -260,18 +248,6 @@ RSpec.describe Subscriptions::TerminateService do
 
         expect(BillSubscriptionJob).to have_been_enqueued
           .with([subscription, next_subscription], timestamp, invoicing_reason: :upgrading)
-      end
-    end
-
-    context 'when organization has the revenue_analytics premium integration' do
-      before do
-        subscription.organization.update!(premium_integrations: ['revenue_analytics'])
-      end
-
-      it 'enqueues a DailyUsages::ComputeJob' do
-        expect do
-          terminate_service.terminate_and_start_next(timestamp:)
-        end.to have_enqueued_job(BillSubscriptionJob).and have_enqueued_job(DailyUsages::ComputeJob)
       end
     end
   end

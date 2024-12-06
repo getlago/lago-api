@@ -60,7 +60,14 @@ module DailyUsages
       end
 
       if subscription.terminated?
-        DailyUsages::ComputeJob.perform_later(subscription, timestamp: subscription.terminated_at)
+        invoice = subscription.invoices
+          .joins(:invoice_subscriptions)
+          .where(invoice_subscriptions: {invoicing_reason: 'subscription_terminating'})
+          .first
+
+        if invoice.present?
+          DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions: [subscription])
+        end
       end
 
       result

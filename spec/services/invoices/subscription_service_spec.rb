@@ -369,5 +369,25 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         end
       end
     end
+
+    context 'when revenue_analytics is set' do
+      before do
+        organization.update!(premium_integrations: %w[revenue_analytics])
+      end
+
+      it 'enqueues DailyUsages::FillFromInvoiceJob with email false' do
+        expect { invoice_service.call }
+          .to have_enqueued_job(DailyUsages::FillFromInvoiceJob)
+      end
+
+      context 'when subscription is terminating' do
+        let(:invoicing_reason) { :subscription_terminating }
+
+        it 'enqueues DailyUsages::FillFromInvoiceJob with email false' do
+          expect { invoice_service.call }
+            .to have_enqueued_job(DailyUsages::FillFromInvoiceJob)
+        end
+      end
+    end
   end
 end

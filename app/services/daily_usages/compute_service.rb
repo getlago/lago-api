@@ -9,6 +9,11 @@ module DailyUsages
     end
 
     def call
+      if subscription_billing_day?
+        # Usage on billing day will be computed using the periodic invoice as we cannont rely on the caching mechanism
+        return result
+      end
+
       if existing_daily_usage.present?
         result.daily_usage = existing_daily_usage
         return result
@@ -38,23 +43,45 @@ module DailyUsages
 
     attr_reader :subscription, :timestamp
 
+    delegate :customer, to: :subscription
+
     def current_usage
-      @current_usage ||= Invoices::CustomerUsageService.call(
+      return @current_usage if defined?(@current_usage)
+      with_cache = true
+
+      # Subscription has been terminated before the initial enqueue of the the job
+      # In that case, we cannot rely on the cache as it will not be relevant anymore
+      with_cache = false if subscription.terminated? && subscription.terminated_at > timestamp
+
+      @current_usage = Invoices::CustomerUsageService.call(
         customer: subscription.customer,
         subscription: subscription,
-        apply_taxes: false
+        apply_taxes: false,
+        with_cache:,
+        # Force the timestamp, to allow computing usage if terminated subscription with the right boundaries
+        timestamp: with_cache ? Time.current : timestamp
       ).raise_if_error!.usage
     end
 
     def existing_daily_usage
-      return nil if subscription.terminated_at?(timestamp)
-
       @existing_daily_usage ||= DailyUsage.refreshed_at_in_timezone(timestamp)
         .find_by(subscription_id: subscription.id)
     end
 
     def diff_usage(daily_usage)
       DailyUsages::ComputeDiffService.call!(daily_usage:).usage_diff
+    end
+
+    def subscription_billing_day?
+      date_in_timezone = timestamp.in_time_zone(customer.applicable_timezone).to_date
+
+      previous_billing_date_in_timezone = Subscriptions::DatesService
+        .new_instance(subscription, timestamp, current_usage: true)
+        .previous_beginning_of_period
+        .in_time_zone(customer.applicable_timezone)
+        .to_date
+
+      date_in_timezone == previous_billing_date_in_timezone
     end
   end
 end
