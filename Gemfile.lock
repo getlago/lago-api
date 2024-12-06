@@ -1,9 +1,10 @@
 GIT
   remote: https://github.com/getlago/lago-expression.git
-  revision: a096edf11524bfda7d7f196ddb7722b6c5b8eeae
+  revision: 6883f3472135508101a875edc0a5d077167da592
+  tag: v0.1.2
   glob: expression-ruby/lago-expression.gemspec
   specs:
-    lago-expression (0.0.1)
+    lago-expression (0.1.0)
       bigdecimal
       rake (~> 13)
       rake-compiler (~> 1.2)
@@ -693,7 +694,7 @@ GEM
     rb-fsevent (0.11.2)
     rb-inotify (0.11.1)
       ffi (~> 1.0)
-    rb_sys (0.9.102)
+    rb_sys (0.9.103)
     rbs (3.6.1)
       logger
     rdoc (6.7.0)
