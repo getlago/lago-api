@@ -6145,6 +6145,8 @@ type Permissions {
   organizationView: Boolean!
   paymentRequestsCreate: Boolean!
   paymentRequestsView: Boolean!
+  paymentsCreate: Boolean!
+  paymentsView: Boolean!
   plansCreate: Boolean!
   plansDelete: Boolean!
   plansUpdate: Boolean!
