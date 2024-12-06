@@ -14,11 +14,7 @@ module Types
       field :display_name, String, null: false
       field :name, String, null: false
 
-      field :selected, Boolean, null: true
-
-      def selected
-        object.selected_for_organization?
-      end
+      field :selected, Boolean, null: true, method: :selected_for_organization?
     end
   end
 end
