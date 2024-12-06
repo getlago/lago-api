@@ -22911,6 +22911,63 @@
           "enumValues": null
         },
         {
+          "kind": "OBJECT",
+          "name": "InvoiceCustomSectionCollection",
+          "description": "InvoiceCustomSectionCollection type",
+          "interfaces": [
+
+          ],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated InvoiceCustomSectionCollection",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "InvoiceCustomSection",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+
+              ]
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
           "kind": "INTERFACE",
           "name": "InvoiceItem",
           "description": "Invoice Item",
@@ -34167,6 +34224,43 @@
                   "isDeprecated": false,
                   "deprecationReason": null
                 },
+                {
+                  "name": "limit",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "page",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
+              "name": "invoiceCustomSections",
+              "description": "Query invoice_custom_sections",
+              "type": {
+                "kind": "OBJECT",
+                "name": "InvoiceCustomSectionCollection",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
                 {
                   "name": "limit",
                   "description": null,
