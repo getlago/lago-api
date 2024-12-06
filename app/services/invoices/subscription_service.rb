@@ -55,6 +55,8 @@ module Invoices
         SendWebhookJob.perform_later('fee.created', fee)
       end
 
+      fill_daily_usage
+
       if tax_error?(fee_result)
         SendWebhookJob.perform_later('invoice.drafted', invoice) if grace_period?
 
@@ -147,6 +149,18 @@ module Invoices
       return false unless fee_result.error.is_a?(BaseService::ServiceFailure)
 
       fee_result.error.code == 'tax_error'
+    end
+
+    USAGE_TRACKABLE_REASONS = %i[subscription_periodic subscription_terminating].freeze
+    def fill_daily_usage
+      return unless invoice.organization.premium_integrations.include?("revenue_analytics")
+
+      subscriptions = invoice
+        .invoice_subscriptions
+        .select { |is| USAGE_TRACKABLE_REASONS.include?(is.invoicing_reason.to_sym) }
+      return if subscriptions.blank?
+
+      DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions:)
     end
   end
 end
