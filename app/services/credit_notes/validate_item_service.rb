@@ -53,9 +53,9 @@ module CreditNotes
       false
     end
 
-    # NOTE: Check if item amount is >= 0 (CreditNoteItem.amount_cents has numericality validation: greater_than_or_equal_to: 0)
+    # NOTE: Check if item amount is positive
     def valid_item_amount?
-      return true if item.amount_cents >= 0
+      return true if item.amount_cents.positive?
 
       add_error(field: :amount_cents, error_code: 'invalid_value')
     end
