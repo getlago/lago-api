@@ -31,6 +31,10 @@ dunning_campaigns:
   create: true
   update: true
   delete: true
+invoice_custom_sections:
+  create: true
+  update: true
+  delete: true
 subscriptions:
   create: false
   update: false

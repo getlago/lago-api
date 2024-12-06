@@ -159,5 +159,7 @@ module Types
     field :destroy_api_key, mutation: Mutations::ApiKeys::Destroy
     field :rotate_api_key, mutation: Mutations::ApiKeys::Rotate
     field :update_api_key, mutation: Mutations::ApiKeys::Update
+
+    field :create_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Create
   end
 end
