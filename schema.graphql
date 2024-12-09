@@ -2114,7 +2114,7 @@ input CreateInvoiceCustomSectionInput {
   clientMutationId: String
   code: String!
   description: String
-  details: String!
+  details: String
   displayName: String
   name: String!
   selected: Boolean
@@ -4470,14 +4470,14 @@ type InvoiceCollection {
 }
 
 type InvoiceCustomSection {
-  code: String
+  code: String!
   description: String
   details: String
-  displayName: String!
+  displayName: String
   id: ID!
   name: String!
   organization: Organization
-  selected: Boolean
+  selected: Boolean!
 }
 
 """

@@ -8,13 +8,13 @@ module Types
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
 
-      field :code, String, null: true
+      field :code, String, null: false
       field :description, String, null: true
       field :details, String, null: true
-      field :display_name, String, null: false
+      field :display_name, String, null: true
       field :name, String, null: false
 
-      field :selected, Boolean, null: true, method: :selected_for_organization?
+      field :selected, Boolean, null: false, method: :selected_for_organization?
     end
   end
 end
