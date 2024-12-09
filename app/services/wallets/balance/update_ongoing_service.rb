@@ -58,7 +58,7 @@ module Wallets
       end
 
       def ongoing_balance_cents
-        wallet.balance_cents - total_usage_amount_cents + pay_in_advance_usage_amount_cents
+        wallet.balance_cents - total_usage_amount_cents - wallet.ongoing_draft_invoices_balance_cents + pay_in_advance_usage_amount_cents
       end
 
       def credits_ongoing_balance

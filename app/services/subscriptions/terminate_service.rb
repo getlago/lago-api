@@ -36,7 +36,15 @@ module Subscriptions
         # NOTE: We should bill subscription and generate invoice for all cases except for the upgrade
         #       For upgrade we will create only one invoice for termination charges and for in advance charges
         #       It is handled in subscriptions/create_service.rb
-        bill_subscription unless upgrade
+        unless upgrade
+          bill_subscription
+
+          if subscription.customer.wallets.active.any?
+            Wallets::Balance::RefreshOngoingService.call(
+              wallet: subscription.customer.wallets.active.first
+            )
+          end
+        end
       end
 
       # NOTE: Pending next subscription should be canceled as well
