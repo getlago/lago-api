@@ -99,6 +99,18 @@ RSpec.describe CreditNotesQuery, type: :query do
     end
   end
 
+  context 'with external_customer_id filter' do
+    let(:filters) { {external_customer_id: customer.external_id} }
+
+    it 'applies the filter' do
+      returned_ids = result.credit_notes.pluck(:id)
+
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(3)
+      expect(returned_ids).not_to include(credit_note_fourth.id)
+    end
+  end
+
   context 'when searching for /imthe/ term and filtering by customer_id' do
     let(:search_term) { 'imthe' }
     let(:filters) { {customer_id: customer.id} }

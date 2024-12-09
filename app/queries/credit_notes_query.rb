@@ -10,6 +10,7 @@ class CreditNotesQuery < BaseQuery
     credit_notes = credit_notes.order(id: :asc)
 
     credit_notes = with_customer_id(credit_notes) if filters.customer_id.present?
+    credit_notes = with_external_customer_id(credit_notes) if filters.external_customer_id.present?
 
     result.credit_notes = credit_notes
     result
@@ -37,5 +38,9 @@ class CreditNotesQuery < BaseQuery
 
   def with_customer_id(scope)
     scope.where(customer_id: filters.customer_id)
+  end
+
+  def with_external_customer_id(scope)
+    scope.joins(:customer).where(customers: {external_id: filters.external_customer_id})
   end
 end
