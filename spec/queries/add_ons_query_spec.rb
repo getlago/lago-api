@@ -29,7 +29,7 @@ RSpec.describe AddOnsQuery, type: :query do
     expect(returned_ids).to include(add_on_third.id)
   end
 
-  context "when add ons have the ordering criteria" do
+  context "when add ons have the values for the ordering criteria" do
     let(:add_on_second) do
       create(:add_on, organization:, name: "abcde", code: "22", created_at: add_on_first.created_at).tap do |add_on|
         add_on.update! id: "00000000-0000-0000-0000-000000000000"
