@@ -26,6 +26,22 @@ RSpec.describe AppliedCouponsQuery, type: :query do
     end
   end
 
+  context "when applied coupons have the same created_at" do
+    let(:applied_coupon_2) do
+      create(:applied_coupon, coupon:, customer:, created_at: applied_coupon.created_at).tap do |applied_coupon|
+        applied_coupon.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    before { applied_coupon_2 }
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(result.applied_coupons.count).to eq(2)
+      expect(result.applied_coupons).to eq([applied_coupon_2, applied_coupon])
+    end
+  end
+
   context 'when customer is deleted' do
     let(:customer) { create(:customer, :deleted, organization:) }
 
