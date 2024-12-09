@@ -7,6 +7,7 @@ RSpec.describe IntegrationItemsQuery, type: :query do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
+  let(:returned_ids) { result.integration_items.pluck(:id) }
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
@@ -30,15 +31,32 @@ RSpec.describe IntegrationItemsQuery, type: :query do
   end
 
   it 'returns all integration items of an organization' do
-    returned_ids = result.integration_items.pluck(:id)
+    expect(result).to be_success
+    expect(returned_ids.count).to eq(3)
+    expect(returned_ids).to include(integration_item_first.id)
+    expect(returned_ids).to include(integration_item_second.id)
+    expect(returned_ids).not_to include(integration_item_third.id)
+    expect(returned_ids).to include(integration_item_fourth.id)
+  end
 
-    aggregate_failures do
+  context "when add ons have the ordering criteria" do
+    let(:integration_item_second) do
+      create(
+        :integration_item,
+        integration: integration_second,
+        external_id: integration_item_first.external_id,
+        created_at: integration_item_first.created_at
+      ).tap do |integration_item|
+        integration_item.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
       expect(result).to be_success
       expect(returned_ids.count).to eq(3)
       expect(returned_ids).to include(integration_item_first.id)
       expect(returned_ids).to include(integration_item_second.id)
-      expect(returned_ids).not_to include(integration_item_third.id)
-      expect(returned_ids).to include(integration_item_fourth.id)
+      expect(returned_ids.index(integration_item_first.id)).to be > returned_ids.index(integration_item_second.id)
     end
   end
 

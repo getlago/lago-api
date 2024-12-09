@@ -5,6 +5,7 @@ class IntegrationItemsQuery < BaseQuery
     integration_items = base_scope.result
     integration_items = paginate(integration_items)
     integration_items = integration_items.order(external_name: :asc)
+    integration_items = apply_consistent_ordering(integration_items)
 
     integration_items = with_integration_id(integration_items) if filters.integration_id.present?
     integration_items = with_item_type(integration_items) unless filters.item_type.nil?
