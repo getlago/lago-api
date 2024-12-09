@@ -90,7 +90,7 @@ module Invoices
     end
 
     def create_payment(invoice)
-      Invoices::Payments::CreateService.new(invoice).call
+      Invoices::Payments::CreateService.call_async(invoice:)
     end
 
     def should_deliver_email?
