@@ -7,6 +7,7 @@ RSpec.describe CustomersQuery, type: :query do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
+  let(:returned_ids) { result.customers.pluck(:id) }
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
@@ -29,15 +30,37 @@ RSpec.describe CustomersQuery, type: :query do
     customer_third
   end
 
-  it 'returns all customers' do
-    returned_ids = result.customers.pluck(:id)
-
-    aggregate_failures do
+  it "returns all customers" do
       expect(result).to be_success
       expect(returned_ids.count).to eq(3)
       expect(returned_ids).to include(customer_first.id)
       expect(returned_ids).to include(customer_second.id)
       expect(returned_ids).to include(customer_third.id)
+  end
+
+  context "when customers have the same created_at" do
+    let(:customer_second) do
+      create(
+        :customer,
+        organization:,
+        name: "abcde",
+        firstname: "Jane",
+        lastname: "Smith",
+        legal_name: "other name",
+        external_id: "22",
+        email: "2@example.com",
+        created_at: customer_first.created_at
+      ).tap do |customer|
+        customer.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(3)
+      expect(returned_ids).to include(customer_first.id)
+      expect(returned_ids).to include(customer_second.id)
+      expect(returned_ids.index(customer_first.id)).to be > returned_ids.index(customer_second.id)
     end
   end
 
