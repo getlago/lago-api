@@ -33,7 +33,7 @@ module Wallets
 
       def compute_update_params
         params = {
-          ongoing_usage_balance_cents: total_usage_amount_cents,
+          ongoing_usage_balance_cents:,
           credits_ongoing_usage_balance:,
           ongoing_balance_cents:,
           credits_ongoing_balance:,
@@ -53,12 +53,16 @@ module Wallets
         @currency ||= wallet.ongoing_balance.currency
       end
 
+      def ongoing_usage_balance_cents
+        @ongoing_usage_balance_cents ||= total_usage_amount_cents + wallet.customer.invoices.draft.sum(:total_amount_cents)
+      end
+
       def credits_ongoing_usage_balance
-        total_usage_amount_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
+        ongoing_usage_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
       end
 
       def ongoing_balance_cents
-        wallet.balance_cents - total_usage_amount_cents + pay_in_advance_usage_amount_cents
+        @ongoing_balance_cents ||= wallet.balance_cents - ongoing_usage_balance_cents + pay_in_advance_usage_amount_cents
       end
 
       def credits_ongoing_balance
