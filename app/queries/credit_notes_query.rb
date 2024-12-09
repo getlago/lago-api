@@ -4,10 +4,7 @@ class CreditNotesQuery < BaseQuery
   def call
     credit_notes = base_scope.result
     credit_notes = paginate(credit_notes)
-    credit_notes = credit_notes.order(created_at: :desc)
-
-    # ensure consistent order on credit_notes with the same created_at
-    credit_notes = credit_notes.order(id: :asc)
+    credit_notes = apply_consistent_ordering(credit_notes)
 
     credit_notes = with_customer_id(credit_notes) if filters.customer_id.present?
     credit_notes = with_external_customer_id(credit_notes) if filters.external_customer_id.present?
