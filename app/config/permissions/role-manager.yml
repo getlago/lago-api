@@ -74,3 +74,6 @@ organization:
 payment_requests:
   view: true
   create: true
+payments:
+  view: true
+  create: true
