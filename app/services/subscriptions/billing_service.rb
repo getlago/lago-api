@@ -16,10 +16,6 @@ module Subscriptions
             # NOTE: In case of downgrade, subscription remain active until the end of the period,
             #       a next subscription is pending, the current one must be terminated
             Subscriptions::TerminateJob.perform_later(subscription, today.to_i)
-
-            if subscription.should_sync_hubspot_subscription?
-              Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
-            end
           else
             billing_subscriptions << subscription
           end
@@ -101,7 +97,7 @@ module Subscriptions
           INNER JOIN organizations ON organizations.id = customers.organization_id
         WHERE subscriptions.status IN (#{Subscription.statuses[:active]}, #{Subscription.statuses[:terminated]})
           -- Because this job might be run for the past, we need to "revert" the past and if the subscription was not yet terminated, it should be billed.
-          AND (subscriptions.terminated_at is NULL OR subscriptions.terminated_at > :today#{at_time_zone})
+          AND (subscriptions.terminated_at is NULL OR subscriptions.terminated_at >= :today#{at_time_zone})
           AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
           AND plans.interval = #{Plan.intervals[interval]}
           AND #{conditions.join(" AND ")}
