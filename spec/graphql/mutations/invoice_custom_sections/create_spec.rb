@@ -56,4 +56,28 @@ RSpec.describe Mutations::InvoiceCustomSections::Create, type: :graphql do
       expect(result_data['selected']).to eq(true)
     end
   end
+
+  context 'when fail to create invoice_custom_section' do
+    it 'returns an error' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            code: nil,
+            name: 'First Invoice Custom Section',
+            description: 'this invoice custom section will be added in the PDF',
+            details: 'This is the exact information shown in the invoice',
+            displayName: 'Section name displayed in the invoice',
+            selected: true
+          }
+        }
+      )
+
+      expect(result['errors']).to be_present
+      expect(result['errors'].first['message']).to include('invalid value for code')
+    end
+  end
 end
