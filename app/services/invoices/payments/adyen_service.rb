@@ -51,6 +51,8 @@ module Invoices
 
         result.payment = payment
         result
+      rescue Faraday::ConnectionFailed => e
+        raise Invoices::Payments::ConnectionError, e
       end
 
       def update_payment_status(provider_payment_id:, status:, metadata: {})
