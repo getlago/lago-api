@@ -17,7 +17,7 @@ module DailyUsages
       (from..to).each do |date|
         datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
 
-        next if date == Time.zone.today &&
+        next if date == Time.zone.today ||
           DailyUsage.refreshed_at_in_timezone(datetime).where(subscription_id: subscription.id).exists?
 
         Timecop.freeze(datetime + 5.minutes) do
