@@ -7,6 +7,7 @@ RSpec.describe CouponsQuery, type: :query do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
+  let(:returned_ids) { result.coupons.pluck(:id) }
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
@@ -23,13 +24,25 @@ RSpec.describe CouponsQuery, type: :query do
   end
 
   it 'returns all coupons' do
-    returned_ids = result.coupons.pluck(:id)
+    expect(result.coupons.count).to eq(3)
+    expect(returned_ids).to include(coupon_first.id)
+    expect(returned_ids).to include(coupon_second.id)
+    expect(returned_ids).to include(coupon_third.id)
+  end
 
-    aggregate_failures do
-      expect(result.coupons.count).to eq(3)
+  context "when coupons have the same created_at" do
+    let(:coupon_second) do
+      create(:coupon, organization:, status: "active", name: "defgh", code: "22", created_at: coupon_first.created_at).tap do |coupon|
+        coupon.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(3)
       expect(returned_ids).to include(coupon_first.id)
       expect(returned_ids).to include(coupon_second.id)
-      expect(returned_ids).to include(coupon_third.id)
+      expect(returned_ids.index(coupon_first.id)).to be > returned_ids.index(coupon_second.id)
     end
   end
 
