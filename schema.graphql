@@ -4481,6 +4481,21 @@ type InvoiceCustomSection {
 }
 
 """
+InvoiceCustomSectionCollection type
+"""
+type InvoiceCustomSectionCollection {
+  """
+  A collection of paginated InvoiceCustomSectionCollection
+  """
+  collection: [InvoiceCustomSection!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
 Invoice Item
 """
 interface InvoiceItem {
@@ -6594,6 +6609,11 @@ type Query {
     limit: Int
     page: Int
   ): CreditNoteCollection
+
+  """
+  Query invoice_custom_sections
+  """
+  invoiceCustomSections(limit: Int, page: Int): InvoiceCustomSectionCollection
 
   """
   Query invoiced usage of an organization
