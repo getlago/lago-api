@@ -303,11 +303,11 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
     end
 
     it 'creates a payment' do
-      allow(Invoices::Payments::CreateService).to receive(:call)
+      allow(Invoices::Payments::CreateService).to receive(:call_async)
 
       create_service.call
 
-      expect(Invoices::Payments::CreateService).to have_received(:call)
+      expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
     it_behaves_like 'syncs invoice' do

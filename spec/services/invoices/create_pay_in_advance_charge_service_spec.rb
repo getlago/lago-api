@@ -135,16 +135,11 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
     end
 
     it 'creates a payment' do
-      payment_create_service = instance_double(Invoices::Payments::CreateService)
-      allow(Invoices::Payments::CreateService)
-        .to receive(:new).and_return(payment_create_service)
-      allow(payment_create_service)
-        .to receive(:call)
+      allow(Invoices::Payments::CreateService).to receive(:call_async)
 
       invoice_service.call
 
-      expect(Invoices::Payments::CreateService).to have_received(:new)
-      expect(payment_create_service).to have_received(:call)
+      expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
     it 'enqueues a SendWebhookJob for the invoice' do

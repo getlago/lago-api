@@ -5,7 +5,7 @@ module PaymentRequests
     class GocardlessCreateJob < ApplicationJob
       queue_as 'providers'
 
-      unique :until_executed
+      unique :until_executed, on_conflict: :log
 
       def perform(payable)
         result = PaymentRequests::Payments::GocardlessService.new(payable).create
