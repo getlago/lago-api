@@ -161,5 +161,6 @@ module Types
     field :update_api_key, mutation: Mutations::ApiKeys::Update
 
     field :create_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Create
+    field :update_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Update
   end
 end
