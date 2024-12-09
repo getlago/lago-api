@@ -12,6 +12,7 @@ module IntegrationCustomers
       return result if result.error
 
       return result if integration_customer.type == 'IntegrationCustomers::AnrokCustomer'
+      return result if integration_customer.type == 'IntegrationCustomers::SalesforceCustomer'
       return result.not_found_failure!(resource: 'integration_customer') unless integration_customer
 
       integration_customer.external_customer_id = external_customer_id if external_customer_id.present?

@@ -180,6 +180,8 @@ module Customers
     end
 
     def create_or_update_provider_customer(customer, payment_provider, billing_configuration = {})
+      return if payment_provider.nil?
+
       handle_provider_customer = customer.payment_provider.present?
       handle_provider_customer ||= (billing_configuration || {})[:provider_customer_id].present?
       handle_provider_customer ||= customer.send(:"#{payment_provider}_customer")&.provider_customer_id.present?
