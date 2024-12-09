@@ -7,6 +7,7 @@ RSpec.describe AddOnsQuery, type: :query do
     described_class.call(organization:, pagination:, search_term:)
   end
 
+  let(:returned_ids) { result.add_ons.pluck(:id) }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:add_on_first) { create(:add_on, organization:, name: 'defgh', code: '11') }
@@ -22,13 +23,25 @@ RSpec.describe AddOnsQuery, type: :query do
   end
 
   it 'returns all add_ons' do
-    returned_ids = result.add_ons.pluck(:id)
+    expect(result.add_ons.count).to eq(3)
+    expect(returned_ids).to include(add_on_first.id)
+    expect(returned_ids).to include(add_on_second.id)
+    expect(returned_ids).to include(add_on_third.id)
+  end
 
-    aggregate_failures do
-      expect(result.add_ons.count).to eq(3)
+  context "when add ons have the same created_at" do
+    let(:add_on_second) do
+      create(:add_on, organization:, name: 'abcde', code: '22', created_at: add_on_first.created_at).tap do |add_on|
+        add_on.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(3)
       expect(returned_ids).to include(add_on_first.id)
       expect(returned_ids).to include(add_on_second.id)
-      expect(returned_ids).to include(add_on_third.id)
+      expect(returned_ids.index(add_on_first.id)).to be > returned_ids.index(add_on_second.id)
     end
   end
 
