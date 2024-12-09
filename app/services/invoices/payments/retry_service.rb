@@ -28,7 +28,7 @@ module Invoices
         end
 
         deliver_webhook
-        Invoices::Payments::CreateService.new(invoice).call
+        Invoices::Payments::CreateService.call_async(invoice:)
 
         result.invoice = invoice
 

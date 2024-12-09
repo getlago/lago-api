@@ -53,7 +53,7 @@ describe 'Wallet Transaction with invoice after payment', :scenarios, type: :req
             currency: invoice.currency
           )
         )
-      Invoices::Payments::CreateService.call(invoice)
+      Invoices::Payments::CreateService.call_async(invoice)
       perform_all_enqueued_jobs
 
       invoice.reload

@@ -11,6 +11,8 @@ module Invoices
       retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
 
       def perform(invoice)
+        # NOTE: Legacy job, kept only to avoid existing jobs
+        #
         result = Invoices::Payments::StripeService.call(invoice)
         result.raise_if_error!
       end

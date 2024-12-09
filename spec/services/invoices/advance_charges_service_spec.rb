@@ -42,7 +42,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
     end
 
     before do
-      allow(Invoices::Payments::CreateService).to receive(:call)
+      allow(Invoices::Payments::CreateService).to receive(:call_async)
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
