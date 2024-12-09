@@ -93,25 +93,28 @@ module Api
       end
 
       def index
-        credit_notes = current_organization.credit_notes.finalized
-
-        if params[:external_customer_id]
-          credit_notes = credit_notes.joins(:customer).where(customers: {external_id: params[:external_customer_id]})
-        end
-
-        credit_notes = credit_notes.order(created_at: :desc)
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            credit_notes.includes(:items, :applied_taxes),
-            ::V1::CreditNoteSerializer,
-            collection_name: 'credit_notes',
-            meta: pagination_metadata(credit_notes),
-            includes: %i[items applied_taxes error_details]
-          )
+        result = CreditNotesQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          },
+          filters: index_filters
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.credit_notes.includes(:items, :applied_taxes),
+              ::V1::CreditNoteSerializer,
+              collection_name: "credit_notes",
+              meta: pagination_metadata(result.credit_notes),
+              includes: %i[items applied_taxes error_details]
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       def estimate
@@ -162,6 +165,10 @@ module Api
               :amount_cents
             ]
           )
+      end
+
+      def index_filters
+        params.permit(:external_customer_id)
       end
 
       def resource_name
