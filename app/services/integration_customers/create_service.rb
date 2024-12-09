@@ -49,6 +49,10 @@ module IntegrationCustomers
         sync_with_provider: false
       )
 
+      if integration&.type&.to_s == 'Integrations::SalesforceIntegration' && customer.external_salesforce_id.present?
+        customer.external_salesforce_id = new_integration_customer.external_customer_id
+      end
+
       if integration&.type&.to_s == 'Integrations::NetsuiteIntegration'
         new_integration_customer.subsidiary_id = subsidiary_id
         new_integration_customer.save!
