@@ -143,14 +143,14 @@ RSpec.describe Invoice, type: :model do
     before { invoice }
 
     it 'returns all invoices that are ready for finalization' do
-      expect(Invoice.ready_to_be_finalized.pluck(:id)).to include(invoice.id)
+      expect(described_class.ready_to_be_finalized.pluck(:id)).to include(invoice.id)
     end
 
     context 'when issuing date has not been reached' do
       let(:invoice) { create(:invoice, status: :draft, issuing_date: Time.current + 1.day) }
 
       it 'returns all invoices that are ready for finalization' do
-        expect(Invoice.ready_to_be_finalized.pluck(:id)).not_to include(invoice.id)
+        expect(described_class.ready_to_be_finalized.pluck(:id)).not_to include(invoice.id)
       end
     end
   end
