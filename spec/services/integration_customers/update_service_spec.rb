@@ -117,6 +117,24 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
             expect(integration_customer.reload.external_customer_id).not_to eq(external_customer_id)
           end
         end
+
+        context 'with salesforce customer' do
+          let(:external_customer_id) { SecureRandom.uuid }
+          let(:integration) { create(:salesforce_integration, organization:) }
+          let(:integration_customer) { create(:salesforce_customer, integration:, customer:) }
+
+          it 'does not calls aggregator update service' do
+            service_call
+
+            expect(aggregator_contacts_update_service).not_to have_received(:call)
+          end
+
+          it 'does not update integration customer' do
+            service_call
+
+            expect(integration_customer.reload.external_customer_id).not_to eq(external_customer_id)
+          end
+        end
       end
 
       context 'when sync with provider is false' do
