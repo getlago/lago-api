@@ -7,6 +7,7 @@ RSpec.describe DunningCampaignsQuery, type: :query do
     described_class.call(organization:, pagination:, search_term:, filters:, order:)
   end
 
+  let(:returned_ids) { result.dunning_campaigns.pluck(:id) }
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { nil }
@@ -40,6 +41,29 @@ RSpec.describe DunningCampaignsQuery, type: :query do
     expect(result.dunning_campaigns).to eq(
       [dunning_campaign_second, dunning_campaign_first, dunning_campaign_third]
     )
+  end
+
+  context "when dunning campaigns have the same value for the ordering criteria" do
+    let(:dunning_campaign_second) do
+      create(
+        :dunning_campaign,
+        organization:,
+        name: dunning_campaign_first.name,
+        code: "22",
+        applied_to_organization: false,
+        created_at: dunning_campaign_first.created_at
+      ).tap do |dunning_campaign|
+        dunning_campaign.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(3)
+      expect(returned_ids).to include(dunning_campaign_first.id)
+      expect(returned_ids).to include(dunning_campaign_second.id)
+      expect(returned_ids.index(dunning_campaign_first.id)).to be > returned_ids.index(dunning_campaign_second.id)
+    end
   end
 
   context "with pagination" do
