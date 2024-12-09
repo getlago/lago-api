@@ -7,6 +7,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
+  let(:returned_ids) { result.billable_metrics.pluck(:id) }
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
@@ -25,15 +26,27 @@ RSpec.describe BillableMetricsQuery, type: :query do
   end
 
   it 'returns all billable metrics' do
-    returned_ids = result.billable_metrics.pluck(:id)
+    expect(result).to be_success
+    expect(returned_ids.count).to eq(4)
+    expect(returned_ids).to include(billable_metric_first.id)
+    expect(returned_ids).to include(billable_metric_second.id)
+    expect(returned_ids).to include(billable_metric_third.id)
+    expect(returned_ids).to include(billable_metric_fourth.id)
+  end
 
-    aggregate_failures do
+  context "when billable metrics have the same created_at" do
+    let(:billable_metric_second) do
+      create(:billable_metric, organization:, name: 'abcde', code: '22', created_at: billable_metric_first.created_at).tap do |billable_metric|
+        billable_metric.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
       expect(result).to be_success
       expect(returned_ids.count).to eq(4)
       expect(returned_ids).to include(billable_metric_first.id)
       expect(returned_ids).to include(billable_metric_second.id)
-      expect(returned_ids).to include(billable_metric_third.id)
-      expect(returned_ids).to include(billable_metric_fourth.id)
+      expect(returned_ids.index(billable_metric_first.id)).to be > returned_ids.index(billable_metric_second.id)
     end
   end
 
