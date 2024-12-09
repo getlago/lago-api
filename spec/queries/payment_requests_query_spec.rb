@@ -7,6 +7,8 @@ RSpec.describe PaymentRequestsQuery, type: :query do
     described_class.call(organization:, pagination:, filters:)
   end
 
+  let(:returned_ids) { result.payment_requests.pluck(:id) }
+
   let(:pagination) { nil }
   let(:filters) { {} }
 
@@ -27,6 +29,22 @@ RSpec.describe PaymentRequestsQuery, type: :query do
       payment_request_first.id,
       payment_request_second.id
     )
+  end
+
+  context "when payment requests have the values for the ordering criteria" do
+    let(:payment_request_second) do
+      create(:payment_request, organization:, customer:, created_at: payment_request_first.created_at).tap do |payment_request|
+        payment_request.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).to include(payment_request_first.id)
+      expect(returned_ids).to include(payment_request_second.id)
+      expect(returned_ids.index(payment_request_first.id)).to be > returned_ids.index(payment_request_second.id)
+    end
   end
 
   context "with pagination" do
