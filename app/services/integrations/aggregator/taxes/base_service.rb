@@ -59,6 +59,9 @@ module Integrations
           else
             code, message = retrieve_error_details(body['failedInvoices'].first['validation_errors'])
 
+            # Temp fix for the API limit issue
+            message = 'API limit' if message == 'Internal server error: resource contention.'
+
             unless message.include?('API limit')
               deliver_tax_error_webhook(customer:, code:, message:)
             end
