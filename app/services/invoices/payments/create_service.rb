@@ -34,6 +34,7 @@ module Invoices
         result
       end
 
+
       private
 
       attr_reader :invoice
