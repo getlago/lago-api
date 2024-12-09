@@ -41,6 +41,24 @@ RSpec.describe CreditNotesQuery, type: :query do
     end
   end
 
+  context "when credit notes have the same created_at" do
+    let(:credit_note_second) do
+      create(:credit_note, customer:, number: "22imthesecondone", created_at: credit_note_first.created_at).tap do |credit_note|
+        credit_note.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
+      returned_ids = result.credit_notes.pluck(:id)
+
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(4)
+      expect(returned_ids).to include(credit_note_first.id)
+      expect(returned_ids).to include(credit_note_second.id)
+      expect(returned_ids.index(credit_note_first.id)).to be > returned_ids.index(credit_note_second.id)
+    end
+  end
+
   context 'with pagination' do
     let(:pagination) { {page: 2, limit: 3} }
 

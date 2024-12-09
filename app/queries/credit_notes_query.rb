@@ -6,6 +6,9 @@ class CreditNotesQuery < BaseQuery
     credit_notes = paginate(credit_notes)
     credit_notes = credit_notes.order(created_at: :desc)
 
+    # ensure consistent order on credit_notes with the same created_at
+    credit_notes = credit_notes.order(id: :asc)
+
     credit_notes = with_customer_id(credit_notes) if filters.customer_id.present?
 
     result.credit_notes = credit_notes
