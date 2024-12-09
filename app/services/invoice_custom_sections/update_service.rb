@@ -14,7 +14,7 @@ module InvoiceCustomSections
       if selected
         SelectService.call(section: invoice_custom_section, organization: invoice_custom_section.organization)
       else
-        DeselectService.call(section: invoice_custom_section, organization: invoice_custom_section.organization)
+        Deselect::ForOrganizationService.call(section: invoice_custom_section)
       end
       result.invoice_custom_section = invoice_custom_section
       result
