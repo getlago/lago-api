@@ -7,7 +7,7 @@ RSpec.describe InvoiceCustomSections::UpdateService do
 
   let(:organization) { create(:organization) }
   let(:invoice_custom_section) { create(:invoice_custom_section, organization: organization) }
-  let(:update_params) { { name: 'Updated Name' } }
+  let(:update_params) { {name: 'Updated Name'} }
   let(:selected) { true }
 
   before do
@@ -37,7 +37,7 @@ RSpec.describe InvoiceCustomSections::UpdateService do
     end
 
     context 'when update fails' do
-      let(:update_params) { { name: nil } }
+      let(:update_params) { {name: nil} }
 
       it 'handles validation errors' do
         expect(service_result).not_to be_success
