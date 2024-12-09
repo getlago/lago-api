@@ -7,6 +7,7 @@ RSpec.describe InvoicesQuery, type: :query do
     described_class.call(organization:, pagination:, search_term:, filters:)
   end
 
+  let(:returned_ids) { result.invoices.pluck(:id) }
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { nil }
@@ -91,17 +92,38 @@ RSpec.describe InvoicesQuery, type: :query do
   end
 
   it 'returns all invoices' do
-    returned_ids = result.invoices.pluck(:id)
+    expect(result).to be_success
+    expect(returned_ids.count).to eq(6)
+    expect(returned_ids).to include(invoice_first.id)
+    expect(returned_ids).to include(invoice_second.id)
+    expect(returned_ids).to include(invoice_third.id)
+    expect(returned_ids).to include(invoice_fourth.id)
+    expect(returned_ids).to include(invoice_fifth.id)
+    expect(returned_ids).to include(invoice_sixth.id)
+  end
 
-    aggregate_failures do
+  context "when invoices have the values for the ordering criteria" do
+    let(:invoice_second) do
+      create(
+        :invoice,
+        organization:,
+        status: 'finalized',
+        payment_status: 'pending',
+        customer: customer_second,
+        number: '2222222222',
+        issuing_date: invoice_first.issuing_date,
+        created_at: invoice_first.created_at
+      ).tap do |invoice|
+        invoice.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    it "returns a consistent list" do
       expect(result).to be_success
       expect(returned_ids.count).to eq(6)
       expect(returned_ids).to include(invoice_first.id)
       expect(returned_ids).to include(invoice_second.id)
-      expect(returned_ids).to include(invoice_third.id)
-      expect(returned_ids).to include(invoice_fourth.id)
-      expect(returned_ids).to include(invoice_fifth.id)
-      expect(returned_ids).to include(invoice_sixth.id)
+      expect(returned_ids.index(invoice_first.id)).to be > returned_ids.index(invoice_second.id)
     end
   end
 
