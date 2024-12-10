@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
+ActiveRecord::Schema[7.1].define(version: 2024_12_09_145233) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -21,6 +21,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
   create_enum "billable_metric_rounding_function", ["round", "floor", "ceil"]
   create_enum "billable_metric_weighted_interval", ["seconds"]
   create_enum "customer_type", ["company", "individual"]
+  create_enum "payment_type", ["provider", "manual"]
   create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -911,6 +912,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
     t.boolean "payment_overdue", default: false
     t.bigint "negative_amount_cents", default: 0, null: false
     t.bigint "progressive_billing_credit_amount_cents", default: 0, null: false
+    t.bigint "total_paid_amount_cents", default: 0, null: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
@@ -1082,13 +1084,15 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
     t.uuid "payment_provider_customer_id"
     t.bigint "amount_cents", null: false
     t.string "amount_currency", null: false
-    t.string "provider_payment_id", null: false
+    t.string "provider_payment_id"
     t.string "status", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "payable_type", default: "Invoice", null: false
     t.uuid "payable_id"
     t.jsonb "provider_payment_data", default: {}
+    t.string "reference"
+    t.enum "payment_type", default: "provider", null: false, enum_type: "payment_type"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"

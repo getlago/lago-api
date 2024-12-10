@@ -10,7 +10,19 @@ class Payment < ApplicationRecord
   has_many :refunds
   has_many :integration_resources, as: :syncable
 
+  PAYMENT_TYPES = {provider: "provider", manual: "manual"}
+
+  enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
+
+  validates :payment_type, presence: true
+  validates :provider_payment_id, presence: true, if: -> { payment_type_provider? }
+  validates :provider_payment_id, absence: true, if: -> { payment_type_manual? }
+  validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
+  validates :reference, absence: true, if: -> { payment_type_provider? }
+
   delegate :customer, to: :payable
+
+  scope :succeeded, -> { where(status: ['paid_out', 'succeeded', 'Authorised']) }
 
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
@@ -27,7 +39,9 @@ end
 #  amount_cents                 :bigint           not null
 #  amount_currency              :string           not null
 #  payable_type                 :string           default("Invoice"), not null
+#  payment_type                 :enum             default("provider"), not null
 #  provider_payment_data        :jsonb
+#  reference                    :string
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
@@ -35,7 +49,7 @@ end
 #  payable_id                   :uuid
 #  payment_provider_customer_id :uuid
 #  payment_provider_id          :uuid
-#  provider_payment_id          :string           not null
+#  provider_payment_id          :string
 #
 # Indexes
 #
