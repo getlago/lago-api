@@ -51,20 +51,27 @@ module Api
       end
 
       def index
-        add_ons = current_organization.add_ons
-          .order(created_at: :desc)
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            add_ons.includes(:taxes),
-            ::V1::AddOnSerializer,
-            collection_name: "add_ons",
-            meta: pagination_metadata(add_ons),
-            includes: %i[taxes]
-          )
+        result = AddOnsQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          }
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.add_ons.includes(:taxes),
+              ::V1::AddOnSerializer,
+              collection_name: "add_ons",
+              meta: pagination_metadata(result.add_ons),
+              includes: %i[taxes]
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       private

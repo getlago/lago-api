@@ -79,21 +79,27 @@ module Api
       end
 
       def index
-        metrics = current_organization.billable_metrics
-          .includes(:filters)
-          .order(created_at: :desc)
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            metrics,
-            ::V1::BillableMetricSerializer,
-            collection_name: "billable_metrics",
-            meta: pagination_metadata(metrics),
-            includes: %i[counters] # DEPRECATED since 2024-11-22
-          )
+        result = BillableMetricsQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          }
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.metrics.includes(:filters),
+              ::V1::BillableMetricSerializer,
+              collection_name: "billable_metrics",
+              meta: pagination_metadata(result.metrics),
+              includes: %i[counters] # DEPRECATED since 2024-11-22
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       def evaluate_expression

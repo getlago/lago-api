@@ -52,19 +52,26 @@ module Api
       end
 
       def index
-        coupons = current_organization.coupons
-          .order(created_at: :desc)
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            coupons,
-            ::V1::CouponSerializer,
-            collection_name: "coupons",
-            meta: pagination_metadata(coupons)
-          )
+        result = CouponsQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          }
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.coupons,
+              ::V1::CouponSerializer,
+              collection_name: "coupons",
+              meta: pagination_metadata(result.coupons)
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       private
