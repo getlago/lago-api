@@ -16,19 +16,22 @@ RSpec.describe PlansQuery, type: :query do
   let(:plan_first) { create(:plan, organization:, name: "defgh", code: "11") }
   let(:plan_second) { create(:plan, organization:, name: "abcde", code: "22") }
   let(:plan_third) { create(:plan, organization:, name: "presuv", code: "33") }
+  let(:plan_fourth) { create(:plan, organization:, name: "pending deletion", code: "44", pending_deletion: true) }
 
   before do
     plan_first
     plan_second
     plan_third
+    plan_fourth
   end
 
-  it "returns all plans" do
+  it "returns all plans not pending for deletion" do
     expect(result).to be_success
     expect(returned_ids.count).to eq(3)
     expect(returned_ids).to include(plan_first.id)
     expect(returned_ids).to include(plan_second.id)
     expect(returned_ids).to include(plan_third.id)
+    expect(returned_ids).not_to include(plan_fourth.id)
   end
 
   context "when plans have the same values for the ordering criteria" do
@@ -63,6 +66,16 @@ RSpec.describe PlansQuery, type: :query do
       expect(result.plans.next_page).to be_nil
       expect(result.plans.total_pages).to eq(2)
       expect(result.plans.total_count).to eq(3)
+    end
+  end
+
+  context "when filtering to include pending for deletion plans" do
+    let(:filters) { {include_pending_deletion: true} }
+
+    it "includes pending for deletion plans" do
+      expect(result).to be_success
+      expect(result.plans.count).to eq(4)
+      expect(result.plans).to include(plan_fourth)
     end
   end
 
