@@ -19,7 +19,7 @@ module Mutations
         selected = args.delete(:selected) || false
         invoice_custom_section = ::InvoiceCustomSection.find(args.delete(:id))
         result = ::InvoiceCustomSections::UpdateService.call(
-          invoice_custom_section: , update_params: args.to_h, selected: selected
+          invoice_custom_section:, update_params: args.to_h, selected: selected
         )
 
         result.success? ? result.invoice_custom_section : result_error(result)
