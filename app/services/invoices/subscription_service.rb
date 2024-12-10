@@ -44,6 +44,7 @@ module Invoices
         invoice.reload
 
         flag_lifetime_usage_for_refresh
+        customer.flag_wallets_for_refresh if grace_period?
         fee_result
       end
       result.non_invoiceable_fees = fee_result.non_invoiceable_fees
