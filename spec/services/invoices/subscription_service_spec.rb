@@ -293,6 +293,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
         expect(lifetime_usage.reload.recalculate_invoiced_usage).to be(false)
       end
+
+      it 'flags wallets for refresh' do
+        wallet = create(:wallet, customer:)
+
+        expect { invoice_service.call }.to change { wallet.reload.ready_to_be_refreshed }.from(false).to(true)
+      end
     end
 
     context 'when invoice already exists' do
