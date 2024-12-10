@@ -33,11 +33,6 @@ module Invoices
         result.invoice = invoice
         return result unless should_process_payment?
 
-        unless invoice.total_amount_cents.positive?
-          update_invoice_payment_status(payment_status: :succeeded)
-          return result
-        end
-
         increment_payment_attempts
 
         gocardless_result = create_gocardless_payment

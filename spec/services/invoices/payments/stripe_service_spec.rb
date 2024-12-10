@@ -107,33 +107,6 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
     end
 
-    context 'with 0 amount' do
-      let(:invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          total_amount_cents: 0,
-          currency: 'EUR'
-        )
-      end
-
-      it 'does not creates a stripe payment' do
-        result = stripe_service.call
-
-        expect(result).to be_success
-
-        aggregate_failures do
-          expect(result.invoice).to eq(invoice)
-          expect(result.payment).to be_nil
-
-          expect(result.invoice).to be_payment_succeeded
-
-          expect(Stripe::PaymentIntent).not_to have_received(:create)
-        end
-      end
-    end
-
     context 'when customer does not have a provider customer id' do
       before { stripe_customer.update!(provider_customer_id: nil) }
 

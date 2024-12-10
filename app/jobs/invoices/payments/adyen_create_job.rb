@@ -12,8 +12,7 @@ module Invoices
       def perform(invoice)
         # NOTE: Legacy job, kept only to avoid existing jobs
 
-        result = Invoices::Payments::AdyenService.call(invoice)
-        result.raise_if_error!
+        Invoices::Payments::CreateService.call!(invoice:, payment_provider: :adyen)
       end
     end
   end

@@ -6,12 +6,12 @@ RSpec.describe Invoices::Payments::AdyenCreateJob, type: :job do
   let(:invoice) { create(:invoice) }
 
   it 'calls the stripe create service' do
-    allow(Invoices::Payments::AdyenService).to receive(:call)
-      .with(invoice)
+    allow(Invoices::Payments::CreateService).to receive(:call!)
+      .with(invoice:, payment_provider: :adyen)
       .and_return(BaseService::Result.new)
 
     described_class.perform_now(invoice)
 
-    expect(Invoices::Payments::AdyenService).to have_received(:call)
+    expect(Invoices::Payments::CreateService).to have_received(:call!)
   end
 end
