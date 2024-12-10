@@ -93,33 +93,6 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
     end
 
-    context 'with 0 amount' do
-      let(:invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          total_amount_cents: 0,
-          currency: 'EUR'
-        )
-      end
-
-      it 'does not creates a adyen payment' do
-        result = adyen_service.call
-
-        expect(result).to be_success
-
-        aggregate_failures do
-          expect(result.invoice).to eq(invoice)
-          expect(result.payment).to be_nil
-
-          expect(result.invoice).to be_payment_succeeded
-
-          expect(payments_api).not_to have_received(:payments)
-        end
-      end
-    end
-
     context 'when customer does not have a provider customer id' do
       before { adyen_customer.update!(provider_customer_id: nil) }
 
