@@ -76,15 +76,13 @@ RSpec.describe TaxesQuery, type: :query do
     let(:pagination) { {page: 2, limit: 3} }
 
     it 'applies the pagination' do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.taxes.count).to eq(1)
-        expect(result.taxes.current_page).to eq(2)
-        expect(result.taxes.prev_page).to eq(1)
-        expect(result.taxes.next_page).to be_nil
-        expect(result.taxes.total_pages).to eq(2)
-        expect(result.taxes.total_count).to eq(4)
-      end
+      expect(result).to be_success
+      expect(result.taxes.count).to eq(1)
+      expect(result.taxes.current_page).to eq(2)
+      expect(result.taxes.prev_page).to eq(1)
+      expect(result.taxes.next_page).to be_nil
+      expect(result.taxes.total_pages).to eq(2)
+      expect(result.taxes.total_count).to eq(4)
     end
   end
 

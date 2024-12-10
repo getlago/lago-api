@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CouponsQuery, type: :query do
   subject(:result) do
@@ -13,9 +13,9 @@ RSpec.describe CouponsQuery, type: :query do
   let(:filters) { {} }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:coupon_first) { create(:coupon, organization:, status: 'active', name: 'defgh', code: '11') }
-  let(:coupon_second) { create(:coupon, organization:, status: 'terminated', name: 'abcde', code: '22') }
-  let(:coupon_third) { create(:coupon, organization:, status: 'active', name: 'presuv', code: '33') }
+  let(:coupon_first) { create(:coupon, organization:, status: "active", name: "defgh", code: "11") }
+  let(:coupon_second) { create(:coupon, organization:, status: "terminated", name: "abcde", code: "22") }
+  let(:coupon_third) { create(:coupon, organization:, status: "active", name: "presuv", code: "33") }
 
   before do
     coupon_first
@@ -23,18 +23,24 @@ RSpec.describe CouponsQuery, type: :query do
     coupon_third
   end
 
-  it 'returns all coupons' do
+  it "returns all coupons" do
     expect(result.coupons.count).to eq(3)
     expect(returned_ids).to include(coupon_first.id)
     expect(returned_ids).to include(coupon_second.id)
     expect(returned_ids).to include(coupon_third.id)
   end
 
-  context "when coupons have the same created_at" do
+  context "when coupons have the same values for the ordering criteria" do
     let(:coupon_second) do
-      create(:coupon, organization:, status: "active", name: "defgh", code: "22", created_at: coupon_first.created_at).tap do |coupon|
-        coupon.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      create(
+        :coupon,
+        organization:,
+        id: "00000000-0000-0000-0000-000000000000",
+        status: "active",
+        name: "defgh",
+        code: "22",
+        created_at: coupon_first.created_at
+      )
     end
 
     it "returns a consistent list" do
@@ -46,49 +52,39 @@ RSpec.describe CouponsQuery, type: :query do
     end
   end
 
-  context 'with pagination' do
+  context "with pagination" do
     let(:pagination) { {page: 2, limit: 2} }
 
-    it 'applies the pagination' do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.coupons.count).to eq(1)
-        expect(result.coupons.current_page).to eq(2)
-        expect(result.coupons.prev_page).to eq(1)
-        expect(result.coupons.next_page).to be_nil
-        expect(result.coupons.total_pages).to eq(2)
-        expect(result.coupons.total_count).to eq(3)
-      end
+    it "applies the pagination" do
+      expect(result).to be_success
+      expect(result.coupons.count).to eq(1)
+      expect(result.coupons.current_page).to eq(2)
+      expect(result.coupons.prev_page).to eq(1)
+      expect(result.coupons.next_page).to be_nil
+      expect(result.coupons.total_pages).to eq(2)
+      expect(result.coupons.total_count).to eq(3)
     end
   end
 
-  context 'when searching for /de/ term' do
-    let(:search_term) { 'de' }
+  context "when searching for /de/ term" do
+    let(:search_term) { "de" }
 
-    it 'returns only two coupons' do
-      returned_ids = result.coupons.pluck(:id)
-
-      aggregate_failures do
-        expect(returned_ids.count).to eq(2)
-        expect(returned_ids).to include(coupon_first.id)
-        expect(returned_ids).to include(coupon_second.id)
-        expect(returned_ids).not_to include(coupon_third.id)
-      end
+    it "returns only two coupons" do
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).to include(coupon_first.id)
+      expect(returned_ids).to include(coupon_second.id)
+      expect(returned_ids).not_to include(coupon_third.id)
     end
   end
 
-  context 'when filtering by terminated status' do
-    let(:filters) { {status: 'terminated'} }
+  context "when filtering by terminated status" do
+    let(:filters) { {status: "terminated"} }
 
-    it 'returns only two coupons' do
-      returned_ids = result.coupons.pluck(:id)
-
-      aggregate_failures do
-        expect(returned_ids.count).to eq(1)
-        expect(returned_ids).not_to include(coupon_first.id)
-        expect(returned_ids).to include(coupon_second.id)
-        expect(returned_ids).not_to include(coupon_third.id)
-      end
+    it "returns only two coupons" do
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).not_to include(coupon_first.id)
+      expect(returned_ids).to include(coupon_second.id)
+      expect(returned_ids).not_to include(coupon_third.id)
     end
   end
 end

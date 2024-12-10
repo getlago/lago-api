@@ -30,11 +30,10 @@ RSpec.describe SubscriptionsQuery, type: :query do
         :subscription,
         customer:,
         plan:,
+        id: "00000000-0000-0000-0000-000000000000",
         started_at: subscription.started_at,
         created_at: subscription.created_at
-      ).tap do |subs|
-        subs.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      )
     end
 
     before { subscription_2 }

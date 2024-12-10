@@ -41,9 +41,13 @@ RSpec.describe IntegrationMappingsQuery, type: :query do
 
   context "when mappings have the same values for the ordering criteria" do
     let(:integration_mapping_second) do
-      create(:netsuite_mapping, integration:, mappable:, created_at: integration_mapping_first.created_at).tap do |integration_mapping|
-        integration_mapping.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      create(
+        :netsuite_mapping,
+        integration:,
+        mappable:,
+        id: "00000000-0000-0000-0000-000000000000",
+        created_at: integration_mapping_first.created_at
+      )
     end
 
     it "returns a consistent list" do

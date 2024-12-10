@@ -43,18 +43,17 @@ RSpec.describe DunningCampaignsQuery, type: :query do
     )
   end
 
-  context "when dunning campaigns have the same value for the ordering criteria" do
+  context "when dunning campaigns have the same values for the ordering criteria" do
     let(:dunning_campaign_second) do
       create(
         :dunning_campaign,
         organization:,
+        id: "00000000-0000-0000-0000-000000000000",
         name: dunning_campaign_first.name,
         code: "22",
         applied_to_organization: false,
         created_at: dunning_campaign_first.created_at
-      ).tap do |dunning_campaign|
-        dunning_campaign.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      )
     end
 
     it "returns a consistent list" do
@@ -69,7 +68,7 @@ RSpec.describe DunningCampaignsQuery, type: :query do
   context "with pagination" do
     let(:pagination) { {page: 2, limit: 2} }
 
-    it "applies the pagination", :aggregate_failures do
+    it "applies the pagination" do
       expect(result).to be_success
       expect(result.dunning_campaigns.count).to eq(1)
       expect(result.dunning_campaigns.current_page).to eq(2)

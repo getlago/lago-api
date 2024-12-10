@@ -24,14 +24,14 @@ RSpec.describe PlansQuery, type: :query do
   end
 
   it "returns all plans" do
-      expect(result).to be_success
-      expect(returned_ids.count).to eq(3)
-      expect(returned_ids).to include(plan_first.id)
-      expect(returned_ids).to include(plan_second.id)
-      expect(returned_ids).to include(plan_third.id)
+    expect(result).to be_success
+    expect(returned_ids.count).to eq(3)
+    expect(returned_ids).to include(plan_first.id)
+    expect(returned_ids).to include(plan_second.id)
+    expect(returned_ids).to include(plan_third.id)
   end
 
-  context "when plans have the values for the ordering criteria" do
+  context "when plans have the same values for the ordering criteria" do
     let(:plan_second) do
       create(
         :plan,
@@ -56,13 +56,13 @@ RSpec.describe PlansQuery, type: :query do
     let(:pagination) { {page: 2, limit: 2} }
 
     it "applies the pagination" do
-        expect(result).to be_success
-        expect(result.plans.count).to eq(1)
-        expect(result.plans.current_page).to eq(2)
-        expect(result.plans.prev_page).to eq(1)
-        expect(result.plans.next_page).to be_nil
-        expect(result.plans.total_pages).to eq(2)
-        expect(result.plans.total_count).to eq(3)
+      expect(result).to be_success
+      expect(result.plans.count).to eq(1)
+      expect(result.plans.current_page).to eq(2)
+      expect(result.plans.prev_page).to eq(1)
+      expect(result.plans.next_page).to be_nil
+      expect(result.plans.total_pages).to eq(2)
+      expect(result.plans.total_count).to eq(3)
     end
   end
 
@@ -70,12 +70,10 @@ RSpec.describe PlansQuery, type: :query do
     let(:search_term) { "de" }
 
     it "returns only two plans" do
-      returned_ids = result.plans.pluck(:id)
-
-        expect(returned_ids.count).to eq(2)
-        expect(returned_ids).to include(plan_first.id)
-        expect(returned_ids).to include(plan_second.id)
-        expect(returned_ids).not_to include(plan_third.id)
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).to include(plan_first.id)
+      expect(returned_ids).to include(plan_second.id)
+      expect(returned_ids).not_to include(plan_third.id)
     end
   end
 end

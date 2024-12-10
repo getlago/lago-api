@@ -102,20 +102,19 @@ RSpec.describe InvoicesQuery, type: :query do
     expect(returned_ids).to include(invoice_sixth.id)
   end
 
-  context "when invoices have the values for the ordering criteria" do
+  context "when invoices have the same values for the ordering criteria" do
     let(:invoice_second) do
       create(
         :invoice,
         organization:,
+        id: "00000000-0000-0000-0000-000000000000",
         status: 'finalized',
         payment_status: 'pending',
         customer: customer_second,
         number: '2222222222',
         issuing_date: invoice_first.issuing_date,
         created_at: invoice_first.created_at
-      ).tap do |invoice|
-        invoice.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      )
     end
 
     it "returns a consistent list" do

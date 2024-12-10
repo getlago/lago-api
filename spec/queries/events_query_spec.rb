@@ -19,16 +19,15 @@ RSpec.describe EventsQuery, type: :query do
     expect(result.events).to eq([event])
   end
 
-  context "when events have the ordering criteria" do
+  context "when events have the same values for the ordering criteria" do
     let(:event_2) do
       create(
         :event,
         organization:,
+        id: "00000000-0000-0000-0000-000000000000",
         timestamp: event.timestamp,
         created_at: event.created_at
-      ).tap do |event|
-        event.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      )
     end
 
     it "returns a consistent list" do

@@ -56,17 +56,16 @@ RSpec.describe PastUsageQuery, type: :query do
     expect(result.usage_periods.count).to eq(2)
   end
 
-  context "when invoice subscriptions have the values for the ordering criteria" do
+  context "when invoice subscriptions have the same values for the ordering criteria" do
     let(:invoice_subscription2) do
       create(
         :invoice_subscription,
+        id: "00000000-0000-0000-0000-000000000000",
         charges_from_datetime: invoice_subscription1.charges_from_datetime,
         charges_to_datetime: invoice_subscription1.charges_to_datetime,
         subscription:,
         created_at: invoice_subscription1.created_at
-      ).tap do |invoice_subscription|
-        invoice_subscription.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      )
     end
 
     it "returns a consistent list" do

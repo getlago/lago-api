@@ -46,16 +46,15 @@ RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
     end
   end
 
-  context "when integration collection mappings have the ordering criteria" do
+  context "when integration collection mappings have the same values for the ordering criteria" do
     let(:netsuite_collection_mapping_second) do
       create(
         :netsuite_collection_mapping,
         integration:,
+        id: "00000000-0000-0000-0000-000000000000",
         mapping_type: :coupon,
         created_at: netsuite_collection_mapping_first.created_at
-      ).tap do |netsuite_collection_mapping|
-        netsuite_collection_mapping.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      )
     end
 
     it "returns a consistent list" do

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe AppliedCouponsQuery, type: :query do
   subject(:result) do
@@ -18,19 +18,21 @@ RSpec.describe AppliedCouponsQuery, type: :query do
 
   before { applied_coupon }
 
-  it 'returns a list of applied_coupons' do
-    aggregate_failures do
-      expect(result).to be_success
-      expect(result.applied_coupons.count).to eq(1)
-      expect(result.applied_coupons).to eq([applied_coupon])
-    end
+  it "returns a list of applied_coupons" do
+    expect(result).to be_success
+    expect(result.applied_coupons.count).to eq(1)
+    expect(result.applied_coupons).to eq([applied_coupon])
   end
 
-  context "when applied coupons have the same created_at" do
+  context "when applied coupons have the same values for the ordering criteria" do
     let(:applied_coupon_2) do
-      create(:applied_coupon, coupon:, customer:, created_at: applied_coupon.created_at).tap do |applied_coupon|
-        applied_coupon.update! id: "00000000-0000-0000-0000-000000000000"
-      end
+      create(
+        :applied_coupon,
+        coupon:,
+        customer:,
+        id: "00000000-0000-0000-0000-000000000000",
+        created_at: applied_coupon.created_at
+      )
     end
 
     before { applied_coupon_2 }
@@ -42,48 +44,40 @@ RSpec.describe AppliedCouponsQuery, type: :query do
     end
   end
 
-  context 'when customer is deleted' do
+  context "when customer is deleted" do
     let(:customer) { create(:customer, :deleted, organization:) }
 
-    it 'filters the applied_coupons' do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.applied_coupons.count).to eq(0)
-      end
+    it "filters the applied_coupons" do
+      expect(result).to be_success
+      expect(result.applied_coupons.count).to eq(0)
     end
   end
 
-  context 'with pagination' do
+  context "with pagination" do
     let(:pagination) { {page: 2, limit: 10} }
 
-    it 'applies the pagination' do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.applied_coupons.count).to eq(0)
-        expect(result.applied_coupons.current_page).to eq(2)
-      end
+    it "applies the pagination" do
+      expect(result).to be_success
+      expect(result.applied_coupons.count).to eq(0)
+      expect(result.applied_coupons.current_page).to eq(2)
     end
   end
 
-  context 'with customer filter' do
+  context "with customer filter" do
     let(:filters) { {external_customer_id: customer.external_id} }
 
-    it 'applies the filter' do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.applied_coupons.count).to eq(1)
-      end
+    it "applies the filter" do
+      expect(result).to be_success
+      expect(result.applied_coupons.count).to eq(1)
     end
   end
 
-  context 'with status filter' do
-    let(:filters) { {status: 'terminated'} }
+  context "with status filter" do
+    let(:filters) { {status: "terminated"} }
 
-    it 'applies the filter' do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.applied_coupons.count).to eq(0)
-      end
+    it "applies the filter" do
+      expect(result).to be_success
+      expect(result.applied_coupons.count).to eq(0)
     end
   end
 end
