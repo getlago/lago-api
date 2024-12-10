@@ -97,17 +97,7 @@ class Invoice < ApplicationRecord
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
-  scope :ready_to_be_finalized,
-    lambda {
-      date = <<-SQL
-            (
-              invoices.created_at +
-              COALESCE(customers.invoice_grace_period, organizations.invoice_grace_period) * INTERVAL '1 DAY'
-            )
-      SQL
-
-      draft.joins(:customer, :organization).where("#{Arel.sql(date)} < ?", Time.current)
-    }
+  scope :ready_to_be_finalized, -> { draft.where('issuing_date <= ?', Time.current.to_date) }
 
   scope :created_before,
     lambda { |invoice|
