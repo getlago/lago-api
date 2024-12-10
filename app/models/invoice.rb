@@ -97,16 +97,7 @@ class Invoice < ApplicationRecord
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
-  scope :ready_to_be_finalized,
-    lambda {
-      draft
-        .joins(customer: :organization)
-        .where(
-          "issuing_date#{Utils::Timezone.at_time_zone_sql} <= " \
-          "DATE(?#{Utils::Timezone.at_time_zone_sql})",
-          Time.current
-        )
-    }
+  scope :ready_to_be_finalized, -> { draft.where('issuing_date <= ?', Time.current.to_date) }
 
   scope :created_before,
     lambda { |invoice|
