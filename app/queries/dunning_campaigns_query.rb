@@ -7,6 +7,7 @@ class DunningCampaignsQuery < BaseQuery
     dunning_campaigns = base_scope.result
     dunning_campaigns = paginate(dunning_campaigns)
     dunning_campaigns = dunning_campaigns.order(order)
+    dunning_campaigns = apply_consistent_ordering(dunning_campaigns)
 
     dunning_campaigns = with_applied_to_organization(dunning_campaigns) unless filters.applied_to_organization.nil?
     dunning_campaigns = with_currency_threshold(dunning_campaigns) if filters.currency.present?

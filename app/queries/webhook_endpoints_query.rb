@@ -4,7 +4,10 @@ class WebhookEndpointsQuery < BaseQuery
   def call
     webhook_endpoints = base_scope.result
     webhook_endpoints = paginate(webhook_endpoints)
-    webhook_endpoints = webhook_endpoints.order(:webhook_url)
+    webhook_endpoints = apply_consistent_ordering(
+      webhook_endpoints,
+      default_order: {webhook_url: :asc, created_at: :desc}
+    )
 
     result.webhook_endpoints = webhook_endpoints
     result

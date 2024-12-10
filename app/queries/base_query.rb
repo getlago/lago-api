@@ -57,4 +57,9 @@ class BaseQuery < BaseService
     result.single_validation_failure!(field: field_name.to_sym, error_code: 'invalid_date')
       .raise_if_error!
   end
+
+  # Apply consistent ordering across query objects
+  def apply_consistent_ordering(scope, default_order: { created_at: :desc })
+    scope.order(default_order).order(id: :asc)
+  end
 end

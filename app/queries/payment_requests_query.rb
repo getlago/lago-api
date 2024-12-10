@@ -4,7 +4,7 @@ class PaymentRequestsQuery < BaseQuery
   def call
     payment_requests = PaymentRequest.where(organization:)
     payment_requests = paginate(payment_requests)
-    payment_requests = payment_requests.order(created_at: :desc)
+    payment_requests = apply_consistent_ordering(payment_requests)
 
     payment_requests = with_external_customer(payment_requests) if filters.external_customer_id
 

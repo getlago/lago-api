@@ -3,7 +3,7 @@
 class IntegrationMappingsQuery < BaseQuery
   def call
     integration_mappings = paginate(base_scope)
-    integration_mappings = integration_mappings.order(created_at: :desc)
+    integration_mappings = apply_consistent_ordering(integration_mappings)
 
     integration_mappings = with_integration_id(integration_mappings) if filters.integration_id
     integration_mappings = with_mappable_type(integration_mappings) if filters.mappable_type

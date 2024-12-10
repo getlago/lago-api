@@ -5,6 +5,7 @@ class CouponsQuery < BaseQuery
     coupons = base_scope.result
     coupons = paginate(coupons)
     coupons = coupons.order_by_status_and_expiration
+    coupons = apply_consistent_ordering(coupons)
 
     coupons = with_status(coupons) if filters.status.present?
 

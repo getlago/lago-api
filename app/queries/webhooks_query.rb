@@ -9,7 +9,10 @@ class WebhooksQuery < BaseQuery
   def call
     webhooks = base_scope.result
     webhooks = paginate(webhooks)
-    webhooks = webhooks.order(updated_at: :desc)
+    webhooks = apply_consistent_ordering(
+      webhooks,
+      default_order: { updated_at: :desc, created_at: :desc }
+    )
 
     webhooks = with_status(webhooks) if filters.status.present?
 

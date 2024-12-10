@@ -4,7 +4,7 @@ class CustomersQuery < BaseQuery
   def call
     customers = base_scope.result
     customers = paginate(customers)
-    customers = customers.order(created_at: :desc)
+    customers = apply_consistent_ordering(customers)
 
     result.customers = customers
     result

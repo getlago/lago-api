@@ -4,7 +4,7 @@ class PlansQuery < BaseQuery
   def call
     plans = base_scope.result
     plans = paginate(plans)
-    plans = plans.order(created_at: :desc)
+    plans = apply_consistent_ordering(plans)
 
     result.plans = plans
     result

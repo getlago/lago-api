@@ -7,6 +7,8 @@ RSpec.describe PaymentRequestsQuery, type: :query do
     described_class.call(organization:, pagination:, filters:)
   end
 
+  let(:returned_ids) { result.payment_requests.pluck(:id) }
+
   let(:pagination) { nil }
   let(:filters) { {} }
 
@@ -21,7 +23,7 @@ RSpec.describe PaymentRequestsQuery, type: :query do
     payment_request_second
   end
 
-  it "returns all payment requests", :aggregate_failures do
+  it "returns all payment requests" do
     expect(result).to be_success
     expect(result.payment_requests.pluck(:id)).to contain_exactly(
       payment_request_first.id,
@@ -29,10 +31,30 @@ RSpec.describe PaymentRequestsQuery, type: :query do
     )
   end
 
+  context "when payment requests have the same values for the ordering criteria" do
+    let(:payment_request_second) do
+      create(
+        :payment_request,
+        organization:,
+        customer:,
+        id: "00000000-0000-0000-0000-000000000000",
+        created_at: payment_request_first.created_at
+      )
+    end
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).to include(payment_request_first.id)
+      expect(returned_ids).to include(payment_request_second.id)
+      expect(returned_ids.index(payment_request_first.id)).to be > returned_ids.index(payment_request_second.id)
+    end
+  end
+
   context "with pagination" do
     let(:pagination) { {page: 2, limit: 1} }
 
-    it "applies the pagination", :aggregate_failures do
+    it "applies the pagination" do
       expect(result).to be_success
       expect(result.payment_requests.count).to eq(1)
       expect(result.payment_requests.current_page).to eq(2)
@@ -46,7 +68,7 @@ RSpec.describe PaymentRequestsQuery, type: :query do
   context "when filtering by customer_id" do
     let(:filters) { {external_customer_id: customer.external_id} }
 
-    it "returns all payment_requests of the customer", :aggregate_failures do
+    it "returns all payment_requests of the customer" do
       expect(result).to be_success
       expect(result.payment_requests.pluck(:id)).to contain_exactly(
         payment_request_second.id

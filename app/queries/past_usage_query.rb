@@ -5,7 +5,7 @@ class PastUsageQuery < BaseQuery
     validate_filters
     return result if result.error.present?
 
-    query_result = query
+    query_result = apply_consistent_ordering(query)
     result.usage_periods = query_result.map do |invoice_subscription|
       OpenStruct.new(
         invoice_subscription:,

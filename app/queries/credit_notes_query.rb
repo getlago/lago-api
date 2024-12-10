@@ -4,9 +4,10 @@ class CreditNotesQuery < BaseQuery
   def call
     credit_notes = base_scope.result
     credit_notes = paginate(credit_notes)
-    credit_notes = credit_notes.order(created_at: :desc)
+    credit_notes = apply_consistent_ordering(credit_notes)
 
     credit_notes = with_customer_id(credit_notes) if filters.customer_id.present?
+    credit_notes = with_external_customer_id(credit_notes) if filters.external_customer_id.present?
 
     result.credit_notes = credit_notes
     result
@@ -34,5 +35,9 @@ class CreditNotesQuery < BaseQuery
 
   def with_customer_id(scope)
     scope.where(customer_id: filters.customer_id)
+  end
+
+  def with_external_customer_id(scope)
+    scope.joins(:customer).where(customers: {external_id: filters.external_customer_id})
   end
 end
