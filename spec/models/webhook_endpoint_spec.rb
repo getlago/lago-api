@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe WebhookEndpoint, type: :model do
   it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_many(:webhooks).dependent(:destroy) }
+  it { is_expected.to have_many(:webhooks).dependent(:delete_all) }
 
   it { is_expected.to validate_presence_of(:webhook_url) }
 
