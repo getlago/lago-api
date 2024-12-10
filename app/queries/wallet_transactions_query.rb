@@ -11,7 +11,7 @@ class WalletTransactionsQuery < BaseQuery
 
     wallet_transactions = wallet.wallet_transactions
     wallet_transactions = paginate(wallet_transactions)
-    wallet_transactions = wallet_transactions.order(created_at: :desc)
+    wallet_transactions = apply_consistent_ordering(wallet_transactions)
 
     if valid_transaction_type?(filters.transaction_type)
       wallet_transactions = with_transaction_type(wallet_transactions)
