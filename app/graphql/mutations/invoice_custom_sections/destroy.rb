@@ -4,21 +4,22 @@ module Mutations
   module InvoiceCustomSections
     class Destroy < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = 'invoice_custom_sections:delete'
 
-      graphql_name 'DestroyPlan'
-      description 'Deletes a Plan'
+      graphql_name 'DestroyInvoiceCustomSection'
+      description 'Deletes an InvoiceCustomSection'
 
       argument :id, ID, required: true
 
       field :id, ID, null: true
 
       def resolve(id:)
-        plan = context[:current_user].plans.find_by(id:)
-        result = ::Plans::PrepareDestroyService.call(plan:)
+        invoice_custom_section = current_organization.invoice_custom_sections.find_by(id:)
+        result = ::InvoiceCustomSections::DestroyService.call(invoice_custom_section:)
 
-        result.success? ? result.plan : result_error(result)
+        result.success? ? result.invoice_custom_section : result_error(result)
       end
     end
   end
