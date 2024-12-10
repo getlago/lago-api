@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe SubscriptionsQuery, type: :query do
   subject(:result) { described_class.call(organization:, pagination:, filters:) }
 
+  let(:returned_ids) { result.subscriptions.pluck(:id) }
+
   let(:organization) { create(:organization) }
   let(:pagination) { nil }
   let(:filters) { {} }
@@ -19,6 +21,28 @@ RSpec.describe SubscriptionsQuery, type: :query do
     expect(result).to be_success
     expect(result.subscriptions.count).to eq(1)
     expect(result.subscriptions).to eq([subscription])
+  end
+
+  context "when subscriptions have the same values for the ordering criteria" do
+    let(:subscription) { create(:subscription, customer:, plan:, started_at: 1.day.ago) }
+    let(:subscription_2) do
+      create(
+        :subscription,
+        customer:,
+        plan:,
+        started_at: subscription.started_at,
+        created_at: subscription.created_at
+      ).tap do |subs|
+        subs.update! id: "00000000-0000-0000-0000-000000000000"
+      end
+    end
+
+    before { subscription_2 }
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([subscription_2.id, subscription.id])
+    end
   end
 
   context "with pagination" do
