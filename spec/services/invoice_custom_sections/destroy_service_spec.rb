@@ -7,7 +7,7 @@ RSpec.describe InvoiceCustomSections::DestroyService do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer) }
-  let(:invoice_custom_section) { create(:invoice_custom_section, organization: ) }
+  let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
 
   before do
     allow(InvoiceCustomSections::Deselect::ForAllUsagesService).to receive(:call).and_call_original
