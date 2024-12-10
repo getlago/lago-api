@@ -32,6 +32,27 @@ RSpec.describe WebhooksQuery, type: :query do
     expect(returned_ids).to include(webhook_other_type.id)
   end
 
+  context "when webhooks have the same values for the ordering criteria" do
+    let(:webhook_failed) do
+      create(
+        :webhook,
+        :failed,
+        webhook_endpoint:,
+        id: "00000000-0000-0000-0000-000000000000",
+        created_at: webhook_succeeded.created_at,
+        updated_at: webhook_succeeded.updated_at
+      )
+    end
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(3)
+      expect(returned_ids).to include(webhook_succeeded.id)
+      expect(returned_ids).to include(webhook_failed.id)
+      expect(returned_ids.index(webhook_succeeded.id)).to be > returned_ids.index(webhook_failed.id)
+    end
+  end
+
   context "with pagination" do
     let(:pagination) { {page: 2, limit: 2} }
 
