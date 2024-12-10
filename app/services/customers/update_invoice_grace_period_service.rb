@@ -10,21 +10,21 @@ module Customers
 
     def call
       old_grace_period = customer.invoice_grace_period.to_i
-      grace_period_diff = grace_period - old_grace_period
+      grace_period_diff = customer.applicable_invoice_grace_period.to_i - customer.applicable_invoice_grace_period.to_i
 
       if grace_period != old_grace_period
         customer.invoice_grace_period = grace_period
         customer.save!
 
         # NOTE: Update issuing_date on draft invoices.
-        customer.invoices.draft.each do |invoice|
+        customer.invoices.draft.find_each do |invoice|
           invoice.issuing_date = invoice.issuing_date + grace_period_diff.days
           invoice.payment_due_date = grace_period_payment_due_date(invoice)
           invoice.save!
         end
 
         # NOTE: Finalize related draft invoices.
-        customer.invoices.ready_to_be_finalized.each do |invoice|
+        customer.invoices.ready_to_be_finalized.find_each do |invoice|
           Invoices::RefreshDraftAndFinalizeService.call(invoice:)
         end
       end
