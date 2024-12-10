@@ -9,7 +9,7 @@ class WebhookEndpoint < ApplicationRecord
   ].freeze
 
   belongs_to :organization
-  has_many :webhooks, dependent: :destroy
+  has_many :webhooks, dependent: :delete_all
 
   validates :webhook_url, presence: true, url: true
   validates :webhook_url, uniqueness: {scope: :organization_id}
