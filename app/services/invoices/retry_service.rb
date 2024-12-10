@@ -44,7 +44,7 @@ module Invoices
       GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-      Invoices::Payments::CreateService.new(invoice).call
+      Invoices::Payments::CreateService.call_async(invoice:)
       Utils::SegmentTrack.invoice_created(invoice)
 
       result

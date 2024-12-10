@@ -3,23 +3,35 @@
 module Invoices
   module Payments
     class CreateService < BaseService
-      def initialize(invoice)
+      def initialize(invoice:, payment_provider: nil)
         @invoice = invoice
+        @payment_provider = payment_provider&.to_sym
 
         super
       end
 
       def call
+        # TODO: Refactor to avoid duplicated logic in provider services.
+        #       Lago Payment related logic should be handled here and the
+        #       payment execution should be delegated to the provider services
+
         case payment_provider
         when :stripe
-          Invoices::Payments::StripeCreateJob.perform_later(invoice)
+          Invoices::Payments::StripeService.call(invoice)
         when :gocardless
-          Invoices::Payments::GocardlessCreateJob.perform_later(invoice)
+          Invoices::Payments::GocardlessService.call(invoice)
         when :adyen
-          Invoices::Payments::AdyenCreateJob.perform_later(invoice)
+          Invoices::Payments::AdyenService.call(invoice)
         end
-      rescue ActiveJob::Uniqueness::JobNotUnique => e
-        Sentry.capture_exception(e)
+      end
+
+      def call_async
+        return result unless payment_provider
+
+        Invoices::Payments::CreateJob.perform_later(invoice:, payment_provider:)
+
+        result.payment_provider = payment_provider
+        result
       end
 
       private
@@ -27,7 +39,7 @@ module Invoices
       attr_reader :invoice
 
       def payment_provider
-        invoice.customer.payment_provider&.to_sym
+        @payment_provider ||= invoice.customer.payment_provider&.to_sym
       end
     end
   end
