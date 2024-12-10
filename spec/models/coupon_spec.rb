@@ -3,50 +3,71 @@
 require 'rails_helper'
 
 RSpec.describe Coupon, type: :model do
-  subject(:coupon) { create(:coupon) }
-
-  let(:organization) { create(:organization) }
+  subject(:coupon) { build(:coupon) }
 
   it_behaves_like 'paper_trail traceable'
 
+  it { is_expected.to validate_presence_of(:name) }
+  it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0).allow_nil }
+
+  specify do
+    expect(subject)
+      .to validate_inclusion_of(:amount_currency)
+      .in_array(described_class.currency_list)
+  end
+
   describe 'validations' do
-    context 'when coupon is fixed amount' do
-      it 'validates amount_cents' do
-        expect(coupon).to be_valid
+    describe 'of amount cents' do
+      subject { coupon }
 
-        coupon.amount_cents = nil
-        expect(coupon).not_to be_valid
+      let(:coupon) { build_stubbed(:coupon, coupon_type:) }
+
+      context 'when coupon type is fixed amount' do
+        let(:coupon_type) { :fixed_amount }
+
+        it { is_expected.to validate_presence_of(:amount_cents) }
       end
 
-      it 'validates amount_currency' do
-        coupon.amount_currency = nil
-        expect(coupon).not_to be_valid
-      end
+      context 'when coupon type is percentage' do
+        let(:coupon_type) { :percentage }
 
-      it 'validates percentage_rate' do
-        coupon.percentage_rate = nil
-        expect(coupon).to be_valid
+        it { is_expected.not_to validate_presence_of(:amount_cents) }
       end
     end
 
-    context 'when coupon is percentage' do
-      subject(:coupon) { create(:coupon, coupon_type: 'percentage', percentage_rate: 10) }
+    describe 'of amount currency' do
+      subject { coupon }
 
-      it 'validates percentage_rate' do
-        expect(coupon).to be_valid
+      let(:coupon) { build_stubbed(:coupon, coupon_type:) }
 
-        coupon.percentage_rate = nil
-        expect(coupon).not_to be_valid
+      context 'when coupon type is fixed amount' do
+        let(:coupon_type) { :fixed_amount }
+
+        it { is_expected.to validate_presence_of(:amount_currency) }
       end
 
-      it 'validates amount_cents' do
-        coupon.amount_cents = nil
-        expect(coupon).to be_valid
+      context 'when coupon type is percentage' do
+        let(:coupon_type) { :percentage }
+
+        it { is_expected.not_to validate_presence_of(:amount_currency) }
+      end
+    end
+
+    describe 'of percentage rate' do
+      subject { coupon }
+
+      let(:coupon) { build_stubbed(:coupon, coupon_type:) }
+
+      context 'when coupon type is fixed amount' do
+        let(:coupon_type) { :fixed_amount }
+
+        it { is_expected.not_to validate_presence_of(:percentage_rate) }
       end
 
-      it 'validates amount_currency' do
-        coupon.amount_currency = nil
-        expect(coupon).to be_valid
+      context 'when coupon type is percentage' do
+        let(:coupon_type) { :percentage }
+
+        it { is_expected.to validate_presence_of(:percentage_rate) }
       end
     end
   end

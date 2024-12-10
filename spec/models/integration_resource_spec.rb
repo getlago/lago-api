@@ -3,11 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe IntegrationResource, type: :model do
-  subject(:integration_resource) { create(:integration_resource) }
+  subject(:integration_resource) { build(:integration_resource) }
 
   let(:resource_types) do
     %i[invoice sales_order_deprecated payment credit_note subscription]
   end
+
+  it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to belong_to(:syncable) }
   it { is_expected.to belong_to(:integration) }

@@ -5,10 +5,10 @@ require 'rails_helper'
 RSpec.describe IntegrationItem, type: :model do
   subject(:integration_item) { build(:integration_item) }
 
+  it_behaves_like 'paper_trail traceable'
+
   it { is_expected.to belong_to(:integration) }
-
   it { is_expected.to validate_presence_of(:external_id) }
-
   it { is_expected.to define_enum_for(:item_type).with_values(%i[standard tax account]) }
 
   it 'validates uniqueness of external id' do

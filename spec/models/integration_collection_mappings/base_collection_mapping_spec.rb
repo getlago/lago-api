@@ -3,14 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping, type: :model do
-  subject(:mapping) { described_class.new(type:, mapping_type:) }
-
-  let(:mapping_type) { :fallback_item }
-  let(:type) { 'IntegrationCollectionMappings::NetsuiteCollectionMapping' }
+  subject(:mapping) { build(:netsuite_collection_mapping, settings: {}) }
 
   let(:mapping_types) do
     %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account]
   end
+
+  it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to belong_to(:integration) }
 
@@ -19,6 +18,8 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping, type: :mode
   describe 'validations' do
     describe 'of mapping type uniqueness' do
       let(:errors) { mapping.errors }
+      let(:mapping_type) { :fallback_item }
+      let(:type) { 'IntegrationCollectionMappings::NetsuiteCollectionMapping' }
 
       context 'when it is unique in scope of integration' do
         it 'does not add an error' do

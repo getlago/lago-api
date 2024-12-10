@@ -5,6 +5,10 @@ require 'rails_helper'
 RSpec.describe Integrations::BaseIntegration, type: :model do
   subject(:integration) { described_class.new(attributes) }
 
+  it_behaves_like 'paper_trail traceable' do
+    subject { build(:netsuite_integration) }
+  end
+
   let(:secrets) { {'api_key' => api_key, 'api_secret' => api_secret} }
   let(:api_key) { SecureRandom.uuid }
   let(:api_secret) { SecureRandom.uuid }
