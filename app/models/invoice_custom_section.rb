@@ -10,6 +10,8 @@ class InvoiceCustomSection < ApplicationRecord
   validates :name, presence: true
   validates :code, presence: true, uniqueness: {scope: :organization_id}
 
+  default_scope -> { kept }
+
   def selected_for_organization?
     organization.selected_invoice_custom_sections.exists?(id: id)
   end

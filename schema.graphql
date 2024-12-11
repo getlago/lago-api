@@ -5218,7 +5218,7 @@ type Mutation {
   ): DestroyIntegrationMappingPayload
 
   """
-  Deletes an InvoiceCustomSection
+  Deletes an invoice_custom_section
   """
   destroyInvoiceCustomSection(
     """

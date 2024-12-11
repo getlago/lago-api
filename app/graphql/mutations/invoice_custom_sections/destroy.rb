@@ -9,7 +9,7 @@ module Mutations
       REQUIRED_PERMISSION = 'invoice_custom_sections:delete'
 
       graphql_name 'DestroyInvoiceCustomSection'
-      description 'Deletes an InvoiceCustomSection'
+      description 'Deletes an invoice_custom_section'
 
       argument :id, ID, required: true
 
