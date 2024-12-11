@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class IntegrationResource < ApplicationRecord
+  include PaperTrailTraceable
+
   belongs_to :syncable, polymorphic: true
   belongs_to :integration, class_name: 'Integrations::BaseIntegration'
 
