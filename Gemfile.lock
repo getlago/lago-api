@@ -186,6 +186,12 @@ GEM
       activerecord (>= 5.a)
       database_cleaner-core (~> 2.0.0)
     database_cleaner-core (2.0.1)
+    datadog (2.7.1)
+      datadog-ruby_core_source (~> 3.3)
+      libdatadog (~> 14.1.0.1.0)
+      libddwaf (~> 1.15.0.0.0)
+      msgpack
+    datadog-ruby_core_source (3.3.6)
     date (3.3.4)
     debug (1.9.2)
       irb (~> 1.10)
@@ -352,6 +358,17 @@ GEM
       roda (~> 3.68, >= 3.69)
       tilt (~> 2.0)
     language_server-protocol (3.17.0.3)
+    libdatadog (14.1.0.1.0)
+    libdatadog (14.1.0.1.0-aarch64-linux)
+    libdatadog (14.1.0.1.0-x86_64-linux)
+    libddwaf (1.15.0.0.0-aarch64-linux)
+      ffi (~> 1.0)
+    libddwaf (1.15.0.0.0-arm64-darwin)
+      ffi (~> 1.0)
+    libddwaf (1.15.0.0.0-x86_64-darwin)
+      ffi (~> 1.0)
+    libddwaf (1.15.0.0.0-x86_64-linux)
+      ffi (~> 1.0)
     lint_roller (1.1.0)
     listen (3.9.0)
       rb-fsevent (~> 0.10, >= 0.10.3)
@@ -937,6 +954,7 @@ DEPENDENCIES
   countries
   csv (~> 3.0)
   database_cleaner-active_record
+  datadog
   debug
   discard (~> 1.2)
   dotenv
