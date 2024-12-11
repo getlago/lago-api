@@ -26072,7 +26072,7 @@
             },
             {
               "name": "destroyInvoiceCustomSection",
-              "description": "Deletes an InvoiceCustomSection",
+              "description": "Deletes an invoice_custom_section",
               "type": {
                 "kind": "OBJECT",
                 "name": "DestroyInvoiceCustomSectionPayload",

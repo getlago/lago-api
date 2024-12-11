@@ -8,6 +8,8 @@ module InvoiceCustomSections
     end
 
     def call
+      return result.not_found_failure!(resource: 'invoice_custom_section') unless invoice_custom_section
+
       ActiveRecord::Base.transaction do
         invoice_custom_section.discard
         Deselect::ForAllUsagesService.call(section: invoice_custom_section).raise_if_error!
