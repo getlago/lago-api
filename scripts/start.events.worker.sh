@@ -1,3 +1,3 @@
 #!/bin/bash
 
-bundle exec sidekiq -C config/sidekiq/sidekiq_events.yml
+exec bundle exec sidekiq -C config/sidekiq/sidekiq_events.yml
