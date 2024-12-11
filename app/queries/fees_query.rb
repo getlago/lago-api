@@ -9,7 +9,7 @@ class FeesQuery < BaseQuery
     end
 
     fees = paginate(base_scope)
-    fees = apply_consistent_ordering(fees, default_order: { created_at: :asc })
+    fees = apply_consistent_ordering(fees, default_order: {created_at: :asc})
 
     fees = with_external_subscription(fees) if filters.external_subscription_id
 

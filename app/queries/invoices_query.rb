@@ -6,7 +6,7 @@ class InvoicesQuery < BaseQuery
     invoices = paginate(invoices)
     invoices = apply_consistent_ordering(
       invoices,
-      default_order: { issuing_date: :desc, created_at: :desc }
+      default_order: {issuing_date: :desc, created_at: :desc}
     )
 
     invoices = with_currency(invoices) if filters.currency

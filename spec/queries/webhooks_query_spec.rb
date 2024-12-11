@@ -71,7 +71,6 @@ RSpec.describe WebhooksQuery, type: :query do
     let(:search_term) { "generated" }
 
     it "returns only one webhook" do
-
       expect(returned_ids.count).to eq(1)
       expect(returned_ids).to include(webhook_other_type.id)
     end
@@ -82,7 +81,6 @@ RSpec.describe WebhooksQuery, type: :query do
     let(:filters) { {status: "succeeded"} }
 
     it "returns only one webhook" do
-
       expect(returned_ids.count).to eq(1)
       expect(returned_ids).to include(webhook_succeeded.id)
     end
