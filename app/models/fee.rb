@@ -45,8 +45,8 @@ class Fee < ApplicationRecord
   enum payment_status: PAYMENT_STATUS, _prefix: :payment
 
   validates :amount_currency, inclusion: {in: currency_list}
-  validates :units, numericality: {greated_than_or_equal_to: 0}
-  validates :events_count, numericality: {greated_than_or_equal_to: 0}, allow_nil: true
+  validates :units, numericality: {greater_than_or_equal_to: 0}
+  validates :events_count, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
 
