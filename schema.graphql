@@ -6653,6 +6653,16 @@ type Query {
   ): CreditNoteCollection
 
   """
+  Query a single invoice_custom_section of an organization
+  """
+  invoiceCustomSection(
+    """
+    Uniq ID of the invoice_custom_section
+    """
+    id: ID!
+  ): InvoiceCustomSection
+
+  """
   Query invoice_custom_sections
   """
   invoiceCustomSections(limit: Int, page: Int): InvoiceCustomSectionCollection

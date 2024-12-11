@@ -34389,6 +34389,35 @@
               ]
             },
             {
+              "name": "invoiceCustomSection",
+              "description": "Query a single invoice_custom_section of an organization",
+              "type": {
+                "kind": "OBJECT",
+                "name": "InvoiceCustomSection",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the invoice_custom_section",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "invoiceCustomSections",
               "description": "Query invoice_custom_sections",
               "type": {

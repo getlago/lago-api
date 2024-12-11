@@ -52,6 +52,7 @@ module Types
     field :invoice, resolver: Resolvers::InvoiceResolver
     field :invoice_collections, resolver: Resolvers::Analytics::InvoiceCollectionsResolver
     field :invoice_credit_notes, resolver: Resolvers::InvoiceCreditNotesResolver
+    field :invoice_custom_section, resolver: Resolvers::InvoiceCustomSectionResolver
     field :invoice_custom_sections, resolver: Resolvers::InvoiceCustomSectionsResolver
     field :invoiced_usages, resolver: Resolvers::Analytics::InvoicedUsagesResolver
     field :invoices, resolver: Resolvers::InvoicesResolver

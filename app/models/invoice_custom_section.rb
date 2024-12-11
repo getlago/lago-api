@@ -11,7 +11,7 @@ class InvoiceCustomSection < ApplicationRecord
   validates :code, presence: true, uniqueness: {scope: :organization_id}
 
   def selected_for_organization?
-    organization.invoice_custom_sections.exists?(id: id)
+    organization.selected_invoice_custom_sections.exists?(id: id)
   end
 end
 
