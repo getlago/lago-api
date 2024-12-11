@@ -15,8 +15,6 @@ class Payment < ApplicationRecord
   enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
 
   validates :payment_type, presence: true
-  validates :provider_payment_id, presence: true, if: -> { payment_type_provider? }
-  validates :provider_payment_id, absence: true, if: -> { payment_type_manual? }
   validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
   validates :reference, absence: true, if: -> { payment_type_provider? }
 

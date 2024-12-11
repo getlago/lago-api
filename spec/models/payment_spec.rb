@@ -75,42 +75,6 @@ RSpec.describe Payment, type: :model do
         end
       end
     end
-
-    describe 'of provider payment id' do
-      context 'when payment type is provider' do
-        context 'when provider payment id is present' do
-          it 'does not add an error' do
-            expect(errors.where(:provider_payment_id, :blank)).not_to be_present
-          end
-        end
-
-        context 'when provider payment id is not present' do
-          let(:provider_payment_id) { nil }
-
-          it 'adds an error' do
-            expect(errors.where(:provider_payment_id, :blank)).to be_present
-          end
-        end
-      end
-
-      context 'when payment type is manual' do
-        let(:payment_type) { 'manual' }
-
-        context 'when provider payment id is present' do
-          it 'adds an error' do
-            expect(errors.where(:provider_payment_id, :present)).to be_present
-          end
-        end
-
-        context 'when provider payment id is not present' do
-          let(:provider_payment_id) { nil }
-
-          it 'does not add an error' do
-            expect(errors.where(:provider_payment_id, :blank)).not_to be_present
-          end
-        end
-      end
-    end
   end
 
   describe '.succeeded' do
