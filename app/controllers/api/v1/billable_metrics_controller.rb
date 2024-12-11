@@ -90,10 +90,10 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.metrics.includes(:filters),
+              result.billable_metrics.includes(:filters),
               ::V1::BillableMetricSerializer,
               collection_name: "billable_metrics",
-              meta: pagination_metadata(result.metrics),
+              meta: pagination_metadata(result.billable_metrics),
               includes: %i[counters] # DEPRECATED since 2024-11-22
             )
           )
