@@ -25,16 +25,15 @@ RSpec.describe Mutations::InvoiceCustomSections::Destroy, type: :graphql do
   let(:membership) { create(:membership) }
   let(:invoice_custom_section) { create(:invoice_custom_section, organization: membership.organization) }
 
+  before { invoice_custom_section }
+
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'invoice_custom_sections:delete'
 
-  before { invoice_custom_section }
-
   context 'when invoice custom section with such ID exists in the current organization' do
-
     it 'destroys the invoice custom section' do
-      expect { result }.to change { InvoiceCustomSection.count }.from(1).to(0)
+      expect { result }.to change(InvoiceCustomSection, :count).from(1).to(0)
     end
   end
 
@@ -42,7 +41,7 @@ RSpec.describe Mutations::InvoiceCustomSections::Destroy, type: :graphql do
     let(:invoice_custom_section) { create(:invoice_custom_section) }
 
     it 'does not delete the invoice_custom_section' do
-      expect { result }.not_to change { InvoiceCustomSection.count }
+      expect { result }.not_to change(InvoiceCustomSection, :count)
     end
 
     it 'returns an error' do
