@@ -19,7 +19,7 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver, type: :graphql do
 
   before { invoice_custom_section }
 
-  it 'returns a single tax' do
+  it 'returns a single invoice_custom_section' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
