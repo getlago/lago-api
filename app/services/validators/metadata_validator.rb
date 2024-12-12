@@ -5,7 +5,7 @@ module Validators
     DEFAULT_CONFIG = {
       max_keys: 5,
       max_key_length: 20,
-      max_value_length: 40
+      max_value_length: 100
     }.freeze
 
     attr_reader :metadata, :errors, :config
