@@ -18,7 +18,8 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
         taxes_rate: 30,
         fees_amount_cents: 2600,
         sub_total_excluding_taxes_amount_cents: 9900090,
-        sub_total_including_taxes_amount_cents: 9900100
+        sub_total_including_taxes_amount_cents: 9900100,
+        progressive_billing_credit_amount_cents: 1239000
       )
     end
 
@@ -163,6 +164,11 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
     it 'updates taxes_rate' do
       expect { refresh_service.call }
         .to change { invoice.reload.taxes_rate }.from(30.0).to(15)
+    end
+
+    it 'recalculates progressive billing amount' do
+      expect { refresh_service.call }
+        .to change { invoice.reload.progressive_billing_credit_amount_cents }.from(1239000).to(0)
     end
 
     context 'when there is a tax_integration set up' do
