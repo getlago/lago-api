@@ -155,6 +155,17 @@ class Fee < ApplicationRecord
     amount_currency
   end
 
+  def basic_rate_percentage?
+    return false unless charge?
+    return false unless charge.percentage?
+
+    if charge_filter
+      charge_filter.properties.keys == ['rate']
+    else
+      charge.properties.keys == ['rate']
+    end
+  end
+
   def sub_total_excluding_taxes_amount_cents
     amount_cents - precise_coupons_amount_cents
   end

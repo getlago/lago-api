@@ -453,4 +453,51 @@ RSpec.describe Fee, type: :model do
       end
     end
   end
+
+  describe '#basic_rate_percentage?' do
+    let(:fee) { create(:fee, fee_type: :charge, charge:, amount_cents: 1000, total_aggregated_units: 1) }
+    let(:charge) { create(:standard_charge) }
+
+    it 'returns false if charge model is not percentage' do
+      expect(fee).not_to be_basic_rate_percentage
+    end
+
+    context 'when charge model is percentage but has other properties except rate' do
+      let(:charge) { create(:charge, charge_model: 'percentage', properties: {rate: '0', fixed_amount: '20'}) }
+
+      it 'returns false' do
+        expect(fee).not_to be_basic_rate_percentage
+      end
+    end
+
+    context 'when properties of percentage charge contain only rate' do
+      let(:charge) { create(:charge, charge_model: 'percentage', properties: {rate: '0'}) }
+
+      it 'returns true' do
+        expect(fee).to be_basic_rate_percentage
+      end
+    end
+
+    context 'when charge is percentage and there are charge filters' do
+      let(:charge) { create(:charge, charge_model: 'percentage', properties: {rate: '0'}) }
+
+      before { fee.update!(charge_filter:) }
+
+      context 'when filter has other properties except rate' do
+        let(:charge_filter) { create(:charge_filter, charge:, properties: {rate: '0', fixed_amount: '20'}) }
+
+        it 'returns false' do
+          expect(fee).not_to be_basic_rate_percentage
+        end
+      end
+
+      context 'when filter properties contain only rate' do
+        let(:charge_filter) { create(:charge_filter, charge:, properties: {rate: '0'}) }
+
+        it 'returns true' do
+          expect(fee).to be_basic_rate_percentage
+        end
+      end
+    end
+  end
 end
