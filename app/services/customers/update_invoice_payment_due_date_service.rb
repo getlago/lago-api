@@ -11,10 +11,11 @@ module Customers
     def call
       ActiveRecord::Base.transaction do
         # NOTE: Update payment_due_date if net_payment_term changed
-        customer.invoices.draft.each do |invoice|
-          invoice.update!(net_payment_term:, payment_due_date: invoice_payment_due_date(invoice))
+        if net_payment_term != customer.applicable_net_payment_term
+          customer.invoices.draft.each do |invoice|
+            invoice.update!(net_payment_term:, payment_due_date: invoice_payment_due_date(invoice))
+          end
         end
-
         result.customer = customer
         result
       end

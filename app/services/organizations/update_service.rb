@@ -23,7 +23,6 @@ module Organizations
       organization.state = params[:state] if params.key?(:state)
       organization.country = params[:country]&.upcase if params.key?(:country)
       organization.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
-      organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
       organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
       organization.document_number_prefix = params[:document_number_prefix] if params.key?(:document_number_prefix)
       organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)

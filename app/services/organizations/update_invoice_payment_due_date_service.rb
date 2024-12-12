@@ -11,8 +11,11 @@ module Organizations
     def call
       ActiveRecord::Base.transaction do
         # NOTE: Update payment_due_date if net_payment_term changed
-        organization.invoices.draft.each do |invoice|
-          if organization.net_payment_term != net_payment_term
+        #
+        if organization.net_payment_term != net_payment_term
+          organization.net_payment_term = net_payment_term
+
+          organization.invoices.draft.each do |invoice|
             invoice.update!(payment_due_date: invoice_payment_due_date(invoice))
           end
         end
