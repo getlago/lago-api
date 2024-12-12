@@ -16,4 +16,4 @@ else
 fi
 
 bundle exec rails signup:seed_organization
-bundle exec rails s -b ::
+exec bundle exec rails s -b ::
