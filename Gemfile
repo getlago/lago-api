@@ -3,7 +3,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.3.4"
+ruby "3.3.6"
 
 # Core
 gem "aasm"
@@ -11,8 +11,8 @@ gem "activejob-uniqueness", require: "active_job/uniqueness/sidekiq_patch"
 gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
-gem "puma", "~> 6.4"
-gem "rails", "~> 7.1.3.4"
+gem "puma", "~> 6.5"
+gem "rails", "~> 7.1.5.1"
 gem "redis"
 gem "sidekiq"
 gem "sidekiq-throttled", '1.4.0' # '1.5.0' was losing some jobs
