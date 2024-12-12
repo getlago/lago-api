@@ -160,7 +160,9 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               'quantity' => 0.0,
               'rate' => 0.0,
               'amount' => 2.0,
-              'taxdetailsreference' => anything
+              'taxdetailsreference' => anything,
+              'custcol_service_period_date_from' => anything,
+              'custcol_service_period_date_to' => anything
             },
             {
               'item' => '4',
@@ -168,7 +170,9 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               'quantity' => 0.0,
               'rate' => 0.0,
               'amount' => 2.0,
-              'taxdetailsreference' => anything
+              'taxdetailsreference' => anything,
+              'custcol_service_period_date_from' => anything,
+              'custcol_service_period_date_to' => anything
             },
             {
               'item' => 'm2',
@@ -176,7 +180,9 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               'quantity' => 2,
               'rate' => 4.1212121212334,
               'amount' => 2.0,
-              'taxdetailsreference' => anything
+              'taxdetailsreference' => anything,
+              'custcol_service_period_date_from' => anything,
+              'custcol_service_period_date_to' => anything
             },
             {
               'item' => '2',
