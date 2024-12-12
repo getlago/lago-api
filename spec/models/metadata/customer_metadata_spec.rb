@@ -38,9 +38,9 @@ RSpec.describe Metadata::CustomerMetadata, type: :model do
     end
 
     context 'when value length is invalid' do
-      let(:value) { 'abcde-abcde-abcde-abcde-abcde-abcde' }
+      let(:value) { 'a' * 101 }
 
-      it { expect(metadata).to be_valid }
+      it { expect(metadata).not_to be_valid }
     end
   end
 end
