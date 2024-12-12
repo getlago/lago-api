@@ -6660,7 +6660,7 @@ type Query {
     Uniq ID of the invoice_custom_section
     """
     id: ID!
-  ): InvoiceCustomSection
+  ): InvoiceCustomSection!
 
   """
   Query invoice_custom_sections
