@@ -127,6 +127,7 @@ module Invoices
       invoice.fees_amount_cents = 0
       invoice.sub_total_excluding_taxes_amount_cents = 0
       invoice.sub_total_including_taxes_amount_cents = 0
+      invoice.progressive_billing_credit_amount_cents = 0
       invoice.save!
     end
   end
