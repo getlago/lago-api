@@ -20,6 +20,7 @@ module DailyUsages
         next if date == Time.zone.today ||
           DailyUsage.refreshed_at_in_timezone(datetime).where(subscription_id: subscription.id).exists?
 
+        Timecop.thread_safe = true
         Timecop.freeze(datetime + 5.minutes) do
           usage = Invoices::CustomerUsageService.call(
             customer: subscription.customer,
@@ -62,7 +63,7 @@ module DailyUsages
       if subscription.terminated?
         invoice = subscription.invoices
           .joins(:invoice_subscriptions)
-          .where(invoice_subscriptions: {invoicing_reason: 'subscription_terminating'})
+          .where(invoice_subscriptions: {invoicing_reason: "subscription_terminating"})
           .first
 
         if invoice.present?
