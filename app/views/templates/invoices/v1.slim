@@ -499,7 +499,7 @@ html
                   .body-1
                     = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
                 td.body-1 style="text-align: right;" width="30%"
-                  = subscription_fees(subscription.id).subscription_kind.first&.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
+                  = subscription_fees(subscription.id).subscription.first&.amount&.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
             table.total-table width="100%"
               tr
                 td.body-2 width="70%" = I18n.t('invoice.sub_total')

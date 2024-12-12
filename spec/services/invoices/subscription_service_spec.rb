@@ -86,7 +86,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect(result.invoice.issuing_date.to_date).to eq(timestamp)
         expect(result.invoice.invoice_type).to eq("subscription")
         expect(result.invoice.payment_status).to eq("pending")
-        expect(result.invoice.fees.subscription_kind.count).to eq(1)
+        expect(result.invoice.fees.subscription.count).to eq(1)
         expect(result.invoice.fees.charge.count).to eq(1)
 
         expect(result.invoice.currency).to eq("EUR")
@@ -176,7 +176,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
           expect(result.invoice.issuing_date.to_date).to eq(timestamp)
           expect(result.invoice.invoice_type).to eq("subscription")
           expect(result.invoice.payment_status).to eq("pending")
-          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          expect(result.invoice.fees.subscription.count).to eq(1)
           expect(result.invoice.fees.charge.count).to eq(1)
 
           expect(result.invoice.currency).to eq("EUR")

@@ -160,7 +160,7 @@ RSpec.describe Invoices::RetryService, type: :service do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.fees.charge.count).to eq(1)
-          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          expect(result.invoice.fees.subscription.count).to eq(1)
 
           expect(result.invoice.currency).to eq('EUR')
           expect(result.invoice.fees_amount_cents).to eq(3_000)

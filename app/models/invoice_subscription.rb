@@ -79,7 +79,7 @@ class InvoiceSubscription < ApplicationRecord
   end
 
   def subscription_fee
-    fees.subscription_kind.first
+    fees.subscription.first
   end
 
   def commitment_fee

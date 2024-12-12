@@ -166,7 +166,7 @@ class Invoice < ApplicationRecord
   end
 
   def subscription_amount_cents
-    fees.subscription_kind.sum(:amount_cents)
+    fees.subscription.sum(:amount_cents)
   end
 
   def invoice_subscription(subscription_id)

@@ -10,7 +10,7 @@ module Commitments
           invoices_result = FetchInvoicesService.call(commitment: minimum_commitment, invoice_subscription:)
 
           Fee
-            .subscription_kind
+            .subscription
             .joins(subscription: :plan)
             .where(
               subscription_id: subscription.id,

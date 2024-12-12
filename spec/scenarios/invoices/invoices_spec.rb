@@ -445,7 +445,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription.invoices.count }.from(0).to(1)
 
         invoice = subscription.invoices.first
-        expect(invoice.fees.subscription_kind.count).to eq(1)
+        expect(invoice.fees.subscription.count).to eq(1)
       end
     end
   end
@@ -1234,7 +1234,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           expect(first_invoice.credit_notes_amount_cents).to eq(0)
 
           # There is only one fee that is subscription kind
-          fee = first_invoice.fees.subscription_kind.first
+          fee = first_invoice.fees.subscription.first
 
           AdjustedFees::CreateService.call(organization:, fee:, params: adjusted_fee_params)
           credit_note = credit_note.reload
@@ -1315,7 +1315,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           expect(first_invoice.credit_notes_amount_cents).to eq(0)
 
           # There is only one fee that is subscription kind
-          fee = first_invoice.fees.subscription_kind.first
+          fee = first_invoice.fees.subscription.first
 
           AdjustedFees::CreateService.call(organization:, fee:, params: adjusted_fee_params)
           credit_note = credit_note.reload

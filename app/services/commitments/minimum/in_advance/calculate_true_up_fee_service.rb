@@ -25,7 +25,7 @@ module Commitments
           ).call
 
           Fee
-            .subscription_kind
+            .subscription
             .joins(subscription: :plan)
             .where(
               "(fees.properties->>'from_datetime') >= ?",
