@@ -449,7 +449,7 @@ html
             - elsif subscription?
               td.body-1 style="text-align: right;" width="30%"
                 = subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
-          - if fees.charge_kind.any?
+          - if fees.charge.any?
             tr
               td width="70%"
                 .body-1 = I18n.t('invoice.all_usage_based_fees')
@@ -505,13 +505,13 @@ html
                 td.body-2 width="70%" = I18n.t('invoice.sub_total')
                 td.body-1 width="30%" = invoice_subscription(subscription.id).subscription_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
-          - if subscription? && subscription_fees(subscription.id).charge_kind.any?
+          - if subscription? && subscription_fees(subscription.id).charge.any?
             .body-1 = I18n.t('invoice.usage_based_fees')
             .mb-24.body-3
               = I18n.t('invoice.list_of_charges', from: I18n.l(invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date, format: :default), to: I18n.l(invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date, format: :default))
             .charge-details.mb-24
               table.charge-details-table width="100%"
-                - subscription_fees(subscription.id).charge_kind.group_by(&:charge_id).each do |_charge_id, fees|
+                - subscription_fees(subscription.id).charge.group_by(&:charge_id).each do |_charge_id, fees|
                   - fee = fees.first
                   - if fees.all? { |f| f.group_id? } && fees.sum(&:units) > 0
                     tr

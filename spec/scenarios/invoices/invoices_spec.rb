@@ -363,7 +363,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription.invoices.count }.from(0).to(1)
 
         invoice = subscription.invoices.first
-        expect(invoice.fees.charge_kind.count).to eq(1)
+        expect(invoice.fees.charge.count).to eq(1)
       end
     end
   end
@@ -410,7 +410,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription.invoices.count }.from(0).to(1)
 
         invoice = subscription.invoices.first
-        expect(invoice.fees.charge_kind.count).to eq(1)
+        expect(invoice.fees.charge.count).to eq(1)
       end
     end
   end
@@ -499,7 +499,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription.invoices.count }.from(0).to(1)
 
         invoice = subscription.invoices.first
-        expect(invoice.fees.charge_kind.count).to eq(1)
+        expect(invoice.fees.charge.count).to eq(1)
       end
     end
   end
@@ -562,7 +562,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription.invoices.count }.from(0).to(1)
 
         invoice = subscription.invoices.first
-        expect(invoice.fees.charge_kind.count).to eq(0)
+        expect(invoice.fees.charge.count).to eq(0)
       end
     end
   end
@@ -609,7 +609,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           .and change { subscription.invoices.count }.from(0).to(1)
 
         invoice = subscription.invoices.first
-        expect(invoice.fees.charge_kind.count).to eq(0)
+        expect(invoice.fees.charge.count).to eq(0)
       end
     end
   end
@@ -1153,7 +1153,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         expect(terminated_invoice.credit_notes_amount_cents).to eq(0)
 
         # In terminated invoice there is only one fee that is charge kind
-        fee = terminated_invoice.fees.charge_kind.first
+        fee = terminated_invoice.fees.charge.first
 
         AdjustedFees::CreateService.call(organization:, fee:, params: adjusted_fee_params)
         credit_note = credit_note.reload

@@ -58,7 +58,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
         perform_all_enqueued_jobs
 
         invoice = customer.invoices.order(created_at: :desc).first
-        fee = Fee.charge_kind.where(invoice:).first
+        fee = Fee.charge.where(invoice:).first
 
         expect(invoice.status).to eq('draft')
         expect(invoice.total_amount_cents).to eq(12_900)
@@ -119,7 +119,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
         perform_all_enqueued_jobs
 
         invoice = customer.invoices.order(created_at: :desc).first
-        fee = Fee.charge_kind.where(invoice:).first
+        fee = Fee.charge.where(invoice:).first
 
         expect(invoice.status).to eq('draft')
         expect(invoice.total_amount_cents).to eq(12_900)

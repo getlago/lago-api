@@ -106,7 +106,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(invoice.subscriptions.first).to eq(subscription)
           expect(invoice.payment_status).to eq('pending')
           expect(invoice.fees.subscription_kind.count).to eq(1)
-          expect(invoice.fees.charge_kind.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
 
           invoice_subscription = invoice.invoice_subscriptions.first
           expect(invoice_subscription).to have_attributes(
@@ -335,7 +335,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            expect(invoice.fees.charge_kind.count).to eq(0)
+            expect(invoice.fees.charge.count).to eq(0)
           end
         end
       end
@@ -361,7 +361,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
           end
         end
       end
@@ -383,7 +383,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            expect(Fee.charge_kind.count).to eq(0)
+            expect(Fee.charge.count).to eq(0)
           end
         end
       end
@@ -409,7 +409,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            expect(Fee.charge_kind.where(invoice_id: nil).count).to eq(1)
+            expect(Fee.charge.where(invoice_id: nil).count).to eq(1)
           end
         end
       end
@@ -430,7 +430,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            expect(Fee.charge_kind.count).to eq(0)
+            expect(Fee.charge.count).to eq(0)
           end
         end
       end
@@ -449,7 +449,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
             expect(invoice.fees.commitment_kind.count).to eq(0)
 
             invoice_subscription = invoice.invoice_subscriptions.first
@@ -474,7 +474,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
             expect(invoice.fees.commitment_kind.count).to eq(1)
           end
         end
@@ -498,7 +498,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
             expect(Fee.where(invoice_id: nil).count).to eq(1)
           end
         end
@@ -540,7 +540,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
             expect(invoice.payment_status).to eq('pending')
             expect(invoice.fees.subscription_kind.count).to eq(2)
-            expect(invoice.fees.charge_kind.count).to eq(2)
+            expect(invoice.fees.charge.count).to eq(2)
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
@@ -564,7 +564,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
             expect(invoice.payment_status).to eq('pending')
             expect(invoice.fees.subscription_kind.count).to eq(2)
-            expect(invoice.fees.charge_kind.count).to eq(2)
+            expect(invoice.fees.charge.count).to eq(2)
             expect(invoice.fees.commitment_kind.count).to eq(2)
 
             invoice_subscription = invoice.invoice_subscriptions.first
@@ -645,7 +645,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge.count).to eq(0)
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
@@ -662,7 +662,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge.count).to eq(0)
               expect(invoice.fees.commitment_kind.count).to eq(1)
             end
           end
@@ -692,7 +692,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice.fees.charge_kind.count).to eq(1)
+              expect(invoice.fees.charge.count).to eq(1)
               expect(invoice.fees.commitment_kind.count).to eq(0)
             end
           end
@@ -709,7 +709,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice.fees.charge_kind.count).to eq(1)
+              expect(invoice.fees.charge.count).to eq(1)
               expect(invoice.fees.commitment_kind.count).to eq(1)
             end
           end
@@ -752,7 +752,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge.count).to eq(0)
             end
           end
 
@@ -778,7 +778,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge.count).to eq(0)
             end
           end
 
@@ -831,7 +831,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge.count).to eq(0)
             end
           end
 
@@ -857,7 +857,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice.fees.charge_kind.count).to eq(0)
+              expect(invoice.fees.charge.count).to eq(0)
             end
           end
 
@@ -1097,7 +1097,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(result).to be_success
 
             expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
           end
         end
       end
@@ -1249,7 +1249,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               expect(result).to be_success
 
               expect(invoice.fees.subscription_kind.count).to eq(0)
-              expect(invoice.fees.charge_kind.count).to eq(1)
+              expect(invoice.fees.charge.count).to eq(1)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -1283,7 +1283,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
                 expect(result).to be_success
 
                 expect(invoice.fees.subscription_kind.count).to eq(0)
-                expect(invoice.fees.charge_kind.count).to eq(1)
+                expect(invoice.fees.charge.count).to eq(1)
 
                 invoice_subscription = invoice.invoice_subscriptions.first
                 expect(invoice_subscription).to have_attributes(
@@ -1319,7 +1319,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
           expect(invoice.subscriptions.first).to eq(subscription)
           expect(invoice.fees.subscription_kind.count).to eq(1)
-          expect(invoice.fees.charge_kind.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
 
           invoice_subscription = invoice.invoice_subscriptions.first
           expect(invoice_subscription).to have_attributes(
@@ -1343,7 +1343,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
@@ -1444,7 +1444,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
@@ -1469,7 +1469,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
           expect(invoice.subscriptions.first).to eq(subscription)
           expect(invoice.fees.subscription_kind.count).to eq(1)
-          expect(invoice.fees.charge_kind.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
 
           invoice_subscription = invoice.invoice_subscriptions.first
           expect(invoice_subscription).to have_attributes(
@@ -1495,7 +1495,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
@@ -1529,7 +1529,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
               expect(invoice.subscriptions.first).to eq(subscription)
               expect(invoice.fees.subscription_kind.count).to eq(1)
-              expect(invoice.fees.charge_kind.count).to eq(1)
+              expect(invoice.fees.charge.count).to eq(1)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -1556,7 +1556,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription_kind.count).to eq(1)
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
@@ -1625,7 +1625,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             .to eq (timestamp - 1.month).beginning_of_day.as_json
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
-          expect(result.invoice.fees.charge_kind.count).to eq(1)
+          expect(result.invoice.fees.charge.count).to eq(1)
           expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
           expect(result.invoice.taxes_amount_cents).to eq(20)
           expect(result.invoice.total_amount_cents).to eq(90)

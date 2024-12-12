@@ -271,8 +271,8 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
       fees = invoice.fees
       subscription1 = Subscription.find_by(external_id: 'sub_external_id')
       subscription2 = Subscription.find_by(external_id: 'sub_external_id2')
-      sub1_fees = fees.charge_kind.where(subscription: subscription1).joins(:charge)
-      sub2_fees = fees.charge_kind.where(subscription: subscription2).joins(:charge)
+      sub1_fees = fees.charge.where(subscription: subscription1).joins(:charge)
+      sub2_fees = fees.charge.where(subscription: subscription2).joins(:charge)
 
       # Subscription 1 fees
       expect(sub1_fees.where(charge: {billable_metric_id: bm1.id}).first).to have_attributes(

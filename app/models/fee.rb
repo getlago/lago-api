@@ -51,7 +51,6 @@ class Fee < ApplicationRecord
   validates :total_aggregated_units, presence: true, if: :charge?
 
   scope :subscription_kind, -> { where(fee_type: :subscription) }
-  scope :charge_kind, -> { where(fee_type: :charge) }
   scope :commitment_kind, -> { where(fee_type: :commitment) }
 
   scope :positive_units, -> { where('units > ?', 0) }

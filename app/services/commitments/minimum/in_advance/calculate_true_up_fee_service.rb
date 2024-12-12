@@ -45,7 +45,7 @@ module Commitments
           invoices_result = FetchInvoicesService.call(commitment: minimum_commitment, invoice_subscription:)
 
           Fee
-            .charge_kind
+            .charge
             .joins(:charge)
             .where(
               subscription_id: subscription.id,
@@ -61,7 +61,7 @@ module Commitments
           ).call
 
           Fee
-            .charge_kind
+            .charge
             .joins(:charge)
             .where(
               subscription_id: subscription.id,
@@ -87,7 +87,7 @@ module Commitments
           ).call
 
           Fee
-            .charge_kind
+            .charge
             .joins(:charge)
             .joins(charge: :billable_metric)
             .where(billable_metric: {recurring: true})
