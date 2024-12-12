@@ -19,30 +19,29 @@ module Integrations
           response = http_client.post_with_response(payload.body, headers)
           body = JSON.parse(response.body)
 
-          external_id = if body.is_a?(Hash)
+          if body.is_a?(Hash)
             process_hash_result(body)
           else
-            body
+            process_string_result(body)
           end
 
           Rails.logger.info "Response body: #{body}"
-          Rails.logger.info "External ID: #{external_id}"
+          Rails.logger.info "External ID: #{result.external_id}"
 
-          return result unless external_id
+          return result unless result.external_id
 
-          Rails.logger.info "Creating integration resource with external ID: #{external_id}"
+          Rails.logger.info "Creating integration resource with external ID: #{result.external_id}"
 
           IntegrationResource.create!(
             integration:,
-            external_id: external_id,
+            external_id: result.external_id,
             syncable_id: invoice.id,
             syncable_type: 'Invoice',
             resource_type: :invoice
           )
 
-          Rails.logger.info "Integration resource created. external ID: #{external_id}, invoice ID: #{invoice.id}"
+          Rails.logger.info "Integration resource created. external ID: #{result.external_id}, invoice ID: #{invoice.id}"
 
-          result.external_id = external_id
           result
         rescue LagoHttpClient::HttpError => e
           raise RequestLimitError(e) if request_limit_error?(e)
@@ -74,14 +73,18 @@ module Integrations
         def process_hash_result(body)
           external_id = body['succeededInvoices']&.first.try(:[], 'id')
 
-          return external_id if external_id
+          if external_id
+            result.external_id = external_id
+          else
+            message = body['failedInvoices'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
+            code = 'Validation error'
 
-          message = body['failedInvoices'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
-          code = 'Validation error'
+            deliver_error_webhook(customer:, code:, message:)
+          end
+        end
 
-          deliver_error_webhook(customer:, code:, message:)
-
-          nil
+        def process_string_result(body)
+          result.external_id = body
         end
       end
     end
