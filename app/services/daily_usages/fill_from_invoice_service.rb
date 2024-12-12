@@ -54,7 +54,7 @@ module DailyUsages
         amount_cents: invoice.fees_amount_cents,
         total_amount_cents: invoice.fees.sum(&:total_amount_cents),
         taxes_amount_cents: invoice.fees.sum(:taxes_amount_cents),
-        fees: invoice.fees.select { |f| f.subscription_id == subscription.id }
+        fees: invoice.fees.charge.select { |f| f.subscription_id == subscription.id }
       )
     end
 
