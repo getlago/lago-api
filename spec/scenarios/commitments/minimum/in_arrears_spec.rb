@@ -51,7 +51,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       let(:minimum_commitment) { nil }
 
       it 'creates an invoice without minimum commitment fee' do
-        expect(invoice.fees.commitment_kind.count).to eq(0)
+        expect(invoice.fees.commitment.count).to eq(0)
       end
     end
 
@@ -59,7 +59,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1) }
 
       it 'creates an invoice without minimum commitment fee' do
-        expect(invoice.fees.commitment_kind.count).to eq(0)
+        expect(invoice.fees.commitment.count).to eq(0)
       end
     end
 
@@ -67,8 +67,8 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
       it 'creates an invoice with minimum commitment fee', :aggregate_failures do
-        expect(invoice.fees.commitment_kind.count).to eq(1)
-        expect(invoice.fees.commitment_kind.first.amount_cents).to eq(commitment_fee_amount_cents)
+        expect(invoice.fees.commitment.count).to eq(1)
+        expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
       end
     end
   end

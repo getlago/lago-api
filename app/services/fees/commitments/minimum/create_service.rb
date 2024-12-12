@@ -53,7 +53,7 @@ module Fees
         delegate :organization, to: :invoice
 
         def invoice_has_minimum_commitment_fee?
-          invoice.fees.commitment_kind.where(subscription:).any? { |fee| fee.invoiceable.minimum_commitment? }
+          invoice.fees.commitment.where(subscription:).any? { |fee| fee.invoiceable.minimum_commitment? }
         end
       end
     end

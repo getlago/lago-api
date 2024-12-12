@@ -141,7 +141,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
     context 'when subscription is billed for the first period' do
       it 'creates an invoice with minimum commitment fee' do
         travel_to(subscription_time + 1.week) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(987_000)
+          expect(invoice.fees.commitment.first.amount_cents).to eq(987_000)
         end
       end
     end
@@ -156,7 +156,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
 
       it 'creates an invoice with minimum commitment fee' do
         travel_to(subscription_time + 2.weeks) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(989_000)
+          expect(invoice.fees.commitment.first.amount_cents).to eq(989_000)
         end
       end
     end
@@ -185,7 +185,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
     context 'when subscription is billed for the first period' do
       it 'creates an invoice with minimum commitment fee' do
         travel_to(subscription_time + 1.week) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(987_000)
+          expect(invoice.fees.commitment.first.amount_cents).to eq(987_000)
         end
       end
     end
@@ -200,7 +200,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
 
       it 'creates an invoice with minimum commitment fee' do
         travel_to(subscription_time + 2.weeks) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(989_000)
+          expect(invoice.fees.commitment.first.amount_cents).to eq(989_000)
         end
       end
     end

@@ -144,7 +144,7 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
           Subscriptions::BillingService.new.call
           perform_all_enqueued_jobs
 
-          expect(invoice.fees.commitment_kind.count).to eq(0)
+          expect(invoice.fees.commitment.count).to eq(0)
         end
       end
     end
@@ -184,8 +184,8 @@ describe 'Billing Minimum Commitments In Arrears Scenario', :scenarios, type: :r
       it 'creates an invoice with minimum commitment fee' do
         travel_to(subscription_time + 1.year + 1.month) do
           aggregate_failures do
-            expect(invoice.fees.commitment_kind.count).to eq(1)
-            expect(invoice.fees.commitment_kind.sum(:amount_cents)).to eq(981_100)
+            expect(invoice.fees.commitment.count).to eq(1)
+            expect(invoice.fees.commitment.sum(:amount_cents)).to eq(981_100)
           end
         end
       end

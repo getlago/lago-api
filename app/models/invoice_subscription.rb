@@ -83,7 +83,7 @@ class InvoiceSubscription < ApplicationRecord
   end
 
   def commitment_fee
-    fees.commitment_kind.first
+    fees.commitment.first
   end
 
   def total_amount_cents

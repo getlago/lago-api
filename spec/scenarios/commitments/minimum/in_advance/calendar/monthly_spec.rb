@@ -139,7 +139,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
     context 'when subscription is billed for the first period' do
       it 'creates an invoice with no minimum commitment fee' do
         travel_to(subscription_time) do
-          expect(invoice.fees.commitment_kind.count).to eq(0)
+          expect(invoice.fees.commitment.count).to eq(0)
         end
       end
     end
@@ -154,7 +154,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
 
       it 'creates an invoice with minimum commitment fee' do
         travel_to((subscription_time + 1.month).beginning_of_month) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(61_276)
+          expect(invoice.fees.commitment.first.amount_cents).to eq(61_276)
         end
       end
     end
@@ -174,7 +174,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
 
       it 'creates an invoice with minimum commitment fee' do
         travel_to((subscription_time + 2.months).beginning_of_month) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(988_500)
+          expect(invoice.fees.commitment.first.amount_cents).to eq(988_500)
         end
       end
     end
@@ -203,7 +203,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
     context 'when subscription is billed for the first period' do
       it 'creates an invoice with no minimum commitment fee' do
         travel_to(subscription_time) do
-          expect(invoice.fees.commitment_kind.count).to eq(0)
+          expect(invoice.fees.commitment.count).to eq(0)
         end
       end
     end
@@ -218,7 +218,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
 
       it 'creates an invoice with minimum commitment fee' do
         travel_to((subscription_time + 1.month).beginning_of_month) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(61_276)
+          expect(invoice.fees.commitment.first.amount_cents).to eq(61_276)
         end
       end
     end
@@ -238,7 +238,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
 
       it 'creates an invoice with minimum commitment fee' do
         travel_to((subscription_time + 2.months).beginning_of_month) do
-          expect(invoice.fees.commitment_kind.first.amount_cents).to eq(988_500)
+          expect(invoice.fees.commitment.first.amount_cents).to eq(988_500)
         end
       end
     end
