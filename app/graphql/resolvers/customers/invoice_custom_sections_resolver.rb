@@ -3,6 +3,7 @@
 module Resolvers
   module Customers
     class InvoiceCustomSectionsResolver < Resolvers::BaseResolver
+      include RequiredOrganization
       description 'Query selected invoice_custom_sections of a customer'
 
       argument :limit, Integer, required: false
