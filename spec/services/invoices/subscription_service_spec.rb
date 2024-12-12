@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::SubscriptionService, type: :service do
   subject(:invoice_service) do
@@ -17,7 +17,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
   let(:invoicing_reason) { :subscription_periodic }
 
-  describe 'call' do
+  describe "call" do
     let(:subscription) do
       create(
         :subscription,
@@ -31,16 +31,16 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     let(:subscriptions) { [subscription] }
     let(:lifetime_usage) { create(:lifetime_usage, subscription: subscription) }
 
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
+    let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
     let(:timestamp) { Time.zone.now.beginning_of_month }
     let(:started_at) { Time.zone.now - 2.years }
 
-    let(:plan) { create(:plan, interval: 'monthly', pay_in_advance:) }
+    let(:plan) { create(:plan, interval: "monthly", pay_in_advance:) }
     let(:pay_in_advance) { false }
 
     before do
       tax
-      create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
+      create(:standard_charge, plan: subscription.plan, charge_model: "standard")
       lifetime_usage
 
       allow(SegmentTrackJob).to receive(:perform_later)
@@ -49,12 +49,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
-    it 'calls SegmentTrackJob' do
+    it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
@@ -63,7 +63,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       )
     end
 
-    it 'creates a payment' do
+    it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
       invoice_service.call
@@ -71,7 +71,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
-    it 'creates an invoice' do
+    it "creates an invoice" do
       result = invoice_service.call
 
       aggregate_failures do
@@ -84,12 +84,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
         expect(result.invoice.subscriptions.first).to eq(subscription)
         expect(result.invoice.issuing_date.to_date).to eq(timestamp)
-        expect(result.invoice.invoice_type).to eq('subscription')
-        expect(result.invoice.payment_status).to eq('pending')
+        expect(result.invoice.invoice_type).to eq("subscription")
+        expect(result.invoice.payment_status).to eq("pending")
         expect(result.invoice.fees.subscription_kind.count).to eq(1)
         expect(result.invoice.fees.charge_kind.count).to eq(1)
 
-        expect(result.invoice.currency).to eq('EUR')
+        expect(result.invoice.currency).to eq("EUR")
         expect(result.invoice.fees_amount_cents).to eq(100)
 
         expect(result.invoice.taxes_amount_cents).to eq(20)
@@ -103,23 +103,23 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    it_behaves_like 'syncs invoice' do
+    it_behaves_like "syncs invoice" do
       let(:service_call) { invoice_service.call }
     end
 
-    it 'enqueues a SendWebhookJob' do
+    it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call
-      end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
+      end.to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
     end
 
-    it 'enqueues GeneratePdfAndNotifyJob with email false' do
+    it "enqueues GeneratePdfAndNotifyJob with email false" do
       expect do
         invoice_service.call
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-    it 'flags lifetime usage for refresh' do
+    it "flags lifetime usage for refresh" do
       create(:usage_threshold, plan:)
 
       invoice_service.call
@@ -127,14 +127,14 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
     end
 
-    context 'when there is tax provider integration' do
+    context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
       let(:response) { instance_double(Net::HTTPOK) }
       let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+      let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
       let(:body) do
-        p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
+        p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json")
         File.read(p)
       end
       let(:integration_collection_mapping) do
@@ -142,7 +142,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
           :netsuite_collection_mapping,
           integration:,
           mapping_type: :fallback_item,
-          settings: {external_id: '1', external_account_code: '11', external_name: ''}
+          settings: {external_id: "1", external_account_code: "11", external_name: ""}
         )
       end
 
@@ -157,16 +157,16 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
           fee = m.receiver
           if fee.charge_id == plan.charges.first.id
-            'charge_fee_id-12345'
+            "charge_fee_id-12345"
           elsif fee.subscription_id == subscription.id
-            'sub_fee_id-12345'
+            "sub_fee_id-12345"
           else
             m.call(*args)
           end
         end
       end
 
-      it 'creates an invoice' do
+      it "creates an invoice" do
         result = invoice_service.call
 
         aggregate_failures do
@@ -174,12 +174,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.issuing_date.to_date).to eq(timestamp)
-          expect(result.invoice.invoice_type).to eq('subscription')
-          expect(result.invoice.payment_status).to eq('pending')
+          expect(result.invoice.invoice_type).to eq("subscription")
+          expect(result.invoice.payment_status).to eq("pending")
           expect(result.invoice.fees.subscription_kind.count).to eq(1)
           expect(result.invoice.fees.charge_kind.count).to eq(1)
 
-          expect(result.invoice.currency).to eq('EUR')
+          expect(result.invoice.currency).to eq("EUR")
           expect(result.invoice.fees_amount_cents).to eq(100)
 
           expect(result.invoice.taxes_amount_cents).to eq(10)
@@ -192,50 +192,50 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         end
       end
 
-      context 'when there is error received from the provider' do
+      context "when there is error received from the provider" do
         let(:body) do
-          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
           File.read(p)
         end
 
-        it 'returns tax error' do
+        it "returns tax error" do
           result = invoice_service.call
 
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:tax_error]).to eq(['taxDateTooFarInFuture'])
+            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
 
             invoice = customer.invoices.order(created_at: :desc).first
 
-            expect(invoice.status).to eq('failed')
+            expect(invoice.status).to eq("failed")
             expect(invoice.error_details.count).to eq(1)
-            expect(invoice.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
+            expect(invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
           end
         end
       end
     end
 
-    context 'when periodic but no active subscriptions' do
-      it 'does not create any invoices' do
+    context "when periodic but no active subscriptions" do
+      it "does not create any invoices" do
         subscription.terminated!
         expect { invoice_service.call }.not_to change(Invoice, :count)
       end
     end
 
-    context 'with lago_premium' do
+    context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
-      it 'enqueues GeneratePdfAndNotifyJob with email true' do
+      it "enqueues GeneratePdfAndNotifyJob with email true" do
         expect do
           invoice_service.call
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context 'when organization does not have right email settings' do
+      context "when organization does not have right email settings" do
         before { subscription.customer.organization.update!(email_settings: []) }
 
-        it 'enqueues GeneratePdfAndNotifyJob with email false' do
+        it "enqueues GeneratePdfAndNotifyJob with email false" do
           expect do
             invoice_service.call
           end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
@@ -243,71 +243,71 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context 'with customer timezone' do
-      before { subscription.customer.update!(timezone: 'America/Los_Angeles', invoice_grace_period: 3) }
+    context "with customer timezone" do
+      before { subscription.customer.update!(timezone: "America/Los_Angeles", invoice_grace_period: 3) }
 
-      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }
+      let(:timestamp) { DateTime.parse("2022-11-25 01:00:00") }
 
-      it 'assigns the issuing date in the customer timezone' do
+      it "assigns the issuing date in the customer timezone" do
         result = invoice_service.call
 
-        expect(result.invoice.issuing_date.to_s).to eq('2022-11-27')
+        expect(result.invoice.issuing_date.to_s).to eq("2022-11-27")
       end
     end
 
-    context 'with applicable grace period' do
+    context "with applicable grace period" do
       before do
         subscription.customer.update!(invoice_grace_period: 3)
       end
 
-      it 'does not track any invoice creation on segment' do
+      it "does not track any invoice creation on segment" do
         invoice_service.call
         expect(SegmentTrackJob).not_to have_received(:perform_later)
       end
 
-      it 'does not create any payment' do
+      it "does not create any payment" do
         invoice_service.call
         expect(Invoices::Payments::StripeCreateJob).not_to have_received(:perform_later)
         expect(Invoices::Payments::GocardlessCreateJob).not_to have_received(:perform_later)
       end
 
-      it 'creates an invoice as draft' do
+      it "creates an invoice as draft" do
         result = invoice_service.call
         expect(result).to be_success
         expect(result.invoice).to be_draft
       end
 
-      it 'enqueues a SendWebhookJob' do
+      it "enqueues a SendWebhookJob" do
         expect do
           invoice_service.call
-        end.to have_enqueued_job(SendWebhookJob).with('invoice.drafted', Invoice)
+        end.to have_enqueued_job(SendWebhookJob).with("invoice.drafted", Invoice)
       end
 
-      it 'does not flag lifetime usage for refresh' do
+      it "does not flag lifetime usage for refresh" do
         invoice_service.call
 
         expect(lifetime_usage.reload.recalculate_invoiced_usage).to be(false)
       end
 
-      it 'flags wallets for refresh' do
+      it "flags wallets for refresh" do
         wallet = create(:wallet, customer:)
 
         expect { invoice_service.call }.to change { wallet.reload.ready_to_be_refreshed }.from(false).to(true)
       end
     end
 
-    context 'when invoice already exists' do
-      let(:timestamp) { Time.zone.parse('2023-10-01T00:00:00.000Z') }
+    context "when invoice already exists" do
+      let(:timestamp) { Time.zone.parse("2023-10-01T00:00:00.000Z") }
 
       let(:invoice_subscription) do
         create(
           :invoice_subscription,
           invoice: old_invoice,
           subscription:,
-          from_datetime: Time.zone.parse('2023-09-01T00:00:00.000Z'),
-          to_datetime: Time.zone.parse('2023-09-30T23:59:59.999Z').end_of_day,
-          charges_from_datetime: Time.zone.parse('2023-09-01T00:00:00.000Z'),
-          charges_to_datetime: Time.zone.parse('2023-09-30T23:59:59.999Z').end_of_day,
+          from_datetime: Time.zone.parse("2023-09-01T00:00:00.000Z"),
+          to_datetime: Time.zone.parse("2023-09-30T23:59:59.999Z").end_of_day,
+          charges_from_datetime: Time.zone.parse("2023-09-01T00:00:00.000Z"),
+          charges_to_datetime: Time.zone.parse("2023-09-30T23:59:59.999Z").end_of_day,
           recurring: invoicing_reason.to_sym == :subscription_periodic,
           invoicing_reason:
         )
@@ -324,7 +324,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
       before { invoice_subscription }
 
-      it 'does not raise an error' do
+      it "does not raise an error" do
         result = invoice_service.call
 
         expect(result).to be_success
@@ -332,61 +332,63 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context 'when skip zero invoices is set' do
+    context "when skip zero invoices is set" do
       before do
         customer.update(finalize_zero_amount_invoice: :skip)
       end
 
-      context 'when invoice total amount is not 0' do
-        it 'creates an invoice in :finalized status' do
+      context "when invoice total amount is not 0" do
+        it "creates an invoice in :finalized status" do
           result = invoice_service.call
-          expect(result.invoice.status).to eq('finalized')
-          expect(result.invoice.number).not_to include('DRAFT')
+          expect(result.invoice.status).to eq("finalized")
+          expect(result.invoice.number).not_to include("DRAFT")
         end
       end
 
-      context 'when invoice total amount is 0' do
-        let(:plan) { create(:plan, interval: 'monthly', pay_in_advance:, amount_cents: 0) }
+      context "when invoice total amount is 0" do
+        let(:plan) { create(:plan, interval: "monthly", pay_in_advance:, amount_cents: 0) }
 
         before do
           plan
         end
 
-        it 'creates an invoice in :closed status' do
+        it "creates an invoice in :closed status" do
           result = invoice_service.call
-          expect(result.invoice.status).to eq('closed')
-          expect(result.invoice.number).to include('DRAFT')
+          expect(result.invoice.status).to eq("closed")
+          expect(result.invoice.number).to include("DRAFT")
         end
 
-        context 'when organization gas grace period' do
+        context "when organization gas grace period" do
           before do
             organization.update!(invoice_grace_period: 30)
           end
 
-          it 'creates an invoice in :draft status' do
+          it "creates an invoice in :draft status" do
             result = invoice_service.call
-            expect(result.invoice.status).to eq('draft')
+            expect(result.invoice.status).to eq("draft")
           end
         end
       end
     end
 
-    context 'when revenue_analytics is set' do
+    context "when revenue_analytics is set" do
       before do
         organization.update!(premium_integrations: %w[revenue_analytics])
       end
 
-      it 'enqueues DailyUsages::FillFromInvoiceJob with email false' do
+      it "enqueues DailyUsages::FillFromInvoiceJob with email false" do
         expect { invoice_service.call }
           .to have_enqueued_job(DailyUsages::FillFromInvoiceJob)
+          .with(invoice: an_instance_of(Invoice), subscriptions: [subscription])
       end
 
-      context 'when subscription is terminating' do
+      context "when subscription is terminating" do
         let(:invoicing_reason) { :subscription_terminating }
 
-        it 'enqueues DailyUsages::FillFromInvoiceJob with email false' do
+        it "enqueues DailyUsages::FillFromInvoiceJob with email false" do
           expect { invoice_service.call }
             .to have_enqueued_job(DailyUsages::FillFromInvoiceJob)
+            .with(invoice: an_instance_of(Invoice), subscriptions: [subscription])
         end
       end
     end

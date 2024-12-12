@@ -53,22 +53,22 @@ module Invoices
       # Whenever the invoice is refreshed, the fees are not created again. (see `Fees::ChargeService.already_billed?`)
       # The webhook are sent whenever non-invoiceable fees are found in result.
       result.non_invoiceable_fees&.each do |fee|
-        SendWebhookJob.perform_later('fee.created', fee)
+        SendWebhookJob.perform_later("fee.created", fee)
       end
 
       fill_daily_usage
 
       if tax_error?(fee_result)
-        SendWebhookJob.perform_later('invoice.drafted', invoice) if grace_period?
+        SendWebhookJob.perform_later("invoice.drafted", invoice) if grace_period?
 
         return result.validation_failure!(errors: {tax_error: [fee_result.error.error_message]})
       end
 
       if grace_period?
-        SendWebhookJob.perform_later('invoice.drafted', invoice)
+        SendWebhookJob.perform_later("invoice.drafted", invoice)
       else
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
-          SendWebhookJob.perform_later('invoice.created', invoice)
+          SendWebhookJob.perform_later("invoice.created", invoice)
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_finalized_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -85,7 +85,7 @@ module Invoices
 
       raise
     rescue BaseService::ServiceFailure => e
-      raise unless e.code.to_s == 'duplicated_invoices'
+      raise unless e.code.to_s == "duplicated_invoices"
       raise unless invoicing_reason.to_sym == :subscription_periodic
 
       result
@@ -138,7 +138,7 @@ module Invoices
 
     def should_deliver_finalized_email?
       License.premium? &&
-        customer.organization.email_settings.include?('invoice.finalized')
+        customer.organization.email_settings.include?("invoice.finalized")
     end
 
     def flag_lifetime_usage_for_refresh
@@ -149,7 +149,7 @@ module Invoices
       return false if fee_result.success?
       return false unless fee_result.error.is_a?(BaseService::ServiceFailure)
 
-      fee_result.error.code == 'tax_error'
+      fee_result.error.code == "tax_error"
     end
 
     USAGE_TRACKABLE_REASONS = %i[subscription_periodic subscription_terminating].freeze
@@ -159,9 +159,10 @@ module Invoices
       subscriptions = invoice
         .invoice_subscriptions
         .select { |is| USAGE_TRACKABLE_REASONS.include?(is.invoicing_reason.to_sym) }
+        .map(&:subscription)
       return if subscriptions.blank?
 
-      DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions:)
+      DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions: subscriptions)
     end
   end
 end
