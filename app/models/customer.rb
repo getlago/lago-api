@@ -134,7 +134,7 @@ class Customer < ApplicationRecord
   def applicable_invoice_custom_sections
     return [] if skip_invoice_custom_sections?
 
-    selected_invoice_custom_sections.presence || organization.invoice_custom_sections
+    selected_invoice_custom_sections.presence || organization.selected_invoice_custom_sections
   end
 
   def editable?

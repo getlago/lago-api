@@ -22,6 +22,7 @@ module Types
     field :credit_notes, resolver: Resolvers::CreditNotesResolver
     field :current_version, resolver: Resolvers::VersionResolver
     field :customer, resolver: Resolvers::CustomerResolver
+    field :customer_invoice_custom_sections, resolver: Resolvers::Customers::InvoiceCustomSectionsResolver
     field :customer_invoices, resolver: Resolvers::Customers::InvoicesResolver
     field :customer_portal_customer_usage, resolver: Resolvers::CustomerPortal::Customers::UsageResolver
     field :customer_portal_invoice_collections, resolver: Resolvers::CustomerPortal::Analytics::InvoiceCollectionsResolver
