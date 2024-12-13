@@ -40,18 +40,28 @@ module Integrations
           def columns
             result = {
               'tranid' => invoice.number,
-              'entity' => integration_customer.external_customer_id,
-              'taxregoverride' => true,
-              'taxdetailsoverride' => true,
               'custbody_ava_disable_tax_calculation' => true,
-              'custbody_lago_invoice_link' => invoice_url,
-              'custbody_lago_id' => invoice.id,
-              'duedate' => due_date
+              'custbody_lago_invoice_link' => invoice_url
             }
+
+            unless tax_item_complete?
+              result['trandate'] = issuing_date
+            end
+
+            result = result.merge(
+              {
+                'duedate' => due_date,
+                'taxdetailsoverride' => true,
+                'custbody_lago_id' => invoice.id,
+                'entity' => integration_customer.external_customer_id
+              }
+            )
 
             if tax_item&.tax_nexus.present?
               result['nexus'] = tax_item.tax_nexus
             end
+
+            result['taxregoverride'] = true
 
             result
           end
@@ -79,6 +89,10 @@ module Integrations
 
           def due_date
             invoice.payment_due_date&.strftime("%-m/%-d/%Y")
+          end
+
+          def issuing_date
+            invoice.issuing_date&.strftime("%-m/%-d/%Y")
           end
 
           def item(fee)

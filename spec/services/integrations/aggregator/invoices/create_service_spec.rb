@@ -135,6 +135,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   end
 
   let(:due_date) { invoice.payment_due_date.strftime("%-m/%-d/%Y") }
+  let(:issuing_date) { invoice.issuing_date.strftime("%-m/%-d/%Y") }
 
   let(:params) do
     {
@@ -148,6 +149,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         'custbody_lago_id' => invoice.id,
         'custbody_ava_disable_tax_calculation' => true,
         'custbody_lago_invoice_link' => invoice_url,
+        'trandate' => anything,
         'duedate' => due_date
       },
       'lines' => [

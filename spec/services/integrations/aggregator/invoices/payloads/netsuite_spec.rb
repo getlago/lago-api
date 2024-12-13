@@ -152,6 +152,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     end
 
     let(:due_date) { invoice.payment_due_date.strftime("%-m/%-d/%Y") }
+    let(:issuing_date) { invoice.issuing_date.strftime("%-m/%-d/%Y") }
 
     let(:body) do
       {
@@ -227,6 +228,31 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       }
     end
 
+    let(:column_keys_with_taxes) do
+      [
+        'tranid',
+        'custbody_ava_disable_tax_calculation',
+        'custbody_lago_invoice_link',
+        'duedate',
+        'taxdetailsoverride',
+        'custbody_lago_id',
+        'entity',
+        'taxregoverride'
+      ]
+    end
+
+    let(:column_keys_with_taxes_with_nexus) do
+      column_keys_with_taxes.insert(7, 'nexus')
+    end
+
+    let(:column_keys_without_taxes) do
+      column_keys_with_taxes.insert(3, 'trandate')
+    end
+
+    let(:column_keys_without_taxes_with_nexus) do
+      column_keys_without_taxes.insert(8, 'nexus')
+    end
+
     before do
       integration_customer
       charge
@@ -258,12 +284,17 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
             'custbody_lago_id' => invoice.id,
             'custbody_ava_disable_tax_calculation' => true,
             'custbody_lago_invoice_link' => invoice_link,
+            'trandate' => issuing_date,
             'duedate' => due_date
           }
         end
 
         it 'returns payload body with tax columns' do
           expect(subject).to eq(body)
+        end
+
+        it 'has the columns keys in order' do
+          expect(subject['columns'].keys).to eq(column_keys_without_taxes)
         end
       end
 
@@ -353,6 +384,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           it 'returns payload body with tax columns' do
             expect(subject).to eq(body)
           end
+
+          it 'has the columns keys in order' do
+            expect(subject['columns'].keys).to eq(column_keys_with_taxes_with_nexus)
+          end
         end
 
         context 'when tax item is not mapped completely' do
@@ -367,6 +402,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               'custbody_lago_id' => invoice.id,
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_link,
+              'trandate' => issuing_date,
               'duedate' => due_date,
               'nexus' => 'some_nexus'
             }
@@ -374,6 +410,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
 
           it 'returns payload body with tax columns' do
             expect(subject).to eq(body)
+          end
+
+          it 'has the columns keys in order' do
+            expect(subject['columns'].keys).to eq(column_keys_without_taxes_with_nexus)
           end
         end
       end
@@ -389,12 +429,17 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           'custbody_lago_id' => invoice.id,
           'custbody_ava_disable_tax_calculation' => true,
           'custbody_lago_invoice_link' => invoice_link,
+          'trandate' => issuing_date,
           'duedate' => due_date
         }
       end
 
-      it 'returns payload body without tax columns' do
+      it 'returns payload body with tax columns' do
         expect(subject).to eq(body)
+      end
+
+      it 'has the columns keys in order' do
+        expect(subject['columns'].keys).to eq(column_keys_without_taxes)
       end
     end
   end
