@@ -26,6 +26,7 @@ end
 #  id                           :uuid             not null, primary key
 #  amount_cents                 :bigint           not null
 #  amount_currency              :string           not null
+#  payable_payment_status       :enum
 #  payable_type                 :string           default("Invoice"), not null
 #  provider_payment_data        :jsonb
 #  status                       :string           not null
@@ -35,11 +36,12 @@ end
 #  payable_id                   :uuid
 #  payment_provider_customer_id :uuid
 #  payment_provider_id          :uuid
-#  provider_payment_id          :string           not null
+#  provider_payment_id          :string
 #
 # Indexes
 #
 #  index_payments_on_invoice_id                    (invoice_id)
+#  index_payments_on_payable_id_and_payable_type   (payable_id,payable_type) UNIQUE WHERE (payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status]))
 #  index_payments_on_payable_type_and_payable_id   (payable_type,payable_id)
 #  index_payments_on_payment_provider_customer_id  (payment_provider_customer_id)
 #  index_payments_on_payment_provider_id           (payment_provider_id)
