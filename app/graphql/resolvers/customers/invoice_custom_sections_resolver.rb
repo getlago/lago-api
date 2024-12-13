@@ -15,7 +15,7 @@ module Resolvers
         customer = current_organization.customers.find(customer_id)
         customer.applicable_invoice_custom_sections.page(page).per(limit)
       rescue ActiveRecord::RecordNotFound
-        not_found_error(resource: 'invoice')
+        not_found_error(resource: 'customer')
       end
 
     end
