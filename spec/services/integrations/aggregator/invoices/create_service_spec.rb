@@ -149,8 +149,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         'custbody_lago_id' => invoice.id,
         'custbody_ava_disable_tax_calculation' => true,
         'custbody_lago_invoice_link' => invoice_url,
-        'duedate' => due_date,
-        'trandate' => issuing_date
+        'duedate' => due_date
       },
       'lines' => [
         {
