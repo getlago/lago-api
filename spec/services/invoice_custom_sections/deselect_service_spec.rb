@@ -14,6 +14,7 @@ RSpec.describe InvoiceCustomSections::DeselectService, type: :service do
 
       it 'selects the section for the organization' do
         expect { service_result }.to change(organization.selected_invoice_custom_sections, :count).from(1).to(0)
+        expect(service_result).to be_success
         expect(organization.selected_invoice_custom_sections).to eq([])
       end
     end

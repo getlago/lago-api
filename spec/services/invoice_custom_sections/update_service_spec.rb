@@ -20,6 +20,7 @@ RSpec.describe InvoiceCustomSections::UpdateService do
       it 'updates the invoice custom section' do
         result = service_result
 
+        expect(result).to be_success
         expect(result.invoice_custom_section.name).to eq('Updated Name')
         expect(InvoiceCustomSections::SelectService).to have_received(:call)
           .with(section: invoice_custom_section, organization: organization)
