@@ -26,7 +26,9 @@ module V1
         total_amount_cents: model.total_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
-        version_number: model.version_number
+        version_number: model.version_number,
+        created_at: model.created_at.iso8601,
+        updated_at: model.updated_at.iso8601
       }
 
       payload.merge!(customer) if include?(:customer)
