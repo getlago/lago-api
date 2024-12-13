@@ -472,7 +472,10 @@ html
                         = ' • ' + fee.filter_display_name(separator: ' • ')
                       - if fee.billable_metric.weighted_sum_agg?
                         .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(fee.subscription.plan.interval))
-                      .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
+                      - if fee.succeeded_at.present?
+                        .body-3 = I18n.l(fee.succeeded_at.to_date, format: :default) + ' • ' + I18n.t('invoice.total_events', count: fee.events_count)
+                      - else
+                        .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
                       - if fee.charge.prorated?
                         .body-3 = I18n.t('invoice.fee_prorated')
                     td.body-2
