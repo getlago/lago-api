@@ -17,7 +17,6 @@ module Resolvers
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: 'customer')
       end
-
     end
   end
 end

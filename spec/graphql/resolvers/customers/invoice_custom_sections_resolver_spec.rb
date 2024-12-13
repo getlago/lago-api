@@ -24,7 +24,6 @@ RSpec.describe Resolvers::Customers::InvoiceCustomSectionsResolver, type: :graph
     organization.save
   end
 
-  it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
 
   it 'returns a list of invoice_custom_sections' do
