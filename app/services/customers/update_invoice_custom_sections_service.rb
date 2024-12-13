@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Customers
-  class SelectInvoiceCustomSectionsService < BaseService
+  class UpdateInvoiceCustomSectionsService < BaseService
     def initialize(customer:, section_ids: [])
       @customer = customer
       @section_ids = section_ids
