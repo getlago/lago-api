@@ -37,21 +37,15 @@ module PaymentProviders
 
           payment.provider_payment_id = gocardless_result.id
           payment.status = gocardless_result.status
+          payment.payable_payment_status = payment_status_mapping(payment.status)
           payment.save!
 
-          result.payment_status = payment_status_mapping(payment.status)
           result.payment = payment
           result
         rescue GoCardlessPro::ValidationError => e
-          result.error_message = e.message
-          result.error_code = e.code
-          result.payment_status = :failed
-          result
+          prepare_failed_result(e)
         rescue MandateNotFoundError, GoCardlessPro::Error => e
-          result.error_message = e.message
-          result.error_code = e.code
-          result.payment_status = :failed
-          result.service_failure!(code: "gocardless_error", message: "#{e.code}: #{e.message}")
+          prepare_failed_result(e, reraise: true)
         end
 
         attr_reader :payment, :invoice, :provider_customer
@@ -86,8 +80,8 @@ module PaymentProviders
         def create_gocardless_payment
           client.payments.create(
             params: {
-              amount: invoice.total_amount_cents,
-              currency: invoice.currency.upcase,
+              amount: payment.amount_cents,
+              currency: payment.amount_currency.upcase,
               retry_if_possible: false,
               metadata: {
                 lago_customer_id: customer.id,
@@ -110,6 +104,16 @@ module PaymentProviders
           return :failed if FAILED_STATUSES.include?(payment_status)
 
           payment_status
+        end
+
+        def prepare_failed_result(error, reraise: false)
+          result.error_message = error.message
+          result.error_code = error.code
+          result.reraise = reraise
+
+          payment.update!(status: :failed, payable_payment_status: :failed)
+
+          result.service_failure!(code: "gocardless_error", message: "#{error.code}: #{error.message}")
         end
       end
     end

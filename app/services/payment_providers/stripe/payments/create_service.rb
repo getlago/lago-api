@@ -24,35 +24,32 @@ module PaymentProviders
 
           payment.provider_payment_id = stripe_result.id
           payment.status = stripe_result.status
+          payment.payable_payment_status = payment_status_mapping(payment.status)
           payment.provider_payment_data = stripe_result.next_action if stripe_result.status == "requires_action"
           payment.save!
 
           handle_requires_action(payment) if payment.status == "requires_action"
 
-          result.payment_status = payment_status_mapping(payment.status)
           result.payment = payment
           result
 
         # TODO: global refactor of the error handling
-        # reprocessable errors shoud let the payment status to pending
-        # identified errors should mark it as failed to allow reprocess via a new payment
+        # identified processing errors should mark it as failed to allow reprocess via a new payment
+        # other should be reprocessed
         rescue ::Stripe::AuthenticationError, ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
           # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
           #       For now we keep it as pending, the user can still update it manually
           return result if e.code == "amount_too_small"
 
-          result.error_message = e.message
-          result.error_code = e.code
-          result.payment_status = :failed
-          result
+          prepare_failed_result(e)
         rescue ::Stripe::RateLimitError => e
+          # Allow auto-retry with idempotency key
           raise Invoices::Payments::RateLimitError, e
         rescue ::Stripe::APIConnectionError => e
+          # Allow auto-retry with idempotency key
           raise Invoices::Payments::ConnectionError, e
         rescue ::Stripe::StripeError => e
-          result.error_message = e.message
-          result.error_code = e.code
-          result.service_failure!(code: "stripe_error", message: e.message)
+          prepare_failed_result(e, reraise: true)
         end
 
         private
@@ -125,8 +122,8 @@ module PaymentProviders
 
         def payment_intent_payload
           {
-            amount: invoice.total_amount_cents,
-            currency: invoice.currency.downcase,
+            amount: payment.amount_cents,
+            currency: payment.amount_currency.downcase,
             customer: provider_customer.provider_customer_id,
             payment_method: stripe_payment_method,
             payment_method_types: provider_customer.provider_payment_methods,
@@ -162,6 +159,16 @@ module PaymentProviders
 
         def description
           "#{invoice.organization.name} - Invoice #{invoice.number}"
+        end
+
+        def prepare_failed_result(error, reraise: false)
+          result.error_message = error.message
+          result.error_code = error.code
+          result.reraise = reraise
+
+          payment.update!(status: :failed, payable_payment_status: :failed)
+
+          result.service_failure!(code: "stripe_error", message: error.message)
         end
       end
     end

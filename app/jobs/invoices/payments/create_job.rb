@@ -10,8 +10,8 @@ module Invoices
       retry_on Invoices::Payments::ConnectionError, wait: :polynomially_longer, attempts: 6
       retry_on Invoices::Payments::RateLimitError, wait: :polynomially_longer, attempts: 6
 
-      def perform(invoice:, payment_provider:, payment: nil)
-        Invoices::Payments::CreateService.call!(invoice:, payment_provider:, payment:)
+      def perform(invoice:, payment_provider:)
+        Invoices::Payments::CreateService.call!(invoice:, payment_provider:)
       end
 
       def lock_key_arguments

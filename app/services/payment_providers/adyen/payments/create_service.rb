@@ -22,29 +22,24 @@ module PaymentProviders
           adyen_result = create_adyen_payment
 
           if adyen_result.status > 400
-            result.error_message = adyen_result.response["message"]
-            result.error_code = adyen_result.response["errorType"]
-            return result
+            return prepare_failed_result(::Adyen::AdyenError.new(
+              nil, nil, adyen_result.response["message"], adyen_result.response["errorType"]
+            ))
           end
 
-          payment.provider_payment_data = adyen_result.response["pspReference"]
+          payment.provider_payment_id = adyen_result.response["pspReference"]
           payment.status = adyen_result.response["resultCode"]
+          payment.payable_payment_status = payment_status_mapping(payment.status)
           payment.save!
 
-          result.payment_status = payment_status_mapping(payment.status)
           result.payment = payment
           result
         rescue ::Adyen::AuthenticationError, ::Adyen::ValidationError => e
-          result.error_message = e.msg
-          result.error_code = e.code
-          result.payment_status = :failed
-          result
+          prepare_failed_result(e)
         rescue ::Adyen::AdyenError => e
-          result.error_message = e.msg
-          result.error_code = e.code
-          result.payment_status = :failed
-          result.service_failure!(code: "adyen_error", message: "#{e.code}: #{e.msg}")
+          prepare_failed_result(e, reraise: true)
         rescue Faraday::ConnectionFailed => e
+          # Allow auto-retry with idempotency key
           raise Invoices::Payments::ConnectionError, e
         end
 
@@ -94,8 +89,8 @@ module PaymentProviders
         def payment_params
           prms = {
             amount: {
-              currency: invoice.currency.upcase,
-              value: invoice.total_amount_cents
+              currency: payment.amount_currency.upcase,
+              value: payment.amount_cents
             },
             reference: invoice.number,
             paymentMethod: {
@@ -117,6 +112,16 @@ module PaymentProviders
           return :failed if FAILED_STATUSES.include?(payment_status)
 
           payment_status
+        end
+
+        def prepare_failed_result(error, reraise: false)
+          result.error_message = error.msg
+          result.error_code = error.code
+          result.reraise = reraise
+
+          payment.update!(status: :failed, payable_payment_status: :failed)
+
+          result.service_failure!(code: "adyen_error", message: "#{error.code}: #{error.msg}")
         end
       end
     end

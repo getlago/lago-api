@@ -56,7 +56,6 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service 
         .and_return(payments_response)
       allow(payments_api).to receive(:payment_methods)
         .and_return(payment_methods_response)
-      allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
     it "creates an adyen payment" do
@@ -70,8 +69,7 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service 
       expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
       expect(result.payment.amount_currency).to eq(invoice.currency)
       expect(result.payment.status).to eq("Authorised")
-
-      expect(result.payment_status).to eq(:succeeded)
+      expect(result.payment.payable_payment_status).to eq("succeeded")
 
       expect(adyen_customer.reload.payment_method_id)
         .to eq(payment_methods_response.response["storedPaymentMethods"].first["id"])
@@ -86,12 +84,19 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service 
         allow(payments_api).to receive(:payments).and_return(payments_error_response)
       end
 
-      it "returns a success result with error messages" do
+      it "returns a failed result" do
         result = create_service.call
 
-        expect(result).to be_success
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("adyen_error")
+        expect(result.error.error_message)
+          .to eq("validation: There are no payment methods available for the given parameters.")
+
         expect(result.error_message).to eq("There are no payment methods available for the given parameters.")
         expect(result.error_code).to eq("validation")
+        expect(result.payment.status).to eq("failed")
+        expect(result.payment.payable_payment_status).to eq("failed")
       end
     end
 
@@ -116,13 +121,17 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service 
             .and_raise(Adyen::ValidationError.new("Invalid card number", nil))
         end
 
-        it "returns a success result with error messages" do
+        it "returns a failed result" do
           result = create_service.call
 
-          expect(result).to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("adyen_error")
+          expect(result.error.error_message).to eq(": Invalid card number")
+
           expect(result.error_message).to eq("Invalid card number")
           expect(result.error_code).to be_nil
-          expect(result.payment_status).to eq(:failed)
+          expect(result.payment.status).to eq("failed")
+          expect(result.payment.payable_payment_status).to eq("failed")
         end
       end
 
@@ -135,10 +144,14 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service 
         it "returns a success result with error messages" do
           result = create_service.call
 
-          expect(result).to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("adyen_error")
+          expect(result.error.error_message).to eq(": Invalid card number")
+
           expect(result.error_message).to eq("Invalid card number")
           expect(result.error_code).to be_nil
-          expect(result.payment_status).to eq(:failed)
+          expect(result.payment.status).to eq("failed")
+          expect(result.payment.payable_payment_status).to eq("failed")
         end
       end
     end
@@ -172,7 +185,7 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service 
 
         expect(result.error_message).to eq("error")
         expect(result.error_code).to eq("code")
-        expect(result.payment_status).to eq(:failed)
+        expect(result.payment.payable_payment_status).to eq("failed")
       end
     end
   end

@@ -88,8 +88,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
       expect(result.payment.amount_currency).to eq(invoice.currency)
       expect(result.payment.status).to eq("succeeded")
-
-      expect(result.payment_status).to eq(:succeeded)
+      expect(result.payment.payable_payment_status).to eq("succeeded")
 
       expect(Stripe::PaymentIntent).to have_received(:create)
     end
@@ -156,13 +155,17 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
           .and_raise(::Stripe::CardError.new("error", {}))
       end
 
-      it "returns a success result with error messages" do
+      it "returns a failed result" do
         result = create_service.call
 
-        expect(result).to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("stripe_error")
+        expect(result.error.error_message).to eq("error")
+
         expect(result.error_message).to eq("error")
         expect(result.error_code).to be_nil
-        expect(result.payment_status).to eq(:failed)
+        expect(result.payment.status).to eq("failed")
+        expect(result.payment.payable_payment_status).to eq("failed")
       end
     end
 
@@ -242,8 +245,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
         expect(result.payment.amount_currency).to eq(invoice.currency)
         expect(result.payment.status).to eq("processing")
-
-        expect(result.payment_status).to eq(:pending)
+        expect(result.payment.payable_payment_status).to eq("pending")
 
         expect(Stripe::PaymentIntent).to have_received(:create)
       end

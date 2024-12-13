@@ -21,6 +21,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_16_140931) do
   create_enum "billable_metric_rounding_function", ["round", "floor", "ceil"]
   create_enum "billable_metric_weighted_interval", ["seconds"]
   create_enum "customer_type", ["company", "individual"]
+  create_enum "payment_payable_payment_status", ["pending", "processing", "succeeded", "failed"]
   create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
   create_enum "tax_status", ["pending", "succeeded", "failed"]
 
@@ -1091,8 +1092,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_16_140931) do
     t.string "payable_type", default: "Invoice", null: false
     t.uuid "payable_id"
     t.jsonb "provider_payment_data", default: {}
+    t.enum "payable_payment_status", enum_type: "payment_payable_payment_status"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
-    t.index ["payable_id", "payable_type"], name: "index_payments_on_payable_id_and_payable_type", unique: true, where: "((status)::text = 'pending'::text)"
+    t.index ["payable_id", "payable_type"], name: "index_payments_on_payable_id_and_payable_type", unique: true, where: "(payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status]))"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"

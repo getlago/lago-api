@@ -5,9 +5,8 @@ module Invoices
     class CreateService < BaseService
       include Customers::PaymentProviderFinder
 
-      def initialize(invoice:, payment_provider: nil, payment: nil)
+      def initialize(invoice:, payment_provider: nil)
         @invoice = invoice
-        @payment = payment
         @provider = payment_provider&.to_sym
 
         super
@@ -22,40 +21,53 @@ module Invoices
           return result
         end
 
+        if processing_payment
+          # Payment is being processed, return the existing payment
+          # Status will be updated via webhooks
+          result.payment = processing_payment
+          return result
+        end
+
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
 
-        @payment ||= Payment.create!(
-          payable: invoice,
+        payment ||= Payment.create_with(
           payment_provider_id: current_payment_provider.id,
           payment_provider_customer_id: current_payment_provider_customer.id,
           amount_cents: invoice.total_amount_cents,
-          amount_currency: invoice.currency,
+          amount_currency: invoice.currency
+        ).find_or_create_by!(
+          payable: invoice,
+          payable_payment_status: "pending",
           status: "pending"
         )
+
         result.payment = payment
 
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(provider:, payment:).call!
 
-        deliver_error_webhook(payment_result) if payment_result.error_message.present?
+        # Keep payment in a pending state. Used manly for `amount_too_small` in stripe service
+        return result if payment_result.payment.payable_payment_status.nil?
 
-        if payment_result.payment_status.present?
-          update_invoice_payment_status(
-            payment_status: payment_result.payment_status,
-            processing: payment_result.payment.status == "processing"
-          )
+        payment_status = payment_result.payment.payable_payment_status
+        update_invoice_payment_status(
+          payment_status: (payment_status == "processing") ? :pending : payment_status,
+          processing: payment_status == "processing"
+        )
 
-          if ["pending", "success"].include?(payment_result.payment_status)
-            # TODO: better handling of payment status, with a `processing` status on the payment
-            Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
-          end
-        end
+        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
 
         result
       rescue BaseService::ServiceFailure => e
         deliver_error_webhook(e.result)
-        update_invoice_payment_status(payment_status: e.result.payment_status) if e.result.payment_status.present?
 
-        raise
+        if e.result.payment.payable_payment_status.present?
+          update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
+        end
+
+        # Some errors should be investigated and need to be raised
+        raise if e.result.reraise
+
+        result
       end
 
       def call_async
@@ -113,6 +125,17 @@ module Invoices
             error_code: payment_result.error_code
           }
         })
+      end
+
+      def processing_payment
+        @processing_payment ||= Payment.find_by(
+          payable_id: invoice,
+          payment_provider_id: current_payment_provider.id,
+          payment_provider_customer_id: current_payment_provider_customer.id,
+          amount_cents: invoice.total_amount_cents,
+          amount_currency: invoice.currency,
+          payable_payment_status: "processing"
+        )
       end
     end
   end

@@ -74,9 +74,8 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :ser
       expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
       expect(result.payment.amount_currency).to eq(invoice.currency)
       expect(result.payment.status).to eq("paid_out")
+      expect(result.payment.payable_payment_status).to eq("succeeded")
       expect(gocardless_customer.reload.provider_mandate_id).to eq("mandate_id")
-
-      expect(result.payment_status).to eq(:succeeded)
 
       expect(gocardless_payments_service).to have_received(:create)
     end
@@ -110,7 +109,7 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :ser
 
         expect(result.error_message).to eq("error")
         expect(result.error_code).to eq("code")
-        expect(result.payment_status).to eq(:failed)
+        expect(result.payment.payable_payment_status).to eq("failed")
       end
     end
 
@@ -137,7 +136,7 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :ser
 
           expect(result.error_message).to eq("No mandate available for payment")
           expect(result.error_code).to eq("no_mandate_error")
-          expect(result.payment_status).to eq(:failed)
+          expect(result.payment.payable_payment_status).to eq("failed")
         end
       end
     end
