@@ -15,6 +15,7 @@ module Customers
           # note: we should compare with the applicable_net_payment_term
           should_update_draft_invoices = net_payment_term != customer.applicable_net_payment_term
 
+          # But we always store the value!
           customer.net_payment_term = net_payment_term
 
           # NOTE: Update payment_due_date if applicable_net_payment_term changed
@@ -24,9 +25,9 @@ module Customers
             end
           end
         end
-        result.customer = customer
-        result
       end
+      result.customer = customer
+      result
     end
 
     private
