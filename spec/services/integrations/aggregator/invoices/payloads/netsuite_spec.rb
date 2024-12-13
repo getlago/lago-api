@@ -228,7 +228,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       }
     end
 
-    let(:column_keys_without_taxes) do
+    let(:column_keys_with_taxes) do
       [
         'tranid',
         'custbody_ava_disable_tax_calculation',
@@ -241,12 +241,16 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       ]
     end
 
-    let(:column_keys_without_taxes_with_nexus) do
-      column_keys_without_taxes.insert(7, 'nexus')
+    let(:column_keys_with_taxes_with_nexus) do
+      column_keys_with_taxes.insert(7, 'nexus')
     end
 
-    let(:column_keys_with_taxes) do
-      column_keys_without_taxes_with_nexus.insert(3, 'trandate')
+    let(:column_keys_without_taxes) do
+      column_keys_with_taxes.insert(3, 'trandate')
+    end
+
+    let(:column_keys_without_taxes_with_nexus) do
+      column_keys_without_taxes.insert(8, 'nexus')
     end
 
     before do
@@ -280,6 +284,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
             'custbody_lago_id' => invoice.id,
             'custbody_ava_disable_tax_calculation' => true,
             'custbody_lago_invoice_link' => invoice_link,
+            'trandate' => issuing_date,
             'duedate' => due_date
           }
         end
@@ -372,7 +377,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_link,
               'duedate' => due_date,
-              'trandate' => issuing_date,
               'nexus' => 'some_nexus'
             }
           end
@@ -382,7 +386,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           end
 
           it 'has the columns keys in order' do
-            expect(subject['columns'].keys).to eq(column_keys_with_taxes)
+            expect(subject['columns'].keys).to eq(column_keys_with_taxes_with_nexus)
           end
         end
 
@@ -398,6 +402,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               'custbody_lago_id' => invoice.id,
               'custbody_ava_disable_tax_calculation' => true,
               'custbody_lago_invoice_link' => invoice_link,
+              'trandate' => issuing_date,
               'duedate' => due_date,
               'nexus' => 'some_nexus'
             }
@@ -424,11 +429,12 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           'custbody_lago_id' => invoice.id,
           'custbody_ava_disable_tax_calculation' => true,
           'custbody_lago_invoice_link' => invoice_link,
+          'trandate' => issuing_date,
           'duedate' => due_date
         }
       end
 
-      it 'returns payload body without tax columns' do
+      it 'returns payload body with tax columns' do
         expect(subject).to eq(body)
       end
 

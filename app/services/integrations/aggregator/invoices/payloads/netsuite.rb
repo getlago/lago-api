@@ -44,7 +44,7 @@ module Integrations
               'custbody_lago_invoice_link' => invoice_url
             }
 
-            if tax_item_complete?
+            unless tax_item_complete?
               result['trandate'] = issuing_date
             end
 
