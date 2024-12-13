@@ -98,13 +98,18 @@ module Integrations
               raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invalid_mapping')
             end
 
+            from_property = fee.charge? ? 'charges_from_datetime' : 'from_datetime'
+            to_property = fee.charge? ? 'charges_to_datetime' : 'to_datetime'
+
             {
               'item' => mapped_item.external_id,
               'account' => mapped_item.external_account_code,
               'quantity' => limited_rate(fee.units),
               'rate' => limited_rate(fee.precise_unit_amount),
               'amount' => limited_rate(amount(fee.amount_cents, resource: invoice)),
-              'taxdetailsreference' => fee.id
+              'taxdetailsreference' => fee.id,
+              'custcol_service_period_date_from' => fee.properties[from_property]&.to_date&.strftime("%-m/%-d/%Y"),
+              'custcol_service_period_date_to' => fee.properties[to_property]&.to_date&.strftime("%-m/%-d/%Y")
             }
           end
 

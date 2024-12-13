@@ -168,7 +168,10 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 'quantity' => 0.0,
                 'rate' => 0.0,
                 'amount' => 100.0,
-                'taxdetailsreference' => fee_sub.id
+                'taxdetailsreference' => fee_sub.id,
+                'custcol_service_period_date_from' =>
+                  fee_sub.properties['from_datetime']&.to_date&.strftime("%-m/%-d/%Y"),
+                'custcol_service_period_date_to' => fee_sub.properties['to_datetime']&.to_date&.strftime("%-m/%-d/%Y")
               },
               {
                 'item' => '4',
@@ -176,7 +179,11 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 'quantity' => 0.0,
                 'rate' => 0.0,
                 'amount' => 2.0,
-                'taxdetailsreference' => minimum_commitment_fee.id
+                'taxdetailsreference' => minimum_commitment_fee.id,
+                'custcol_service_period_date_from' =>
+                  minimum_commitment_fee.properties['from_datetime']&.to_date&.strftime("%-m/%-d/%Y"),
+                'custcol_service_period_date_to' =>
+                  minimum_commitment_fee.properties['to_datetime']&.to_date&.strftime("%-m/%-d/%Y")
               },
               {
                 'item' => 'm2',
@@ -184,7 +191,11 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 'quantity' => 2,
                 'rate' => 4.1212121212334,
                 'amount' => 2.0,
-                'taxdetailsreference' => charge_fee.id
+                'taxdetailsreference' => charge_fee.id,
+                'custcol_service_period_date_from' =>
+                  charge_fee.properties['charges_from_datetime']&.to_date&.strftime("%-m/%-d/%Y"),
+                'custcol_service_period_date_to' =>
+                  charge_fee.properties['charges_to_datetime']&.to_date&.strftime("%-m/%-d/%Y")
               },
               {
                 'item' => '2',
