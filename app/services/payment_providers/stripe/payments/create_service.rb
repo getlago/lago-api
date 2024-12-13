@@ -9,30 +9,21 @@ module PaymentProviders
         SUCCESS_STATUSES = %w[succeeded].freeze
         FAILED_STATUSES = %w[canceled].freeze
 
-        def initialize(invoice:, provider_customer:)
-          @invoice = invoice
-          @provider_customer = provider_customer
+        def initialize(payment:)
+          @payment = payment
+          @invoice = payment.payable
+          @provider_customer = payment.payment_provider_customer
 
           super
         end
 
         def call
-          result.invoice = invoice
+          result.payment = payment
 
           stripe_result = create_payment_intent
-          # NOTE: return if payment was not processed
-          return result unless stripe_result
 
-          payment = Payment.new(
-            payable: invoice,
-            payment_provider_id: payment_provider.id,
-            payment_provider_customer_id: provider_customer.id,
-            amount_cents: stripe_result.amount,
-            amount_currency: stripe_result.currency&.upcase,
-            provider_payment_id: stripe_result.id,
-            status: stripe_result.status
-          )
-
+          payment.provider_payment_id = stripe_result.id
+          payment.status = stripe_result.status
           payment.provider_payment_data = stripe_result.next_action if stripe_result.status == "requires_action"
           payment.save!
 
@@ -41,6 +32,10 @@ module PaymentProviders
           result.payment_status = payment_status_mapping(payment.status)
           result.payment = payment
           result
+
+        # TODO: global refactor of the error handling
+        # reprocessable errors shoud let the payment status to pending
+        # identified errors should mark it as failed to allow reprocess via a new payment
         rescue ::Stripe::AuthenticationError, ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
           # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
           #       For now we keep it as pending, the user can still update it manually
@@ -62,7 +57,7 @@ module PaymentProviders
 
         private
 
-        attr_reader :invoice, :provider_customer
+        attr_reader :payment, :invoice, :provider_customer
 
         delegate :payment_provider, to: :provider_customer
 
@@ -123,8 +118,7 @@ module PaymentProviders
             payment_intent_payload,
             {
               api_key: payment_provider.secret_key,
-              # TODO(payment): Rely again on idempotency_key
-              idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}"
+              idempotency_key: "payment-#{payment.id}"
             }
           )
         end

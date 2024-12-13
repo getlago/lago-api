@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service do
-  subject(:create_service) { described_class.new(invoice:, provider_customer: adyen_customer) }
+  subject(:create_service) { described_class.new(payment:) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
@@ -26,6 +26,18 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service 
       total_amount_cents: 1000,
       currency: "USD",
       ready_for_payment_processing: true
+    )
+  end
+
+  let(:payment) do
+    create(
+      :payment,
+      payable: invoice,
+      status: "pending",
+      payment_provider: adyen_payment_provider,
+      payment_provider_customer: adyen_customer,
+      amount_cents: invoice.total_amount_cents,
+      amount_currency: invoice.currency
     )
   end
 

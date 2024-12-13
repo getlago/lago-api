@@ -17,9 +17,10 @@ module PaymentProviders
           end
         end
 
-        def initialize(invoice:, provider_customer:)
-          @invoice = invoice
-          @provider_customer = provider_customer
+        def initialize(payment:)
+          @payment = payment
+          @invoice = payment.payable
+          @provider_customer = payment.payment_provider_customer
 
           super
         end
@@ -30,19 +31,12 @@ module PaymentProviders
         FAILED_STATUSES = %w[cancelled customer_approval_denied failed charged_back].freeze
 
         def call
-          result.invoice = invoice
+          result.payment = payment
 
           gocardless_result = create_gocardless_payment
 
-          payment = Payment.new(
-            payable: invoice,
-            payment_provider_id: payment_provider.id,
-            payment_provider_customer_id: provider_customer.id,
-            amount_cents: gocardless_result.amount,
-            amount_currency: gocardless_result.currency&.upcase,
-            provider_payment_id: gocardless_result.id,
-            status: gocardless_result.status
-          )
+          payment.provider_payment_id = gocardless_result.id
+          payment.status = gocardless_result.status
           payment.save!
 
           result.payment_status = payment_status_mapping(payment.status)
@@ -60,7 +54,7 @@ module PaymentProviders
           result.service_failure!(code: "gocardless_error", message: "#{e.code}: #{e.message}")
         end
 
-        attr_reader :invoice, :provider_customer
+        attr_reader :payment, :invoice, :provider_customer
 
         delegate :payment_provider, :customer, to: :provider_customer
 
@@ -105,7 +99,7 @@ module PaymentProviders
               }
             },
             headers: {
-              "Idempotency-Key" => "#{invoice.id}/#{invoice.payment_attempts}"
+              "Idempotency-Key" => "payment-#{payment.id}"
             }
           )
         end

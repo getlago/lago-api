@@ -8,15 +8,16 @@ module PaymentProviders
         SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
         FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
 
-        def initialize(invoice:, provider_customer:)
-          @invoice = invoice
-          @provider_customer = provider_customer
+        def initialize(payment:)
+          @payment = payment
+          @invoice = payment.payable
+          @provider_customer = payment.payment_provider_customer
 
           super
         end
 
         def call
-          result.invoice = invoice
+          result.payment = payment
 
           adyen_result = create_adyen_payment
 
@@ -26,15 +27,8 @@ module PaymentProviders
             return result
           end
 
-          payment = Payment.new(
-            payable: invoice,
-            payment_provider_id: payment_provider.id,
-            payment_provider_customer_id: provider_customer.id,
-            amount_cents: invoice.total_amount_cents,
-            amount_currency: invoice.currency.upcase,
-            provider_payment_id: adyen_result.response["pspReference"],
-            status: adyen_result.response["resultCode"]
-          )
+          payment.provider_payment_data = adyen_result.response["pspReference"]
+          payment.status = adyen_result.response["resultCode"]
           payment.save!
 
           result.payment_status = payment_status_mapping(payment.status)
@@ -56,7 +50,7 @@ module PaymentProviders
 
         private
 
-        attr_reader :invoice, :provider_customer
+        attr_reader :payment, :invoice, :provider_customer
 
         delegate :payment_provider, :customer, to: :provider_customer
 
@@ -84,7 +78,10 @@ module PaymentProviders
         def create_adyen_payment
           update_payment_method_id
 
-          client.checkout.payments_api.payments(Lago::Adyen::Params.new(payment_params).to_h)
+          client.checkout.payments_api.payments(
+            Lago::Adyen::Params.new(payment_params).to_h,
+            headers: {"idempotency-key" => "payment-#{payment.id}"}
+          )
         end
 
         def payment_method_params

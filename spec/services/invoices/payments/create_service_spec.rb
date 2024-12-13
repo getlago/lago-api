@@ -16,12 +16,11 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
   describe "#call" do
     let(:result) do
       BaseService::Result.new.tap do |r|
-        r.payment = payment
         r.payment_status = "pending"
+        r.payment = OpenStruct.new(status: "processing")
       end
     end
 
-    let(:payment) { create(:payment, payable: invoice, status: "processing") }
     let(:provider_class) { PaymentProviders::Stripe::Payments::CreateService }
     let(:provider_service) { instance_double(provider_class) }
 
@@ -29,16 +28,27 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       provider_customer
 
       allow(provider_class)
-        .to receive(:new).with(invoice:, provider_customer:)
+        .to receive(:new).with(payment: an_instance_of(Payment))
         .and_return(provider_service)
       allow(provider_service).to receive(:call!)
         .and_return(result)
     end
 
-    it "calls the stripe service" do
-      create_service.call
+    it "creates a payment and calls the stripe service" do
+      result = create_service.call
 
-      expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+      expect(result).to be_success
+      expect(result.invoice).to eq(invoice)
+      expect(result.payment).to be_present
+
+      payment = result.payment
+      expect(payment.payment_provider).to eq(payment_provider)
+      expect(payment.payment_provider_customer).to eq(provider_customer)
+      expect(payment.amount_cents).to eq(invoice.total_amount_cents)
+      expect(payment.amount_currency).to eq(invoice.currency)
+      expect(payment.payable).to eq(invoice)
+
+      expect(provider_class).to have_received(:new)
       expect(provider_service).to have_received(:call!)
     end
 
@@ -48,7 +58,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       expect(invoice.reload).to be_payment_pending
       expect(invoice.payment_attempts).to eq(1)
       expect(invoice.ready_for_payment_processing).to be_falsey
-      expect(invoice.payments).to eq([payment])
+      expect(invoice.payments.count).to eq(1)
     end
 
     context "with gocardless payment provider" do
@@ -60,7 +70,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       it "calls the gocardless service" do
         create_service.call
 
-        expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+        expect(provider_class).to have_received(:new).with(payment: an_instance_of(Payment))
         expect(provider_service).to have_received(:call!)
       end
     end
@@ -74,7 +84,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       it "calls the adyen service" do
         create_service.call
 
-        expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+        expect(provider_class).to have_received(:new)
         expect(provider_service).to have_received(:call!)
       end
     end
@@ -160,6 +170,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
     context "when provider service raises a service failure" do
       let(:result) do
         BaseService::Result.new.tap do |r|
+          r.payment = OpenStruct.new(status: "pending")
           r.error_message = "error"
           r.error_code = "code"
         end
@@ -188,6 +199,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       context "when result has a payment_status" do
         let(:result) do
           BaseService::Result.new.tap do |r|
+            r.payment = OpenStruct.new(status: "pending")
             r.error_message = "error"
             r.error_code = "code"
             r.payment_status = "failed"
@@ -206,6 +218,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
     context "when the provider service returns error details" do
       let(:result) do
         BaseService::Result.new.tap do |r|
+          r.payment = OpenStruct.new(status: "pending")
           r.error_message = "error"
           r.error_code = "code"
         end
@@ -256,6 +269,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
     context "when result only has a payment_status" do
       let(:result) do
         BaseService::Result.new.tap do |r|
+          r.payment = OpenStruct.new(status: "pending")
           r.payment_status = "failed"
         end
       end

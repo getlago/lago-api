@@ -5,8 +5,9 @@ module Invoices
     class CreateService < BaseService
       include Customers::PaymentProviderFinder
 
-      def initialize(invoice:, payment_provider: nil)
+      def initialize(invoice:, payment_provider: nil, payment: nil)
         @invoice = invoice
+        @payment = payment
         @provider = payment_provider&.to_sym
 
         super
@@ -23,25 +24,30 @@ module Invoices
 
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
 
-        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
-          provider:, invoice:, provider_customer: current_payment_provider_customer
-        ).call!
+        @payment ||= Payment.create!(
+          payable: invoice,
+          payment_provider_id: current_payment_provider.id,
+          payment_provider_customer_id: current_payment_provider_customer.id,
+          amount_cents: invoice.total_amount_cents,
+          amount_currency: invoice.currency,
+          status: "pending"
+        )
+        result.payment = payment
+
+        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(provider:, payment:).call!
 
         deliver_error_webhook(payment_result) if payment_result.error_message.present?
 
-        if payment_result.payment.present?
-          result.payment = payment_result.payment
-
+        if payment_result.payment_status.present?
           update_invoice_payment_status(
             payment_status: payment_result.payment_status,
-            processing: result.payment.status == "processing"
+            processing: payment_result.payment.status == "processing"
           )
 
-          if result.payment.should_sync_payment?
-            Integrations::Aggregator::Payments::CreateJob.perform_later(payment: result.payment)
+          if ["pending", "success"].include?(payment_result.payment_status)
+            # TODO: better handling of payment status, with a `processing` status on the payment
+            Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
           end
-        elsif payment_result.payment_status.present?
-          update_invoice_payment_status(payment_status: payment_result.payment_status)
         end
 
         result
@@ -63,7 +69,7 @@ module Invoices
 
       private
 
-      attr_reader :invoice
+      attr_reader :invoice, :payment
 
       delegate :customer, to: :invoice
 
