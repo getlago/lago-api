@@ -171,6 +171,10 @@ class BaseService
     raise NotImplementedError
   end
 
+  def call!(*, &)
+    call(*, &).raise_if_error!
+  end
+
   def call_async(**args, &block)
     raise NotImplementedError
   end

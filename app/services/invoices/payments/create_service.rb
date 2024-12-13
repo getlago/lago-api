@@ -17,17 +17,39 @@ module Invoices
         return result unless should_process_payment?
 
         unless invoice.total_amount_cents.positive?
-          Invoices::UpdateService.call!(
-            invoice:,
-            params: {payment_status: :succeeded, ready_for_payment_processing: false},
-            webhook_notification: true
-          )
+          update_invoice_payment_status(payment_status: :succeeded)
           return result
         end
 
-        # TODO(payments): Create a pending paymnent record with a DB uniqueness constraint on invoice_id
-        #                 and inject it to the payment services to avoid duplicated payments
-        ::PaymentProviders::CreatePaymentFactory.new_instance(provider:, invoice:).call
+        invoice.update!(payment_attempts: invoice.payment_attempts + 1)
+
+        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
+          provider:, invoice:, provider_customer: current_payment_provider_customer
+        ).call!
+
+        deliver_error_webhook(payment_result) if payment_result.error_message.present?
+
+        if payment_result.payment.present?
+          result.payment = payment_result.payment
+
+          update_invoice_payment_status(
+            payment_status: payment_result.payment_status,
+            processing: result.payment.status == "processing"
+          )
+
+          if result.payment.should_sync_payment?
+            Integrations::Aggregator::Payments::CreateJob.perform_later(payment: result.payment)
+          end
+        elsif payment_result.payment_status.present?
+          update_invoice_payment_status(payment_status: payment_result.payment_status)
+        end
+
+        result
+      rescue BaseService::ServiceFailure => e
+        deliver_error_webhook(e.result)
+        update_invoice_payment_status(payment_status: e.result.payment_status) if e.result.payment_status.present?
+
+        raise
       end
 
       def call_async
@@ -51,8 +73,40 @@ module Invoices
 
       def should_process_payment?
         return false if invoice.payment_succeeded? || invoice.voided?
+        return false if current_payment_provider.blank?
 
-        payment_provider(customer).present?
+        current_payment_provider_customer&.provider_customer_id
+      end
+
+      def current_payment_provider
+        @current_payment_provider ||= payment_provider(customer)
+      end
+
+      def current_payment_provider_customer
+        @current_payment_provider_customer ||= customer.payment_provider_customers
+          .find_by(payment_provider_id: current_payment_provider.id)
+      end
+
+      def update_invoice_payment_status(payment_status:, processing: false)
+        Invoices::UpdateService.call!(
+          invoice: invoice,
+          params: {
+            payment_status:,
+            # NOTE: A proper `processing` payment status should be introduced for invoices
+            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+          },
+          webhook_notification: payment_status.to_sym == :succeeded
+        )
+      end
+
+      def deliver_error_webhook(payment_result)
+        DeliverErrorWebhookService.call_async(invoice, {
+          provider_customer_id: current_payment_provider_customer.provider_customer_id,
+          provider_error: {
+            message: payment_result.error_message,
+            error_code: payment_result.error_code
+          }
+        })
       end
     end
   end

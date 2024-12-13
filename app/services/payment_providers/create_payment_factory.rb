@@ -2,8 +2,8 @@
 
 module PaymentProviders
   class CreatePaymentFactory
-    def self.new_instance(provider:, invoice:)
-      service_class(provider:).new(invoice)
+    def self.new_instance(provider:, invoice:, provider_customer:)
+      service_class(provider:).new(invoice:, provider_customer:)
     end
 
     def self.service_class(provider:)
@@ -11,11 +11,11 @@ module PaymentProviders
       #                into PaymentProviders::*::Payments::CreateService#call
       case provider.to_sym
       when :adyen
-        Invoices::Payments::AdyenService
+        PaymentProviders::Adyen::Payments::CreateService
       when :gocardless
-        Invoices::Payments::GocardlessService
+        PaymentProviders::Gocardless::Payments::CreateService
       when :stripe
-        Invoices::Payments::StripeService
+        PaymentProviders::Stripe::Payments::CreateService
       end
     end
   end

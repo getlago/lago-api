@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::Payments::CreateService, type: :service do
   subject(:create_service) { described_class.new(invoice:, payment_provider: provider) }
@@ -8,62 +8,81 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
   let(:organization) { create(:organization) }
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100) }
   let(:customer) { create(:customer, organization:, payment_provider: provider, payment_provider_code:) }
-  let(:provider) { 'stripe' }
-  let(:payment_provider_code) { 'stripe_1' }
+  let(:provider) { "stripe" }
+  let(:payment_provider_code) { "stripe_1" }
   let(:payment_provider) { create(:stripe_provider, code: payment_provider_code, organization:) }
+  let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
 
-  describe '#call' do
-    let(:result) { BaseService::Result.new }
-    let(:provider_class) { Invoices::Payments::StripeService }
+  describe "#call" do
+    let(:result) do
+      BaseService::Result.new.tap do |r|
+        r.payment = payment
+        r.payment_status = "pending"
+      end
+    end
+
+    let(:payment) { create(:payment, payable: invoice, status: "processing") }
+    let(:provider_class) { PaymentProviders::Stripe::Payments::CreateService }
     let(:provider_service) { instance_double(provider_class) }
 
     before do
-      payment_provider
+      provider_customer
 
       allow(provider_class)
-        .to receive(:new).with(invoice)
+        .to receive(:new).with(invoice:, provider_customer:)
         .and_return(provider_service)
-      allow(provider_service).to receive(:call)
+      allow(provider_service).to receive(:call!)
         .and_return(result)
     end
 
-    it 'calls the stripe service' do
+    it "calls the stripe service" do
       create_service.call
 
-      expect(provider_class).to have_received(:new).with(invoice)
-      expect(provider_service).to have_received(:call)
+      expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+      expect(provider_service).to have_received(:call!)
     end
 
-    context 'with gocardless payment provider' do
-      let(:provider) { 'gocardless' }
-      let(:provider_class) { Invoices::Payments::GocardlessService }
+    it "updates the invoice payment status" do
+      create_service.call
+
+      expect(invoice.reload).to be_payment_pending
+      expect(invoice.payment_attempts).to eq(1)
+      expect(invoice.ready_for_payment_processing).to be_falsey
+      expect(invoice.payments).to eq([payment])
+    end
+
+    context "with gocardless payment provider" do
+      let(:provider) { "gocardless" }
+      let(:provider_class) { PaymentProviders::Gocardless::Payments::CreateService }
       let(:payment_provider) { create(:gocardless_provider, code: payment_provider_code, organization:) }
+      let(:provider_customer) { create(:gocardless_customer, payment_provider:, customer:) }
 
-      it 'calls the gocardless service' do
+      it "calls the gocardless service" do
         create_service.call
 
-        expect(provider_class).to have_received(:new).with(invoice)
-        expect(provider_service).to have_received(:call)
+        expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+        expect(provider_service).to have_received(:call!)
       end
     end
 
-    context 'with adyen payment provider' do
-      let(:provider) { 'adyen' }
-      let(:provider_class) { Invoices::Payments::AdyenService }
+    context "with adyen payment provider" do
+      let(:provider) { "adyen" }
+      let(:provider_class) { PaymentProviders::Adyen::Payments::CreateService }
       let(:payment_provider) { create(:adyen_provider, code: payment_provider_code, organization:) }
+      let(:provider_customer) { create(:adyen_customer, payment_provider:, customer:) }
 
-      it 'calls the adyen service' do
+      it "calls the adyen service" do
         create_service.call
 
-        expect(provider_class).to have_received(:new).with(invoice)
-        expect(provider_service).to have_received(:call)
+        expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+        expect(provider_service).to have_received(:call!)
       end
     end
 
-    context 'when invoice is payment_succeeded' do
+    context "when invoice is payment_succeeded" do
       before { invoice.payment_succeeded! }
 
-      it 'does not creates a payment' do
+      it "does not creates a payment" do
         result = create_service.call
 
         expect(result).to be_success
@@ -73,10 +92,10 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       end
     end
 
-    context 'when invoice is voided' do
+    context "when invoice is voided" do
       before { invoice.voided! }
 
-      it 'does not creates a payment' do
+      it "does not creates a payment" do
         result = create_service.call
 
         expect(result).to be_success
@@ -86,18 +105,18 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       end
     end
 
-    context 'when invoice amount is 0' do
+    context "when invoice amount is 0" do
       let(:invoice) do
         create(
           :invoice,
           organization:,
           customer:,
           total_amount_cents: 0,
-          currency: 'EUR'
+          currency: "EUR"
         )
       end
 
-      it 'does not creates a payment' do
+      it "does not creates a payment" do
         result = create_service.call
 
         expect(result).to be_success
@@ -108,10 +127,10 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       end
     end
 
-    context 'with missing payment provider' do
+    context "with missing payment provider" do
       let(:payment_provider) { nil }
 
-      it 'does not creates a payment' do
+      it "does not creates a payment" do
         result = create_service.call
 
         expect(result).to be_success
@@ -120,29 +139,157 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
         expect(provider_class).not_to have_received(:new)
       end
     end
+
+    context "when customer does not have a provider customer id" do
+      before { provider_customer.update!(provider_customer_id: nil) }
+
+      it "does not creates a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    it_behaves_like "syncs payment" do
+      let(:service_call) { create_service.call }
+    end
+
+    context "when provider service raises a service failure" do
+      let(:result) do
+        BaseService::Result.new.tap do |r|
+          r.error_message = "error"
+          r.error_code = "code"
+        end
+      end
+
+      before do
+        allow(provider_service).to receive(:call!)
+          .and_raise(BaseService::ServiceFailure.new(result, code: "code", error_message: "error"))
+      end
+
+      it "re-reaise the error and delivers an error webhook" do
+        expect { create_service.call }
+          .to raise_error(BaseService::ServiceFailure)
+          .and enqueue_job(SendWebhookJob)
+          .with(
+            "invoice.payment_failure",
+            invoice,
+            provider_customer_id: provider_customer.provider_customer_id,
+            provider_error: {
+              message: "error",
+              error_code: "code"
+            }
+          ).on_queue(:webhook)
+      end
+
+      context "when result has a payment_status" do
+        let(:result) do
+          BaseService::Result.new.tap do |r|
+            r.error_message = "error"
+            r.error_code = "code"
+            r.payment_status = "failed"
+          end
+        end
+
+        it "updates the invoice payment status" do
+          expect { create_service.call }
+            .to raise_error(BaseService::ServiceFailure)
+
+          expect(invoice.reload).to be_payment_failed
+        end
+      end
+    end
+
+    context "when the provider service returns error details" do
+      let(:result) do
+        BaseService::Result.new.tap do |r|
+          r.error_message = "error"
+          r.error_code = "code"
+        end
+      end
+
+      it "delivers an error webhook" do
+        expect { create_service.call }
+          .to enqueue_job(SendWebhookJob)
+          .with(
+            "invoice.payment_failure",
+            invoice,
+            provider_customer_id: provider_customer.provider_customer_id,
+            provider_error: {
+              message: "error",
+              error_code: "code"
+            }
+          ).on_queue(:webhook)
+      end
+
+      context "when invoice is credit? and open?" do
+        before do
+          allow(Invoices::Payments::DeliverErrorWebhookService)
+            .to receive(:call_async).and_call_original
+        end
+
+        it "delivers an error webhook" do
+          wallet_transaction = create(:wallet_transaction)
+          create(:fee, fee_type: :credit, invoice: invoice, invoiceable: wallet_transaction)
+          invoice.update!(status: :open, invoice_type: :credit)
+
+          create_service.call
+
+          expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with(
+              "wallet_transaction.payment_failure",
+              wallet_transaction,
+              provider_customer_id: provider_customer.provider_customer_id,
+              provider_error: {
+                message: "error",
+                error_code: "code"
+              }
+            )
+        end
+      end
+    end
+
+    context "when result only has a payment_status" do
+      let(:result) do
+        BaseService::Result.new.tap do |r|
+          r.payment_status = "failed"
+        end
+      end
+
+      it "updates the invoice payment status" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(invoice.reload).to be_payment_failed
+      end
+    end
   end
 
-  describe '#call_async' do
-    it 'enqueues a job to create a stripe payment' do
+  describe "#call_async" do
+    it "enqueues a job to create a stripe payment" do
       expect { create_service.call_async }
         .to have_enqueued_job(Invoices::Payments::CreateJob)
         .with(invoice:, payment_provider: :stripe)
     end
 
-    context 'with gocardless payment provider' do
-      let(:provider) { 'gocardless' }
+    context "with gocardless payment provider" do
+      let(:provider) { "gocardless" }
 
-      it 'enqueues a job to create a gocardless payment' do
+      it "enqueues a job to create a gocardless payment" do
         expect { create_service.call_async }
           .to have_enqueued_job(Invoices::Payments::CreateJob)
           .with(invoice:, payment_provider: :gocardless)
       end
     end
 
-    context 'with adyen payment provider' do
-      let(:provider) { 'adyen' }
+    context "with adyen payment provider" do
+      let(:provider) { "adyen" }
 
-      it 'enqueues a job to create a gocardless payment' do
+      it "enqueues a job to create a gocardless payment" do
         expect { create_service.call_async }
           .to have_enqueued_job(Invoices::Payments::CreateJob)
           .with(invoice:, payment_provider: :adyen)

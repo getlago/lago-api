@@ -16,60 +16,8 @@ module Invoices
         super
       end
 
-      def call
-        result.invoice = invoice
-        return result unless should_process_payment?
-
-        increment_payment_attempts
-
-        stripe_result = create_payment_intent
-        # NOTE: return if payment was not processed
-        return result unless stripe_result
-
-        payment = Payment.new(
-          payable: invoice,
-          payment_provider_id: stripe_payment_provider.id,
-          payment_provider_customer_id: customer.stripe_customer.id,
-          amount_cents: stripe_result.amount,
-          amount_currency: stripe_result.currency&.upcase,
-          provider_payment_id: stripe_result.id,
-          status: stripe_result.status
-        )
-
-        payment.provider_payment_data = stripe_result.next_action if stripe_result.status == 'requires_action'
-
-        payment.save!
-
-        update_invoice_payment_status(
-          payment_status: invoice_payment_status(payment.status),
-          processing: payment.status == 'processing'
-        )
-
-        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
-
-        handle_requires_action(payment) if payment.status == 'requires_action'
-
-        result.payment = payment
-        result
-      rescue ::Stripe::AuthenticationError, ::Stripe::CardError, ::Stripe::InvalidRequestError, Stripe::PermissionError => e
-        # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
-        #       For now we keep it as pending, the user can still update it manually
-        return result if e.code == 'amount_too_small'
-
-        deliver_error_webhook(e)
-        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
-        result
-      rescue ::Stripe::RateLimitError => e
-        raise Invoices::Payments::RateLimitError, e
-      rescue ::Stripe::APIConnectionError => e
-        raise Invoices::Payments::ConnectionError, e
-      rescue ::Stripe::StripeError => e
-        deliver_error_webhook(e)
-        raise
-      end
-
       def update_payment_status(organization_id:, status:, stripe_payment:)
-        payment = if stripe_payment.metadata[:payment_type] == 'one-time'
+        payment = if stripe_payment.metadata[:payment_type] == "one-time"
           create_payment(stripe_payment)
         else
           Payment.find_by(provider_payment_id: stripe_payment.id)
@@ -90,7 +38,7 @@ module Invoices
 
         update_invoice_payment_status(
           payment_status: invoice_payment_status(status),
-          processing: status == 'processing'
+          processing: status == "processing"
         )
 
         result
@@ -108,13 +56,13 @@ module Invoices
           }
         )
 
-        result.payment_url = res['url']
+        result.payment_url = res["url"]
 
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
         deliver_error_webhook(e)
 
-        result.single_validation_failure!(error_code: 'payment_provider_error')
+        result.single_validation_failure!(error_code: "payment_provider_error")
       end
 
       private
@@ -126,7 +74,7 @@ module Invoices
       def create_payment(stripe_payment, invoice: nil)
         @invoice = invoice || Invoice.find_by(id: stripe_payment.metadata[:lago_invoice_id])
         unless @invoice
-          result.not_found_failure!(resource: 'invoice')
+          result.not_found_failure!(resource: "invoice")
           return
         end
 
@@ -158,79 +106,6 @@ module Invoices
         stripe_payment_provider.secret_key
       end
 
-      def stripe_payment_method
-        payment_method_id = customer.stripe_customer.payment_method_id
-
-        if payment_method_id
-          # NOTE: Check if payment method still exists
-          customer_service = PaymentProviderCustomers::StripeService.new(customer.stripe_customer)
-          customer_service_result = customer_service.check_payment_method(payment_method_id)
-          return customer_service_result.payment_method.id if customer_service_result.success?
-        end
-
-        # NOTE: Retrieve list of existing payment_methods
-        payment_method = Stripe::PaymentMethod.list(
-          {
-            customer: customer.stripe_customer.provider_customer_id
-          },
-          {
-            api_key: stripe_api_key
-          }
-        ).first
-        customer.stripe_customer.payment_method_id = payment_method&.id
-        customer.stripe_customer.save!
-
-        payment_method&.id
-      end
-
-      def update_payment_method_id
-        result = Stripe::Customer.retrieve(
-          customer.stripe_customer.provider_customer_id,
-          {
-            api_key: stripe_api_key
-          }
-        )
-        # TODO: stripe customer should be updated/deleted
-        return if result.deleted?
-
-        if (payment_method_id = result.invoice_settings.default_payment_method || result.default_source)
-          customer.stripe_customer.update!(payment_method_id:)
-        end
-      end
-
-      def create_payment_intent
-        update_payment_method_id
-
-        Stripe::PaymentIntent.create(
-          payment_intent_payload,
-          {
-            api_key: stripe_api_key,
-            idempotency_key: "#{invoice.id}/#{invoice.payment_attempts}"
-          }
-        )
-      end
-
-      def payment_intent_payload
-        {
-          amount: invoice.total_amount_cents,
-          currency: invoice.currency.downcase,
-          customer: customer.stripe_customer.provider_customer_id,
-          payment_method: stripe_payment_method,
-          payment_method_types: customer.stripe_customer.provider_payment_methods,
-          confirm: true,
-          off_session: off_session?,
-          return_url: success_redirect_url,
-          error_on_requires_action: error_on_requires_action?,
-          description:,
-          metadata: {
-            lago_customer_id: customer.id,
-            lago_invoice_id: invoice.id,
-            invoice_issuing_date: invoice.issuing_date.iso8601,
-            invoice_type: invoice.invoice_type
-          }
-        }
-      end
-
       def payment_url_payload
         {
           line_items: [
@@ -245,7 +120,7 @@ module Invoices
               }
             }
           ],
-          mode: 'payment',
+          mode: "payment",
           success_url: success_redirect_url,
           customer: customer.stripe_customer.provider_customer_id,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
@@ -256,7 +131,7 @@ module Invoices
               lago_invoice_id: invoice.id,
               invoice_issuing_date: invoice.issuing_date.iso8601,
               invoice_type: invoice.invoice_type,
-              payment_type: 'one-time'
+              payment_type: "one-time"
             }
           }
         }
@@ -323,20 +198,12 @@ module Invoices
       # to permit 3D secure authentication
       # https://docs.stripe.com/india-recurring-payments
       def off_session?
-        invoice.customer.country != 'IN'
+        invoice.customer.country != "IN"
       end
 
       # NOTE: Same as off_session?
       def error_on_requires_action?
-        invoice.customer.country != 'IN'
-      end
-
-      def handle_requires_action(payment)
-        params = {
-          provider_customer_id: customer.stripe_customer.provider_customer_id
-        }
-
-        SendWebhookJob.perform_later('payment.requires_action', payment, params)
+        invoice.customer.country != "IN"
       end
 
       def stripe_payment_provider
