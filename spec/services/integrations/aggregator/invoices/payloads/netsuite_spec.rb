@@ -252,6 +252,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
         let(:columns) do
           {
             'tranid' => invoice.number,
+            'otherrefnum' => invoice.number,
             'entity' => integration_customer.external_customer_id,
             'taxregoverride' => true,
             'taxdetailsoverride' => true,
@@ -339,6 +340,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           let(:columns) do
             {
               'tranid' => invoice.number,
+              'otherrefnum' => invoice.number,
               'entity' => integration_customer.external_customer_id,
               'taxregoverride' => true,
               'taxdetailsoverride' => true,
@@ -361,6 +363,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           let(:columns) do
             {
               'tranid' => invoice.number,
+              'otherrefnum' => invoice.number,
               'entity' => integration_customer.external_customer_id,
               'taxregoverride' => true,
               'taxdetailsoverride' => true,
@@ -383,6 +386,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       let(:columns) do
         {
           'tranid' => invoice.number,
+          'otherrefnum' => invoice.number,
           'entity' => integration_customer.external_customer_id,
           'taxregoverride' => true,
           'taxdetailsoverride' => true,
