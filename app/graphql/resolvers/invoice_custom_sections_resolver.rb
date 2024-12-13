@@ -19,8 +19,6 @@ module Resolvers
         Arel.sql('CASE WHEN invoice_custom_section_selections.id IS NOT NULL THEN 0 ELSE 1 END'),
         :name
       ).page(page).per(limit)
-    rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'invoice')
     end
   end
 end
