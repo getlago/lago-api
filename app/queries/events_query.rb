@@ -5,9 +5,9 @@ class EventsQuery < BaseQuery
     events = organization.clickhouse_events_store? ? Clickhouse::EventsRaw : Event
     events = events.where(organization_id: organization.id)
     events = paginate(events)
+
     events = events.order(timestamp: :desc) unless organization.clickhouse_events_store?
     events = events.order(ingested_at: :desc) if organization.clickhouse_events_store?
-    events = apply_consistent_ordering(events)
 
     events = with_code(events) if filters.code
     events = with_external_subscription_id(events) if filters.external_subscription_id

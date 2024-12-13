@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "rails_helper"
+require 'rails_helper'
 
 RSpec.describe EventsQuery, type: :query do
-  subject(:result) { described_class.call(organization:, pagination:, filters:) }
+  subject(:events_query) { described_class.new(organization:, pagination:, filters:) }
 
   let(:organization) { create(:organization) }
   let(:pagination) { nil }
@@ -13,74 +13,79 @@ RSpec.describe EventsQuery, type: :query do
 
   before { event }
 
-  it "returns a list of events" do
-    expect(result).to be_success
-    expect(result.events.count).to eq(1)
-    expect(result.events).to eq([event])
-  end
+  describe 'call' do
+    it 'returns a list of events' do
+      result = events_query.call
 
-  context "when events have the same values for the ordering criteria" do
-    let(:event_2) do
-      create(
-        :event,
-        organization:,
-        id: "00000000-0000-0000-0000-000000000000",
-        timestamp: event.timestamp,
-        created_at: event.created_at
-      )
+      aggregate_failures do
+        expect(result).to be_success
+        expect(result.events.count).to eq(1)
+        expect(result.events).to eq([event])
+      end
     end
 
-    it "returns a consistent list" do
-      expect(result).to be_success
-      expect(result.events).to eq([event_2, event])
+    context 'with pagination' do
+      let(:pagination) { {page: 2, limit: 10} }
+
+      it 'applies the pagination' do
+        result = events_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.events.count).to eq(0)
+          expect(result.events.current_page).to eq(2)
+        end
+      end
     end
-  end
 
-  context "with pagination" do
-    let(:pagination) { {page: 2, limit: 10} }
+    context 'with code filter' do
+      let(:event2) { create(:event, organization:) }
+      let(:filters) { {code: event.code} }
 
-    it "applies the pagination" do
-      expect(result).to be_success
-      expect(result.events.count).to eq(0)
-      expect(result.events.current_page).to eq(2)
+      before { event2 }
+
+      it 'applies the filter' do
+        result = events_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.events.count).to eq(1)
+        end
+      end
     end
-  end
 
-  context "with code filter" do
-    let(:event2) { create(:event, organization:) }
-    let(:filters) { {code: event.code} }
+    context 'with external subscription id filter' do
+      let(:event2) { create(:event, organization:) }
+      let(:filters) { {external_subscription_id: event.external_subscription_id} }
 
-    before { event2 }
+      before { event2 }
 
-    it "applies the filter" do
-      expect(result).to be_success
-      expect(result.events.count).to eq(1)
+      it 'applies the filter' do
+        result = events_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.events.count).to eq(1)
+        end
+      end
     end
-  end
 
-  context "with external subscription id filter" do
-    let(:event2) { create(:event, organization:) }
-    let(:filters) { {external_subscription_id: event.external_subscription_id} }
-
-    before { event2 }
-
-    it "applies the filter" do
-      expect(result).to be_success
-      expect(result.events.count).to eq(1)
-    end
-  end
-
-  context "with timestamp from filter" do
-    let(:filters) {
-      {
-        timestamp_from: 2.days.ago.iso8601.to_date.to_s,
-        timestamp_to: Date.tomorrow.iso8601.to_date.to_s
+    context 'with timestamp from filter' do
+      let(:filters) {
+        {
+          timestamp_from: 2.days.ago.iso8601.to_date.to_s,
+          timestamp_to: Date.tomorrow.iso8601.to_date.to_s
+        }
       }
-    }
 
-    it "applies the filter" do
-      expect(result).to be_success
-      expect(result.events.count).to eq(1)
+      it 'applies the filter' do
+        result = events_query.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.events.count).to eq(1)
+        end
+      end
     end
   end
 end
