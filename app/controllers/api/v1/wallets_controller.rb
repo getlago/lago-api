@@ -52,22 +52,28 @@ module Api
       end
 
       def index
-        customer = current_organization.customers.find_by(external_id: params[:external_customer_id])
-        return not_found_error(resource: 'customer') unless customer
-
-        wallets = customer.wallets
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            wallets,
-            ::V1::WalletSerializer,
-            collection_name: 'wallets',
-            meta: pagination_metadata(wallets),
-            includes: %i[recurring_transaction_rules]
-          )
+        result = WalletsQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          },
+          filters: {external_customer_id: params[:external_customer_id]}
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.wallets.includes(:recurring_transaction_rules),
+              ::V1::WalletSerializer,
+              collection_name: "wallets",
+              meta: pagination_metadata(result.wallets),
+              includes: %i[recurring_transaction_rules]
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       private

@@ -3,7 +3,7 @@
 class AppliedCouponsQuery < BaseQuery
   def call
     applied_coupons = paginate(base_scope)
-    applied_coupons = applied_coupons.order(created_at: :desc)
+    applied_coupons = apply_consistent_ordering(applied_coupons)
 
     applied_coupons = with_external_customer(applied_coupons) if filters.external_customer_id
     applied_coupons = with_status(applied_coupons) if valid_status?

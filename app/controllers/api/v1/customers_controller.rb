@@ -36,19 +36,27 @@ module Api
       end
 
       def index
-        customers = current_organization.customers
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            customers.includes(:taxes, :integration_customers),
-            ::V1::CustomerSerializer,
-            collection_name: 'customers',
-            meta: pagination_metadata(customers),
-            includes: %i[taxes integration_customers]
-          )
+        result = CustomersQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          }
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.customers.includes(:taxes, :integration_customers),
+              ::V1::CustomerSerializer,
+              collection_name: "customers",
+              meta: pagination_metadata(result.customers),
+              includes: %i[taxes integration_customers]
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       def show

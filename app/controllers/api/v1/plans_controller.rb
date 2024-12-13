@@ -47,20 +47,33 @@ module Api
       end
 
       def index
-        plans = current_organization.plans.parents
-          .order(created_at: :desc)
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            plans.includes(:usage_thresholds, :taxes, :minimum_commitment, charges: {filters: {values: :billable_metric_filter}}),
-            ::V1::PlanSerializer,
-            collection_name: 'plans',
-            meta: pagination_metadata(plans),
-            includes: %i[charges usage_thresholds taxes minimum_commitment]
-          )
+        result = PlansQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          },
+          filters: {include_pending_deletion: true}
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.plans.includes(
+                :usage_thresholds,
+                :taxes,
+                :minimum_commitment,
+                charges: {filters: {values: :billable_metric_filter}}
+              ),
+              ::V1::PlanSerializer,
+              collection_name: "plans",
+              meta: pagination_metadata(result.plans),
+              includes: %i[charges usage_thresholds taxes minimum_commitment]
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       private

@@ -4,7 +4,7 @@ class AddOnsQuery < BaseQuery
   def call
     add_ons = base_scope.result
     add_ons = paginate(add_ons)
-    add_ons = add_ons.order(created_at: :desc)
+    add_ons = apply_consistent_ordering(add_ons)
 
     result.add_ons = add_ons
     result

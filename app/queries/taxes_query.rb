@@ -7,6 +7,7 @@ class TaxesQuery < BaseQuery
     taxes = base_scope.result
     taxes = paginate(taxes)
     taxes = taxes.order(order)
+    taxes = apply_consistent_ordering(taxes)
 
     taxes = with_auto_generated(taxes) if filters.auto_generated.present?
     taxes = with_applied_to_organization(taxes) unless filters.applied_to_organization.nil?

@@ -7,14 +7,16 @@ RSpec.describe TaxesQuery, type: :query do
     described_class.call(organization:, pagination:, search_term:, filters:, order:)
   end
 
+  let(:returned_ids) { result.taxes.pluck(:id) }
+
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { nil }
   let(:order) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:tax_first) { create(:tax, organization:, name: 'defgh', code: '11') }
-  let(:tax_second) { create(:tax, organization:, name: 'abcde', code: '22') }
+  let(:tax_first) { create(:tax, organization:, name: 'defgh', code: '11', rate: 10) }
+  let(:tax_second) { create(:tax, organization:, name: 'abcde', code: '22', rate: 5) }
 
   let(:tax_third) do
     create(
@@ -22,7 +24,8 @@ RSpec.describe TaxesQuery, type: :query do
       organization:,
       name: 'presuv',
       code: '33',
-      applied_to_organization: false
+      applied_to_organization: false,
+      rate: 20
     )
   end
 
@@ -48,19 +51,38 @@ RSpec.describe TaxesQuery, type: :query do
     expect(result.taxes).to eq([tax_second, auto_generated_tax, tax_first, tax_third])
   end
 
+  context "when taxes have the same values for the ordering criteria" do
+    let(:tax_second) do
+      create(
+        :tax,
+        organization:,
+        id: "00000000-0000-0000-0000-000000000000",
+        name: tax_first.name,
+        code: '22',
+        created_at: tax_first.created_at
+      )
+    end
+
+    it "returns a consistent list" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(4)
+      expect(returned_ids).to include(tax_first.id)
+      expect(returned_ids).to include(tax_second.id)
+      expect(returned_ids.index(tax_first.id)).to be > returned_ids.index(tax_second.id)
+    end
+  end
+
   context 'with pagination' do
     let(:pagination) { {page: 2, limit: 3} }
 
     it 'applies the pagination' do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.taxes.count).to eq(1)
-        expect(result.taxes.current_page).to eq(2)
-        expect(result.taxes.prev_page).to eq(1)
-        expect(result.taxes.next_page).to be_nil
-        expect(result.taxes.total_pages).to eq(2)
-        expect(result.taxes.total_count).to eq(4)
-      end
+      expect(result).to be_success
+      expect(result.taxes.count).to eq(1)
+      expect(result.taxes.current_page).to eq(2)
+      expect(result.taxes.prev_page).to eq(1)
+      expect(result.taxes.next_page).to be_nil
+      expect(result.taxes.total_pages).to eq(2)
+      expect(result.taxes.total_count).to eq(4)
     end
   end
 
@@ -92,7 +114,7 @@ RSpec.describe TaxesQuery, type: :query do
     let(:order) { 'rate' }
 
     it 'returns the taxes ordered by rate' do
-      expect(result.taxes).to eq([auto_generated_tax, tax_first, tax_second, tax_third])
+      expect(result.taxes).to eq([auto_generated_tax, tax_second, tax_first, tax_third])
     end
   end
 end

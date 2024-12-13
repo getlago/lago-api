@@ -31,18 +31,26 @@ module Api
       end
 
       def index
-        webhook_endpoints = current_organization.webhook_endpoints
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            webhook_endpoints,
-            ::V1::WebhookEndpointSerializer,
-            collection_name: 'webhook_endpoints',
-            meta: pagination_metadata(webhook_endpoints)
-          )
+        result = WebhookEndpointsQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          }
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.webhook_endpoints,
+              ::V1::WebhookEndpointSerializer,
+              collection_name: "webhook_endpoints",
+              meta: pagination_metadata(result.webhook_endpoints)
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       def show

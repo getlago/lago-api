@@ -649,6 +649,25 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(json[:plans].first[:usage_thresholds].count).to eq(1)
     end
 
+    context "when pending for deletion plan exists" do
+      subject { get_with_token(organization, "/api/v1/plans") }
+
+      let(:plan_pending_for_deletion) do
+        create(:plan, organization:, pending_deletion: true)
+      end
+
+      before { plan_pending_for_deletion }
+
+      it "includes the plan in the response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:plans].count).to eq(2)
+        expect(json[:plans].map { |p| p[:lago_id] }).to include(plan_pending_for_deletion.id)
+      end
+    end
+
     context 'with pagination' do
       before { create(:plan, organization:) }
 

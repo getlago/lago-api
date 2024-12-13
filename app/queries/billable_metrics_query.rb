@@ -6,7 +6,7 @@ class BillableMetricsQuery < BaseQuery
 
     metrics = base_scope.result
     metrics = paginate(metrics)
-    metrics = metrics.order(created_at: :desc)
+    metrics = apply_consistent_ordering(metrics)
 
     metrics = with_recurring(metrics) unless filters.recurring.nil?
     metrics = with_aggregation_type(metrics) if filters.aggregation_types.present?

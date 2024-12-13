@@ -3,6 +3,7 @@
 class BaseQuery < BaseService
   # nil values force Kaminari to apply its default values for page and limit.
   DEFAULT_PAGINATION_PARAMS = {page: nil, limit: nil}
+  DEFAULT_ORDER = {created_at: :desc}
 
   Pagination = Struct.new(:page, :limit, keyword_init: true)
 
@@ -56,5 +57,10 @@ class BaseQuery < BaseService
   rescue Date::Error
     result.single_validation_failure!(field: field_name.to_sym, error_code: 'invalid_date')
       .raise_if_error!
+  end
+
+  # Apply consistent ordering across query objects
+  def apply_consistent_ordering(scope, default_order: DEFAULT_ORDER)
+    scope.order(default_order).order(id: :asc)
   end
 end

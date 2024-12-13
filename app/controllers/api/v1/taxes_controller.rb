@@ -43,19 +43,26 @@ module Api
       end
 
       def index
-        taxes = current_organization.taxes
-          .order(created_at: :desc)
-          .page(params[:page])
-          .per(params[:per_page] || PER_PAGE)
-
-        render(
-          json: ::CollectionSerializer.new(
-            taxes,
-            ::V1::TaxSerializer,
-            collection_name: 'taxes',
-            meta: pagination_metadata(taxes)
-          )
+        result = TaxesQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          }
         )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.taxes,
+              ::V1::TaxSerializer,
+              collection_name: "taxes",
+              meta: pagination_metadata(result.taxes)
+            )
+          )
+        else
+          render_error_response(result)
+        end
       end
 
       private

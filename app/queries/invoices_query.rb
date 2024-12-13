@@ -4,7 +4,10 @@ class InvoicesQuery < BaseQuery
   def call
     invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
     invoices = paginate(invoices)
-    invoices = invoices.order(issuing_date: :desc, created_at: :desc)
+    invoices = apply_consistent_ordering(
+      invoices,
+      default_order: {issuing_date: :desc, created_at: :desc}
+    )
 
     invoices = with_currency(invoices) if filters.currency
     invoices = with_customer_external_id(invoices) if filters.customer_external_id
