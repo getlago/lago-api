@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-module InvoiceCustomSections
-  class SelectService < BaseService
-    def initialize(section:, organization:)
+module Organizations
+  class SelectInvoiceCustomSectionService < BaseService
+    def initialize(organization:, section:)
       @section = section
       @organization = organization
       super
     end
 
     def call
-      select_for_organization if organization
+      select_for_organization
       result
     end
 

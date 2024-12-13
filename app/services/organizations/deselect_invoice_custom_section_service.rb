@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-module InvoiceCustomSections
-  module Deselect
-    class ForOrganizationService < BaseService
+module Organizations
+    class DeselectInvoiceCustomSectionService < BaseService
       def initialize(section:)
         @section = section
         @organization = section.organization
