@@ -15,8 +15,12 @@ module Organizations
         if organization.net_payment_term != net_payment_term
           organization.net_payment_term = net_payment_term
 
-          organization.invoices.draft.find_each do |invoice|
-            invoice.update!(payment_due_date: invoice_payment_due_date(invoice))
+          # update only invoices, where the customer does not have a setting
+          organization.invoices.includes(:customer).draft.find_each do |invoice|
+            # the customer has a setting of their own, no update needed.
+            next unless invoice.customer.net_payment_term.nil?
+
+            invoice.update!(net_payment_term: net_payment_term, payment_due_date: invoice_payment_due_date(invoice))
           end
         end
 

@@ -143,6 +143,39 @@ RSpec.describe Organizations::UpdateService do
           end
         end
       end
+
+      context 'when updating net_payment_term' do
+        let(:customer) { create(:customer, organization:) }
+
+        let(:draft_invoice) do
+          create(:invoice, status: :draft, customer:, created_at: DateTime.parse('19 Jun 2022'), organization:)
+        end
+
+        let(:params) do
+          {
+            net_payment_term: 2
+          }
+        end
+
+        before do
+          draft_invoice
+          allow(Organizations::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
+        end
+
+        it 'finalizes corresponding draft invoices' do
+          current_date = DateTime.parse('22 Jun 2022')
+
+          travel_to(current_date) do
+            result = update_service.call
+            expect(result).to be_success
+
+            aggregate_failures do
+              expect(result.organization.net_payment_term).to eq(2)
+              expect(Organizations::UpdateInvoicePaymentDueDateService).to have_received(:call).with(organization:, net_payment_term: 2)
+            end
+          end
+        end
+      end
     end
 
     context 'with base64 logo' do
