@@ -162,7 +162,7 @@ RSpec.describe Organizations::UpdateService do
           allow(Organizations::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
         end
 
-        it 'finalizes corresponding draft invoices' do
+        it 'updates the corresponding draft invoices' do
           current_date = DateTime.parse('22 Jun 2022')
 
           travel_to(current_date) do

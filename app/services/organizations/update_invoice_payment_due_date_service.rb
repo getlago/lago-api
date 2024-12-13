@@ -20,7 +20,7 @@ module Organizations
             # the customer has a setting of their own, no update needed.
             next unless invoice.customer.net_payment_term.nil?
 
-            invoice.update!(net_payment_term: net_payment_term, payment_due_date: invoice_payment_due_date(invoice))
+            invoice.update!(net_payment_term:, payment_due_date: invoice_payment_due_date(invoice))
           end
         end
 
