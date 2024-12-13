@@ -31,7 +31,7 @@ RSpec.describe Mutations::InvoiceCustomSections::Update, type: :graphql do
 
     before { invoice_custom_section }
 
-    it 'creates a invoice_custom_section' do
+    it 'updates a invoice_custom_section' do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
