@@ -213,11 +213,7 @@ module Customers
       end
 
       if args.key?(:selected_invoice_custom_section_ids)
-        if customer.organization.selected_invoice_custom_sections.ids == args[:selected_invoice_custom_section_ids]
-          customer.selected_invoice_custom_sections = []
-        else
-          SelectInvoiceCustomSectionsService.call(customer:, section_ids: args[:selected_invoice_custom_section_ids])
-        end
+        UpdateInvoiceCustomSectionsService.call(customer:, section_ids: args[:selected_invoice_custom_section_ids])
       end
     end
   end
