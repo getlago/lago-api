@@ -54,7 +54,7 @@ module DataExports
 
         serialized_subscription = {
           external_id: fee.subscription&.external_id,
-          plan_code: fee.subscription&.plan&.code,
+          plan_code: fee.subscription&.plan&.code
         }
 
         [
