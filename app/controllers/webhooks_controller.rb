@@ -2,10 +2,10 @@
 
 class WebhooksController < ApplicationController
   def stripe
-    result = PaymentProviders::StripeService.new.handle_incoming_webhook(
+    result = PaymentProviders::Stripe::HandleIncomingWebhookService.call(
       organization_id: params[:organization_id],
       code: params[:code].presence,
-      params: request.body.read,
+      body: request.body.read,
       signature: request.headers['HTTP_STRIPE_SIGNATURE']
     )
 
