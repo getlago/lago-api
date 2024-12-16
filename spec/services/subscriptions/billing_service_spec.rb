@@ -414,6 +414,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
 
     context 'when downgraded' do
       let(:customer) { create(:customer, :with_hubspot_integration) }
+      let(:current_date) { DateTime.parse('20 Feb 2022') }
       let(:subscription) do
         create(
           :subscription,
@@ -436,8 +437,6 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       end
 
       before { subscription }
-
-      let(:current_date) { DateTime.parse('20 Feb 2022') }
 
       it 'enqueues a job on billing day' do
         travel_to(current_date) do
