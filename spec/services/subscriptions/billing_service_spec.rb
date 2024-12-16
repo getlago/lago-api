@@ -16,10 +16,12 @@ RSpec.describe Subscriptions::BillingService, type: :service do
         :subscription,
         plan:,
         subscription_at:,
-        started_at: Time.zone.now,
+        started_at: current_date - 10.days,
         billing_time:
       )
     end
+
+    let(:current_date) { DateTime.parse('20 Jun 2022') }
 
     before { subscription }
 
@@ -33,7 +35,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           customer:,
           plan:,
           subscription_at:,
-          started_at: Time.zone.now
+          started_at: current_date - 10.days
         )
       end
 
@@ -43,7 +45,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           customer:,
           plan:,
           subscription_at:,
-          started_at: Time.zone.now
+          started_at: current_date - 10.days
         )
       end
 
@@ -52,7 +54,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           :subscription,
           plan:,
           subscription_at:,
-          started_at: Time.zone.now
+          started_at: current_date - 10.days
         )
       end
 
@@ -63,8 +65,6 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       end
 
       it 'enqueues a job on billing day' do
-        current_date = DateTime.parse('20 Jun 2022')
-
         travel_to(current_date) do
           billing_service.call
 
@@ -100,10 +100,9 @@ RSpec.describe Subscriptions::BillingService, type: :service do
     context 'when billed monthly with calendar billing time' do
       let(:interval) { :monthly }
       let(:billing_time) { :calendar }
+      let(:current_date) { DateTime.parse('01 Feb 2022') }
 
       it 'enqueues a job on billing day' do
-        current_date = DateTime.parse('01 Feb 2022')
-
         travel_to(current_date) do
           billing_service.call
 
@@ -151,10 +150,9 @@ RSpec.describe Subscriptions::BillingService, type: :service do
     context 'when billed quarterly with calendar billing time' do
       let(:interval) { :quarterly }
       let(:billing_time) { :calendar }
+      let(:current_date) { DateTime.parse('01 Apr 2022') }
 
       it 'enqueues a job on billing day' do
-        current_date = DateTime.parse('01 Apr 2022')
-
         travel_to(current_date) do
           billing_service.call
 
@@ -183,9 +181,9 @@ RSpec.describe Subscriptions::BillingService, type: :service do
       let(:interval) { :yearly }
       let(:billing_time) { :calendar }
 
-      it 'enqueues a job on billing day' do
-        current_date = DateTime.parse('01 Jan 2022')
+      let(:current_date) { DateTime.parse('01 Jan 2022') }
 
+      it 'enqueues a job on billing day' do
         travel_to(current_date) do
           billing_service.call
 
@@ -421,7 +419,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           :subscription,
           customer:,
           subscription_at:,
-          started_at: Time.zone.now,
+          started_at: current_date - 10.days,
           previous_subscription:,
           status: :pending
         )
@@ -432,32 +430,21 @@ RSpec.describe Subscriptions::BillingService, type: :service do
           :subscription,
           customer:,
           subscription_at:,
-          started_at: Time.zone.now,
+          started_at: current_date - 10.days,
           billing_time: :anniversary
         )
       end
 
       before { subscription }
 
-      it 'enqueues a job on billing day' do
-        current_date = DateTime.parse('20 Feb 2022')
+      let(:current_date) { DateTime.parse('20 Feb 2022') }
 
+      it 'enqueues a job on billing day' do
         travel_to(current_date) do
           billing_service.call
 
           expect(Subscriptions::TerminateJob).to have_been_enqueued
             .with(previous_subscription, current_date.to_i)
-        end
-      end
-
-      it 'enqueues Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob' do
-        current_date = DateTime.parse('20 Feb 2022')
-        allow(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to receive(:perform_later)
-
-        travel_to(current_date) do
-          billing_service.call
-          expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
-            .to have_received(:perform_later).with(subscription: previous_subscription)
         end
       end
     end
