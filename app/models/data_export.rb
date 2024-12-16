@@ -17,6 +17,7 @@ class DataExport < ApplicationRecord
   enum :status, STATUSES, validate: true
 
   validates :resource_type, presence: true
+  validates :file, attached: true, if: :completed?
 
   def processing!
     update!(status: 'processing', started_at: Time.zone.now)

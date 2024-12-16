@@ -24,6 +24,26 @@ RSpec.describe DataExport, type: :model do
       .validating
   end
 
+  describe 'validations' do
+    describe 'of file being attached' do
+      subject { data_export }
+
+      let(:data_export) { build(:data_export, status:) }
+
+      context 'when status is completed' do
+        let(:status) { 'completed' }
+
+        it { is_expected.to validate_attached_of(:file) }
+      end
+
+      context 'when status is non-completed' do
+        let(:status) { described_class::STATUSES.excluding('completed').sample }
+
+        it { is_expected.not_to validate_attached_of(:file) }
+      end
+    end
+  end
+
   describe '#processing!' do
     subject(:processing!) { data_export.processing! }
 
@@ -41,7 +61,7 @@ RSpec.describe DataExport, type: :model do
   describe '#completed!' do
     subject(:completed!) { data_export.completed! }
 
-    let(:data_export) { create :data_export }
+    let(:data_export) { create :data_export, :with_file }
 
     it 'updates status and started_at timestamp' do
       freeze_time do

@@ -8,6 +8,7 @@ ruby "3.3.6"
 # Core
 gem "aasm"
 gem "activejob-uniqueness", require: "active_job/uniqueness/sidekiq_patch"
+gem "active_storage_validations"
 gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
