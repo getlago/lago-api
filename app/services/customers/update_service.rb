@@ -47,7 +47,6 @@ module Customers
         customer.logo_url = args[:logo_url] if args.key?(:logo_url)
         customer.legal_name = args[:legal_name] if args.key?(:legal_name)
         customer.legal_number = args[:legal_number] if args.key?(:legal_number)
-        customer.net_payment_term = args[:net_payment_term] if args.key?(:net_payment_term)
         customer.external_salesforce_id = args[:external_salesforce_id] if args.key?(:external_salesforce_id)
         customer.shipping_address_line1 = shipping_address[:address_line1] if shipping_address.key?(:address_line1)
         customer.shipping_address_line2 = shipping_address[:address_line2] if shipping_address.key?(:address_line2)

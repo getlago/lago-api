@@ -11,9 +11,16 @@ module Organizations
     def call
       ActiveRecord::Base.transaction do
         # NOTE: Update payment_due_date if net_payment_term changed
-        organization.invoices.draft.each do |invoice|
-          if organization.net_payment_term != net_payment_term
-            invoice.update!(payment_due_date: invoice_payment_due_date(invoice))
+
+        if organization.net_payment_term != net_payment_term
+          organization.net_payment_term = net_payment_term
+
+          # update only invoices, where the customer does not have a setting
+          organization.invoices.includes(:customer).draft.find_each do |invoice|
+            # the customer has a setting of their own, no update needed.
+            next unless invoice.customer.net_payment_term.nil?
+
+            invoice.update!(net_payment_term:, payment_due_date: invoice_payment_due_date(invoice))
           end
         end
 

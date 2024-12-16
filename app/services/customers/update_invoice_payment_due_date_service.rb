@@ -10,14 +10,24 @@ module Customers
 
     def call
       ActiveRecord::Base.transaction do
-        # NOTE: Update payment_due_date if net_payment_term changed
-        customer.invoices.draft.each do |invoice|
-          invoice.update!(net_payment_term:, payment_due_date: invoice_payment_due_date(invoice))
-        end
+        if net_payment_term != customer.net_payment_term
 
-        result.customer = customer
-        result
+          # note: we should compare with the applicable_net_payment_term
+          should_update_draft_invoices = net_payment_term != customer.applicable_net_payment_term
+
+          # But we always store the value!
+          customer.net_payment_term = net_payment_term
+
+          # NOTE: Update payment_due_date if applicable_net_payment_term changed
+          if should_update_draft_invoices
+            customer.invoices.draft.find_each do |invoice|
+              invoice.update!(net_payment_term: customer.applicable_net_payment_term, payment_due_date: invoice_payment_due_date(invoice))
+            end
+          end
+        end
       end
+      result.customer = customer
+      result
     end
 
     private
@@ -25,7 +35,7 @@ module Customers
     attr_reader :customer, :net_payment_term
 
     def invoice_payment_due_date(invoice)
-      invoice.issuing_date + (net_payment_term || customer.applicable_net_payment_term).days
+      invoice.issuing_date + customer.applicable_net_payment_term.days
     end
   end
 end
