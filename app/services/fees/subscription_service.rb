@@ -95,7 +95,7 @@ module Fees
     end
 
     def already_billed?
-      existing_fee = invoice.fees.subscription_kind.find_by(subscription_id: subscription.id)
+      existing_fee = invoice.fees.subscription.find_by(subscription_id: subscription.id)
       return false unless existing_fee
 
       result.fee = existing_fee
@@ -138,7 +138,7 @@ module Fees
       # However, we should not bill full amount if subscription is downgraded since in that case, first invoice
       # should be prorated (this part is covered with first_subscription_amount method).
       return true if plan.pay_in_advance? && subscription.anniversary? && !subscription.previous_subscription_id
-      return true if subscription.fees.subscription_kind.where('created_at < ?', invoice.created_at).exists?
+      return true if subscription.fees.subscription.where('created_at < ?', invoice.created_at).exists?
       return true if subscription.started_in_past? && plan.pay_in_advance?
 
       if subscription.started_in_past? &&

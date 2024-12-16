@@ -152,11 +152,11 @@ class Invoice < ApplicationRecord
   end
 
   def charge_amount_cents
-    fees.charge_kind.sum(:amount_cents)
+    fees.charge.sum(:amount_cents)
   end
 
   def subscription_amount_cents
-    fees.subscription_kind.sum(:amount_cents)
+    fees.subscription.sum(:amount_cents)
   end
 
   def invoice_subscription(subscription_id)
@@ -175,7 +175,7 @@ class Invoice < ApplicationRecord
 
   def existing_fees_in_interval?(subscription_id:, charge_in_advance: false)
     subscription_fees(subscription_id)
-      .charge_kind
+      .charge
       .positive_units
       .where(true_up_parent_fee: nil)
       .joins(:charge)

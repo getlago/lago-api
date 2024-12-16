@@ -20,7 +20,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
       it 'creates a commitment fee' do
         expect do
           service_call
-        end.not_to change(Fee.commitment_kind, :count)
+        end.not_to change(Fee.commitment, :count)
       end
     end
 
@@ -28,13 +28,13 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
       it 'does not create a commitment fee' do
         expect do
           service_call
-        end.not_to change(Fee.commitment_kind, :count)
+        end.not_to change(Fee.commitment, :count)
       end
     end
   end
 
   context 'when plan has a minimum commitment' do
-    let(:commitment_fee) { Fee.commitment_kind.first }
+    let(:commitment_fee) { Fee.commitment.first }
 
     before { create(:commitment, :minimum_commitment, plan:) }
 
@@ -43,19 +43,19 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
         it 'creates a commitment fee' do
           expect do
             service_call
-          end.to change(Fee.commitment_kind, :count).by(1)
+          end.to change(Fee.commitment, :count).by(1)
         end
 
         it 'saves taxes amount cents' do
           service_call
 
-          expect(Fee.commitment_kind.first.taxes_amount_cents).to eq(0)
+          expect(Fee.commitment.first.taxes_amount_cents).to eq(0)
         end
 
         it 'saves precise amount cents' do
           service_call
 
-          expect(Fee.commitment_kind.first.precise_amount_cents).to eq(1000.0)
+          expect(Fee.commitment.first.precise_amount_cents).to eq(1000.0)
         end
       end
 
@@ -70,7 +70,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
         it 'creates a commitment fee' do
           expect do
             service_call
-          end.to change(Fee.commitment_kind, :count).by(1)
+          end.to change(Fee.commitment, :count).by(1)
         end
       end
     end
@@ -81,7 +81,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
       it 'does not create a commitment fee' do
         expect do
           service_call
-        end.not_to change(Fee.commitment_kind, :count)
+        end.not_to change(Fee.commitment, :count)
       end
     end
 
@@ -91,7 +91,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
       it 'does not create a commitment fee' do
         expect do
           service_call
-        end.to change(Fee.commitment_kind, :count).by(1)
+        end.to change(Fee.commitment, :count).by(1)
       end
     end
   end

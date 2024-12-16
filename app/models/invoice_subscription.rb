@@ -71,7 +71,7 @@ class InvoiceSubscription < ApplicationRecord
   end
 
   def charge_amount_cents
-    fees.charge_kind.sum(:amount_cents)
+    fees.charge.sum(:amount_cents)
   end
 
   def subscription_amount_cents
@@ -79,11 +79,11 @@ class InvoiceSubscription < ApplicationRecord
   end
 
   def subscription_fee
-    fees.subscription_kind.first
+    fees.subscription.first
   end
 
   def commitment_fee
-    fees.commitment_kind.first
+    fees.commitment.first
   end
 
   def total_amount_cents

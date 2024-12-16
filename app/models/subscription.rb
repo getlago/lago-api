@@ -120,7 +120,7 @@ class Subscription < ApplicationRecord
   end
 
   def already_billed?
-    fees.subscription_kind.any?
+    fees.subscription.any?
   end
 
   def starting_in_the_future?

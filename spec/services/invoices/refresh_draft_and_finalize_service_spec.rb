@@ -71,8 +71,8 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
 
       aggregate_failures do
         expect(result).to be_success
-        expect(result.invoice.fees.charge_kind.count).to eq(1)
-        expect(result.invoice.fees.subscription_kind.count).to eq(1)
+        expect(result.invoice.fees.charge.count).to eq(1)
+        expect(result.invoice.fees.subscription.count).to eq(1)
       end
     end
 
@@ -156,8 +156,8 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.fees.charge_kind.count).to eq(1)
-          expect(result.invoice.fees.subscription_kind.count).to eq(1)
+          expect(result.invoice.fees.charge.count).to eq(1)
+          expect(result.invoice.fees.subscription.count).to eq(1)
         end
       end
     end
@@ -294,8 +294,8 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         end
 
         it 'updates fees despite error result' do
-          expect { finalize_service.call }.to change(invoice.fees.charge_kind, :count).from(0).to(1)
-            .and change(invoice.fees.subscription_kind, :count).from(0).to(1)
+          expect { finalize_service.call }.to change(invoice.fees.charge, :count).from(0).to(1)
+            .and change(invoice.fees.subscription, :count).from(0).to(1)
         end
 
         it 'does not send any updates' do

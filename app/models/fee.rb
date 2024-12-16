@@ -50,10 +50,6 @@ class Fee < ApplicationRecord
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
 
-  scope :subscription_kind, -> { where(fee_type: :subscription) }
-  scope :charge_kind, -> { where(fee_type: :charge) }
-  scope :commitment_kind, -> { where(fee_type: :commitment) }
-
   scope :positive_units, -> { where('units > ?', 0) }
 
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions

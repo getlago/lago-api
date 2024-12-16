@@ -607,7 +607,7 @@ describe 'Charge Models - Prorated Graduated Scenarios', :scenarios, type: :requ
               .and change { subscription.invoices.count }.from(1).to(2)
 
             invoice = subscription.invoices.order(created_at: :desc).first
-            expect(invoice.fees.charge_kind.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
 
             # 30226 (17 / 31 * 75 units) + 2.58 (2 / 31 * 20 units - prorated event in termination period)
             expect(invoice.total_amount_cents).to eq(27_323)

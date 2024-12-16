@@ -226,7 +226,7 @@ module Invoices
       # NOTE: When plan is pay in advance we generate an invoice upon subscription creation
       # We want to prevent creating subscription fee if subscription creation already happened on billing day
       fee_exists = subscription.fees
-        .subscription_kind
+        .subscription
         .where(created_at: issuing_date.beginning_of_day..issuing_date.end_of_day)
         .where.not(invoice_id: invoice.id)
         .any?
