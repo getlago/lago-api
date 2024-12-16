@@ -724,6 +724,19 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_144027) do
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
   end
 
+  create_table "inbound_webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "source", null: false
+    t.string "event_type", null: false
+    t.jsonb "payload", null: false
+    t.string "status", default: "pending", null: false
+    t.uuid "organization_id", null: false
+    t.string "code"
+    t.string "signature"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_inbound_webhooks_on_organization_id"
+  end
+
   create_table "integration_collection_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "integration_id", null: false
     t.integer "mapping_type", null: false
@@ -1415,6 +1428,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_144027) do
   add_foreign_key "group_properties", "groups", on_delete: :cascade
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
   add_foreign_key "groups", "groups", column: "parent_group_id"
+  add_foreign_key "inbound_webhooks", "organizations"
   add_foreign_key "integration_collection_mappings", "integrations"
   add_foreign_key "integration_customers", "customers"
   add_foreign_key "integration_customers", "integrations"
