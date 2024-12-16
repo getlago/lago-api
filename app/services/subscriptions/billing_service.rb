@@ -78,6 +78,8 @@ module Subscriptions
 
           -- Do not bill subscriptions that have started _after_ :today (excludes subscriptions starting today! and also importantly invoices that might have started after this service is run)
           AND DATE(subscriptions.started_at#{at_time_zone}) < DATE(:today#{at_time_zone})
+          -- Do not bill subscriptions that were not created yet
+          and DATE(subscriptions.created_at) <= Date(:today)
           AND (
             subscriptions.ending_at IS NULL OR
             DATE(subscriptions.ending_at#{at_time_zone}) != DATE(:today#{at_time_zone})
@@ -95,9 +97,7 @@ module Subscriptions
           INNER JOIN plans ON plans.id = subscriptions.plan_id
           INNER JOIN customers ON customers.id = subscriptions.customer_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
-        WHERE subscriptions.status IN (#{Subscription.statuses[:active]}, #{Subscription.statuses[:terminated]})
-          -- Because this job might be run for the past, we need to "revert" the past and if the subscription was not yet terminated, it should be billed.
-          AND (subscriptions.terminated_at is NULL OR subscriptions.terminated_at >= :today#{at_time_zone})
+        WHERE subscriptions.status = #{Subscription.statuses[:active]}
           AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
           AND plans.interval = #{Plan.intervals[interval]}
           AND #{conditions.join(" AND ")}
