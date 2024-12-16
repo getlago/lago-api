@@ -72,7 +72,7 @@ class Invoice < ApplicationRecord
   enum invoice_type: INVOICE_TYPES
   enum payment_status: PAYMENT_STATUS, _prefix: :payment
   enum status: STATUS
-  enum tax_status: TAX_STATUSES,  _prefix: :tax
+  enum tax_status: TAX_STATUSES, _prefix: :tax
 
   aasm column: 'status', timestamps: true do
     state :generating
@@ -471,6 +471,7 @@ end
 #  status                                  :integer          default("finalized"), not null
 #  sub_total_excluding_taxes_amount_cents  :bigint           default(0), not null
 #  sub_total_including_taxes_amount_cents  :bigint           default(0), not null
+#  tax_status                              :integer          default("succeeded"), not null
 #  taxes_amount_cents                      :bigint           default(0), not null
 #  taxes_rate                              :float            default(0.0), not null
 #  timezone                                :string           default("UTC"), not null
