@@ -10,11 +10,7 @@ module PaymentRequests
       retry_on Faraday::ConnectionFailed, wait: :polynomially_longer, attempts: 6
 
       def perform(payable)
-        result = PaymentRequests::Payments::AdyenService.new(payable).create
-
-        PaymentRequestMailer.with(payment_request: payable).requested.deliver_later if result.payable&.payment_failed?
-
-        result.raise_if_error!
+        PaymentRequests::Payments::CreateService.call!(payable:, payment_provider: 'adyen')
       end
     end
   end
