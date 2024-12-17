@@ -66,6 +66,17 @@ class BaseService
     end
   end
 
+  class UnknownTaxFailure < FailedResult
+    attr_reader :code, :error_message
+
+    def initialize(result, code:, error_message:)
+      @code = code
+      @error_message = error_message
+
+      super(result, "#{code}: #{error_message}")
+    end
+  end
+
   class ForbiddenFailure < FailedResult
     attr_reader :code
 
@@ -125,6 +136,10 @@ class BaseService
 
     def service_failure!(code:, message:)
       fail_with_error!(ServiceFailure.new(self, code:, error_message: message))
+    end
+
+    def unknown_tax_failure!(code:, message:)
+      fail_with_error!(UnknownTaxFailure.new(self, code:, error_message: message))
     end
 
     def forbidden_failure!(code: "feature_unavailable")
