@@ -51,7 +51,7 @@ module Invoices
           refresh: true
         ).raise_if_error!
 
-        # TODO: instead of invoice.reload, do the propper request to the DB with includes to have preloaded relationships:
+        # TODO: instead of invoice.reload, do the full request to the DB with includes to have preloaded relationships:
         # invoice = Invoice.find(invoice.id).includes(invoice_subscriptions: :subscription)
         calculate_result = Invoices::CalculateFeesService.call(
           invoice: invoice.reload,
