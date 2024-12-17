@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
+ActiveRecord::Schema[7.1].define(version: 2024_12_13_144427) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -511,6 +511,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_11_28_132010) do
     t.datetime "updated_at", null: false
     t.datetime "refreshed_at", null: false
     t.jsonb "usage_diff", default: "{}", null: false
+    t.string "timezone", default: "UTC", null: false
     t.index ["customer_id"], name: "index_daily_usages_on_customer_id"
     t.index ["organization_id", "external_subscription_id"], name: "idx_on_organization_id_external_subscription_id_df3a30d96d"
     t.index ["organization_id"], name: "index_daily_usages_on_organization_id"

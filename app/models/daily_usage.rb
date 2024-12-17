@@ -21,6 +21,7 @@ end
 #  id                       :uuid             not null, primary key
 #  from_datetime            :datetime         not null
 #  refreshed_at             :datetime         not null
+#  timezone                 :string           default("UTC"), not null
 #  to_datetime              :datetime         not null
 #  usage                    :jsonb            not null
 #  usage_diff               :jsonb            not null
