@@ -62,8 +62,13 @@ class Invoice < ApplicationRecord
 
   INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
+  TAX_STATUSES = {
+    pending: 'pending',
+    succeeded: 'succeeded',
+    failed: 'failed'
+  }.freeze
 
-  VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4}.freeze
+  VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
   INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6}.freeze
   STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
   GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
@@ -71,6 +76,9 @@ class Invoice < ApplicationRecord
   enum invoice_type: INVOICE_TYPES
   enum payment_status: PAYMENT_STATUS, _prefix: :payment
   enum status: STATUS
+
+  attribute :tax_status, :string
+  enum tax_status: TAX_STATUSES, _prefix: :tax
 
   aasm column: 'status', timestamps: true do
     state :generating
@@ -80,6 +88,7 @@ class Invoice < ApplicationRecord
     state :voided
     state :failed
     state :closed
+    state :pending
 
     event :finalize do
       transitions from: :draft, to: :finalized
@@ -468,6 +477,7 @@ end
 #  status                                  :integer          default("finalized"), not null
 #  sub_total_excluding_taxes_amount_cents  :bigint           default(0), not null
 #  sub_total_including_taxes_amount_cents  :bigint           default(0), not null
+#  tax_status                              :enum
 #  taxes_amount_cents                      :bigint           default(0), not null
 #  taxes_rate                              :float            default(0.0), not null
 #  timezone                                :string           default("UTC"), not null

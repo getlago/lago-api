@@ -4562,6 +4562,7 @@ enum InvoiceStatusTypeEnum {
   finalized
   generating
   open
+  pending
   voided
 }
 
