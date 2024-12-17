@@ -119,6 +119,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.day, 'schedule:clean_inbound_webhooks', at: '01:10') do
+    Clock::InboundWebhooksCleanupJob
+      .set(sentry: {"slug" => 'lago_clean_inbound_webhooks', "cron" => '5 1 * * *'})
+      .perform_later
+  end
+
   unless ActiveModel::Type::Boolean.new.cast(ENV['LAGO_DISABLE_EVENTS_VALIDATION'])
     every(1.hour, 'schedule:post_validate_events', at: '*:05') do
       Clock::EventsValidationJob
