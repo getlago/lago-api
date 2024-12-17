@@ -20,6 +20,15 @@ module Events
         filters_scope(scope)
       end
 
+      def distinct_codes
+        ::Clickhouse::EventsEnriched
+          .where(external_subscription_id: subscription.external_id)
+          .where(organization_id: subscription.organization.id)
+          .where("events_enriched.timestamp >= ?", from_datetime)
+          .where("events_enriched.timestamp <= ?", to_datetime)
+          .pluck('DISTINCT(code)')
+      end
+
       def events_values(limit: nil, force_from: false, exclude_event: false)
         scope = events(force_from:, ordered: true)
 
@@ -306,7 +315,7 @@ module Events
       def sum
         sql = <<-SQL
           WITH events AS (#{events.to_sql})
-          
+
           SELECT sum(events.decimal_value)
           FROM events
         SQL

@@ -22,6 +22,14 @@ module Events
         filters_scope(scope)
       end
 
+      def distinct_codes
+        Event.where(external_subscription_id: subscription.external_id)
+          .where(organization_id: subscription.organization.id)
+          .from_datetime(from_datetime)
+          .to_datetime(to_datetime)
+          .pluck('DISTINCT(code)')
+      end
+
       def events_values(limit: nil, force_from: false, exclude_event: false)
         field_name = sanitized_property_name
         field_name = "(#{field_name})::numeric" if numeric_property

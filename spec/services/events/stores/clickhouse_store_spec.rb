@@ -122,6 +122,25 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
     end
   end
 
+  describe '#distinct_codes' do
+    before do
+      Clickhouse::EventsEnriched.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: 'other_code',
+        timestamp: boundaries[:from_datetime] + (1..10).to_a.sample.days,
+        value: "value",
+        decimal_value: 0,
+        precise_total_amount_cents: 0
+      )
+    end
+
+    it 'returns the distinct event codes' do
+      expect(event_store.distinct_codes).to match_array([code, 'other_code'])
+    end
+  end
+
   describe '.count' do
     it 'returns the number of unique events' do
       expect(event_store.count).to eq(5)

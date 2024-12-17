@@ -12,6 +12,8 @@ module BillableMetrics
       end
 
       def compute_aggregation(options: {})
+        return empty_result if should_bypass_aggregation?
+
         aggregation = event_store.sum
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
@@ -37,6 +39,8 @@ module BillableMetrics
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
+        return empty_results if should_bypass_aggregation?
+
         aggregations = event_store.grouped_sum
         return empty_results if aggregations.blank?
 

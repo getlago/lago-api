@@ -11,6 +11,8 @@ module BillableMetrics
       end
 
       def compute_aggregation(options: {})
+        return empty_result if should_bypass_aggregation?
+
         result.aggregation = compute_aggregation_value(event_store.last)
         result.count = event_store.count
         result.options = options
@@ -23,6 +25,8 @@ module BillableMetrics
       #       Result will have an aggregations attribute
       #       containing the aggregation result of each group
       def compute_grouped_by_aggregation(*)
+        return empty_results if should_bypass_aggregation?
+
         aggregations = event_store.grouped_last
         return empty_results if aggregations.blank?
 

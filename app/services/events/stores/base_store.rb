@@ -3,7 +3,7 @@
 module Events
   module Stores
     class BaseStore
-      def initialize(code:, subscription:, boundaries:, filters: {})
+      def initialize(subscription:, boundaries:, code: nil, filters: {})
         @code = code
         @subscription = subscription
         @boundaries = boundaries

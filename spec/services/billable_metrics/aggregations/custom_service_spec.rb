@@ -12,11 +12,13 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         from_datetime:,
         to_datetime:
       },
-      filters:
+      filters:,
+      bypass_aggregation:
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:bypass_aggregation) { false }
   let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
 
   let(:subscription) { create(:subscription) }
@@ -152,6 +154,19 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
     end
   end
 
+  context 'when bypass_aggregation is set to true' do
+    let(:bypass_aggregation) { true }
+
+    it 'returns a default empty result' do
+      result = custom_service.aggregate
+
+      expect(result.aggregation).to eq(0)
+      expect(result.count).to eq(0)
+      expect(result.current_usage_units).to eq(0)
+      expect(result.options).to eq({running_total: []})
+    end
+  end
+
   context 'when the charge is payed in advance' do
     let(:charge) { create(:standard_charge, billable_metric:, properties: charge_properties, pay_in_advance: true) }
 
@@ -258,6 +273,21 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         expect(aggregation.count).to eq(1)
         expect(aggregation.current_usage_units).to eq(11)
         expect(aggregation.custom_aggregation).to eq({total_units: 11, amount: 0.1})
+      end
+    end
+
+    context 'when bypass_aggregation is set to true' do
+      let(:bypass_aggregation) { true }
+
+      it 'returns an empty result' do
+        result = custom_service.aggregate
+
+        expect(result.aggregations.count).to eq(1)
+
+        aggregation = result.aggregations.first
+        expect(aggregation.aggregation).to eq(0)
+        expect(aggregation.count).to eq(0)
+        expect(aggregation.grouped_by).to eq({'agent_name' => nil})
       end
     end
   end

@@ -11,6 +11,8 @@ module BillableMetrics
       end
 
       def compute_aggregation(*)
+        return empty_result if should_bypass_aggregation?
+
         result.aggregation = event_store.weighted_sum(initial_value:).ceil(20)
         result.count = event_store.count
         result.variation = event_store.sum || 0
@@ -29,6 +31,8 @@ module BillableMetrics
       #       Result will have an aggregations attribute
       #       containing the aggregation result of each group.
       def compute_grouped_by_aggregation(*)
+        return empty_results if should_bypass_aggregation?
+
         aggregations = event_store.grouped_weighted_sum(initial_values: grouped_latest_values)
         return empty_results if aggregations.blank?
 

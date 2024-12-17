@@ -115,6 +115,22 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
   end
 
+  describe '#distinct_codes' do
+    before do
+      create(
+        :event,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: 'other_code',
+        timestamp: boundaries[:from_datetime] + (1..10).to_a.sample.days
+      )
+    end
+
+    it 'returns the distinct event codes' do
+      expect(event_store.distinct_codes).to match_array([code, 'other_code'])
+    end
+  end
+
   describe '#count' do
     it 'returns the number of unique events' do
       expect(event_store.count).to eq(5)
