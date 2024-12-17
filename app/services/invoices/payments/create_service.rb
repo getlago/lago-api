@@ -43,7 +43,17 @@ module Invoices
 
         result.payment = payment
 
-        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(provider:, payment:).call!
+        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
+          provider:,
+          payment:,
+          reference: "#{invoice.organization.name} - Invoice #{invoice.number}",
+          metadata: {
+            lago_invoice_id: invoice.id,
+            lago_customer_id: invoice.customer_id,
+            invoice_issuing_date: invoice.issuing_date.iso8601,
+            invoice_type: invoice.invoice_type
+          }
+        ).call!
 
         payment_status = payment_result.payment.payable_payment_status
         update_invoice_payment_status(
@@ -109,7 +119,7 @@ module Invoices
           params: {
             payment_status:,
             # NOTE: A proper `processing` payment status should be introduced for invoices
-            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+            ready_for_payment_processing: !processing && payment_status.to_sym != :failed # TODO
           },
           webhook_notification: payment_status.to_sym == :succeeded
         )
