@@ -11,7 +11,7 @@ module DataExports
       def call
         result.csv_file = with_csv do |csv|
           collection.each do |item|
-            csv << serialized_item(item)
+            serialize_item(item, csv)
           end
         end
 

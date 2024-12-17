@@ -46,12 +46,12 @@ module DataExports
 
       attr_reader :data_export_part, :serializer_klass
 
-      def serialized_item(invoice)
+      def serialize_item(invoice, csv)
         serialized_invoice = serializer_klass
           .new(invoice, includes: %i[customer])
           .serialize
 
-        [
+        csv << [
           serialized_invoice[:lago_id],
           serialized_invoice[:sequential_id],
           serialized_invoice[:issuing_date],
