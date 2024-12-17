@@ -15,7 +15,7 @@ describe Clock::InboundWebhooksRetryJob, job: true do
 
     context "when inbound webhook is pending" do
       let(:status) { "pending" }
-      let(:updated_at) { 11.hours.ago }
+      let(:updated_at) { 110.minutes.ago }
 
       it "does not queue a job" do
         inbound_webhooks_retry_job.perform_now
@@ -23,8 +23,8 @@ describe Clock::InboundWebhooksRetryJob, job: true do
         expect(InboundWebhooks::ProcessJob).not_to have_been_enqueued
       end
 
-      context "when inbound webhook has not being updated for more than 12 hours" do
-        let(:updated_at) { 12.hours.ago }
+      context "when inbound webhook has not being updated for more than 2 hours" do
+        let(:updated_at) { 2.hours.ago }
 
         it "queues a job to process the failed inbound webhook" do
           inbound_webhooks_retry_job.perform_now
@@ -38,7 +38,7 @@ describe Clock::InboundWebhooksRetryJob, job: true do
 
     context "when inbound webhook is processing" do
       let(:status) { "processing" }
-      let(:updated_at) { 11.hours.ago }
+      let(:updated_at) { 110.minutes.ago }
 
       it "does not queue a job" do
         inbound_webhooks_retry_job.perform_now
@@ -46,8 +46,8 @@ describe Clock::InboundWebhooksRetryJob, job: true do
         expect(InboundWebhooks::ProcessJob).not_to have_been_enqueued
       end
 
-      context "when inbound webhook has not being updated for more than 12 hours" do
-        let(:updated_at) { 12.hours.ago }
+      context "when inbound webhook has not being updated for more than 2 hours" do
+        let(:updated_at) { 2.hours.ago }
 
         it "queues a job to process the failed inbound webhook" do
           inbound_webhooks_retry_job.perform_now

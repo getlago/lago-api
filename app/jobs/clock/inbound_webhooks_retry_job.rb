@@ -9,7 +9,7 @@ module Clock
     def perform
       InboundWebhook
         .where(status: ["pending", "processing"])
-        .where("updated_at < ?", 12.hours.ago)
+        .where("updated_at < ?", 2.hours.ago)
         .find_each do |inbound_webhook|
         InboundWebhooks::ProcessJob.perform_later(inbound_webhook:)
       end
