@@ -5,11 +5,44 @@ require 'rails_helper'
 RSpec.describe DataExport, type: :model do
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:membership) }
+  it { is_expected.to have_one(:user).through(:membership) }
   it { is_expected.to have_many(:data_export_parts) }
 
-  it { is_expected.to validate_presence_of(:format) }
   it { is_expected.to validate_presence_of(:resource_type) }
-  it { is_expected.to validate_presence_of(:status) }
+
+  specify do
+    expect(subject)
+      .to define_enum_for(:format)
+      .with_values([:csv])
+      .validating
+  end
+
+  specify do
+    expect(subject)
+      .to define_enum_for(:status)
+      .with_values(%i[pending processing completed failed])
+      .validating
+  end
+
+  describe 'validations' do
+    describe 'of file being attached' do
+      subject { data_export }
+
+      let(:data_export) { build(:data_export, status:) }
+
+      context 'when status is completed' do
+        let(:status) { 'completed' }
+
+        it { is_expected.to validate_attached_of(:file) }
+      end
+
+      context 'when status is non-completed' do
+        let(:status) { described_class::STATUSES.excluding('completed').sample }
+
+        it { is_expected.not_to validate_attached_of(:file) }
+      end
+    end
+  end
 
   describe '#processing!' do
     subject(:processing!) { data_export.processing! }
@@ -28,7 +61,7 @@ RSpec.describe DataExport, type: :model do
   describe '#completed!' do
     subject(:completed!) { data_export.completed! }
 
-    let(:data_export) { create :data_export }
+    let(:data_export) { create :data_export, :with_file }
 
     it 'updates status and started_at timestamp' do
       freeze_time do
@@ -43,25 +76,25 @@ RSpec.describe DataExport, type: :model do
   describe '#expired?' do
     subject(:expired?) { data_export.expired? }
 
-    let(:data_export) { build :data_export }
+    let(:data_export) { build_stubbed :data_export }
 
     it { is_expected.to eq false }
 
     context 'when export is completed' do
-      let(:data_export) { build :data_export, :completed }
+      let(:data_export) { build_stubbed :data_export, :completed }
 
       it { is_expected.to eq false }
     end
 
     context 'when the expiration date is reached' do
-      let(:data_export) { build :data_export, :expired }
+      let(:data_export) { build_stubbed :data_export, :expired }
 
       it { is_expected.to eq true }
     end
   end
 
   describe "#export_class" do
-    let(:data_export) { create :data_export, resource_type: }
+    let(:data_export) { build_stubbed :data_export, resource_type: }
 
     context "when resource_type is invoices" do
       let(:resource_type) { "invoices" }
@@ -88,7 +121,7 @@ RSpec.describe DataExport, type: :model do
     end
   end
 
-  describe '.filename' do
+  describe '#filename' do
     subject(:filename) { data_export.filename }
 
     let(:data_export) { create :data_export, :completed }
@@ -112,7 +145,7 @@ RSpec.describe DataExport, type: :model do
     end
   end
 
-  describe '.file_url' do
+  describe '#file_url' do
     subject(:file_url) { data_export.file_url }
 
     let(:data_export) { create :data_export, :completed }

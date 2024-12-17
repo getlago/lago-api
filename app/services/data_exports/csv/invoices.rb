@@ -5,22 +5,13 @@ require 'forwardable'
 
 module DataExports
   module Csv
-    class Invoices < BaseService
+    class Invoices < BaseCsvService
       extend Forwardable
 
       def initialize(data_export_part:, serializer_klass: V1::InvoiceSerializer)
         @data_export_part = data_export_part
         @serializer_klass = serializer_klass
         super
-      end
-
-      def call
-        result.csv_file = with_csv do |csv|
-          invoices.each do |invoice|
-            csv << serialized_invoice(invoice)
-          end
-        end
-        result
       end
 
       def self.headers
@@ -53,22 +44,14 @@ module DataExports
 
       private
 
-      def with_csv
-        tempfile = Tempfile.create([data_export_part.id, ".csv"])
-        yield CSV.new(tempfile, headers: false)
+      attr_reader :data_export_part, :serializer_klass
 
-        tempfile.rewind
-        tempfile
-      end
-
-      attr_reader :data_export_part, :serializer_klass, :output, :batch_size
-
-      def serialized_invoice(invoice)
+      def serialize_item(invoice, csv)
         serialized_invoice = serializer_klass
           .new(invoice, includes: %i[customer])
           .serialize
 
-        [
+        csv << [
           serialized_invoice[:lago_id],
           serialized_invoice[:sequential_id],
           serialized_invoice[:issuing_date],
@@ -95,7 +78,7 @@ module DataExports
         ]
       end
 
-      def invoices
+      def collection
         Invoice.find(data_export_part.object_ids)
       end
     end

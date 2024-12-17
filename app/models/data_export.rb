@@ -7,19 +7,17 @@ class DataExport < ApplicationRecord
 
   belongs_to :organization
   belongs_to :membership
+  has_one :user, through: :membership
 
   has_one_attached :file
 
   has_many :data_export_parts
 
+  enum :format, EXPORT_FORMATS, validate: true
+  enum :status, STATUSES, validate: true
+
   validates :resource_type, presence: true
-  validates :format, presence: true, inclusion: {in: EXPORT_FORMATS}
-  validates :status, presence: true, inclusion: {in: STATUSES}
-
-  enum format: EXPORT_FORMATS
-  enum status: STATUSES
-
-  delegate :user, to: :membership
+  validates :file, attached: true, if: :completed?
 
   def processing!
     update!(status: 'processing', started_at: Time.zone.now)
@@ -49,7 +47,7 @@ class DataExport < ApplicationRecord
     blob_path = Rails.application.routes.url_helpers.rails_blob_path(
       file,
       host: 'void',
-      expires_in: 7.days
+      expires_in: EXPIRATION_PERIOD
     )
 
     File.join(ENV['LAGO_API_URL'], blob_path)

@@ -7,6 +7,7 @@ require_relative '../config/environment'
 require 'spec_helper'
 require 'simplecov'
 require 'money-rails/test_helpers'
+require 'active_storage_validations/matchers'
 
 def pp(*args)
   # Uncomment the following line if you can't find where you left a `pp` call
@@ -60,6 +61,7 @@ RSpec.configure do |config|
   config.include LicenseHelper
   config.include PdfHelper
   config.include ActiveSupport::Testing::TimeHelpers
+  config.include ActiveStorageValidations::Matchers
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [Rails.root.join('spec/fixtures').to_s]

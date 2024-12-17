@@ -6,7 +6,6 @@ class DataExportMailer < ApplicationMailer
     @resource_type = @data_export.resource_type.humanize.downcase
     user = @data_export.user
 
-    return if @data_export.file.blank?
     return if @data_export.expired?
     return unless @data_export.completed?
 
