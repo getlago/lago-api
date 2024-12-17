@@ -2,6 +2,12 @@
 
 class AddTaxStatusToInvoices < ActiveRecord::Migration[7.1]
   def change
-    add_column :invoices, :tax_status, :integer, null: false, default: 1
+    create_enum :tax_status, %w[pending succeeded failed]
+
+    safety_assured do
+      change_table :invoices do |t|
+        t.enum :tax_status, enum_type: 'tax_status', null: true
+      end
+    end
   end
 end

@@ -22,6 +22,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_16_140931) do
   create_enum "billable_metric_weighted_interval", ["seconds"]
   create_enum "customer_type", ["company", "individual"]
   create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
+  create_enum "tax_status", ["pending", "succeeded", "failed"]
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
@@ -911,7 +912,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_16_140931) do
     t.boolean "payment_overdue", default: false
     t.bigint "negative_amount_cents", default: 0, null: false
     t.bigint "progressive_billing_credit_amount_cents", default: 0, null: false
-    t.integer "tax_status", default: 1, null: false
+    t.enum "tax_status", enum_type: "tax_status"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["number"], name: "index_invoices_on_number"
