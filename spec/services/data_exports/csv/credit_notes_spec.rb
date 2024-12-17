@@ -38,7 +38,7 @@ RSpec.describe DataExports::Csv::CreditNotes do
           credit_note.credit_amount_cents,
           credit_note.balance_amount_cents,
           credit_note.refund_amount_cents,
-          credit_note.file_url,
+          credit_note.file_url
         ].map(&:to_s)
       end
     end
