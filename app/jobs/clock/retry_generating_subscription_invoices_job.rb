@@ -4,7 +4,13 @@ module Clock
   class RetryGeneratingSubscriptionInvoicesJob < ApplicationJob
     include SentryCronConcern
 
-    queue_as 'clock'
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_CLOCK'])
+        :clock
+      else
+        :default
+      end
+    end
 
     THRESHOLD = -> { 1.day.ago }
 
