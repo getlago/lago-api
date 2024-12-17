@@ -8,11 +8,7 @@ module PaymentRequests
       unique :until_executed, on_conflict: :log
 
       def perform(payable)
-        result = PaymentRequests::Payments::GocardlessService.new(payable).create
-
-        PaymentRequestMailer.with(payment_request: payable).requested.deliver_later if result.payable&.payment_failed?
-
-        result.raise_if_error!
+        PaymentRequests::Payments::CreateService.call!(payable:, payment_provider: 'gocardless')
       end
     end
   end
