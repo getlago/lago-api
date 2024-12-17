@@ -1,77 +1,67 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe WebhooksController, type: :request do
-  describe 'POST /stripe' do
-    let(:organization) { create(:organization) }
-
-    let(:stripe_provider) do
-      create(
-        :stripe_provider,
-        organization:,
-        webhook_secret: 'secrests'
-      )
-    end
-
-    let(:stripe_service) { instance_double(PaymentProviders::StripeService) }
+  describe "POST /stripe" do
+    let(:organization_id) { Faker::Internet.uuid }
+    let(:code) { "stripe_1" }
+    let(:signature) { "signature" }
+    let(:event_type) { "payment_intent.succeeded" }
 
     let(:event) do
-      path = Rails.root.join('spec/fixtures/stripe/payment_intent_event.json')
+      path = Rails.root.join("spec/fixtures/stripe/payment_intent_event.json")
       JSON.parse(File.read(path))
     end
 
-    let(:result) do
-      result = BaseService::Result.new
-      result.event = Stripe::Event.construct_from(event)
-      result
-    end
+    let(:payload) { event.merge(code:) }
+    let(:result) { BaseService::Result.new }
 
     before do
-      allow(PaymentProviders::Stripe::HandleIncomingWebhookService)
+      allow(InboundWebhooks::CreateService)
         .to receive(:call)
         .with(
-          organization_id: organization.id,
-          code: nil,
-          body: event.to_json,
-          signature: 'signature'
+          organization_id:,
+          webhook_source: :stripe,
+          code:,
+          payload: payload.to_json,
+          signature:,
+          event_type:
         )
         .and_return(result)
     end
 
-    it 'handle stripe webhooks' do
+    it "handle stripe webhooks" do
       post(
-        "/webhooks/stripe/#{stripe_provider.organization_id}",
-        params: event.to_json,
+        "/webhooks/stripe/#{organization_id}",
+        params: payload.to_json,
         headers: {
-          'HTTP_STRIPE_SIGNATURE' => 'signature',
-          'Content-Type' => 'application/json'
+          "HTTP_STRIPE_SIGNATURE" => signature,
+          "Content-Type" => "application/json"
         }
       )
 
       expect(response).to have_http_status(:success)
-      expect(PaymentProviders::Stripe::HandleIncomingWebhookService)
-        .to have_received(:call)
+      expect(InboundWebhooks::CreateService).to have_received(:call)
     end
 
-    context 'when failing to handle stripe event' do
-      let(:result) do
-        BaseService::Result.new.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+    context "when InboundWebhooks::CreateService is not successful" do
+      before do
+        result.record_validation_failure!(record: build(:inbound_webhook))
       end
 
-      it 'returns a bad request' do
+      it "returns a bad request" do
         post(
-          "/webhooks/stripe/#{stripe_provider.organization_id}",
-          params: event.to_json,
+          "/webhooks/stripe/#{organization_id}",
+          params: payload.to_json,
           headers: {
-            'HTTP_STRIPE_SIGNATURE' => 'signature',
-            'Content-Type' => 'application/json'
+            "HTTP_STRIPE_SIGNATURE" => signature,
+            "Content-Type" => "application/json"
           }
         )
 
         expect(response).to have_http_status(:bad_request)
-        expect(PaymentProviders::Stripe::HandleIncomingWebhookService)
-          .to have_received(:call)
+        expect(InboundWebhooks::CreateService).to have_received(:call)
       end
     end
   end

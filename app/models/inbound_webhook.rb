@@ -5,7 +5,12 @@ class InboundWebhook < ApplicationRecord
 
   validates :event_type, :payload, :source, :status, presence: true
 
-  STATUSES = {pending: "pending"}
+  STATUSES = {
+    pending: "pending",
+    processing: "processing",
+    processed: "processed",
+    failed: "failed"
+  }
 
   enum :status, STATUSES
 end

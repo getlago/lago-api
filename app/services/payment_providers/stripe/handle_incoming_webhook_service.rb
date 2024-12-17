@@ -3,11 +3,10 @@
 module PaymentProviders
   module Stripe
     class HandleIncomingWebhookService < BaseService
-      def initialize(organization_id:, body:, signature:, code: nil)
-        @organization_id = organization_id
-        @body = body
-        @signature = signature
-        @code = code
+      extend Forwardable
+
+      def initialize(inbound_webhook:)
+        @inbound_webhook = inbound_webhook
 
         super
       end
@@ -22,7 +21,7 @@ module PaymentProviders
         return payment_provider_result unless payment_provider_result.success?
 
         event = ::Stripe::Webhook.construct_event(
-          body,
+          payload,
           signature,
           payment_provider_result.payment_provider&.webhook_secret
         )
@@ -42,7 +41,7 @@ module PaymentProviders
 
       private
 
-      attr_reader :organization_id, :body, :signature, :code
+      def_delegators :@inbound_webhook, :code, :organization_id, :payload, :signature
     end
   end
 end
