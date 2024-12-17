@@ -111,11 +111,11 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     end
 
     it "creates a payment for the payment request" do
-      allow(PaymentRequests::Payments::CreateService).to receive(:call).and_call_original
+      allow(PaymentRequests::Payments::CreateService).to receive(:call_async).and_call_original
 
       result = create_service.call
 
-      expect(PaymentRequests::Payments::CreateService).to have_received(:call).with(result.payment_request)
+      expect(PaymentRequests::Payments::CreateService).to have_received(:call_async).with(payable: result.payment_request)
     end
 
     context "when Payments::CreateService returns an error" do
