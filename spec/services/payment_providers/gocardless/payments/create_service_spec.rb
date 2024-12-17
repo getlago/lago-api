@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :service do
-  subject(:create_service) { described_class.new(invoice:, provider_customer: gocardless_customer) }
+  subject(:create_service) { described_class.new(payment:) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
@@ -23,6 +23,18 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :ser
       total_amount_cents: 200,
       currency: "EUR",
       ready_for_payment_processing: true
+    )
+  end
+
+  let(:payment) do
+    create(
+      :payment,
+      payable: invoice,
+      status: "pending",
+      payment_provider: gocardless_payment_provider,
+      payment_provider_customer: gocardless_customer,
+      amount_cents: invoice.total_amount_cents,
+      amount_currency: invoice.currency
     )
   end
 
@@ -62,9 +74,8 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :ser
       expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
       expect(result.payment.amount_currency).to eq(invoice.currency)
       expect(result.payment.status).to eq("paid_out")
+      expect(result.payment.payable_payment_status).to eq("succeeded")
       expect(gocardless_customer.reload.provider_mandate_id).to eq("mandate_id")
-
-      expect(result.payment_status).to eq(:succeeded)
 
       expect(gocardless_payments_service).to have_received(:create)
     end
@@ -98,7 +109,7 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :ser
 
         expect(result.error_message).to eq("error")
         expect(result.error_code).to eq("code")
-        expect(result.payment_status).to eq(:failed)
+        expect(result.payment.payable_payment_status).to eq("failed")
       end
     end
 
@@ -125,7 +136,7 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :ser
 
           expect(result.error_message).to eq("No mandate available for payment")
           expect(result.error_code).to eq("no_mandate_error")
-          expect(result.payment_status).to eq(:failed)
+          expect(result.payment.payable_payment_status).to eq("failed")
         end
       end
     end

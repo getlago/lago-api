@@ -8,55 +8,44 @@ module PaymentProviders
         SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
         FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
 
-        def initialize(invoice:, provider_customer:)
-          @invoice = invoice
-          @provider_customer = provider_customer
+        def initialize(payment:)
+          @payment = payment
+          @invoice = payment.payable
+          @provider_customer = payment.payment_provider_customer
 
           super
         end
 
         def call
-          result.invoice = invoice
+          result.payment = payment
 
           adyen_result = create_adyen_payment
 
           if adyen_result.status > 400
-            result.error_message = adyen_result.response["message"]
-            result.error_code = adyen_result.response["errorType"]
-            return result
+            return prepare_failed_result(::Adyen::AdyenError.new(
+              nil, nil, adyen_result.response["message"], adyen_result.response["errorType"]
+            ))
           end
 
-          payment = Payment.new(
-            payable: invoice,
-            payment_provider_id: payment_provider.id,
-            payment_provider_customer_id: provider_customer.id,
-            amount_cents: invoice.total_amount_cents,
-            amount_currency: invoice.currency.upcase,
-            provider_payment_id: adyen_result.response["pspReference"],
-            status: adyen_result.response["resultCode"]
-          )
+          payment.provider_payment_id = adyen_result.response["pspReference"]
+          payment.status = adyen_result.response["resultCode"]
+          payment.payable_payment_status = payment_status_mapping(payment.status)
           payment.save!
 
-          result.payment_status = payment_status_mapping(payment.status)
           result.payment = payment
           result
         rescue ::Adyen::AuthenticationError, ::Adyen::ValidationError => e
-          result.error_message = e.msg
-          result.error_code = e.code
-          result.payment_status = :failed
-          result
+          prepare_failed_result(e)
         rescue ::Adyen::AdyenError => e
-          result.error_message = e.msg
-          result.error_code = e.code
-          result.payment_status = :failed
-          result.service_failure!(code: "adyen_error", message: "#{e.code}: #{e.msg}")
+          prepare_failed_result(e, reraise: true)
         rescue Faraday::ConnectionFailed => e
+          # Allow auto-retry with idempotency key
           raise Invoices::Payments::ConnectionError, e
         end
 
         private
 
-        attr_reader :invoice, :provider_customer
+        attr_reader :payment, :invoice, :provider_customer
 
         delegate :payment_provider, :customer, to: :provider_customer
 
@@ -84,7 +73,10 @@ module PaymentProviders
         def create_adyen_payment
           update_payment_method_id
 
-          client.checkout.payments_api.payments(Lago::Adyen::Params.new(payment_params).to_h)
+          client.checkout.payments_api.payments(
+            Lago::Adyen::Params.new(payment_params).to_h,
+            headers: {"idempotency-key" => "payment-#{payment.id}"}
+          )
         end
 
         def payment_method_params
@@ -97,8 +89,8 @@ module PaymentProviders
         def payment_params
           prms = {
             amount: {
-              currency: invoice.currency.upcase,
-              value: invoice.total_amount_cents
+              currency: payment.amount_currency.upcase,
+              value: payment.amount_cents
             },
             reference: invoice.number,
             paymentMethod: {
@@ -120,6 +112,16 @@ module PaymentProviders
           return :failed if FAILED_STATUSES.include?(payment_status)
 
           payment_status
+        end
+
+        def prepare_failed_result(error, reraise: false)
+          result.error_message = error.msg
+          result.error_code = error.code
+          result.reraise = reraise
+
+          payment.update!(status: :failed, payable_payment_status: :failed)
+
+          result.service_failure!(code: "adyen_error", message: "#{error.code}: #{error.msg}")
         end
       end
     end

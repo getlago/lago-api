@@ -3,7 +3,7 @@
 module Invoices
   module Payments
     class CreateJob < ApplicationJob
-      queue_as 'low_priority'
+      queue_as "low_priority"
 
       unique :until_executed, on_conflict: :log
 
@@ -12,6 +12,10 @@ module Invoices
 
       def perform(invoice:, payment_provider:)
         Invoices::Payments::CreateService.call!(invoice:, payment_provider:)
+      end
+
+      def lock_key_arguments
+        [arguments.first[:invoice]]
       end
     end
   end

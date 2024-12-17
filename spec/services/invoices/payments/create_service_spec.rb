@@ -16,12 +16,10 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
   describe "#call" do
     let(:result) do
       BaseService::Result.new.tap do |r|
-        r.payment = payment
-        r.payment_status = "pending"
+        r.payment = OpenStruct.new(payable_payment_status: "processing")
       end
     end
 
-    let(:payment) { create(:payment, payable: invoice, status: "processing") }
     let(:provider_class) { PaymentProviders::Stripe::Payments::CreateService }
     let(:provider_service) { instance_double(provider_class) }
 
@@ -29,16 +27,27 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       provider_customer
 
       allow(provider_class)
-        .to receive(:new).with(invoice:, provider_customer:)
+        .to receive(:new).with(payment: an_instance_of(Payment))
         .and_return(provider_service)
       allow(provider_service).to receive(:call!)
         .and_return(result)
     end
 
-    it "calls the stripe service" do
-      create_service.call
+    it "creates a payment and calls the stripe service" do
+      result = create_service.call
 
-      expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+      expect(result).to be_success
+      expect(result.invoice).to eq(invoice)
+      expect(result.payment).to be_present
+
+      payment = result.payment
+      expect(payment.payment_provider).to eq(payment_provider)
+      expect(payment.payment_provider_customer).to eq(provider_customer)
+      expect(payment.amount_cents).to eq(invoice.total_amount_cents)
+      expect(payment.amount_currency).to eq(invoice.currency)
+      expect(payment.payable).to eq(invoice)
+
+      expect(provider_class).to have_received(:new)
       expect(provider_service).to have_received(:call!)
     end
 
@@ -48,7 +57,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       expect(invoice.reload).to be_payment_pending
       expect(invoice.payment_attempts).to eq(1)
       expect(invoice.ready_for_payment_processing).to be_falsey
-      expect(invoice.payments).to eq([payment])
+      expect(invoice.payments.count).to eq(1)
     end
 
     context "with gocardless payment provider" do
@@ -60,7 +69,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       it "calls the gocardless service" do
         create_service.call
 
-        expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+        expect(provider_class).to have_received(:new).with(payment: an_instance_of(Payment))
         expect(provider_service).to have_received(:call!)
       end
     end
@@ -74,7 +83,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       it "calls the adyen service" do
         create_service.call
 
-        expect(provider_class).to have_received(:new).with(invoice:, provider_customer:)
+        expect(provider_class).to have_received(:new)
         expect(provider_service).to have_received(:call!)
       end
     end
@@ -160,8 +169,10 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
     context "when provider service raises a service failure" do
       let(:result) do
         BaseService::Result.new.tap do |r|
+          r.payment = OpenStruct.new(status: "pending")
           r.error_message = "error"
           r.error_code = "code"
+          r.reraise = true
         end
       end
 
@@ -185,12 +196,13 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
           ).on_queue(:webhook)
       end
 
-      context "when result has a payment_status" do
+      context "when payment has a payable_payment_status" do
         let(:result) do
           BaseService::Result.new.tap do |r|
+            r.payment = OpenStruct.new(payable_payment_status: "failed")
             r.error_message = "error"
             r.error_code = "code"
-            r.payment_status = "failed"
+            r.reraise = true
           end
         end
 
@@ -200,29 +212,6 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
 
           expect(invoice.reload).to be_payment_failed
         end
-      end
-    end
-
-    context "when the provider service returns error details" do
-      let(:result) do
-        BaseService::Result.new.tap do |r|
-          r.error_message = "error"
-          r.error_code = "code"
-        end
-      end
-
-      it "delivers an error webhook" do
-        expect { create_service.call }
-          .to enqueue_job(SendWebhookJob)
-          .with(
-            "invoice.payment_failure",
-            invoice,
-            provider_customer_id: provider_customer.provider_customer_id,
-            provider_error: {
-              message: "error",
-              error_code: "code"
-            }
-          ).on_queue(:webhook)
       end
 
       context "when invoice is credit? and open?" do
@@ -236,7 +225,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
           create(:fee, fee_type: :credit, invoice: invoice, invoiceable: wallet_transaction)
           invoice.update!(status: :open, invoice_type: :credit)
 
-          create_service.call
+          expect { create_service.call }.to raise_error(BaseService::ServiceFailure)
 
           expect(Invoices::Payments::DeliverErrorWebhookService).to have_received(:call_async)
           expect(SendWebhookJob).to have_been_enqueued
@@ -253,18 +242,69 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       end
     end
 
-    context "when result only has a payment_status" do
+    context "when payable_payment_status is not present" do
       let(:result) do
         BaseService::Result.new.tap do |r|
-          r.payment_status = "failed"
+          r.payment = OpenStruct.new(status: "pending")
         end
       end
 
-      it "updates the invoice payment status" do
+      it "keeps the invoice payment status" do
         result = create_service.call
 
         expect(result).to be_success
-        expect(invoice.reload).to be_payment_failed
+        expect(invoice.reload).to be_payment_pending
+      end
+    end
+
+    context 'when a payment exits' do
+      let(:payment) do
+        create(
+          :payment,
+          payable: invoice,
+          payment_provider:,
+          payment_provider_customer: provider_customer,
+          amount_cents: invoice.total_amount_cents,
+          amount_currency: invoice.currency,
+          status: "pending",
+          payable_payment_status: payment_status
+        )
+      end
+
+      let(:payment_status) { "pending" }
+
+      before { payment }
+
+      it "retrieves the payment for processing" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+        expect(result.payment).to eq(payment)
+
+        expect(payment.payment_provider).to eq(payment_provider)
+        expect(payment.payment_provider_customer).to eq(provider_customer)
+        expect(payment.amount_cents).to eq(invoice.total_amount_cents)
+        expect(payment.amount_currency).to eq(invoice.currency)
+        expect(payment.payable).to eq(invoice)
+
+        expect(provider_class).to have_received(:new)
+        expect(provider_service).to have_received(:call!)
+      end
+
+      context "when payment is already processing" do
+        let(:payment_status) { "processing" }
+
+        it "does not creates a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to eq(invoice)
+          expect(result.payment).to eq(payment)
+
+          expect(provider_class).not_to have_received(:new)
+          expect(provider_service).not_to have_received(:call!)
+        end
       end
     end
   end

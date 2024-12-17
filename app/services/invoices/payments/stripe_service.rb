@@ -80,13 +80,15 @@ module Invoices
 
         increment_payment_attempts
 
-        Payment.new(
+        Payment.find_or_create_by!(
           payable: @invoice,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
           amount_cents: @invoice.total_amount_cents,
           amount_currency: @invoice.currency,
-          provider_payment_id: stripe_payment.id
+          provider_payment_id: stripe_payment.id,
+          payable_payment_status: "pending",
+          status: stripe_payment.status
         )
       end
 

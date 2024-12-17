@@ -2,8 +2,8 @@
 
 module PaymentProviders
   class CreatePaymentFactory
-    def self.new_instance(provider:, invoice:, provider_customer:)
-      service_class(provider:).new(invoice:, provider_customer:)
+    def self.new_instance(provider:, payment:)
+      service_class(provider:).new(payment:)
     end
 
     def self.service_class(provider:)
