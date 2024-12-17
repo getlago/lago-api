@@ -10,7 +10,7 @@ module Invoices
       end
     end
 
-    unique :until_executed, on_conflict: :log
+    unique :until_executed, on_conflict: :log, lock_ttl: 6.hours
 
     retry_on Sequenced::SequenceError, wait: :polynomially_longer
 
