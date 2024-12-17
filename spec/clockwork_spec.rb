@@ -199,12 +199,12 @@ describe Clockwork do
     end
   end
 
-  describe "schedule:retry_failed_inbound_webhooks" do
-    let(:job) { "schedule:retry_failed_inbound_webhooks" }
+  describe "schedule:retry_inbound_webhooks" do
+    let(:job) { "schedule:retry_inbound_webhooks" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:05:00") }
     let(:end_time) { Time.zone.parse("1 Apr 2022 00:20:00") }
 
-    it "enqueue a retry failed inbound webhooks job" do
+    it "enqueue a retry inbound webhooks job" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,

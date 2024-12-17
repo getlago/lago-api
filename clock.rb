@@ -153,9 +153,9 @@ module Clockwork
       .perform_later
   end
 
-  every(15.minutes, "schedule:retry_failed_inbound_webhooks") do
+  every(15.minutes, "schedule:retry_inbound_webhooks") do
     Clock::InboundWebhooksRetryJob
-      .set(sentry: {"slug" => "lago_retry_failed_inbound_webhooks", "cron" => '*/15 * * * *'})
+      .set(sentry: {"slug" => "lago_retry_inbound_webhooks", "cron" => '*/15 * * * *'})
       .perform_later
   end
 end
