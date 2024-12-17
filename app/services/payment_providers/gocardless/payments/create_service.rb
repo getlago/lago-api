@@ -17,8 +17,10 @@ module PaymentProviders
           end
         end
 
-        def initialize(payment:)
+        def initialize(payment:, reference:, metadata:)
           @payment = payment
+          @reference = reference
+          @metadata = metadata
           @invoice = payment.payable
           @provider_customer = payment.payment_provider_customer
 
@@ -48,7 +50,7 @@ module PaymentProviders
           prepare_failed_result(e, reraise: true)
         end
 
-        attr_reader :payment, :invoice, :provider_customer
+        attr_reader :payment, :reference, :metadata, :invoice, :provider_customer
 
         delegate :payment_provider, :customer, to: :provider_customer
 
@@ -83,11 +85,7 @@ module PaymentProviders
               amount: payment.amount_cents,
               currency: payment.amount_currency.upcase,
               retry_if_possible: false,
-              metadata: {
-                lago_customer_id: customer.id,
-                lago_invoice_id: invoice.id,
-                invoice_issuing_date: invoice.issuing_date.iso8601
-              },
+              metadata: metadata.except(:invoice_type),
               links: {
                 mandate: mandate_id
               }
