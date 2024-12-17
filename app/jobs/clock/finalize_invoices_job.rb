@@ -3,7 +3,7 @@
 module Clock
   class FinalizeInvoicesJob < ApplicationJob
     include SentryCronConcern
-    BATCH_SIZE = 500
+    BATCH_SIZE = 1000
 
     queue_as 'clock'
 

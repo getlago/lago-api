@@ -51,10 +51,10 @@ module Invoices
           refresh: true
         ).raise_if_error!
 
-        # reload the invoice including the invoice_subscriptions and subscriptions that are used in calculate_fees_service
-        invoice = Invoice.find(invoice.id).includes(invoice_subscriptions: :subscription)
+        # TODO: instead of invoice.reload, do the propper request to the DB with includes to have preloaded relationships:
+        # invoice = Invoice.find(invoice.id).includes(invoice_subscriptions: :subscription)
         calculate_result = Invoices::CalculateFeesService.call(
-          invoice: invoice,
+          invoice: invoice.reload,
           recurring:,
           context:
         )
