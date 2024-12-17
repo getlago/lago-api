@@ -9,7 +9,7 @@ module Clock
     unique :until_executed, on_conflict: :log
 
     def perform
-      Invoice.draft.ready_to_be_refreshed.with_active_subscriptions.includes(:credit_notes).find_each do |invoice|
+      Invoice.ready_to_be_refreshed.with_active_subscriptions.includes(:credit_notes).find_each do |invoice|
         Invoices::RefreshDraftJob.perform_later(invoice)
       end
     end

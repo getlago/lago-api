@@ -105,7 +105,7 @@ class Invoice < ApplicationRecord
   scope :visible, -> { where(status: VISIBLE_STATUS.keys) }
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
-  scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
+  scope :ready_to_be_refreshed, -> { draft.where(ready_to_be_refreshed: true) }
   scope :ready_to_be_finalized, -> { draft.where('issuing_date <= ?', Time.current.to_date) }
 
   scope :created_before,
