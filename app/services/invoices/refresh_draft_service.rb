@@ -51,10 +51,9 @@ module Invoices
           refresh: true
         ).raise_if_error!
 
-        # TODO: instead of invoice.reload, do the full request to the DB with includes to have preloaded relationships:
-        # invoice = Invoice.find(invoice.id).includes(invoice_subscriptions: :subscription)
+        invoice = Invoice.includes(invoice_subscriptions: :subscription).find(result.invoice.id)
         calculate_result = Invoices::CalculateFeesService.call(
-          invoice: invoice.reload,
+          invoice: invoice,
           recurring:,
           context:
         )
@@ -103,7 +102,8 @@ module Invoices
     def invoice_credit_note_items
       CreditNoteItem
         .joins(:credit_note)
-        .where(credit_note: {invoice_id: invoice.id}).includes(:fee)
+        .where(credit_note: {invoice_id: invoice.id})
+        .includes(:fee)
     end
 
     def flag_lifetime_usage_for_refresh
