@@ -77,7 +77,7 @@ module DataExports
       end
 
       def collection
-        CreditNote.find(data_export_part.object_ids)
+        CreditNote.includes(:customer).find(data_export_part.object_ids)
       end
     end
   end
