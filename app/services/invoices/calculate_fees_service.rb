@@ -116,6 +116,8 @@ module Invoices
     def create_charges_fees(subscription, boundaries)
       return unless charge_boundaries_valid?(boundaries)
 
+      received_event_codes = distinct_event_codes(subscription, boundaries)
+
       subscription
         .plan
         .charges
@@ -127,7 +129,8 @@ module Invoices
         .find_each do |charge|
           next if should_not_create_charge_fee?(charge, subscription)
 
-          Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:).raise_if_error!
+          bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
+          Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:, bypass_aggregation:).raise_if_error!
         end
     end
 
@@ -363,6 +366,16 @@ module Invoices
 
     def finalizing_invoice?
       context == :finalize || Invoice::GENERATED_INVOICE_STATUSES.include?(invoice.status)
+    end
+
+    def distinct_event_codes(subscription, boundaries)
+      Events::Stores::StoreFactory
+        .store_class(organization: invoice.organization)
+        .new(
+          subscription:,
+          boundaries: {from_datetime: boundaries[:charges_from_datetime], to_datetime: boundaries[:charges_to_datetime]}
+        )
+        .distinct_codes
     end
   end
 end

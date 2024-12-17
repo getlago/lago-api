@@ -3,7 +3,7 @@
 module BillableMetrics
   module Aggregations
     class BaseService < ::BaseService
-      def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {})
+      def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {}, bypass_aggregation: false)
         super(nil)
         @event_store_class = event_store_class
         @charge = charge
@@ -16,6 +16,8 @@ module BillableMetrics
         @grouped_by_values = filters[:grouped_by_values]
 
         @boundaries = boundaries
+
+        @bypass_aggregation = bypass_aggregation
 
         result.aggregator = self
       end
@@ -71,7 +73,8 @@ module BillableMetrics
         :event,
         :boundaries,
         :grouped_by,
-        :grouped_by_values
+        :grouped_by_values,
+        :bypass_aggregation
 
       delegate :billable_metric, to: :charge
 
@@ -115,6 +118,19 @@ module BillableMetrics
 
         target_result.aggregation = 0 if target_result.aggregation.negative?
         target_result.current_usage_units = 0 if target_result.current_usage_units.negative?
+      end
+
+      def should_bypass_aggregation?
+        return false if billable_metric.recurring?
+
+        bypass_aggregation
+      end
+
+      def empty_result
+        result.aggregation = 0
+        result.count = 0
+        result.current_usage_units = 0
+        result.options = {running_total: []}
       end
 
       def empty_results

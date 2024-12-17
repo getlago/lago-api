@@ -2,7 +2,7 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:, current_usage: false, cache_middleware: nil)
+    def initialize(invoice:, charge:, subscription:, boundaries:, current_usage: false, cache_middleware: nil, bypass_aggregation: false)
       @invoice = invoice
       @charge = charge
       @subscription = subscription
@@ -13,6 +13,9 @@ module Fees
       @cache_middleware = cache_middleware || Subscriptions::ChargeCacheMiddleware.new(
         subscription:, charge:, to_datetime: boundaries[:charges_to_datetime], cache: false
       )
+
+      # Allow the service to ignore events aggregation
+      @bypass_aggregation = bypass_aggregation
 
       super(nil)
     end
@@ -52,7 +55,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :current_usage, :currency, :cache_middleware
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :current_usage, :currency, :cache_middleware, :bypass_aggregation
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -248,7 +251,8 @@ module Fees
           to_datetime: boundaries.charges_to_datetime,
           charges_duration: boundaries.charges_duration
         },
-        filters: aggregation_filters(charge_filter:)
+        filters: aggregation_filters(charge_filter:),
+        bypass_aggregation:
       )
     end
 

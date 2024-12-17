@@ -7,6 +7,8 @@ module BillableMetrics
       BATCH_SIZE = 1000
 
       def compute_aggregation(options: {})
+        return empty_result if should_bypass_aggregation?
+
         result.count = event_store.count
 
         aggregation_result = perform_custom_aggregation(grouped_by_values:)
@@ -33,6 +35,8 @@ module BillableMetrics
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
+        return empty_results if should_bypass_aggregation?
+
         counts = event_store.grouped_count
         return empty_results if counts.blank?
 
