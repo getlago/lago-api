@@ -8,8 +8,10 @@ module PaymentProviders
         SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
         FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
 
-        def initialize(payment:)
+        def initialize(payment:, reference:, metadata:)
           @payment = payment
+          @reference = reference
+          @metadata = metadata
           @invoice = payment.payable
           @provider_customer = payment.payment_provider_customer
 
@@ -45,7 +47,7 @@ module PaymentProviders
 
         private
 
-        attr_reader :payment, :invoice, :provider_customer
+        attr_reader :payment, :reference, :metadata, :invoice, :provider_customer
 
         delegate :payment_provider, :customer, to: :provider_customer
 
@@ -92,7 +94,7 @@ module PaymentProviders
               currency: payment.amount_currency.upcase,
               value: payment.amount_cents
             },
-            reference: invoice.number,
+            reference: reference,
             paymentMethod: {
               type: "scheme",
               storedPaymentMethodId: provider_customer.payment_method_id

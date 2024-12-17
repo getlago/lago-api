@@ -9,8 +9,10 @@ module PaymentProviders
         SUCCESS_STATUSES = %w[succeeded].freeze
         FAILED_STATUSES = %w[canceled].freeze
 
-        def initialize(payment:)
+        def initialize(payment:, reference:, metadata:)
           @payment = payment
+          @reference = reference
+          @metadata = metadata
           @invoice = payment.payable
           @provider_customer = payment.payment_provider_customer
 
@@ -56,7 +58,7 @@ module PaymentProviders
 
         private
 
-        attr_reader :payment, :invoice, :provider_customer
+        attr_reader :payment, :reference, :metadata, :invoice, :provider_customer
 
         delegate :payment_provider, to: :provider_customer
 
@@ -133,13 +135,8 @@ module PaymentProviders
             off_session: off_session?,
             return_url: success_redirect_url,
             error_on_requires_action: error_on_requires_action?,
-            description:,
-            metadata: {
-              lago_customer_id: provider_customer.customer_id,
-              lago_invoice_id: invoice.id,
-              invoice_issuing_date: invoice.issuing_date.iso8601,
-              invoice_type: invoice.invoice_type
-            }
+            description: reference,
+            metadata: metadata
           }
         end
 
@@ -157,10 +154,6 @@ module PaymentProviders
         # NOTE: Same as off_session?
         def error_on_requires_action?
           invoice.customer.country != "IN"
-        end
-
-        def description
-          "#{invoice.organization.name} - Invoice #{invoice.number}"
         end
 
         def prepare_failed_result(error, reraise: false, payable_payment_status: :failed)
