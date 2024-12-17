@@ -49,36 +49,6 @@ module PaymentProviders
       PaymentProviders::Stripe::RegisterWebhookService.call(stripe_provider)
     end
 
-    def handle_incoming_webhook(organization_id:, params:, signature:, code: nil)
-      organization = Organization.find_by(id: organization_id)
-
-      payment_provider_result = PaymentProviders::FindService.call(
-        organization_id:,
-        code:,
-        payment_provider_type: 'stripe'
-      )
-
-      return payment_provider_result unless payment_provider_result.success?
-
-      event = ::Stripe::Webhook.construct_event(
-        params,
-        signature,
-        payment_provider_result.payment_provider&.webhook_secret
-      )
-
-      PaymentProviders::Stripe::HandleEventJob.perform_later(
-        organization:,
-        event: event.to_json
-      )
-
-      result.event = event
-      result
-    rescue JSON::ParserError
-      result.service_failure!(code: 'webhook_error', message: 'Invalid payload')
-    rescue ::Stripe::SignatureVerificationError
-      result.service_failure!(code: 'webhook_error', message: 'Invalid signature')
-    end
-
     private
 
     def unregister_webhook(stripe_provider, api_key)

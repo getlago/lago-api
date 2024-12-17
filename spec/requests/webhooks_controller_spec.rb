@@ -28,13 +28,12 @@ RSpec.describe WebhooksController, type: :request do
     end
 
     before do
-      allow(PaymentProviders::StripeService).to receive(:new)
-        .and_return(stripe_service)
-      allow(stripe_service).to receive(:handle_incoming_webhook)
+      allow(PaymentProviders::Stripe::HandleIncomingWebhookService)
+        .to receive(:call)
         .with(
           organization_id: organization.id,
           code: nil,
-          params: event.to_json,
+          body: event.to_json,
           signature: 'signature'
         )
         .and_return(result)
@@ -51,9 +50,8 @@ RSpec.describe WebhooksController, type: :request do
       )
 
       expect(response).to have_http_status(:success)
-
-      expect(PaymentProviders::StripeService).to have_received(:new)
-      expect(stripe_service).to have_received(:handle_incoming_webhook)
+      expect(PaymentProviders::Stripe::HandleIncomingWebhookService)
+        .to have_received(:call)
     end
 
     context 'when failing to handle stripe event' do
@@ -72,9 +70,8 @@ RSpec.describe WebhooksController, type: :request do
         )
 
         expect(response).to have_http_status(:bad_request)
-
-        expect(PaymentProviders::StripeService).to have_received(:new)
-        expect(stripe_service).to have_received(:handle_incoming_webhook)
+        expect(PaymentProviders::Stripe::HandleIncomingWebhookService)
+          .to have_received(:call)
       end
     end
   end
