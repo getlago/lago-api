@@ -4,6 +4,7 @@ retry: 1
 queues:
   - default
   - mailers
+  - clock
   - providers
   - webhook
   - invoices
