@@ -66,6 +66,8 @@ RSpec.configure do |config|
   end
 
   config.define_derived_metadata do |meta|
-    meta[:aggregate_failures] = true
+    unless meta.key?(:aggregate_failures)
+      meta[:aggregate_failures] = true
+    end
   end
 end
