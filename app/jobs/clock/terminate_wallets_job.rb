@@ -4,7 +4,13 @@ module Clock
   class TerminateWalletsJob < ApplicationJob
     include SentryCronConcern
 
-    queue_as 'clock'
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_CLOCK'])
+        :clock_worker
+      else
+        :clock
+      end
+    end
 
     def perform
       Wallet.active.expired.find_each do |wallet|
