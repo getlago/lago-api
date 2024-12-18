@@ -46,6 +46,7 @@ module DataExports
 
     def all_object_ids
       case resource_type
+      when "credit_notes" then credit_note_ids
       when "invoices", "invoice_fees" then all_invoice_ids
       else
         raise ResourceTypeNotSupportedError.new(
@@ -64,6 +65,18 @@ module DataExports
         search_term:,
         filters:
       ).invoices.pluck(:id)
+    end
+
+    def credit_note_ids
+      search_term = resource_query.delete("search_term")
+      filters = resource_query
+
+      CreditNotesQuery.call(
+        organization:,
+        pagination: nil,
+        search_term:,
+        filters:
+      ).credit_notes.pluck(:id)
     end
   end
 end
