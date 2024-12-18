@@ -37,11 +37,19 @@ module Events
         return missing_subscription_error
       end
 
+      return invalid_timestamp_error unless valid_timestamp?
       return transaction_id_error unless valid_transaction_id?
       return invalid_code_error unless valid_code?
       return invalid_properties_error unless valid_properties?
 
       nil
+    end
+
+    def valid_timestamp?
+      return true if params[:timestamp].blank?
+
+      # timestamp is a number of seconds
+      valid_number?(params[:timestamp])
     end
 
     def valid_transaction_id?
@@ -90,6 +98,10 @@ module Events
 
     def invalid_customer_error
       result.not_found_failure!(resource: 'customer')
+    end
+
+    def invalid_timestamp_error
+      result.validation_failure!(errors: {timestamp: ['invalid_format']})
     end
 
     def billable_metric

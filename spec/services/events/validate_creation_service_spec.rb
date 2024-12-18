@@ -254,5 +254,31 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
       end
     end
+
+    context 'when timestamp is in a wrong format' do
+      let(:params) do
+        {external_customer_id: customer.external_id, code: billable_metric.code, transaction_id:, timestamp: '2025-01-01'}
+      end
+
+      it 'returns a timestamp_is_not_valid error' do
+        validate_event
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:timestamp)
+        expect(result.error.messages[:timestamp]).to include('invalid_format')
+      end
+    end
+
+    context 'when timestamp is valid' do
+      let(:params) do
+        {external_customer_id: customer.external_id, code: billable_metric.code, transaction_id:, timestamp: Time.current.to_i + 0.11}
+      end
+
+      it 'does not raise any errors' do
+        expect(validate_event).to be_nil
+        expect(result).to be_success
+      end
+    end
   end
 end

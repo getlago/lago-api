@@ -18,7 +18,7 @@ module Events
       event.external_subscription_id = params[:external_subscription_id]
       event.properties = params[:properties] || {}
       event.metadata = metadata || {}
-      event.timestamp = Time.zone.at(params[:timestamp] ? params[:timestamp].to_f : timestamp)
+      event.timestamp = Time.zone.at(params[:timestamp] ? Float(params[:timestamp]) : timestamp)
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
       CalculateExpressionService.call(organization:, event:).raise_if_error!
@@ -35,6 +35,8 @@ module Events
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique
       result.single_validation_failure!(field: :transaction_id, error_code: 'value_already_exist')
+    rescue ArgumentError
+      result.single_validation_failure!(field: :timestamp, error_code: 'invalid_format')
     end
 
     private
