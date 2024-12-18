@@ -499,7 +499,7 @@ end
 #  index_invoices_on_number                         (number)
 #  index_invoices_on_organization_id                (organization_id)
 #  index_invoices_on_payment_overdue                (payment_overdue)
-#  index_invoices_on_ready_to_be_refreshed          (ready_to_be_refreshed) WHERE ready_to_be_refreshed
+#  index_invoices_on_ready_to_be_refreshed          (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
 #  index_invoices_on_sequential_id                  (sequential_id)
 #  index_invoices_on_status                         (status)
 #

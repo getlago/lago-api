@@ -920,7 +920,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_17_120924) do
     t.index ["number"], name: "index_invoices_on_number"
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
-    t.index ["ready_to_be_refreshed"], name: "index_invoices_on_ready_to_be_refreshed", where: "ready_to_be_refreshed"
+    t.index ["ready_to_be_refreshed"], name: "index_invoices_on_ready_to_be_refreshed", where: "(ready_to_be_refreshed = true)"
     t.index ["sequential_id"], name: "index_invoices_on_sequential_id"
     t.index ["status"], name: "index_invoices_on_status"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
