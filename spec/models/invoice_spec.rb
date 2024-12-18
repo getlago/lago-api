@@ -155,6 +155,22 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe 'ready_to_be_refreshed' do
+    let(:invoices) do
+      [
+        create(:invoice, status: :draft, ready_to_be_refreshed: true),
+        create(:invoice, status: :draft, ready_to_be_refreshed: false),
+        create(:invoice, status: :finalized, ready_to_be_refreshed: true)
+      ]
+    end
+
+    before { invoices }
+
+    it 'returns only the invoices that are ready for refresh' do
+      expect(described_class.ready_to_be_finalized.pluck(:id)).to include(invoices[0].id)
+    end
+  end
+
   describe 'when status is visible' do
     it do
       described_class::VISIBLE_STATUS.keys.each do |status|
