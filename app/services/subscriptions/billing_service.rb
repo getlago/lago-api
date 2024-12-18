@@ -16,10 +16,6 @@ module Subscriptions
             # NOTE: In case of downgrade, subscription remain active until the end of the period,
             #       a next subscription is pending, the current one must be terminated
             Subscriptions::TerminateJob.perform_later(subscription, today.to_i)
-
-            if subscription.should_sync_hubspot_subscription?
-              Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
-            end
           else
             billing_subscriptions << subscription
           end
@@ -79,8 +75,11 @@ module Subscriptions
         WHERE
           -- Exclude subscriptions already billed today
           already_billed_today.invoiced_count IS NULL
-          -- Do not bill subscriptions that started this day, they are billed by another job
-          AND DATE(subscriptions.started_at#{at_time_zone}) != DATE(:today#{at_time_zone})
+
+          -- Do not bill subscriptions that have started _after_ :today (excludes subscriptions starting today! and also importantly invoices that might have started after this service is run)
+          AND DATE(subscriptions.started_at#{at_time_zone}) < DATE(:today#{at_time_zone})
+          -- Do not bill subscriptions that were not created yet
+          and DATE(subscriptions.created_at) <= Date(:today)
           AND (
             subscriptions.ending_at IS NULL OR
             DATE(subscriptions.ending_at#{at_time_zone}) != DATE(:today#{at_time_zone})

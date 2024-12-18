@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Cops
-  class ServiceCallCop < ::RuboCop::Cop::Cop
+  class ServiceCallCop < ::RuboCop::Cop::Base
     def_node_matcher :base_service_subclass?, <<~PATTERN
       (const {nil? cbase} :BaseService)
     PATTERN
