@@ -51,9 +51,8 @@ module Invoices
           refresh: true
         ).raise_if_error!
 
-        invoice = Invoice.includes(invoice_subscriptions: :subscription).find(result.invoice.id)
         calculate_result = Invoices::CalculateFeesService.call(
-          invoice: invoice,
+          invoice: invoice.reload,
           recurring:,
           context:
         )
