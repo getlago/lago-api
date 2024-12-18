@@ -3,7 +3,6 @@
 module Api
   module V1
     class EventsController < Api::BaseController
-      before_action :validate_timestamp_format, only: [:create, :estimate_fees]
 
       def create
         result = ::Events::CreateService.call(
@@ -108,12 +107,6 @@ module Api
       end
 
       private
-
-      def validate_timestamp_format
-        return if params[:event][:timestamp].to_f.to_s == params[:event][:timestamp].to_s
-
-        render json: { error: 'Invalid timestamp format' }, status: :unprocessable_entity
-      end
 
       def create_params
         params

@@ -77,6 +77,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect { subject }.not_to change(Event, :count)
 
         expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq({timestamp: ["invalid_format"]})
       end
     end
   end
