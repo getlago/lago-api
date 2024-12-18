@@ -145,6 +145,19 @@ RSpec.describe Subscriptions::BillingService, type: :service do
             .with([subscription], billing_date)
         end
       end
+
+      context "when subscription is created after billing_at" do
+        let(:created_at) { billing_at + 1.day }
+
+        it 'does not enqueue a job on billing day' do
+          billing_service.call
+
+          expect(BillSubscriptionJob).not_to have_been_enqueued
+            .with([subscription], billing_at.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).not_to have_been_enqueued
+            .with([subscription], billing_at)
+        end
+      end
     end
 
     context 'when billed quarterly with calendar billing time' do
