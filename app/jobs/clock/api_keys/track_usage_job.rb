@@ -7,9 +7,9 @@ module Clock
 
       queue_as do
         if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_CLOCK'])
-          :clock
+          :clock_worker
         else
-          :default
+          :clock
         end
       end
 
