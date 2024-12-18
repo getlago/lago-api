@@ -41,10 +41,7 @@ module IntegrationCustomers
     end
 
     def link_customer!
-      sync_with_provider = false
-      if integration&.type&.to_s == 'Integrations::SalesforceIntegration'
-        sync_with_provider = true
-      end
+      sync_with_provider = integration&.type&.to_s == 'Integrations::SalesforceIntegration'
 
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
         integration:,
