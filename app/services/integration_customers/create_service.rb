@@ -41,12 +41,14 @@ module IntegrationCustomers
     end
 
     def link_customer!
+      sync_with_provider = integration&.type&.to_s == 'Integrations::SalesforceIntegration'
+
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
         integration:,
         customer:,
         external_customer_id: params[:external_customer_id],
         type: customer_type,
-        sync_with_provider: false
+        sync_with_provider: sync_with_provider
       )
 
       if integration&.type&.to_s == 'Integrations::NetsuiteIntegration'
