@@ -56,6 +56,7 @@ class DataExport < ApplicationRecord
   def export_class
     case resource_type
     when "credit_notes" then DataExports::Csv::CreditNotes
+    when "credit_note_items" then DataExports::Csv::CreditNoteItems
     when "invoices" then DataExports::Csv::Invoices
     when "invoice_fees" then DataExports::Csv::InvoiceFees
     end

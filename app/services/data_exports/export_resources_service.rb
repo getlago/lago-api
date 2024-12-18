@@ -46,7 +46,7 @@ module DataExports
 
     def all_object_ids
       case resource_type
-      when "credit_notes" then credit_note_ids
+      when "credit_notes", "credit_note_items" then credit_note_ids
       when "invoices", "invoice_fees" then all_invoice_ids
       else
         raise ResourceTypeNotSupportedError.new(

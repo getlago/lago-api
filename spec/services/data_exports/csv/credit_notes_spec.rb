@@ -51,7 +51,7 @@ RSpec.describe DataExports::Csv::CreditNotes do
       File.unlink(file.path)
     end
 
-    it "adds serialized credit notes to csv", :aggregate_failures do
+    it "adds serialized credit notes to csv" do
       expect(result).to be_success
       parsed_rows = CSV.parse(result.csv_file, nil_value: "")
       expect(parsed_rows).to eq(expected_rows)

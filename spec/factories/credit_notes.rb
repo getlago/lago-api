@@ -37,5 +37,9 @@ FactoryBot.define do
         create(:error_detail, owner: i, error_code: 'tax_error')
       end
     end
+
+    trait :with_items do
+      items { create_pair(:credit_note_item) }
+    end
   end
 end

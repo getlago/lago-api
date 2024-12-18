@@ -120,6 +120,14 @@ RSpec.describe DataExport, type: :model do
       end
     end
 
+    context "when resource_type is credit note items" do
+      let(:resource_type) { "credit_note_items" }
+
+      it "returns DataExports::Csv::CreditNotes" do
+        expect(data_export.export_class).to eq(DataExports::Csv::CreditNoteItems)
+      end
+    end
+
     context "when resource_type is an unsupported value" do
       let(:resource_type) { "unsupported" }
 
