@@ -3,7 +3,6 @@
 module Api
   module V1
     class EventsController < Api::BaseController
-
       def create
         result = ::Events::CreateService.call(
           organization: current_organization,
