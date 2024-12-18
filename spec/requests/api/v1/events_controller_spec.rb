@@ -58,6 +58,27 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
+
+    context 'when sending wrong format for the timestamp' do
+      let(:create_params) do
+        {
+          code: metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          timestamp: Time.current.to_s,
+          precise_total_amount_cents: '123.45',
+          properties: {
+            foo: 'bar'
+          }
+        }
+      end
+
+      it 'returns a not found response' do
+        expect { subject }.not_to change(Event, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
   end
 
   describe 'POST /api/v1/events/batch' do
