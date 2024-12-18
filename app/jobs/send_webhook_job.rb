@@ -3,7 +3,13 @@
 require Rails.root.join('lib/lago_http_client/lago_http_client')
 
 class SendWebhookJob < ApplicationJob
-  queue_as 'webhook'
+  queue_as do
+    if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_WEBHOOK'])
+      :webhook_worker
+    else
+      :webhook
+    end
+  end
 
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 6
 
