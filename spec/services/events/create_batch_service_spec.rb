@@ -196,6 +196,35 @@ RSpec.describe Events::CreateBatchService, type: :service do
       end
     end
 
+    context 'when timestamp is in a wrong format' do
+      let(:timestamp) { Time.current.to_s }
+      let(:events_params) do
+        {
+          events: [
+            {
+              external_customer_id: SecureRandom.uuid,
+              external_subscription_id: SecureRandom.uuid,
+              code:,
+              transaction_id: SecureRandom.uuid,
+              precise_total_amount_cents:,
+              properties: {foo: 'bar'},
+              timestamp:
+            }
+          ]
+        }
+      end
+
+      it 'returns an error' do
+        result = nil
+        expect { result = create_batch_service.call }.not_to change(Event, :count)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(0)
+        expect(result.error.messages[0][:timestamp]).to include('invalid_format')
+      end
+    end
+
     context "with an expression configured on the billable metric" do
       let(:billable_metric) { create(:billable_metric, code:, organization:, field_name: "result", expression: "concat(event.properties.foo, '-bar')") }
 
