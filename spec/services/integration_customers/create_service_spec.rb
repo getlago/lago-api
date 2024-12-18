@@ -74,7 +74,7 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
             expect { service_call }.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
           end
 
-          context 'when the integration is with salesforce' do
+          context 'when the integration type is salesforce' do
             let(:integration) { create(:salesforce_integration, organization:) }
             let(:integration_type) { 'salesforce' }
 
