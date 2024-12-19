@@ -105,7 +105,7 @@ class Invoice < ApplicationRecord
   scope :visible, -> { where(status: VISIBLE_STATUS.keys) }
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
-  scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
+  scope :ready_to_be_refreshed, -> { draft.where(ready_to_be_refreshed: true) }
   scope :ready_to_be_finalized, -> { draft.where('issuing_date <= ?', Time.current.to_date) }
 
   scope :created_before,
@@ -495,9 +495,11 @@ end
 #
 #  index_invoices_on_customer_id                    (customer_id)
 #  index_invoices_on_customer_id_and_sequential_id  (customer_id,sequential_id) UNIQUE
+#  index_invoices_on_issuing_date                   (issuing_date)
 #  index_invoices_on_number                         (number)
 #  index_invoices_on_organization_id                (organization_id)
 #  index_invoices_on_payment_overdue                (payment_overdue)
+#  index_invoices_on_ready_to_be_refreshed          (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
 #  index_invoices_on_sequential_id                  (sequential_id)
 #  index_invoices_on_status                         (status)
 #
