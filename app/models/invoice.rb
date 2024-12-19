@@ -446,7 +446,8 @@ class Invoice < ApplicationRecord
     status_changed?(from: 'draft', to: 'finalized') ||
       status_changed?(from: 'generating', to: 'finalized') ||
       status_changed?(from: 'open', to: 'finalized') ||
-      status_changed?(from: 'failed', to: 'finalized')
+      status_changed?(from: 'failed', to: 'finalized') ||
+      status_changed?(from: 'pending', to: 'finalized')
   end
 end
 
