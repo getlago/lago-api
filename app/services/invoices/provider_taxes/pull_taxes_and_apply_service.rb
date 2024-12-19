@@ -11,7 +11,7 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: 'invoice') unless invoice
-        unless (invoice.pending? || invoice.draft?) && invoice.tax_pending?
+        unless ((invoice.pending? || invoice.draft?) && invoice.tax_pending?)
           return result.not_allowed_failure!(code: 'invalid_status')
         end
 

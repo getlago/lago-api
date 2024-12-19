@@ -10,7 +10,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob, type: :job do
   let(:result) { BaseService::Result.new }
 
   before do
-    allow(Invoices::ProviderTaxes::PullTaxesService).to receive(:call)
+    allow(Invoices::ProviderTaxes::PullTaxesAndApplyService).to receive(:call)
       .with(invoice:)
       .and_return(result)
   end
@@ -24,7 +24,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob, type: :job do
     it 'calls successfully the service' do
       described_class.perform_now(invoice:)
 
-      expect(Invoices::ProviderTaxes::PullTaxesService).to have_received(:call)
+      expect(Invoices::ProviderTaxes::PullTaxesAndApplyService).to have_received(:call)
     end
   end
 
@@ -32,7 +32,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob, type: :job do
     it 'does not call the service' do
       described_class.perform_now(invoice:)
 
-      expect(Invoices::ProviderTaxes::PullTaxesService).not_to have_received(:call)
+      expect(Invoices::ProviderTaxes::PullTaxesAndApplyService).not_to have_received(:call)
     end
   end
 end
