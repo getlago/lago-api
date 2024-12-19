@@ -102,6 +102,7 @@ module Invoices
       CreditNoteItem
         .joins(:credit_note)
         .where(credit_note: {invoice_id: invoice.id})
+        .includes(:fee)
     end
 
     def flag_lifetime_usage_for_refresh
