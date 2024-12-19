@@ -19,7 +19,6 @@ development:
   clickhouse:
     adapter: clickhouse
     database: default
-    schema_format: 'ruby'
     host: clickhouse
     port: 8123
     username: default
