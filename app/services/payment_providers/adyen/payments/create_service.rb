@@ -4,7 +4,7 @@ module PaymentProviders
   module Adyen
     module Payments
       class CreateService < BaseService
-        PENDING_STATUSES = %w[AuthorisedPending Received].freeze
+        PROCESSING_STATUSES = %w[AuthorisedPending Received].freeze
         SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
         FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
 
@@ -107,7 +107,7 @@ module PaymentProviders
         end
 
         def payment_status_mapping(payment_status)
-          return :pending if PENDING_STATUSES.include?(payment_status)
+          return :processing if PROCESSING_STATUSES.include?(payment_status)
           return :succeeded if SUCCESS_STATUSES.include?(payment_status)
           return :failed if FAILED_STATUSES.include?(payment_status)
 

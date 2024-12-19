@@ -245,7 +245,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
         expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
         expect(result.payment.amount_currency).to eq(invoice.currency)
         expect(result.payment.status).to eq("processing")
-        expect(result.payment.payable_payment_status).to eq("pending")
+        expect(result.payment.payable_payment_status).to eq("processing")
 
         expect(Stripe::PaymentIntent).to have_received(:create)
       end

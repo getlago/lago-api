@@ -25,7 +25,7 @@ module PaymentProviders
           super
         end
 
-        PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed]
+        PROCESSING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed]
           .freeze
         SUCCESS_STATUSES = %w[paid_out].freeze
         FAILED_STATUSES = %w[cancelled customer_approval_denied failed charged_back].freeze
@@ -99,7 +99,7 @@ module PaymentProviders
         end
 
         def payment_status_mapping(payment_status)
-          return :pending if PENDING_STATUSES.include?(payment_status)
+          return :processing if PROCESSING_STATUSES.include?(payment_status)
           return :succeeded if SUCCESS_STATUSES.include?(payment_status)
           return :failed if FAILED_STATUSES.include?(payment_status)
 
