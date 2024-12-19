@@ -36,11 +36,11 @@ module PaymentRequests
           payment_provider_id: current_payment_provider.id,
           payment_provider_customer_id: current_payment_provider_customer.id,
           amount_cents: payable.total_amount_cents,
-          amount_currency: payable.currency
+          amount_currency: payable.currency,
+          status: "pending"
         ).find_or_create_by!(
           payable:,
-          payable_payment_status: "pending",
-          status: "pending"
+          payable_payment_status: "pending"
         )
 
         result.payment = payment
@@ -56,23 +56,16 @@ module PaymentRequests
           }
         ).call!
 
-        # TODO: payment status should be failed and payable_payment_status should be pending
-        # Keep payment in a pending state. Used manly for `amount_too_small` in stripe service
-        return result if payment.payable_payment_status.nil?
-
-        update_payable_payment_status(payment_status: payment.payable_payment_status)
-        update_invoices_payment_status(payment_status: payment.payable_payment_status)
+        update_payable_payment_status(payment_status: payment_result.payment.payable_payment_status)
+        update_invoices_payment_status(payment_status: payment_result.payment.payable_payment_status)
 
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later if payable.payment_failed?
-        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
 
         result
       rescue BaseService::ServiceFailure => e
+        result.payment = e.result.payment
         deliver_error_webhook(e.result)
-
-        if e.result.payment.payable_payment_status.present?
-          update_payable_payment_status(payment_status: e.result.payment.payable_payment_status)
-        end
+        update_payable_payment_status(payment_status: e.result.payment.payable_payment_status)
 
         # Some errors should be investigated and need to be raised
         raise if e.result.reraise
@@ -93,7 +86,7 @@ module PaymentRequests
 
       attr_reader :payable
 
-      delegate :customer, to: :payable
+      delegate :customer, :organization, to: :payable
 
       def provider
         @provider ||= payable.customer.payment_provider&.to_sym
@@ -119,7 +112,8 @@ module PaymentRequests
         PaymentRequests::UpdateService.call!(
           payable: payable,
           params: {
-            payment_status:,
+            # NOTE: A proper `processing` payment status should be introduced for invoices
+            payment_status: (payment_status.to_s == "processing") ? :pending : payment_status,
             ready_for_payment_processing: payment_status.to_sym == :failed
           },
           webhook_notification: payment_status.to_sym == :succeeded
@@ -128,14 +122,15 @@ module PaymentRequests
 
       def update_invoices_payment_status(payment_status:)
         payable.invoices.each do |invoice|
-          Invoices::UpdateService.call(
+          Invoices::UpdateService.call!(
             invoice:,
             params: {
-              payment_status:,
+              # NOTE: A proper `processing` payment status should be introduced for invoices
+              payment_status: (payment_status.to_s == "processing") ? :pending : payment_status,
               ready_for_payment_processing: payment_status.to_sym == :failed
             },
             webhook_notification: payment_status.to_sym == :succeeded
-          ).raise_if_error!
+          )
         end
       end
 
