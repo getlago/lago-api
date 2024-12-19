@@ -4,7 +4,7 @@ module PaymentProviders
   module Stripe
     module Payments
       class CreateService < BaseService
-        PENDING_STATUSES = %w[processing requires_capture requires_action requires_confirmation requires_payment_method]
+        PROCESSING_STATUSES = %w[processing requires_capture requires_action requires_confirmation requires_payment_method]
           .freeze
         SUCCESS_STATUSES = %w[succeeded].freeze
         FAILED_STATUSES = %w[canceled].freeze
@@ -59,7 +59,7 @@ module PaymentProviders
         delegate :payment_provider, to: :provider_customer
 
         def payment_status_mapping(payment_status)
-          return :pending if PENDING_STATUSES.include?(payment_status)
+          return :processing if PROCESSING_STATUSES.include?(payment_status)
           return :succeeded if SUCCESS_STATUSES.include?(payment_status)
           return :failed if FAILED_STATUSES.include?(payment_status)
 

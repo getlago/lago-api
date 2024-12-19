@@ -129,7 +129,7 @@ module Invoices
 
       def processing_payment
         @processing_payment ||= Payment.find_by(
-          payable_id: invoice,
+          payable: invoice,
           payment_provider_id: current_payment_provider.id,
           payment_provider_customer_id: current_payment_provider_customer.id,
           amount_cents: invoice.total_amount_cents,
