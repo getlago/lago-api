@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
-class Customer < ApplicationRecord
+class Customer < Account
   include PaperTrailTraceable
   include Sequenced
   include Currencies
   include CustomerTimezone
   include OrganizationTimezone
-  include Discard::Model
-  self.discard_column = :deleted_at
 
   FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS = [
     :inherit,
@@ -27,12 +25,10 @@ class Customer < ApplicationRecord
 
   before_save :ensure_slug
 
-  belongs_to :organization
   belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign"
 
   has_many :subscriptions
   has_many :events
-  has_many :invoices
   has_many :applied_coupons
   has_many :metadata, class_name: 'Metadata::CustomerMetadata', dependent: :destroy
   has_many :coupons, through: :applied_coupons
@@ -262,6 +258,7 @@ end
 #  state                            :string
 #  tax_identification_number        :string
 #  timezone                         :string
+#  type                             :string           default("Customer"), not null
 #  url                              :string
 #  vat_rate                         :float
 #  zipcode                          :string

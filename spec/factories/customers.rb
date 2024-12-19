@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :customer do
     organization
+    type { "Customer" }
     name { Faker::TvShows::SiliconValley.character }
     firstname { Faker::Name.first_name }
     lastname { Faker::Name.last_name }
