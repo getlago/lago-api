@@ -63,60 +63,6 @@ module PaymentRequests
         @gocardless_payment_provider ||= payment_provider(customer)
       end
 
-<<<<<<< HEAD
-      def mandate_id
-        result = client.mandates.list(
-          params: {
-            customer: customer.gocardless_customer.provider_customer_id,
-            status: %w[pending_customer_approval pending_submission submitted active]
-          }
-        )
-
-        mandate = result&.records&.first
-
-        raise MandateNotFoundError unless mandate
-
-        customer.gocardless_customer.provider_mandate_id = mandate.id
-        customer.gocardless_customer.save!
-
-        mandate.id
-      end
-
-      def create_gocardless_payment
-        client.payments.create(
-          params: {
-            amount: payable.total_amount_cents,
-            currency: payable.currency.upcase,
-            retry_if_possible: false,
-            metadata: {
-              lago_customer_id: customer.id,
-              lago_payable_id: payable.id,
-              lago_payable_type: payable.class.name
-            },
-            links: {
-              mandate: mandate_id
-            }
-          },
-          headers: {
-            'Idempotency-Key' => "#{payable.id}/#{payable.payment_attempts}"
-          }
-        )
-      rescue GoCardlessPro::Error => e
-        deliver_error_webhook(e)
-        update_payable_payment_status(payment_status: :failed, deliver_webhook: false)
-
-        result.service_failure!(code: e.code, message: e.message)
-        nil
-=======
-      def payable_payment_status(payment_status)
-        return :pending if PENDING_STATUSES.include?(payment_status)
-        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-        return :failed if FAILED_STATUSES.include?(payment_status)
-
-        payment_status
->>>>>>> e049a84a (misc(PaymentRequest): Re-use payment logic for request)
-      end
-
       def update_payable_payment_status(payment_status:, deliver_webhook: true)
         UpdateService.call(
           payable: result.payable,

@@ -3,35 +3,117 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
-  subject(:create_service) { described_class.new(payable: payment_request, payment_provider:) }
+  subject(:create_service) { described_class.new(payable: payment_request, payment_provider: provider) }
+
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:, payment_provider: provider, payment_provider_code:) }
+  let(:provider) { "stripe" }
+  let(:payment_provider_code) { "stripe_1" }
 
   let(:payment_request) do
-    create(:payment_request, customer:, organization: customer.organization)
+    create(
+      :payment_request,
+      organization:,
+      customer:,
+      amount_cents: 799,
+      amount_currency: "USD",
+      invoices: [invoice_1, invoice_2]
+    )
   end
-  let(:customer) { create(:customer, payment_provider:) }
+
+  let(:invoice_1) do
+    create(
+      :invoice,
+      organization:,
+      customer:,
+      total_amount_cents: 200,
+      currency: "USD",
+      ready_for_payment_processing: true
+    )
+  end
+
+  let(:invoice_2) do
+    create(
+      :invoice,
+      organization:,
+      customer:,
+      total_amount_cents: 599,
+      currency: "USD",
+      ready_for_payment_processing: true
+    )
+  end
 
   describe "#call" do
-    context "with adyen payment provider" do
-      let(:payment_provider) { "adyen" }
-      let(:service_instance) { instance_double(PaymentRequests::Payments::AdyenService) }
-      let(:service_result) { BaseService::Result.new }
+    let(:payment_provider) { create(:stripe_provider, code: payment_provider_code, organization:) }
+    let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
+    let(:provider_class) { PaymentProviders::Stripe::Payments::CreateService }
+    let(:provider_service) { instance_double(provider_class) }
 
-      before do
-        allow(PaymentRequests::Payments::AdyenService).to receive(:new)
-          .with(payment_request)
-          .and_return(service_instance)
-        allow(service_instance).to receive(:create)
-          .and_return(service_result)
+    let(:service_result) do
+      BaseService::Result.new.tap do |r|
+        r.payment = OpenStruct.new(payable_payment_status: "succeeded")
+      end
+    end
+
+    before do
+      provider_customer
+
+      allow(provider_class)
+        .to receive(:new)
+        .with(
+          payment: an_instance_of(Payment),
+          reference: "#{organization.name} - Overdue invoices",
+          metadata: {
+            lago_customer_id: customer.id,
+            lago_payable_id: payment_request.id,
+            lago_payable_type: "PaymentRequest"
+          }
+        ).and_return(provider_service)
+      allow(provider_service).to receive(:call!)
+        .and_return(service_result)
+    end
+
+    context "with adyen payment provider" do
+      let(:provider) { "adyen" }
+      let(:payment_provider) { create(:adyen_provider, code: payment_provider_code, organization:) }
+      let(:provider_customer) { create(:adyen_customer, payment_provider:, customer:) }
+
+      let(:provider_class) { PaymentProviders::Adyen::Payments::CreateService }
+      let(:provider_service) { instance_double(provider_class) }
+
+      let(:service_result) do
+        BaseService::Result.new.tap do |r|
+          r.payment = OpenStruct.new(payable_payment_status: "succeeded")
+        end
       end
 
-      it 'creates an adyen payment' do
+      it 'creates a payment and  calls the adyen service' do
         result = create_service.call
 
-        expect(result).to eq(service_result)
+        expect(result).to be_success
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_present
 
-        expect(PaymentRequests::Payments::AdyenService).to have_received(:new)
-          .with(payment_request)
-        expect(service_instance).to have_received(:create)
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payable.payment_attempts).to eq(1)
+        expect(result.payable.ready_for_payment_processing).to eq(false)
+
+        payment = result.payment
+        expect(payment.payment_provider).to eq(payment_provider)
+        expect(payment.payment_provider_customer).to eq(provider_customer)
+        expect(payment.amount_cents).to eq(payment_request.total_amount_cents)
+        expect(payment.amount_currency).to eq(payment_request.currency)
+        expect(payment.payable).to eq(payment_request)
+
+        expect(provider_class).to have_received(:new)
+        expect(provider_service).to have_received(:call!)
+      end
+
+      it "updates invoice payment status to succeeded" do
+        create_service.call
+
+        expect(invoice_1.reload).to be_payment_succeeded
+        expect(invoice_2.reload).to be_payment_succeeded
       end
 
       it "does not send a payment requested email" do
@@ -41,8 +123,8 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
 
       context "when the payment fails" do
         let(:service_result) do
-          BaseService::Result.new.tap do |result|
-            result.payable = instance_double(PaymentRequest, payment_failed?: true)
+          BaseService::Result.new.tap do |r|
+            r.payment = OpenStruct.new(payable_payment_status: "failed")
           end
         end
 
@@ -55,26 +137,40 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
     end
 
     context "with gocardless payment provider" do
-      let(:payment_provider) { "gocardless" }
-      let(:service_instance) { instance_double(PaymentRequests::Payments::GocardlessService) }
-      let(:service_result) { BaseService::Result.new }
+      let(:provider) { "gocardless" }
+      let(:payment_provider) { create(:gocardless_provider, code: payment_provider_code, organization:) }
+      let(:provider_customer) { create(:gocardless_customer, payment_provider:, customer:) }
 
-      before do
-        allow(PaymentRequests::Payments::GocardlessService).to receive(:new)
-          .with(payment_request)
-          .and_return(service_instance)
-        allow(service_instance).to receive(:create)
-          .and_return(service_result)
-      end
+      let(:provider_class) { PaymentProviders::Gocardless::Payments::CreateService }
+      let(:provider_service) { instance_double(provider_class) }
 
-      it 'creates an adyen payment' do
+      it 'creates a payment and calls the gocardless service' do
         result = create_service.call
 
-        expect(result).to eq(service_result)
+        expect(result).to be_success
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_present
 
-        expect(PaymentRequests::Payments::GocardlessService).to have_received(:new)
-          .with(payment_request)
-        expect(service_instance).to have_received(:create)
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payable.payment_attempts).to eq(1)
+        expect(result.payable.ready_for_payment_processing).to eq(false)
+
+        payment = result.payment
+        expect(payment.payment_provider).to eq(payment_provider)
+        expect(payment.payment_provider_customer).to eq(provider_customer)
+        expect(payment.amount_cents).to eq(payment_request.total_amount_cents)
+        expect(payment.amount_currency).to eq(payment_request.currency)
+        expect(payment.payable).to eq(payment_request)
+
+        expect(provider_class).to have_received(:new)
+        expect(provider_service).to have_received(:call!)
+      end
+
+      it "updates invoice payment status to succeeded" do
+        create_service.call
+
+        expect(invoice_1.reload).to be_payment_succeeded
+        expect(invoice_2.reload).to be_payment_succeeded
       end
 
       it "does not send a payment requested email" do
@@ -84,8 +180,8 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
 
       context "when the payment fails" do
         let(:service_result) do
-          BaseService::Result.new.tap do |result|
-            result.payable = instance_double(PaymentRequest, payment_failed?: true)
+          BaseService::Result.new.tap do |r|
+            r.payment = OpenStruct.new(payable_payment_status: "failed")
           end
         end
 
@@ -98,26 +194,33 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
     end
 
     context "with stripe payment provider" do
-      let(:payment_provider) { "stripe" }
-      let(:service_instance) { instance_double(PaymentRequests::Payments::StripeService) }
-      let(:service_result) { BaseService::Result.new }
-
-      before do
-        allow(PaymentRequests::Payments::StripeService).to receive(:new)
-          .with(payment_request)
-          .and_return(service_instance)
-        allow(service_instance).to receive(:create)
-          .and_return(service_result)
-      end
-
-      it 'creates an adyen payment' do
+      it 'creates a payment and calls the stripe service' do
         result = create_service.call
 
-        expect(result).to eq(service_result)
+        expect(result).to be_success
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_present
 
-        expect(PaymentRequests::Payments::StripeService).to have_received(:new)
-          .with(payment_request)
-        expect(service_instance).to have_received(:create)
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payable.payment_attempts).to eq(1)
+        expect(result.payable.ready_for_payment_processing).to eq(false)
+
+        payment = result.payment
+        expect(payment.payment_provider).to eq(payment_provider)
+        expect(payment.payment_provider_customer).to eq(provider_customer)
+        expect(payment.amount_cents).to eq(payment_request.total_amount_cents)
+        expect(payment.amount_currency).to eq(payment_request.currency)
+        expect(payment.payable).to eq(payment_request)
+
+        expect(provider_class).to have_received(:new)
+        expect(provider_service).to have_received(:call!)
+      end
+
+      it "updates invoice payment status to succeeded" do
+        create_service.call
+
+        expect(invoice_1.reload).to be_payment_succeeded
+        expect(invoice_2.reload).to be_payment_succeeded
       end
 
       it "does not send a payment requested email" do
@@ -127,8 +230,8 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
 
       context "when the payment fails" do
         let(:service_result) do
-          BaseService::Result.new.tap do |result|
-            result.payable = instance_double(PaymentRequest, payment_failed?: true)
+          BaseService::Result.new.tap do |r|
+            r.payment = OpenStruct.new(payable_payment_status: "failed")
           end
         end
 
@@ -136,6 +239,248 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
           expect { create_service.call }
             .to have_enqueued_mail(PaymentRequestMailer, :requested)
             .with(params: {payment_request:}, args: [])
+        end
+      end
+    end
+
+    context "when payment request payment status is succeeded" do
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          payment_status: "succeeded",
+          amount_cents: 799,
+          amount_currency: "EUR",
+          invoices: [invoice_1, invoice_2]
+        )
+      end
+
+      it "does not creates a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        expect(result.payable).to be_payment_succeeded
+        expect(result.payable.payment_attempts).to eq(0)
+        expect(result.payment).to be_nil
+
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "with no payment provider" do
+      let(:payment_provider) { nil }
+
+      it "does not creates a stripe payment", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_nil
+
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "with 0 amount" do
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          amount_cents: 0,
+          amount_currency: "EUR",
+          invoices: [invoice]
+        )
+      end
+
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 0,
+          currency: "EUR"
+        )
+      end
+
+      it "does not creates a stripe payment", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_nil
+        expect(result.payable).to be_payment_succeeded
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "when customer does not have a provider customer id" do
+      before { provider_customer.update!(provider_customer_id: nil) }
+
+      it "does not creates a stripe payment", :aggregate_failures do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "when provider service raises a service failure" do
+      let(:service_result) do
+        BaseService::Result.new.tap do |r|
+          r.payment = OpenStruct.new(status: "pending", payable_payment_status: "pending")
+          r.error_message = "error"
+          r.error_code = "code"
+          r.reraise = true
+        end
+      end
+
+      before do
+        allow(provider_service).to receive(:call!)
+          .and_raise(BaseService::ServiceFailure.new(service_result, code: "code", error_message: "error"))
+      end
+
+      it "re-reaise the error and delivers an error webhook" do
+        expect { create_service.call }
+          .to raise_error(BaseService::ServiceFailure)
+          .and enqueue_job(SendWebhookJob)
+          .with(
+            "payment_request.payment_failure",
+            payment_request,
+            provider_customer_id: provider_customer.provider_customer_id,
+            provider_error: {
+              message: "error",
+              error_code: "code"
+            }
+          ).on_queue(:webhook)
+      end
+
+      context "when payment has a payable_payment_status" do
+        let(:service_result) do
+          BaseService::Result.new.tap do |r|
+            r.payment = OpenStruct.new(payable_payment_status: "failed")
+            r.error_message = "error"
+            r.error_code = "code"
+            r.reraise = true
+          end
+        end
+
+        it "updates the payment request payment status" do
+          expect { create_service.call }
+            .to raise_error(BaseService::ServiceFailure)
+
+          expect(payment_request.reload).to be_payment_failed
+        end
+      end
+
+      context "when payable_payment_status is pending" do
+        let(:service_result) do
+          BaseService::Result.new.tap do |r|
+            r.payment = OpenStruct.new(status: "failed", payable_payment_status: "pending")
+            r.error_message = "stripe_error"
+            r.error_code = "amount_too_small"
+          end
+        end
+
+        it "re-reaise the error and delivers an error webhook" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payable).to eq(payment_request)
+          expect(result.payment).to be_present
+
+          expect(result.payment.status).to eq("failed")
+          expect(result.payment.payable_payment_status).to eq("pending")
+
+          expect(provider_class).to have_received(:new)
+          expect(provider_service).to have_received(:call!)
+        end
+      end
+    end
+
+    context "when payment status is processing" do
+      let(:service_result) do
+        BaseService::Result.new.tap do |r|
+          r.payment = OpenStruct.new(payable_payment_status: "pending", status: "processing")
+        end
+      end
+
+      it "creates a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_present
+
+        expect(result.payable).to be_payment_pending
+        expect(result.payable.payment_attempts).to eq(1)
+        expect(result.payable.ready_for_payment_processing).to eq(false)
+
+        payment = result.payment
+        expect(payment.payment_provider).to eq(payment_provider)
+        expect(payment.payment_provider_customer).to eq(provider_customer)
+        expect(payment.amount_cents).to eq(payment_request.total_amount_cents)
+        expect(payment.amount_currency).to eq(payment_request.currency)
+        expect(payment.payable_payment_status).to eq("pending")
+        expect(payment.payable).to eq(payment_request)
+
+        expect(provider_class).to have_received(:new)
+        expect(provider_service).to have_received(:call!)
+      end
+    end
+
+    context 'when a payment exits' do
+      let(:payment) do
+        create(
+          :payment,
+          payable: payment_request,
+          payment_provider:,
+          payment_provider_customer: provider_customer,
+          amount_cents: payment_request.total_amount_cents,
+          amount_currency: payment_request.currency,
+          status: "pending",
+          payable_payment_status: payment_status
+        )
+      end
+
+      let(:payment_status) { "pending" }
+
+      before { payment }
+
+      it "retrieves the payment for processing" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to eq(payment)
+
+        expect(payment.payment_provider).to eq(payment_provider)
+        expect(payment.payment_provider_customer).to eq(provider_customer)
+        expect(payment.amount_cents).to eq(payment_request.total_amount_cents)
+        expect(payment.amount_currency).to eq(payment_request.currency)
+
+        expect(provider_class).to have_received(:new)
+        expect(provider_service).to have_received(:call!)
+      end
+
+      context "when payment is already processing" do
+        let(:payment_status) { "processing" }
+
+        it "does not creates a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payable).to eq(payment_request)
+          expect(result.payment).to eq(payment)
+
+          expect(provider_class).not_to have_received(:new)
+          expect(provider_service).not_to have_received(:call!)
         end
       end
     end

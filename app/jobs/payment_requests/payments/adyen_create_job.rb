@@ -10,6 +10,8 @@ module PaymentRequests
       retry_on Faraday::ConnectionFailed, wait: :polynomially_longer, attempts: 6
 
       def perform(payable)
+        # NOTE: Legacy job, kept only to avoid faileure with existing jobs
+
         PaymentRequests::Payments::CreateService.call!(payable:, payment_provider: 'adyen')
       end
     end

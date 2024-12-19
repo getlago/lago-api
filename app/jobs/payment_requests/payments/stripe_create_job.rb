@@ -11,6 +11,8 @@ module PaymentRequests
       retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
 
       def perform(payable)
+        # NOTE: Legacy job, kept only to avoid faileure with existing jobs
+
         PaymentRequests::Payments::CreateService.call!(payable:, payment_provider: 'stripe')
       end
     end
