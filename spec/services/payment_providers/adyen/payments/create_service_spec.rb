@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service do
-  subject(:create_service) { described_class.new(payment:) }
+  subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
@@ -17,6 +17,15 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService, type: :service 
   let(:payments_response) { generate(:adyen_payments_response) }
   let(:payment_methods_response) { generate(:adyen_payment_methods_response) }
   let(:code) { "adyen_1" }
+  let(:reference) { "organization.name - Invoice #{invoice.number}" }
+  let(:metadata) do
+    {
+      lago_customer_id: customer.id,
+      lago_invoice_id: invoice.id,
+      invoice_issuing_date: invoice.issuing_date.iso8601,
+      invoice_type: invoice.invoice_type
+    }
+  end
 
   let(:invoice) do
     create(

@@ -3,7 +3,7 @@
 module PaymentProviders
   class CreatePaymentFactory
     def self.new_instance(provider:, payment:, reference:, metadata:)
-      service_class(provider:).new(payment:, referehce:, metadata:)
+      service_class(provider:).new(payment:, reference:, metadata:)
     end
 
     def self.service_class(provider:)
