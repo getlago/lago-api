@@ -146,8 +146,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {status: 'draft'} }
 
     it 'returns 2 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(2)
         expect(returned_ids).not_to include(invoice_first.id)
@@ -163,8 +161,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {payment_status: 'failed'} }
 
     it 'returns 1 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(1)
         expect(returned_ids).not_to include(invoice_first.id)
@@ -180,8 +176,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {payment_status: ['succeeded', 'failed']} }
 
     it 'returns 1 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(2)
         expect(returned_ids).to include(invoice_first.id)
@@ -197,8 +191,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {payment_dispute_lost: true} }
 
     it 'returns 1 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(1)
         expect(returned_ids).not_to include(invoice_first.id)
@@ -215,8 +207,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {payment_dispute_lost: false} }
 
     it 'returns 1 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(5)
         expect(returned_ids).to include(invoice_first.id)
@@ -241,8 +231,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {payment_overdue: false} }
 
     it 'returns expected invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(5)
         expect(returned_ids).to include(invoice_first.id)
@@ -259,8 +247,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {invoice_type: 'credit'} }
 
     it 'returns 1 invoice' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids).to eq [invoice_fifth.id]
       end
@@ -271,8 +257,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {currency: 'USD'} }
 
     it 'returns 1 invoice' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids).to eq [invoice_fourth.id]
       end
@@ -283,8 +267,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {customer_external_id: customer_second.external_id} }
 
     it 'returns 2 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids).not_to include(invoice_first.id)
         expect(returned_ids).to include(invoice_second.id)
@@ -299,8 +281,6 @@ RSpec.describe InvoicesQuery, type: :query do
       let(:search_term) { "2222" }
 
       it "returns 1 invoices" do
-        returned_ids = result.invoices.pluck(:id)
-
         aggregate_failures do
           expect(result.invoices.count).to eq(1)
           expect(returned_ids).not_to include(invoice_first.id)
@@ -317,8 +297,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {issuing_date_from: 2.days.ago.iso8601.to_date.to_s} }
 
     it 'returns 4 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids).not_to include(invoice_first.id)
         expect(returned_ids).not_to include(invoice_second.id)
@@ -346,8 +324,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {issuing_date_to: 2.weeks.ago.iso8601.to_date.to_s} }
 
     it 'returns 2 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids).not_to include(invoice_first.id)
         expect(returned_ids).to include(invoice_second.id)
@@ -380,8 +356,6 @@ RSpec.describe InvoicesQuery, type: :query do
     end
 
     it 'returns 2 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids).to include(invoice_first.id)
         expect(returned_ids).to include(invoice_second.id)
@@ -397,8 +371,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:search_term) { invoice_fourth.id.scan(/.{10}/).first }
 
     it 'returns 1 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(1)
         expect(returned_ids).not_to include(invoice_first.id)
@@ -414,8 +386,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:search_term) { invoice_first.number }
 
     it 'returns 1 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(1)
         expect(returned_ids).to include(invoice_first.id)
@@ -431,8 +401,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:search_term) { customer_second.external_id }
 
     it 'returns 2 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(2)
         expect(returned_ids).not_to include(invoice_first.id)
@@ -448,8 +416,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:search_term) { 'rick' }
 
     it 'returns 3 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(4)
         expect(returned_ids).to include(invoice_first.id)
@@ -466,8 +432,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:search_term) { 'gmail' }
 
     it 'returns 2 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(2)
         expect(returned_ids).not_to include(invoice_first.id)
@@ -484,8 +448,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {customer_id: customer_second.id} }
 
     it 'returns 1 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(1)
         expect(returned_ids).not_to include(invoice_first.id)
@@ -501,8 +463,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {customer_id: create(:customer, organization:).id} }
 
     it 'returns 0 invoices' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(0)
         expect(returned_ids).not_to include(invoice_first.id)
@@ -517,8 +477,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:search_term) { 'SanchezLast' }
 
     it 'returns the correct invoices for this customer' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(4)
         expect(returned_ids).to include(invoice_first.id)
@@ -535,8 +493,6 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:search_term) { 'MortyFirst' }
 
     it 'returns the correct invoices for this customer' do
-      returned_ids = result.invoices.pluck(:id)
-
       aggregate_failures do
         expect(returned_ids.count).to eq(2)
         expect(returned_ids).not_to include(invoice_first.id)

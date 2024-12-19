@@ -65,6 +65,10 @@ class CreditNote < ApplicationRecord
     %w[number id]
   end
 
+  def self.ransackable_associations(_ = nil)
+    %w[customer]
+  end
+
   def file_url
     return if file.blank?
 

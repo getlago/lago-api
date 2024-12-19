@@ -99,7 +99,9 @@ module Api
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
           },
-          filters: index_filters
+          filters: {
+            customer_external_id: params[:external_customer_id]
+          }
         )
 
         if result.success?
@@ -165,10 +167,6 @@ module Api
               :amount_cents
             ]
           )
-      end
-
-      def index_filters
-        params.permit(:external_customer_id)
       end
 
       def resource_name
