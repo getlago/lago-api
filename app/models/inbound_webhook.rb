@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class InboundWebhook < ApplicationRecord
+  WEBHOOK_PROCESSING_WINDOW = 2.hours
+
   belongs_to :organization
 
   validates :event_type, :payload, :source, :status, presence: true
@@ -15,8 +17,8 @@ class InboundWebhook < ApplicationRecord
   enum :status, STATUSES
 
   scope :retriable, -> { reprocessable.or(old_pending) }
-  scope :reprocessable, -> { processing.where("processing_at <= ?", 2.hours.ago) }
-  scope :old_pending, -> { pending.where("created_at <= ?", 2.hours.ago) }
+  scope :reprocessable, -> { processing.where("processing_at <= ?", WEBHOOK_PROCESSING_WINDOW.ago) }
+  scope :old_pending, -> { pending.where("created_at <= ?", WEBHOOK_PROCESSING_WINDOW.ago) }
 
   def processing!
     update!(status: :processing, processing_at: Time.zone.now)
