@@ -39,7 +39,9 @@ module PaymentProviders
         rescue ::Stripe::AuthenticationError, ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
           # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
           #       For now we keep it as pending, the user can still update it manually
-          return result if e.code == "amount_too_small"
+          if e.code == "amount_too_small"
+            return prepare_failed_result(e, payable_payment_status: :pending)
+          end
 
           prepare_failed_result(e)
         rescue ::Stripe::RateLimitError => e
@@ -161,12 +163,12 @@ module PaymentProviders
           "#{invoice.organization.name} - Invoice #{invoice.number}"
         end
 
-        def prepare_failed_result(error, reraise: false)
+        def prepare_failed_result(error, reraise: false, payable_payment_status: :failed)
           result.error_message = error.message
           result.error_code = error.code
           result.reraise = reraise
 
-          payment.update!(status: :failed, payable_payment_status: :failed)
+          payment.update!(status: :failed, payable_payment_status:)
 
           result.service_failure!(code: "stripe_error", message: error.message)
         end

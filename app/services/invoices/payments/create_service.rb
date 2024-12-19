@@ -45,9 +45,6 @@ module Invoices
 
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(provider:, payment:).call!
 
-        # Keep payment in a pending state. Used manly for `amount_too_small` in stripe service
-        return result if payment_result.payment.payable_payment_status.nil?
-
         payment_status = payment_result.payment.payable_payment_status
         update_invoice_payment_status(
           payment_status: (payment_status == "processing") ? :pending : payment_status,
@@ -58,9 +55,10 @@ module Invoices
 
         result
       rescue BaseService::ServiceFailure => e
+        result.payment = e.result.payment
         deliver_error_webhook(e.result)
 
-        if e.result.payment.payable_payment_status.present?
+        if e.result.payment.payable_payment_status&.to_sym != :pending
           update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
         end
 

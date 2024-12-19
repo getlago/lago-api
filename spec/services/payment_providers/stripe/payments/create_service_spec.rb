@@ -226,7 +226,15 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       it "returns an empty result" do
         result = create_service.call
 
-        expect(result).to be_success
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("stripe_error")
+        expect(result.error.error_message).to eq("amount_too_small")
+
+        expect(result.error_message).to eq("amount_too_small")
+        expect(result.error_code).to eq("amount_too_small")
+        expect(result.payment.status).to eq("failed")
+        expect(result.payment.payable_payment_status).to eq("pending")
       end
     end
 

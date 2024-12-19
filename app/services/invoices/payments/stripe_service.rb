@@ -80,16 +80,23 @@ module Invoices
 
         increment_payment_attempts
 
-        Payment.find_or_create_by!(
+        payment = Payment.find_or_initialize_by(
           payable: @invoice,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
           amount_cents: @invoice.total_amount_cents,
           amount_currency: @invoice.currency,
-          provider_payment_id: stripe_payment.id,
-          payable_payment_status: "pending",
-          status: stripe_payment.status
+          status: "pending"
         )
+
+        status = invoice_payment_status(stripe_payment.status)
+        status = (status.to_sym == :pending) ? :processing : status
+
+        payment.provider_payment_id = stripe_payment.id
+        payment.status = stripe_payment.status
+        payment.payable_payment_status = status
+        payment.save!
+        payment
       end
 
       def success_redirect_url

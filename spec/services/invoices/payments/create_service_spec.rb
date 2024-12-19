@@ -169,7 +169,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
     context "when provider service raises a service failure" do
       let(:result) do
         BaseService::Result.new.tap do |r|
-          r.payment = OpenStruct.new(status: "pending")
+          r.payment = OpenStruct.new(status: "failed", payable_payment_status: "failed")
           r.error_message = "error"
           r.error_code = "code"
           r.reraise = true
@@ -240,20 +240,29 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
             )
         end
       end
-    end
 
-    context "when payable_payment_status is not present" do
-      let(:result) do
-        BaseService::Result.new.tap do |r|
-          r.payment = OpenStruct.new(status: "pending")
+      context "when payable_payment_status is pending" do
+        let(:result) do
+          BaseService::Result.new.tap do |r|
+            r.payment = OpenStruct.new(status: "failed", payable_payment_status: "pending")
+            r.error_message = "stripe_error"
+            r.error_code = "amount_too_small"
+          end
         end
-      end
 
-      it "keeps the invoice payment status" do
-        result = create_service.call
+        it "re-reaise the error and delivers an error webhook" do
+          result = create_service.call
 
-        expect(result).to be_success
-        expect(invoice.reload).to be_payment_pending
+          expect(result).to be_success
+          expect(result.invoice).to eq(invoice)
+          expect(result.payment).to be_present
+
+          expect(result.payment.status).to eq("failed")
+          expect(result.payment.payable_payment_status).to eq("pending")
+
+          expect(provider_class).to have_received(:new)
+          expect(provider_service).to have_received(:call!)
+        end
       end
     end
 
