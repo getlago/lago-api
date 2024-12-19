@@ -2,6 +2,8 @@
 
 module InboundWebhooks
   class ProcessService < BaseService
+    WEBHOOK_PROCESSING_WINDOW = 2.hours
+
     WEBHOOK_HANDLER_SERVICES = {
       stripe: PaymentProviders::Stripe::HandleIncomingWebhookService
     }
@@ -13,6 +15,10 @@ module InboundWebhooks
     end
 
     def call
+      return result if within_processing_window?
+      return result if inbound_webhook.failed?
+      return result if inbound_webhook.processed?
+
       inbound_webhook.processing!
 
       handler_result = handler_service_klass.call(inbound_webhook:)
@@ -43,6 +49,10 @@ module InboundWebhooks
 
     def webhook_source
       inbound_webhook.source.to_sym
+    end
+
+    def within_processing_window?
+      inbound_webhook.processing? && inbound_webhook.processing_at > WEBHOOK_PROCESSING_WINDOW.ago
     end
   end
 end
