@@ -43,8 +43,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       standard_charge
 
       allow(SegmentTrackJob).to receive(:perform_later)
-      allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
-      allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
+      allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 

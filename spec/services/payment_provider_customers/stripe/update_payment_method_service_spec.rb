@@ -40,8 +40,8 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService, typ
         result = update_service.call
 
         expect(result).to be_success
-        expect(Invoices::Payments::StripeCreateJob).to have_been_enqueued
-          .with(invoice)
+        expect(Invoices::Payments::CreateJob).to have_been_enqueued
+          .with(invoice:, payment_provider: :stripe)
       end
 
       context 'when invoices are not finalized' do
@@ -51,8 +51,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService, typ
           result = update_service.call
 
           expect(result).to be_success
-          expect(Invoices::Payments::StripeCreateJob).not_to have_been_enqueued
-            .with(invoice)
+          expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
         end
       end
 
@@ -63,8 +62,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService, typ
           result = update_service.call
 
           expect(result).to be_success
-          expect(Invoices::Payments::StripeCreateJob).not_to have_been_enqueued
-            .with(invoice)
+          expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
         end
       end
     end

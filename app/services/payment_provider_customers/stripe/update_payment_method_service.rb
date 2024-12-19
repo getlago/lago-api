@@ -35,7 +35,7 @@ module PaymentProviderCustomers
           .where(status: 'finalized')
 
         invoices.find_each do |invoice|
-          Invoices::Payments::StripeCreateJob.perform_later(invoice)
+          Invoices::Payments::CreateJob.perform_later(invoice:, payment_provider: :stripe)
         end
       end
     end
