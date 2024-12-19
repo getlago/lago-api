@@ -2,6 +2,10 @@
 
 class SubscriptionEventTrigger < ApplicationRecord
   validates :organization_id, :external_subscription_id, :created_at, presence: true
+
+  def self.trigger(organization_id:, external_subscription_id:)
+    connection.select_all sanitize_sql_array(["call trigger_subscription_update(?,?, null)", organization_id, external_subscription_id])
+  end
 end
 
 # == Schema Information

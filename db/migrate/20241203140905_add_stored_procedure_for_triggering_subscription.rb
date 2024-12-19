@@ -6,7 +6,8 @@ class AddStoredProcedureForTriggeringSubscription < ActiveRecord::Migration[7.1]
       execute "
   CREATE OR REPLACE PROCEDURE trigger_subscription_update(
       p_organization_id UUID,
-      p_external_subscription_id varchar
+      p_external_subscription_id varchar,
+      result_id INOUT UUID
   )
   LANGUAGE plpgsql
   AS $$
@@ -21,7 +22,8 @@ class AddStoredProcedureForTriggeringSubscription < ActiveRecord::Migration[7.1]
           p_external_subscription_id,
           NOW()
       )
-      ON CONFLICT DO NOTHING;
+      ON CONFLICT DO NOTHING
+      RETURNING id INTO result_id;
   END;
   $$;"
     end

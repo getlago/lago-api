@@ -570,7 +570,7 @@ DROP TABLE IF EXISTS public.add_ons;
 DROP TABLE IF EXISTS public.active_storage_variant_records;
 DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
-DROP PROCEDURE IF EXISTS public.trigger_subscription_update(IN p_organization_id uuid, IN p_external_subscription_id character varying);
+DROP PROCEDURE IF EXISTS public.trigger_subscription_update(IN p_organization_id uuid, IN p_external_subscription_id character varying, INOUT result_id uuid);
 DROP TYPE IF EXISTS public.tax_status;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
@@ -683,10 +683,10 @@ CREATE TYPE public.tax_status AS ENUM (
 
 
 --
--- Name: trigger_subscription_update(uuid, character varying); Type: PROCEDURE; Schema: public; Owner: -
+-- Name: trigger_subscription_update(uuid, character varying, uuid); Type: PROCEDURE; Schema: public; Owner: -
 --
 
-CREATE PROCEDURE public.trigger_subscription_update(IN p_organization_id uuid, IN p_external_subscription_id character varying)
+CREATE PROCEDURE public.trigger_subscription_update(IN p_organization_id uuid, IN p_external_subscription_id character varying, INOUT result_id uuid)
     LANGUAGE plpgsql
     AS $$
   BEGIN
@@ -700,7 +700,8 @@ CREATE PROCEDURE public.trigger_subscription_update(IN p_organization_id uuid, I
           p_external_subscription_id,
           NOW()
       )
-      ON CONFLICT DO NOTHING;
+      ON CONFLICT DO NOTHING
+      RETURNING id INTO result_id;
   END;
   $$;
 
