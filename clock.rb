@@ -119,6 +119,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.day, 'schedule:clean_inbound_webhooks', at: '01:10') do
+    Clock::InboundWebhooksCleanupJob
+      .set(sentry: {"slug" => 'lago_clean_inbound_webhooks', "cron" => '5 1 * * *'})
+      .perform_later
+  end
+
   unless ActiveModel::Type::Boolean.new.cast(ENV['LAGO_DISABLE_EVENTS_VALIDATION'])
     every(1.hour, 'schedule:post_validate_events', at: '*:05') do
       Clock::EventsValidationJob
@@ -144,6 +150,12 @@ module Clockwork
   every(15.minutes, "schedule:retry_failed_invoices") do
     Clock::RetryFailedInvoicesJob
       .set(sentry: {"slug" => "lago_retry_failed_invoices", "cron" => '*/15 * * * *'})
+      .perform_later
+  end
+
+  every(15.minutes, "schedule:retry_inbound_webhooks") do
+    Clock::InboundWebhooksRetryJob
+      .set(sentry: {"slug" => "lago_retry_inbound_webhooks", "cron" => '*/15 * * * *'})
       .perform_later
   end
 end

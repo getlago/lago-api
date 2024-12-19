@@ -3,18 +3,12 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::HandleIncomingWebhookService, type: :service do
-  subject(:result) do
-    described_class.call(
-      organization_id: organization.id,
-      body: event.to_json,
-      signature: "signature",
-      code:
-    )
-  end
+  subject(:result) { described_class.call(inbound_webhook:) }
 
+  let(:inbound_webhook) { create :inbound_webhook, organization:, code: }
+  let(:code) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:code) { nil }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:event_result) { Stripe::Event.construct_from(event) }
 
