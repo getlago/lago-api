@@ -2,8 +2,6 @@
 
 module InboundWebhooks
   class ProcessService < BaseService
-    WEBHOOK_PROCESSING_WINDOW = 2.hours
-
     WEBHOOK_HANDLER_SERVICES = {
       stripe: PaymentProviders::Stripe::HandleIncomingWebhookService
     }
@@ -52,7 +50,7 @@ module InboundWebhooks
     end
 
     def within_processing_window?
-      inbound_webhook.processing? && inbound_webhook.processing_at > WEBHOOK_PROCESSING_WINDOW.ago
+      inbound_webhook.processing? && inbound_webhook.processing_at > InboundWebhook::WEBHOOK_PROCESSING_WINDOW.ago
     end
   end
 end
