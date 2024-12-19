@@ -35,6 +35,60 @@ RSpec.describe InboundWebhooks::ProcessService, type: :service do
     end
   end
 
+  context "when inbound webhook is within processing window" do
+    let(:inbound_webhook) do
+      create(
+        :inbound_webhook,
+        source: webhook_source,
+        status: "processing",
+        processing_at: 119.minutes.ago
+      )
+    end
+
+    it "does not process the webhook" do
+      expect(result).to be_success
+      expect(PaymentProviders::Stripe::HandleIncomingWebhookService)
+        .not_to have_received(:call)
+    end
+  end
+
+  context "when inbound webhook is outside the processing window" do
+    let(:inbound_webhook) do
+      create(
+        :inbound_webhook,
+        source: webhook_source,
+        status: "processing",
+        processing_at: 121.minutes.ago
+      )
+    end
+
+    it "processes the webhook as normal" do
+      expect(result).to be_success
+    end
+  end
+
+  context "when inbound webhook has failed" do
+    let(:inbound_webhook) { create :inbound_webhook, source: webhook_source, status: }
+    let(:status) { "failed" }
+
+    it "does not process the webhook" do
+      expect(result).to be_success
+      expect(PaymentProviders::Stripe::HandleIncomingWebhookService)
+        .not_to have_received(:call)
+    end
+  end
+
+  context "when inbound webhook has been processed" do
+    let(:inbound_webhook) { create :inbound_webhook, source: webhook_source, status: }
+    let(:status) { "processed" }
+
+    it "does not process the webhook" do
+      expect(result).to be_success
+      expect(PaymentProviders::Stripe::HandleIncomingWebhookService)
+        .not_to have_received(:call)
+    end
+  end
+
   context "when webhook source is Stripe" do
     let(:webhook_source) { "stripe" }
 
