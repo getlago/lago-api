@@ -58,13 +58,12 @@ module PaymentRequests
 
         # TODO: payment status should be failed and payable_payment_status should be pending
         # Keep payment in a pending state. Used manly for `amount_too_small` in stripe service
-        return result if payment.payable_payment_status.nil?
+        return result if payment_result.payment.payable_payment_status.nil?
 
-        update_payable_payment_status(payment_status: payment.payable_payment_status)
-        update_invoices_payment_status(payment_status: payment.payable_payment_status)
+        update_payable_payment_status(payment_status: payment_result.payment.payable_payment_status)
+        update_invoices_payment_status(payment_status: payment_result.payment.payable_payment_status)
 
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later if payable.payment_failed?
-        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
 
         result
       rescue BaseService::ServiceFailure => e
@@ -93,7 +92,7 @@ module PaymentRequests
 
       attr_reader :payable
 
-      delegate :customer, to: :payable
+      delegate :customer, :organization, to: :payable
 
       def provider
         @provider ||= payable.customer.payment_provider&.to_sym

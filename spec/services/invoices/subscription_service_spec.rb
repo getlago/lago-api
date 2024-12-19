@@ -44,8 +44,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       lifetime_usage
 
       allow(SegmentTrackJob).to receive(:perform_later)
-      allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
-      allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
+      allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
@@ -267,8 +266,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
       it "does not create any payment" do
         invoice_service.call
-        expect(Invoices::Payments::StripeCreateJob).not_to have_received(:perform_later)
-        expect(Invoices::Payments::GocardlessCreateJob).not_to have_received(:perform_later)
+        expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
       end
 
       it "creates an invoice as draft" do
