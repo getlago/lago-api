@@ -63,6 +63,7 @@ credit_notes:
   create: true
   update: true
   void: true
+  export: true
 customer_settings:
   view: true
   update:
