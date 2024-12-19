@@ -11,9 +11,8 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: 'invoice') unless invoice
-        unless ((invoice.pending? || invoice.draft?) && invoice.tax_pending?)
-          return result.not_allowed_failure!(code: 'invalid_status')
-        end
+        return result.not_allowed_failure!(code: 'invalid_status') unless invoice.pending? || invoice.draft?
+        return result.not_allowed_failure!(code: 'invalid_tax_status') unless invoice.tax_pending?
 
         invoice.error_details.tax_error.discard_all
         taxes_result = if invoice.draft?
@@ -40,6 +39,7 @@ module Invoices
           create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
           invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+          invoice.tax_status = 'succeeded'
           if invoice.draft?
             invoice.status = :draft
           else
