@@ -17,10 +17,10 @@ module Invoices
       end
 
       def update_payment_status(organization_id:, status:, stripe_payment:)
-        payment = if stripe_payment.metadata[:payment_type] == "one-time"
-          create_payment(stripe_payment)
-        else
-          Payment.find_by(provider_payment_id: stripe_payment.id)
+        payment = Payment.find_by(provider_payment_id: stripe_payment.id)
+
+        if !payment && stripe_payment.metadata[:payment_type] == "one-time"
+          payment = create_payment(stripe_payment)
         end
 
         unless payment
