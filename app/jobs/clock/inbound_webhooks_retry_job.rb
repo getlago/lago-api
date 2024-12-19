@@ -7,10 +7,7 @@ module Clock
     queue_as "clock"
 
     def perform
-      InboundWebhook
-        .where(status: ["pending", "processing"])
-        .where("updated_at < ?", 2.hours.ago)
-        .find_each do |inbound_webhook|
+      InboundWebhook.retriable.find_each do |inbound_webhook|
         InboundWebhooks::ProcessJob.perform_later(inbound_webhook:)
       end
     end
