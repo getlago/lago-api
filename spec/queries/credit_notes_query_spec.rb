@@ -7,9 +7,8 @@ RSpec.describe CreditNotesQuery, type: :query do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let(:organization) { customer.organization }
+  let(:customer) { create(:customer) }
 
   let(:pagination) { nil }
   let(:search_term) { nil }
@@ -307,7 +306,6 @@ RSpec.describe CreditNotesQuery, type: :query do
       let(:customer) do
         create(
           :customer,
-          organization:,
           name: "Rick Sanchez",
           firstname: "Rick Ramon",
           lastname: "Sanchez Spencer"
@@ -344,7 +342,6 @@ RSpec.describe CreditNotesQuery, type: :query do
       let(:customer) do
         create(
           :customer,
-          organization:,
           name: "Rick Sanchez",
           firstname: "Rick Ramon",
           lastname: "Sanchez Spencer"
@@ -383,7 +380,6 @@ RSpec.describe CreditNotesQuery, type: :query do
       let(:customer) do
         create(
           :customer,
-          organization:,
           name: "Rick Sanchez",
           firstname: "Rick Ramon",
           lastname: "Sanchez Spencer"
