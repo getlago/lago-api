@@ -513,10 +513,12 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_20_095049) do
     t.datetime "updated_at", null: false
     t.datetime "refreshed_at", null: false
     t.jsonb "usage_diff", default: "{}", null: false
+    t.date "usage_date"
     t.index ["customer_id"], name: "index_daily_usages_on_customer_id"
     t.index ["organization_id", "external_subscription_id"], name: "idx_on_organization_id_external_subscription_id_df3a30d96d"
     t.index ["organization_id"], name: "index_daily_usages_on_organization_id"
     t.index ["subscription_id"], name: "index_daily_usages_on_subscription_id"
+    t.index ["usage_date"], name: "index_daily_usages_on_usage_date"
   end
 
   create_table "data_export_parts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
