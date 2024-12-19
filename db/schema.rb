@@ -734,6 +734,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_144027) do
     t.string "signature"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "processing_at", precision: nil
     t.index ["organization_id"], name: "index_inbound_webhooks_on_organization_id"
   end
 
