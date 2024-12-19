@@ -23,6 +23,7 @@ end
 #  refreshed_at             :datetime         not null
 #  to_datetime              :datetime         not null
 #  usage                    :jsonb            not null
+#  usage_date               :date
 #  usage_diff               :jsonb            not null
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
@@ -37,6 +38,7 @@ end
 #  index_daily_usages_on_customer_id                           (customer_id)
 #  index_daily_usages_on_organization_id                       (organization_id)
 #  index_daily_usages_on_subscription_id                       (subscription_id)
+#  index_daily_usages_on_usage_date                            (usage_date)
 #
 # Foreign Keys
 #
