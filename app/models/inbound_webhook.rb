@@ -13,6 +13,10 @@ class InboundWebhook < ApplicationRecord
   }
 
   enum :status, STATUSES
+
+  def processing!
+    update!(status: :processing, processing_at: Time.zone.now)
+  end
 end
 
 # == Schema Information
@@ -23,6 +27,7 @@ end
 #  code            :string
 #  event_type      :string           not null
 #  payload         :jsonb            not null
+#  processing_at   :datetime
 #  signature       :string
 #  source          :string           not null
 #  status          :string           default("pending"), not null
