@@ -60,7 +60,7 @@ module Invoices
     end
 
     def should_apply_fee_taxes?
-      return false if invoice.one_off? && !invoice.failed?
+      return false if invoice.one_off? && !(invoice.failed? || invoice.pending?)
       return false if invoice.advance_charges?
 
       true
