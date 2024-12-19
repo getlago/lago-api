@@ -1,7 +1,10 @@
 # See https://git-scm.com/docs/gitattributes for more about git attribute files.
 
 # Mark the database schema as having been generated.
-db/schema.rb linguist-generated
+db/structure.sql linguist-generated
+db/events_structure.sql linguist-generated
+db/clickhouse_structure.sql linguist-generated
+
 schema.json linguist-generated
 schema.graphql linguist-generated
 

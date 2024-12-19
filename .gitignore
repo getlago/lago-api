@@ -22,8 +22,6 @@
 /tmp/storage/*
 !/tmp/storage/
 !/tmp/storage/.keep
-db/events_schema.rb
-db/clickhouse_schema.rb
 /config/master.key
 
 .env
