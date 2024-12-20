@@ -16,6 +16,11 @@ FactoryBot.define do
       association :payment_provider_customer, factory: :adyen_customer
     end
 
+    trait :gocardless_payment do
+      association :payment_provider, factory: :gocardless_provider
+      association :payment_provider_customer, factory: :gocardless_customer
+    end
+
     trait :requires_action do
       status { 'requires_action' }
       provider_payment_data do
