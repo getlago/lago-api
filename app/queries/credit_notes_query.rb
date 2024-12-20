@@ -9,9 +9,9 @@ class CreditNotesQuery < BaseQuery
     credit_notes = with_currency(credit_notes) if filters.currency.present?
     credit_notes = with_customer_external_id(credit_notes) if filters.customer_external_id
     credit_notes = with_customer_id(credit_notes) if filters.customer_id.present?
-    credit_notes = with_reason(credit_notes) if filters.reason.present?
-    credit_notes = with_credit_status(credit_notes) if filters.credit_status.present?
-    credit_notes = with_refund_status(credit_notes) if filters.refund_status.present?
+    credit_notes = with_reason(credit_notes) if valid_reasons.present?
+    credit_notes = with_credit_status(credit_notes) if valid_credit_statuses.present?
+    credit_notes = with_refund_status(credit_notes) if valid_refund_statuses.present?
     credit_notes = with_invoice_number(credit_notes) if filters.invoice_number.present?
     credit_notes = with_issuing_date_range(credit_notes) if filters.issuing_date_from || filters.issuing_date_to
     credit_notes = with_amount_range(credit_notes) if filters.amount_from.present? || filters.amount_to.present?
@@ -66,15 +66,15 @@ class CreditNotesQuery < BaseQuery
   end
 
   def with_reason(scope)
-    scope.where(reason: filters.reason)
+    scope.where(reason: valid_reasons)
   end
 
   def with_credit_status(scope)
-    scope.where(credit_status: filters.credit_status)
+    scope.where(credit_status: valid_credit_statuses)
   end
 
   def with_refund_status(scope)
-    scope.where(refund_status: filters.refund_status)
+    scope.where(refund_status: valid_refund_statuses)
   end
 
   def with_invoice_number(scope)
@@ -99,5 +99,20 @@ class CreditNotesQuery < BaseQuery
 
   def issuing_date_to
     @issuing_date_to ||= parse_datetime_filter(:issuing_date_to)
+  end
+
+  def valid_credit_statuses
+    @valid_credit_statuses ||= Array(filters.credit_status)
+      .select { |credit_status| CreditNote.credit_statuses.key?(credit_status) }
+  end
+
+  def valid_refund_statuses
+    @valid_refund_statuses ||= Array(filters.refund_status)
+      .select { |refund_status| CreditNote.refund_statuses.key?(refund_status) }
+  end
+
+  def valid_reasons
+    @valid_reasons ||= Array(filters.reason)
+      .select { |reason| CreditNote.reasons.key?(reason) }
   end
 end

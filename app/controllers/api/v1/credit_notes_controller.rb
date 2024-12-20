@@ -103,9 +103,9 @@ module Api
           filters: {
             currency: params[:currency],
             customer_external_id: params[:external_customer_id],
-            reason: select_valid_reasons(params[:reason]),
-            credit_status: select_valid_credit_statuses(params[:credit_status]),
-            refund_status: select_valid_refund_statuses(params[:refund_status]),
+            reason: params[:reason],
+            credit_status: params[:credit_status],
+            refund_status: params[:refund_status],
             invoice_number: params[:invoice_number],
             issuing_date_from: (Date.strptime(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
             issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
@@ -166,22 +166,6 @@ module Api
 
       def update_params
         params.require(:credit_note).permit(:refund_status)
-      end
-
-      def select_valid_credit_statuses(credit_statuses)
-        Array(credit_statuses)
-          .select { |credit_status| CreditNote.credit_statuses.key?(credit_status) }
-          .presence
-      end
-
-      def select_valid_refund_statuses(refund_statuses)
-        Array(refund_statuses)
-          .select { |refund_status| CreditNote.refund_statuses.key?(refund_status) }
-          .presence
-      end
-
-      def select_valid_reasons(reasons)
-        Array(reasons).select { |reason| CreditNote.reasons.key?(reason) }.presence
       end
 
       def estimate_params

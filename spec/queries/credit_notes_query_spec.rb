@@ -84,15 +84,13 @@ RSpec.describe CreditNotesQuery, type: :query do
   end
 
   context "when reason filter applied" do
-    let(:filters) { {reason: matching_reasons} }
-
     let(:matching_reasons) { CreditNote::REASON.sample(2) }
 
     let!(:matching_credit_notes) do
       matching_reasons.map { |reason| create(:credit_note, reason:, customer:) }
     end
 
-    before do
+    let!(:non_matching_credit_note) do
       create(
         :credit_note,
         reason: CreditNote::REASON.excluding(matching_reasons).sample,
@@ -100,15 +98,28 @@ RSpec.describe CreditNotesQuery, type: :query do
       )
     end
 
-    it "returns credit notes with matching reasons" do
-      expect(result).to be_success
-      expect(result.credit_notes.pluck(:id)).to match_array matching_credit_notes.pluck(:id)
+    context "with valid options" do
+      let(:filters) { {reason: matching_reasons} }
+
+      it "returns credit notes with matching reasons" do
+        expect(result).to be_success
+        expect(result.credit_notes.pluck(:id)).to match_array matching_credit_notes.pluck(:id)
+      end
+    end
+
+    context "with invalid options" do
+      let(:filters) { {reason: "invalid-reason"} }
+
+      it "returns all credit notes" do
+        expect(result).to be_success
+
+        expect(result.credit_notes.pluck(:id))
+          .to contain_exactly(*matching_credit_notes.pluck(:id), non_matching_credit_note.id)
+      end
     end
   end
 
   context "when credit status filter applied" do
-    let(:filters) { {credit_status: matching_credit_statuses} }
-
     let(:matching_credit_statuses) { CreditNote::CREDIT_STATUS.sample(2) }
 
     let!(:matching_credit_notes) do
@@ -117,7 +128,7 @@ RSpec.describe CreditNotesQuery, type: :query do
       end
     end
 
-    before do
+    let!(:non_matching_credit_note) do
       create(
         :credit_note,
         credit_status: CreditNote::CREDIT_STATUS.excluding(matching_credit_statuses).sample,
@@ -125,15 +136,28 @@ RSpec.describe CreditNotesQuery, type: :query do
       )
     end
 
-    it "returns credit notes with matching credit statuses" do
-      expect(result).to be_success
-      expect(result.credit_notes.pluck(:id)).to match_array matching_credit_notes.pluck(:id)
+    context "with valid options" do
+      let(:filters) { {credit_status: matching_credit_statuses} }
+
+      it "returns credit notes with matching credit statuses" do
+        expect(result).to be_success
+        expect(result.credit_notes.pluck(:id)).to match_array matching_credit_notes.pluck(:id)
+      end
+    end
+
+    context "with invalid options" do
+      let(:filters) { {credit_status: "invalid-credit-status"} }
+
+      it "returns all credit notes" do
+        expect(result).to be_success
+
+        expect(result.credit_notes.pluck(:id))
+          .to contain_exactly(*matching_credit_notes.pluck(:id), non_matching_credit_note.id)
+      end
     end
   end
 
   context "when refund status filter applied" do
-    let(:filters) { {refund_status: matching_refund_statuses} }
-
     let(:matching_refund_statuses) { CreditNote::REFUND_STATUS.sample(2) }
 
     let!(:matching_credit_notes) do
@@ -142,7 +166,7 @@ RSpec.describe CreditNotesQuery, type: :query do
       end
     end
 
-    before do
+    let!(:non_matching_credit_note) do
       create(
         :credit_note,
         refund_status: CreditNote::REFUND_STATUS.excluding(matching_refund_statuses).sample,
@@ -150,9 +174,24 @@ RSpec.describe CreditNotesQuery, type: :query do
       )
     end
 
-    it "returns credit notes with matching refund statuses" do
-      expect(result).to be_success
-      expect(result.credit_notes.pluck(:id)).to match_array matching_credit_notes.pluck(:id)
+    context "with valid options" do
+      let(:filters) { {refund_status: matching_refund_statuses} }
+
+      it "returns credit notes with matching refund statuses" do
+        expect(result).to be_success
+        expect(result.credit_notes.pluck(:id)).to match_array matching_credit_notes.pluck(:id)
+      end
+    end
+
+    context "with invalid options" do
+      let(:filters) { {refund_status: "invalid-refund-status"} }
+
+      it "returns all credit notes" do
+        expect(result).to be_success
+
+        expect(result.credit_notes.pluck(:id))
+          .to contain_exactly(*matching_credit_notes.pluck(:id), non_matching_credit_note.id)
+      end
     end
   end
 
