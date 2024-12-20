@@ -23,7 +23,7 @@ class FixChargePropertiesWithDoubleValues < ActiveRecord::Migration[7.1]
       charge: charge_filter.charge, properties: charge_filter.properties
     ).raise_if_error!
     charge_filter.properties = result.properties
-    charge.save!
+    charge_filter.save!
   end
 
   def fix_charge_properties(charge)
