@@ -163,6 +163,5 @@ module Types
     field :create_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Create
     field :destroy_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Destroy
     field :update_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Update
-    field :destroy_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Destroy
   end
 end
