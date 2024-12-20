@@ -47,13 +47,15 @@ module Events
         event.external_subscription_id = event_params[:external_subscription_id]
         event.properties = event_params[:properties] || {}
         event.metadata = metadata || {}
-        event.timestamp = Time.zone.at(event_params[:timestamp] ? event_params[:timestamp].to_f : timestamp)
+        event.timestamp = Time.zone.at(event_params[:timestamp] ? Float(event_params[:timestamp]) : timestamp)
         event.precise_total_amount_cents = event_params[:precise_total_amount_cents]
 
         CalculateExpressionService.call(organization:, event:).raise_if_error!
 
         result.events.push(event)
         result.errors = result.errors.merge({index => event.errors.messages}) unless event.valid?
+      rescue ArgumentError
+        result.errors = result.errors.merge({index => {timestamp: ['invalid_format']}})
       end
     end
 

@@ -58,6 +58,28 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
+
+    context 'when sending wrong format for the timestamp' do
+      let(:create_params) do
+        {
+          code: metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          timestamp: Time.current.to_s,
+          precise_total_amount_cents: '123.45',
+          properties: {
+            foo: 'bar'
+          }
+        }
+      end
+
+      it 'returns a not found response' do
+        expect { subject }.not_to change(Event, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq({timestamp: ["invalid_format"]})
+      end
+    end
   end
 
   describe 'POST /api/v1/events/batch' do
@@ -87,6 +109,40 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(json[:events].first[:external_subscription_id]).to eq(subscription.external_id)
+    end
+
+    context 'with invalid timestamp for one event' do
+      let(:batch_params) do
+        [
+          {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            timestamp: Time.current.to_i,
+            precise_total_amount_cents: '123.45',
+            properties: {
+              foo: 'bar'
+            }
+          },
+          {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            timestamp: Time.current.to_s,
+            precise_total_amount_cents: '123.45',
+            properties: {
+              foo: 'bar'
+            }
+          }
+        ]
+      end
+
+      it 'returns an error indicating which event contained which error' do
+        expect { subject }.not_to change(Event, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq({'1': {timestamp: ["invalid_format"]}})
+      end
     end
   end
 

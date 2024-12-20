@@ -117,6 +117,17 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
+    context 'when timestamp is given in a wrong format' do
+      let(:timestamp) { Time.current.to_s }
+
+      it 'returns an error' do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to include({timestamp: ['invalid_format']})
+      end
+    end
+
     context 'when kafka is configured' do
       let(:karafka_producer) { instance_double(WaterDrop::Producer) }
 
