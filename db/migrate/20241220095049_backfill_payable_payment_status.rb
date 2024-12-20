@@ -8,15 +8,15 @@ class BackfillPayablePaymentStatus < ActiveRecord::Migration[7.1]
 
       payments = Payment.joins(:payment_provider)
         .where(payment_providers: {type: provider_type}, status: provider_class::PENDING_STATUSES)
-      payments.update_all(payable_payment_status: :pending)
+      payments.update_all(payable_payment_status: :pending) # rubocop:disable Rails/SkipsModelValidations
 
       payments = Payment.joins(:payment_provider)
         .where(payment_providers: {type: provider_type}, status: provider_class::SUCCESS_STATUSES)
-      payments.update_all(payable_payment_status: :succeeded)
+      payments.update_all(payable_payment_status: :succeeded) # rubocop:disable Rails/SkipsModelValidations
 
       payments = Payment.joins(:payment_provider)
         .where(payment_providers: {type: provider_type}, status: provider_class::FAILED_STATUSES)
-      payments.update_all(payable_payment_status: :failed)
+      payments.update_all(payable_payment_status: :failed) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end
