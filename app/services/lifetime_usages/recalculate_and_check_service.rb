@@ -35,9 +35,9 @@ module LifetimeUsages
     end
 
     def tax_error?(result)
-      return false unless result.error.is_a?(BaseService::ServiceFailure)
+      return false if result.success?
 
-      !result.success? && result.error&.code == 'tax_error'
+      result.error.is_a?(BaseService::UnknownTaxFailure)
     end
   end
 end

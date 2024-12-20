@@ -15,7 +15,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice.issuing_date = issuing_date
         refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
-        if tax_error?(refresh_result.error)
+        if invoice.tax_pending?
           invoice.update!(issuing_date: drafted_issuing_date)
           return refresh_result
         end
