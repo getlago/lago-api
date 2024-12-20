@@ -28,6 +28,7 @@ module Types
     field :generate_customer_portal_url, mutation: Mutations::CustomerPortal::GenerateUrl
     field :update_customer_portal_customer, mutation: Mutations::CustomerPortal::UpdateCustomer
 
+    field :create_credit_notes_data_export, mutation: Mutations::DataExports::CreditNotes::Create
     field :create_invoices_data_export, mutation: Mutations::DataExports::Invoices::Create
 
     field :create_subscription, mutation: Mutations::Subscriptions::Create
