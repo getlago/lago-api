@@ -59,8 +59,8 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       )
     end
 
-    let(:integration) { create(:anrok_integration, organization:) }
-    let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+    let(:integration_tax) { create(:anrok_integration, organization:) }
+    let(:integration_customer_tax) { create(:anrok_customer, integration: integration_tax, customer:) }
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
     let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
@@ -79,7 +79,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
     let(:integration_collection_mapping) do
       create(
         :netsuite_collection_mapping,
-        integration:,
+        integration: integration_tax,
         mapping_type: :fallback_item,
         settings: {external_id: '1', external_account_code: '11', external_name: ''}
       )
@@ -94,7 +94,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       allow(Invoices::Payments::StripeCreateJob).to receive(:perform_later).and_call_original
       allow(Invoices::Payments::GocardlessCreateJob).to receive(:perform_later).and_call_original
 
-      integration_customer
+      integration_customer_tax
 
       allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
       allow(LagoHttpClient::Client).to receive(:new).with(endpoint_draft).and_return(lago_client)
@@ -108,6 +108,17 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq('invoice_not_found')
+      end
+    end
+
+    context 'when integration customer does not exist' do
+      let(:integration_customer_tax) { nil }
+
+      it 'returns an error' do
+        result = pull_taxes_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq('integration_customer_not_found')
       end
     end
 

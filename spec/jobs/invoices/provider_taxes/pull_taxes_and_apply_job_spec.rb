@@ -15,24 +15,9 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob, type: :job do
       .and_return(result)
   end
 
-  context 'when there is anrok customer' do
-    let(:integration) { create(:anrok_integration, organization:) }
-    let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+  it 'calls successfully the service' do
+    described_class.perform_now(invoice:)
 
-    before { integration_customer }
-
-    it 'calls successfully the service' do
-      described_class.perform_now(invoice:)
-
-      expect(Invoices::ProviderTaxes::PullTaxesAndApplyService).to have_received(:call)
-    end
-  end
-
-  context 'when there is NOT anrok customer' do
-    it 'does not call the service' do
-      described_class.perform_now(invoice:)
-
-      expect(Invoices::ProviderTaxes::PullTaxesAndApplyService).not_to have_received(:call)
-    end
+    expect(Invoices::ProviderTaxes::PullTaxesAndApplyService).to have_received(:call)
   end
 end

@@ -11,6 +11,7 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: 'invoice') unless invoice
+        return result.not_found_failure!(resource: 'integration_customer') unless customer.anrok_customer
         return result.not_allowed_failure!(code: 'invalid_status') unless invoice.pending? || invoice.draft?
         return result.not_allowed_failure!(code: 'invalid_tax_status') unless invoice.tax_pending?
 
