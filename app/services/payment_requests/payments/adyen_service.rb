@@ -6,10 +6,6 @@ module PaymentRequests
       include Lago::Adyen::ErrorHandlable
       include Customers::PaymentProviderFinder
 
-      PENDING_STATUSES = %w[AuthorisedPending Received].freeze
-      SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
-      FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
-
       def initialize(payable = nil)
         @payable = payable
 
@@ -48,7 +44,7 @@ module PaymentRequests
 
         payment.save!
 
-        payable_payment_status = payable_payment_status(payment.status)
+        payable_payment_status = adyen_payment_provider.determine_payment_status(payment.status)
         update_payable_payment_status(payment_status: payable_payment_status)
         update_invoices_payment_status(payment_status: payable_payment_status)
 
@@ -91,7 +87,7 @@ module PaymentRequests
 
         payment.update!(status:)
 
-        payable_payment_status = payable_payment_status(status)
+        payable_payment_status = payment.payment_provider&.determine_payment_status(status)
         update_payable_payment_status(payment_status: payable_payment_status)
         update_invoices_payment_status(payment_status: payable_payment_status)
         reset_customer_dunning_campaign_status(payable_payment_status)
@@ -205,14 +201,6 @@ module PaymentRequests
 
       def success_redirect_url
         adyen_payment_provider.success_redirect_url.presence || ::PaymentProviders::AdyenProvider::SUCCESS_REDIRECT_URL
-      end
-
-      def payable_payment_status(payment_status)
-        return :pending if PENDING_STATUSES.include?(payment_status)
-        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-        return :failed if FAILED_STATUSES.include?(payment_status)
-
-        payment_status
       end
 
       def update_payable_payment_status(payment_status:, deliver_webhook: true)

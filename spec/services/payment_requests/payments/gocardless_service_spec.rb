@@ -285,6 +285,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
     let(:payment) do
       create(
         :payment,
+        :gocardless_payment,
         payable: payment_request,
         provider_payment_id: provider_payment_id,
         status: "pending_submission"

@@ -26,6 +26,14 @@ module PaymentProviders
     validates :name, presence: true
 
     settings_accessors :webhook_secret, :success_redirect_url
+
+    def determine_payment_status(payment_status)
+      return :pending if self.class::PENDING_STATUSES.include?(payment_status)
+      return :succeeded if self.class::SUCCESS_STATUSES.include?(payment_status)
+      return :failed if self.class::FAILED_STATUSES.include?(payment_status)
+
+      payment_status
+    end
   end
 end
 

@@ -4,6 +4,10 @@ module PaymentProviders
   class GocardlessProvider < BaseProvider
     SUCCESS_REDIRECT_URL = 'https://gocardless.com/'
 
+    PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed].freeze
+    SUCCESS_STATUSES = %w[paid_out].freeze
+    FAILED_STATUSES = %w[cancelled customer_approval_denied failed charged_back].freeze
+
     validates :access_token, presence: true
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 

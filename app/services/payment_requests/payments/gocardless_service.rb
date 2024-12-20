@@ -18,11 +18,6 @@ module PaymentRequests
         end
       end
 
-      PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed]
-        .freeze
-      SUCCESS_STATUSES = %w[paid_out].freeze
-      FAILED_STATUSES = %w[cancelled customer_approval_denied failed charged_back].freeze
-
       def initialize(payable = nil)
         @payable = payable
 
@@ -55,7 +50,7 @@ module PaymentRequests
 
         payment.save!
 
-        payable_payment_status = payable_payment_status(payment.status)
+        payable_payment_status = gocardless_payment_provider.determine_payment_status(payment.status)
         update_payable_payment_status(payment_status: payable_payment_status)
         update_invoices_payment_status(payment_status: payable_payment_status)
 
@@ -81,7 +76,7 @@ module PaymentRequests
 
         payment.update!(status:)
 
-        payable_payment_status = payable_payment_status(status)
+        payable_payment_status = payment.payment_provider.determine_payment_status(status)
         update_payable_payment_status(payment_status: payable_payment_status)
         update_invoices_payment_status(payment_status: payable_payment_status)
         reset_customer_dunning_campaign_status(payable_payment_status)
@@ -160,14 +155,6 @@ module PaymentRequests
 
         result.service_failure!(code: e.code, message: e.message)
         nil
-      end
-
-      def payable_payment_status(payment_status)
-        return :pending if PENDING_STATUSES.include?(payment_status)
-        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-        return :failed if FAILED_STATUSES.include?(payment_status)
-
-        payment_status
       end
 
       def update_payable_payment_status(payment_status:, deliver_webhook: true)
