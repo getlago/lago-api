@@ -13,7 +13,7 @@ module Invoices
       retry_on Invoices::Payments::RateLimitError, wait: :polynomially_longer, attempts: 6
 
       def perform(invoice)
-        # NOTE: Legacy job, kept only to avoid existing jobs
+        # NOTE: Legacy job, kept only to avoid faileure with existing jobs
 
         Invoices::Payments::CreateService.call!(invoice:, payment_provider: :stripe)
       end

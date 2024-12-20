@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :service do
-  subject(:create_service) { described_class.new(payment:) }
+  subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
@@ -14,6 +14,15 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService, type: :ser
   let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
   let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
   let(:code) { "gocardless_1" }
+  let(:reference) { "organization.name - Invoice #{invoice.number}" }
+  let(:metadata) do
+    {
+      lago_customer_id: customer.id,
+      lago_invoice_id: invoice.id,
+      invoice_issuing_date: invoice.issuing_date.iso8601,
+      invoice_type: invoice.invoice_type
+    }
+  end
 
   let(:invoice) do
     create(
