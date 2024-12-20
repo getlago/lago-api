@@ -20,9 +20,6 @@ class BillSubscriptionJob < ApplicationJob
       skip_charges:
     )
     return if result.success?
-    # NOTE: We don't want a dead job for failed invoice due to the tax reason.
-    #       This invoice should be in failed status and can be retried.
-    return if tax_error?(result)
 
     # If the invoice was passed as an argument, it means the job was already retried (see end of function)
     if invoice || !result.invoice&.generating?
@@ -40,13 +37,5 @@ class BillSubscriptionJob < ApplicationJob
       invoice: result.invoice,
       skip_charges:
     )
-  end
-
-  private
-
-  def tax_error?(result)
-    return false unless result.error.is_a?(BaseService::ValidationFailure)
-
-    result.error&.messages&.dig(:tax_error)&.present?
   end
 end
