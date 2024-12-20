@@ -485,6 +485,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
     t.integer "last_dunning_campaign_attempt", default: 0, null: false
     t.datetime "last_dunning_campaign_attempt_at", precision: nil
     t.boolean "skip_invoice_custom_sections", default: false, null: false
+    t.string "type", default: "Customer", null: false
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
@@ -934,6 +935,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
     t.bigint "negative_amount_cents", default: 0, null: false
     t.bigint "progressive_billing_credit_amount_cents", default: 0, null: false
     t.enum "tax_status", enum_type: "tax_status"
+    t.uuid "account_id"
+    t.index ["account_id", "sequential_id"], name: "index_invoices_on_account_id_and_sequential_id", unique: true
+    t.index ["account_id"], name: "index_invoices_on_account_id"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["issuing_date"], name: "index_invoices_on_issuing_date"

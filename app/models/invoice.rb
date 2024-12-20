@@ -17,6 +17,9 @@ class Invoice < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
 
+  belongs_to :issuer, -> { with_discarded }, polymorphic: true
+  belongs_to :recipient, -> { with_discarded }, polymorphic: true
+
   has_many :fees
   has_many :credits
   has_many :wallet_transactions
