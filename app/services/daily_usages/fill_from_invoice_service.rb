@@ -27,7 +27,8 @@ module DailyUsages
           usage: ::V1::Customers::UsageSerializer.new(usage, includes: %i[charges_usage]).serialize,
           from_datetime: invoice_subscription.from_datetime,
           to_datetime: invoice_subscription.to_datetime,
-          refreshed_at: invoice_subscription.timestamp
+          refreshed_at: invoice_subscription.timestamp,
+          usage_date: invoice_subscription.charges_to_datetime
         )
 
         daily_usage.usage_diff = diff_usage(daily_usage)
