@@ -11,6 +11,11 @@ FactoryBot.define do
     provider_payment_id { SecureRandom.uuid }
     status { 'pending' }
 
+    trait :adyen_payment do
+      association :payment_provider, factory: :adyen_provider
+      association :payment_provider_customer, factory: :adyen_customer
+    end
+
     trait :requires_action do
       status { 'requires_action' }
       provider_payment_data do

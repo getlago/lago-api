@@ -426,6 +426,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
     let(:payment) do
       create(
         :payment,
+        :adyen_payment,
         payable: payment_request,
         provider_payment_id:,
         status: "Pending"
