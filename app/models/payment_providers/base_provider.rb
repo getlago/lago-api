@@ -32,7 +32,7 @@ module PaymentProviders
       return :succeeded if self.class::SUCCESS_STATUSES.include?(payment_status)
       return :failed if self.class::FAILED_STATUSES.include?(payment_status)
 
-      nil
+      payment_status
     end
   end
 end
