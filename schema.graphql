@@ -6462,6 +6462,11 @@ type Query {
   ): Customer
 
   """
+  Query selected invoice_custom_sections of a customer
+  """
+  customerInvoiceCustomSections(customerId: ID!, limit: Int, page: Int): InvoiceCustomSectionCollection
+
+  """
   Query invoices of a customer
   """
   customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!

@@ -403,6 +403,48 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe '#applicable_invoice_custom_sections' do
+    let(:organization) { customer.organization }
+    let(:organization_section) { create(:invoice_custom_section, organization: organization) }
+    let(:customer_section) { create(:invoice_custom_section, organization: organization) }
+    let(:not_selected_section) { create(:invoice_custom_section, organization: organization) }
+
+    before { not_selected_section }
+
+    context 'when customer has skip_invoice_custom_sections set to true' do
+      before { customer.update(skip_invoice_custom_sections: true) }
+
+      it 'returns an empty array' do
+        expect(customer.applicable_invoice_custom_sections).to eq([])
+      end
+    end
+
+    context 'when customer has its own selected_invoice_custom_sections' do
+      before do
+        customer.selected_invoice_custom_sections << customer_section
+        organization.selected_invoice_custom_sections << organization_section
+      end
+
+      it 'returns the customer\'s selected_invoice_custom_sections' do
+        expect(customer.applicable_invoice_custom_sections).to eq([customer_section])
+      end
+    end
+
+    context 'when customer does not have any selected_invoice_custom_sections but organization has' do
+      before { organization.selected_invoice_custom_sections << organization_section }
+
+      it 'returns the organization\'s invoice_custom_sections' do
+        expect(customer.applicable_invoice_custom_sections).to eq([organization_section])
+      end
+    end
+
+    context 'when neither customer nor organization have selected invoice custom sections' do
+      it 'returns an empty array' do
+        expect(customer.applicable_invoice_custom_sections).to eq([])
+      end
+    end
+  end
+
   describe 'timezones' do
     subject(:customer) do
       build(
