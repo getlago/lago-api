@@ -4,6 +4,10 @@ module PaymentProviders
   class AdyenProvider < BaseProvider
     SUCCESS_REDIRECT_URL = 'https://www.adyen.com/'
 
+    PENDING_STATUSES = %w[AuthorisedPending Received].freeze
+    SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
+    FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
+
     validates :api_key, :merchant_account, presence: true
     validates :success_redirect_url, adyen_url: true, allow_nil: true, length: {maximum: 1024}
 

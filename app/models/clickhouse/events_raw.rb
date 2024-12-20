@@ -51,7 +51,6 @@ end
 # Table name: events_raw
 #
 #  code                       :string           not null
-#  ingested_at                :datetime         not null
 #  precise_total_amount_cents :decimal(40, 15)
 #  properties                 :string           not null
 #  timestamp                  :datetime         not null
