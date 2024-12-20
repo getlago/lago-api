@@ -5,11 +5,6 @@ module PaymentRequests
     class StripeService < BaseService
       include Customers::PaymentProviderFinder
 
-      PENDING_STATUSES = %w[processing requires_capture requires_action requires_confirmation requires_payment_method]
-        .freeze
-      SUCCESS_STATUSES = %w[succeeded].freeze
-      FAILED_STATUSES = %w[canceled].freeze
-
       def initialize(payable = nil)
         @payable = payable
 
@@ -43,7 +38,7 @@ module PaymentRequests
 
         payment.save!
 
-        payable_payment_status = payable_payment_status(payment.status)
+        payable_payment_status = stripe_payment_provider.determine_payment_status(payment.status)
         update_payable_payment_status(
           payment_status: payable_payment_status,
           processing: payment.status == "processing"
@@ -111,7 +106,7 @@ module PaymentRequests
         payment.update!(status:)
 
         processing = status == "processing"
-        payment_status = payable_payment_status(status)
+        payment_status = payment.payment_provider.determine_payment_status(status)
         update_payable_payment_status(payment_status:, processing:)
         update_invoices_payment_status(payment_status:, processing:)
         reset_customer_dunning_campaign_status(payment_status)
@@ -218,14 +213,6 @@ module PaymentRequests
 
       def description
         "#{organization.name} - Overdue invoices"
-      end
-
-      def payable_payment_status(payment_status)
-        return :pending if PENDING_STATUSES.include?(payment_status)
-        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-        return :failed if FAILED_STATUSES.include?(payment_status)
-
-        payment_status&.to_sym
       end
 
       def update_payable_payment_status(payment_status:, deliver_webhook: true, processing: false)
