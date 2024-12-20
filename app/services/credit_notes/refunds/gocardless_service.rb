@@ -5,6 +5,10 @@ module CreditNotes
     class GocardlessService < BaseService
       include Customers::PaymentProviderFinder
 
+      PENDING_STATUSES = %w[created pending_submission submitted refund_settled].freeze
+      SUCCESS_STATUSES = %w[paid].freeze
+      FAILED_STATUSES = %w[cancelled bounced funds_returned failed].freeze
+
       def initialize(credit_note = nil)
         @credit_note = credit_note
 
@@ -29,7 +33,7 @@ module CreditNotes
         )
         refund.save!
 
-        update_credit_note_status(payment.payment_provider&.determine_payment_status(refund.status))
+        update_credit_note_status(credit_note_status(refund.status))
         Utils::SegmentTrack.refund_status_changed(refund.status, credit_note.id, organization.id)
 
         result.refund = refund
@@ -54,7 +58,7 @@ module CreditNotes
         return result if refund.credit_note.succeeded?
 
         refund.update!(status:)
-        update_credit_note_status(refund.payment.payment_provider&.determine_payment_status(refund.status))
+        update_credit_note_status(credit_note_status(refund.status))
         Utils::SegmentTrack.refund_status_changed(refund.status, credit_note.id, organization.id)
 
         if FAILED_STATUSES.include?(status.to_s)
@@ -132,6 +136,14 @@ module CreditNotes
         credit_note.refunded_at = Time.current if credit_note.succeeded?
 
         credit_note.save!
+      end
+
+      def credit_note_status(status)
+        return 'pending' if PENDING_STATUSES.include?(status)
+        return 'succeeded' if SUCCESS_STATUSES.include?(status)
+        return 'failed' if FAILED_STATUSES.include?(status)
+
+        status
       end
 
       def handle_missing_refund(metadata)
