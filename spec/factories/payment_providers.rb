@@ -61,4 +61,23 @@ FactoryBot.define do
       success_redirect_url { Faker::Internet.url }
     end
   end
+
+  factory :cashfree_provider, class: 'PaymentProviders::CashfreeProvider' do
+    organization
+    type { 'PaymentProviders::CashfreeProvider' }
+    code { "cashfree_account_#{SecureRandom.uuid}" }
+    name { 'Cashfree Account 1' }
+
+    secrets do
+      {client_id: SecureRandom.uuid, client_secret: SecureRandom.uuid}.to_json
+    end
+
+    settings do
+      {success_redirect_url:}
+    end
+
+    transient do
+      success_redirect_url { Faker::Internet.url }
+    end
+  end
 end

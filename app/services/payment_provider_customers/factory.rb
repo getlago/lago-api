@@ -12,6 +12,8 @@ module PaymentProviderCustomers
         PaymentProviderCustomers::StripeService
       when 'PaymentProviderCustomers::GocardlessCustomer'
         PaymentProviderCustomers::GocardlessService
+      when 'PaymentProviderCustomers::CashfreeCustomer'
+        PaymentProviderCustomers::CashfreeService
       when 'PaymentProviderCustomers::AdyenCustomer'
         PaymentProviderCustomers::AdyenService
       else

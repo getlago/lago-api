@@ -31,6 +31,8 @@ module Resolvers
         PaymentProviders::StripeProvider.to_s
       when 'gocardless'
         PaymentProviders::GocardlessProvider.to_s
+      when 'cashfree'
+        PaymentProviders::CashfreeProvider.to_s
       else
         raise(NotImplementedError)
       end

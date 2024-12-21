@@ -39,9 +39,10 @@ class Organization < ApplicationRecord
   has_many :error_details
   has_many :dunning_campaigns
 
-  has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"
-  has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
-  has_many :adyen_payment_providers, class_name: "PaymentProviders::AdyenProvider"
+  has_many :stripe_payment_providers, class_name: 'PaymentProviders::StripeProvider'
+  has_many :gocardless_payment_providers, class_name: 'PaymentProviders::GocardlessProvider'
+  has_many :cashfree_payment_providers, class_name: 'PaymentProviders::CashfreeProvider'
+  has_many :adyen_payment_providers, class_name: 'PaymentProviders::AdyenProvider'
 
   has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
@@ -124,7 +125,9 @@ class Organization < ApplicationRecord
       stripe_payment_provider
     when "gocardless"
       gocardless_payment_provider
-    when "adyen"
+    when 'cashfree'
+      cashfree_payment_provider
+    when 'adyen'
       adyen_payment_provider
     end
   end
