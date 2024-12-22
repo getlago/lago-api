@@ -18,8 +18,7 @@ module DailyUsages
         datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
 
         next if date == Time.zone.today ||
-          subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists? ||
-          DailyUsage.refreshed_at_in_timezone(datetime).where(subscription_id: subscription.id).exists?
+          subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists?
 
         Timecop.thread_safe = true
         Timecop.freeze(datetime + 5.minutes) do

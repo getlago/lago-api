@@ -11,5 +11,6 @@ FactoryBot.define do
     to_datetime { Time.current.end_of_month }
     refreshed_at { Time.current }
     usage { {} }
+    usage_date { Date.yesterday }
   end
 end

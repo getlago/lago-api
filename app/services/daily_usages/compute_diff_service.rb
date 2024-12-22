@@ -58,14 +58,12 @@ module DailyUsages
 
     attr_reader :daily_usage
 
-    delegate :subscription, :refreshed_at, :from_datetime, :to_datetime, to: :daily_usage
+    delegate :subscription, :usage_date, :from_datetime, :to_datetime, to: :daily_usage
 
     def previous_daily_usage
-      @previous_daily_usage ||= DailyUsage
-        .where(subscription_id: subscription.id, from_datetime:, to_datetime:)
-        .where("refreshed_at < ?", refreshed_at)
-        .order(refreshed_at: :desc)
-        .first
+      @previous_daily_usage ||= subscription.daily_usages
+        .where(from_datetime:, to_datetime:)
+        .find_by(usage_date: usage_date - 1.day)
     end
 
     def apply_diff(previous_values, current_values)

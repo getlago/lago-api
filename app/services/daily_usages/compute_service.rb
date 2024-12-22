@@ -10,7 +10,7 @@ module DailyUsages
 
     def call
       if subscription_billing_day?
-        # Usage on billing day will be computed using the periodic invoice as we cannont rely on the caching mechanism
+        # Usage on billing day will be computed using the periodic invoice as we cannot rely on the caching mechanism
         return result
       end
 
@@ -28,7 +28,7 @@ module DailyUsages
         from_datetime: current_usage.from_datetime,
         to_datetime: current_usage.to_datetime,
         refreshed_at: timestamp,
-        usage_date: date_in_timezone - 1.day
+        usage_date:
       )
 
       daily_usage.usage_diff = diff_usage(daily_usage)
@@ -65,7 +65,7 @@ module DailyUsages
     end
 
     def existing_daily_usage
-      @existing_daily_usage ||= DailyUsage.refreshed_at_in_timezone(timestamp)
+      @existing_daily_usage ||= DailyUsage.usage_date_in_timezone(usage_date)
         .find_by(subscription_id: subscription.id)
     end
 
@@ -85,6 +85,10 @@ module DailyUsages
 
     def date_in_timezone
       @date_in_timezone ||= timestamp.in_time_zone(customer.applicable_timezone).to_date
+    end
+
+    def usage_date
+      @usage_date ||= date_in_timezone - 1.day
     end
   end
 end

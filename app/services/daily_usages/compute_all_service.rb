@@ -24,17 +24,17 @@ module DailyUsages
       # NOTE(DailyUsage): For now the query filters organizations having revenue_analytics premium integrations
       #                   This might change in the future
       Subscription
-        .with(already_refreshed_today: already_refreshed_today)
+        .with(existing_daily_usage:)
         .joins(customer: :organization)
         .merge(Organization.with_revenue_analytics_support)
-        .joins("LEFT JOIN already_refreshed_today ON subscriptions.id = already_refreshed_today.subscription_id")
+        .joins("LEFT JOIN existing_daily_usage ON subscriptions.id = existing_daily_usage.subscription_id")
         .active
-        .where("already_refreshed_today.subscription_id IS NULL") # Exclude subscriptions that already have a daily usage record for today in customer's timezone
-        .where("DATE_PART('hour', (:timestamp#{at_time_zone})) IN (0, 1, 2)", timestamp:) # Refresh the usage as soom as a subscription starts a new day in customer's timezone
+        .where("existing_daily_usage.subscription_id IS NULL") # Exclude subscriptions that already have a daily usage record for yesterday in customer's timezone
+        .where("DATE_PART('hour', (:timestamp#{at_time_zone})) IN (0, 1, 2)", timestamp:) # Store the usage as soon as a subscription starts a new day in customer's timezone
     end
 
-    def already_refreshed_today
-      DailyUsage.refreshed_at_in_timezone(timestamp).select(:subscription_id)
+    def existing_daily_usage
+      DailyUsage.usage_date_in_timezone(timestamp.to_date - 1.day).select(:subscription_id)
     end
   end
 end
