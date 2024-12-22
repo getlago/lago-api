@@ -11,7 +11,7 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
 
   let(:subscriptions) { [subscription] }
 
-  let(:timestamp) { Time.zone.parse('2025-01-01T01:00:00') }
+  let(:timestamp) { Time.zone.parse("2025-01-01T01:00:00") }
 
   let(:invoice) do
     create(
@@ -28,10 +28,10 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
       subscription:,
       invoice:,
       timestamp:,
-      from_datetime: Time.zone.parse('2024-12-01T00:00:00'),
-      to_datetime: Time.zone.parse('2024-12-31T23:59:59'),
-      charges_from_datetime: Time.zone.parse('2024-12-01T00:00:00'),
-      charges_to_datetime: Time.zone.parse('2024-12-31T23:59:59')
+      from_datetime: Time.zone.parse("2024-12-01T00:00:00"),
+      to_datetime: Time.zone.parse("2024-12-31T23:59:59"),
+      charges_from_datetime: Time.zone.parse("2024-12-01T00:00:00"),
+      charges_to_datetime: Time.zone.parse("2024-12-31T23:59:59")
     )
   end
 
@@ -51,7 +51,8 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
         from_datetime: invoice_subscription.from_datetime,
         to_datetime: invoice_subscription.to_datetime,
         refreshed_at: invoice_subscription.timestamp,
-        usage_diff: Hash
+        usage_diff: Hash,
+        usage_date: invoice_subscription.charges_to_datetime.to_date
       )
     end
 
@@ -65,7 +66,8 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
           external_subscription_id: subscription.external_id,
           from_datetime: invoice_subscription.from_datetime,
           to_datetime: invoice_subscription.to_datetime,
-          refreshed_at: invoice_subscription.timestamp
+          refreshed_at: invoice_subscription.timestamp,
+          usage_date: invoice_subscription.charges_to_datetime.to_date
         )
       end
 
@@ -74,7 +76,7 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
       end
     end
 
-    context 'when multiples subscriptions are passed to the service' do
+    context "when multiples subscriptions are passed to the service" do
       let(:subscription2) { create(:subscription, customer:) }
       let(:subscriptions) { [subscription, subscription2] }
 
@@ -84,10 +86,10 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
           subscription: subscription2,
           invoice:,
           timestamp:,
-          from_datetime: Time.zone.parse('2024-12-01T00:00:00'),
-          to_datetime: Time.zone.parse('2024-12-31T23:59:59'),
-          charges_from_datetime: Time.zone.parse('2024-12-01T00:00:00'),
-          charges_to_datetime: Time.zone.parse('2024-12-31T23:59:59')
+          from_datetime: Time.zone.parse("2024-12-01T00:00:00"),
+          to_datetime: Time.zone.parse("2024-12-31T23:59:59"),
+          charges_from_datetime: Time.zone.parse("2024-12-01T00:00:00"),
+          charges_to_datetime: Time.zone.parse("2024-12-31T23:59:59")
         )
       end
 
@@ -97,7 +99,7 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
         expect { fill_service.call }.to change(DailyUsage, :count).by(2)
       end
 
-      context 'when only one subscription has to be updated' do
+      context "when only one subscription has to be updated" do
         let(:subscriptions) { [subscription] }
 
         it "creates daily usages for the subscriptions" do
@@ -113,7 +115,8 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
             from_datetime: invoice_subscription.from_datetime,
             to_datetime: invoice_subscription.to_datetime,
             refreshed_at: invoice_subscription.timestamp,
-            usage_diff: Hash
+            usage_diff: Hash,
+            usage_date: invoice_subscription.charges_to_datetime.to_date
           )
         end
       end
