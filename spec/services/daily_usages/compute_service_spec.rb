@@ -13,9 +13,10 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
   end
 
   let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
+  let(:usage_date) { Date.parse("2024-10-21") }
 
   describe "#call" do
-    it "creates a daily usage", aggregate_failures: true do
+    it "creates a daily usage" do
       travel_to(timestamp) do
         expect { compute_service.call }.to change(DailyUsage, :count).by(1)
 
@@ -37,12 +38,12 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
 
     context "when a daily usage already exists" do
       let(:existing_daily_usage) do
-        create(:daily_usage, subscription:, organization:, customer:, refreshed_at: timestamp)
+        create(:daily_usage, subscription:, organization:, customer:, usage_date:)
       end
 
       before { existing_daily_usage }
 
-      it "returns the existing daily usage", aggregate_failure: true do
+      it "returns the existing daily usage" do
         result = compute_service.call
 
         expect(result).to be_success
@@ -53,7 +54,7 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
         let(:organization) { create(:organization, timezone: "America/Sao_Paulo") }
 
         let(:existing_daily_usage) do
-          create(:daily_usage, subscription:, organization:, customer:, refreshed_at: timestamp - 4.hours)
+          create(:daily_usage, subscription:, organization:, customer:, usage_date: usage_date - 4.hours)
         end
 
         it "takes the timezone into account" do
@@ -68,7 +69,7 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
         let(:customer) { create(:customer, organization:, timezone: "America/Sao_Paulo") }
 
         let(:existing_daily_usage) do
-          create(:daily_usage, subscription:, organization:, customer:, refreshed_at: timestamp - 4.hours)
+          create(:daily_usage, subscription:, organization:, customer:, usage_date: usage_date - 4.hours)
         end
 
         it "takes the timezone into account" do
@@ -99,7 +100,7 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
 
       let(:timestamp) { subscription.terminated_at - 1.day }
 
-      it "creates a daily usage", aggregate_failures: true do
+      it "creates a daily usage" do
         result = compute_service.call
 
         expect(result).to be_success

@@ -28,7 +28,7 @@ module DailyUsages
           from_datetime: invoice_subscription.from_datetime,
           to_datetime: invoice_subscription.to_datetime,
           refreshed_at: invoice_subscription.timestamp,
-          usage_date: invoice_subscription.charges_to_datetime
+          usage_date: invoice_subscription.charges_to_datetime.to_date
         )
 
         daily_usage.usage_diff = diff_usage(daily_usage)
@@ -67,7 +67,7 @@ module DailyUsages
       DailyUsage.find_by(
         from_datetime: invoice_subscription.from_datetime,
         to_datetime: invoice_subscription.to_datetime,
-        refreshed_at: invoice_subscription.timestamp,
+        usage_date: invoice_subscription.charges_to_datetime.to_date,
         subscription_id: invoice_subscription.subscription_id
       )
     end
