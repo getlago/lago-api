@@ -28,7 +28,7 @@ module DailyUsages
         from_datetime: current_usage.from_datetime,
         to_datetime: current_usage.to_datetime,
         refreshed_at: timestamp,
-        usage_date: timestamp.to_date - 1.day
+        usage_date: date_in_timezone - 1.day
       )
 
       daily_usage.usage_diff = diff_usage(daily_usage)
@@ -74,8 +74,6 @@ module DailyUsages
     end
 
     def subscription_billing_day?
-      date_in_timezone = timestamp.in_time_zone(customer.applicable_timezone).to_date
-
       previous_billing_date_in_timezone = Subscriptions::DatesService
         .new_instance(subscription, timestamp, current_usage: true)
         .previous_beginning_of_period
@@ -83,6 +81,10 @@ module DailyUsages
         .to_date
 
       date_in_timezone == previous_billing_date_in_timezone
+    end
+
+    def date_in_timezone
+      @date_in_timezone ||= timestamp.in_time_zone(customer.applicable_timezone).to_date
     end
   end
 end

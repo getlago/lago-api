@@ -18,7 +18,7 @@ module DailyUsages
         datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
 
         next if date == Time.zone.today ||
-          subscription.daily_usages.where(usage_date: date - 1.day).exists? ||
+          subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists? ||
           DailyUsage.refreshed_at_in_timezone(datetime).where(subscription_id: subscription.id).exists?
 
         Timecop.thread_safe = true
@@ -46,7 +46,7 @@ module DailyUsages
             to_datetime: usage.to_datetime,
             refreshed_at: datetime,
             usage_diff: {},
-            usage_date: date - 1.day
+            usage_date: datetime.to_date - 1.day
           )
 
           if date != from

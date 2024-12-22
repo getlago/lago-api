@@ -27,7 +27,7 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
           external_subscription_id: subscription.external_id,
           usage: Hash,
           usage_diff: Hash,
-          usage_date: timestamp.to_date - 1.day
+          usage_date: Date.parse("2024-10-21")
         )
         expect(daily_usage.refreshed_at).to match_datetime(timestamp)
         expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
@@ -117,6 +117,19 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
         expect(daily_usage.refreshed_at).to match_datetime(timestamp)
         expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
         expect(daily_usage.to_datetime).to match_datetime(subscription.terminated_at)
+      end
+    end
+
+    context "with customer timezone" do
+      let(:customer) { create(:customer, organization:, timezone: "Australia/Sydney") }
+      let(:timestamp) { Time.zone.parse("2024-10-21 15:05:00") }
+
+      it "creates a daily usage with expected usage_date" do
+        expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+
+        daily_usage = DailyUsage.order(created_at: :asc).last
+        # Timestamp is 22 Oct 2024 02:05:00 AEDT
+        expect(daily_usage.usage_date).to eq(Date.parse("2024-10-21"))
       end
     end
   end
