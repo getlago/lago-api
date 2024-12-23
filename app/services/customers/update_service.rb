@@ -213,6 +213,7 @@ module Customers
       end
 
       if args.key?(:selected_invoice_custom_section_ids)
+        customer.skip_invoice_custom_sections = false
         UpdateInvoiceCustomSectionsService.call(customer:, section_ids: args[:selected_invoice_custom_section_ids])
       end
     end

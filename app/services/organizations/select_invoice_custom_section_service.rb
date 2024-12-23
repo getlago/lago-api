@@ -2,9 +2,9 @@
 
 module Organizations
   class SelectInvoiceCustomSectionService < BaseService
-    def initialize(organization:, section:)
+    def initialize(section:)
       @section = section
-      @organization = organization
+      @organization = section.organization
       super
     end
 

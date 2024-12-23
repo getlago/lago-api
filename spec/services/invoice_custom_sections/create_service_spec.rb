@@ -21,7 +21,7 @@ RSpec.describe InvoiceCustomSections::CreateService, type: :service do
       end
 
       before do
-        allow(InvoiceCustomSections::SelectService).to receive(:call).and_call_original
+        allow(Organizations::SelectInvoiceCustomSectionService).to receive(:call).and_call_original
       end
 
       context 'when selected is true' do
@@ -31,7 +31,7 @@ RSpec.describe InvoiceCustomSections::CreateService, type: :service do
           expect { service_result }.to change(organization.invoice_custom_sections, :count).by(1)
             .and change(organization.reload.selected_invoice_custom_sections, :count).by(1)
           expect(service_result.invoice_custom_section).to be_persisted.and have_attributes(create_params)
-          expect(InvoiceCustomSections::SelectService).to have_received(:call)
+          expect(Organizations::SelectInvoiceCustomSectionService).to have_received(:call)
             .with(section: service_result.invoice_custom_section, organization: organization)
         end
       end
@@ -42,7 +42,7 @@ RSpec.describe InvoiceCustomSections::CreateService, type: :service do
         it 'creates an invoice_custom_section that belongs to the organization' do
           expect { service_result }.to change(organization.invoice_custom_sections, :count).by(1)
           expect(service_result.invoice_custom_section).to be_persisted.and have_attributes(create_params)
-          expect(InvoiceCustomSections::SelectService).not_to have_received(:call)
+          expect(Organizations::SelectInvoiceCustomSectionService).not_to have_received(:call)
             .with(section: service_result.invoice_custom_section, organization: organization)
         end
       end

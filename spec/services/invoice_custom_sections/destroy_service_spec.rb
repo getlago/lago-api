@@ -10,7 +10,7 @@ RSpec.describe InvoiceCustomSections::DestroyService do
   let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
 
   before do
-    allow(InvoiceCustomSections::Deselect::ForAllUsagesService).to receive(:call).and_call_original
+    allow(InvoiceCustomSections::DeselectAllService).to receive(:call).and_call_original
     organization.selected_invoice_custom_sections << invoice_custom_section
     customer.selected_invoice_custom_sections << invoice_custom_section
   end
@@ -21,10 +21,11 @@ RSpec.describe InvoiceCustomSections::DestroyService do
         result = service_result
 
         expect(result.invoice_custom_section.discarded?).to be(true)
-        expect(InvoiceCustomSections::Deselect::ForAllUsagesService).to have_received(:call)
+        expect(InvoiceCustomSections::DeselectAllService).to have_received(:call)
           .with(section: invoice_custom_section)
         expect(organization.selected_invoice_custom_sections).to eq([])
         expect(customer.selected_invoice_custom_sections).to eq([])
+        expect(customer.applicable_invoice_custom_sections).to eq([])
       end
     end
   end

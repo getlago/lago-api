@@ -11,8 +11,8 @@ RSpec.describe InvoiceCustomSections::UpdateService do
   let(:selected) { true }
 
   before do
-    allow(InvoiceCustomSections::SelectService).to receive(:call).and_call_original
-    allow(InvoiceCustomSections::Deselect::ForOrganizationService).to receive(:call).and_call_original
+    allow(Organizations::SelectInvoiceCustomSectionService).to receive(:call).and_call_original
+    allow(Organizations::DeselectInvoiceCustomSectionServicee).to receive(:call).and_call_original
   end
 
   describe '#call' do
@@ -22,7 +22,7 @@ RSpec.describe InvoiceCustomSections::UpdateService do
 
         expect(result).to be_success
         expect(result.invoice_custom_section.name).to eq('Updated Name')
-        expect(InvoiceCustomSections::SelectService).to have_received(:call)
+        expect(Organizations::SelectInvoiceCustomSectionService).to have_received(:call)
           .with(section: invoice_custom_section, organization: organization)
       end
 
@@ -31,7 +31,7 @@ RSpec.describe InvoiceCustomSections::UpdateService do
 
         it 'calls Deselect::ForOrganizationService when selected is false' do
           service_result
-          expect(InvoiceCustomSections::Deselect::ForOrganizationService).to have_received(:call)
+          expect(Organizations::DeselectInvoiceCustomSectionServicee).to have_received(:call)
             .with(section: invoice_custom_section)
         end
       end
