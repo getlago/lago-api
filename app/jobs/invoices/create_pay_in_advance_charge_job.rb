@@ -2,6 +2,8 @@
 
 module Invoices
   class CreatePayInAdvanceChargeJob < ApplicationJob
+    include ConcurrencyThrottlable
+
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_BILLING'])
         :billing
@@ -11,6 +13,7 @@ module Invoices
     end
 
     retry_on Sequenced::SequenceError
+    retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
 
     unique :until_executed, on_conflict: :log
 

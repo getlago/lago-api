@@ -4475,6 +4475,7 @@ type Invoice {
   subTotalIncludingTaxesAmountCents: BigInt!
   subscriptions: [Subscription!]
   taxProviderVoidable: Boolean!
+  taxStatus: InvoiceTaxStatusTypeEnum
   taxesAmountCents: BigInt!
   taxesRate: Float!
   totalAmountCents: BigInt!
@@ -4619,6 +4620,12 @@ type InvoiceSubscription {
   subscriptionAmountCents: BigInt!
   toDatetime: ISO8601DateTime
   totalAmountCents: BigInt!
+}
+
+enum InvoiceTaxStatusTypeEnum {
+  failed
+  pending
+  succeeded
 }
 
 enum InvoiceTypeEnum {

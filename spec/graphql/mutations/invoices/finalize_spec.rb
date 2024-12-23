@@ -15,6 +15,7 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
         finalizeInvoice(input: $input) {
           id
           status
+          taxStatus
         }
       }
     GQL
@@ -41,6 +42,37 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
       aggregate_failures do
         expect(result_data['id']).to be_present
         expect(result_data['status']).to eq('finalized')
+      end
+    end
+  end
+
+  context 'with tax provider' do
+    let(:integration) { create(:anrok_integration, organization:) }
+    let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+    before do
+      integration_customer
+    end
+
+    it 'returns pending invoice' do
+      freeze_time do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {id: invoice.id}
+          }
+        )
+
+        result_data = result['data']['finalizeInvoice']
+
+        aggregate_failures do
+          expect(result_data['id']).to be_present
+          expect(result_data['status']).to eq('pending')
+          expect(result_data['taxStatus']).to eq('pending')
+        end
       end
     end
   end
