@@ -5,7 +5,7 @@ module InboundWebhooks
     queue_as :default
 
     def perform(inbound_webhook:)
-      InboundWebhooks::ProcessService.call(inbound_webhook:).raise_if_error!
+      InboundWebhooks::ProcessService.call!(inbound_webhook:)
     end
   end
 end
