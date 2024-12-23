@@ -229,6 +229,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_144027) do
     t.index ["organization_id", "timestamp", "charge_id", "group_id"], name: "index_timestamp_group_lookup"
     t.index ["organization_id", "timestamp", "charge_id"], name: "index_timestamp_lookup"
     t.index ["organization_id"], name: "index_cached_aggregations_on_organization_id"
+    t.index ["timestamp", "charge_id", "external_subscription_id"], name: "idx_on_timestamp_charge_id_external_subscription_id"
   end
 
   create_table "charge_filter_values", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
