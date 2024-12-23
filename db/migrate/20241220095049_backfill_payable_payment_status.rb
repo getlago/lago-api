@@ -6,7 +6,20 @@ class BackfillPayablePaymentStatus < ActiveRecord::Migration[7.1]
     # Find `payable_id`s with duplicate_statuses payments
 
     # Define statuses to clean up duplicates
-    duplicate_statuses = %w[processing pending_submission]
+    duplicate_statuses = %w[
+      processing
+      requires_capture
+      requires_action
+      requires_confirmation
+      requires_payment_method
+      pending_customer_approval
+      pending_submission
+      submitted
+      confirmed
+      AuthorisedPending
+      Received
+    ]
+
     duplicate_payables = Payment.where(status: duplicate_statuses)
       .group(:payable_id)
       .having('COUNT(id) > 1')
