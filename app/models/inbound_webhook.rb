@@ -10,7 +10,7 @@ class InboundWebhook < ApplicationRecord
   STATUSES = {
     pending: "pending",
     processing: "processing",
-    processed: "processed",
+    succeeded: "succeeded",
     failed: "failed"
   }
 
@@ -36,14 +36,16 @@ end
 #  processing_at   :datetime
 #  signature       :string
 #  source          :string           not null
-#  status          :string           default("pending"), not null
+#  status          :enum             default("pending"), not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  organization_id :uuid             not null
 #
 # Indexes
 #
-#  index_inbound_webhooks_on_organization_id  (organization_id)
+#  index_inbound_webhooks_on_organization_id           (organization_id)
+#  index_inbound_webhooks_on_status_and_created_at     (status,created_at) WHERE (status = 'pending'::inbound_webhook_status)
+#  index_inbound_webhooks_on_status_and_processing_at  (status,processing_at) WHERE (status = 'processing'::inbound_webhook_status)
 #
 # Foreign Keys
 #

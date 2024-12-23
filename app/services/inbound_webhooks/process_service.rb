@@ -15,7 +15,7 @@ module InboundWebhooks
     def call
       return result if within_processing_window?
       return result if inbound_webhook.failed?
-      return result if inbound_webhook.processed?
+      return result if inbound_webhook.succeeded?
 
       inbound_webhook.processing!
 
@@ -26,7 +26,7 @@ module InboundWebhooks
         return handler_result
       end
 
-      inbound_webhook.processed!
+      inbound_webhook.succeeded!
 
       result.inbound_webhook = inbound_webhook
       result

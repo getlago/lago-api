@@ -78,9 +78,9 @@ RSpec.describe InboundWebhooks::ProcessService, type: :service do
     end
   end
 
-  context "when inbound webhook has been processed" do
+  context "when inbound webhook has been succeeded" do
     let(:inbound_webhook) { create :inbound_webhook, source: webhook_source, status: }
-    let(:status) { "processed" }
+    let(:status) { "succeeded" }
 
     it "does not process the webhook" do
       expect(result).to be_success
@@ -105,8 +105,8 @@ RSpec.describe InboundWebhooks::ProcessService, type: :service do
         .with(inbound_webhook:)
     end
 
-    it "updated inbound webhook status to processed" do
-      expect { result }.to change(inbound_webhook, :status).to("processed")
+    it "updated inbound webhook status to succeeded" do
+      expect { result }.to change(inbound_webhook, :status).to("succeeded")
     end
 
     context "when the stripe webhook handling fails" do
