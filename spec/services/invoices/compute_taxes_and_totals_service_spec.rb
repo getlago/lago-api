@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::RetryService, type: :service do
-  subject(:retry_service) { described_class.new(invoice:) }
+RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
+  subject(:totals_service) { described_class.new(invoice:) }
 
   describe '#call' do
     let(:organization) { create(:organization) }
@@ -12,8 +12,7 @@ RSpec.describe Invoices::RetryService, type: :service do
     let(:invoice) do
       create(
         :invoice,
-        :failed,
-        :with_tax_error,
+        :finalized,
         customer:,
         organization:,
         subscriptions: [subscription],
@@ -72,30 +71,53 @@ RSpec.describe Invoices::RetryService, type: :service do
       end
     end
 
-    context 'when invoice is not failed' do
+    context 'when there is tax provider' do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
       before do
-        invoice.update(status: %i[draft finalized voided generating].sample)
+        integration_customer
       end
 
-      it 'returns an error' do
-        result = retry_service.call
+      it 'enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob' do
+        expect do
+          totals_service.call
+        end.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+      end
 
-        expect(result).not_to be_success
-        expect(result.error.code).to eq('invalid_status')
+      it 'sets correct statuses on invoice' do
+        totals_service.call
+
+        expect(invoice.reload.status).to eq('pending')
+        expect(invoice.reload.tax_status).to eq('pending')
+      end
+
+      context 'when invoice is draft' do
+        before { invoice.update!(status: :draft) }
+
+        it 'sets only tax status' do
+          described_class.new(invoice:, finalizing: false).call
+
+          expect(invoice.reload.status).to eq('draft')
+          expect(invoice.reload.tax_status).to eq('pending')
+        end
       end
     end
 
-    it 'enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob' do
-      expect do
-        retry_service.call
-      end.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
-    end
+    context 'when there is NO tax provider' do
+      let(:result) { BaseService::Result.new }
 
-    it 'sets correct statuses' do
-      retry_service.call
+      before do
+        allow(Invoices::ComputeAmountsFromFees).to receive(:call)
+          .with(invoice:)
+          .and_return(result)
+      end
 
-      expect(invoice.reload.status).to eq('pending')
-      expect(invoice.reload.tax_status).to eq('pending')
+      it 'calls the add on create service' do
+        totals_service.call
+
+        expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
+      end
     end
   end
 end

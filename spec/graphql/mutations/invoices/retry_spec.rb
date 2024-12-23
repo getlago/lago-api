@@ -41,30 +41,6 @@ RSpec.describe Mutations::Invoices::Retry, type: :graphql do
       amount_cents: 2_000
     )
   end
-
-  let(:integration) { create(:anrok_integration, organization:) }
-  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-  let(:response) { instance_double(Net::HTTPOK) }
-  let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
-  let(:body) do
-    path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response.json')
-    json = File.read(path)
-
-    # setting item_id based on the test example
-    response = JSON.parse(json)
-    response['succeededInvoices'].first['fees'].first['item_id'] = fee_subscription.id
-
-    response.to_json
-  end
-  let(:integration_collection_mapping) do
-    create(
-      :netsuite_collection_mapping,
-      integration:,
-      mapping_type: :fallback_item,
-      settings: {external_id: '1', external_account_code: '11', external_name: ''}
-    )
-  end
   let(:mutation) do
     <<-GQL
       mutation($input: RetryInvoiceInput!) {
@@ -77,14 +53,7 @@ RSpec.describe Mutations::Invoices::Retry, type: :graphql do
   end
 
   before do
-    integration_collection_mapping
     fee_subscription
-
-    integration_customer
-
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
-    allow(lago_client).to receive(:post_with_response).and_return(response)
-    allow(response).to receive(:body).and_return(body)
   end
 
   it_behaves_like 'requires current user'
@@ -106,7 +75,7 @@ RSpec.describe Mutations::Invoices::Retry, type: :graphql do
       data = result['data']['retryInvoice']
 
       expect(data['id']).to eq(invoice.id)
-      expect(data['status']).to eq('finalized')
+      expect(data['status']).to eq('pending')
     end
   end
 end

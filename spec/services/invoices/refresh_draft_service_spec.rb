@@ -174,71 +174,22 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
     context 'when there is a tax_integration set up' do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-      let(:response) { instance_double(Net::HTTPOK) }
-      let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
-      let(:integration_collection_mapping) do
-        create(
-          :netsuite_collection_mapping,
-          integration:,
-          mapping_type: :fallback_item,
-          settings: {external_id: '1', external_account_code: '11', external_name: ''}
-        )
-      end
       let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
 
       before do
-        integration_collection_mapping
         integration_customer
         charge
-
-        allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
-        allow(lago_client).to receive(:post_with_response).and_return(response)
-        allow(response).to receive(:body).and_return(body)
-        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
-          fee = m.receiver
-          if fee.charge_id == charge.id
-            'charge_fee_id-12345'
-          elsif fee.subscription_id == subscription.id
-            'sub_fee_id-12345'
-          else
-            m.call(*args)
-          end
-        end
       end
 
-      context 'when successfully fetching taxes' do
-        let(:body) do
-          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
-          File.read(p)
-        end
-
-        it 'successfully applies taxes and regenerates fees' do
-          expect { refresh_service.call }.to change { invoice.reload.taxes_rate }.from(30.0).to(10.0)
-            .and change { invoice.fees.count }.from(0).to(2)
-        end
-      end
-
-      context 'when failed to fetch taxes' do
-        let(:body) do
-          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
-          json = File.read(p)
-          response = JSON.parse(json)
-          response.to_json
-        end
-
+      context 'when taxes are unknown' do
         it 'regenerates fees' do
           expect { refresh_service.call }.to change { invoice.fees.count }.from(0).to(2)
         end
 
-        it 'creates error_detail for the invoice' do
-          result = refresh_service.call
+        it 'sets correct tax status' do
+          refresh_service.call
 
-          aggregate_failures do
-            expect(result.success?).to be(false)
-            expect(invoice.reload.error_details.count).to eq(1)
-            expect(invoice.error_details.last.error_code).to include('tax_error')
-          end
+          expect(invoice.reload.tax_status).to eq('pending')
         end
 
         it 'resets invoice values to calculatable before the error' do

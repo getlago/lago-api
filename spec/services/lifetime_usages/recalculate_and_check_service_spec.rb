@@ -68,13 +68,13 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
     end
 
     context 'when there is tax provider error' do
-      let(:error_result) { BaseService::Result.new.service_failure!(code: 'tax_error', message: '') }
+      let(:error_result) { BaseService::Result.new.unknown_tax_failure!(code: 'tax_error', message: '') }
 
       before do
         allow(Invoices::ProgressiveBillingService).to receive(:call).and_return(error_result)
       end
 
-      it "creates a failed invoice without raising error" do
+      it "creates a pending invoice without raising error" do
         expect { service.call }.not_to raise_error
       end
     end
