@@ -1,4 +1,4 @@
-# spec/services/customers/update_invoice_custom_sections_service_spec.rb
+# frozen_string_literal: true
 
 require 'rails_helper'
 
