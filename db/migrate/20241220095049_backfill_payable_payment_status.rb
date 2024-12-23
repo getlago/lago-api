@@ -2,6 +2,26 @@
 
 class BackfillPayablePaymentStatus < ActiveRecord::Migration[7.1]
   def change
+    # clean all duplicate data
+    # Find `payable_id`s with duplicate "processing" payments
+    duplicate_payables = Payment.where(status: 'processing')
+      .group(:payable_id)
+      .having('COUNT(id) > 1')
+      .pluck(:payable_id)
+
+    # clean the duplicates
+    duplicate_payables.each do |payable_id|
+      # Find the most recent "pending"
+      latest_pending_payment = Payment.where(status: 'processing', payable_id: payable_id)
+        .order(created_at: :desc)
+        .first
+
+      # Update all other "pending" payments for this `payable_id` to "failed"
+      Payment.where(status: 'processing', payable_id: payable_id)
+        .where.not(id: latest_pending_payment.id)
+        .update_all(status: 'failed')
+    end
+
     provider_types = PaymentProviders::BaseProvider.distinct.pluck(:type)
     provider_types.each do |provider_type|
       provider_class = provider_type.constantize
