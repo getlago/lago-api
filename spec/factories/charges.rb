@@ -16,7 +16,10 @@ FactoryBot.define do
     factory :graduated_charge do
       charge_model { 'graduated' }
       properties do
-        {graduated_ranges: []}
+        {graduated_ranges: [
+          {from_value: 0, to_value: 10, per_unit_amount: '0', flat_amount: '200'},
+          {from_value: 11, to_value: nil, per_unit_amount: '0', flat_amount: '300'}
+        ]}
       end
     end
 
