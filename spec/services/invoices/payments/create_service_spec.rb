@@ -250,7 +250,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
           end
         end
 
-        it "re-reaise the error and delivers an error webhook" do
+        it "updates the invoice payment status and does not delivers an error webhook" do
           result = create_service.call
 
           expect(result).to be_success
@@ -262,6 +262,8 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
 
           expect(provider_class).to have_received(:new)
           expect(provider_service).to have_received(:call!)
+
+          expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
     end
