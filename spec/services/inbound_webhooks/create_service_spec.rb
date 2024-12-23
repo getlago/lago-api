@@ -20,10 +20,17 @@ RSpec.describe InboundWebhooks::CreateService, type: :service do
   let(:signature) { "signature" }
   let(:payload) { event.merge(code:).to_json }
   let(:event_type) { "payment_intent.successful" }
+  let(:validation_payload_result) { BaseService::Result.new }
 
   let(:event) do
     path = Rails.root.join("spec/fixtures/stripe/payment_intent_event.json")
     JSON.parse(File.read(path))
+  end
+
+  before do
+    allow(InboundWebhooks::ValidatePayloadService)
+      .to receive(:call)
+      .and_return(validation_payload_result)
   end
 
   it "creates an inbound webhook" do
@@ -43,7 +50,7 @@ RSpec.describe InboundWebhooks::CreateService, type: :service do
       .with(inbound_webhook: result.inbound_webhook)
   end
 
-  context "with validation error" do
+  context "with record validation error" do
     let(:webhook_source) { nil }
 
     it "returns an error" do
@@ -56,6 +63,20 @@ RSpec.describe InboundWebhooks::CreateService, type: :service do
       result
 
       expect(InboundWebhooks::ProcessJob).not_to have_been_enqueued
+    end
+  end
+
+  context "when payload validation fails" do
+    let(:validation_payload_result) do
+      BaseService::Result.new.service_failure!(
+        code: "webhook_error", message: "Invalid signature"
+      )
+    end
+
+    it "returns an error" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ServiceFailure)
+      expect(result.error.message).to eq "webhook_error: Invalid signature"
     end
   end
 end

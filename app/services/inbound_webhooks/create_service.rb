@@ -14,6 +14,8 @@ module InboundWebhooks
     end
 
     def call
+      return validate_payload_result unless validate_payload_result.success?
+
       inbound_webhook = InboundWebhook.create!(
         organization_id:,
         source: webhook_source,
@@ -36,5 +38,15 @@ module InboundWebhooks
     private
 
     attr_reader :organization_id, :webhook_source, :code, :payload, :signature, :event_type
+
+    def validate_payload_result
+      @validate_payload_result ||= InboundWebhooks::ValidatePayloadService.call(
+        organization_id:,
+        code:,
+        payload:,
+        signature:,
+        webhook_source:
+      )
+    end
   end
 end
