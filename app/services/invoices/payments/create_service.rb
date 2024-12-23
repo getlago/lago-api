@@ -34,11 +34,11 @@ module Invoices
           payment_provider_id: current_payment_provider.id,
           payment_provider_customer_id: current_payment_provider_customer.id,
           amount_cents: invoice.total_amount_cents,
-          amount_currency: invoice.currency
+          amount_currency: invoice.currency,
+          status: "pending"
         ).find_or_create_by!(
           payable: invoice,
-          payable_payment_status: "pending",
-          status: "pending"
+          payable_payment_status: "pending"
         )
 
         result.payment = payment
@@ -56,9 +56,9 @@ module Invoices
         result
       rescue BaseService::ServiceFailure => e
         result.payment = e.result.payment
-        deliver_error_webhook(e.result)
 
         if e.result.payment.payable_payment_status&.to_sym != :pending
+          deliver_error_webhook(e.result)
           update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
         end
 
