@@ -11,12 +11,12 @@ class BackfillPayablePaymentStatus < ActiveRecord::Migration[7.1]
 
     # clean the duplicates
     duplicate_payables.each do |payable_id|
-      # Find the most recent "pending"
+      # Find the most recent "processing"
       latest_pending_payment = Payment.where(status: 'processing', payable_id: payable_id)
         .order(created_at: :desc)
         .first
 
-      # Update all other "pending" payments for this `payable_id` to "failed"
+      # Update all other "processing" payments for this `payable_id` to "failed"
       Payment.where(status: 'processing', payable_id: payable_id)
         .where.not(id: latest_pending_payment.id)
         .update_all(status: 'failed')
