@@ -481,4 +481,33 @@ RSpec.describe CreditNotesQuery, type: :query do
       end
     end
   end
+
+  context 'with multiple filters applied at the same time' do
+    let(:search_term) { credit_note.number.first(5) }
+
+    let(:filters) do
+      {
+        currency: credit_note.currency,
+        customer_external_id: credit_note.customer.external_id,
+        customer_id: credit_note.customer.id,
+        reason: credit_note.reason,
+        credit_status: credit_note.credit_status,
+        refund_status: credit_note.refund_status,
+        invoice_number: credit_note.invoice.number,
+        issuing_date_from: credit_note.issuing_date,
+        issuing_date_to: credit_note.issuing_date,
+        amount_from: credit_note.total_amount_cents,
+        amount_to: credit_note.total_amount_cents
+      }
+    end
+
+    let!(:credit_note) { create(:credit_note, total_amount_currency: "EUR", customer:) }
+
+    before { create(:credit_note, total_amount_currency: "USD", customer:) }
+
+    it "returns credit notes matching all provided filters" do
+      expect(result).to be_success
+      expect(result.credit_notes.pluck(:id)).to contain_exactly credit_note.id
+    end
+  end
 end
