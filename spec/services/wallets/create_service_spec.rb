@@ -93,6 +93,26 @@ RSpec.describe Wallets::CreateService, type: :service do
         service_result
         expect(customer.reload.currency).to eq('EUR')
       end
+
+      context 'when no currency is provided' do
+        let(:params) do
+          {
+            name: 'New Wallet',
+            customer:,
+            organization_id: organization.id,
+            currency: nil,
+            rate_amount: '1.00',
+            expiration_at:,
+            paid_credits:,
+            granted_credits:
+          }
+        end
+
+        it 'returns an error' do
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:currency]).to eq(['value_is_invalid'])
+        end
+      end
     end
 
     context 'when wallet have transaction metadata' do
