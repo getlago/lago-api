@@ -18,7 +18,7 @@ module PaymentProviders
       charge.dispute.closed
     ].freeze
 
-    PENDING_STATUSES = %w[
+    PROCESSING_STATUSES = %w[
       processing
       requires_capture
       requires_action

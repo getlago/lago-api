@@ -10,7 +10,7 @@ module Invoices
       retry_on Faraday::ConnectionFailed, wait: :polynomially_longer, attempts: 6
 
       def perform(invoice)
-        # NOTE: Legacy job, kept only to avoid faileure with existing jobs
+        # NOTE: Legacy job, kept only to avoid failure with existing jobs
 
         Invoices::Payments::CreateService.call!(invoice:, payment_provider: :adyen)
       end
