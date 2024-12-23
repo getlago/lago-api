@@ -6,10 +6,6 @@ module Invoices
       include Lago::Adyen::ErrorHandlable
       include Customers::PaymentProviderFinder
 
-      PENDING_STATUSES = %w[AuthorisedPending Received].freeze
-      SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
-      FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
-
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -30,7 +26,7 @@ module Invoices
 
         payment.update!(status:)
 
-        invoice_payment_status = invoice_payment_status(status)
+        invoice_payment_status = payment.payment_provider&.determine_payment_status(status)
         update_invoice_payment_status(payment_status: invoice_payment_status)
 
         result
@@ -173,14 +169,6 @@ module Invoices
         }
         prms[:shopperEmail] = customer.email if customer.email
         prms
-      end
-
-      def invoice_payment_status(payment_status)
-        return :pending if PENDING_STATUSES.include?(payment_status)
-        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-        return :failed if FAILED_STATUSES.include?(payment_status)
-
-        payment_status
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true)

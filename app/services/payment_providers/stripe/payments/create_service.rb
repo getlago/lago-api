@@ -4,11 +4,6 @@ module PaymentProviders
   module Stripe
     module Payments
       class CreateService < BaseService
-        PROCESSING_STATUSES = %w[processing requires_capture requires_action requires_confirmation requires_payment_method]
-          .freeze
-        SUCCESS_STATUSES = %w[succeeded].freeze
-        FAILED_STATUSES = %w[canceled].freeze
-
         def initialize(payment:, reference:, metadata:)
           @payment = payment
           @reference = reference
@@ -26,7 +21,7 @@ module PaymentProviders
 
           payment.provider_payment_id = stripe_result.id
           payment.status = stripe_result.status
-          payment.payable_payment_status = payment_status_mapping(payment.status)
+          payment.payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
           payment.provider_payment_data = stripe_result.next_action if stripe_result.status == "requires_action"
           payment.save!
 
@@ -61,14 +56,6 @@ module PaymentProviders
         attr_reader :payment, :reference, :metadata, :invoice, :provider_customer
 
         delegate :payment_provider, to: :provider_customer
-
-        def payment_status_mapping(payment_status)
-          return :processing if PROCESSING_STATUSES.include?(payment_status)
-          return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-          return :failed if FAILED_STATUSES.include?(payment_status)
-
-          payment_status
-        end
 
         def handle_requires_action(payment)
           SendWebhookJob.perform_later("payment.requires_action", payment, {
