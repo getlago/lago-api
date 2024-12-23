@@ -5,12 +5,12 @@ class DailyUsage < ApplicationRecord
   belongs_to :customer
   belongs_to :subscription
 
-  scope :refreshed_at_in_timezone, ->(timestamp) do
+  scope :usage_date_in_timezone, ->(timestamp) do
     at_time_zone = Utils::Timezone.at_time_zone_sql(customer: "cus", organization: "org")
 
     joins("INNER JOIN customers AS cus ON daily_usages.customer_id = cus.id")
       .joins("INNER JOIN organizations AS org ON daily_usages.organization_id = org.id")
-      .where("DATE((daily_usages.refreshed_at)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
+      .where("DATE((daily_usages.usage_date)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
   end
 end
 

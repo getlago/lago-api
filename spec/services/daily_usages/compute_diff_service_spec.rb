@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DailyUsages::ComputeDiffService, type: :service do
   subject(:diff_service) { described_class.new(daily_usage:, previous_daily_usage:) }
@@ -167,7 +167,7 @@ RSpec.describe DailyUsages::ComputeDiffService, type: :service do
     }
   end
 
-  it 'computes the diff between the two daily usages' do
+  it "computes the diff between the two daily usages" do
     result = diff_service.call
 
     expect(result).to be_success
@@ -269,10 +269,10 @@ RSpec.describe DailyUsages::ComputeDiffService, type: :service do
     )
   end
 
-  context 'when the previous daily usage is nil' do
+  context "when the previous daily usage is nil" do
     let(:previous_daily_usage) { nil }
 
-    it 'returns the current usage as diff' do
+    it "returns the current usage as diff" do
       result = diff_service.call
 
       expect(result).to be_success
