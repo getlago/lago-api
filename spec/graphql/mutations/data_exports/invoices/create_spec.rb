@@ -6,7 +6,6 @@ RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
   let(:required_permission) { 'invoices:export' }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:currency) { 'EUR' }
 
   let(:mutation) do
     <<-GQL

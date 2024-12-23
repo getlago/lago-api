@@ -2,12 +2,12 @@
 
 module Types
   module DataExports
-    module Invoices
+    module CreditNotes
       class ExportTypeEnum < Types::BaseEnum
-        graphql_name 'InvoiceExportTypeEnum'
+        graphql_name 'CreditNoteExportTypeEnum'
 
-        value 'invoices'
-        value 'invoice_fees'
+        value 'credit_notes'
+        value 'credit_note_items'
       end
     end
   end
