@@ -23,7 +23,7 @@ RSpec.describe InvoiceCustomSections::UpdateService do
         expect(result).to be_success
         expect(result.invoice_custom_section.name).to eq('Updated Name')
         expect(Organizations::SelectInvoiceCustomSectionService).to have_received(:call)
-          .with(section: invoice_custom_section, organization: organization)
+          .with(section: invoice_custom_section)
       end
 
       context 'when pass selected as false' do
