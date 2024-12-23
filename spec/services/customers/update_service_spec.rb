@@ -329,7 +329,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           result = customers_service.call
           expect(result).to be_success
           expect(customer.reload.selected_invoice_custom_sections).to be_empty
-          expect(customer.applicab  le_invoice_custom_sections).to be_empty
+          expect(customer.applicable_invoice_custom_sections).to be_empty
         end
       end
 
@@ -380,7 +380,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           expect(customer.reload.skip_invoice_custom_sections).to be false
           expect(customer.selected_invoice_custom_sections.ids).to match_array(invoice_custom_sections[1..2].map(&:id))
         end
-    end
+      end
     end
 
     context 'when organization has eu tax management' do
