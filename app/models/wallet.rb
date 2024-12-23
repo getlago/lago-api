@@ -2,6 +2,7 @@
 
 class Wallet < ApplicationRecord
   include PaperTrailTraceable
+  include Currencies
 
   belongs_to :customer, -> { with_discarded }
 
@@ -15,6 +16,7 @@ class Wallet < ApplicationRecord
   monetize :ongoing_balance_cents, :ongoing_usage_balance_cents, with_model_currency: :balance_currency
 
   validates :rate_amount, numericality: {greater_than: 0}
+  validates :currency, inclusion: {in: currency_list}
 
   STATUSES = [
     :active,
