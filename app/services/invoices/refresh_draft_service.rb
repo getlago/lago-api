@@ -109,7 +109,7 @@ module Invoices
     end
 
     def tax_error?(error)
-      error && error.is_a?(BaseService::UnknownTaxFailure)
+      error&.is_a?(BaseService::UnknownTaxFailure)
     end
 
     def reset_invoice_values
