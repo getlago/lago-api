@@ -32,7 +32,9 @@ end
 #  amount_currency              :string           not null
 #  payable_payment_status       :enum
 #  payable_type                 :string           default("Invoice"), not null
+#  payment_type                 :enum             default("provider"), not null
 #  provider_payment_data        :jsonb
+#  reference                    :string
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
