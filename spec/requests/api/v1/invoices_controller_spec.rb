@@ -468,9 +468,11 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     context 'with search term param' do
       let(:params) { {search_term: matching_invoice.number} }
 
-      let!(:matching_invoice) { create(:invoice, customer:, number: "222", organization:) }
+      let!(:matching_invoice) do
+        create(:invoice, customer:, number: SecureRandom.uuid, organization:)
+      end
 
-      before { create(:invoice, customer:, number: "111", organization:) }
+      before { create(:invoice, customer:, number: "not-relevant-number", organization:) }
 
       it 'returns invoices matching the search terms' do
         subject

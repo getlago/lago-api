@@ -3,7 +3,9 @@
 require 'rails_helper'
 
 RSpec.describe IntegrationMappings::BaseMapping, type: :model do
-  subject(:mapping) { described_class.new }
+  subject(:mapping) { build(:netsuite_mapping, settings: {}) }
+
+  it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to belong_to(:integration) }
 

@@ -13,6 +13,10 @@ RSpec.describe PaymentProviders::BaseProvider, type: :model do
     {secrets: secrets.to_json}
   end
 
+  it_behaves_like 'paper_trail traceable' do
+    subject { build(:stripe_provider) }
+  end
+
   it { is_expected.to have_many(:payment_provider_customers).dependent(:nullify) }
   it { is_expected.to have_many(:customers).through(:payment_provider_customers) }
   it { is_expected.to have_many(:payments).dependent(:nullify) }

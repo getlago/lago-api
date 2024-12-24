@@ -262,6 +262,9 @@ GEM
     ffi (1.17.0-x86_64-linux-gnu)
     fiber-storage (1.0.0)
     formatador (1.1.0)
+    fuubar (2.5.1)
+      rspec-core (~> 3.0)
+      ruby-progressbar (~> 1.4)
     globalid (1.2.1)
       activesupport (>= 6.1)
     gocardless_pro (2.57.0)
@@ -954,6 +957,7 @@ DEPENDENCIES
   dry-validation
   factory_bot_rails
   faker
+  fuubar
   gocardless_pro (~> 2.34)
   google-cloud-storage
   googleauth (~> 1.11.0)

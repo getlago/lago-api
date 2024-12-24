@@ -3,6 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe AddOn, type: :model do
+  subject { build(:add_on) }
+
+  it_behaves_like 'paper_trail traceable'
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:applied_add_ons) }
   it { is_expected.to have_many(:customers) }
