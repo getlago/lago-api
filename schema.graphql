@@ -3188,6 +3188,11 @@ type Customer {
   addressLine1: String
   addressLine2: String
   anrokCustomer: AnrokCustomer
+
+  """
+  Invoice custom sections applicable to the customer
+  """
+  applicableInvoiceCustomSections: [InvoiceCustomSection!]
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
@@ -3241,6 +3246,11 @@ type Customer {
   Define if a customer has overdue invoices
   """
   hasOverdueInvoices: Boolean!
+
+  """
+  Define if the customer has custom invoice custom sections selection
+  """
+  hasOverwrittenInvoiceCustomSectionsSelection: Boolean
   hubspotCustomer: HubspotCustomer
   id: ID!
   invoiceGracePeriod: Int
@@ -3262,6 +3272,11 @@ type Customer {
   salesforceCustomer: SalesforceCustomer
   sequentialId: String!
   shippingAddress: CustomerAddress
+
+  """
+  Skip invoice custom sections for the customer
+  """
+  skipInvoiceCustomSections: Boolean
   slug: String!
   state: String
 
@@ -6541,11 +6556,6 @@ type Query {
   ): Customer
 
   """
-  Query selected invoice_custom_sections of a customer
-  """
-  customerInvoiceCustomSections(customerId: ID!, limit: Int, page: Int): InvoiceCustomSectionCollection
-
-  """
   Query invoices of a customer
   """
   customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
@@ -8293,6 +8303,7 @@ Update Customer input arguments
 input UpdateCustomerInput {
   addressLine1: String
   addressLine2: String
+  applicableInvoiceCustomSectionIds: [ID!]
   appliedDunningCampaignId: ID
   billingConfiguration: CustomerBillingConfigurationInput
   city: String
@@ -8325,6 +8336,7 @@ input UpdateCustomerInput {
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
+  skipInvoiceCustomSections: Boolean
   state: String
   taxCodes: [String!]
   taxIdentificationNumber: String

@@ -17,6 +17,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           creditNotesCreditsAvailableCount
           creditNotesBalanceAmountCents
           applicableTimezone
+          hasOverwrittenInvoiceCustomSectionsSelection
+          skipInvoiceCustomSections
           invoices {
             id
             invoiceType
@@ -33,6 +35,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
           appliedAddOns { id amountCents amountCurrency addOn { id name } }
           taxes { id code name }
+          applicableInvoiceCustomSections { id name }
           creditNotes {
             id
             creditStatus
@@ -56,13 +59,14 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) do
-    create(:customer, organization:, currency: 'EUR')
+    create(:customer, organization:, currency: 'EUR', skip_invoice_custom_sections: false)
   end
   let(:subscription) { create(:subscription, customer:) }
   let(:applied_add_on) { create(:applied_add_on, customer:) }
   let(:applied_tax) { create(:customer_applied_tax, customer:) }
   let(:credit_note) { create(:credit_note, customer:) }
   let(:credit_note_item) { create(:credit_note_item, credit_note:) }
+  let(:invoice_custom_sections) { create_list(:invoice_custom_section, 3, organization:) }
 
   before do
     organization.update!(timezone: 'America/New_York')
@@ -71,6 +75,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     applied_tax
     subscription
     credit_note_item
+    organization.selected_invoice_custom_sections = invoice_custom_sections
+    customer.selected_invoice_custom_sections = invoice_custom_sections[0..1]
   end
 
   it_behaves_like 'requires current user'
@@ -103,6 +109,30 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       expect(customer_response['hasCreditNotes']).to be true
       expect(customer_response['creditNotesCreditsAvailableCount']).to eq(1)
       expect(customer_response['creditNotesBalanceAmountCents']).to eq('120')
+      expect(customer_response['hasOverwrittenInvoiceCustomSectionsSelection']).to be true
+      expect(customer_response['skipInvoiceCustomSections']).to be false
+      expect(customer_response['applicableInvoiceCustomSections'].count).to eq(2)
+    end
+  end
+
+  context 'when customer has nested from organization invoice_custom_sections' do
+    before do
+      customer.selected_invoice_custom_sections = []
+    end
+
+    it 'returns a single customer with correct hasOverwrittenInvoiceCustomSectionsSelection value' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          customerId: customer.id
+        }
+      )
+
+      customer_response = result['data']['customer']
+      expect(customer_response['hasOverwrittenInvoiceCustomSectionsSelection']).to be false
     end
   end
 
