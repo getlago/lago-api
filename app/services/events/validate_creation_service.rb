@@ -1,39 +1,21 @@
 # frozen_string_literal: true
 
 module Events
-  class ValidateCreationService
-    def self.call(...)
-      new(...).call
-    end
-
-    def initialize(organization:, params:, result:, customer:, subscriptions: [])
+  class ValidateCreationService < BaseService
+    def initialize(organization:, event_params:, customer:, subscriptions: [])
       @organization = organization
-      @params = params
-      @result = result
+      @event_params = event_params
       @customer = customer
       @subscriptions = subscriptions
+
+      super
     end
 
     def call
-      LagoTracer.in_span("Events::ValidateCreationService#call") do
-        validate_create
-      end
-    end
-
-    private
-
-    attr_reader :organization, :params, :result, :customer, :subscriptions
-
-    def validate_create
-      return invalid_customer_error if params[:external_customer_id] && !customer
-
-      if params[:external_subscription_id].blank? && subscriptions.count(&:active?) > 1
-        return missing_subscription_error
-      end
+      return missing_subscription_error if event_params[:external_subscription_id].blank?
       return missing_subscription_error if subscriptions.empty?
 
-      if params[:external_subscription_id] &&
-          subscriptions.pluck(:external_id).exclude?(params[:external_subscription_id])
+      if subscriptions.pluck(:external_id).exclude?(event_params[:external_subscription_id])
         return missing_subscription_error
       end
 
@@ -42,24 +24,28 @@ module Events
       return invalid_code_error unless valid_code?
       return invalid_properties_error unless valid_properties?
 
-      nil
+      result
     end
 
+    private
+
+    attr_reader :organization, :event_params, :customer, :subscriptions
+
     def valid_timestamp?
-      return true if params[:timestamp].blank?
+      return true if event_params[:timestamp].blank?
 
       # timestamp is a number of seconds
-      valid_number?(params[:timestamp])
+      valid_number?(event_params[:timestamp])
     end
 
     def valid_transaction_id?
-      return false if params[:transaction_id].blank?
+      return false if event_params[:transaction_id].blank?
 
-      Event.where(
+      !Event.where(
         organization_id: organization.id,
-        transaction_id: params[:transaction_id],
+        transaction_id: event_params[:transaction_id],
         external_subscription_id: subscriptions.first.external_id
-      ).none?
+      ).exists?
     end
 
     def valid_code?
@@ -71,7 +57,7 @@ module Events
     def valid_properties?
       return true unless billable_metric.max_agg? || billable_metric.sum_agg? || billable_metric.latest_agg?
 
-      valid_number?((params[:properties] || {})[billable_metric.field_name.to_sym])
+      valid_number?((event_params[:properties] || {})[billable_metric.field_name.to_sym])
     end
 
     def valid_number?(value)
@@ -96,16 +82,12 @@ module Events
       result.validation_failure!(errors: {properties: ['value_is_not_valid_number']})
     end
 
-    def invalid_customer_error
-      result.not_found_failure!(resource: 'customer')
-    end
-
     def invalid_timestamp_error
       result.validation_failure!(errors: {timestamp: ['invalid_format']})
     end
 
     def billable_metric
-      @billable_metric ||= organization.billable_metrics.find_by(code: params[:code])
+      @billable_metric ||= organization.billable_metrics.find_by(code: event_params[:code])
     end
   end
 end
