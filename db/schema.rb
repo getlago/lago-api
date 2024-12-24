@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
+ActiveRecord::Schema[7.1].define(version: 2024_12_24_141116) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -23,6 +23,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
   create_enum "customer_type", ["company", "individual"]
   create_enum "inbound_webhook_status", ["pending", "processing", "succeeded", "failed"]
   create_enum "payment_payable_payment_status", ["pending", "processing", "succeeded", "failed"]
+  create_enum "payment_type", ["provider", "manual"]
   create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
   create_enum "tax_status", ["pending", "succeeded", "failed"]
 
@@ -1115,6 +1116,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
     t.uuid "payable_id"
     t.jsonb "provider_payment_data", default: {}
     t.enum "payable_payment_status", enum_type: "payment_payable_payment_status"
+    t.enum "payment_type", default: "provider", null: false, enum_type: "payment_type"
+    t.string "reference"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["payable_id", "payable_type"], name: "index_payments_on_payable_id_and_payable_type", unique: true, where: "(payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status]))"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
