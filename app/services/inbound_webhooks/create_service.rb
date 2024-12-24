@@ -25,9 +25,7 @@ module InboundWebhooks
         event_type:
       )
 
-      after_commit do
-        InboundWebhooks::ProcessJob.perform_later(inbound_webhook:)
-      end
+      InboundWebhooks::ProcessJob.perform_later(inbound_webhook:)
 
       result.inbound_webhook = inbound_webhook
       result
