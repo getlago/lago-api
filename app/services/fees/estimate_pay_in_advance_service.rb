@@ -5,14 +5,14 @@ module Fees
     def initialize(organization:, params:)
       @organization = organization
       # NOTE: validation is shared with event creation and is expecting a transaction_id
-      @params = params.merge(transaction_id: SecureRandom.uuid)
+      @event_params = params.merge(transaction_id: SecureRandom.uuid)
 
       super
     end
 
     def call
-      Events::ValidateCreationService.call(organization:, params:, customer:, subscriptions:, result:)
-      return result unless result.success?
+      validation_result = Events::ValidateCreationService.call(organization:, event_params:, customer:, subscriptions:)
+      return validation_result unless validation_result.success?
 
       if charges.none?
         return result.single_validation_failure!(field: :code, error_code: 'does_not_match_an_instant_charge')
@@ -38,17 +38,17 @@ module Fees
 
     private
 
-    attr_reader :organization, :params
+    attr_reader :organization, :event_params
 
     def event
       return @event if @event
 
       @event = Event.new(
         organization_id: organization.id,
-        code: params[:code],
+        code: event_params[:code],
         external_customer_id: customer&.external_id,
         external_subscription_id: subscriptions.first&.external_id,
-        properties: params[:properties] || {},
+        properties: event_params[:properties] || {},
         transaction_id: SecureRandom.uuid,
         timestamp: Time.current
       )
@@ -58,9 +58,9 @@ module Fees
       return @customer if @customer
 
       @customer = if params[:external_subscription_id]
-        organization.subscriptions.find_by(external_id: params[:external_subscription_id])&.customer
+        organization.subscriptions.find_by(external_id: event_params[:external_subscription_id])&.customer
       else
-        Customer.find_by(external_id: params[:external_customer_id], organization_id: organization.id)
+        Customer.find_by(external_id: event_params[:external_customer_id], organization_id: organization.id)
       end
     end
 
@@ -68,7 +68,7 @@ module Fees
       return @subscriptions if defined? @subscriptions
 
       timestamp = Time.current
-      subscriptions = if customer && params[:external_subscription_id].blank?
+      subscriptions = if customer && event_params[:external_subscription_id].blank?
         customer.subscriptions
       else
         organization.subscriptions.where(external_id: params[:external_subscription_id])

@@ -85,6 +85,26 @@ module Api
         end
       end
 
+      def estimate_instant_fees
+        result = Fees::EstimateInstantPayInAdvanceService.call(
+          organization: current_organization,
+          params: create_params
+        )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.fees,
+              ::V1::FeesSerializer,
+              collection_name: 'fees',
+              includes: %i[applied_taxes]
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       def estimate_fees
         result = Fees::EstimatePayInAdvanceService.call(
           organization: current_organization,
