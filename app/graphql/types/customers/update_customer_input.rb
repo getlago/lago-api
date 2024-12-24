@@ -52,8 +52,8 @@ module Types
       argument :exclude_from_dunning_campaign, Boolean, required: false
 
       # Invoice custom sections settings
-      argument :skip_invoice_custom_sections, Boolean, required: false
       argument :applicable_invoice_custom_section_ids, [ID], required: false
+      argument :skip_invoice_custom_sections, Boolean, required: false
     end
   end
 end
