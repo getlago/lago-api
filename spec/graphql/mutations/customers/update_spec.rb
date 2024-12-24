@@ -132,7 +132,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data['billingConfiguration']['id']).to eq("#{customer.id}-c0nf")
       expect(result_data['metadata'][0]['key']).to eq('test-key')
       expect(result_data['taxes'][0]['code']).to eq(tax.code)
-      expect(result_data['applicableInvoiceCustomSections']).to eq(invoice_custom_sections[0..1].map { |section| { 'id' => section.id } })
+      expect(result_data['applicableInvoiceCustomSections']).to eq(invoice_custom_sections[0..1].map { |section| {'id' => section.id} })
     end
   end
 
