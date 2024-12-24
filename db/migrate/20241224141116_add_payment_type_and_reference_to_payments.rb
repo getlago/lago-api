@@ -25,8 +25,11 @@ class AddPaymentTypeAndReferenceToPayments < ActiveRecord::Migration[7.1]
   end
 
   def down
-    remove_column :payments, :payment_type
-    remove_column :payments, :reference
+    change_table :payments, bulk: true do |t|
+      t.remove :payment_type
+      t.remove :reference
+    end
+
     drop_enum :payment_type
   end
 end
