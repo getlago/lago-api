@@ -96,8 +96,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.fees,
               ::V1::FeesSerializer,
-              collection_name: 'fees',
-              includes: %i[applied_taxes]
+              collection_name: 'fees'
             )
           )
         else

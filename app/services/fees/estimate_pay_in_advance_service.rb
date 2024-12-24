@@ -57,7 +57,7 @@ module Fees
     def customer
       return @customer if @customer
 
-      @customer = if params[:external_subscription_id]
+      @customer = if event_params[:external_subscription_id]
         organization.subscriptions.find_by(external_id: event_params[:external_subscription_id])&.customer
       else
         Customer.find_by(external_id: event_params[:external_customer_id], organization_id: organization.id)
@@ -71,7 +71,7 @@ module Fees
       subscriptions = if customer && event_params[:external_subscription_id].blank?
         customer.subscriptions
       else
-        organization.subscriptions.where(external_id: params[:external_subscription_id])
+        organization.subscriptions.where(external_id: event_params[:external_subscription_id])
       end
       return unless subscriptions
 

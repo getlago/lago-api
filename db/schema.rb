@@ -1225,15 +1225,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_01_22_112050) do
     t.index ["payment_provider_id"], name: "index_refunds_on_payment_provider_id"
   end
 
-  create_table "subscription_event_triggers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "organization_id", null: false
-    t.string "external_subscription_id", null: false
-    t.datetime "start_processing_at", precision: nil
-    t.datetime "created_at", precision: nil, null: false
-    t.index ["external_subscription_id", "organization_id"], name: "idx_on_external_subscription_id_organization_id_40aa74e2eb", unique: true, where: "(start_processing_at IS NULL)"
-    t.index ["start_processing_at", "external_subscription_id", "organization_id"], name: "idx_on_start_processing_at_external_subscription_id_31b81116ce", unique: true
-  end
-
   create_table "subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.uuid "plan_id", null: false

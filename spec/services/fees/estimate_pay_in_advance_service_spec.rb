@@ -102,7 +102,7 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.error_code).to eq('customer_not_found')
+          expect(result.error.error_code).to eq('subscription_not_found')
         end
       end
     end
@@ -132,25 +132,12 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
 
         before { subscription }
 
-        it 'returns a list of fees' do
+        it 'returns nothing' do
           result = estimate_service.call
 
           aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(1)
-
-            fee = result.fees.first
-            expect(fee).not_to be_persisted
-            expect(fee).to have_attributes(
-              subscription:,
-              charge:,
-              fee_type: 'charge',
-              pay_in_advance: true,
-              invoiceable: charge,
-              events_count: 1,
-              pay_in_advance_event_id: nil,
-              pay_in_advance_event_transaction_id: String
-            )
+            expect(result).not_to be_success
+            expect(result.fees).to be_nil
           end
         end
       end
