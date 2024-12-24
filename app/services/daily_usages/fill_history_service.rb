@@ -16,7 +16,7 @@ module DailyUsages
 
       (from..to).each do |date|
         datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
-        datetime = date if datetime < date # Handle last day for timezone with positive offset
+        datetime = date.beginning_of_day.utc if datetime < date # Handle last day for timezone with positive offset
 
         next if subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists?
 
