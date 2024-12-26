@@ -12,7 +12,7 @@ module V1
         display_name: model.display_name,
         selected_for_organization: model.selected_for_organization?,
         organization: {
-          lago_id: model.organization_id,
+          lago_id: model.organization_id
         }
       }
     end

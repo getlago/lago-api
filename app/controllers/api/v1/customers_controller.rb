@@ -109,6 +109,7 @@ module Api
           render_customer(result.customer)
         else
           render_error_response(result)
+        end
       end
 
       def applicable_invoice_custom_sections
