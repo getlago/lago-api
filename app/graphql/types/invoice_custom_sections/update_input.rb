@@ -7,6 +7,7 @@ module Types
 
       argument :id, ID, required: true
 
+      argument :code, String, required: false
       argument :description, String, required: false
       argument :details, String, required: false
       argument :display_name, String, required: false
