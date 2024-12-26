@@ -69,7 +69,7 @@ module Invoices
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:)
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice).raise_if_error!
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:).raise_if_error!
 
         invoice.payment_status = :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
