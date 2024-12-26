@@ -65,6 +65,7 @@ Rails.application.routes.draw do
         put :finalize, on: :member
         put :sync_salesforce_id, on: :member
       end
+      resources :invoice_custom_sections, param: :code, code: /.*/
       resources :payment_requests, only: %i[create index]
       resources :plans, param: :code, code: /.*/
       resources :taxes, param: :code, code: /.*/
