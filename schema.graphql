@@ -8504,6 +8504,7 @@ input UpdateInvoiceCustomSectionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   description: String
   details: String
   displayName: String
