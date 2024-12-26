@@ -19,7 +19,6 @@ RSpec.describe Api::V1::InvoiceCustomSectionsController, type: :request do
       }
     end
 
-
     it 'creates an invoice_custom_section' do
       subject
 
