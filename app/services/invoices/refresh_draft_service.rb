@@ -121,6 +121,7 @@ module Invoices
       invoice_subscriptions.destroy_all
       invoice.applied_taxes.destroy_all
       invoice.error_details.discard_all
+      invoice.applied_invoice_custom_sections.destroy_all
 
       invoice.taxes_amount_cents = 0
       invoice.total_amount_cents = 0
@@ -129,6 +130,7 @@ module Invoices
       invoice.sub_total_excluding_taxes_amount_cents = 0
       invoice.sub_total_including_taxes_amount_cents = 0
       invoice.progressive_billing_credit_amount_cents = 0
+
       invoice.save!
     end
   end
