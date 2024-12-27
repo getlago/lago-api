@@ -41,6 +41,7 @@ module Invoices
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
         create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)

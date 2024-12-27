@@ -22,6 +22,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         create_credit_fee(invoice)
         compute_amounts(invoice)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         if License.premium? && wallet_transaction.invoice_requires_successful_payment?
           invoice.open!
