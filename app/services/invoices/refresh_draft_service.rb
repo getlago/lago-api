@@ -56,6 +56,7 @@ module Invoices
           recurring:,
           context:
         )
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         invoice.credit_notes.each do |credit_note|
           subscription_id = cn_subscription_ids.find { |h| h[:credit_note_id] == credit_note.id }[:subscription_id]
