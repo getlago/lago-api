@@ -5,6 +5,5 @@ class AddCodeUniquenessConstraintOnInvoiceCustomSections < ActiveRecord::Migrati
 
   def change
     remove_index :invoice_custom_sections, %i[organization_id code], unique: true, algorithm: :concurrently
-    add_index :invoice_custom_sections, %i[organization_id code], unique: true, where: 'deleted_at IS NULL', algorithm: :concurrently
   end
 end
