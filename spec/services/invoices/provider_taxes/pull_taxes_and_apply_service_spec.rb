@@ -146,6 +146,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
           .to change(invoice.error_details.tax_error, :count).from(1).to(0)
       end
 
+      it 'updates the issuing date and payment due date' do
+        invoice.customer.update(timezone: 'America/New_York')
+
+        freeze_time do
+          current_date = Time.current.in_time_zone('America/New_York').to_date
+
+          expect { pull_taxes_service.call }
+            .to change { invoice.reload.issuing_date }.to(current_date)
+            .and change { invoice.reload.payment_due_date }.to(current_date)
+        end
+      end
+
       it 'generates invoice number' do
         customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
         sequential_id = customer.invoices.where.not(id: invoice.id).order(created_at: :desc).first&.sequential_id || 0

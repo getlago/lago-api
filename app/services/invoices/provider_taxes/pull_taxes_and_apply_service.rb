@@ -34,6 +34,11 @@ module Invoices
         provider_taxes = taxes_result.fees
 
         ActiveRecord::Base.transaction do
+          unless invoice.draft?
+            invoice.issuing_date = issuing_date
+            invoice.payment_due_date = payment_due_date
+          end
+
           Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes:)
 
           create_credit_note_credit if should_create_credit_note_credit?
@@ -41,11 +46,7 @@ module Invoices
 
           invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
           invoice.tax_status = 'succeeded'
-          if invoice.draft?
-            invoice.status = :draft
-          else
-            Invoices::TransitionToFinalStatusService.call(invoice:)
-          end
+          Invoices::TransitionToFinalStatusService.call(invoice:) unless invoice.draft?
 
           invoice.save!
           invoice.reload
@@ -113,6 +114,14 @@ module Invoices
         prepaid_credit_result.raise_if_error!
 
         invoice.total_amount_cents -= prepaid_credit_result.prepaid_credit_amount_cents
+      end
+
+      def issuing_date
+        @issuing_date ||= Time.current.in_time_zone(customer.applicable_timezone).to_date
+      end
+
+      def payment_due_date
+        @payment_due_date ||= issuing_date + customer.applicable_net_payment_term.days
       end
 
       def customer
