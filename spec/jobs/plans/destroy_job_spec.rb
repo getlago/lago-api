@@ -24,7 +24,7 @@ RSpec.describe Plans::DestroyJob, type: :job do
       expect do
         described_class.perform_later(plan)
         described_class.perform_later(plan)
-      end.to change { enqueued_jobs.count }.by(1)
+      end.to change(enqueued_jobs, :count).by(1)
     end
   end
 
@@ -66,4 +66,3 @@ RSpec.describe Plans::DestroyJob, type: :job do
     end
   end
 end
-
