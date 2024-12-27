@@ -36,7 +36,7 @@ end
 #
 #  idx_on_organization_id_deleted_at_225e3f789d               (organization_id,deleted_at)
 #  index_invoice_custom_sections_on_organization_id           (organization_id)
-#  index_invoice_custom_sections_on_organization_id_and_code  (organization_id,code) UNIQUE
+#  index_invoice_custom_sections_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #
 # Foreign Keys
 #
