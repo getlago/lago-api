@@ -115,7 +115,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     end
   end
 
-  context 'when customer has nested from organization invoice_custom_sections' do
+  context 'when customer has invoice_custom_sections nested from organization ' do
     before do
       customer.selected_invoice_custom_sections = []
     end
