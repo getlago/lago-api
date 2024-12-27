@@ -78,11 +78,5 @@ module Invoices
       License.premium? &&
         invoice.organization.email_settings.include?('invoice.finalized')
     end
-
-    def tax_error?(error)
-      return false unless error.is_a?(BaseService::ValidationFailure)
-
-      error&.messages&.dig(:tax_error).present?
-    end
   end
 end

@@ -26,23 +26,21 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
   it_behaves_like 'requires permission', 'invoices:update'
 
   it 'finalizes the given invoice' do
-    freeze_time do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {id: invoice.id}
-        }
-      )
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {id: invoice.id}
+      }
+    )
 
-      result_data = result['data']['finalizeInvoice']
+    result_data = result['data']['finalizeInvoice']
 
-      aggregate_failures do
-        expect(result_data['id']).to be_present
-        expect(result_data['status']).to eq('finalized')
-      end
+    aggregate_failures do
+      expect(result_data['id']).to be_present
+      expect(result_data['status']).to eq('finalized')
     end
   end
 
@@ -55,25 +53,21 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
     end
 
     it 'returns pending invoice' do
-      freeze_time do
-        result = execute_graphql(
-          current_user: membership.user,
-          current_organization: organization,
-          permissions: required_permission,
-          query: mutation,
-          variables: {
-            input: {id: invoice.id}
-          }
-        )
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: invoice.id}
+        }
+      )
 
-        result_data = result['data']['finalizeInvoice']
+      result_data = result['data']['finalizeInvoice']
 
-        aggregate_failures do
-          expect(result_data['id']).to be_present
-          expect(result_data['status']).to eq('pending')
-          expect(result_data['taxStatus']).to eq('pending')
-        end
-      end
+      expect(result_data['id']).to be_present
+      expect(result_data['status']).to eq('pending')
+      expect(result_data['taxStatus']).to eq('pending')
     end
   end
 end
