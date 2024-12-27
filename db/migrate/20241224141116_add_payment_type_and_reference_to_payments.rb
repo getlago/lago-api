@@ -6,9 +6,11 @@ class AddPaymentTypeAndReferenceToPayments < ActiveRecord::Migration[7.1]
   def up
     create_enum :payment_type, %w[provider manual]
 
-    change_table :payments, bulk: true do |t|
-      t.column :payment_type, :enum, enum_type: 'payment_type', null: true
-      t.column :reference, :string, default: nil
+    safety_assured do
+      change_table :payments, bulk: true do |t|
+        t.column :payment_type, :enum, enum_type: 'payment_type', null: true
+        t.column :reference, :string, default: nil
+      end
     end
 
     # Backfill existing records
