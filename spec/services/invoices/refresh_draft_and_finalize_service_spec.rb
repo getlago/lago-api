@@ -79,6 +79,10 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       let(:service_call) { finalize_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections" do
+      let(:service_call) { invoice_service.call }
+    end
+
     it 'enqueues a SendWebhookJob' do
       expect do
         finalize_service.call
