@@ -13,6 +13,7 @@ class Payment < ApplicationRecord
   has_many :integration_resources, as: :syncable
 
   PAYMENT_TYPES = {provider: "provider", manual: "manual"}
+  attribute :payment_type, :string
   enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
   validates :reference, length: {maximum: 40}
 
