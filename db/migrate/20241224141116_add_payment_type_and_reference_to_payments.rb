@@ -25,7 +25,9 @@ class AddPaymentTypeAndReferenceToPayments < ActiveRecord::Migration[7.1]
       SQL
     end
 
-    add_index :payments, :payment_type, algorithm: :concurrently
+    safety_assured do
+      add_index :payments, :payment_type, algorithm: :concurrently
+    end
   end
 
   def down
