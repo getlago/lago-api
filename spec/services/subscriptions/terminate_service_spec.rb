@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Subscriptions::TerminateService do
   subject(:terminate_service) { described_class.new(subscription:) }
 
-  describe '.terminate' do
+  describe '#call' do
     let(:subscription) { create(:subscription) }
 
     it 'terminates a subscription' do
@@ -32,9 +32,14 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     it 'enqueues a BillSubscriptionJob' do
-      expect do
-        terminate_service.call
-      end.to have_enqueued_job(BillSubscriptionJob).and have_enqueued_job(BillNonInvoiceableFeesJob)
+      expect { terminate_service.call }.to have_enqueued_job(BillSubscriptionJob)
+    end
+
+    it "enqueues a BillNonInvoiceableFeesJob" do
+      freeze_time do
+        expect { terminate_service.call }.to have_enqueued_job(BillNonInvoiceableFeesJob)
+          .with([subscription], Time.zone.now)
+      end
     end
 
     it 'enqueues a SendWebhookJob' do
@@ -183,6 +188,25 @@ RSpec.describe Subscriptions::TerminateService do
           expect do
             terminate_service.call
           end.not_to change(CreditNote, :count)
+        end
+      end
+    end
+
+    context "when subscription is an upgrade or downgrade" do
+      let(:subscription_2) do
+        create(:subscription, {
+          external_id: subscription.external_id,
+          customer: subscription.customer,
+          status: :terminated
+        })
+      end
+
+      before { subscription_2 }
+
+      it "enqueues a BillNonInvoiceableFeesJob with both subscriptions" do
+        freeze_time do
+          expect { terminate_service.call }.to have_enqueued_job(BillNonInvoiceableFeesJob)
+            .with([subscription_2, subscription], Time.zone.now)
         end
       end
     end
