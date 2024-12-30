@@ -63,10 +63,7 @@ module Invoices
           CreditNotes::RefreshDraftService.call(credit_note:, fee:, old_fee_values:)
         end
 
-        if tax_error?(calculate_result.error)
-          return result.validation_failure!(errors: {tax_error: [calculate_result.error.error_message]})
-        end
-        calculate_result.raise_if_error!
+        calculate_result.raise_if_error! unless tax_error?(calculate_result.error)
 
         if old_total_amount_cents != invoice.total_amount_cents
           flag_lifetime_usage_for_refresh
@@ -75,6 +72,8 @@ module Invoices
 
         # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
+
+        return result if tax_error?(calculate_result.error)
 
         if invoice.should_update_hubspot_invoice?
           Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice: invoice.reload)
@@ -110,9 +109,7 @@ module Invoices
     end
 
     def tax_error?(error)
-      return false unless error.is_a?(BaseService::ServiceFailure)
-
-      error&.code == 'tax_error'
+      error&.is_a?(BaseService::UnknownTaxFailure)
     end
 
     def reset_invoice_values

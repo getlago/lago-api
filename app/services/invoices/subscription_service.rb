@@ -34,7 +34,7 @@ module Invoices
           context:
         )
 
-        set_invoice_generated_status unless invoice.failed?
+        set_invoice_generated_status unless invoice.pending?
         invoice.save!
 
         # NOTE: We don't want to raise error and corrupt DB commit if there is tax error.
@@ -61,7 +61,7 @@ module Invoices
       if tax_error?(fee_result)
         SendWebhookJob.perform_later("invoice.drafted", invoice) if grace_period?
 
-        return result.validation_failure!(errors: {tax_error: [fee_result.error.error_message]})
+        return result
       end
 
       if grace_period?
@@ -147,9 +147,8 @@ module Invoices
 
     def tax_error?(fee_result)
       return false if fee_result.success?
-      return false unless fee_result.error.is_a?(BaseService::ServiceFailure)
 
-      fee_result.error.code == "tax_error"
+      fee_result.error.is_a?(BaseService::UnknownTaxFailure)
     end
 
     USAGE_TRACKABLE_REASONS = %i[subscription_periodic subscription_terminating].freeze

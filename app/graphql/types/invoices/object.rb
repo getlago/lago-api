@@ -19,6 +19,7 @@ module Types
       field :payment_dispute_lost_at, GraphQL::Types::ISO8601DateTime
       field :payment_status, Types::Invoices::PaymentStatusTypeEnum, null: false
       field :status, Types::Invoices::StatusTypeEnum, null: false
+      field :tax_status, Types::Invoices::TaxStatusTypeEnum, null: true
       field :voidable, Boolean, null: false, method: :voidable?
 
       field :currency, Types::CurrencyEnum

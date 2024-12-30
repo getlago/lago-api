@@ -4,6 +4,8 @@ module Fees
   class CreatePayInAdvanceJob < ApplicationJob
     queue_as :default
 
+    retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
+
     unique :until_executed, on_conflict: :log
 
     def perform(charge:, event:, billing_at: nil)

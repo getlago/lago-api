@@ -13,6 +13,8 @@ module Integrations
             return result unless integration
             return result unless integration.type == 'Integrations::AnrokIntegration'
 
+            throttle!(:anrok)
+
             response = http_client.post_with_response(payload, headers)
             body = JSON.parse(response.body)
 

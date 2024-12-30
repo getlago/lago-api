@@ -203,93 +203,30 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
     context 'when tax integration is set up' do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-      let(:response) { instance_double(Net::HTTPOK) }
-      let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
-      let(:integration_collection_mapping) do
-        create(
-          :netsuite_collection_mapping,
-          integration:,
-          mapping_type: :fallback_item,
-          settings: {external_id: '1', external_account_code: '11', external_name: ''}
-        )
-      end
 
       before do
-        integration_collection_mapping
         integration_customer
         invoice.update(issuing_date: Time.current + 3.months)
 
-        allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
-        allow(lago_client).to receive(:post_with_response).and_return(response)
-        allow(response).to receive(:body).and_return(body)
         allow(Invoices::ApplyProviderTaxesService).to receive(:call).and_call_original
         allow(SendWebhookJob).to receive(:perform_later).and_call_original
         allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later).and_call_original
         allow(Integrations::Aggregator::Invoices::CreateJob).to receive(:perform_later).and_call_original
         allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
         allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
-        allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
-          fee = m.receiver
-          if fee.charge_id == standard_charge.id
-            'charge_fee_id-12345'
-          elsif fee.subscription_id == subscription.id
-            'sub_fee_id-12345'
-          else
-            m.call(*args)
-          end
-        end
       end
 
-      context 'when taxes fetched correctly' do
-        let(:body) do
-          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
-          File.read(p)
-        end
-        let(:invoice_issuing_date) { Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date }
-
-        it 'refreshes all data and applies fetched taxes' do
-          aggregate_failures do
-            expect { finalize_service.call }.to change { invoice.reload.taxes_rate }.from(0.0).to(10.0)
-              .and change { invoice.fees.count }.from(0).to(2)
-            expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
-            expect(Invoices::ApplyProviderTaxesService).to have_received(:call)
-          end
-        end
-
-        it 'finalizes the invoice' do
-          expect { finalize_service.call }.to change { invoice.reload.status }.from('draft').to('finalized')
-        end
-
-        it 'sends finalized invoice issuing date to tax_provider' do
-          finalize_service.call
-          expect(lago_client).to have_received(:post_with_response)
-            .with([hash_including('issuing_date' => invoice_issuing_date)], anything)
-        end
-      end
-
-      context 'when fetched taxes with errors' do
-        let(:body) do
-          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
-          File.read(p)
-        end
-
-        it 'returns error' do
+      context 'when taxes are unknown' do
+        it 'returns pending invoice' do
           result = finalize_service.call
           aggregate_failures do
-            expect(invoice.reload.status).to eql('failed')
-            expect(result.success?).to be(false)
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:tax_error]).to eq(['taxDateTooFarInFuture'])
+            expect(invoice.reload.status).to eql('pending')
+            expect(result.success?).to be(true)
           end
         end
 
-        it 'moves invoice to failed state' do
-          expect { finalize_service.call }.to change(invoice.reload, :status).from('draft').to('failed')
-        end
-
-        it 'creates a new error_detail for the invoice' do
-          expect { finalize_service.call }.to change(invoice.error_details, :count).from(0).to(1)
+        it 'moves invoice to pending tax state' do
+          expect { finalize_service.call }.to change(invoice.reload, :tax_status).from(nil).to('pending')
         end
 
         it 'updates fees despite error result' do

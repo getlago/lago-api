@@ -160,101 +160,24 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       context 'when there is tax provider integration' do
         let(:integration) { create(:anrok_integration, organization:) }
         let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-        let(:response) { instance_double(Net::HTTPOK) }
-        let(:lago_client) { instance_double(LagoHttpClient::Client) }
-        let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
-        let(:body) do
-          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
-          File.read(p)
-        end
-        let(:integration_collection_mapping) do
-          create(
-            :netsuite_collection_mapping,
-            integration:,
-            mapping_type: :fallback_item,
-            settings: {external_id: '1', external_account_code: '11', external_name: ''}
-          )
-        end
 
         before do
-          integration_collection_mapping
           integration_customer
-
-          allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
-          allow(lago_client).to receive(:post_with_response).and_return(response)
-          allow(response).to receive(:body).and_return(body)
-          allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
-          allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
-          allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *args| # rubocop:disable RSpec/AnyInstance
-            fee = m.receiver
-            if fee.charge_id == charge.id
-              'charge_fee_id-12345'
-            elsif fee.subscription_id == subscription.id
-              'sub_fee_id-12345'
-            else
-              m.call(*args)
-            end
-          end
         end
 
-        it 'creates fees' do
+        it 'returns tax unknown error and puts invoice in valid status' do
           result = invoice_service.call
 
           aggregate_failures do
-            expect(result).to be_success
+            expect(result).not_to be_success
+            expect(result.error.code).to eq('tax_error')
+            expect(result.error.error_message).to eq('unknown taxes')
 
-            expect(result.invoice.fees_amount_cents).to eq(100)
-            expect(result.invoice.taxes_amount_cents).to eq(10)
-
-            expect(result.invoice.reload.error_details.count).to eq(0)
-          end
-        end
-
-        it 'fetches taxes using finalized invoices service' do
-          invoice_service.call
-          expect(Integrations::Aggregator::Taxes::Invoices::CreateService).to have_received(:call)
-        end
-
-        context 'when there is error received from the provider' do
-          let(:body) do
-            p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
-            File.read(p)
-          end
-
-          it 'returns tax error' do
-            result = invoice_service.call
-
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error.code).to eq('tax_error')
-              expect(result.error.error_message).to eq('taxDateTooFarInFuture')
-
-              expect(invoice.reload.status).to eq('failed')
-              expect(invoice.reload.error_details.count).to eq(1)
-              expect(invoice.reload.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
-            end
-          end
-
-          context 'with api limit error' do
-            let(:body) do
-              p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/api_limit_response.json')
-              File.read(p)
-            end
-
-            it 'returns and store proper error details' do
-              result = invoice_service.call
-
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error.code).to eq('tax_error')
-                expect(result.error.error_message).to eq('validationError')
-
-                expect(invoice.reload.error_details.count).to eq(1)
-                expect(invoice.reload.error_details.first.details['tax_error']).to eq('validationError')
-                expect(invoice.reload.error_details.first.details['tax_error_message'])
-                  .to eq("You've exceeded your API limit of 10 per second")
-              end
-            end
+            expect(invoice.reload.status).to eq('pending')
+            expect(invoice.reload.tax_status).to eq('pending')
+            expect(invoice.reload.fees_amount_cents).to eq(100)
+            expect(invoice.reload.taxes_amount_cents).to eq(0)
+            expect(invoice.reload.error_details.count).to eq(0)
           end
         end
 
@@ -271,47 +194,40 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           end
 
           context 'when no context is passed' do
-            let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
-
-            it 'creates fees' do
+            it 'returns tax unknown error and puts invoice in valid status' do
               result = invoice_service.call
 
               aggregate_failures do
-                expect(result).to be_success
+                expect(result).not_to be_success
+                expect(result.error.code).to eq('tax_error')
+                expect(result.error.error_message).to eq('unknown taxes')
 
-                expect(result.invoice.fees_amount_cents).to eq(100)
-                expect(result.invoice.taxes_amount_cents).to eq(10)
-
-                expect(result.invoice.reload.error_details.count).to eq(0)
+                expect(invoice.reload.status).to eq('draft')
+                expect(invoice.reload.tax_status).to eq('pending')
+                expect(invoice.reload.fees_amount_cents).to eq(100)
+                expect(invoice.reload.taxes_amount_cents).to eq(0)
+                expect(invoice.reload.error_details.count).to eq(0)
               end
-            end
-
-            it 'fetches taxes using draft invoices service' do
-              invoice_service.call
-              expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
             end
           end
 
           context 'when context is :finalize' do
-            let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
             let(:context) { :finalize }
 
-            it 'creates fees' do
+            it 'returns tax unknown error and puts invoice in valid status' do
               result = invoice_service.call
 
               aggregate_failures do
-                expect(result).to be_success
+                expect(result).not_to be_success
+                expect(result.error.code).to eq('tax_error')
+                expect(result.error.error_message).to eq('unknown taxes')
 
-                expect(result.invoice.fees_amount_cents).to eq(100)
-                expect(result.invoice.taxes_amount_cents).to eq(10)
-
-                expect(result.invoice.reload.error_details.count).to eq(0)
+                expect(invoice.reload.status).to eq('pending')
+                expect(invoice.reload.tax_status).to eq('pending')
+                expect(invoice.reload.fees_amount_cents).to eq(100)
+                expect(invoice.reload.taxes_amount_cents).to eq(0)
+                expect(invoice.reload.error_details.count).to eq(0)
               end
-            end
-
-            it 'fetches taxes using finalized invoices service' do
-              invoice_service.call
-              expect(Integrations::Aggregator::Taxes::Invoices::CreateService).to have_received(:call)
             end
           end
         end
