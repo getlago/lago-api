@@ -2,8 +2,6 @@
 
 module Fees
   class CreatePayInAdvanceJob < ApplicationJob
-    include ConcurrencyThrottlable
-
     queue_as :default
 
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25

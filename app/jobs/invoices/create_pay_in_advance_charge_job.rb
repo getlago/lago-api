@@ -2,8 +2,6 @@
 
 module Invoices
   class CreatePayInAdvanceChargeJob < ApplicationJob
-    include ConcurrencyThrottlable
-
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_BILLING'])
         :billing
