@@ -28,7 +28,7 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
 
     context 'when sending skip_invoice_custom_sections: true AND selected_ids' do
       let(:skip_invoice_custom_sections) { true }
-      let(:section_ids) { [1, 2,3 ] }
+      let(:section_ids) { [1, 2, 3] }
 
       it 'raises an error' do
         result = service.call
