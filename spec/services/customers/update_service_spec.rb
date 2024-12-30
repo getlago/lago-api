@@ -381,6 +381,23 @@ RSpec.describe Customers::UpdateService, type: :service do
           expect(customer.selected_invoice_custom_sections.ids).to match_array(invoice_custom_sections[1..2].map(&:id))
         end
       end
+
+      context 'when sending both: skip_invoice_custom_sections and selected_invoice_custom_section_ids' do
+        let(:update_args) do
+          {
+            id: customer.id,
+            skip_invoice_custom_sections: true,
+            selected_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
+          }
+        end
+
+        it 'returns an error' do
+          result = customers_service.call
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:invoice_custom_sections]).to include('skip_sections_and_selected_ids_sent_together')
+        end
+      end
     end
 
     context 'when organization has eu tax management' do

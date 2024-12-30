@@ -116,7 +116,11 @@ module Customers
           customer.reset_dunning_campaign!
         end
 
-        manage_invoice_custom_sections
+        Customers::ManageInvoiceCustomSectionsService.call(
+          customer:,
+          skip_invoice_custom_sections: args[:skip_invoice_custom_sections],
+          section_ids: args[:selected_invoice_custom_section_ids]
+        ).raise_if_error!
 
         customer.save!
         customer.reload
@@ -204,18 +208,6 @@ module Customers
       return unless args[:applied_dunning_campaign_id]
 
       DunningCampaign.find(args[:applied_dunning_campaign_id])
-    end
-
-    def manage_invoice_custom_sections
-      if args.key?(:skip_invoice_custom_sections)
-        customer.selected_invoice_custom_sections = [] if args[:skip_invoice_custom_sections]
-        customer.skip_invoice_custom_sections = args[:skip_invoice_custom_sections]
-      end
-
-      if args.key?(:selected_invoice_custom_section_ids)
-        customer.skip_invoice_custom_sections = false
-        UpdateInvoiceCustomSectionsService.call(customer:, section_ids: args[:selected_invoice_custom_section_ids])
-      end
     end
   end
 end
