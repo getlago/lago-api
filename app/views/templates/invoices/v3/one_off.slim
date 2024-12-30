@@ -457,6 +457,9 @@ html
             td.body-1 = MoneyHelper.format(total_amount)
 
 
+
+      - if applied_invoice_custom_sections.present?
+        == SlimHelper.render('templates/invoices/v3/_custom_sections', self)
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 
       .powered-by

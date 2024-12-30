@@ -1,0 +1,7 @@
+.invoice-custom-sections.body-3.mb-24
+  - applied_invoice_custom_sections.each do |section|
+    .invoice-custom-section
+      .body-1
+        | #{section.display_name}
+      .body-2
+        | #{section.details}
