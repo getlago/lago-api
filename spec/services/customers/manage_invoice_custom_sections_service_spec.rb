@@ -7,7 +7,7 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
   let(:invoice_custom_sections) { create_list(:invoice_custom_section, 4, organization: customer.organization) }
   let(:skip_invoice_custom_sections) { nil }
   let(:service) { described_class.new(customer: customer, section_ids:, skip_invoice_custom_sections:) }
-  let(:section_ids) { [] }
+  let(:section_ids) { nil }
 
   before do
     customer.selected_invoice_custom_sections << invoice_custom_sections[0] if customer
@@ -70,25 +70,25 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
       end
 
       context 'when selected_ids are an empty array' do
-      let(:section_ids) { [] }
+        let(:section_ids) { [] }
 
-      it 'assigns organization sections' do
-        service.call
-        expect(customer.reload.selected_invoice_custom_sections.ids).to match_array([])
-        expect(customer.applicable_invoice_custom_sections.ids).to match_array(organization.selected_invoice_custom_sections.ids)
-      end
+        it 'assigns organization sections' do
+          service.call
+          expect(customer.reload.selected_invoice_custom_sections.ids).to match_array([])
+          expect(customer.applicable_invoice_custom_sections.ids).to match_array(customer.organization.selected_invoice_custom_sections.ids)
+        end
       end
 
       context 'when setting invoice_custom_sections_ids when previously customer had skip_invoice_custom_sections' do
-        let(:section_ids) { invoice_custom_sections[1..2].map(&:id) }
+        let(:section_ids) { [] }
 
         before { customer.update(skip_invoice_custom_sections: true) }
 
         it 'sets skip_invoice_custom_sections to false' do
           service.call
           expect(customer.reload.skip_invoice_custom_sections).to be_falsey
-          expect(customer.selected_invoice_custom_sections.ids).to match_array(section_ids)
-          expect(customer.applicable_invoice_custom_sections.ids).to match_array(section_ids)
+          expect(customer.selected_invoice_custom_sections.ids).to match_array([])
+          expect(customer.applicable_invoice_custom_sections.ids).to match_array(customer.organization.selected_invoice_custom_sections.ids)
         end
       end
     end
@@ -102,7 +102,7 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
         service.call
         expect(customer.reload.skip_invoice_custom_sections).to be_truthy
         expect(customer.selected_invoice_custom_sections).to be_empty
-        expect(customer.applied_invoice_custom_sections).to be_empty
+        expect(customer.applicable_invoice_custom_sections).to be_empty
       end
     end
 
