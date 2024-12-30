@@ -51,6 +51,7 @@ end
 #  index_payments_on_payable_type_and_payable_id   (payable_type,payable_id)
 #  index_payments_on_payment_provider_customer_id  (payment_provider_customer_id)
 #  index_payments_on_payment_provider_id           (payment_provider_id)
+#  index_payments_on_payment_type                  (payment_type)
 #
 # Foreign Keys
 #
