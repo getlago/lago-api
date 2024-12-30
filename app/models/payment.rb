@@ -12,6 +12,11 @@ class Payment < ApplicationRecord
   has_many :refunds
   has_many :integration_resources, as: :syncable
 
+  PAYMENT_TYPES = {provider: "provider", manual: "manual"}
+  enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
+  validates :reference, length: {maximum: 40}
+
+
   delegate :customer, to: :payable
 
   enum payable_payment_status: PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h

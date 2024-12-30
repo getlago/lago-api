@@ -3,7 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Payment, type: :model do
-  subject(:payment) { create(:payment) }
+  subject(:payment) { build(:payment, payment_type:, provider_payment_id:, reference:) }
+
+  let(:payment_type) { 'provider' }
+  let(:provider_payment_id) { SecureRandom.uuid }
+  let(:reference) { nil }
 
   it_behaves_like 'paper_trail traceable'
 
