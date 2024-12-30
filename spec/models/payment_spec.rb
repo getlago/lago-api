@@ -15,6 +15,28 @@ RSpec.describe Payment, type: :model do
   it { is_expected.to belong_to(:payable) }
   it { is_expected.to delegate_method(:customer).to(:payable) }
 
+  it do
+    expect(subject)
+      .to define_enum_for(:payment_type)
+      .with_values(Payment::PAYMENT_TYPES)
+      .with_prefix(:payment_type)
+      .backed_by_column_of_type(:enum)
+  end
+
+  describe 'validations' do
+    let(:errors) { payment.errors }
+
+    before { payment.valid? }
+
+    context 'when reference is more than 40 characters' do
+      let(:reference) { 'a' * 41 }
+
+      it 'adds an error' do
+        expect(errors.where(:reference, :too_long)).to be_present
+      end
+    end
+  end
+
   describe '#should_sync_payment?' do
     subject(:method_call) { payment.should_sync_payment? }
 
