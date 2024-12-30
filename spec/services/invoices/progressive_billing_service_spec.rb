@@ -232,5 +232,9 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
     it_behaves_like 'syncs invoice' do
       let(:service_call) { create_service.call }
     end
+
+    it_behaves_like "applies invoice_custom_sections" do
+      let(:service_call) { create_service.call }
+    end
   end
 end

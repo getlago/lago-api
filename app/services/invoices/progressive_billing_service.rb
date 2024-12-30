@@ -21,6 +21,7 @@ module Invoices
 
         Credits::ProgressiveBillingService.call(invoice:)
         Credits::AppliedCouponsService.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         return totals_result if !totals_result.success? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)

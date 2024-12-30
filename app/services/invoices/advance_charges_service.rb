@@ -59,6 +59,7 @@ module Invoices
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         invoice.payment_status = :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
