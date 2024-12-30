@@ -24,9 +24,13 @@ class AddPaymentTypeAndReferenceToPayments < ActiveRecord::Migration[7.1]
         ALTER TABLE payments ALTER COLUMN payment_type SET NOT NULL;
       SQL
     end
+
+    add_index :payments, :payment_type, algorithm: :concurrently
   end
 
   def down
+    remove_index :payments, column: :payment_type
+
     change_table :payments, bulk: true do |t|
       t.remove :payment_type
       t.remove :reference
