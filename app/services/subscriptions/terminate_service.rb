@@ -111,15 +111,29 @@ module Subscriptions
           subscription.terminated_at,
           invoicing_reason: :subscription_terminating
         )
-        BillNonInvoiceableFeesJob.set(wait: 2.seconds).perform_later([subscription], subscription.terminated_at)
+        BillNonInvoiceableFeesJob.set(wait: 2.seconds).perform_later(
+          invoiceable_subscriptions.to_a,
+          subscription.terminated_at
+        )
       else
         BillSubscriptionJob.perform_now(
           [subscription],
           subscription.terminated_at,
           invoicing_reason: :subscription_terminating
         )
-        BillNonInvoiceableFeesJob.perform_now([subscription], subscription.terminated_at)
+        BillNonInvoiceableFeesJob.perform_now(
+          invoiceable_subscriptions.to_a,
+          subscription.terminated_at
+        )
       end
+    end
+
+    def invoiceable_subscriptions
+      # Expect all subscriptions belogns to the same organization
+      @invoiceable_subscriptions ||= subscription.organization.subscriptions.where(
+        external_id: subscription.external_id,
+        status: [:active, :terminated]
+      )
     end
 
     # NOTE: If subscription is terminated automatically by setting ending_at, there is a chance that this service will
