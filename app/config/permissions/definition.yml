@@ -100,3 +100,6 @@ organization:
 payment_requests:
   view: true
   create:
+payments:
+  view: true
+  create:
