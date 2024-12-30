@@ -107,6 +107,8 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
     end
 
     context 'when an ActiveRecord::RecordInvalid error is raised' do
+      let(:section_ids) { invoice_custom_sections[1..2].map(&:id) }
+
       before do
         allow(customer).to receive(:selected_invoice_custom_sections=).and_raise(ActiveRecord::RecordInvalid.new(customer))
       end

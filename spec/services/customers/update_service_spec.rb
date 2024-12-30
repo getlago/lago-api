@@ -337,7 +337,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         let(:update_args) do
           {
             id: customer.id,
-            selected_invoice_custom_section_ids: invoice_custom_sections[2..3].map(&:id)
+            selected_invoice_custom_section_ids: []
           }
         end
 
