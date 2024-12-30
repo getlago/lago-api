@@ -1124,6 +1124,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_24_142141) do
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
+    t.index ["payment_type"], name: "index_payments_on_payment_type"
   end
 
   create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
