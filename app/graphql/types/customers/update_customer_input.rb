@@ -47,8 +47,13 @@ module Types
       argument :billing_configuration, Types::Customers::BillingConfigurationInput, required: false
       argument :finalize_zero_amount_invoice, Types::Customers::FinalizeZeroAmountInvoiceEnum, required: false
 
+      # Dunning campaign settings
       argument :applied_dunning_campaign_id, ID, required: false
       argument :exclude_from_dunning_campaign, Boolean, required: false
+
+      # Invoice custom sections settings
+      argument :applicable_invoice_custom_section_ids, [ID], required: false
+      argument :skip_invoice_custom_sections, Boolean, required: false
     end
   end
 end
