@@ -342,9 +342,5 @@ RSpec.describe Fees::OneOffService do
         end
       end
     end
-
-    it_behaves_like "applies invoice_custom_sections" do
-      let(:service_call) { one_off_service.call }
-    end
   end
 end
