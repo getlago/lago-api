@@ -8,7 +8,9 @@ class InvoiceCustomSection < ApplicationRecord
   has_many :invoice_custom_section_selections, dependent: :destroy
 
   validates :name, presence: true
-  validates :code, presence: true, uniqueness: {scope: :organization_id}
+  validates :code,
+    presence: true,
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
 
   default_scope -> { kept }
 
