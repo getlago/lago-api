@@ -15,7 +15,9 @@ class Payment < ApplicationRecord
   PAYMENT_TYPES = {provider: "provider", manual: "manual"}
   attribute :payment_type, :string
   enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
-  validates :reference, length: {maximum: 40}
+  validates :payment_type, presence: true
+  validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
+  validates :reference, absence: true, if: -> { payment_type_provider? }
 
   delegate :customer, to: :payable
 
