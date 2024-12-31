@@ -28,11 +28,43 @@ RSpec.describe Payment, type: :model do
 
     before { payment.valid? }
 
-    context 'when reference is more than 40 characters' do
-      let(:reference) { 'a' * 41 }
+    describe 'of reference' do
+      context 'when payment type is provider' do
+        context 'when reference is present' do
+          let(:reference) { '123' }
 
-      it 'adds an error' do
-        expect(errors.where(:reference, :too_long)).to be_present
+          it 'adds an error' do
+            expect(errors.where(:reference, :present)).to be_present
+          end
+        end
+
+        context 'when reference is not present' do
+          it 'does not add an error' do
+            expect(errors.where(:reference, :present)).not_to be_present
+          end
+        end
+      end
+
+      context 'when payment type is manual' do
+        let(:payment_type) { 'manual' }
+
+        context 'when reference is present' do
+          context 'when reference is less than 40 characters' do
+            let(:reference) { '123' }
+
+            it 'does not add an error' do
+              expect(errors.where(:reference, :blank)).not_to be_present
+            end
+          end
+
+          context 'when reference is more than 40 characters' do
+            let(:reference) { 'a' * 41 }
+
+            it 'adds an error' do
+              expect(errors.where(:reference, :too_long)).to be_present
+            end
+          end
+        end
       end
     end
   end
