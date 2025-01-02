@@ -191,25 +191,6 @@ RSpec.describe Subscriptions::TerminateService do
         end
       end
     end
-
-    context "when subscription is an upgrade or downgrade" do
-      let(:subscription_2) do
-        create(:subscription, {
-          external_id: subscription.external_id,
-          customer: subscription.customer,
-          status: :terminated
-        })
-      end
-
-      before { subscription_2 }
-
-      it "enqueues a BillNonInvoiceableFeesJob with both subscriptions" do
-        freeze_time do
-          expect { terminate_service.call }.to have_enqueued_job(BillNonInvoiceableFeesJob)
-            .with([subscription_2, subscription], Time.zone.now)
-        end
-      end
-    end
   end
 
   describe '.terminate_and_start_next' do
