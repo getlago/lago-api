@@ -3,11 +3,13 @@
 require 'rails_helper'
 
 RSpec.describe Payment, type: :model do
-  subject(:payment) { build(:payment, payment_type:, provider_payment_id:, reference:) }
+  subject(:payment) { build(:payment, payable:, payment_type:, provider_payment_id:, reference:, amount_cents:) }
 
+  let(:payable) { create(:invoice, total_amount_cents: 10000) }
   let(:payment_type) { 'provider' }
   let(:provider_payment_id) { SecureRandom.uuid }
   let(:reference) { nil }
+  let(:amount_cents) { 200 }
 
   it_behaves_like 'paper_trail traceable'
 
@@ -28,6 +30,130 @@ RSpec.describe Payment, type: :model do
     let(:errors) { payment.errors }
 
     before { payment.valid? }
+
+    describe 'of max invoice paid amount cents' do
+      before { payment.save }
+
+      context 'when payable is an invoice' do
+        context 'when payment type is provider' do
+          let(:payment_type) { 'provider' }
+
+          context 'when amount cents + total paid amount cents is smaller or equal than invoice total amount cents' do
+            let(:payment_request) { create(:payment_request, payment_status: :succeeded) }
+
+            it 'does not add an error' do
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
+            end
+          end
+
+          context 'when amount cents + total paid amount cents is greater than invoice total amount cents' do
+            let(:amount_cents) { 10001 }
+
+            it 'does not add an error' do
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
+            end
+          end
+        end
+
+        context 'when payment type is manual' do
+          let(:payment_type) { 'manual' }
+
+          context 'when amount cents + total paid amount cents is smaller or equal than invoice total amount cents' do
+            let(:payment_request) { create(:payment_request, payment_status: :succeeded) }
+
+            it 'does not add an error' do
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
+            end
+          end
+
+          context 'when amount cents + total paid amount cents is greater than invoice total amount cents' do
+            let(:amount_cents) { 10001 }
+
+            it 'adds an error' do
+              expect(errors.where(:amount_cents, :greater_than)).to be_present
+            end
+          end
+        end
+      end
+    end
+
+    describe 'of payment request succeeded' do
+      context 'when payable is an invoice' do
+        context 'when payment type is provider' do
+          let(:payment_type) { 'provider' }
+
+          context 'when succeeded payment requests exist' do
+            let(:payment_request) { create(:payment_request, payment_status: :succeeded) }
+
+            before do
+              create(:payment_request_applied_invoice, payment_request:, invoice: payable)
+              payment.save
+            end
+
+            it 'does not add an error' do
+              expect(errors.where(:base, :payment_request_is_already_succeeded)).not_to be_present
+            end
+          end
+
+          context 'when no succeeded payment requests exist' do
+            before { payment.save }
+
+            it 'does not add an error' do
+              expect(errors.where(:base, :payment_request_is_already_succeeded)).not_to be_present
+            end
+          end
+        end
+
+        context 'when payment type is manual' do
+          let(:payment_type) { 'manual' }
+
+          context 'when succeeded payment request exist' do
+            let(:payment_request) { create(:payment_request, payment_status: 'succeeded') }
+
+            before do
+              create(:payment_request_applied_invoice, payment_request:, invoice: payable)
+              payment.save
+            end
+
+            it 'adds an error' do
+              expect(payment.errors.where(:base, :payment_request_is_already_succeeded)).to be_present
+            end
+          end
+
+          context 'when no succeeded payment requests exist' do
+            before { payment.save }
+
+            it 'does not add an error' do
+              expect(errors.where(:base, :payment_request_is_already_succeeded)).not_to be_present
+            end
+          end
+        end
+      end
+
+      context 'when payable is not an invoice' do
+        let(:payable) { create(:payment_request) }
+
+        context 'when payment type is provider' do
+          let(:payment_type) { 'provider' }
+
+          before { payment.save }
+
+          it 'does not add an error' do
+            expect(errors.where(:base, :payment_request_is_already_succeeded)).not_to be_present
+          end
+        end
+
+        context 'when payment type is manual' do
+          let(:payment_type) { 'manual' }
+
+          before { payment.save }
+
+          it 'does not add an error' do
+            expect(errors.where(:base, :payment_request_is_already_succeeded)).not_to be_present
+          end
+        end
+      end
+    end
 
     describe 'of reference' do
       context 'when payment type is provider' do
