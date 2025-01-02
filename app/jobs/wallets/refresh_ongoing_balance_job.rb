@@ -4,7 +4,7 @@ module Wallets
   class RefreshOngoingBalanceJob < ApplicationJob
     queue_as 'wallets'
 
-    unique :until_executed, on_conflict: :log
+    unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
 

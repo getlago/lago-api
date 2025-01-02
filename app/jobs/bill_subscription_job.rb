@@ -9,6 +9,8 @@ class BillSubscriptionJob < ApplicationJob
     end
   end
 
+  unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
+
   retry_on Sequenced::SequenceError, ActiveJob::DeserializationError
 
   def perform(subscriptions, timestamp, invoicing_reason:, invoice: nil, skip_charges: false)
