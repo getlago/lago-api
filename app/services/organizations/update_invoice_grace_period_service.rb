@@ -24,11 +24,6 @@ module Organizations
           invoice.payment_due_date = grace_period_payment_due_date(invoice)
           invoice.save!
         end
-
-        # NOTE: Finalize related draft invoices.
-        organization.invoices.ready_to_be_finalized.find_each do |invoice|
-          Invoices::RefreshDraftAndFinalizeService.call(invoice:)
-        end
       end
 
       result.organization = organization

@@ -4,12 +4,12 @@ module Customers
   class UpdateInvoiceGracePeriodService < BaseService
     def initialize(customer:, grace_period:)
       @customer = customer
-      @grace_period = grace_period.to_i
+      @grace_period = grace_period
       super
     end
 
     def call
-      old_grace_period = customer.invoice_grace_period.to_i
+      old_grace_period = customer.invoice_grace_period
       old_applicable_grace_period = customer.applicable_invoice_grace_period.to_i
 
       if grace_period != old_grace_period
