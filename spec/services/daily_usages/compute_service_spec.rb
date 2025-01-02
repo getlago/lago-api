@@ -101,23 +101,25 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
       let(:timestamp) { subscription.terminated_at - 1.day }
 
       it "creates a daily usage" do
-        result = compute_service.call
+        travel_to("2024-11-24") do
+          result = compute_service.call
 
-        expect(result).to be_success
+          expect(result).to be_success
 
-        daily_usage = result.daily_usage
-        expect(daily_usage).to have_attributes(
-          organization_id: organization.id,
-          customer_id: customer.id,
-          subscription_id: subscription.id,
-          external_subscription_id: subscription.external_id,
-          usage: Hash,
-          usage_diff: Hash,
-          usage_date: timestamp.to_date - 1.day
-        )
-        expect(daily_usage.refreshed_at).to match_datetime(timestamp)
-        expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
-        expect(daily_usage.to_datetime).to match_datetime(subscription.terminated_at)
+          daily_usage = result.daily_usage
+          expect(daily_usage).to have_attributes(
+            organization_id: organization.id,
+            customer_id: customer.id,
+            subscription_id: subscription.id,
+            external_subscription_id: subscription.external_id,
+            usage: Hash,
+            usage_diff: Hash,
+            usage_date: timestamp.to_date - 1.day
+          )
+          expect(daily_usage.refreshed_at).to match_datetime(timestamp)
+          expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
+          expect(daily_usage.to_datetime).to match_datetime(subscription.terminated_at)
+        end
       end
     end
 
