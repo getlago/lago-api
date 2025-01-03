@@ -1,0 +1,24 @@
+# frozen_string_literal: true
+
+module Types
+  module Payments
+    class Object < Types::BaseObject
+      graphql_name "Payment"
+
+      field :id, ID, null: false
+
+      field :amount_cents, GraphQL::Types::BigInt, null: false
+      field :amount_currency, Types::CurrencyEnum, null: false
+
+      field :invoice, Types::Invoices::Object, null: false
+      field :payable, Types::Payables::Object, null: false
+      field :payable_payment_status, Types::Payments::PayablePaymentStatusEnum, null: true
+      field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
+      field :payment_type, Types::Payments::PaymentTypeEnum, null: false
+      field :provider_payment_id, GraphQL::Types::String, null: true
+      field :reference, GraphQL::Types::String, null: true
+
+      field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+    end
+  end
+end
