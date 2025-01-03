@@ -483,6 +483,7 @@ end
 #  taxes_rate                              :float            default(0.0), not null
 #  timezone                                :string           default("UTC"), not null
 #  total_amount_cents                      :bigint           default(0), not null
+#  total_paid_amount_cents                 :bigint           default(0), not null
 #  version_number                          :integer          default(4), not null
 #  voided_at                               :datetime
 #  created_at                              :datetime         not null

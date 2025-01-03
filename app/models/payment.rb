@@ -7,10 +7,17 @@ class Payment < ApplicationRecord
 
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: 'PaymentProviders::BaseProvider'
-  belongs_to :payment_provider_customer, class_name: 'PaymentProviderCustomers::BaseCustomer'
+  belongs_to :payment_provider_customer, optional: true, class_name: 'PaymentProviderCustomers::BaseCustomer'
 
   has_many :refunds
   has_many :integration_resources, as: :syncable
+
+  PAYMENT_TYPES = {provider: "provider", manual: "manual"}
+  attribute :payment_type, :string
+  enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
+  validates :payment_type, presence: true
+  validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
+  validates :reference, absence: true, if: -> { payment_type_provider? }
 
   delegate :customer, to: :payable
 
@@ -32,7 +39,9 @@ end
 #  amount_currency              :string           not null
 #  payable_payment_status       :enum
 #  payable_type                 :string           default("Invoice"), not null
+#  payment_type                 :enum             default("provider"), not null
 #  provider_payment_data        :jsonb
+#  reference                    :string
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
@@ -49,6 +58,7 @@ end
 #  index_payments_on_payable_type_and_payable_id   (payable_type,payable_id)
 #  index_payments_on_payment_provider_customer_id  (payment_provider_customer_id)
 #  index_payments_on_payment_provider_id           (payment_provider_id)
+#  index_payments_on_payment_type                  (payment_type)
 #
 # Foreign Keys
 #
