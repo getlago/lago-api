@@ -8,7 +8,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
   let(:adyen_payment_provider) { create(:adyen_provider, organization:, code:) }
-  let(:adyen_customer) { create(:adyen_customer, customer:) }
+  let(:adyen_customer) { create(:adyen_customer, customer:, payment_provider: adyen_payment_provider) }
   let(:adyen_client) { instance_double(Adyen::Client) }
   let(:payments_api) { Adyen::PaymentsApi.new(adyen_client, 70) }
   let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
@@ -55,7 +55,8 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         :payment,
         payable: invoice,
         provider_payment_id: "ch_123456",
-        status: "Pending"
+        status: "Pending",
+        payment_provider: adyen_payment_provider
       )
     end
 
