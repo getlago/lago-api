@@ -31,11 +31,11 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
     expect(refresh_service).not_to have_received(:call)
   end
 
-  it 'has a lock_ttl of 6.hours' do
+  it 'has a lock_ttl of 12.hours' do
     # When there's lots of draft invoices to be refreshed, we might end up enqueueing multiple of them.
     # This will block all queues with lower prio than the `invoices` queue. (e.g. wallets). This is undesirable,
     # so we bump the lock_ttl for this job to 6 hours
-    expect(described_class.new.lock_options[:lock_ttl]).to eq(6.hours)
+    expect(described_class.new.lock_options[:lock_ttl]).to eq(12.hours)
   end
 
   context 'when there was a tax fetching error in RefreshDraft service' do
