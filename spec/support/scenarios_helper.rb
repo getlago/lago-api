@@ -146,6 +146,12 @@ module ScenariosHelper
     customer.update!(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)
   end
 
+  ### Fees
+
+  def update_fee(fee, params)
+    put_with_token(organization, "/api/v1/fees/#{fee.id}", params)
+  end
+
   # This performs any enqueued-jobs, and continues doing so until the queue is empty.
   # Lots of the jobs enqueue other jobs as part of their work, and this ensures that
   # everything that's supposed to happen, happens.

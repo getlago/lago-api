@@ -118,7 +118,10 @@ module Subscriptions
           subscription.terminated_at,
           invoicing_reason: :subscription_terminating
         )
-        BillNonInvoiceableFeesJob.perform_now([subscription], subscription.terminated_at)
+        BillNonInvoiceableFeesJob.perform_now(
+          [subscription],
+          subscription.terminated_at
+        )
       end
     end
 

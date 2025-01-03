@@ -2,13 +2,13 @@
 
 module Invoices
   class AdvanceChargesService < BaseService
-    def initialize(subscriptions:, billing_at:)
-      @subscriptions = subscriptions
+    def initialize(initial_subscriptions:, billing_at:)
+      @initial_subscriptions = initial_subscriptions
       @billing_at = billing_at
 
-      @customer = subscriptions&.first&.customer
+      @customer = initial_subscriptions&.first&.customer
       @organization = customer&.organization
-      @currency = subscriptions&.first&.plan&.amount_currency
+      @currency = initial_subscriptions&.first&.plan&.amount_currency
 
       super
     end
@@ -35,7 +35,16 @@ module Invoices
 
     private
 
-    attr_accessor :subscriptions, :billing_at, :customer, :organization, :currency
+    attr_accessor :initial_subscriptions, :billing_at, :customer, :organization, :currency
+
+    def subscriptions
+      return [] unless organization
+
+      @subscriptions ||= organization.subscriptions.where(
+        external_id: initial_subscriptions.pluck(:external_id).uniq,
+        status: [:active, :terminated]
+      )
+    end
 
     def has_charges_with_statement?
       plan_ids = subscriptions.pluck(:plan_id)
