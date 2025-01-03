@@ -6,12 +6,8 @@ RSpec.describe PaymentProviders::Stripe::HandleIncomingWebhookService, type: :se
   subject(:result) { described_class.call(inbound_webhook:) }
 
   let(:inbound_webhook) { create :inbound_webhook }
-  let(:event_result) { Stripe::Event.construct_from(event) }
-
-  let(:event) do
-    path = Rails.root.join("spec/fixtures/stripe/payment_intent_event.json")
-    JSON.parse(File.read(path))
-  end
+  let(:webhook_payload) { JSON.parse(inbound_webhook.payload) }
+  let(:event_result) { Stripe::Event.construct_from(webhook_payload) }
 
   it "checks the webhook" do
     expect(result).to be_success
@@ -20,7 +16,7 @@ RSpec.describe PaymentProviders::Stripe::HandleIncomingWebhookService, type: :se
   end
 
   context "when failing to parse payload" do
-    let(:event) { "invalid" }
+    let(:inbound_webhook) { create :inbound_webhook, payload: "invalid" }
 
     it "returns an error" do
       expect(result).not_to be_success

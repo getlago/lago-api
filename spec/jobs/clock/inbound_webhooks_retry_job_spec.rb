@@ -69,7 +69,7 @@ describe Clock::InboundWebhooksRetryJob, job: true do
 
     context "when inbound webhook is processed" do
       let(:inbound_webhook) { create :inbound_webhook, status: }
-      let(:status) { "processed" }
+      let(:status) { "succeeded" }
 
       it "does not queue a job" do
         inbound_webhooks_retry_job.perform_now
