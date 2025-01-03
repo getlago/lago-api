@@ -144,6 +144,9 @@ html
 
 
       /* ----------------------- variable ----------------------- */
+      :root {
+        --border-color: #D9DEE7;
+      }
 
       @font-face {
         font-family: 'Inter var';
@@ -245,7 +248,7 @@ html
         color: #66758F;
       }
       .invoice-resume-table tr {
-        border-bottom: 1px solid #D9DEE7;
+        border-bottom: 1px solid var(--border-color);
       }
       .invoice-resume-table tr td {
         padding-top: 8px;
@@ -284,12 +287,12 @@ html
         width: 50%;
       }
       .invoice-resume .total-table tr:not(:last-child) td:nth-child(2) {
-        border-bottom: 1px solid #D9DEE7;
+        border-bottom: 1px solid var(--border-color);
         text-align: left;
         width: 35%;
       }
       .invoice-resume .total-table tr:not(:last-child) td:nth-child(3) {
-        border-bottom: 1px solid #D9DEE7;
+        border-bottom: 1px solid var(--border-color);
         text-align: right;
         width: 15%;
       }
@@ -320,10 +323,10 @@ html
         text-align: right;
       }
       .breakdown-details-table tr td {
-        border-bottom: 1px solid #d9dee7;
+        border-bottom: 1px solid var(--border-color);
       }
       .breakdown-details-table tr:first-child td {
-        border-top: 1px solid #d9dee7;
+        border-top: 1px solid var(--border-color);
       }
 
       .powered-by {
@@ -365,7 +368,7 @@ html
       }
       .invoice-resume-table tr.details.subtotal td {
         padding-bottom: 8px;
-        border-bottom: 1px solid #d9dee7;
+        border-bottom: 1px solid var(--border-color);
         color: #19212e;
       }
 
