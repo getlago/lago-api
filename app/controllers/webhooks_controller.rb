@@ -2,20 +2,16 @@
 
 class WebhooksController < ApplicationController
   def stripe
-    result = PaymentProviders::Stripe::HandleIncomingWebhookService.call(
+    result = InboundWebhooks::CreateService.call(
       organization_id: params[:organization_id],
+      webhook_source: :stripe,
       code: params[:code].presence,
-      body: request.body.read,
-      signature: request.headers['HTTP_STRIPE_SIGNATURE']
+      payload: request.body.read,
+      signature: request.headers["HTTP_STRIPE_SIGNATURE"],
+      event_type: params[:type]
     )
 
-    unless result.success?
-      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == 'webhook_error'
-        return head(:bad_request)
-      end
-
-      result.raise_if_error!
-    end
+    return head(:bad_request) unless result.success?
 
     head(:ok)
   end

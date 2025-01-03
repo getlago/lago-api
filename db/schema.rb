@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_12_23_144027) do
+ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -21,6 +21,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_144027) do
   create_enum "billable_metric_rounding_function", ["round", "floor", "ceil"]
   create_enum "billable_metric_weighted_interval", ["seconds"]
   create_enum "customer_type", ["company", "individual"]
+  create_enum "inbound_webhook_status", ["pending", "processing", "succeeded", "failed"]
   create_enum "payment_payable_payment_status", ["pending", "processing", "succeeded", "failed"]
   create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
   create_enum "tax_status", ["pending", "succeeded", "failed"]
@@ -724,6 +725,22 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_144027) do
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
   end
 
+  create_table "inbound_webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "source", null: false
+    t.string "event_type", null: false
+    t.jsonb "payload", null: false
+    t.enum "status", default: "pending", null: false, enum_type: "inbound_webhook_status"
+    t.uuid "organization_id", null: false
+    t.string "code"
+    t.string "signature"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "processing_at", precision: nil
+    t.index ["organization_id"], name: "index_inbound_webhooks_on_organization_id"
+    t.index ["status", "created_at"], name: "index_inbound_webhooks_on_status_and_created_at", where: "(status = 'pending'::inbound_webhook_status)"
+    t.index ["status", "processing_at"], name: "index_inbound_webhooks_on_status_and_processing_at", where: "(status = 'processing'::inbound_webhook_status)"
+  end
+
   create_table "integration_collection_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "integration_id", null: false
     t.integer "mapping_type", null: false
@@ -1415,6 +1432,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_144027) do
   add_foreign_key "group_properties", "groups", on_delete: :cascade
   add_foreign_key "groups", "billable_metrics", on_delete: :cascade
   add_foreign_key "groups", "groups", column: "parent_group_id"
+  add_foreign_key "inbound_webhooks", "organizations"
   add_foreign_key "integration_collection_mappings", "integrations"
   add_foreign_key "integration_customers", "customers"
   add_foreign_key "integration_customers", "integrations"
