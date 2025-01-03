@@ -11,7 +11,7 @@ module InvoiceCustomSections
 
     def call
       invoice_custom_section = organization.invoice_custom_sections.create!(create_params)
-      SelectService.call(section: invoice_custom_section, organization:) if selected
+      Organizations::SelectInvoiceCustomSectionService.call(section: invoice_custom_section) if selected
       result.invoice_custom_section = invoice_custom_section
       result
     rescue ActiveRecord::RecordInvalid => e

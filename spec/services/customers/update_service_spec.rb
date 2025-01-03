@@ -309,6 +309,97 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
+    context 'when updating invoice_custom_sections' do
+      let(:invoice_custom_sections) { create_list(:invoice_custom_section, 4, organization:) }
+
+      before do
+        customer.selected_invoice_custom_sections << invoice_custom_sections[0]
+        organization.selected_invoice_custom_sections = invoice_custom_sections[2..3]
+      end
+
+      context 'when customer is set to skip_invoice_custom_sections: true' do
+        let(:update_args) do
+          {
+            id: customer.id,
+            skip_invoice_custom_sections: true
+          }
+        end
+
+        it 'clears customer selected invoice custom sections' do
+          result = customers_service.call
+          expect(result).to be_success
+          expect(customer.reload.selected_invoice_custom_sections).to be_empty
+          expect(customer.applicable_invoice_custom_sections).to be_empty
+        end
+      end
+
+      context 'when setting to invoice custom sections that match with organization selected invoice custom sections' do
+        let(:update_args) do
+          {
+            id: customer.id,
+            selected_invoice_custom_section_ids: []
+          }
+        end
+
+        it 'assigns organization sections to customer' do
+          result = customers_service.call
+          expect(result).to be_success
+          expect(customer.reload.selected_invoice_custom_sections).to be_empty
+          expect(customer.applicable_invoice_custom_sections.ids).to match_array(invoice_custom_sections[2..3].map(&:id))
+        end
+      end
+
+      context 'when setting custom invoice_custom_sections for the customer' do
+        let(:update_args) do
+          {
+            id: customer.id,
+            selected_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
+          }
+        end
+
+        it 'assigns customer sections' do
+          result = customers_service.call
+          expect(result).to be_success
+          expect(customer.reload.selected_invoice_custom_sections.ids).to match_array(invoice_custom_sections[1..2].map(&:id))
+        end
+      end
+
+      context 'when setting custom invoice_custom_sections for the customer with skipped invoice_custom_sections' do
+        let(:update_args) do
+          {
+            id: customer.id,
+            selected_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
+          }
+        end
+
+        before { customer.update!(skip_invoice_custom_sections: true) }
+
+        it 'updates skip_invoice_custom_sections to false' do
+          result = customers_service.call
+          expect(result).to be_success
+          expect(customer.reload.skip_invoice_custom_sections).to be false
+          expect(customer.selected_invoice_custom_sections.ids).to match_array(invoice_custom_sections[1..2].map(&:id))
+        end
+      end
+
+      context 'when sending both: skip_invoice_custom_sections and selected_invoice_custom_section_ids' do
+        let(:update_args) do
+          {
+            id: customer.id,
+            skip_invoice_custom_sections: true,
+            selected_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
+          }
+        end
+
+        it 'returns an error' do
+          result = customers_service.call
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:invoice_custom_sections]).to include('skip_sections_and_selected_ids_sent_together')
+        end
+      end
+    end
+
     context 'when organization has eu tax management' do
       let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
 
