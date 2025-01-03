@@ -11,7 +11,6 @@ RSpec.describe PaymentProviders::Stripe::ValidateIncomingWebhookService, type: :
   let(:signature) { "signature" }
   let(:payment_provider) { create(:stripe_provider, webhook_secret:) }
   let(:webhook_secret) { "webhook_secret" }
-  let(:payload) { "{stripe incoming webhook JSON payload}" }
   let(:stripe_default_tolerance) { 300 }
 
   before do
