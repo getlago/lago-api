@@ -197,6 +197,22 @@ module Api
         end
       end
 
+      def preview
+        customer = find_or_build_customer
+        subscription = find_or_build_subscription(customer:)
+
+        result = Invoices::PreviewService.call(
+          customer:,
+          subscription:,
+          targeted_at: params[:targeted_at]
+        )
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params
@@ -226,6 +242,17 @@ module Api
             :key,
             :value
           ]
+        )
+      end
+
+      def preview_params
+        params.require(:customer).permit(
+          :external_id,
+          :name,
+          :shipping_address_line1,
+          :shipping_city,
+          :shipping_zipcode,
+          :shipping_country
         )
       end
 
@@ -263,6 +290,51 @@ module Api
 
       def resource_name
         'invoice'
+      end
+
+      def find_or_build_customer
+        if preview_params[:external_id]
+          Customer.find_by(external_id: preview_params[:external_id])
+        else
+          Customer.new(
+            name: preview_params[:name],
+            organization: current_organization,
+            shipping_address_line1: preview_params[:shipping_address_line1],
+            shipping_city: preview_params[:shipping_city],
+            shipping_zipcode: preview_params[:shipping_zipcode],
+            shipping_country: preview_params[:shipping_country],
+            created_at: Time.current,
+            updated_at: Time.current
+          )
+        end
+      end
+
+      def find_or_build_subscription(customer:)
+        if params[:plan_code]
+          plan = current_organization.plans.find_by(code: params[:plan_code])
+
+          return nil unless plan
+
+          billing_time = if params[:billing_time] && params[:billing_time] == 'anniversary'
+            'anniversary'
+          else
+            'calendar'
+          end
+
+          Subscription.new(
+            customer:,
+            plan:,
+            subscription_at: Time.current,
+            started_at: Time.current,
+            billing_time:,
+            created_at: Time.current,
+            updated_at: Time.current
+          )
+        else
+          # TODO: Fetch all subscriptions based on external_id - part 2
+
+          nil
+        end
       end
     end
   end

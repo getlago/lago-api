@@ -2,10 +2,11 @@
 
 module Fees
   class SubscriptionService < BaseService
-    def initialize(invoice:, subscription:, boundaries:)
+    def initialize(invoice:, subscription:, boundaries:, preview: false)
       @invoice = invoice
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
+      @preview = preview
 
       super(nil)
     end
@@ -16,6 +17,9 @@ module Fees
       new_precise_amount_cents = compute_amount
       new_amount_cents = new_precise_amount_cents.round
       new_fee = initialize_fee(new_amount_cents, new_precise_amount_cents)
+
+      result.fee = new_fee
+      return result if preview
 
       ActiveRecord::Base.transaction do
         new_fee.save!
@@ -30,7 +34,7 @@ module Fees
 
     private
 
-    attr_reader :invoice, :subscription, :boundaries
+    attr_reader :invoice, :subscription, :boundaries, :preview
 
     delegate :customer, :organization, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
