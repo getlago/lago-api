@@ -67,13 +67,13 @@ module V1
       when :stripe
         configuration[:provider_customer_id] = model.stripe_customer&.provider_customer_id
         configuration[:provider_payment_methods] = model.stripe_customer&.provider_payment_methods
-        configuration.merge!(model.stripe_customer&.settings || {})
+        configuration.merge!(model.stripe_customer&.settings&.symbolize_keys || {})
       when :gocardless
         configuration[:provider_customer_id] = model.gocardless_customer&.provider_customer_id
-        configuration.merge!(model.gocardless_customer&.settings || {})
+        configuration.merge!(model.gocardless_customer&.settings&.symbolize_keys || {})
       when :adyen
         configuration[:provider_customer_id] = model.adyen_customer&.provider_customer_id
-        configuration.merge!(model.adyen_customer&.settings || {})
+        configuration.merge!(model.adyen_customer&.settings&.symbolize_keys || {})
       end
 
       configuration

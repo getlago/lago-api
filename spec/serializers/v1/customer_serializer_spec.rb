@@ -65,4 +65,19 @@ RSpec.describe ::V1::CustomerSerializer do
       expect(result['customer']['integration_customers'].count).to eq(1)
     end
   end
+
+  context 'with a stripe customer' do
+    let(:stripe_customer) { create(:stripe_customer, customer:) }
+
+    before do
+      stripe_customer
+      customer.update!(payment_provider: 'stripe')
+    end
+
+    it 'serializes the object' do
+      result = JSON.parse(serializer.to_json)
+      expect(result['customer']['billing_configuration']['provider_customer_id']).to eq(stripe_customer.provider_customer_id)
+      expect(result['customer']['billing_configuration']['provider_payment_methods']).to eq(stripe_customer.provider_payment_methods)
+    end
+  end
 end
