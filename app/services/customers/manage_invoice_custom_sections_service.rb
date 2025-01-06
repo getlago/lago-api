@@ -12,8 +12,8 @@ module Customers
     end
 
     def call
-      return result.not_found_failure!(resource: "customer") unless customer
-      raise_invalid_params if skip_invoice_custom_sections && (section_ids.present? || section_codes.present?)
+        return result.not_found_failure!(resource: "customer") unless customer
+        raise_invalid_params if skip_invoice_custom_sections && !(section_ids || section_codes).nil?
 
       ActiveRecord::Base.transaction do
         if !skip_invoice_custom_sections.nil?

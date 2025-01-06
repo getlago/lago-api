@@ -34,7 +34,8 @@ module V1
         external_salesforce_id: model.external_salesforce_id,
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         billing_configuration:,
-        shipping_address: model.shipping_address
+        shipping_address: model.shipping_address,
+        skip_invoice_custom_sections: model.skip_invoice_custom_sections
       }
 
       payload = payload.merge(metadata)
