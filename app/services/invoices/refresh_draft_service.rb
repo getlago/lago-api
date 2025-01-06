@@ -90,6 +90,9 @@ module Invoices
     attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context, :invoice_subscriptions
 
     def fetch_timestamp
+      timestamp = invoice_subscriptions.first&.timestamp
+      return timestamp if timestamp
+
       fee = invoice.fees.first
       # NOTE: Adding 1 second because of to_i rounding.
       return invoice.created_at + 1.second unless fee&.properties&.[]('timestamp')
