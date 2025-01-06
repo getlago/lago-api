@@ -112,19 +112,6 @@ module Api
         end
       end
 
-      def applicable_invoice_custom_sections
-        customer = current_organization.customers.find_by(external_id: params[:customer_external_id])
-        applicable_invoice_custom_sections = customer.applicable_invoice_custom_sections
-
-        render(
-          json: ::CollectionSerializer.new(
-            applicable_invoice_custom_sections,
-            ::V1::InvoiceCustomSectionSerializer,
-            collection_name: 'applicable_invoice_custom_sections'
-          )
-        )
-      end
-
       private
 
       def create_params
@@ -194,7 +181,7 @@ module Api
           json: ::V1::CustomerSerializer.new(
             customer,
             root_name: 'customer',
-            includes: %i[taxes integration_customers]
+            includes: %i[taxes integration_customers applicable_invoice_custom_sections]
           )
         )
       end
