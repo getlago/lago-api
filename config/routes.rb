@@ -22,13 +22,11 @@ Rails.application.routes.draw do
 
       resources :customers, param: :external_id, only: %i[create index show destroy] do
         get :portal_url
-        get :applicable_invoice_custom_sections
 
         get :current_usage, to: 'customers/usage#current'
         get :past_usage, to: 'customers/usage#past'
 
         post :checkout_url
-        post :update_invoice_custom_sections
 
         scope module: :customers do
           resources :applied_coupons, only: %i[destroy]
@@ -67,7 +65,6 @@ Rails.application.routes.draw do
         put :finalize, on: :member
         put :sync_salesforce_id, on: :member
       end
-      resources :invoice_custom_sections, param: :code, code: /.*/
       resources :payment_requests, only: %i[create index]
       resources :plans, param: :code, code: /.*/
       resources :taxes, param: :code, code: /.*/

@@ -41,6 +41,7 @@ module V1
       payload = payload.merge(taxes) if include?(:taxes)
       payload = payload.merge(vies_check) if include?(:vies_check)
       payload = payload.merge(integration_customers) if include?(:integration_customers)
+      payload = payload.merge(applicable_invoice_custom_sections) if include?(:applicable_invoice_custom_sections)
 
       payload
     end
@@ -96,6 +97,14 @@ module V1
         model.integration_customers,
         ::V1::IntegrationCustomerSerializer,
         collection_name: 'integration_customers'
+      ).serialize
+    end
+
+    def applicable_invoice_custom_sections
+      ::CollectionSerializer.new(
+        model.applicable_invoice_custom_sections,
+        ::V1::InvoiceCustomSectionSerializer,
+        collection_name: 'applicable_invoice_custom_sections'
       ).serialize
     end
   end
