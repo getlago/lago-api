@@ -26,7 +26,7 @@ module Subscriptions
     def self.charge_pay_in_advance_interval(timestamp, subscription)
       date_service = new_instance(
         subscription,
-        Time.zone.at(timestamp) + 1.day,
+        Time.zone.at(timestamp),
         current_usage: true
       )
 
