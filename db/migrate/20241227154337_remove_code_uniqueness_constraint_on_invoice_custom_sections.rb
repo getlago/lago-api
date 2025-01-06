@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddCodeUniquenessConstraintOnInvoiceCustomSections < ActiveRecord::Migration[7.1]
+class RemoveCodeUniquenessConstraintOnInvoiceCustomSections < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
 
   def change
