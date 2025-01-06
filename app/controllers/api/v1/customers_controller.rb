@@ -96,22 +96,6 @@ module Api
         end
       end
 
-      # note: for DunningCampaign we don't have open api actions at all :thinking:
-      def update_invoice_custom_sections
-        customer = current_organization.customers.find_by(external_id: params[:customer_external_id])
-        applicable_invoice_custom_section_ids = current_organization.invoice_custom_sections.where(code: params[:invoice_custom_section_codes]).ids
-        result = ::Customers::UpdateService.call(
-          customer: customer,
-          args: params.permit(:skip_invoice_custom_sections).merge(applicable_invoice_custom_section_ids:)
-        )
-
-        if result.success?
-          render_customer(result.customer)
-        else
-          render_error_response(result)
-        end
-      end
-
       private
 
       def create_params
@@ -139,6 +123,7 @@ module Api
           :net_payment_term,
           :external_salesforce_id,
           :finalize_zero_amount_invoice,
+          :skip_invoice_custom_sections,
           integration_customers: [
             :id,
             :external_customer_id,
@@ -172,7 +157,8 @@ module Api
             :state,
             :country
           ],
-          tax_codes: []
+          tax_codes: [],
+          invoice_custom_section_codes: []
         )
       end
 

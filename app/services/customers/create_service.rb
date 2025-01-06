@@ -84,8 +84,8 @@ module Customers
 
         Customers::ManageInvoiceCustomSectionsService.call(
           customer:,
-          skip_invoice_custom_sections: args[:skip_invoice_custom_sections],
-          section_codes: args[:invoice_custom_section_codes]
+          skip_invoice_custom_sections: params[:skip_invoice_custom_sections],
+          section_codes: params[:invoice_custom_section_codes]
         ).raise_if_error!
 
         if new_customer && params[:metadata]
