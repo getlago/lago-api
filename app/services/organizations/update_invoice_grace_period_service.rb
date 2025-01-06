@@ -24,6 +24,10 @@ module Organizations
           invoice.payment_due_date = grace_period_payment_due_date(invoice)
           invoice.save!
         end
+
+        organization.invoices.ready_to_be_finalized.find_each do |invoice|
+          Invoices::FinalizeJob.perform_later(invoice)
+        end
       end
 
       result.organization = organization
