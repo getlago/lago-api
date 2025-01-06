@@ -39,6 +39,7 @@ module V1
       payload.merge!(applied_taxes) if include?(:applied_taxes)
       payload.merge!(error_details) if include?(:error_details)
       payload.merge!(applied_usage_thresholds) if model.progressive_billing?
+      payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
 
       payload
     end
@@ -110,6 +111,14 @@ module V1
         model.applied_usage_thresholds,
         ::V1::AppliedUsageThresholdSerializer,
         collection_name: 'applied_usage_thresholds'
+      ).serialize
+    end
+
+    def applied_invoice_custom_sections
+      ::CollectionSerializer.new(
+        model.applied_invoice_custom_sections,
+        ::V1::Invoices::AppliedInvoiceCustomSectionSerializer,
+        collection_name: 'applied_invoice_custom_sections'
       ).serialize
     end
   end
