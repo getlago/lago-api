@@ -22,7 +22,7 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
     before do
       invoice_to_be_finalized
       invoice_to_not_be_finalized
-      allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call)
+      allow(Invoices::FinalizeJob).to receive(:perform_later)
     end
 
     it 'updates invoice grace period on customer' do
@@ -36,8 +36,8 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
         result = update_service.call
 
         expect(result.customer.invoice_grace_period).to eq(2)
-        expect(Invoices::RefreshDraftAndFinalizeService).not_to have_received(:call).with(invoice: invoice_to_not_be_finalized)
-        expect(Invoices::RefreshDraftAndFinalizeService).to have_received(:call).with(invoice: invoice_to_be_finalized)
+        expect(Invoices::FinalizeJob).not_to have_received(:perform_later).with(invoice_to_not_be_finalized)
+        expect(Invoices::FinalizeJob).to have_received(:perform_later).with(invoice_to_be_finalized)
       end
     end
 
@@ -76,7 +76,7 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
         travel_to(current_date) do
           update_service.call
 
-          expect(Invoices::RefreshDraftAndFinalizeService).not_to have_received(:call)
+          expect(Invoices::FinalizeJob).not_to have_received(:perform_later)
         end
       end
 
@@ -86,6 +86,18 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
         travel_to(current_date) do
           expect { update_service.call }.not_to change { invoice_to_not_be_finalized.reload.issuing_date }
         end
+      end
+    end
+
+    context 'when clearing grace period' do
+      before do
+        customer.update(invoice_grace_period: 0)
+      end
+
+      let(:grace_period) { nil }
+
+      it 'clears the grace period' do
+        expect { update_service.call }.to change(customer, :invoice_grace_period).from(0).to(nil)
       end
     end
   end
