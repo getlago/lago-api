@@ -388,8 +388,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       it 'puts invoice in failed status' do
         result = pull_taxes_service.call
 
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result).to be_success
         expect(invoice.reload.status).to eq('failed')
       end
 
@@ -412,8 +411,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         it 'puts invoice in failed status' do
           result = pull_taxes_service.call
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result).to be_success
           expect(invoice.reload.status).to eq('failed')
         end
 

@@ -28,7 +28,7 @@ module Invoices
           invoice.status = 'failed' unless invoice.draft?
           invoice.save!
 
-          return result.validation_failure!(errors: {tax_error: [taxes_result.error.code]})
+          return result
         end
 
         provider_taxes = taxes_result.fees
@@ -68,8 +68,6 @@ module Invoices
         result.record_validation_failure!(record: e.record)
       rescue BaseService::FailedResult => e
         e.result
-      rescue => e
-        result.fail_with_error!(e)
       end
 
       private
