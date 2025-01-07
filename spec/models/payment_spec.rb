@@ -3,13 +3,78 @@
 require 'rails_helper'
 
 RSpec.describe Payment, type: :model do
-  subject(:payment) { create(:payment) }
+  subject(:payment) { build(:payment, payment_type:, provider_payment_id:, reference:) }
+
+  let(:payment_type) { 'provider' }
+  let(:provider_payment_id) { SecureRandom.uuid }
+  let(:reference) { nil }
 
   it_behaves_like 'paper_trail traceable'
 
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to belong_to(:payable) }
   it { is_expected.to delegate_method(:customer).to(:payable) }
+  it { is_expected.to validate_presence_of(:payment_type) }
+
+  it do
+    expect(subject)
+      .to define_enum_for(:payment_type)
+      .with_values(Payment::PAYMENT_TYPES)
+      .with_prefix(:payment_type)
+      .backed_by_column_of_type(:enum)
+  end
+
+  describe 'validations' do
+    let(:errors) { payment.errors }
+
+    before { payment.valid? }
+
+    describe 'of reference' do
+      context 'when payment type is provider' do
+        context 'when reference is present' do
+          let(:reference) { '123' }
+
+          it 'adds an error' do
+            expect(errors.where(:reference, :present)).to be_present
+          end
+        end
+
+        context 'when reference is not present' do
+          it 'does not add an error' do
+            expect(errors.where(:reference, :present)).not_to be_present
+          end
+        end
+      end
+
+      context 'when payment type is manual' do
+        let(:payment_type) { 'manual' }
+
+        context 'when reference is not present' do
+          it 'adds an error' do
+            expect(errors[:reference]).to include('value_is_mandatory')
+          end
+        end
+
+        context 'when reference is present' do
+          context 'when reference is less than 40 characters' do
+            let(:reference) { '123' }
+
+            it 'does not add an error' do
+              expect(errors.where(:reference, :blank)).not_to be_present
+            end
+          end
+
+          context 'when reference is more than 40 characters' do
+            let(:reference) { 'a' * 41 }
+
+            it 'adds an error' do
+              expect(errors.where(:reference, :too_long)).to be_present
+            end
+          end
+        end
+      end
+    end
+  end
 
   describe '#should_sync_payment?' do
     subject(:method_call) { payment.should_sync_payment? }

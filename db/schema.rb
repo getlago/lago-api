@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
+ActiveRecord::Schema[7.1].define(version: 2024_12_24_142141) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -23,6 +23,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
   create_enum "customer_type", ["company", "individual"]
   create_enum "inbound_webhook_status", ["pending", "processing", "succeeded", "failed"]
   create_enum "payment_payable_payment_status", ["pending", "processing", "succeeded", "failed"]
+  create_enum "payment_type", ["provider", "manual"]
   create_enum "subscription_invoicing_reason", ["subscription_starting", "subscription_periodic", "subscription_terminating", "in_advance_charge", "in_advance_charge_periodic", "progressive_billing"]
   create_enum "tax_status", ["pending", "succeeded", "failed"]
 
@@ -934,6 +935,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
     t.bigint "negative_amount_cents", default: 0, null: false
     t.bigint "progressive_billing_credit_amount_cents", default: 0, null: false
     t.enum "tax_status", enum_type: "tax_status"
+    t.bigint "total_paid_amount_cents", default: 0, null: false
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["issuing_date"], name: "index_invoices_on_issuing_date"
@@ -1115,11 +1117,14 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_23_154437) do
     t.uuid "payable_id"
     t.jsonb "provider_payment_data", default: {}
     t.enum "payable_payment_status", enum_type: "payment_payable_payment_status"
+    t.enum "payment_type", default: "provider", null: false, enum_type: "payment_type"
+    t.string "reference"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["payable_id", "payable_type"], name: "index_payments_on_payable_id_and_payable_type", unique: true, where: "(payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status]))"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
+    t.index ["payment_type"], name: "index_payments_on_payment_type"
   end
 
   create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
