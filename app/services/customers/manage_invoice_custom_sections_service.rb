@@ -13,6 +13,7 @@ module Customers
 
     def call
         return result.not_found_failure!(resource: "customer") unless customer
+        raise_double_selection if !section_ids.nil? && !section_codes.nil?
         raise_invalid_params if skip_invoice_custom_sections && !(section_ids || section_codes).nil?
 
       ActiveRecord::Base.transaction do
@@ -38,6 +39,10 @@ module Customers
     private
 
     attr_reader :customer, :section_ids, :skip_invoice_custom_sections, :section_codes
+
+    def raise_double_selection
+      result.validation_failure!(errors: {invoice_custom_sections: ['section_ids_and_section_codes_sent_together']})
+    end
 
     def raise_invalid_params
       result.validation_failure!(errors: {invoice_custom_sections: ['skip_sections_and_selected_ids_sent_together']})
