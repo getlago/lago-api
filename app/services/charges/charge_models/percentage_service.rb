@@ -178,7 +178,7 @@ module Charges
       def min_max_adjustment_total_amount
         return BigDecimal(0) unless should_apply_min_max?
 
-        compute_amount_with_transaction_min_max - compute_percentage_amount - compute_fixed_amount
+        BigDecimal(compute_amount_with_transaction_min_max - compute_percentage_amount - compute_fixed_amount)
       end
     end
   end
