@@ -25,7 +25,7 @@ module Customers
         if !section_ids.nil? || !section_codes.nil?
           customer.skip_invoice_custom_sections = false
           return result if customer.applicable_invoice_custom_sections.ids == section_ids ||
-                            customer.applicable_invoice_custom_sections.map(&:code) == section_codes
+            customer.applicable_invoice_custom_sections.map(&:code) == section_codes
 
           assign_selected_sections
         end
@@ -50,11 +50,11 @@ module Customers
 
     def assign_selected_sections
       # Note: when assigning organization's sections, an empty array will be sent
-      unless section_ids.nil?
-        customer.selected_invoice_custom_sections = customer.organization.invoice_custom_sections.where(id: section_ids)
-      else
-        customer.selected_invoice_custom_sections = customer.organization.invoice_custom_sections.where(code: section_codes)
+      if section_ids.nil?
+        return customer.selected_invoice_custom_sections = customer.organization.invoice_custom_sections.where(code: section_codes)
       end
+
+      customer.selected_invoice_custom_sections = customer.organization.invoice_custom_sections.where(id: section_ids)
     end
   end
 end

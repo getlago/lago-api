@@ -266,7 +266,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           sections = json[:customer][:applicable_invoice_custom_sections]
           expect(sections).to be_present
           expect(sections.length).to eq(2)
-          expect(sections.map{|sec| sec[:code]}).to eq(invoice_custom_sections.map(&:code))
+          expect(sections.map { |sec| sec[:code] }).to eq(invoice_custom_sections.map(&:code))
         end
       end
 
