@@ -25,9 +25,8 @@ module Organizations
           invoice.save!
         end
 
-        # NOTE: Finalize related draft invoices.
         organization.invoices.ready_to_be_finalized.find_each do |invoice|
-          Invoices::RefreshDraftAndFinalizeService.call(invoice:)
+          Invoices::FinalizeJob.perform_later(invoice)
         end
       end
 
