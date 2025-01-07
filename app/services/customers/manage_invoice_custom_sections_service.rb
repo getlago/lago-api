@@ -24,8 +24,8 @@ module Customers
 
         if !section_ids.nil? || !section_codes.nil?
           customer.skip_invoice_custom_sections = false
-          return result if customer.applicable_invoice_custom_sections.ids == section_ids ||
-            customer.applicable_invoice_custom_sections.map(&:code) == section_codes
+          return result if customer.selected_invoice_custom_sections.ids == section_ids ||
+            customer.selected_invoice_custom_sections.map(&:code) == section_codes
 
           assign_selected_sections
         end
