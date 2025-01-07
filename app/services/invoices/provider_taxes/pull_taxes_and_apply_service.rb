@@ -64,10 +64,6 @@ module Invoices
         end
 
         result
-      rescue ActiveRecord::RecordInvalid => e
-        result.record_validation_failure!(record: e.record)
-      rescue BaseService::FailedResult => e
-        e.result
       end
 
       private
