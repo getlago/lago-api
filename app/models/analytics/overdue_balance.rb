@@ -49,7 +49,7 @@ module Analytics
             SELECT
               DATE_TRUNC('month', payment_due_date) AS month,
               i.currency,
-              COALESCE(SUM(total_amount_cents), 0) AS total_amount_cents,
+              COALESCE(SUM(total_amount_cents - total_paid_amount_cents), 0) AS total_amount_cents,
               array_agg(DISTINCT i.id) AS ids
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.id
