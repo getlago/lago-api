@@ -16,7 +16,8 @@ module Resolvers
 
     def resolve(page: nil, limit: nil)
       current_organization.invoice_custom_sections.left_outer_joins(:invoice_custom_section_selections).order(
-        Arel.sql('CASE WHEN invoice_custom_section_selections.id IS NOT NULL THEN 0 ELSE 1 END'),
+        Arel.sql('CASE WHEN invoice_custom_section_selections.id IS NOT NULL AND
+                  invoice_custom_section_selections.customer_id IS NULL THEN 0 ELSE 1 END'),
         :name
       ).page(page).per(limit)
     end
