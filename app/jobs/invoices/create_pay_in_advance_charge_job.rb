@@ -12,6 +12,7 @@ module Invoices
 
     retry_on Sequenced::SequenceError
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
+    retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
 
     unique :until_executed, on_conflict: :log
 
