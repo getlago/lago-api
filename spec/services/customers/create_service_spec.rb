@@ -363,7 +363,6 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(customer.skip_invoice_custom_sections).to eq(false)
         end
       end
-
     end
 
     context 'when customer already exists' do
