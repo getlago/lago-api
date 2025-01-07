@@ -28,7 +28,7 @@ module Invoices
           invoice.status = 'failed' unless invoice.draft?
           invoice.save!
 
-          return result.validation_failure!(errors: {tax_error: [taxes_result.error.code]})
+          return result
         end
 
         provider_taxes = taxes_result.fees
