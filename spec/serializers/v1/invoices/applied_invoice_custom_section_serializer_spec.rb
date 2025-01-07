@@ -12,8 +12,7 @@ RSpec.describe V1::Invoices::AppliedInvoiceCustomSectionSerializer, type: :seria
       code: 'custom_code',
       details: 'custom_details',
       display_name: 'Custom Display Name',
-      created_at: Time.current
-    )
+      created_at: Time.current)
   end
 
   describe '#serialize' do
