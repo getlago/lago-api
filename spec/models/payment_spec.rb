@@ -49,6 +49,12 @@ RSpec.describe Payment, type: :model do
       context 'when payment type is manual' do
         let(:payment_type) { 'manual' }
 
+        context 'when reference is not present' do
+          it 'adds an error' do
+            expect(errors[:reference]).to include('value_is_mandatory')
+          end
+        end
+
         context 'when reference is present' do
           context 'when reference is less than 40 characters' do
             let(:reference) { '123' }
