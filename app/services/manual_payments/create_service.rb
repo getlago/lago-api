@@ -2,8 +2,8 @@
 
 module ManualPayments
   class CreateService < BaseService
-    def initialize(invoice:, params:)
-      @invoice = invoice
+    def initialize(organization:, params:)
+      @organization = organization
       @params = params
 
       super
@@ -22,7 +22,8 @@ module ManualPayments
           amount_currency: invoice.currency,
           status: 'succeeded',
           payable_payment_status: 'succeeded',
-          payment_type: :manual
+          payment_type: :manual,
+          created_at: params[:paid_at].present? ? Time.iso8601(params[:paid_at]) : nil
         )
 
         invoice.update!(total_paid_amount_cents: invoice.total_paid_amount_cents + amount_cents)
@@ -43,7 +44,11 @@ module ManualPayments
 
     private
 
-    attr_reader :invoice, :params
+    attr_reader :organization, :params
+
+    def invoice
+      @invoice ||= organization.invoices.find_by(id: params[:invoice_id])
+    end
 
     def check_preconditions
       return result.forbidden_failure! unless License.premium?
