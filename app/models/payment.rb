@@ -18,13 +18,23 @@ class Payment < ApplicationRecord
   validates :payment_type, presence: true
   validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
   validates :reference, absence: true, if: -> { payment_type_provider? }
+  validate :max_invoice_paid_amount_cents, on: :create
+  validate :payment_request_succeeded, on: :create
 
   delegate :customer, to: :payable
 
   enum payable_payment_status: PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h
 
-  validate :max_invoice_paid_amount_cents, on: :create
-  validate :payment_request_succeeded, on: :create
+  scope :for_organization, ->(organization) do
+    invoices_join = ActiveRecord::Base.sanitize_sql_array(
+      ["LEFT JOIN invoices AS i ON i.id = payments.payable_id AND payments.payable_type = 'Invoice' AND i.organization_id = ?", organization.id]
+    )
+    payment_requests_join = ActiveRecord::Base.sanitize_sql_array(
+      ["LEFT JOIN payment_requests AS pr ON pr.id = payments.payable_id AND payments.payable_type = 'PaymentRequest' AND pr.organization_id = ?", organization.id]
+    )
+
+    joins(invoices_join).joins(payment_requests_join).where('i.id IS NOT NULL OR pr.id IS NOT NULL')
+  end
 
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)

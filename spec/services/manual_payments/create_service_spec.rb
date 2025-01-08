@@ -3,12 +3,14 @@
 require "rails_helper"
 
 RSpec.describe ManualPayments::CreateService, type: :service do
-  subject(:service) { described_class.new(invoice:, params:) }
+  subject(:service) { described_class.new(organization:, params:) }
 
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
+  let(:invoice_id) { invoice.id }
   let(:organization) { create(:organization, premium_integrations:) }
   let(:customer) { create(:customer, organization:) }
-  let(:params) { {amount_cents:, reference: "ref1"} }
+  let(:params) { {invoice_id:, amount_cents:, reference: "ref1", paid_at:} }
+  let(:paid_at) { 1.year.ago.iso8601 }
   let(:amount_cents) { 10000 }
 
   describe "#call" do
@@ -45,7 +47,7 @@ RSpec.describe ManualPayments::CreateService, type: :service do
         let(:premium_integrations) { %w[manual_payments] }
 
         context "when invoice does not exist" do
-          let(:invoice) { nil }
+          let(:invoice_id) { SecureRandom.uuid }
 
           it "returns not found failure" do
             result = service.call
@@ -95,10 +97,12 @@ RSpec.describe ManualPayments::CreateService, type: :service do
 
             expect(result).to be_success
             expect(result.payment.payment_type).to eq("manual")
+            expect(result.payment.created_at).to eq(paid_at)
           end
 
           it "updates invoice's total paid amount cents" do
-            expect { service.call }.to change(invoice, :total_paid_amount_cents).from(0).to(amount_cents)
+            result = service.call
+            expect(result.payment.payable.total_paid_amount_cents).to eq(amount_cents)
           end
 
           context "when there is an integration customer" do
@@ -134,7 +138,9 @@ RSpec.describe ManualPayments::CreateService, type: :service do
           end
 
           it "updates invoice's total paid amount cents" do
-            expect { service.call }.to change(invoice, :total_paid_amount_cents).from(0).to(amount_cents)
+            result = service.call
+
+            expect(result.payment.payable.total_paid_amount_cents).to eq(amount_cents)
           end
 
           it "updates invoice's payment status to suceeded" do
