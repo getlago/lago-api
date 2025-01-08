@@ -20,6 +20,7 @@ module Api
 
       def index
         result = PaymentsQuery.call(
+          organization: current_organization,
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
