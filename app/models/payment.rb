@@ -23,10 +23,30 @@ class Payment < ApplicationRecord
 
   enum payable_payment_status: PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h
 
+  validate :max_invoice_paid_amount_cents, on: :create
+  validate :payment_request_succeeded, on: :create
+
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
 
     payable.finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
+  end
+
+  private
+
+  def max_invoice_paid_amount_cents
+    return if !payable.is_a?(Invoice) || payment_type_provider?
+    return if amount_cents + payable.total_paid_amount_cents <= payable.total_amount_cents
+
+    errors.add(:amount_cents, :greater_than)
+  end
+
+  def payment_request_succeeded
+    return if !payable.is_a?(Invoice) || payment_type_provider?
+
+    if payable.payment_requests.where(payment_status: 'succeeded').exists?
+      errors.add(:base, :payment_request_is_already_succeeded)
+    end
   end
 end
 
