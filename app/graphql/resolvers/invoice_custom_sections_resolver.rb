@@ -15,11 +15,12 @@ module Resolvers
     type Types::InvoiceCustomSections::Object.collection_type, null: true
 
     def resolve(page: nil, limit: nil)
-      current_organization.invoice_custom_sections.left_outer_joins(:invoice_custom_section_selections).order(
-        Arel.sql('CASE WHEN invoice_custom_section_selections.id IS NOT NULL AND
-                  invoice_custom_section_selections.customer_id IS NULL THEN 0 ELSE 1 END'),
-        :name
-      ).page(page).per(limit)
+      current_organization.invoice_custom_sections
+        .joins('LEFT JOIN invoice_custom_section_selections ON invoice_custom_sections.id = invoice_custom_section_selections.invoice_custom_section_id AND invoice_custom_section_selections.customer_id is NULL')
+        .order(
+          Arel.sql('CASE WHEN invoice_custom_section_selections.id IS NOT NULL THEN 0 ELSE 1 END'),
+          :name
+        ).page(page).per(limit)
     end
   end
 end

@@ -10,7 +10,7 @@ module V1
         description: model.description,
         details: model.details,
         display_name: model.display_name,
-        selected_for_organization: model.selected_for_organization?,
+        applied_for_organization: model.selected_for_organization?,
         organization: {
           lago_id: model.organization_id
         }
