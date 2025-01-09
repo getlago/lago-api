@@ -88,7 +88,9 @@ es:
     total: Total
     total_credits_with_value: 'Total de créditos con valor: %{credit_amount} créditos'
     total_due: Total debido
-    total_event: Eventos totales
+    total_due_amount: Monto debido
+    total_events: 'Eventos totales: %{count}'
+    total_paid_amount: Monto pagado
     total_unit: 'Total de unidades: %{units}'
     total_unit_interval: 'Total de unidades: %{events_count} evento(s) para %{units}'
     true_up_details: Gasto mínimo de %{min_amount} prorrateado en días de uso
