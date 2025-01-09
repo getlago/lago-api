@@ -25,6 +25,19 @@ class Payment < ApplicationRecord
 
   enum payable_payment_status: PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h
 
+  scope :for_organization, lambda { |organization|
+    invoices_join = ActiveRecord::Base.sanitize_sql_array(
+      ["LEFT JOIN invoices AS i ON i.id = payments.payable_id AND payments.payable_type = 'Invoice' AND i.organization_id = ?", organization.id]
+    )
+    payment_requests_join = ActiveRecord::Base.sanitize_sql_array(
+      ["LEFT JOIN payment_requests AS pr ON pr.id = payments.payable_id AND payments.payable_type = 'PaymentRequest' AND pr.organization_id = ?", organization.id]
+    )
+
+    joins(invoices_join)
+      .joins(payment_requests_join)
+      .where('i.id IS NOT NULL OR pr.id IS NOT NULL')
+  }
+
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
 
@@ -43,9 +56,9 @@ class Payment < ApplicationRecord
   def payment_request_succeeded
     return if !payable.is_a?(Invoice) || payment_type_provider?
 
-    if payable.payment_requests.where(payment_status: 'succeeded').exists?
-      errors.add(:base, :payment_request_is_already_succeeded)
-    end
+    return unless payable.payment_requests.where(payment_status: 'succeeded').exists?
+
+    errors.add(:base, :payment_request_is_already_succeeded)
   end
 end
 
