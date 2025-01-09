@@ -33,9 +33,7 @@ class Payment < ApplicationRecord
       ["LEFT JOIN payment_requests AS pr ON pr.id = payments.payable_id AND payments.payable_type = 'PaymentRequest' AND pr.organization_id = ?", organization.id]
     )
 
-    joins(invoices_join)
-      .joins(payment_requests_join)
-      .where('i.id IS NOT NULL OR pr.id IS NOT NULL')
+    joins(invoices_join).joins(payment_requests_join).where('i.id IS NOT NULL OR pr.id IS NOT NULL')
   }
 
   def should_sync_payment?
