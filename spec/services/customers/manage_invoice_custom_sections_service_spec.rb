@@ -86,7 +86,7 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
 
         it "sets skip_invoice_custom_sections to false" do
           service.call
-          expect(customer.reload.skip_invoice_custom_sections).to be_false
+          expect(customer.reload.skip_invoice_custom_sections).to be false
           expect(customer.selected_invoice_custom_sections.ids).to match_array([])
           expect(customer.applicable_invoice_custom_sections.ids).to match_array(customer.organization.selected_invoice_custom_sections.ids)
         end
@@ -100,7 +100,7 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
 
       it "sets skip_invoice_custom_sections to true" do
         service.call
-        expect(customer.reload.skip_invoice_custom_sections).to be_true
+        expect(customer.reload.skip_invoice_custom_sections).to be true
         expect(customer.selected_invoice_custom_sections).to be_empty
         expect(customer.applicable_invoice_custom_sections).to be_empty
       end

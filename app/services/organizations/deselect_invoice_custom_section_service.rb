@@ -10,6 +10,7 @@ module Organizations
 
     def call
       deselect_for_organization
+      result.section = section
       result
     end
 
@@ -23,7 +24,6 @@ module Organizations
       InvoiceCustomSectionSelection.where(
         organization_id: organization.id, invoice_custom_section_id: section.id
       ).destroy_all
-      result.section = section
     end
   end
 end
