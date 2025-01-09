@@ -36,12 +36,6 @@ class Payment < ApplicationRecord
     joins(invoices_join).joins(payment_requests_join).where('i.id IS NOT NULL OR pr.id IS NOT NULL')
   end
 
-  scope :for_organization, ->(organization) do
-    joins("LEFT JOIN invoices AS i ON i.id = payments.payable_id AND i.organization_id = '#{organization.id}'")
-      .joins("LEFT JOIN payment_requests AS pr ON pr.id = payments.payable_id AND pr.organization_id = '#{organization.id}'")
-      .where('i.id IS NOT NULL OR pr.id IS NOT NULL')
-  end
-
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
 
