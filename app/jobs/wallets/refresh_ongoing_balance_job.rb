@@ -2,7 +2,7 @@
 
 module Wallets
   class RefreshOngoingBalanceJob < ApplicationJob
-    queue_as 'wallets'
+    queue_as 'low_priority'
 
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 

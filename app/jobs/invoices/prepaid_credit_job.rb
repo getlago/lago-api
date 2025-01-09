@@ -2,7 +2,7 @@
 
 module Invoices
   class PrepaidCreditJob < ApplicationJob
-    queue_as 'wallets'
+    queue_as 'high_priority'
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
     unique :until_executed, on_conflict: :log
