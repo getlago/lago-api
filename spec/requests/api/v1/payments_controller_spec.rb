@@ -54,16 +54,19 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
     it "returns organization's payments", :aggregate_failures do
       invoice = create(:invoice, organization:)
+      payment_request = create(:payment_request, organization:)
       first_payment = create(:payment, payable: invoice)
       second_payment = create(:payment, payable: invoice)
+      third_payment = create(:payment, payable: payment_request)
 
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:payments].count).to eq(2)
+      expect(json[:payments].count).to eq(3)
       expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(
         first_payment.id,
-        second_payment.id
+        second_payment.id,
+        third_payment.id
       )
     end
 
