@@ -127,6 +127,28 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
       end
     end
 
+    context 'when payment for a payment request exits' do
+      let(:payment_request) { create(:payment_request, customer:, organization:) }
+      let(:payment) { create(:payment, payable: payment_request) }
+      let(:id) { payment.id }
+
+      before do
+        create(:payment_request_applied_invoice, invoice:, payment_request:)
+      end
+
+      include_examples 'requires API permission', 'payment', 'read'
+
+      it 'returns the payment' do
+        subject
+
+        aggregate_failures do
+          expect(response).to have_http_status(:ok)
+          expect(json[:payment][:lago_id]).to eq(payment.id)
+          expect(json[:payment][:invoice_id].first).to eq(invoice.id)
+        end
+      end
+    end
+
     context 'when payment does not exist' do
       let(:id) { SecureRandom.uuid }
 
