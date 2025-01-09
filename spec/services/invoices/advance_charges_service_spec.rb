@@ -160,6 +160,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         create(
           :fee,
           :succeeded,
+          succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days,
           invoice_id: nil,
           subscription: subscription_2,
           amount_cents: 999,
