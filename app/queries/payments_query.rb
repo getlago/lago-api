@@ -14,12 +14,16 @@ class PaymentsQuery < BaseQuery
   private
 
   def validate_invoice_id(invoice_id)
-    unless invoice_id.is_a?(String) && invoice_id.size == 36
+    unless valid_uuid?(invoice_id)
       result.single_validation_failure!(
         field: :invoice_id,
         error_code: 'value_is_invalid'
       )
     end
+  end
+
+  def valid_uuid?(uuid)
+    !!(uuid =~ /\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\z/)
   end
 
   def base_scope
@@ -35,6 +39,6 @@ class PaymentsQuery < BaseQuery
     SQL
 
     scope.joins(invoices_payment_requests_join)
-      .where('i.id = CAST(:invoice_id AS uuid) OR ipr.invoice_id = CAST(:invoice_id AS uuid)', invoice_id:)
+      .where('i.id = :invoice_id OR ipr.invoice_id = :invoice_id', invoice_id:)
   end
 end
