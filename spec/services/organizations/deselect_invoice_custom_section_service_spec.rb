@@ -10,7 +10,7 @@ RSpec.describe Organizations::DeselectInvoiceCustomSectionService, type: :servic
     let(:section) { create(:invoice_custom_section, organization:) }
 
     context 'when section is not selected for the organization' do
-      it 'selects the section for the organization' do
+      it 'deselects the section for the organization' do
         expect(service_result).to be_success
       end
     end
@@ -23,6 +23,7 @@ RSpec.describe Organizations::DeselectInvoiceCustomSectionService, type: :servic
       it 'deselects the section for the organization' do
         expect { service_result }.to change(organization.selected_invoice_custom_sections, :count).by(-1)
         expect(organization.invoice_custom_sections).to include(section)
+        expect(service_result).to be_success
       end
     end
   end
