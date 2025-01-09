@@ -90,7 +90,9 @@ fr:
     total_credits: Total crédits
     total_credits_with_value: 'Nombre total de crédits: %{credit_amount} crédits'
     total_due: Total dû
+    total_due_amount: Montant dû
     total_events: 'Nombre total d''événements: %{count}'
+    total_paid_amount: Montant payé
     total_unit: 'Nombre total d''unités: %{units}'
     total_unit_interval: 'Nombre total d''unités: %{events_count} événement(s) pour %{units}'
     true_up_details: Dépense minimale de %{min_amount} au prorata des jours d'utilisation
