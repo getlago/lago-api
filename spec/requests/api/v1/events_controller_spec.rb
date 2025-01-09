@@ -234,8 +234,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
   describe 'GET /api/v1/events/:id' do
     subject { get_with_token(organization, "/api/v1/events/#{transaction_id}") }
 
-    let(:event) { create(:event) }
-    let(:organization) { event.organization }
+    let(:event) { create(:event, organization_id: organization.id) }
     let(:transaction_id) { event.transaction_id }
 
     include_examples 'requires API permission', 'event', 'read'
@@ -268,6 +267,34 @@ RSpec.describe Api::V1::EventsController, type: :request do
       it 'returns not found' do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'with clickhouse', clickhouse: true do
+      let(:event) do
+        Clickhouse::EventsRaw.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: metric.code,
+          timestamp: 5.days.ago.to_date,
+          properties: {}
+        )
+      end
+
+      before { organization.update!(clickhouse_events_store: true) }
+
+      it 'returns an event' do
+        subject
+
+        expect(response).to have_http_status(:ok)
+
+        %i[code transaction_id].each do |property|
+          expect(json[:event][property]).to eq event.attributes[property.to_s]
+        end
+
+        expect(json[:event][:lago_subscription_id]).to eq event.subscription_id
+        expect(json[:event][:lago_customer_id]).to eq event.customer_id
       end
     end
   end
