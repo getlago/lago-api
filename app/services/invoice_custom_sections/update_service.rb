@@ -12,9 +12,9 @@ module InvoiceCustomSections
     def call
       invoice_custom_section.update!(update_params)
       if selected
-        SelectService.call(section: invoice_custom_section, organization: invoice_custom_section.organization)
+        Organizations::SelectInvoiceCustomSectionService.call(section: invoice_custom_section)
       else
-        Deselect::ForOrganizationService.call(section: invoice_custom_section)
+        Organizations::DeselectInvoiceCustomSectionService.call(section: invoice_custom_section)
       end
       result.invoice_custom_section = invoice_custom_section
       result

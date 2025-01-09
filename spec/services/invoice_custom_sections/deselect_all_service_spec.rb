@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe InvoiceCustomSections::Deselect::ForAllUsagesService, type: :service do
+RSpec.describe InvoiceCustomSections::DeselectAllService, type: :service do
   describe '#call' do
     subject(:service_result) { described_class.call(section:) }
 
@@ -16,7 +16,7 @@ RSpec.describe InvoiceCustomSections::Deselect::ForAllUsagesService, type: :serv
         customer.selected_invoice_custom_sections << section
       end
 
-      it 'selects the section for the organization' do
+      it 'deselects the section for the organization and customer' do
         expect { service_result }.to change(organization.selected_invoice_custom_sections, :count).from(1).to(0)
           .and change(customer.selected_invoice_custom_sections, :count).from(1).to(0)
         expect(InvoiceCustomSectionSelection.count).to eq(0)
@@ -24,7 +24,7 @@ RSpec.describe InvoiceCustomSections::Deselect::ForAllUsagesService, type: :serv
     end
 
     context 'when the section is not selected' do
-      it 'selects the section for the organization' do
+      it 'does not update anything' do
         service_result
         expect(InvoiceCustomSectionSelection.count).to eq(0)
       end

@@ -12,7 +12,7 @@ module InvoiceCustomSections
 
       ActiveRecord::Base.transaction do
         invoice_custom_section.discard
-        Deselect::ForAllUsagesService.call(section: invoice_custom_section).raise_if_error!
+        DeselectAllService.call(section: invoice_custom_section).raise_if_error!
         result.invoice_custom_section = invoice_custom_section
         result
       end
