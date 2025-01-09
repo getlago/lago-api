@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::AdvanceChargesService, type: :service do
-  subject(:invoice_service) { described_class.new(subscriptions:, billing_at:) }
+  subject(:invoice_service) do
+    described_class.new(initial_subscriptions: subscriptions, billing_at:)
+  end
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -116,6 +118,69 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
           expect(result).to be_success
           expect(result.invoice).to be_nil
         end
+      end
+    end
+
+    context "when there is a successful non invoiceable paid in advance fees" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+
+      let(:charge) do
+        create(
+          :charge,
+          plan:,
+          billable_metric:,
+          prorated: true,
+          pay_in_advance: true,
+          invoiceable: false,
+          regroup_paid_fees: "invoice",
+          properties: {amount: "1"}
+        )
+      end
+
+      let(:subscription_2) do
+        create(:subscription, {
+          external_id: subscription.external_id,
+          customer: subscription.customer,
+          status: :terminated
+        })
+      end
+
+      let(:paid_in_advance_fee) do
+        create(
+          :fee,
+          :succeeded,
+          invoice_id: nil,
+          subscription: subscription_2,
+          amount_cents: 999,
+          properties: fee_boundaries,
+          charge:
+        )
+      end
+
+      before { paid_in_advance_fee }
+
+      it 'creates invoices' do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to be_a Invoice
+        expect(result.invoice.fees.count).to eq 1
+        expect(result.invoice.total_amount_cents).to eq(paid_in_advance_fee.amount_cents)
+
+        expect(result.invoice)
+          .to be_finalized
+          .and have_attributes(
+            invoice_type: 'advance_charges',
+            currency: 'EUR',
+            issuing_date: billing_at.to_date,
+            skip_charges: true
+          )
+
+        expect(result.invoice.invoice_subscriptions.count).to eq(2)
+        sub = result.invoice.invoice_subscriptions.first
+        expect(sub.charges_to_datetime).to match_datetime fee_boundaries[:charges_to_datetime]
+        expect(sub.charges_from_datetime).to match_datetime fee_boundaries[:charges_from_datetime]
+        expect(sub.invoicing_reason).to eq 'in_advance_charge_periodic'
       end
     end
 
