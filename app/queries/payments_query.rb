@@ -13,12 +13,23 @@ class PaymentsQuery < BaseQuery
 
   private
 
+  def validate_invoice_id(invoice_id)
+    unless invoice_id.is_a?(String) && invoice_id.size == 36
+      result.single_validation_failure!(
+        field: :invoice_id,
+        error_code: 'value_is_invalid'
+      )
+    end
+  end
+
   def base_scope
     Payment.for_organization(organization)
   end
 
   def filter_by_invoice(scope)
     invoice_id = filters.invoice_id
+    validate_invoice_id(invoice_id)
+
     invoices_payment_requests_join = <<~SQL
       LEFT JOIN invoices_payment_requests AS ipr ON ipr.payment_request_id = pr.id
     SQL
