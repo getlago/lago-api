@@ -12,7 +12,7 @@ class Payment < ApplicationRecord
   has_many :refunds
   has_many :integration_resources, as: :syncable
 
-  PAYMENT_TYPES = {provider: "provider", manual: "manual"}
+  PAYMENT_TYPES = {provider: 'provider', manual: 'manual'}.freeze
   attribute :payment_type, :string
   enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
   validates :payment_type, presence: true
@@ -24,17 +24,6 @@ class Payment < ApplicationRecord
   delegate :customer, to: :payable
 
   enum payable_payment_status: PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h
-
-  scope :for_organization, ->(organization) do
-    invoices_join = ActiveRecord::Base.sanitize_sql_array(
-      ["LEFT JOIN invoices AS i ON i.id = payments.payable_id AND payments.payable_type = 'Invoice' AND i.organization_id = ?", organization.id]
-    )
-    payment_requests_join = ActiveRecord::Base.sanitize_sql_array(
-      ["LEFT JOIN payment_requests AS pr ON pr.id = payments.payable_id AND payments.payable_type = 'PaymentRequest' AND pr.organization_id = ?", organization.id]
-    )
-
-    joins(invoices_join).joins(payment_requests_join).where('i.id IS NOT NULL OR pr.id IS NOT NULL')
-  end
 
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
