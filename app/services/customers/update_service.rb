@@ -119,7 +119,7 @@ module Customers
         Customers::ManageInvoiceCustomSectionsService.call(
           customer:,
           skip_invoice_custom_sections: args[:skip_invoice_custom_sections],
-          section_ids: args[:selected_invoice_custom_section_ids]
+          section_ids: args[:applicable_invoice_custom_section_ids]
         ).raise_if_error!
 
         customer.save!

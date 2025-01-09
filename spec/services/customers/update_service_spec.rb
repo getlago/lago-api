@@ -337,7 +337,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         let(:update_args) do
           {
             id: customer.id,
-            selected_invoice_custom_section_ids: []
+            applicable_invoice_custom_section_ids: []
           }
         end
 
@@ -353,7 +353,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         let(:update_args) do
           {
             id: customer.id,
-            selected_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
+            applicable_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
           }
         end
 
@@ -368,7 +368,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         let(:update_args) do
           {
             id: customer.id,
-            selected_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
+            applicable_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
           }
         end
 
@@ -382,12 +382,12 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context 'when sending both: skip_invoice_custom_sections and selected_invoice_custom_section_ids' do
+      context 'when sending both: skip_invoice_custom_sections and applicable_invoice_custom_section_ids' do
         let(:update_args) do
           {
             id: customer.id,
             skip_invoice_custom_sections: true,
-            selected_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
+            applicable_invoice_custom_section_ids: invoice_custom_sections[1..2].map(&:id)
           }
         end
 

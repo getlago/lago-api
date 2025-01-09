@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_12_24_142141) do
+ActiveRecord::Schema[7.1].define(version: 2024_12_27_161927) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -853,7 +853,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_24_142141) do
     t.datetime "deleted_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["organization_id", "code"], name: "index_invoice_custom_sections_on_organization_id_and_code", unique: true
+    t.index ["organization_id", "code"], name: "index_invoice_custom_sections_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id", "deleted_at"], name: "idx_on_organization_id_deleted_at_225e3f789d"
     t.index ["organization_id"], name: "index_invoice_custom_sections_on_organization_id"
   end

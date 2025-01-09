@@ -92,6 +92,10 @@ module Types
 
       field :finalize_zero_amount_invoice, Types::Customers::FinalizeZeroAmountInvoiceEnum, null: true, description: 'Options for handling invoices with a zero total amount.'
 
+      field :applicable_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true, description: 'Invoice custom sections applicable to the customer'
+      field :has_overwritten_invoice_custom_sections_selection, Boolean, null: true, description: 'Define if the customer has custom invoice custom sections selection'
+      field :skip_invoice_custom_sections, Boolean, null: true, description: 'Skip invoice custom sections for the customer'
+
       def invoices
         object.invoices.visible.order(created_at: :desc)
       end
@@ -144,6 +148,10 @@ module Types
           id: "#{object&.id}-c0nf",
           document_locale: object&.document_locale
         }
+      end
+
+      def has_overwritten_invoice_custom_sections_selection
+        !object.skip_invoice_custom_sections && object.selected_invoice_custom_sections.any?
       end
     end
   end
