@@ -53,7 +53,7 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
       expect(subscription.fees.charge.where(invoice_id: nil).count).to eq 5
       subscription.fees.charge.order(created_at: :asc).limit(3).update!(
         payment_status: :succeeded,
-        succeeded_at: Time.current
+        succeeded_at: DateTime.new(2024, 6, 20, 0, 10)
       )
       travel_to(DateTime.new(2024, 7, 1, 0, 10)) do
         perform_billing
