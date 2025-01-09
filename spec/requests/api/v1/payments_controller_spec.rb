@@ -103,6 +103,8 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
         end
       end
     end
+
+    xcontext "with payment request and with invoice as a filter"
   end
 
   describe 'GET /api/v1/payments/:id' do
