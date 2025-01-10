@@ -70,7 +70,6 @@ module Invoices
       end
 
       format_usage
-      # Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
     end
 
     def add_charge_fees
