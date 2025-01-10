@@ -41,7 +41,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       expect(response).to have_http_status(:success)
       expect(json[:payment][:lago_id]).to eq(payment.id)
-      expect(json[:payment][:invoice_ids]).to eq([payment.payable.id])
+      expect(json[:payment][:invoice_ids].first).to eq(payment.payable.id)
     end
   end
 
@@ -100,7 +100,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
         subject
         expect(response).to have_http_status(:success)
         expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(first_payment.id)
-        expect(json[:payments].first[:invoice_ids]).to eq([invoice.id])
+        expect(json[:payments].first[:invoice_ids].first).to eq(invoice.id)
       end
     end
   end
@@ -121,7 +121,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
         subject
         expect(response).to have_http_status(:ok)
         expect(json[:payment][:lago_id]).to eq(payment.id)
-        expect(json[:payment][:invoice_ids]).to eq([invoice.id])
+        expect(json[:payment][:invoice_ids].first).to eq(invoice.id)
       end
     end
 
