@@ -32,7 +32,12 @@ class Customer < ApplicationRecord
 
   has_many :subscriptions
   has_many :events
-  has_many :invoices
+
+  has_many :received_invoices, class_name: "Invoice", as: :recipient
+
+  # to migrate from invoices to received_invoices
+  alias invoices received_invoices
+
   has_many :applied_coupons
   has_many :metadata, class_name: 'Metadata::CustomerMetadata', dependent: :destroy
   has_many :coupons, through: :applied_coupons

@@ -17,7 +17,13 @@ class Organization < ApplicationRecord
   has_many :plans
   has_many :customers
   has_many :subscriptions, through: :customers
+
+  # all invoices within the organization scope
   has_many :invoices
+
+  has_many :issued_invoices, class_name: "Invoice", as: :issuer
+  has_many :received_invoices, class_name: "Invoice", as: :recipient
+
   has_many :credit_notes, through: :invoices
   has_many :fees, through: :subscriptions
   has_many :events

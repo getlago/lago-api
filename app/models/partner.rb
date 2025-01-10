@@ -1,5 +1,7 @@
 class Partner < ApplicationRecord
   belongs_to :organization
+
+  has_many :issued_invoices, class_name: "Invoice", as: :issuer
 end
 
 # == Schema Information

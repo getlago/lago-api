@@ -15,6 +15,10 @@ class Invoice < ApplicationRecord
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
+
+  belongs_to :issuer, polymorphic: true
+  belongs_to :recipient, -> { with_discarded }, polymorphic: true
+
   belongs_to :organization
 
   has_many :fees
@@ -462,6 +466,7 @@ end
 #  fees_amount_cents                       :bigint           default(0), not null
 #  file                                    :string
 #  invoice_type                            :integer          default("subscription"), not null
+#  issuer_type                             :string
 #  issuing_date                            :date
 #  net_payment_term                        :integer          default(0), not null
 #  number                                  :string           default(""), not null
@@ -474,6 +479,7 @@ end
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null
+#  recipient_type                          :string
 #  skip_charges                            :boolean          default(FALSE), not null
 #  status                                  :integer          default("finalized"), not null
 #  sub_total_excluding_taxes_amount_cents  :bigint           default(0), not null
@@ -489,19 +495,23 @@ end
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
 #  customer_id                             :uuid
+#  issuer_id                               :uuid
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
+#  recipient_id                            :uuid
 #  sequential_id                           :integer
 #
 # Indexes
 #
 #  index_invoices_on_customer_id                    (customer_id)
 #  index_invoices_on_customer_id_and_sequential_id  (customer_id,sequential_id) UNIQUE
+#  index_invoices_on_issuer                         (issuer_type,issuer_id)
 #  index_invoices_on_issuing_date                   (issuing_date)
 #  index_invoices_on_number                         (number)
 #  index_invoices_on_organization_id                (organization_id)
 #  index_invoices_on_payment_overdue                (payment_overdue)
 #  index_invoices_on_ready_to_be_refreshed          (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
+#  index_invoices_on_recipient                      (recipient_type,recipient_id)
 #  index_invoices_on_sequential_id                  (sequential_id)
 #  index_invoices_on_status                         (status)
 #
