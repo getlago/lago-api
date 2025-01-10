@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_12_27_161927) do
+ActiveRecord::Schema[7.1].define(version: 2025_01_10_091651) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1048,6 +1048,14 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_27_161927) do
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
 
+  create_table "partners", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_partners_on_organization_id"
+  end
+
   create_table "password_resets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "user_id", null: false
     t.string "token", null: false
@@ -1464,6 +1472,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_12_27_161927) do
   add_foreign_key "lifetime_usages", "subscriptions"
   add_foreign_key "memberships", "organizations"
   add_foreign_key "memberships", "users"
+  add_foreign_key "partners", "organizations"
   add_foreign_key "password_resets", "users"
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
