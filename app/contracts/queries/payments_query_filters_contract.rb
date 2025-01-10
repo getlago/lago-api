@@ -9,7 +9,7 @@ module Queries
     end
 
     rule(filters: :invoice_id) do
-      next if value.nil? || value.empty? # Skip validation for nil or empty values
+      next if value.blank? # Skip validation for nil or empty values
       key.failure('must be a valid UUID') unless valid_uuid?(value)
     end
 
