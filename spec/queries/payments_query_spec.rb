@@ -58,6 +58,21 @@ RSpec.describe PaymentsQuery, type: :query do
     end
   end
 
+  context "when filtering by invoice_id of a payment request" do
+    let(:filters) { {invoice_id: invoice_pr.id} }
+    let(:invoice_pr) { create(:invoice, organization:) }
+
+    before do
+      create(:payment_request_applied_invoice, invoice: invoice_pr, payment_request:)
+    end
+
+    it "returns only payments for the specified invoice" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).to include(payment_three.id)
+    end
+  end
+
   context "when filtering with an invalid invoice_id" do
     let(:filters) { {invoice_id: "invalid-uuid"} }
 
