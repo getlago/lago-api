@@ -12,7 +12,8 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
       payment_method: 'card',
       card_location: 'domestic',
       scheme: 'visa',
-      card_type: 'credit'
+      card_type: 'credit',
+      card_number: 2
     }
   end
 
@@ -35,6 +36,7 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
   let(:card_location) { create(:billable_metric_filter, billable_metric:, key: 'card_location', values: %i[domestic]) }
   let(:scheme) { create(:billable_metric_filter, billable_metric:, key: 'scheme', values: %i[visa mastercard]) }
   let(:card_type) { create(:billable_metric_filter, billable_metric:, key: 'card_type', values: %i[credit debit]) }
+  let(:card_number) { create(:billable_metric_filter, billable_metric:, key: 'card_number', values: %i[1 2 3]) }
 
   let(:filter1) { create(:charge_filter, charge:) }
   let(:filter1_values) do
@@ -61,7 +63,8 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
         billable_metric_filter: scheme,
         charge_filter: filter2
       ),
-      create(:charge_filter_value, values: ['credit'], billable_metric_filter: card_type, charge_filter: filter2)
+      create(:charge_filter_value, values: ['credit'], billable_metric_filter: card_type, charge_filter: filter2),
+      create(:charge_filter_value, values: ['2'], billable_metric_filter: card_number, charge_filter: filter2)
     ]
   end
 
