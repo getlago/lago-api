@@ -546,25 +546,53 @@ RSpec.describe InvoicesQuery, type: :query do
   end
 
   context "when metadata filters applied" do
-    let(:filters) do
-      {
-        metadata: matching_invoice.metadata.to_h { |item| [item.key, item.value] }
-      }
-    end
+    let(:filters) { {metadata:} }
 
-    let!(:matching_invoice) { create(:invoice, organization:) }
+    context "when single filter provided" do
+      let(:metadata) { {red: 5} }
 
-    before do
-      metadata = create_pair(:invoice_metadata, invoice: matching_invoice)
+      let!(:matching_invoice) { create(:invoice, organization:) }
 
-      create(:invoice, organization:) do |invoice|
-        create(:invoice_metadata, invoice:, key: metadata.first.key, value: metadata.first.value)
+      before do
+        create(:invoice_metadata, invoice: matching_invoice, key: :red, value: 5)
+
+        create(:invoice, organization:) do |invoice|
+          create(:invoice_metadata, invoice:)
+        end
+      end
+
+      it "returns invoices with matching metadata filters" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to contain_exactly matching_invoice.id
       end
     end
 
-    it "returns invoices with matching metadata filters" do
-      expect(result).to be_success
-      expect(result.invoices.pluck(:id)).to contain_exactly matching_invoice.id
+    context "when multiple filters provided" do
+      let(:metadata) do
+        {
+          red: 5,
+          orange: 3
+        }
+      end
+
+      let!(:matching_invoices) { create_pair(:invoice, organization:) }
+
+      before do
+        matching_invoices.each do |invoice|
+          metadata.each do |key, value|
+            create(:invoice_metadata, invoice:, key:, value:)
+          end
+        end
+
+        create(:invoice, organization:) do |invoice|
+          create(:invoice_metadata, invoice:, key: :red, value: 5)
+        end
+      end
+
+      it "returns invoices with matching metadata filters" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array matching_invoices.pluck(:id)
+      end
     end
   end
 
