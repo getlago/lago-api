@@ -73,6 +73,32 @@ RSpec.describe PaymentsQuery, type: :query do
     end
   end
 
+  context "when filtering by external_customer_id" do
+    let(:filters) { {external_customer_id: customer.external_id} }
+    let(:customer) { create(:customer) }
+    let(:new_invoice) { create(:invoice, organization:, customer:) }
+    let(:new_payment) { create(:payment, payable: new_invoice) }
+
+    before do
+      new_payment
+    end
+
+    it "returns only payments for the specified external_customer_id" do
+      expect(result).to be_success
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).to include(new_payment.id)
+    end
+  end
+
+  context "when filtering by an invalid external_customer_id" do
+    let(:filters) { {external_customer_id: "invalid-external-id"} }
+
+    it "returns an empty result set" do
+      expect(result).to be_success
+      expect(returned_ids).to be_empty
+    end
+  end
+
   context "when filtering with an invalid invoice_id" do
     let(:filters) { {invoice_id: "invalid-uuid"} }
 
