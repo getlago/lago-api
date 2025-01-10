@@ -105,10 +105,10 @@ class InvoicesQuery < BaseQuery
     subquery = base_scope
 
     filters.metadata.each_with_index do |(key, value), index|
-      if index.zero?
-        subquery = base_scope.where(metadata: {key:, value:})
+      subquery = if index.zero?
+        base_scope.where(metadata: {key:, value:})
       else
-        subquery = subquery.or(base_scope.where(metadata: {key:, value:}))
+        subquery.or(base_scope.where(metadata: {key:, value:}))
       end
     end
 
