@@ -20,6 +20,7 @@ module Api
 
       def index
         result = PaymentsQuery.call(
+          organization: current_organization,
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
@@ -42,14 +43,7 @@ module Api
       end
 
       def show
-        payment_of_invoice = Payment.of_invoice(organization: current_organization)
-          .find_by(id: params[:id])
-
-        payment_of_payment_request = Payment.of_payment_request(organization: current_organization)
-          .find_by(id: params[:id])
-
-        payment = payment_of_invoice || payment_of_payment_request
-
+        payment = Payment.for_organization(current_organization).find_by(id: params[:id])
         return not_found_error(resource: "payment") unless payment
 
         render_payment(payment)

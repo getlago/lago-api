@@ -54,16 +54,19 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
     it "returns organization's payments", :aggregate_failures do
       invoice = create(:invoice, organization:)
+      payment_request = create(:payment_request, organization:)
       first_payment = create(:payment, payable: invoice)
       second_payment = create(:payment, payable: invoice)
+      third_payment = create(:payment, payable: payment_request)
 
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:payments].count).to eq(2)
+      expect(json[:payments].count).to eq(3)
       expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(
         first_payment.id,
-        second_payment.id
+        second_payment.id,
+        third_payment.id
       )
     end
 
@@ -95,12 +98,9 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       it "returns invoices's payments", :aggregate_failures do
         subject
-
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(first_payment.id)
-          expect(json[:payments].first[:invoice_id]).to eq(invoice.id)
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(first_payment.id)
+        expect(json[:payments].first[:invoice_id]).to eq(invoice.id)
       end
     end
   end
@@ -119,11 +119,28 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       it 'returns the payment' do
         subject
+        expect(response).to have_http_status(:ok)
+        expect(json[:payment][:lago_id]).to eq(payment.id)
+        expect(json[:payment][:invoice_id]).to eq(invoice.id)
+      end
+    end
 
-        aggregate_failures do
-          expect(response).to have_http_status(:ok)
-          expect(json[:payment][:lago_id]).to eq(payment.id)
-        end
+    context 'when payment for a payment request exits' do
+      let(:payment_request) { create(:payment_request, customer:, organization:) }
+      let(:payment) { create(:payment, payable: payment_request) }
+      let(:id) { payment.id }
+
+      before do
+        create(:payment_request_applied_invoice, invoice:, payment_request:)
+      end
+
+      include_examples 'requires API permission', 'payment', 'read'
+
+      it 'returns the payment' do
+        subject
+        expect(response).to have_http_status(:ok)
+        expect(json[:payment][:lago_id]).to eq(payment.id)
+        expect(json[:payment][:invoice_id].first).to eq(invoice.id)
       end
     end
 
@@ -132,7 +149,6 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       it 'returns a not found error' do
         subject
-
         expect(response).to have_http_status(:not_found)
       end
     end
