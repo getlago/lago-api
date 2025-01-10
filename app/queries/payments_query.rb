@@ -35,10 +35,9 @@ class PaymentsQuery < BaseQuery
     validate_invoice_id(invoice_id)
 
     invoices_payment_requests_join = <<~SQL
-      LEFT JOIN invoices_payment_requests AS ipr ON ipr.payment_request_id = pr.id
+      LEFT JOIN invoices_payment_requests ON invoices_payment_requests.payment_request_id = payment_requests.id
     SQL
-
     scope.joins(invoices_payment_requests_join)
-      .where('i.id = :invoice_id OR ipr.invoice_id = :invoice_id', invoice_id:)
+      .where('invoices.id = :invoice_id OR invoices_payment_requests.invoice_id = :invoice_id', invoice_id: invoice_id)
   end
 end

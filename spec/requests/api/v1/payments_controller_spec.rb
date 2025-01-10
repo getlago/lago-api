@@ -98,12 +98,9 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       it "returns invoices's payments", :aggregate_failures do
         subject
-
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(first_payment.id)
-          expect(json[:payments].first[:invoice_id]).to eq(invoice.id)
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(first_payment.id)
+        expect(json[:payments].first[:invoice_id]).to eq(invoice.id)
       end
     end
   end
@@ -122,11 +119,8 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       it 'returns the payment' do
         subject
-
-        aggregate_failures do
-          expect(response).to have_http_status(:ok)
-          expect(json[:payment][:lago_id]).to eq(payment.id)
-        end
+        expect(response).to have_http_status(:ok)
+        expect(json[:payment][:lago_id]).to eq(payment.id)
       end
     end
 
@@ -143,12 +137,9 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       it 'returns the payment' do
         subject
-
-        aggregate_failures do
-          expect(response).to have_http_status(:ok)
-          expect(json[:payment][:lago_id]).to eq(payment.id)
-          expect(json[:payment][:invoice_id].first).to eq(invoice.id)
-        end
+        expect(response).to have_http_status(:ok)
+        expect(json[:payment][:lago_id]).to eq(payment.id)
+        expect(json[:payment][:invoice_id].first).to eq(invoice.id)
       end
     end
 
@@ -157,7 +148,6 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       it 'returns a not found error' do
         subject
-
         expect(response).to have_http_status(:not_found)
       end
     end

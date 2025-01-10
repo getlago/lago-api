@@ -26,13 +26,20 @@ class Payment < ApplicationRecord
   enum payable_payment_status: PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h
 
   scope :for_organization, lambda { |organization|
-    invoices_join = ActiveRecord::Base.sanitize_sql_array(
-      ["LEFT JOIN invoices AS i ON i.id = payments.payable_id AND payments.payable_type = 'Invoice' AND i.organization_id = ?", organization.id]
-    )
-    payment_requests_join = ActiveRecord::Base.sanitize_sql_array(
-      ["LEFT JOIN payment_requests AS pr ON pr.id = payments.payable_id AND payments.payable_type = 'PaymentRequest' AND pr.organization_id = ?", organization.id]
-    )
-    joins(invoices_join).joins(payment_requests_join).where('i.id IS NOT NULL OR pr.id IS NOT NULL')
+    sanitized_org_id = ActiveRecord::Base.connection.quote(organization.id)
+
+    payables_join = <<~SQL
+      LEFT JOIN invoices
+        ON invoices.id = payments.payable_id
+        AND payments.payable_type = 'Invoice'
+        AND invoices.organization_id = #{sanitized_org_id}
+      LEFT JOIN payment_requests
+        ON payment_requests.id = payments.payable_id
+        AND payments.payable_type = 'PaymentRequest'
+        AND payment_requests.organization_id = #{sanitized_org_id}
+    SQL
+
+    joins(payables_join).where('invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL')
   }
 
   def should_sync_payment?
