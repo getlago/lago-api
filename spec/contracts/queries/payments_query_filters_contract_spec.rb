@@ -23,14 +23,63 @@ RSpec.describe Queries::PaymentsQueryFiltersContract, type: :contract do
         expect(result.success?).to be(true)
       end
     end
+
+    context "when external_customer_id is valid" do
+      let(:filters) { {external_customer_id: "valid_string"} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+    end
+
+    context "when external_customer_id is blank" do
+      let(:filters) { {external_customer_id: nil} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+    end
+
+    context "when both invoice_id and external_customer_id are valid" do
+      let(:filters) { {invoice_id: "7b199d93-2663-4e68-beca-203aefcd019b", external_customer_id: "valid_string"} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+    end
   end
 
   context "when filters are invalid" do
-    it "is invalid when invoice_id is not a UUID" do
-      filters[:invoice_id] = "invalid_uuid"
+    context "when invoice_id is not a UUID" do
+      let(:filters) { {invoice_id: "invalid_uuid"} }
 
-      expect(result.success?).to be(false)
-      expect(result.errors.to_h).to include(filters: {invoice_id: ["must be a valid UUID"]})
+      it "is invalid" do
+        expect(result.success?).to be(false)
+        expect(result.errors.to_h).to include(filters: {invoice_id: ["must be a valid UUID"]})
+      end
+    end
+
+    context "when external_customer_id is not a string" do
+      let(:filters) { {external_customer_id: 123} }
+
+      it "is invalid" do
+        expect(result.success?).to be(false)
+        expect(result.errors.to_h).to include(filters: {external_customer_id: ["must be a string"]})
+      end
+    end
+
+    context "when both invoice_id and external_customer_id are invalid" do
+      let(:filters) { {invoice_id: "invalid_uuid", external_customer_id: 123} }
+
+      it "is invalid" do
+        expect(result.success?).to be(false)
+        expect(result.errors.to_h).to include(
+          filters: {
+            invoice_id: ["must be a valid UUID"],
+            external_customer_id: ["must be a string"]
+          }
+        )
+      end
     end
   end
 end
