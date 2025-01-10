@@ -544,4 +544,58 @@ RSpec.describe InvoicesQuery, type: :query do
       end
     end
   end
+
+  context "when metadata filters applied" do
+    let(:filters) do
+      {
+        metadata: matching_invoice.metadata.to_h { |item| [item.key, item.value] }
+      }
+    end
+
+    let!(:matching_invoice) { create(:invoice, organization:) }
+
+    before do
+      metadata = create_pair(:invoice_metadata, invoice: matching_invoice)
+
+      create(:invoice, organization:) do |invoice|
+        create(:invoice_metadata, invoice:, key: metadata.first.key, value: metadata.first.value)
+      end
+    end
+
+    it "returns invoices with matching metadata filters" do
+      expect(result).to be_success
+      expect(result.invoices.pluck(:id)).to contain_exactly matching_invoice.id
+    end
+  end
+
+  context "with multiple filters applied at the same time" do
+    let(:search_term) { invoice.number.first(5) }
+
+    let(:filters) do
+      {
+        currency: invoice.currency,
+        customer_external_id: invoice.customer.external_id,
+        customer_id: invoice.customer.id,
+        invoice_type: invoice.invoice_type,
+        issuing_date_from: invoice.issuing_date,
+        issuing_date_to: invoice.issuing_date,
+        status: invoice.status,
+        payment_status: invoice.payment_status,
+        payment_dispute_lost: invoice.payment_dispute_lost_at.present?,
+        payment_overdue: invoice.payment_overdue,
+        amount_from: invoice.total_amount_cents,
+        amount_to: invoice.total_amount_cents,
+        metadata: invoice.metadata.to_h { |item| [item.key, item.value] }
+      }
+    end
+
+    let!(:invoice) { create(:invoice, currency: "EUR", organization:) }
+
+    before { create(:invoice, currency: "USD", organization:) }
+
+    it "returns invoices matching all provided filters" do
+      expect(result).to be_success
+      expect(result.invoices.pluck(:id)).to contain_exactly invoice.id
+    end
+  end
 end

@@ -61,7 +61,8 @@ module Api
             customer_external_id: params[:external_customer_id],
             invoice_type: params[:invoice_type],
             issuing_date_from: (Date.strptime(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
-            issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to]))
+            issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
+            metadata: params[:metadata]&.permit!.to_h
           }
         )
 

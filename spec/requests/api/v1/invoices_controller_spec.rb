@@ -504,6 +504,32 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].pluck(:lago_id)).to match_array invoices[1..3].pluck(:id)
       end
     end
+
+    context 'with metadata filters' do
+      let(:params) do
+        metadata = matching_invoice.metadata.first
+
+        {
+          metadata: {
+            metadata.key => metadata.value
+          }
+        }
+      end
+
+      let(:matching_invoice) { create(:invoice, organization:) }
+
+      before do
+        create(:invoice_metadata, invoice: matching_invoice)
+        create(:invoice, organization:)
+      end
+
+      it 'returns invoices with matching metadata filters' do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].pluck(:lago_id)).to contain_exactly matching_invoice.id
+      end
+    end
   end
 
   describe 'PUT /api/v1/invoices/:id/refresh' do

@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :invoice_metadata, class: 'Metadata::InvoiceMetadata' do
     invoice
 
-    key { 'lead_name' }
-    value { 'John Doe' }
+    key { Faker::Commerce.color }
+    value { rand(100) }
   end
 end
