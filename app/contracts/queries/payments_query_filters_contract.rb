@@ -5,6 +5,7 @@ module Queries
     params do
       required(:filters).hash do
         optional(:invoice_id).maybe(:string)
+        optional(:external_customer_id).maybe(:string)
       end
     end
 

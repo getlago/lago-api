@@ -61,7 +61,7 @@ module Api
       end
 
       def index_filters
-        params.permit(:invoice_id)
+        params.permit(:invoice_id, :external_customer_id)
       end
 
       def render_payment(payment)
