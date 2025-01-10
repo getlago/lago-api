@@ -44,7 +44,8 @@ module Invoices
         result
       rescue LagoHttpClient::HttpError => e
         deliver_error_webhook(e)
-        result.service_failure!(code: e.error_code, message: e.error_body)
+
+        result.third_party_failure!(third_party: "Cashfree", error_message: e.error_body)
       end
 
       private

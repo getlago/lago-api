@@ -87,5 +87,39 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService, type: :service do
         end
       end
     end
+
+    context 'when provider service return a third party error' do
+      let(:payment_provider) { 'cashfree' }
+      let(:code) { 'cashfree_1' }
+
+      let(:payment_provider_service) { instance_double(PaymentRequests::Payments::CashfreeService) }
+
+      let(:error_result) do
+        BaseService::Result.new.tap do |result|
+          result.fail_with_error!(
+            BaseService::ThirdPartyFailure.new(
+              result,
+              third_party: 'Cashfree',
+              error_message: '{"code: "link_post_failed", "type": "invalid_request_error"}'
+            )
+          )
+        end
+      end
+
+      before do
+        allow(PaymentRequests::Payments::CashfreeService)
+          .to receive(:new)
+          .and_return(payment_provider_service)
+
+        allow(payment_provider_service).to receive(:generate_payment_url)
+          .and_return(error_result)
+      end
+
+      it 'returns a third party error' do
+        result = generate_payment_url_service.call
+
+        expect(result).to eq(error_result)
+      end
+    end
   end
 end

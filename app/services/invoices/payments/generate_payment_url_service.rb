@@ -22,6 +22,7 @@ module Invoices
         payment_url_result = Invoices::Payments::PaymentProviders::Factory.new_instance(invoice:).generate_payment_url
 
         return payment_url_result unless payment_url_result.success?
+        return payment_url_result if payment_url_result.error.is_a?(BaseService::ThirdPartyFailure)
 
         if payment_url_result.payment_url.blank?
           return result.single_validation_failure!(error_code: 'payment_provider_error')

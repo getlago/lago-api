@@ -168,6 +168,7 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
 
   describe ".generate_payment_url" do
     let(:payment_links_response) { Net::HTTPResponse.new("1.0", "200", "OK") }
+    let(:payment_links_body) { {link_url: "https://payments-test.cashfree.com/links//U1mgll3c0e9g"}.to_json }
 
     before do
       cashfree_payment_provider
@@ -178,7 +179,7 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       allow(cashfree_client).to receive(:post_with_response)
         .and_return(payment_links_response)
       allow(payment_links_response).to receive(:body)
-        .and_return({link_url: "https://payments-test.cashfree.com/links//U1mgll3c0e9g"}.to_json)
+        .and_return(payment_links_body)
     end
 
     it "generates payment url" do
@@ -204,6 +205,36 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
         result = cashfree_service.generate_payment_url
 
         expect(result.payment_url).to be_nil
+      end
+    end
+
+    context 'when payment url failed to generate' do
+      let(:payment_links_response) { Net::HTTPResponse.new("1.0", "400", "Bad Request") }
+      let(:payment_links_body) do
+        {
+          message: "Currency USD is not enabled",
+          code: "link_post_failed",
+          type: "invalid_request_error"
+        }.to_json
+      end
+
+      before do
+        cashfree_payment_provider
+        cashfree_customer
+
+        allow(LagoHttpClient::Client).to receive(:new)
+          .and_return(cashfree_client)
+        allow(cashfree_client).to receive(:post_with_response)
+          .and_raise(::LagoHttpClient::HttpError.new(payment_links_response.code, payment_links_body, nil))
+      end
+
+      it 'returns a third party error' do
+        result = cashfree_service.generate_payment_url
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error.third_party).to eq('Cashfree')
+        expect(result.error.error_message).to eq(payment_links_body)
       end
     end
   end
