@@ -121,6 +121,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
         subject
         expect(response).to have_http_status(:ok)
         expect(json[:payment][:lago_id]).to eq(payment.id)
+        expect(json[:payment][:invoice_id]).to eq(invoice.id)
       end
     end
 
