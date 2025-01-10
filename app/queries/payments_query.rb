@@ -2,6 +2,7 @@
 
 class PaymentsQuery < BaseQuery
   def call
+    return result unless validate_filters.success?
     payments = base_scope
     payments = paginate(payments)
     payments = apply_consistent_ordering(payments)
@@ -13,17 +14,8 @@ class PaymentsQuery < BaseQuery
 
   private
 
-  def validate_invoice_id(invoice_id)
-    unless valid_uuid?(invoice_id)
-      result.single_validation_failure!(
-        field: :invoice_id,
-        error_code: 'value_is_invalid'
-      )
-    end
-  end
-
-  def valid_uuid?(uuid)
-    !!(uuid =~ /\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\z/)
+  def filters_contract
+    @filters_contract ||= Queries::PaymentsQueryFiltersContract.new
   end
 
   def base_scope
@@ -32,7 +24,6 @@ class PaymentsQuery < BaseQuery
 
   def filter_by_invoice(scope)
     invoice_id = filters.invoice_id
-    validate_invoice_id(invoice_id)
 
     invoices_payment_requests_join = <<~SQL
       LEFT JOIN invoices_payment_requests ON invoices_payment_requests.payment_request_id = payment_requests.id
