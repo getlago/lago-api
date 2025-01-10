@@ -7,6 +7,8 @@ module Types
         graphql_name 'DataExportInvoiceFiltersInput'
         description 'Export Invoices search query and filters input argument'
 
+        argument :amount_from, Integer, required: false
+        argument :amount_to, Integer, required: false
         argument :currency, Types::CurrencyEnum, required: false
         argument :customer_external_id, String, required: false
         argument :invoice_type, [Types::Invoices::InvoiceTypeEnum], required: false

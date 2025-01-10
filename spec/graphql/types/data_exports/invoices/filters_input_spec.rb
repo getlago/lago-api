@@ -5,6 +5,8 @@ require 'rails_helper'
 RSpec.describe Types::DataExports::Invoices::FiltersInput do
   subject { described_class }
 
+  it { is_expected.to accept_argument(:amount_from).of_type('Int') }
+  it { is_expected.to accept_argument(:amount_to).of_type('Int') }
   it { is_expected.to accept_argument(:currency).of_type('CurrencyEnum') }
   it { is_expected.to accept_argument(:customer_external_id).of_type('String') }
   it { is_expected.to accept_argument(:invoice_type).of_type('[InvoiceTypeEnum!]') }

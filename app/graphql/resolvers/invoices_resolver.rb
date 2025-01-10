@@ -9,6 +9,8 @@ module Resolvers
 
     description 'Query invoices'
 
+    argument :amount_from, Integer, required: false
+    argument :amount_to, Integer, required: false
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
     argument :customer_id, ID, required: false, description: 'Uniq ID of the customer'
@@ -26,6 +28,8 @@ module Resolvers
     type Types::Invoices::Object.collection_type, null: false
 
     def resolve( # rubocop:disable Metrics/ParameterLists
+      amount_from: nil,
+      amount_to: nil,
       currency: nil,
       customer_external_id: nil,
       customer_id: nil,
@@ -45,6 +49,8 @@ module Resolvers
         pagination: {page:, limit:},
         search_term:,
         filters: {
+          amount_from:,
+          amount_to:,
           payment_status:,
           payment_dispute_lost:,
           payment_overdue:,

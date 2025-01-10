@@ -482,6 +482,28 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
       end
     end
+
+    context 'with amount filters' do
+      let(:params) do
+        {
+          amount_from: invoices.second.total_amount_cents,
+          amount_to: invoices.fourth.total_amount_cents
+        }
+      end
+
+      let!(:invoices) do
+        (1..5).to_a.map do |i|
+          create(:invoice, total_amount_cents: i.succ * 1_000, organization:)
+        end # from smallest to biggest
+      end
+
+      it 'returns invoices with total cents amount in provided range' do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].pluck(:lago_id)).to match_array invoices[1..3].pluck(:id)
+      end
+    end
   end
 
   describe 'PUT /api/v1/invoices/:id/refresh' do

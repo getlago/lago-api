@@ -18,6 +18,7 @@ class InvoicesQuery < BaseQuery
     invoices = with_payment_status(invoices) if filters.payment_status.present?
     invoices = with_payment_dispute_lost(invoices) unless filters.payment_dispute_lost.nil?
     invoices = with_payment_overdue(invoices) unless filters.payment_overdue.nil?
+    invoices = with_amount_range(invoices) if filters.amount_from.present? || filters.amount_to.present?
 
     result.invoices = invoices
     result
@@ -89,6 +90,12 @@ class InvoicesQuery < BaseQuery
   def with_issuing_date_range(scope)
     scope = scope.where(issuing_date: issuing_date_from..) if filters.issuing_date_from
     scope = scope.where(issuing_date: ..issuing_date_to) if filters.issuing_date_to
+    scope
+  end
+
+  def with_amount_range(scope)
+    scope = scope.where("invoices.total_amount_cents >= ?", filters.amount_from) if filters.amount_from
+    scope = scope.where("invoices.total_amount_cents <= ?", filters.amount_to) if filters.amount_to
     scope
   end
 

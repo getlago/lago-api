@@ -3507,6 +3507,8 @@ enum DataExportFormatTypeEnum {
 Export Invoices search query and filters input argument
 """
 input DataExportInvoiceFiltersInput {
+  amountFrom: Int
+  amountTo: Int
   currency: CurrencyEnum
   customerExternalId: String
   invoiceType: [InvoiceTypeEnum!]
@@ -6771,6 +6773,8 @@ type Query {
   Query invoices
   """
   invoices(
+    amountFrom: Int
+    amountTo: Int
     currency: CurrencyEnum
     customerExternalId: String
 

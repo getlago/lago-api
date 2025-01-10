@@ -504,4 +504,44 @@ RSpec.describe InvoicesQuery, type: :query do
       end
     end
   end
+
+  context "when amount filters applied" do
+    let(:filters) { {amount_from:, amount_to:} }
+
+    let!(:invoices) do
+      (1..5).to_a.map do |i|
+        create(:invoice, total_amount_cents: i.succ * 1_000, organization:)
+      end # from smallest to biggest
+    end
+
+    context "when only amount from provided" do
+      let(:amount_from) { invoices.second.total_amount_cents }
+      let(:amount_to) { nil }
+
+      it "returns invoices with total cents amount bigger or equal to provided value" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array invoices[1..].pluck(:id)
+      end
+    end
+
+    context "when only amount to provided" do
+      let(:amount_from) { 100 }
+      let(:amount_to) { invoices.fourth.total_amount_cents }
+
+      it "returns invoices with total cents amount lower or equal to provided value" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array invoices[..3].pluck(:id)
+      end
+    end
+
+    context "when both amount from and amount to provided" do
+      let(:amount_from) { invoices.second.total_amount_cents }
+      let(:amount_to) { invoices.fourth.total_amount_cents }
+
+      it "returns invoices with total cents amount in provided range" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array invoices[1..3].pluck(:id)
+      end
+    end
+  end
 end
