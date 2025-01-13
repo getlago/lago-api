@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Customer < Account
+class Partner < Account
 end
 
 # == Schema Information
