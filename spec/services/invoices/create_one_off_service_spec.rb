@@ -356,4 +356,48 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
   end
+
+  describe '#tax_error?' do
+    subject(:method_call) { create_service.__send__(:tax_error?, result) }
+
+    let(:result) { BaseService::Result.new }
+
+    context 'when the fee result is successful' do
+      it 'returns false' do
+        expect(subject).to be false
+      end
+    end
+
+    context 'when the fee result is not successful' do
+      context 'when the fee result error code is tax_error' do
+        before do
+          result.service_failure!(code: 'tax_error', message: 'Tax error')
+        end
+
+        it 'returns true' do
+          expect(subject).to be true
+        end
+      end
+
+      context 'when the fee result error does not respond to code' do
+        before do
+          result.validation_failure!(errors: [{message: 'error'}])
+        end
+
+        it 'returns false' do
+          expect(subject).to be false
+        end
+      end
+
+      context 'when the fee result error code is not tax_error' do
+        before do
+          result.service_failure!(code: 'code1', message: 'Code1 error')
+        end
+
+        it 'returns false' do
+          expect(subject).to be false
+        end
+      end
+    end
+  end
 end
