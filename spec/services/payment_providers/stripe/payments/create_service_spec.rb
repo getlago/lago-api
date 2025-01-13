@@ -3,13 +3,22 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service do
-  subject(:create_service) { described_class.new(payment:) }
+  subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider) }
   let(:code) { "stripe_1" }
+  let(:reference) { "organization.name - Invoice #{invoice.number}" }
+  let(:metadata) do
+    {
+      lago_customer_id: customer.id,
+      lago_invoice_id: invoice.id,
+      invoice_issuing_date: invoice.issuing_date.iso8601,
+      invoice_type: invoice.invoice_type
+    }
+  end
 
   let(:invoice) do
     create(
@@ -311,13 +320,8 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
           off_session: true,
           return_url: create_service.__send__(:success_redirect_url),
           error_on_requires_action: true,
-          description: create_service.__send__(:description),
-          metadata: {
-            lago_customer_id: customer.id,
-            lago_invoice_id: invoice.id,
-            invoice_issuing_date: invoice.issuing_date.iso8601,
-            invoice_type: invoice.invoice_type
-          }
+          description: reference,
+          metadata: metadata
         }
       end
 
@@ -335,15 +339,6 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
         it "returns the payload" do
           expect(payment_intent_payload).to eq(payload)
         end
-      end
-    end
-
-    context "with #description" do
-      let(:description_call) { create_service.__send__(:description) }
-      let(:description) { "#{organization.name} - Invoice #{invoice.number}" }
-
-      it "returns the description" do
-        expect(description_call).to eq(description)
       end
     end
   end

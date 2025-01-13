@@ -5,11 +5,6 @@ module Invoices
     class GocardlessService < BaseService
       include Customers::PaymentProviderFinder
 
-      PENDING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed]
-        .freeze
-      SUCCESS_STATUSES = %w[paid_out].freeze
-      FAILED_STATUSES = %w[cancelled customer_approval_denied failed charged_back].freeze
-
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -26,7 +21,7 @@ module Invoices
 
         payment.update!(status:)
 
-        invoice_payment_status = invoice_payment_status(status)
+        invoice_payment_status = payment.payment_provider&.determine_payment_status(status)
         update_invoice_payment_status(payment_status: invoice_payment_status)
 
         result
@@ -39,14 +34,6 @@ module Invoices
       attr_accessor :invoice
 
       delegate :organization, :customer, to: :invoice
-
-      def invoice_payment_status(payment_status)
-        return :pending if PENDING_STATUSES.include?(payment_status)
-        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-        return :failed if FAILED_STATUSES.include?(payment_status)
-
-        payment_status
-      end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true)
         update_invoice_result = Invoices::UpdateService.call(

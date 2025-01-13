@@ -43,13 +43,20 @@ module Invoices
 
         result.payment = payment
 
-        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(provider:, payment:).call!
+        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
+          provider:,
+          payment:,
+          reference: "#{invoice.organization.name} - Invoice #{invoice.number}",
+          metadata: {
+            lago_invoice_id: invoice.id,
+            lago_customer_id: invoice.customer_id,
+            invoice_issuing_date: invoice.issuing_date.iso8601,
+            invoice_type: invoice.invoice_type
+          }
+        ).call!
 
         payment_status = payment_result.payment.payable_payment_status
-        update_invoice_payment_status(
-          payment_status: (payment_status == "processing") ? :pending : payment_status,
-          processing: payment_status == "processing"
-        )
+        update_invoice_payment_status(payment_status:)
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
 
@@ -58,9 +65,11 @@ module Invoices
         result.payment = e.result.payment
 
         if e.result.payment.payable_payment_status&.to_sym != :pending
+          # Avoid notification for amount_too_small errors
           deliver_error_webhook(e.result)
-          update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
         end
+
+        update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
 
         # Some errors should be investigated and need to be raised
         raise if e.result.reraise
@@ -103,13 +112,13 @@ module Invoices
           .find_by(payment_provider_id: current_payment_provider.id)
       end
 
-      def update_invoice_payment_status(payment_status:, processing: false)
+      def update_invoice_payment_status(payment_status:)
         Invoices::UpdateService.call!(
           invoice: invoice,
           params: {
-            payment_status:,
             # NOTE: A proper `processing` payment status should be introduced for invoices
-            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+            payment_status: (payment_status.to_s == "processing") ? :pending : payment_status,
+            ready_for_payment_processing: %w[pending failed].include?(payment_status.to_s)
           },
           webhook_notification: payment_status.to_sym == :succeeded
         )

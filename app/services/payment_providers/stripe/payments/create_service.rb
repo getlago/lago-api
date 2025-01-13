@@ -4,13 +4,10 @@ module PaymentProviders
   module Stripe
     module Payments
       class CreateService < BaseService
-        PROCESSING_STATUSES = %w[processing requires_capture requires_action requires_confirmation requires_payment_method]
-          .freeze
-        SUCCESS_STATUSES = %w[succeeded].freeze
-        FAILED_STATUSES = %w[canceled].freeze
-
-        def initialize(payment:)
+        def initialize(payment:, reference:, metadata:)
           @payment = payment
+          @reference = reference
+          @metadata = metadata
           @invoice = payment.payable
           @provider_customer = payment.payment_provider_customer
 
@@ -24,7 +21,7 @@ module PaymentProviders
 
           payment.provider_payment_id = stripe_result.id
           payment.status = stripe_result.status
-          payment.payable_payment_status = payment_status_mapping(payment.status)
+          payment.payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
           payment.provider_payment_data = stripe_result.next_action if stripe_result.status == "requires_action"
           payment.save!
 
@@ -56,17 +53,9 @@ module PaymentProviders
 
         private
 
-        attr_reader :payment, :invoice, :provider_customer
+        attr_reader :payment, :reference, :metadata, :invoice, :provider_customer
 
         delegate :payment_provider, to: :provider_customer
-
-        def payment_status_mapping(payment_status)
-          return :processing if PROCESSING_STATUSES.include?(payment_status)
-          return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-          return :failed if FAILED_STATUSES.include?(payment_status)
-
-          payment_status
-        end
 
         def handle_requires_action(payment)
           SendWebhookJob.perform_later("payment.requires_action", payment, {
@@ -133,13 +122,8 @@ module PaymentProviders
             off_session: off_session?,
             return_url: success_redirect_url,
             error_on_requires_action: error_on_requires_action?,
-            description:,
-            metadata: {
-              lago_customer_id: provider_customer.customer_id,
-              lago_invoice_id: invoice.id,
-              invoice_issuing_date: invoice.issuing_date.iso8601,
-              invoice_type: invoice.invoice_type
-            }
+            description: reference,
+            metadata: metadata
           }
         end
 
@@ -157,10 +141,6 @@ module PaymentProviders
         # NOTE: Same as off_session?
         def error_on_requires_action?
           invoice.customer.country != "IN"
-        end
-
-        def description
-          "#{invoice.organization.name} - Invoice #{invoice.number}"
         end
 
         def prepare_failed_result(error, reraise: false, payable_payment_status: :failed)

@@ -33,7 +33,8 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
         :payment,
         payable: invoice,
         provider_payment_id: "ch_123456",
-        status: "pending_submission"
+        status: "pending_submission",
+        payment_provider: gocardless_payment_provider
       )
     end
 

@@ -4,12 +4,10 @@ module PaymentProviders
   module Adyen
     module Payments
       class CreateService < BaseService
-        PROCESSING_STATUSES = %w[AuthorisedPending Received].freeze
-        SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
-        FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
-
-        def initialize(payment:)
+        def initialize(payment:, reference:, metadata:)
           @payment = payment
+          @reference = reference
+          @metadata = metadata
           @invoice = payment.payable
           @provider_customer = payment.payment_provider_customer
 
@@ -29,7 +27,7 @@ module PaymentProviders
 
           payment.provider_payment_id = adyen_result.response["pspReference"]
           payment.status = adyen_result.response["resultCode"]
-          payment.payable_payment_status = payment_status_mapping(payment.status)
+          payment.payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
           payment.save!
 
           result.payment = payment
@@ -45,7 +43,7 @@ module PaymentProviders
 
         private
 
-        attr_reader :payment, :invoice, :provider_customer
+        attr_reader :payment, :reference, :metadata, :invoice, :provider_customer
 
         delegate :payment_provider, :customer, to: :provider_customer
 
@@ -92,7 +90,7 @@ module PaymentProviders
               currency: payment.amount_currency.upcase,
               value: payment.amount_cents
             },
-            reference: invoice.number,
+            reference: reference,
             paymentMethod: {
               type: "scheme",
               storedPaymentMethodId: provider_customer.payment_method_id
@@ -104,14 +102,6 @@ module PaymentProviders
           }
           prms[:shopperEmail] = customer.email if customer.email
           prms
-        end
-
-        def payment_status_mapping(payment_status)
-          return :processing if PROCESSING_STATUSES.include?(payment_status)
-          return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-          return :failed if FAILED_STATUSES.include?(payment_status)
-
-          payment_status
         end
 
         def prepare_failed_result(error, reraise: false)
