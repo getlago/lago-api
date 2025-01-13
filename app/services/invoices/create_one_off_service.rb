@@ -102,7 +102,7 @@ module Invoices
     end
 
     def tax_error?(fee_result)
-      !fee_result.success? && fee_result&.error&.code == 'tax_error'
+      !fee_result.success? && fee_result.error.respond_to?(:code) && fee_result&.error&.code == 'tax_error'
     end
   end
 end
