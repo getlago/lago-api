@@ -6,10 +6,6 @@ module PaymentProviders
       class CreateService < BaseService
         include ::Customers::PaymentProviderFinder
 
-        PENDING_STATUSES = %w[PARTIALLY_PAID].freeze
-        SUCCESS_STATUSES = %w[PAID].freeze
-        FAILED_STATUSES = %w[EXPIRED CANCELLED].freeze
-
         def initialize(payment:)
           @payment = payment
           @invoice = payment.payable

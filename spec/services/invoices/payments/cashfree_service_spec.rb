@@ -30,7 +30,8 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
         :payment,
         payable: invoice,
         provider_payment_id: invoice.id,
-        status: "pending"
+        status: "pending",
+        payment_provider: cashfree_payment_provider
       )
     end
 

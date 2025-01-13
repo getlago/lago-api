@@ -8,6 +8,10 @@ module PaymentProviders
     API_VERSION = "2023-08-01"
     BASE_URL = (Rails.env.production? ? "https://api.cashfree.com/pg/links" : "https://sandbox.cashfree.com/pg/links")
 
+    PROCESSING_STATUSES = %w[PARTIALLY_PAID].freeze
+    SUCCESS_STATUSES = %w[PAID].freeze
+    FAILED_STATUSES = %w[EXPIRED CANCELLED].freeze
+
     validates :client_id, presence: true
     validates :client_secret, presence: true
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}

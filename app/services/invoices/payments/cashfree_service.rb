@@ -5,10 +5,6 @@ module Invoices
     class CashfreeService < BaseService
       include Customers::PaymentProviderFinder
 
-      PENDING_STATUSES = %w[PARTIALLY_PAID].freeze
-      SUCCESS_STATUSES = %w[PAID].freeze
-      FAILED_STATUSES = %w[EXPIRED CANCELLED].freeze
-
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -28,7 +24,8 @@ module Invoices
         return result if payment.payable.payment_succeeded?
 
         payment.update!(status:)
-        update_invoice_payment_status(payment_status: invoice_payment_status(status))
+        invoice_payment_status = payment.payment_provider&.determine_payment_status(status)
+        update_invoice_payment_status(payment_status: invoice_payment_status)
 
         result
       rescue BaseService::FailedResult => e
@@ -130,14 +127,6 @@ module Invoices
           link_partial_payments: false,
           link_auto_reminders: false
         }
-      end
-
-      def invoice_payment_status(payment_status)
-        return :pending if PENDING_STATUSES.include?(payment_status)
-        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-        return :failed if FAILED_STATUSES.include?(payment_status)
-
-        payment_status
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true)
