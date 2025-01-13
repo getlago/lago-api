@@ -183,6 +183,16 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
+    context 'when customer has an integration customer' do
+      let!(:netsuite_customer) { create(:netsuite_customer, customer:) }
+
+      it 'returns an invoice with customer having integration customers' do
+        subject
+
+        expect(json[:invoice][:customer][:integration_customers].first).to include(lago_id: netsuite_customer.id)
+      end
+    end
+
     context 'when invoice does not exist' do
       let(:invoice_id) { SecureRandom.uuid }
 
@@ -276,6 +286,17 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           payment_status: invoice.payment_status,
           status: invoice.status
         )
+      end
+
+      context 'when customer has an integration customer' do
+        let!(:netsuite_customer) { create(:netsuite_customer, customer:) }
+
+        it 'returns an invoice with customer having integration customers' do
+          subject
+
+          expect(json[:invoices].first[:customer][:integration_customers].first)
+            .to include(lago_id: netsuite_customer.id)
+        end
       end
     end
 
