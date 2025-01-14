@@ -123,6 +123,7 @@ module Api
           :net_payment_term,
           :external_salesforce_id,
           :finalize_zero_amount_invoice,
+          :skip_invoice_custom_sections,
           integration_customers: [
             :id,
             :external_customer_id,
@@ -156,7 +157,8 @@ module Api
             :state,
             :country
           ],
-          tax_codes: []
+          tax_codes: [],
+          invoice_custom_section_codes: []
         )
       end
 
@@ -165,7 +167,7 @@ module Api
           json: ::V1::CustomerSerializer.new(
             customer,
             root_name: 'customer',
-            includes: %i[taxes integration_customers]
+            includes: %i[taxes integration_customers applicable_invoice_custom_sections]
           )
         )
       end

@@ -144,6 +144,9 @@ html
 
 
       /* ----------------------- variable ----------------------- */
+      :root {
+        --border-color: #D9DEE7;
+      }
 
       @font-face {
         font-family: 'Inter var';
@@ -245,7 +248,7 @@ html
         color: #66758F;
       }
       .invoice-resume-table tr {
-        border-bottom: 1px solid #D9DEE7;
+        border-bottom: 1px solid var(--border-color);
       }
       .invoice-resume-table tr td {
         padding-top: 8px;
@@ -284,12 +287,12 @@ html
         width: 50%;
       }
       .invoice-resume .total-table tr:not(:last-child) td:nth-child(2) {
-        border-bottom: 1px solid #D9DEE7;
+        border-bottom: 1px solid var(--border-color);
         text-align: left;
         width: 35%;
       }
       .invoice-resume .total-table tr:not(:last-child) td:nth-child(3) {
-        border-bottom: 1px solid #D9DEE7;
+        border-bottom: 1px solid var(--border-color);
         text-align: right;
         width: 15%;
       }
@@ -320,10 +323,10 @@ html
         text-align: right;
       }
       .breakdown-details-table tr td {
-        border-bottom: 1px solid #d9dee7;
+        border-bottom: 1px solid var(--border-color);
       }
       .breakdown-details-table tr:first-child td {
-        border-top: 1px solid #d9dee7;
+        border-top: 1px solid var(--border-color);
       }
 
       .powered-by {
@@ -365,7 +368,7 @@ html
       }
       .invoice-resume-table tr.details.subtotal td {
         padding-bottom: 8px;
-        border-bottom: 1px solid #d9dee7;
+        border-bottom: 1px solid var(--border-color);
         color: #19212e;
       }
 
@@ -462,6 +465,9 @@ html
         p.body-3.mb-24
           - applied_usage_threshold = applied_usage_thresholds.order(created_at: :asc).last
           = I18n.t('invoice.reached_usage_threshold', usage_amount: MoneyHelper.format(applied_usage_threshold.lifetime_usage_amount), threshold_amount: MoneyHelper.format(applied_usage_threshold.passed_threshold_amount))
+
+      - if applied_invoice_custom_sections.present?
+        == SlimHelper.render('templates/invoices/v4/_custom_sections', self)
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 

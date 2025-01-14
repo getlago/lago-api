@@ -33,6 +33,7 @@ module Invoices
           recurring:,
           context:
         )
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         set_invoice_generated_status unless invoice.pending?
         invoice.save!

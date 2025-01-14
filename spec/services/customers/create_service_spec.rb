@@ -59,6 +59,7 @@ RSpec.describe Customers::CreateService, type: :service do
         billing = create_args[:billing_configuration]
         expect(customer.document_locale).to eq(billing[:document_locale])
         expect(customer.invoice_grace_period).to be_nil
+        expect(customer.skip_invoice_custom_sections).to eq(false)
 
         shipping_address = create_args[:shipping_address]
         expect(customer.shipping_address_line1).to eq(shipping_address[:address_line1])
@@ -330,6 +331,36 @@ RSpec.describe Customers::CreateService, type: :service do
 
           billing = create_args[:billing_configuration]
           expect(customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+        end
+      end
+    end
+
+    context 'with invoice_custom_sections params' do
+      let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
+      let(:create_args) do
+        {
+          external_id:,
+          name: 'Foo Bar',
+          currency: 'EUR',
+          firstname: 'First',
+          lastname: 'Last',
+          invoice_custom_section_codes: [invoice_custom_section.code]
+        }
+      end
+
+      it 'creates customer with invoice_custom_sections' do
+        result = customers_service.create_from_api(
+          organization:,
+          params: create_args
+        )
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          customer = result.customer
+          expect(customer.selected_invoice_custom_sections.count).to eq(1)
+          expect(customer.selected_invoice_custom_sections.first).to eq(invoice_custom_section)
+          expect(customer.skip_invoice_custom_sections).to eq(false)
         end
       end
     end

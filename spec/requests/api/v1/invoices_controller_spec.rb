@@ -177,7 +177,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           customer: Hash,
           subscriptions: [],
           credits: [],
-          applied_taxes: []
+          applied_taxes: [],
+          applied_invoice_custom_sections: []
         )
         expect(json[:invoice][:fees].first).to include(lago_charge_filter_id: charge_filter.id)
       end

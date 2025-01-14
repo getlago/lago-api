@@ -433,8 +433,8 @@ RSpec.describe Customer, type: :model do
     context 'when customer does not have any selected_invoice_custom_sections but organization has' do
       before { organization.selected_invoice_custom_sections << organization_section }
 
-      it 'returns the organization\'s invoice_custom_sections' do
-        expect(customer.applicable_invoice_custom_sections).to eq([organization_section])
+      it "returns the organization's invoice_custom_sections" do
+        expect(customer.applicable_invoice_custom_sections).to match_array([organization_section])
       end
     end
 
