@@ -33,6 +33,8 @@ module Resolvers
         PaymentProviders::GocardlessProvider.to_s
       when "cashfree"
         PaymentProviders::CashfreeProvider.to_s
+      when "moneyhash"
+        PaymentProviders::MoneyhashProvider.to_s
       else
         raise(NotImplementedError)
       end

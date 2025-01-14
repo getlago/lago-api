@@ -39,5 +39,13 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory, type: :serv
         expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::GocardlessService")
       end
     end
+
+    context "when moneyhash" do
+      let(:payment_provider) { "moneyhash" }
+
+      it "returns correct class" do
+        expect(factory_service.class.to_s).to eq("PaymentRequests::Payments::MoneyhashService")
+      end
+    end
   end
 end
