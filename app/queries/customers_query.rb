@@ -13,7 +13,7 @@ class CustomersQuery < BaseQuery
   private
 
   def base_scope
-    Customer.where(organization:).ransack(search_params)
+    Customer.where(organization:).where(additional_params).ransack(search_params)
   end
 
   def search_params
