@@ -2,8 +2,8 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil) # rubocop:disable Metrics/ParameterLists
-      @customer = customer
+    def initialize(account:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil) # rubocop:disable Metrics/ParameterLists
+      @account = account
       @invoice_type = invoice_type
       @currency = currency
       @datetime = datetime
@@ -19,14 +19,14 @@ module Invoices
         invoice = Invoice.create!(
           id: invoice_id || SecureRandom.uuid,
           organization:,
-          customer:,
+          account:,
           invoice_type:,
           currency:,
-          timezone: customer.applicable_timezone,
+          timezone: account.applicable_timezone,
           status: :generating,
           issuing_date:,
           payment_due_date:,
-          net_payment_term: customer.applicable_net_payment_term,
+          net_payment_term: account.applicable_net_payment_term,
           skip_charges:
         )
         result.invoice = invoice
@@ -39,26 +39,26 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id
+    attr_accessor :account, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id
 
-    delegate :organization, to: :customer
+    delegate :organization, to: :account
 
-    # NOTE: accounting date must be in customer timezone
+    # NOTE: accounting date must be in account timezone
     def issuing_date
-      date = datetime.in_time_zone(customer.applicable_timezone).to_date
+      date = datetime.in_time_zone(account.applicable_timezone).to_date
       return date if !grace_period? || charge_in_advance
 
-      date + customer.applicable_invoice_grace_period.days
+      date + account.applicable_invoice_grace_period.days
     end
 
     def grace_period?
       return false unless invoice_type.to_sym == :subscription
 
-      customer.applicable_invoice_grace_period.positive?
+      account.applicable_invoice_grace_period.positive?
     end
 
     def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
+      (issuing_date + account.applicable_net_payment_term.days).to_date
     end
   end
 end

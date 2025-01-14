@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Invoices::CreateGeneratingService, type: :service do
   subject(:create_service) do
-    described_class.new(customer:, invoice_type:, currency:, datetime:, charge_in_advance:)
+    described_class.new(account: customer, invoice_type:, currency:, datetime:, charge_in_advance:)
   end
 
   let(:customer) { create(:customer) }

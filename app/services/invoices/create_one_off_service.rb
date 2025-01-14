@@ -66,7 +66,7 @@ module Invoices
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
-        customer:,
+        account: customer,
         invoice_type: :one_off,
         currency:,
         datetime: Time.zone.at(timestamp)

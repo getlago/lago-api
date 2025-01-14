@@ -81,7 +81,7 @@ module Invoices
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
-        customer:,
+        account: customer,
         invoice_type: :advance_charges,
         currency:,
         datetime: billing_at, # this is an int we need to convert it
