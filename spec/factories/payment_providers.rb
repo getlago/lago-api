@@ -80,4 +80,25 @@ FactoryBot.define do
       success_redirect_url { Faker::Internet.url }
     end
   end
+
+  factory :moneyhash_provider, class: "PaymentProviders::MoneyhashProvider" do
+    organization
+    type { "PaymentProviders::MoneyhashProvider" }
+    name { "MoneyHash" }
+    code { "moneyhash_#{SecureRandom.uuid}" }
+
+    secrets do
+      {api_key:}.to_json
+    end
+
+    settings do
+      {success_redirect_url:, flow_id:}
+    end
+
+    transient do
+      api_key { SecureRandom.uuid }
+      success_redirect_url { Faker::Internet.url }
+      flow_id { SecureRandom.uuid[0..19] }
+    end
+  end
 end
