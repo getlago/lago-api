@@ -26,6 +26,7 @@ module Invoices
 
         create_add_on_fee(invoice)
         compute_amounts(invoice)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         invoice.save!
 

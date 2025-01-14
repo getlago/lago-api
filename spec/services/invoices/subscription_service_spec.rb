@@ -106,6 +106,10 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       let(:service_call) { invoice_service.call }
     end
 
+    it_behaves_like "applies invoice_custom_sections" do
+      let(:service_call) { invoice_service.call }
+    end
+
     it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call
