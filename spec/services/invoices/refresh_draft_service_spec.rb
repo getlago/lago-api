@@ -218,7 +218,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
 
       it 'creates new applied_invoice_custom_sections' do
         expect { refresh_service.call }.to change { invoice.reload.applied_invoice_custom_sections.count }.from(2).to(3)
-        expect(invoice.applied_invoice_custom_sections.map(&:code)).to match(customer.selected_invoice_custom_sections.map(&:code))
+        expect(invoice.applied_invoice_custom_sections.map(&:code)).to match_array(customer.selected_invoice_custom_sections.map(&:code))
       end
     end
 

@@ -31,13 +31,14 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
 
   before do
     organization.selected_invoice_custom_sections.concat(invoice_custom_sections[2..4])
+    customer.selected_invoice_custom_sections.concat(invoice_custom_sections[0..1])
   end
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'
   it_behaves_like 'requires permission', 'invoice_custom_sections:view'
 
-  it 'returns a list of sorted invoice_custom_sections: alphabetical, selected first' do
+  it 'returns a list of sorted invoice_custom_sections: alphabetical, selected first without duplicates' do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
