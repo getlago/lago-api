@@ -9,19 +9,20 @@ class BaseQuery < BaseService
 
   class Filters < OpenStruct; end
 
-  def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
+  def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil, additional_params: {})
     @organization = organization
     @pagination_params = pagination
     @filters = Filters.new(filters)
     @search_term = search_term
     @order = order
+    @additional_params = additional_params
 
     super
   end
 
   private
 
-  attr_reader :organization, :pagination_params, :filters, :search_term, :order
+  attr_reader :organization, :pagination_params, :filters, :search_term, :order, :additional_params
 
   def validate_filters
     validation_result = filters_contract.call(filters: filters.to_h, search_term:)
