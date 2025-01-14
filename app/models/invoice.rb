@@ -15,8 +15,8 @@ class Invoice < ApplicationRecord
   before_save :ensure_number
 
   belongs_to :account, -> { with_discarded }, foreign_key: :customer_id
-  belongs_to :customer, -> { with_discarded }, foreign_key: :customer_id
-  belongs_to :partner, -> { with_discarded }, foreign_key: :customer_id
+  belongs_to :customer, -> { with_discarded }, foreign_key: :customer_id, optional: true
+  belongs_to :partner, -> { with_discarded }, foreign_key: :customer_id, optional: true
   belongs_to :organization
 
   has_many :fees

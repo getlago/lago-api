@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :customer, class: "Customer" do
-    account_type { "Customer" }
-
+  factory :customer do
     organization
     name { Faker::TvShows::SiliconValley.character }
     firstname { Faker::Name.first_name }

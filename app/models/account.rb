@@ -10,7 +10,7 @@ class Account < ApplicationRecord
   self.table_name = :customers
   self.inheritance_column = :account_type
 
-  belongs_to :organization, foreign_key: :customer_id
+  belongs_to :organization
 
   has_many :invoices, foreign_key: :customer_id
 end
