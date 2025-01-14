@@ -60,7 +60,9 @@ module Subscriptions
 
     def ending_at
       @ending_at ||= if args[:ending_at].is_a?(String)
-        DateTime.strptime(args[:ending_at])
+        args[:ending_at].include?('.') ?
+          DateTime.strptime(args[:ending_at], '%Y-%m-%dT%H:%M:%S.%LZ') :
+          DateTime.strptime(args[:ending_at])
       else
         args[:ending_at]
       end
@@ -68,7 +70,9 @@ module Subscriptions
 
     def subscription_at
       @subscription_at ||= if args[:subscription_at].is_a?(String)
-        DateTime.strptime(args[:subscription_at])
+        args[:subscription_at].include?('.') ?
+          DateTime.strptime(args[:subscription_at], '%Y-%m-%dT%H:%M:%S.%LZ') :
+          DateTime.strptime(args[:subscription_at])
       else
         args[:subscription_at]
       end
