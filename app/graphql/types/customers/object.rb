@@ -125,7 +125,7 @@ module Types
         object.active_subscriptions.count
       end
 
-      def provider_customer
+      def provider_customer # rubocop:disable GraphQL/ResolverMethodLength
         case object&.payment_provider&.to_sym
         when :stripe
           object.stripe_customer
@@ -135,6 +135,8 @@ module Types
           object.cashfree_customer
         when :adyen
           object.adyen_customer
+        when :moneyhash
+          object.moneyhash_customer
         end
       end
 
