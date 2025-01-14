@@ -14,7 +14,9 @@ class Invoice < ApplicationRecord
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
   before_save :ensure_number
 
-  belongs_to :customer, -> { with_discarded }
+  belongs_to :account, -> { with_discarded }, foreign_key: :customer_id
+  belongs_to :customer, -> { with_discarded }, foreign_key: :customer_id
+  belongs_to :partner, -> { with_discarded }, foreign_key: :customer_id
   belongs_to :organization
 
   has_many :fees

@@ -15,7 +15,9 @@ class Organization < ApplicationRecord
   has_many :users, through: :memberships
   has_many :billable_metrics
   has_many :plans
-  has_many :customers
+  has_many :accounts, foreign_key: :customer_id
+  has_many :customers, foreign_key: :customer_id
+  has_many :partners, foreign_key: :customer_id
   has_many :subscriptions, through: :customers
   has_many :invoices
   has_many :credit_notes, through: :invoices
