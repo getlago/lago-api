@@ -16,6 +16,8 @@ module PaymentProviders
         PaymentProviders::Gocardless::Payments::CreateService
       when :stripe
         PaymentProviders::Stripe::Payments::CreateService
+      when :moneyhash
+        PaymentProviders::Moneyhash::Payments::CreateService
       end
     end
   end

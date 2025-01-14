@@ -18,6 +18,8 @@ module PaymentRequests
             PaymentRequests::Payments::CashfreeService
           when "gocardless"
             PaymentRequests::Payments::GocardlessService
+          when "moneyhash"
+            PaymentRequests::Payments::MoneyhashService
           else
             raise(NotImplementedError)
           end

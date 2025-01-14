@@ -25,4 +25,10 @@ FactoryBot.define do
 
     provider_customer_id { SecureRandom.uuid }
   end
+
+  factory :moneyhash_customer, class: "PaymentProviderCustomers::MoneyhashCustomer" do
+    customer
+
+    provider_customer_id { SecureRandom.uuid }
+  end
 end
