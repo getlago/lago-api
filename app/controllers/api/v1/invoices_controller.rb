@@ -56,6 +56,7 @@ module Api
             payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
             payment_dispute_lost: params[:payment_dispute_lost],
             payment_overdue: (params[:payment_overdue] if %w[true false].include?(params[:payment_overdue])),
+            partially_paid: (params[:partially_paid] if %w[true false].include?(params[:partially_paid])),
             status: (params[:status] if valid_status?(params[:status])),
             currency: params[:currency],
             customer_external_id: params[:external_customer_id],
