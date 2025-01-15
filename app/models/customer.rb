@@ -29,6 +29,7 @@ class Customer < ApplicationRecord
   enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, _prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string
   enum customer_type: CUSTOMER_TYPES, _prefix: :customer_type
+  attribute :account_type, :string
   enum account_type: ACCOUNT_TYPES, _suffix: :account
 
   before_save :ensure_slug

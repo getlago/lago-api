@@ -4,9 +4,14 @@ class AddAccountTypeToCustomers < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
 
   def change
-    create_enum "account_type", ["customer", "partner"]
+    create_enum :account_type, %w[customer partner]
 
-    add_column :customers, :account_type, :enum, enum_type: "account_type", default: "customer", null: false
+    safety_assured do
+      change_table :customers do |t|
+        t.enum :account_type, enum_type: 'account_type', null: false, default: 'customer'
+      end
+    end
+
     add_index :customers, :account_type, algorithm: :concurrently
   end
 end
