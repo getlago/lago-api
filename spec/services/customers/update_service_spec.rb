@@ -25,7 +25,8 @@ RSpec.describe Customers::UpdateService, type: :service do
         external_id:,
         shipping_address: {
           city: 'Paris'
-        }
+        },
+        account_type: 'customer'
       }
     end
 
@@ -131,17 +132,16 @@ RSpec.describe Customers::UpdateService, type: :service do
     context 'when attached to a subscription' do
       before do
         subscription = create(:subscription, customer:)
-        customer.update!(currency: subscription.plan.amount_currency)
+        customer.update!(currency: subscription.plan.amount_currency, account_type: 'partner')
       end
 
       it 'updates only the name' do
         result = customers_service.call
 
         updated_customer = result.customer
-        aggregate_failures do
-          expect(updated_customer.name).to eq('Updated customer name')
-          expect(updated_customer.external_id).to eq(customer.external_id)
-        end
+        expect(updated_customer.name).to eq('Updated customer name')
+        expect(updated_customer.external_id).to eq(customer.external_id)
+        expect(updated_customer.account_type).to eq('partner')
       end
 
       context 'when updating the currency' do
