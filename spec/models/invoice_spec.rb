@@ -265,6 +265,15 @@ RSpec.describe Invoice, type: :model do
             expect(method_call).to eq(false)
           end
         end
+
+        context 'when the invoice is self_billed' do
+          let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+          let(:sync_invoices) { true }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
       end
     end
   end
@@ -283,6 +292,14 @@ RSpec.describe Invoice, type: :model do
 
       it 'returns true' do
         expect(method_call).to eq(true)
+      end
+
+      context 'when the invoice is self-billed' do
+        let(:invoice) { create(:invoice, customer:, organization:, status: :finalized, self_billed: true) }
+
+        it 'returns false' do
+          expect(method_call).to eq(false)
+        end
       end
     end
 
@@ -359,6 +376,14 @@ RSpec.describe Invoice, type: :model do
 
           it 'returns true' do
             expect(method_call).to eq(true)
+          end
+
+          context 'when invoice is self_billed' do
+            let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+
+            it 'returns false' do
+              expect(method_call).to eq(false)
+            end
           end
         end
 
@@ -438,6 +463,14 @@ RSpec.describe Invoice, type: :model do
           it 'returns true' do
             expect(method_call).to eq(true)
           end
+
+          context 'when invocie is self_billed' do
+            let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+
+            it 'returns false' do
+              expect(method_call).to eq(false)
+            end
+          end
         end
 
         context 'when sync invoices is false' do
@@ -491,6 +524,19 @@ RSpec.describe Invoice, type: :model do
           organization_id_substring = organization.id.last(4).upcase
 
           expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
+        end
+
+        context 'when invoice is self_billed' do
+          let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating, self_billed: true) }
+
+          it 'generates the invoice number based on customer sequence' do
+            invoice.customer.update(sequential_id: 27)
+            invoice.save!
+            invoice.finalized!
+            organization_id_substring = organization.id.last(4).upcase
+
+            expect(invoice.number).to eq("LAG-#{organization_id_substring}-027-006")
+          end
         end
       end
 
