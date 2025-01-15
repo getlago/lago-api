@@ -5,6 +5,7 @@ module Types
     class CreateCustomerInput < BaseInputObject
       description 'Create Customer input arguments'
 
+      argument :account_type, Types::Customers::AccountTypeEnum, required: false
       argument :address_line1, String, required: false
       argument :address_line2, String, required: false
       argument :city, String, required: false
@@ -29,7 +30,6 @@ module Types
       argument :timezone, Types::TimezoneEnum, required: false
       argument :url, String, required: false
       argument :zipcode, String, required: false
-      argument :account_type, Types::Customers::AccountTypeEnum, required: false
 
       argument :shipping_address, Types::Customers::AddressInput, required: false
 
