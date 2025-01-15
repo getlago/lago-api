@@ -59,6 +59,7 @@ module Customers
         customer.lastname = args[:lastname] if args.key?(:lastname)
         customer.customer_type = args[:customer_type] if args.key?(:customer_type)
         customer.account_type = args[:account_type] if args.key?(:account_type)
+        customer.exclude_from_dunning_campaign = true if customer.partner_account?
 
         if args.key?(:finalize_zero_amount_invoice)
           customer.finalize_zero_amount_invoice = args[:finalize_zero_amount_invoice]
