@@ -63,6 +63,7 @@ module Analytics
             LEFT JOIN plans p ON p.id = s.plan_id
             WHERE fee_type = 2
               AND c.organization_id = :organization_id
+              AND i.self_billed IS FALSE
               AND i.status = 1
               AND i.payment_dispute_lost_at IS NULL
             ORDER BY issuing_date ASC

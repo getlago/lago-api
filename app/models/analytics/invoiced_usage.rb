@@ -49,6 +49,7 @@ module Analytics
             LEFT JOIN customers c ON c.id = s.customer_id
             WHERE f.invoiceable_type = 'Charge'
             AND f.fee_type = 0
+            AND i.self_billed IS FALSE
             AND i.payment_dispute_lost_at IS NULL
             AND c.organization_id = :organization_id
           ),
