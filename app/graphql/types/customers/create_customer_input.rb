@@ -30,7 +30,6 @@ module Types
       argument :timezone, Types::TimezoneEnum, required: false
       argument :url, String, required: false
       argument :zipcode, String, required: false
-      argument :account_type, Types::Customers::AccountTypeEnum, required: false
 
       argument :shipping_address, Types::Customers::AddressInput, required: false
 
