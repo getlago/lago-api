@@ -244,7 +244,6 @@ RSpec.describe InvoicesQuery, type: :query do
   end
 
   context 'when filtering by partially_paid' do
-
     let(:invoice_first) do
       create(
         :invoice,
