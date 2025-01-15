@@ -28,7 +28,7 @@ module Invoices
           payment_due_date:,
           net_payment_term: customer.applicable_net_payment_term,
           skip_charges:,
-          self_billing: customer&.partner_account?,
+          self_billed: customer.partner_account?,
         )
         result.invoice = invoice
 

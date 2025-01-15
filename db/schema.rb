@@ -18,6 +18,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_01_14_172823) do
 
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
+  create_enum "account_type", ["customer", "partner"]
   create_enum "billable_metric_rounding_function", ["round", "floor", "ceil"]
   create_enum "billable_metric_weighted_interval", ["seconds"]
   create_enum "customer_type", ["company", "individual"]
@@ -486,7 +487,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_01_14_172823) do
     t.integer "last_dunning_campaign_attempt", default: 0, null: false
     t.datetime "last_dunning_campaign_attempt_at", precision: nil
     t.boolean "skip_invoice_custom_sections", default: false, null: false
-    t.string "account_type", default: "customer"
+    t.enum "account_type", default: "customer", null: false, enum_type: "account_type"
     t.index ["account_type"], name: "index_customers_on_account_type"
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"

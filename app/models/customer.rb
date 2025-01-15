@@ -233,7 +233,7 @@ end
 # Table name: customers
 #
 #  id                               :uuid             not null, primary key
-#  account_type                     :string           default("customer")
+#  account_type                     :enum             default("customer"), not null
 #  address_line1                    :string
 #  address_line2                    :string
 #  city                             :string
