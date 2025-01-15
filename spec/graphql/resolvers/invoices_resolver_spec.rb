@@ -365,4 +365,42 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       end
     end
   end
+
+  context 'with both amount_from and amount_to' do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(
+            limit: 5,
+            amountFrom: #{invoices.second.total_amount_cents},
+            amountTo: #{invoices.fourth.total_amount_cents}
+          ) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    let!(:invoices) do
+      (1..5).to_a.map do |i|
+        create(:invoice, total_amount_cents: i.succ * 1_000, organization:)
+      end # from smallest to biggest
+    end
+
+    it 'returns visible invoices total cents amount in provided range' do
+      collection = result['data']['invoices']['collection']
+
+      expect(collection.pluck('id')).to match_array invoices[1..3].pluck(:id)
+    end
+  end
 end

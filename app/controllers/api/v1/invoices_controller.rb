@@ -51,6 +51,8 @@ module Api
           },
           search_term: params[:search_term],
           filters: {
+            amount_from: params[:amount_from],
+            amount_to: params[:amount_to],
             payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
             payment_dispute_lost: params[:payment_dispute_lost],
             payment_overdue: (params[:payment_overdue] if %w[true false].include?(params[:payment_overdue])),
@@ -59,7 +61,8 @@ module Api
             customer_external_id: params[:external_customer_id],
             invoice_type: params[:invoice_type],
             issuing_date_from: (Date.strptime(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
-            issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to]))
+            issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
+            metadata: params[:metadata]&.permit!.to_h
           }
         )
 

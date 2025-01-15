@@ -504,4 +504,126 @@ RSpec.describe InvoicesQuery, type: :query do
       end
     end
   end
+
+  context "when amount filters applied" do
+    let(:filters) { {amount_from:, amount_to:} }
+
+    let!(:invoices) do
+      (1..5).to_a.map do |i|
+        create(:invoice, total_amount_cents: i.succ * 1_000, organization:)
+      end # from smallest to biggest
+    end
+
+    context "when only amount from provided" do
+      let(:amount_from) { invoices.second.total_amount_cents }
+      let(:amount_to) { nil }
+
+      it "returns invoices with total cents amount bigger or equal to provided value" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array invoices[1..].pluck(:id)
+      end
+    end
+
+    context "when only amount to provided" do
+      let(:amount_from) { 100 }
+      let(:amount_to) { invoices.fourth.total_amount_cents }
+
+      it "returns invoices with total cents amount lower or equal to provided value" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array invoices[..3].pluck(:id)
+      end
+    end
+
+    context "when both amount from and amount to provided" do
+      let(:amount_from) { invoices.second.total_amount_cents }
+      let(:amount_to) { invoices.fourth.total_amount_cents }
+
+      it "returns invoices with total cents amount in provided range" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array invoices[1..3].pluck(:id)
+      end
+    end
+  end
+
+  context "when metadata filters applied" do
+    let(:filters) { {metadata:} }
+
+    context "when single filter provided" do
+      let(:metadata) { {red: 5} }
+
+      let!(:matching_invoice) { create(:invoice, organization:) }
+
+      before do
+        create(:invoice_metadata, invoice: matching_invoice, key: :red, value: 5)
+
+        create(:invoice, organization:) do |invoice|
+          create(:invoice_metadata, invoice:)
+        end
+      end
+
+      it "returns invoices with matching metadata filters" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to contain_exactly matching_invoice.id
+      end
+    end
+
+    context "when multiple filters provided" do
+      let(:metadata) do
+        {
+          red: 5,
+          orange: 3
+        }
+      end
+
+      let!(:matching_invoices) { create_pair(:invoice, organization:) }
+
+      before do
+        matching_invoices.each do |invoice|
+          metadata.each do |key, value|
+            create(:invoice_metadata, invoice:, key:, value:)
+          end
+        end
+
+        create(:invoice, organization:) do |invoice|
+          create(:invoice_metadata, invoice:, key: :red, value: 5)
+        end
+      end
+
+      it "returns invoices with matching metadata filters" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array matching_invoices.pluck(:id)
+      end
+    end
+  end
+
+  context "with multiple filters applied at the same time" do
+    let(:search_term) { invoice.number.first(5) }
+
+    let(:filters) do
+      {
+        currency: invoice.currency,
+        customer_external_id: invoice.customer.external_id,
+        customer_id: invoice.customer.id,
+        invoice_type: invoice.invoice_type,
+        issuing_date_from: invoice.issuing_date,
+        issuing_date_to: invoice.issuing_date,
+        status: invoice.status,
+        payment_status: invoice.payment_status,
+        payment_dispute_lost: invoice.payment_dispute_lost_at.present?,
+        payment_overdue: invoice.payment_overdue,
+        amount_from: invoice.total_amount_cents,
+        amount_to: invoice.total_amount_cents,
+        metadata: invoice.metadata.to_h { |item| [item.key, item.value] }
+      }
+    end
+
+    let!(:invoice) { create(:invoice, currency: "EUR", organization:) }
+
+    before { create(:invoice, currency: "USD", organization:) }
+
+    it "returns invoices matching all provided filters" do
+      expect(result).to be_success
+      expect(result.invoices.pluck(:id)).to contain_exactly invoice.id
+    end
+  end
 end

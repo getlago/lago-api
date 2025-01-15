@@ -18,6 +18,8 @@ class InvoicesQuery < BaseQuery
     invoices = with_payment_status(invoices) if filters.payment_status.present?
     invoices = with_payment_dispute_lost(invoices) unless filters.payment_dispute_lost.nil?
     invoices = with_payment_overdue(invoices) unless filters.payment_overdue.nil?
+    invoices = with_amount_range(invoices) if filters.amount_from.present? || filters.amount_to.present?
+    invoices = with_metadata(invoices) if filters.metadata.present?
 
     result.invoices = invoices
     result
@@ -90,6 +92,31 @@ class InvoicesQuery < BaseQuery
     scope = scope.where(issuing_date: issuing_date_from..) if filters.issuing_date_from
     scope = scope.where(issuing_date: ..issuing_date_to) if filters.issuing_date_to
     scope
+  end
+
+  def with_amount_range(scope)
+    scope = scope.where("invoices.total_amount_cents >= ?", filters.amount_from) if filters.amount_from
+    scope = scope.where("invoices.total_amount_cents <= ?", filters.amount_to) if filters.amount_to
+    scope
+  end
+
+  def with_metadata(scope)
+    base_scope = scope.joins(:metadata)
+    subquery = base_scope
+
+    filters.metadata.each_with_index do |(key, value), index|
+      subquery = if index.zero?
+        base_scope.where(metadata: {key:, value:})
+      else
+        subquery.or(base_scope.where(metadata: {key:, value:}))
+      end
+    end
+
+    subquery = subquery
+      .group("invoices.id")
+      .having("COUNT(DISTINCT metadata.key) = ?", filters.metadata.size)
+
+    scope.where(id: subquery.select(:id))
   end
 
   def issuing_date_from

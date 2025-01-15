@@ -35,6 +35,8 @@ RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
           format: 'csv',
           resourceType: 'invoices',
           filters: {
+            amountFrom: 0,
+            amountTo: 10000,
             currency: 'USD',
             customerExternalId: 'abc123',
             invoiceType: ['one_off'],
