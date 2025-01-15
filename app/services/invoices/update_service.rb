@@ -35,6 +35,10 @@ module Invoices
         return result.not_allowed_failure!(code: 'payment_status_update_on_draft_invoice')
       end
 
+      if old_payment_status.to_s == 'succeeded' && params.key?(:payment_status) && params[:payment_status].to_s != 'succeeded'
+        return result.not_allowed_failure!(code: 'payment_status_update_on_succeeded_invoice')
+      end
+
       if params.key?(:ready_for_payment_processing) && !invoice.voided?
         invoice.ready_for_payment_processing = params[:ready_for_payment_processing]
       end
