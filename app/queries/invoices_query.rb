@@ -91,9 +91,14 @@ class InvoicesQuery < BaseQuery
 
   def with_partially_paid(scope)
     partially_paid = ActiveModel::Type::Boolean.new.cast(filters.partially_paid)
-    return scope unless partially_paid
 
-    scope.where("total_amount_cents > total_paid_amount_cents AND total_paid_amount_cents > 0")
+    if partially_paid
+      scope.where("total_amount_cents > total_paid_amount_cents AND total_paid_amount_cents > 0")
+    elsif partially_paid == false
+      scope.where("total_amount_cents = total_paid_amount_cents OR total_paid_amount_cents = 0")
+    else
+      scope
+    end
   end
 
   def with_issuing_date_range(scope)
