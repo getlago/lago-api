@@ -15,6 +15,11 @@ input AcceptInviteInput {
   token: String!
 }
 
+enum AccountTypeEnum {
+  customer
+  partner
+}
+
 """
 Adyen input arguments
 """
@@ -1926,6 +1931,7 @@ input CreateCreditNoteInput {
 Create Customer input arguments
 """
 input CreateCustomerInput {
+  accountType: AccountTypeEnum
   addressLine1: String
   addressLine2: String
   billingConfiguration: CustomerBillingConfigurationInput
@@ -3181,6 +3187,8 @@ type CurrentVersion {
 }
 
 type Customer {
+  accountType: AccountTypeEnum
+
   """
   Number of active subscriptions per customer
   """

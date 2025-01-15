@@ -81,6 +81,29 @@
           "enumValues": null
         },
         {
+          "kind": "ENUM",
+          "name": "AccountTypeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "customer",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "partner",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "INPUT_OBJECT",
           "name": "AddAdyenPaymentProviderInput",
           "description": "Adyen input arguments",
@@ -6872,6 +6895,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "accountType",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "AccountTypeEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "addressLine1",
               "description": null,
               "type": {
@@ -12259,6 +12294,18 @@
           "interfaces": [],
           "possibleTypes": null,
           "fields": [
+            {
+              "name": "accountType",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "AccountTypeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
             {
               "name": "activeSubscriptionsCount",
               "description": "Number of active subscriptions per customer",

@@ -57,7 +57,6 @@ module Customers
         customer.firstname = args[:firstname] if args.key?(:firstname)
         customer.lastname = args[:lastname] if args.key?(:lastname)
         customer.customer_type = args[:customer_type] if args.key?(:customer_type)
-        customer.account_type = args[:account_type] if args.key?(:account_type)
         customer.exclude_from_dunning_campaign = true if customer.partner_account?
 
         if args.key?(:finalize_zero_amount_invoice)
@@ -92,8 +91,11 @@ module Customers
         Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
       end
 
-      # NOTE: external_id is not editable if customer is attached to subscriptions
-      customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
+      # NOTE: external_id and account type are not editable if customer is attached to subscriptions
+      if customer.editable?
+        customer.external_id = args[:external_id] if args.key?(:external_id)
+        customer.account_type = args[:account_type] if args.key?(:account_type)
+      end
 
       if customer.organization.auto_dunning_enabled?
         if args.key?(:applied_dunning_campaign_id)
