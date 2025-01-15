@@ -56,6 +56,7 @@ module Customers
         customer.firstname = params[:firstname] if params.key?(:firstname)
         customer.lastname = params[:lastname] if params.key?(:lastname)
         customer.customer_type = params[:customer_type] if params.key?(:customer_type)
+        customer.account_type = params[:account_type] if params.key?(:account_type)
         if params.key?(:tax_identification_number)
           customer.tax_identification_number = params[:tax_identification_number]
         end

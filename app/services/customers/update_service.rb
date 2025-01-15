@@ -57,6 +57,7 @@ module Customers
         customer.firstname = args[:firstname] if args.key?(:firstname)
         customer.lastname = args[:lastname] if args.key?(:lastname)
         customer.customer_type = args[:customer_type] if args.key?(:customer_type)
+        customer.account_type = args[:account_type] if args.key?(:account_type)
 
         if args.key?(:finalize_zero_amount_invoice)
           customer.finalize_zero_amount_invoice = args[:finalize_zero_amount_invoice]
