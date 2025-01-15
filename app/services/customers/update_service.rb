@@ -106,6 +106,11 @@ module Customers
         end
       end
 
+      if customer.partner_account?
+        customer.exclude_from_dunning_campaign = true
+        customer.applied_dunning_campaign = nil
+      end
+
       ActiveRecord::Base.transaction do
         if old_provider_customer && args[:payment_provider].nil? && args[:payment_provider_code].present?
           old_provider_customer.discard!
