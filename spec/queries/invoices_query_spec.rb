@@ -243,6 +243,70 @@ RSpec.describe InvoicesQuery, type: :query do
     end
   end
 
+  context 'when filtering by partially_paid' do
+
+    let(:invoice_first) do
+      create(
+        :invoice,
+        organization:,
+        status: 'finalized',
+        payment_status: 'succeeded',
+        customer: customer_first,
+        number: '1111111111',
+        issuing_date: 1.week.ago,
+        total_amount_cents: 2000,
+        total_paid_amount_cents: 2000
+      )
+    end
+    let(:invoice_second) do
+      create(
+        :invoice,
+        organization:,
+        status: 'finalized',
+        payment_status: 'pending',
+        customer: customer_second,
+        number: '2222222222',
+        issuing_date: 2.weeks.ago,
+        total_amount_cents: 2000,
+        total_paid_amount_cents: 1500
+      )
+    end
+
+    context 'when partially_paid is true' do
+      let(:filters) { {partially_paid: true} }
+
+      it 'returns only partially paid invoices' do
+        aggregate_failures do
+          expect(returned_ids.count).to eq(1)
+          expect(returned_ids).to include(invoice_second.id)
+          expect(returned_ids).not_to include(invoice_first.id)
+        end
+      end
+    end
+
+    context 'when partially_paid is false' do
+      let(:filters) { {partially_paid: false} }
+
+      it 'returns only fully paid and unpaid invoices' do
+        aggregate_failures do
+          expect(returned_ids.count).to eq(5)
+          expect(returned_ids).not_to include(invoice_second.id)
+          expect(returned_ids).to include(invoice_first.id)
+        end
+      end
+    end
+
+    context 'when partially_paid is nil' do
+      let(:filters) { {partially_paid: nil} }
+
+      it 'returns all invoices' do
+        aggregate_failures do
+          expect(returned_ids.count).to eq(6)
+        end
+      end
+    end
+  end
+
   context 'when filtering by credit invoice_type' do
     let(:filters) { {invoice_type: 'credit'} }
 
