@@ -111,6 +111,22 @@ RSpec.describe Invoices::UpdateService do
           end
         end
       end
+
+      context 'when invoice has succeded payment status' do
+        let(:invoice) { create(:invoice, payment_status: :succeeded) }
+
+        let(:update_args) do
+          {
+            payment_status: 'failed'
+          }
+        end
+
+        it 'raises an error' do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq('payment_status_update_on_succeeded_invoice')
+        end
+      end
     end
 
     context 'with attached fees' do
