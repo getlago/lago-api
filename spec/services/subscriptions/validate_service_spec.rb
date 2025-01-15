@@ -22,6 +22,46 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
     }
   end
 
+  describe '#ending_at' do
+    subject(:method_call) { validate_service.__send__(:ending_at) }
+
+    context 'when date contains milliseconds' do
+      let(:ending_at) { '2020-01-01T00:00:00.000Z' }
+
+      it 'returns the date' do
+        expect(subject).to eq(DateTime.strptime(ending_at, '%Y-%m-%dT%H:%M:%S.%LZ'))
+      end
+    end
+
+    context 'when date does not contain milliseconds' do
+      let(:ending_at) { '2020-01-01T00:00:00Z' }
+
+      it 'returns the date' do
+        expect(subject).to eq(DateTime.strptime(ending_at))
+      end
+    end
+  end
+
+  describe '#subscription_at' do
+    subject(:method_call) { validate_service.__send__(:subscription_at) }
+
+    context 'when date contains milliseconds' do
+      let(:subscription_at) { '2021-02-01T00:00:00.00Z' }
+
+      it 'returns the date' do
+        expect(subject).to eq(DateTime.strptime(subscription_at, '%Y-%m-%dT%H:%M:%S.%LZ'))
+      end
+    end
+
+    context 'when date does not contain milliseconds' do
+      let(:subscription_at) { '2020-01-01T00:00:00Z' }
+
+      it 'returns the date' do
+        expect(subject).to eq(DateTime.strptime(subscription_at))
+      end
+    end
+  end
+
   describe '.valid?' do
     it 'returns true' do
       expect(validate_service).to be_valid
