@@ -55,7 +55,7 @@ RSpec.describe Queries::PaymentsQueryFiltersContract, type: :contract do
 
       it "is invalid" do
         expect(result.success?).to be(false)
-        expect(result.errors.to_h).to include(filters: {invoice_id: ["must be a valid UUID"]})
+        expect(result.errors.to_h).to include(filters: {invoice_id: ["is in invalid format"]})
       end
     end
 
@@ -75,7 +75,7 @@ RSpec.describe Queries::PaymentsQueryFiltersContract, type: :contract do
         expect(result.success?).to be(false)
         expect(result.errors.to_h).to include(
           filters: {
-            invoice_id: ["must be a valid UUID"],
+            invoice_id: ["is in invalid format"],
             external_customer_id: ["must be a string"]
           }
         )

@@ -306,12 +306,10 @@ RSpec.describe Payment, type: :model do
     it "returns organization's payments" do
       payments = subject
 
-      aggregate_failures do
-        expect(payments).to include(invoice_payment)
-        expect(payments).to include(payment_request_payment)
-        expect(payments).not_to include(other_org_invoice_payment)
-        expect(payments).not_to include(other_org_payment_request_payment)
-      end
+      expect(payments).to include(invoice_payment)
+      expect(payments).to include(payment_request_payment)
+      expect(payments).not_to include(other_org_invoice_payment)
+      expect(payments).not_to include(other_org_payment_request_payment)
     end
   end
 end
