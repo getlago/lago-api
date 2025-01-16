@@ -33,6 +33,7 @@ module V1
 
       payload.merge!(customer) if include?(:customer)
       payload.merge!(subscriptions) if include?(:subscriptions)
+      payload.merge!(billing_periods) if include?(:billing_periods)
       payload.merge!(fees) if include?(:fees)
       payload.merge!(credits) if include?(:credits)
       payload.merge!(metadata) if include?(:metadata)
@@ -119,6 +120,14 @@ module V1
         model.applied_invoice_custom_sections,
         ::V1::Invoices::AppliedInvoiceCustomSectionSerializer,
         collection_name: 'applied_invoice_custom_sections'
+      ).serialize
+    end
+
+    def billing_periods
+      ::CollectionSerializer.new(
+        model.invoice_subscriptions,
+        ::V1::Invoices::BillingPeriodSerializer,
+        collection_name: 'billing_periods'
       ).serialize
     end
   end

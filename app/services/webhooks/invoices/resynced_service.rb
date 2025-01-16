@@ -13,7 +13,7 @@ module Webhooks
         ::V1::InvoiceSerializer.new(
           object,
           root_name: 'invoice',
-          includes: %i[customer integration_customers subscriptions fees credits applied_taxes]
+          includes: %i[customer billing_periods integration_customers subscriptions fees credits applied_taxes]
         )
       end
 
