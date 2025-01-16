@@ -117,7 +117,7 @@ module Invoices
           next if should_not_create_charge_fee?(charge, subscription)
 
           bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
-          Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:, context:, bypass_aggregation:).raise_if_error!
+          Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:, bypass_aggregation:).raise_if_error!
         end
     end
 
@@ -184,7 +184,7 @@ module Invoices
         .find_each do |charge|
         next if should_not_create_charge_fee?(charge, subscription)
 
-        fee_result = Fees::ChargeService.call(invoice: nil, charge:, subscription:, context: :recurring, boundaries:).raise_if_error!
+        fee_result = Fees::ChargeService.call(invoice: nil, charge:, subscription:, boundaries:).raise_if_error!
 
         result.non_invoiceable_fees.concat(fee_result.fees)
       end
