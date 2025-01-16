@@ -77,31 +77,12 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   let(:interval) { 'monthly' }
   let(:trial_period) { 0 }
 
-  let(:charge) do
-    create(
-      :standard_charge,
-      plan: subscription.plan,
-      charge_model: 'standard',
-      billable_metric:,
-      properties: {amount: "1"}
-    )
-  end
-
-  let(:event) do
-    create(
-      :event,
-      organization: organization,
-      subscription: subscription,
-      code: billable_metric.code,
-      timestamp: date_service.charges_to_datetime - 2.days
-    )
-  end
+  let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
 
   before do
     tax
     charge
     invoice_subscriptions
-    event
 
     allow(SegmentTrackJob).to receive(:perform_later)
     allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
@@ -158,8 +139,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           create(:charge_fee, amount_cents: 50, invoice: progressive_invoice)
         end
 
-        let(:event) { nil }
-
         before do
           progressive_invoice
           progressive_fee
@@ -196,7 +175,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(invoice.reload.status).to eq('pending')
             expect(invoice.reload.tax_status).to eq('pending')
-            expect(invoice.reload.fees_amount_cents).to eq(200)
+            expect(invoice.reload.fees_amount_cents).to eq(100)
             expect(invoice.reload.taxes_amount_cents).to eq(0)
             expect(invoice.reload.error_details.count).to eq(0)
           end
@@ -225,7 +204,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
                 expect(invoice.reload.status).to eq('draft')
                 expect(invoice.reload.tax_status).to eq('pending')
-                expect(invoice.reload.fees_amount_cents).to eq(200)
+                expect(invoice.reload.fees_amount_cents).to eq(100)
                 expect(invoice.reload.taxes_amount_cents).to eq(0)
                 expect(invoice.reload.error_details.count).to eq(0)
               end
@@ -245,7 +224,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
                 expect(invoice.reload.status).to eq('pending')
                 expect(invoice.reload.tax_status).to eq('pending')
-                expect(invoice.reload.fees_amount_cents).to eq(200)
+                expect(invoice.reload.fees_amount_cents).to eq(100)
                 expect(invoice.reload.taxes_amount_cents).to eq(0)
                 expect(invoice.reload.error_details.count).to eq(0)
               end
@@ -476,7 +455,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
             expect(invoice.payment_status).to eq('pending')
             expect(invoice.fees.subscription.count).to eq(2)
-            expect(invoice.fees.charge.count).to eq(1) # 0 amount charge fee is not created for subscription 2
+            expect(invoice.fees.charge.count).to eq(2)
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
@@ -500,7 +479,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
             expect(invoice.payment_status).to eq('pending')
             expect(invoice.fees.subscription.count).to eq(2)
-            expect(invoice.fees.charge.count).to eq(1) # 0 amount charge fee is not created for subscription 2
+            expect(invoice.fees.charge.count).to eq(2)
             expect(invoice.fees.commitment.count).to eq(2)
 
             invoice_subscription = invoice.invoice_subscriptions.first
@@ -639,15 +618,13 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
 
-          let(:event) { nil }
-
           it 'creates a charge fee and a minimum commitment fee' do
             result = invoice_service.call
 
             aggregate_failures do
               expect(result).to be_success
 
-              expect(invoice).to have_empty_charge_fees
+              expect(invoice.fees.charge.count).to eq(1)
               expect(invoice.fees.commitment.count).to eq(1)
             end
           end
@@ -886,8 +863,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription_at) { started_at }
         let(:billing_time) { :anniversary }
 
-        let(:event) { nil }
-
         context 'when plan has no minimum commitment' do
           it 'creates a subscription fee' do
             result = invoice_service.call
@@ -1043,8 +1018,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
 
       context 'when subscription started on creation day' do
-        let(:event) { nil }
-
         it 'does not create any charge fees' do
           result = invoice_service.call
 
@@ -1191,7 +1164,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
               expect(result).to be_success
 
               expect(invoice.fees.subscription.count).to eq(0)
-              expect(invoice).to have_empty_charge_fees
+              expect(invoice.fees.charge.count).to eq(1)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -1225,7 +1198,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
                 expect(result).to be_success
 
                 expect(invoice.fees.subscription.count).to eq(0)
-                expect(invoice).to have_empty_charge_fees
+                expect(invoice.fees.charge.count).to eq(1)
 
                 invoice_subscription = invoice.invoice_subscriptions.first
                 expect(invoice_subscription).to have_attributes(
@@ -1277,8 +1250,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:subscription_at) { started_at }
         let(:billing_time) { :anniversary }
 
-        let(:event) { nil }
-
         it 'updates the invoice accordingly' do
           result = invoice_service.call
 
@@ -1287,7 +1258,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
+            expect(invoice.fees.charge.count).to eq(1)
 
             invoice_subscription = invoice.invoice_subscriptions.first
             expect(invoice_subscription).to have_attributes(
@@ -1535,9 +1506,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.fees_amount_cents).to eq(200)
-          expect(result.invoice.taxes_amount_cents).to eq(40)
-          expect(result.invoice.total_amount_cents).to eq(230)
+          expect(result.invoice.fees_amount_cents).to eq(100)
+          expect(result.invoice.taxes_amount_cents).to eq(20)
+          expect(result.invoice.total_amount_cents).to eq(110)
           expect(result.invoice.credits.count).to eq(1)
 
           credit = result.invoice.credits.first
@@ -1570,9 +1541,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.subscriptions.first).to eq(subscription)
           expect(result.invoice.fees.subscription.count).to eq(1)
           expect(result.invoice.fees.charge.count).to eq(1)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(200)
-          expect(result.invoice.taxes_amount_cents).to eq(40)
-          expect(result.invoice.total_amount_cents).to eq(210)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
+          expect(result.invoice.taxes_amount_cents).to eq(20)
+          expect(result.invoice.total_amount_cents).to eq(90)
           expect(result.invoice.wallet_transactions.count).to eq(1)
         end
       end
@@ -1592,8 +1563,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             amount_currency: plan.amount_currency
           )
         end
-
-        let(:event) { nil }
 
         before { applied_coupon }
 

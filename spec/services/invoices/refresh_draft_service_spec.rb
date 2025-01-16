@@ -146,7 +146,8 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
       create(:standard_charge, plan: subscription.plan, charge_model: 'standard')
 
       expect { refresh_service.call }
-        .to change { invoice.fees.pluck(:id).include?(fee.id) }.from(true).to(false)
+        .to change { invoice.reload.fees.count }.from(1).to(2)
+        .and change { invoice.fees.pluck(:id).include?(fee.id) }.from(true).to(false)
         .and change { invoice.fees.pluck(:created_at).uniq }.to([invoice.created_at])
 
       expect(invoice.invoice_subscriptions.first.recurring).to be_truthy
@@ -186,7 +187,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
 
       context 'when taxes are unknown' do
         it 'regenerates fees' do
-          expect { refresh_service.call }.to change { invoice.fees.count }.from(0).to(1)
+          expect { refresh_service.call }.to change { invoice.fees.count }.from(0).to(2)
         end
 
         it 'sets correct tax status' do

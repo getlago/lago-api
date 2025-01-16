@@ -6,7 +6,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
   let(:organization) { create(:organization, webhook_url: nil, email_settings: '') }
 
   let(:customer) { create(:customer, organization:, invoice_grace_period: 5) }
-  let(:subscription_at) { DateTime.new(2022, 7, 19, 12, 12) }
+  let(:subscription_at) { DateTime.new(2023, 7, 19, 12, 12) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'custom') }
   let(:unit_precise_amount) { nil }
 
@@ -52,20 +52,8 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
         )
       end
 
-      travel_to(Time.zone.parse("2023-07-23T10:12")) do
-        create_event(
-          {
-            external_subscription_id: customer.external_id,
-            transaction_id: SecureRandom.uuid,
-            code: billable_metric.code,
-            timestamp: Time.current.to_i,
-            properties: {billable_metric.field_name => 0}
-          }
-        )
-      end
-
       # NOTE: August 19th: Bill subscription
-      travel_to(Time.zone.parse("2023-08-19T12:12")) do
+      travel_to(DateTime.new(2023, 8, 19, 12, 12)) do
         Subscriptions::BillingService.call
         perform_all_enqueued_jobs
 
@@ -83,7 +71,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
       end
 
       # NOTE: August 20th: Refresh and finalize invoice
-      travel_to(Time.zone.parse("2023-08-20T12:12")) do
+      travel_to(DateTime.new(2023, 8, 20, 12, 12)) do
         invoice = customer.invoices.order(created_at: :desc).first
 
         Invoices::RefreshDraftJob.perform_later(invoice)
@@ -125,20 +113,8 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
         )
       end
 
-      travel_to(Time.zone.parse("2023-07-23T10:12")) do
-        create_event(
-          {
-            external_subscription_id: customer.external_id,
-            transaction_id: SecureRandom.uuid,
-            code: billable_metric.code,
-            timestamp: Time.current.to_i,
-            properties: {billable_metric.field_name => 0}
-          }
-        )
-      end
-
       # NOTE: August 19th: Bill subscription
-      travel_to(Time.zone.parse("2023-08-19T12:12")) do
+      travel_to(DateTime.new(2023, 8, 19, 12, 12)) do
         Subscriptions::BillingService.call
         perform_all_enqueued_jobs
 
@@ -156,7 +132,7 @@ describe 'Adjusted Charge Fees Scenario', :scenarios, type: :request, transactio
       end
 
       # NOTE: August 20th: Refresh and finalize invoice
-      travel_to(Time.zone.parse("2023-08-20T12:12")) do
+      travel_to(DateTime.new(2023, 8, 20, 12, 12)) do
         invoice = customer.invoices.order(created_at: :desc).first
 
         Invoices::RefreshDraftJob.perform_later(invoice)
