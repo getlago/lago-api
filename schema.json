@@ -7066,6 +7066,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "accountType",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CustomerAccountTypeEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "addressLine1",
               "description": null,
               "type": {
@@ -12474,6 +12486,22 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "accountType",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CustomerAccountTypeEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "activeSubscriptionsCount",
               "description": "Number of active subscriptions per customer",
               "type": {
@@ -13389,6 +13417,29 @@
           ],
           "inputFields": null,
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "CustomerAccountTypeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "customer",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "partner",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "OBJECT",

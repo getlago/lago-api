@@ -5,6 +5,7 @@ module Types
     class CreateCustomerInput < BaseInputObject
       description 'Create Customer input arguments'
 
+      argument :account_type, Types::Customers::AccountTypeEnum, required: false
       argument :address_line1, String, required: false
       argument :address_line2, String, required: false
       argument :city, String, required: false

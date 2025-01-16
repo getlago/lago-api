@@ -26,6 +26,7 @@ RSpec.describe ::V1::CustomerSerializer do
     aggregate_failures do
       expect(result['customer']['lago_id']).to eq(customer.id)
       expect(result['customer']['external_id']).to eq(customer.external_id)
+      expect(result['customer']['account_type']).to eq(customer.account_type)
       expect(result['customer']['name']).to eq(customer.name)
       expect(result['customer']['firstname']).to eq(customer.firstname)
       expect(result['customer']['lastname']).to eq(customer.lastname)
