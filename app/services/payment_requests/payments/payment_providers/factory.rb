@@ -10,11 +10,13 @@ module PaymentRequests
 
         def self.service_class(payment_provider)
           case payment_provider&.to_s
-          when 'stripe'
+          when "stripe"
             PaymentRequests::Payments::StripeService
-          when 'adyen'
+          when "adyen"
             PaymentRequests::Payments::AdyenService
-          when 'gocardless'
+          when "cashfree"
+            PaymentRequests::Payments::CashfreeService
+          when "gocardless"
             PaymentRequests::Payments::GocardlessService
           else
             raise(NotImplementedError)

@@ -31,5 +31,13 @@ RSpec.describe Invoices::Payments::PaymentProviders::Factory, type: :service do
         expect(factory_service.class.to_s).to eq('Invoices::Payments::GocardlessService')
       end
     end
+
+    context 'when cashfree' do
+      let(:payment_provider) { 'cashfree' }
+
+      it 'returns correct class' do
+        expect(factory_service.class.to_s).to eq('Invoices::Payments::CashfreeService')
+      end
+    end
   end
 end

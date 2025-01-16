@@ -12,6 +12,8 @@ module PaymentProviders
       case provider.to_sym
       when :adyen
         PaymentProviders::Adyen::Payments::CreateService
+      when :cashfree
+        PaymentProviders::Cachfree::Payments::CreateService
       when :gocardless
         PaymentProviders::Gocardless::Payments::CreateService
       when :stripe

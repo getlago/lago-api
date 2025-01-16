@@ -57,6 +57,20 @@ module ApiErrors
     )
   end
 
+  def thirdpary_error(error:)
+    render(
+      json: {
+        status: 422,
+        error: 'Unprocessable Entity',
+        code: 'third_party_error',
+        error_details: {
+          third_party: error.third_party,
+          thirdparty_error: error.error_message
+        }
+      }
+    )
+  end
+
   def render_error_response(error_result)
     case error_result.error
     when BaseService::NotFoundFailure
@@ -69,6 +83,8 @@ module ApiErrors
       forbidden_error(code: error_result.error.code)
     when BaseService::UnauthorizedFailure
       unauthorized_error(message: error_result.error.message)
+    when BaseService::ThirdPartyFailure
+      thirdpary_error(error: error_result.error)
     else
       raise(error_result.error)
     end

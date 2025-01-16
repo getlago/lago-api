@@ -205,6 +205,105 @@
         },
         {
           "kind": "INPUT_OBJECT",
+          "name": "AddCashfreePaymentProviderInput",
+          "description": "Cashfree input arguments",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientSecret",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "successRedirectUrl",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
           "name": "AddGocardlessPaymentProviderInput",
           "description": "Gocardless input arguments",
           "interfaces": null,
@@ -2417,6 +2516,101 @@
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "CashfreeProvider",
+          "description": null,
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "clientId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "clientSecret",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "successRedirectUrl",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
           "inputFields": null,
           "enumValues": null
         },
@@ -11719,6 +11913,26 @@
                 "kind": "OBJECT",
                 "name": "OrganizationBillingConfiguration",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "cashfreePaymentProviders",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "CashfreeProvider",
+                    "ofType": null
+                  }
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -23481,6 +23695,35 @@
               ]
             },
             {
+              "name": "addCashfreePaymentProvider",
+              "description": "Add or update Cashfree payment provider",
+              "type": {
+                "kind": "OBJECT",
+                "name": "CashfreeProvider",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for AddCashfreePaymentProvider",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "AddCashfreePaymentProviderInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "addGocardlessPaymentProvider",
               "description": "Add or update Gocardless payment provider",
               "type": {
@@ -26128,6 +26371,35 @@
               ]
             },
             {
+              "name": "updateCashfreePaymentProvider",
+              "description": "Update Cashfree payment provider",
+              "type": {
+                "kind": "OBJECT",
+                "name": "CashfreeProvider",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for UpdateCashfreePaymentProvider",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "UpdateCashfreePaymentProviderInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "updateCoupon",
               "description": "Update an existing coupon",
               "type": {
@@ -27856,6 +28128,11 @@
             {
               "kind": "OBJECT",
               "name": "AdyenProvider",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "CashfreeProvider",
               "ofType": null
             },
             {
@@ -30771,6 +31048,12 @@
             },
             {
               "name": "gocardless",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "cashfree",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -38420,6 +38703,81 @@
                     "ofType": null
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "UpdateCashfreePaymentProviderInput",
+          "description": "Update input arguments",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "successRedirectUrl",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
