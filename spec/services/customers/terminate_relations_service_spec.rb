@@ -44,10 +44,10 @@ RSpec.describe Customers::TerminateRelationsService, type: :service do
       create(:invoice_subscription, invoice: invoices.last, subscription:, invoicing_reason: :subscription_periodic)
     end
 
-    it 'finalizes draft invoices' do
-      terminate_service.call
-
-      invoices.each { |i| expect(i.reload).to be_finalized }
+    it 'enqueues finalize jobs for the invoices' do
+      expect do
+        terminate_service.call
+      end.to have_enqueued_job(Invoices::FinalizeJob).exactly(:twice)
     end
   end
 
