@@ -11,7 +11,7 @@ module Api
 
         if result.success?
           render(
-            json: ::V1::PaymentSerializer.new(result.payment, root_name: "payment")
+            json: ::V1::PaymentSerializer.new(result.payment, root_name: resource_name)
           )
         else
           render_error_response(result)
@@ -33,7 +33,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.payments,
               ::V1::PaymentSerializer,
-              collection_name: "payments",
+              collection_name: resource_name.pluralize,
               meta: pagination_metadata(result.payments)
             )
           )
@@ -44,7 +44,7 @@ module Api
 
       def show
         payment = Payment.for_organization(current_organization).find_by(id: params[:id])
-        return not_found_error(resource: "payment") unless payment
+        return not_found_error(resource: resource_name) unless payment
 
         render_payment(payment)
       end
@@ -68,7 +68,7 @@ module Api
         render(
           json: ::V1::PaymentSerializer.new(
             payment,
-            root_name: "payment"
+            root_name: resource_name
           )
         )
       end
