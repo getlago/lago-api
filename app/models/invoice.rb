@@ -401,7 +401,7 @@ class Invoice < ApplicationRecord
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
       timezone,
       Time.now.in_time_zone(timezone).beginning_of_month.to_date
-    )
+    ).where(self_billed: false)
 
     result = Invoice.with_advisory_lock(
       organization_id,

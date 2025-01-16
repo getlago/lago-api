@@ -22,11 +22,14 @@ FactoryBot.define do
 
     trait :with_invoice_custom_sections do
       after :create do |org|
-        sections = []
-        3.times do
-          sections << create(:invoice_custom_section, organization: org)
-        end
+        sections = create_list(:invoice_custom_section, 3, organization: org)
         org.invoice_custom_section_selections = sections
+      end
+    end
+
+    trait :with_default_dunning_campaign do
+      after :create do |org|
+        create(:dunning_campaign, organization: org, applied_to_organization: true)
       end
     end
   end
