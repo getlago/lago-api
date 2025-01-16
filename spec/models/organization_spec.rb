@@ -222,23 +222,11 @@ RSpec.describe Organization, type: :model do
   end
 
   describe "#auto_dunning_enabled?" do
-    subject(:auto_dunning_enabled?) { organization.auto_dunning_enabled? }
+    it_behaves_like "organization premium feature", "auto_dunning"
+  end
 
-    it { is_expected.to eq(false) }
-
-    context "when premium features are enabled" do
-      around { |test| lago_premium!(&test) }
-
-      it { is_expected.to eq(false) }
-
-      context "with auto_dunning integration is enabled" do
-        let(:organization) do
-          described_class.new(premium_integrations: ["auto_dunning"])
-        end
-
-        it { is_expected.to eq(true) }
-      end
-    end
+  describe "#revenue_share_enabled?" do
+    it_behaves_like "organization premium feature", "revenue_share"
   end
 
   describe "#reset_customers_last_dunning_campaign_attempt" do
